@@ -8,6 +8,13 @@ import {
 import { Server } from "ws";
 import { ConfigService } from "@nestjs/config";
 import { ConversationBrainService, ConversationContext } from "../services/conversation-brain.service";
+import { GeminiStreamingClient } from "../services/gemini-streaming.service";
+import { ThinkingBudgetManager } from "../services/thinking-budget-manager.service";
+import { PreCallBrainService } from "../services/pre-call-brain.service";
+import { ModelRouter } from "../services/model-router.service";
+import { PostCallProcessor } from "../services/post-call-processor.service";
+import { InworldTTSClient, getTTSProvider } from "../services/inworld-tts.service";
+import { GeminiLiveClient } from "../services/gemini-live.service";
 import { EmotionEngineService } from "../services/emotion-engine.service";
 import { CallOrchestratorService } from "../services/call-orchestrator.service";
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -15,17 +22,20 @@ import { PrismaService } from "../../../prisma/prisma.service";
 /**
  * Audio Pipeline Gateway — handles Twilio Media Streams via WebSocket.
  *
- * Flow:
- * 1. Twilio connects via WebSocket when call is answered
- * 2. Audio chunks streamed from Twilio → Deepgram STT
- * 3. Transcribed text → ConversationBrain (Claude) for response
- * 4. Response text → ElevenLabs TTS → audio back to Twilio
+ * Multi-LLM Architecture:
+ * - PreCallBrain (Claude Sonnet): generates strategic brief BEFORE call
+ * - GeminiStreaming (Flash-Lite): handles 99% of live conversation turns
+ * - ModelRouter: escalates ~1% high-value closes to Claude Sonnet
+ * - ThinkingBudget: adjusts Gemini reasoning depth per turn (0–8000)
+ * - PostCallProcessor (Flash-Lite): generates call report AFTER call
  *
- * Cost optimization:
- * - Deepgram Nova-2: ~$0.0043/min (cheapest production STT)
- * - ElevenLabs: Pre-recorded fillers (one-time cost) + streaming TTS
- * - Claude claude-sonnet-4-20250514: ~$3/$15 per 1M tokens (cheapest smart LLM)
- * - Sentence-level streaming to reduce perceived latency
+ * Audio modes (AUDIO_MODE env):
+ * - "deepgram" (default): Twilio → Deepgram STT → LLM text → TTS → Twilio
+ * - "gemini_live": Twilio → Gemini Live API → Twilio (native audio-to-audio)
+ *
+ * TTS providers (TTS_PROVIDER env):
+ * - "elevenlabs" (default): ElevenLabs streaming TTS
+ * - "inworld": Inworld TTS (A/B benchmarking)
  */
 @WebSocketGateway({ path: "/ai-sales-audio" })
 export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -38,6 +48,13 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
   constructor(
     private config: ConfigService,
     private brain: ConversationBrainService,
+    private gemini: GeminiStreamingClient,
+    private thinkingBudget: ThinkingBudgetManager,
+    private preCallBrain: PreCallBrainService,
+    private modelRouter: ModelRouter,
+    private postCallProcessor: PostCallProcessor,
+    private inworldTTS: InworldTTSClient,
+    private geminiLive: GeminiLiveClient,
     private emotion: EmotionEngineService,
     private callOrchestrator: CallOrchestratorService,
     private prisma: PrismaService,
@@ -122,11 +139,44 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
       currentPhase: "WARM_OPEN",
     };
 
+    // Generate pre-call brief via Claude Sonnet (strategic thinking BEFORE call)
+    let systemPrompt: string;
+    try {
+      const brief = await this.preCallBrain.generateBrief(
+        {
+          name: callSession.lead?.name || undefined,
+          company: callSession.lead?.company || undefined,
+          role: callSession.lead?.role || undefined,
+          temperature: callSession.lead?.temperature || "cold",
+          notes: (callSession.lead as any)?.notes || undefined,
+        },
+        {
+          name: callSession.agent?.name || undefined,
+          description: context.productDescription,
+          benefits: context.productBenefits,
+          pricing: context.productPricing,
+        },
+      );
+
+      systemPrompt = this.preCallBrain.buildGeminiSystemPrompt(
+        brief,
+        { description: context.productDescription, benefits: context.productBenefits, pricing: context.productPricing },
+        context.culturalContext,
+      );
+
+      // Prime Gemini with the strategic brief
+      this.gemini.primeWithBrief(JSON.stringify(brief));
+    } catch (err: any) {
+      this.logger.warn(`Pre-call brief failed, using default prompt: ${err.message}`);
+      systemPrompt = this.brain.buildSystemPrompt(context);
+    }
+
     const session: ActiveCallSession = {
       sessionId,
       client,
       streamSid: msg.start.streamSid,
       context,
+      systemPrompt,
       transcript: [],
       startTime: Date.now(),
       sttBuffer: "",
@@ -136,6 +186,25 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
     this.activeSessions.set(sessionId, session);
     this.logger.log(`Audio session started for call ${sessionId}`);
 
+    // Initialize Gemini Live mode if enabled
+    if (this.geminiLive.isEnabled()) {
+      const opened = await this.geminiLive.openSession(systemPrompt, context.language || "en");
+      if (opened) {
+        this.geminiLive.onResponseAudio((audio) => {
+          const base64Audio = audio.toString("base64");
+          const mediaMsg = JSON.stringify({
+            event: "media",
+            streamSid: session.streamSid,
+            media: { payload: base64Audio },
+          });
+          if (session.client.readyState === 1) {
+            session.client.send(mediaMsg);
+          }
+        });
+        this.logger.log("Gemini Live audio mode active");
+      }
+    }
+
     // Send initial greeting via TTS
     if (context.greeting) {
       await this.synthesizeAndSend(session, context.greeting);
@@ -144,7 +213,7 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
     }
   }
 
-  /** Process incoming audio chunk — forward to Deepgram STT */
+  /** Process incoming audio chunk — forward to Deepgram STT or Gemini Live */
   private async handleMediaChunk(client: any, msg: any) {
     const session = this.findSessionByClient(client);
     if (!session) return;
@@ -152,8 +221,13 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
     // Audio payload is base64-encoded mulaw/8000
     const audioPayload = msg.media.payload;
 
-    // In production: stream to Deepgram for real-time transcription
-    // For now, buffer and process when we detect silence (simplified approach)
+    // Gemini Live mode: feed audio directly (skip Deepgram STT + TTS)
+    if (this.geminiLive.isEnabled()) {
+      this.geminiLive.feedAudio(Buffer.from(audioPayload, "base64"));
+      return;
+    }
+
+    // Standard mode: buffer and process through STT → LLM → TTS pipeline
     session.sttBuffer += audioPayload;
 
     // Batch process every ~2 seconds of audio (16000 bytes at 8kHz mulaw)
@@ -163,9 +237,10 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   /**
-   * Process buffered audio through STT → Brain → TTS pipeline.
-   * In production, this would use Deepgram's streaming WebSocket API
-   * for lower latency. This simplified version uses REST as fallback.
+   * Process buffered audio through STT → ThinkingBudget → ModelRouter → LLM → TTS pipeline.
+   *
+   * Flow: Deepgram STT → emotion detect → thinking budget → model route →
+   *       Gemini Flash-Lite (99%) or Claude Sonnet (1% high-value) → TTS → Twilio
    */
   private async processAudioBuffer(session: ActiveCallSession) {
     const audioData = session.sttBuffer;
@@ -216,11 +291,44 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
         return;
       }
 
-      // Get AI response (streamed for lower latency)
-      let responseText = "";
-      const adaptation = this.emotion.getAdaptation(emotionState);
+      // Calculate thinking budget for this turn
+      const budget = this.thinkingBudget.calculate(
+        transcript,
+        session.context.emotionState,
+        session.context.currentPhase,
+        session.context.conversationHistory,
+      );
 
-      for await (const chunk of this.brain.streamResponse(session.context)) {
+      // Play filler audio while model thinks (budget > 0)
+      const fillerType = this.thinkingBudget.getFillerContext(budget);
+      if (fillerType !== "none") {
+        const fillerText = fillerType === "short"
+          ? "Hmm, let me think about that..."
+          : fillerType === "medium"
+            ? "That's a great question, give me just a moment..."
+            : "You know, that's really important, let me make sure I give you the right answer...";
+        await this.synthesizeAndSend(session, fillerText);
+      }
+
+      // Route: Claude Sonnet for high-value closes, Gemini Flash-Lite for everything else
+      const buyingIntentScore = emotionState.primary === "buying" ? 0.85 : emotionState.primary === "excited" ? 0.7 : 0.3;
+      const useClaude = this.modelRouter.shouldEscalateToClaude(
+        session.sessionId,
+        session.context.emotionState,
+        buyingIntentScore,
+        session.context.currentPhase,
+      );
+
+      let responseText = "";
+      const responseStream = useClaude
+        ? this.modelRouter.escalateToClaudeSonnet(
+            transcript,
+            session.systemPrompt,
+            session.context.conversationHistory.slice(0, -1) as { role: "user" | "assistant"; content: string }[],
+          )
+        : this.gemini.streamResponse(transcript, session.systemPrompt, budget);
+
+      for await (const chunk of responseStream) {
         responseText += chunk;
         // Send sentence-by-sentence for lower perceived latency
         if (chunk.includes(".") || chunk.includes("?") || chunk.includes("!")) {
@@ -242,8 +350,28 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
     }
   }
 
-  /** Synthesize text to speech and send audio back to Twilio */
+  /** Synthesize text to speech and send audio back to Twilio (ElevenLabs or Inworld) */
   private async synthesizeAndSend(session: ActiveCallSession, text: string) {
+    const ttsProvider = getTTSProvider(this.config);
+
+    // Inworld TTS path
+    if (ttsProvider === "inworld") {
+      const voiceId = this.config.get("INWORLD_VOICE_ID") || "default";
+      for await (const chunk of this.inworldTTS.streamFromText(text, voiceId)) {
+        const base64Audio = chunk.toString("base64");
+        const mediaMsg = JSON.stringify({
+          event: "media",
+          streamSid: session.streamSid,
+          media: { payload: base64Audio },
+        });
+        if (session.client.readyState === 1) {
+          session.client.send(mediaMsg);
+        }
+      }
+      return;
+    }
+
+    // ElevenLabs TTS path (default)
     const elevenLabsKey = this.config.get("ELEVENLABS_API_KEY");
     const voiceId = this.config.get("ELEVENLABS_VOICE_ID") || "21m00Tcm4TlvDq8ikWAM"; // Rachel default
 
@@ -303,29 +431,40 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
     }
   }
 
-  /** Finalize call: save transcript, emotion arc, generate summary */
+  /** Finalize call: save transcript, emotion arc, generate summary via Flash-Lite */
   private async finalizeCall(session: ActiveCallSession) {
     try {
       const emotionArc = this.emotion.getEmotionArc(session.sessionId);
 
-      // Generate call summary via Claude
+      // Generate call report via Gemini Flash-Lite (post-call processor)
       const fullTranscript = session.transcript
         .map((t) => `${t.role === "user" ? "Customer" : "Agent"}: ${t.content}`)
         .join("\n");
 
-      let summary: any = null;
-      try {
-        summary = await this.brain.generateCallSummary(fullTranscript);
-      } catch {
-        // Summary generation is optional
-      }
-
       const durationSec = Math.round((Date.now() - session.startTime) / 1000);
+
+      let summary: string | null = null;
+      try {
+        const report = await this.postCallProcessor.generateCallReport({
+          transcript: fullTranscript,
+          durationSeconds: durationSec,
+          leadName: session.context.leadName,
+          agentName: session.context.agentName,
+        });
+        summary = report.summary;
+      } catch {
+        // Summary generation is optional — try simple fallback
+        try {
+          summary = await this.postCallProcessor.generateSimpleSummary(fullTranscript);
+        } catch {
+          // Fully optional
+        }
+      }
 
       // Save to database
       await this.callOrchestrator.endCall(session.sessionId, {
         transcript: fullTranscript,
-        summary: typeof summary === "string" ? summary : JSON.stringify(summary),
+        summary: summary || "No summary available.",
         emotionArc: emotionArc.map((e) => ({
           emotion: e.primary,
           intensity: e.intensity,
@@ -338,8 +477,13 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
         followUpNeeded: this.emotion.isReadyToClose(session.sessionId) || emotionArc.some((e) => e.primary === "buying"),
       });
 
-      // Cleanup
+      // Cleanup all session state
       this.emotion.clearCallHistory(session.sessionId);
+      this.modelRouter.clearSession(session.sessionId);
+      this.gemini.resetHistory();
+      if (this.geminiLive.isEnabled()) {
+        await this.geminiLive.closeSession();
+      }
     } catch (err: any) {
       this.logger.error(`Call finalization error: ${err.message}`);
     }
@@ -421,6 +565,7 @@ interface ActiveCallSession {
   client: any;
   streamSid: string;
   context: ConversationContext;
+  systemPrompt: string;
   transcript: TranscriptEntry[];
   startTime: number;
   sttBuffer: string;

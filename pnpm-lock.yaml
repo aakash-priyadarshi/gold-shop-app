@@ -261,6 +261,9 @@ importers:
       "@deepgram/sdk":
         specifier: ^5.0.0
         version: 5.0.0
+      "@google/generative-ai":
+        specifier: ^0.24.1
+        version: 0.24.1
       "@nestjs/common":
         specifier: ^10.3.0
         version: 10.4.20(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -1653,6 +1656,13 @@ packages:
       {
         integrity: sha512-XOMO2Hupl0wdd172Y06h6kLpBz6Dv+J4okPLl4LPtzbr8f66WbIoy4ev98EBuZ6ZK4h5ydTN6XneT4QVpD7cdA==,
       }
+
+  "@google/generative-ai@0.24.1":
+    resolution:
+      {
+        integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==,
+      }
+    engines: { node: ">=18.0.0" }
 
   "@heroicons/react@2.2.0":
     resolution:
@@ -12225,6 +12235,8 @@ snapshots:
   "@formatjs/intl-localematcher@0.6.2":
     dependencies:
       tslib: 2.8.1
+
+  "@google/generative-ai@0.24.1": {}
 
   "@heroicons/react@2.2.0(react@18.3.1)":
     dependencies:
