@@ -202,7 +202,8 @@ export default function PlaygroundPage() {
       // Play TTS audio if returned
       if (data.audioBase64) {
         setAudioPlaying(true);
-        const audio = new Audio(`data:audio/mp3;base64,${data.audioBase64}`);
+        const mime = data.ttsProvider === "sarvam" ? "audio/wav" : "audio/mp3";
+        const audio = new Audio(`data:${mime};base64,${data.audioBase64}`);
         audio.onended = () => setAudioPlaying(false);
         audio.onerror = () => setAudioPlaying(false);
         audio.play().catch(() => setAudioPlaying(false));
@@ -265,7 +266,8 @@ export default function PlaygroundPage() {
 
             if (data.audioBase64) {
               setAudioPlaying(true);
-              const audio = new Audio(`data:audio/mp3;base64,${data.audioBase64}`);
+              const mime = data.ttsProvider === "sarvam" ? "audio/wav" : "audio/mp3";
+              const audio = new Audio(`data:${mime};base64,${data.audioBase64}`);
               audio.onended = () => setAudioPlaying(false);
               audio.onerror = () => setAudioPlaying(false);
               audio.play().catch(() => setAudioPlaying(false));
