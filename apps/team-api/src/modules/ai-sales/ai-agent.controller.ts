@@ -25,6 +25,11 @@ import { GeminiStreamingClient } from "./services/gemini-streaming.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 import { CentralBrainService } from "./services/central-brain.service";
+import { ABTestingService } from "./services/ab-testing.service";
+import { FollowUpSequencerService } from "./services/follow-up-sequencer.service";
+import { ObjectionPlaybookService } from "./services/objection-playbook.service";
+import { WebhookService } from "./services/webhook.service";
+import { CallRecordingService } from "./services/call-recording.service";
 
 @Controller("ai-sales")
 export class AIAgentController {
@@ -43,6 +48,11 @@ export class AIAgentController {
     private prisma: PrismaService,
     private config: ConfigService,
     private centralBrain: CentralBrainService,
+    private abTesting: ABTestingService,
+    private followUps: FollowUpSequencerService,
+    private playbook: ObjectionPlaybookService,
+    private webhooks: WebhookService,
+    private recordings: CallRecordingService,
   ) {}
 
   /* ─── AGENTS ─── */
@@ -675,5 +685,350 @@ export class AIAgentController {
   @Get("intelligence/call-remarks/:leadId")
   getCallRemarks(@Param("leadId") leadId: string) {
     return this.centralBrain.getCallRemarks(leadId);
+  }
+
+  /* ─── A/B TESTING ENGINE ─── */
+
+  @Post("experiments")
+  @Roles("ADMIN")
+  createExperiment(@Body() body: any) {
+    return this.abTesting.createExperiment(body);
+  }
+
+  @Get("experiments")
+  listExperiments(@Query("status") status?: string) {
+    return this.abTesting.listExperiments(status);
+  }
+
+  @Get("experiments/:id")
+  getExperiment(@Param("id") id: string) {
+    return this.abTesting.getExperiment(id);
+  }
+
+  @Put("experiments/:id")
+  @Roles("ADMIN")
+  updateExperiment(@Param("id") id: string, @Body() body: any) {
+    return this.abTesting.updateExperiment(id, body);
+  }
+
+  @Delete("experiments/:id")
+  @Roles("ADMIN")
+  deleteExperiment(@Param("id") id: string) {
+    return this.abTesting.deleteExperiment(id);
+  }
+
+  @Post("experiments/:id/start")
+  @Roles("ADMIN")
+  startExperiment(@Param("id") id: string) {
+    return this.abTesting.startExperiment(id);
+  }
+
+  @Post("experiments/:id/pause")
+  @Roles("ADMIN")
+  pauseExperiment(@Param("id") id: string) {
+    return this.abTesting.pauseExperiment(id);
+  }
+
+  @Post("experiments/record-outcome")
+  recordExperimentOutcome(@Body() body: any) {
+    return this.abTesting.recordOutcome(body);
+  }
+
+  @Get("experiments/variant/:leadId")
+  getVariantForLead(
+    @Param("leadId") leadId: string,
+    @Query("type") type: string,
+  ) {
+    return this.abTesting.getActiveVariantForLead(leadId, type);
+  }
+
+  /* ─── SMART FOLLOW-UP SEQUENCER ─── */
+
+  @Post("follow-ups/schedule")
+  scheduleFollowUp(@Body() body: any) {
+    return this.followUps.scheduleFollowUp(body);
+  }
+
+  @Get("follow-ups")
+  listFollowUps(@Query("status") status?: string, @Query("limit") limit?: string) {
+    return this.followUps.listFollowUps(status, limit ? parseInt(limit) : undefined);
+  }
+
+  @Get("follow-ups/stats")
+  getFollowUpStats() {
+    return this.followUps.getStats();
+  }
+
+  @Get("follow-ups/pending")
+  getPendingFollowUps(@Query("limit") limit?: string) {
+    return this.followUps.getPendingFollowUps(limit ? parseInt(limit) : undefined);
+  }
+
+  @Get("follow-ups/lead/:leadId")
+  getLeadFollowUps(@Param("leadId") leadId: string) {
+    return this.followUps.getLeadFollowUps(leadId);
+  }
+
+  @Patch("follow-ups/:id/complete")
+  completeFollowUp(
+    @Param("id") id: string,
+    @Body() body: { resultSessionId?: string; outcome?: string },
+  ) {
+    return this.followUps.completeFollowUp(id, body.resultSessionId, body.outcome);
+  }
+
+  @Patch("follow-ups/:id/cancel")
+  cancelFollowUp(@Param("id") id: string) {
+    return this.followUps.cancelFollowUp(id);
+  }
+
+  @Post("follow-ups/re-engage")
+  scheduleReEngagement(@Body() body: { leadId: string; dormantDays: number; segmentKey?: string }) {
+    return this.followUps.scheduleReEngagement(body.leadId, body.dormantDays, body.segmentKey);
+  }
+
+  /* ─── OBJECTION PLAYBOOK ─── */
+
+  @Post("playbook")
+  @Roles("ADMIN")
+  createPlaybookEntry(@Body() body: any) {
+    return this.playbook.create(body);
+  }
+
+  @Get("playbook")
+  listPlaybook(
+    @Query("category") category?: string,
+    @Query("segment") segment?: string,
+    @Query("approved") approved?: string,
+  ) {
+    return this.playbook.list({
+      category,
+      segmentKey: segment,
+      isApproved: approved === "true" ? true : approved === "false" ? false : undefined,
+    });
+  }
+
+  @Get("playbook/stats")
+  getPlaybookStats() {
+    return this.playbook.getStats();
+  }
+
+  @Get("playbook/find")
+  findBestResponse(
+    @Query("objection") objection: string,
+    @Query("segment") segment?: string,
+  ) {
+    return this.playbook.findBestResponse(objection, segment);
+  }
+
+  @Get("playbook/:id")
+  getPlaybookEntry(@Param("id") id: string) {
+    return this.playbook.get(id);
+  }
+
+  @Put("playbook/:id")
+  @Roles("ADMIN")
+  updatePlaybookEntry(@Param("id") id: string, @Body() body: any) {
+    return this.playbook.update(id, body);
+  }
+
+  @Delete("playbook/:id")
+  @Roles("ADMIN")
+  deletePlaybookEntry(@Param("id") id: string) {
+    return this.playbook.remove(id);
+  }
+
+  @Post("playbook/:id/approve")
+  @Roles("ADMIN")
+  approvePlaybookEntry(@Param("id") id: string) {
+    return this.playbook.approve(id);
+  }
+
+  @Post("playbook/:id/reject")
+  @Roles("ADMIN")
+  rejectPlaybookEntry(@Param("id") id: string) {
+    return this.playbook.reject(id);
+  }
+
+  @Post("playbook/:id/record-outcome")
+  recordPlaybookOutcome(
+    @Param("id") id: string,
+    @Body() body: { won: boolean },
+  ) {
+    return this.playbook.recordOutcome(id, body.won);
+  }
+
+  @Post("playbook/seed")
+  @Roles("ADMIN")
+  seedPlaybook() {
+    return this.playbook.seedDefaults();
+  }
+
+  /* ─── WEBHOOK / CRM PUSH ─── */
+
+  @Post("webhooks")
+  @Roles("ADMIN")
+  createWebhook(@Body() body: any) {
+    return this.webhooks.createEndpoint(body);
+  }
+
+  @Get("webhooks")
+  listWebhooks() {
+    return this.webhooks.listEndpoints();
+  }
+
+  @Get("webhooks/stats")
+  getWebhookStats() {
+    return this.webhooks.getStats();
+  }
+
+  @Get("webhooks/:id")
+  getWebhook(@Param("id") id: string) {
+    return this.webhooks.getEndpoint(id);
+  }
+
+  @Put("webhooks/:id")
+  @Roles("ADMIN")
+  updateWebhook(@Param("id") id: string, @Body() body: any) {
+    return this.webhooks.updateEndpoint(id, body);
+  }
+
+  @Delete("webhooks/:id")
+  @Roles("ADMIN")
+  deleteWebhook(@Param("id") id: string) {
+    return this.webhooks.deleteEndpoint(id);
+  }
+
+  @Post("webhooks/:id/toggle")
+  @Roles("ADMIN")
+  toggleWebhook(@Param("id") id: string, @Body() body: { isActive: boolean }) {
+    return this.webhooks.toggleEndpoint(id, body.isActive);
+  }
+
+  @Post("webhooks/:id/test")
+  @Roles("ADMIN")
+  testWebhook(@Param("id") id: string) {
+    return this.webhooks.testEndpoint(id);
+  }
+
+  @Get("webhooks/:id/deliveries")
+  getWebhookDeliveries(@Param("id") id: string, @Query("limit") limit?: string) {
+    return this.webhooks.listDeliveries(id, limit ? parseInt(limit) : undefined);
+  }
+
+  @Post("webhooks/deliveries/:id/retry")
+  retryDelivery(@Param("id") id: string) {
+    return this.webhooks.retryDelivery(id);
+  }
+
+  /* ─── CALL RECORDINGS + ANNOTATIONS ─── */
+
+  @Get("recordings")
+  listRecordings(
+    @Query("limit") limit?: string,
+    @Query("offset") offset?: string,
+  ) {
+    return this.recordings.listRecordings(
+      limit ? parseInt(limit) : undefined,
+      offset ? parseInt(offset) : undefined,
+    );
+  }
+
+  @Get("recordings/stats")
+  getRecordingStats() {
+    return this.recordings.getStats();
+  }
+
+  @Get("recordings/annotations/stats")
+  getAnnotationStats() {
+    return this.recordings.getAnnotationStats();
+  }
+
+  @Get("recordings/:callSessionId")
+  getRecording(@Param("callSessionId") callSessionId: string) {
+    return this.recordings.getRecording(callSessionId);
+  }
+
+  @Delete("recordings/:id")
+  @Roles("ADMIN")
+  deleteRecording(@Param("id") id: string) {
+    return this.recordings.deleteRecording(id);
+  }
+
+  @Post("recordings/save")
+  saveRecording(@Body() body: any) {
+    return this.recordings.saveRecording(body);
+  }
+
+  @Post("recordings/:id/annotations")
+  addAnnotation(@Param("id") id: string, @Body() body: any) {
+    return this.recordings.addAnnotation({ ...body, recordingId: id });
+  }
+
+  @Get("recordings/:id/annotations")
+  listAnnotations(@Param("id") id: string) {
+    return this.recordings.listAnnotations(id);
+  }
+
+  @Put("recordings/annotations/:id")
+  updateAnnotation(@Param("id") id: string, @Body() body: any) {
+    return this.recordings.updateAnnotation(id, body);
+  }
+
+  @Delete("recordings/annotations/:id")
+  deleteAnnotation(@Param("id") id: string) {
+    return this.recordings.deleteAnnotation(id);
+  }
+
+  @Post("recordings/annotations/:id/verify")
+  verifyAnnotation(@Param("id") id: string) {
+    return this.recordings.verifyAnnotation(id);
+  }
+
+  @Get("recordings/:callSessionId/suggestions")
+  suggestAnnotations(@Param("callSessionId") callSessionId: string) {
+    return this.recordings.suggestAnnotations(callSessionId);
+  }
+
+  /* ─── LIVE SENTIMENT DASHBOARD ─── */
+
+  @Get("live/sentiment")
+  async getLiveSentiment() {
+    // Get active calls with recent emotion logs
+    const activeCalls = await this.prisma.callSession.findMany({
+      where: { status: "in_progress" },
+      include: {
+        lead: { select: { name: true, phone: true, segment: true } },
+        agent: { select: { name: true } },
+        emotionLogs: {
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        },
+      },
+    });
+
+    return activeCalls.map((call: any) => ({
+      sessionId: call.id,
+      leadName: call.lead?.name,
+      agentName: call.agent?.name,
+      duration: call.startedAt
+        ? Math.round((Date.now() - new Date(call.startedAt).getTime()) / 1000)
+        : 0,
+      emotions: call.emotionLogs.map((e: any) => ({
+        emotion: e.emotion,
+        confidence: e.confidence,
+        timestamp: e.createdAt,
+      })),
+      currentSentiment: call.emotionLogs[0]?.emotion || "neutral",
+    }));
+  }
+
+  @Get("live/sentiment/history/:callSessionId")
+  async getCallSentimentHistory(@Param("callSessionId") id: string) {
+    const emotions = await this.prisma.emotionLog.findMany({
+      where: { callSessionId: id },
+      orderBy: { createdAt: "asc" },
+    });
+    return emotions;
   }
 }

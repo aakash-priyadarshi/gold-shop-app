@@ -27,6 +27,11 @@ import { SarvamSTTClient } from "./services/sarvam-stt.service";
 import { STTRouterService } from "./services/stt-router.service";
 import { GoogleSTTClient } from "./services/google-stt.service";
 import { CentralBrainService } from "./services/central-brain.service";
+import { ABTestingService } from "./services/ab-testing.service";
+import { FollowUpSequencerService } from "./services/follow-up-sequencer.service";
+import { ObjectionPlaybookService } from "./services/objection-playbook.service";
+import { WebhookService } from "./services/webhook.service";
+import { CallRecordingService } from "./services/call-recording.service";
 
 @Module({
   imports: [PrismaModule, ConfigModule],
@@ -56,8 +61,13 @@ import { CentralBrainService } from "./services/central-brain.service";
     STTRouterService,
     GoogleSTTClient,
     CentralBrainService,
+    ABTestingService,
+    FollowUpSequencerService,
+    ObjectionPlaybookService,
+    WebhookService,
+    CallRecordingService,
   ],
   controllers: [AIAgentController],
-  exports: [AIAgentService, CallOrchestratorService, CentralBrainService],
+  exports: [AIAgentService, CallOrchestratorService, CentralBrainService, WebhookService],
 })
 export class AIAgentModule {}

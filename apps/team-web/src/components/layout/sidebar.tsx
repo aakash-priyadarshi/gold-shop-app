@@ -4,13 +4,17 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import {
+  Activity,
   Award,
   BarChart3,
+  BookOpen,
   Bot,
   Brain,
   Building2,
   ChevronLeft,
+  Disc,
   FileText,
+  FlaskConical,
   HeadphonesIcon,
   LayoutDashboard,
   Lightbulb,
@@ -25,9 +29,11 @@ import {
   Share2,
   Shield,
   Star,
+  Timer,
   UserCircle,
   Users,
   X,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -53,6 +59,12 @@ const navItems = [
       { href: "/ai-sales/analytics", label: "Analytics", icon: BarChart3 },
       { href: "/ai-sales/memory", label: "Agent Memory", icon: Brain },
       { href: "/ai-sales/intelligence", label: "Intelligence", icon: Lightbulb },
+      { href: "/ai-sales/experiments", label: "A/B Testing", icon: FlaskConical },
+      { href: "/ai-sales/follow-ups", label: "Follow-Ups", icon: Timer },
+      { href: "/ai-sales/playbook", label: "Objection Playbook", icon: BookOpen },
+      { href: "/ai-sales/recordings", label: "Recordings", icon: Disc },
+      { href: "/ai-sales/live-sentiment", label: "Live Sentiment", icon: Activity },
+      { href: "/ai-sales/webhooks", label: "Webhooks", icon: Zap },
       { href: "/ai-sales/playground", label: "Playground", icon: Play },
     ],
   },

@@ -273,6 +273,98 @@ export const aiSalesApi = {
     api.get("/ai-sales/intelligence/re-engagement"),
   getCallRemarks: (leadId: string) =>
     api.get(`/ai-sales/intelligence/call-remarks/${leadId}`),
+
+  // A/B Testing Engine
+  listExperiments: (status?: string) =>
+    api.get("/ai-sales/experiments", { params: status ? { status } : {} }),
+  getExperiment: (id: string) => api.get(`/ai-sales/experiments/${id}`),
+  createExperiment: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/experiments", data),
+  updateExperiment: (id: string, data: Record<string, unknown>) =>
+    api.put(`/ai-sales/experiments/${id}`, data),
+  deleteExperiment: (id: string) => api.delete(`/ai-sales/experiments/${id}`),
+  startExperiment: (id: string) => api.post(`/ai-sales/experiments/${id}/start`),
+  pauseExperiment: (id: string) => api.post(`/ai-sales/experiments/${id}/pause`),
+  recordExperimentOutcome: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/experiments/record-outcome", data),
+  getVariantForLead: (leadId: string, type: string) =>
+    api.get(`/ai-sales/experiments/variant/${leadId}`, { params: { type } }),
+
+  // Smart Follow-Up Sequencer
+  listFollowUps: (status?: string, limit?: number) =>
+    api.get("/ai-sales/follow-ups", { params: { status, limit } }),
+  getFollowUpStats: () => api.get("/ai-sales/follow-ups/stats"),
+  getPendingFollowUps: (limit?: number) =>
+    api.get("/ai-sales/follow-ups/pending", { params: limit ? { limit } : {} }),
+  getLeadFollowUps: (leadId: string) =>
+    api.get(`/ai-sales/follow-ups/lead/${leadId}`),
+  scheduleFollowUp: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/follow-ups/schedule", data),
+  completeFollowUp: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/ai-sales/follow-ups/${id}/complete`, data),
+  cancelFollowUp: (id: string) => api.patch(`/ai-sales/follow-ups/${id}/cancel`),
+  scheduleReEngagement: (data: { leadId: string; dormantDays: number; segmentKey?: string }) =>
+    api.post("/ai-sales/follow-ups/re-engage", data),
+
+  // Objection Playbook
+  listPlaybook: (params?: { category?: string; segment?: string; approved?: string }) =>
+    api.get("/ai-sales/playbook", { params }),
+  getPlaybookEntry: (id: string) => api.get(`/ai-sales/playbook/${id}`),
+  createPlaybookEntry: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/playbook", data),
+  updatePlaybookEntry: (id: string, data: Record<string, unknown>) =>
+    api.put(`/ai-sales/playbook/${id}`, data),
+  deletePlaybookEntry: (id: string) => api.delete(`/ai-sales/playbook/${id}`),
+  approvePlaybookEntry: (id: string) => api.post(`/ai-sales/playbook/${id}/approve`),
+  rejectPlaybookEntry: (id: string) => api.post(`/ai-sales/playbook/${id}/reject`),
+  recordPlaybookOutcome: (id: string, won: boolean) =>
+    api.post(`/ai-sales/playbook/${id}/record-outcome`, { won }),
+  findBestResponse: (objection: string, segment?: string) =>
+    api.get("/ai-sales/playbook/find", { params: { objection, segment } }),
+  getPlaybookStats: () => api.get("/ai-sales/playbook/stats"),
+  seedPlaybook: () => api.post("/ai-sales/playbook/seed"),
+
+  // Webhook / CRM Push
+  listWebhooks: () => api.get("/ai-sales/webhooks"),
+  getWebhook: (id: string) => api.get(`/ai-sales/webhooks/${id}`),
+  createWebhook: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/webhooks", data),
+  updateWebhook: (id: string, data: Record<string, unknown>) =>
+    api.put(`/ai-sales/webhooks/${id}`, data),
+  deleteWebhook: (id: string) => api.delete(`/ai-sales/webhooks/${id}`),
+  toggleWebhook: (id: string, isActive: boolean) =>
+    api.post(`/ai-sales/webhooks/${id}/toggle`, { isActive }),
+  testWebhook: (id: string) => api.post(`/ai-sales/webhooks/${id}/test`),
+  getWebhookDeliveries: (id: string, limit?: number) =>
+    api.get(`/ai-sales/webhooks/${id}/deliveries`, { params: limit ? { limit } : {} }),
+  retryDelivery: (id: string) => api.post(`/ai-sales/webhooks/deliveries/${id}/retry`),
+  getWebhookStats: () => api.get("/ai-sales/webhooks/stats"),
+
+  // Call Recordings + Annotations
+  listRecordings: (limit?: number, offset?: number) =>
+    api.get("/ai-sales/recordings", { params: { limit, offset } }),
+  getRecording: (callSessionId: string) =>
+    api.get(`/ai-sales/recordings/${callSessionId}`),
+  deleteRecording: (id: string) => api.delete(`/ai-sales/recordings/${id}`),
+  saveRecording: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/recordings/save", data),
+  addAnnotation: (recordingId: string, data: Record<string, unknown>) =>
+    api.post(`/ai-sales/recordings/${recordingId}/annotations`, data),
+  listAnnotations: (recordingId: string) =>
+    api.get(`/ai-sales/recordings/${recordingId}/annotations`),
+  updateAnnotation: (id: string, data: Record<string, unknown>) =>
+    api.put(`/ai-sales/recordings/annotations/${id}`, data),
+  deleteAnnotation: (id: string) => api.delete(`/ai-sales/recordings/annotations/${id}`),
+  verifyAnnotation: (id: string) => api.post(`/ai-sales/recordings/annotations/${id}/verify`),
+  suggestAnnotations: (callSessionId: string) =>
+    api.get(`/ai-sales/recordings/${callSessionId}/suggestions`),
+  getRecordingStats: () => api.get("/ai-sales/recordings/stats"),
+  getAnnotationStats: () => api.get("/ai-sales/recordings/annotations/stats"),
+
+  // Live Sentiment Dashboard
+  getLiveSentiment: () => api.get("/ai-sales/live/sentiment"),
+  getCallSentimentHistory: (callSessionId: string) =>
+    api.get(`/ai-sales/live/sentiment/history/${callSessionId}`),
 };
 
 // ─── Certificates ───
