@@ -611,21 +611,23 @@ export class AIAgentController {
     }
     const llmLatencyMs = Date.now() - llmStart;
 
-    // 3. TTS — synthesize reply
+    // 3. TTS — synthesize reply (ElevenLabs primary, Sarvam fallback)
     let audioBase64: string | undefined;
     let ttsLatencyMs: number | undefined;
     let ttsProvider: string | undefined;
-    const apiKey = this.config.get<string>("ELEVENLABS_API_KEY");
+
+    // Try ElevenLabs first
+    const elevenLabsKey = this.config.get<string>("ELEVENLABS_API_KEY");
     const voiceId = agent.voiceId
       || this.agentVoices.getDefaultVoice()?.voiceId
       || "pFZP5JQG7iQjIQuC4Bku"; // Lily — ElevenLabs default multilingual female voice
-    if (apiKey && voiceId && reply) {
+    if (elevenLabsKey && voiceId && reply) {
       try {
-        this.logger.log(`TTS: voiceId=${voiceId}, reply length=${reply.length}`);
+        this.logger.log(`TTS ElevenLabs: voiceId=${voiceId}, reply length=${reply.length}`);
         const ttsStart = Date.now();
         const ttsResp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
           method: "POST",
-          headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
+          headers: { "xi-api-key": elevenLabsKey, "Content-Type": "application/json" },
           body: JSON.stringify({
             text: reply,
             model_id: "eleven_multilingual_v2",
@@ -642,13 +644,52 @@ export class AIAgentController {
           ttsProvider = "elevenlabs";
         } else {
           const errBody = await ttsResp.text().catch(() => "");
-          this.logger.warn(`TTS HTTP ${ttsResp.status}: ${errBody.substring(0, 200)}`);
+          this.logger.warn(`ElevenLabs TTS HTTP ${ttsResp.status}: ${errBody.substring(0, 200)}`);
         }
       } catch (err: any) {
-        this.logger.warn(`TTS failed: ${err.message}`);
+        this.logger.warn(`ElevenLabs TTS failed: ${err.message}`);
       }
-    } else {
-      this.logger.warn(`TTS skipped: apiKey=${!!apiKey}, voiceId=${voiceId || "none"}, reply=${!!reply}`);
+    }
+
+    // Fallback: Sarvam TTS (supports Hindi and Indian languages natively)
+    const sarvamKey = this.config.get<string>("SARVAM_API_KEY");
+    if (!audioBase64 && sarvamKey && reply) {
+      try {
+        this.logger.log(`TTS Sarvam fallback: reply length=${reply.length}`);
+        const ttsStart = Date.now();
+        // Detect language — use agent's language or default to Hindi
+        const lang = agent.languages?.[0] || sttResult.detectedLanguage || "hi-IN";
+        const sarvamTtsResp = await fetch("https://api.sarvam.ai/text-to-speech", {
+          method: "POST",
+          headers: {
+            "api-subscription-key": sarvamKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputs: [reply],
+            target_language_code: lang.includes("-") ? lang : `${lang}-IN`,
+            speaker: "meera", // Sarvam's default female Hindi voice
+            model: "bulbul:v2",
+          }),
+        });
+        if (sarvamTtsResp.ok) {
+          const sarvamData = await sarvamTtsResp.json() as { audios?: string[] };
+          if (sarvamData.audios?.[0]) {
+            audioBase64 = sarvamData.audios[0]; // Sarvam returns base64 WAV directly
+            ttsLatencyMs = Date.now() - ttsStart;
+            ttsProvider = "sarvam";
+          }
+        } else {
+          const errBody = await sarvamTtsResp.text().catch(() => "");
+          this.logger.warn(`Sarvam TTS HTTP ${sarvamTtsResp.status}: ${errBody.substring(0, 200)}`);
+        }
+      } catch (err: any) {
+        this.logger.warn(`Sarvam TTS failed: ${err.message}`);
+      }
+    }
+
+    if (!audioBase64) {
+      this.logger.warn(`TTS: no provider succeeded for reply (${reply.length} chars)`);
     }
 
     return {
