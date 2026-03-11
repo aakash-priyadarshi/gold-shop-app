@@ -12,15 +12,16 @@ export class AIAgentService {
   async createAgent(data: {
     name: string;
     voiceId: string;
-    language?: string;
-    personality?: string;
+    languages?: string[];
+    personalityDescription?: string;
     greeting?: string;
+    description?: string;
   }) {
-    return this.prisma.aIAgent.create({ data });
+    return this.prisma.agentVoice.create({ data: data as any });
   }
 
   async listAgents() {
-    return this.prisma.aIAgent.findMany({
+    return this.prisma.agentVoice.findMany({
       where: { isActive: true },
       include: { _count: { select: { callSessions: true } } },
       orderBy: { createdAt: "desc" },
@@ -28,7 +29,7 @@ export class AIAgentService {
   }
 
   async getAgent(id: string) {
-    const agent = await this.prisma.aIAgent.findUnique({
+    const agent = await this.prisma.agentVoice.findUnique({
       where: { id },
       include: {
         scripts: { orderBy: { createdAt: "desc" } },
@@ -40,11 +41,11 @@ export class AIAgentService {
   }
 
   async updateAgent(id: string, data: Record<string, any>) {
-    return this.prisma.aIAgent.update({ where: { id }, data });
+    return this.prisma.agentVoice.update({ where: { id }, data });
   }
 
   async toggleAgent(id: string, isActive: boolean) {
-    return this.prisma.aIAgent.update({ where: { id }, data: { isActive } });
+    return this.prisma.agentVoice.update({ where: { id }, data: { isActive } });
   }
 
   /* ─── SCRIPTS ─── */
@@ -311,7 +312,7 @@ export class AIAgentService {
     const [callStats, leadPipeline, topAgents, recentCalls, costBreakdown] = await Promise.all([
       this.getCallStats(),
       this.getLeadPipeline(),
-      this.prisma.aIAgent.findMany({
+      this.prisma.agentVoice.findMany({
         where: { isActive: true },
         include: {
           _count: { select: { callSessions: true } },

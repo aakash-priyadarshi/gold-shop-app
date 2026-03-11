@@ -555,8 +555,8 @@ export class AIAgentController {
     const start = Date.now();
     const systemPrompt = this.brain.buildSystemPrompt({
       agentName: agent.name,
-      agentPersonality: agent.personality || undefined,
-      language: agent.language || "en",
+      agentPersonality: agent.personalityDescription || undefined,
+      language: agent.languages?.[0]?.split("-")[0] || "en",
       greeting: agent.greeting || undefined,
       conversationHistory,
     });

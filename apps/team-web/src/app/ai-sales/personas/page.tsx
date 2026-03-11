@@ -66,6 +66,8 @@ const EMPTY_FORM = {
   accent: "",
   isDefault: false,
   isActive: true,
+  description: "",
+  greeting: "",
   personalityDescription: "",
   speciality: "",
   backstory: "",
@@ -101,6 +103,8 @@ function buildPayload(form: typeof EMPTY_FORM) {
     accent: form.accent || undefined,
     isDefault: form.isDefault,
     isActive: form.isActive,
+    description: form.description || undefined,
+    greeting: form.greeting || undefined,
     personalityDescription: form.personalityDescription || undefined,
     speciality: form.speciality || undefined,
     backstory: form.backstory || undefined,
@@ -127,6 +131,8 @@ function personaToForm(p: any): typeof EMPTY_FORM {
     accent: p.accent || "",
     isDefault: p.isDefault || false,
     isActive: p.isActive ?? true,
+    description: p.description || "",
+    greeting: p.greeting || "",
     personalityDescription: p.personalityDescription || "",
     speciality: p.speciality || "",
     backstory: p.backstory || "",
@@ -303,6 +309,15 @@ export default function PersonasPage() {
               <Label>Backstory</Label>
               <Textarea value={form.backstory} onChange={(e) => set("backstory", e.target.value)} placeholder="Rich character backstory the AI reads before calls..." rows={4} />
             </div>
+            <div>
+              <Label>Description (internal)</Label>
+              <Textarea value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Internal description of this agent's purpose..." rows={2} />
+            </div>
+            <div>
+              <Label>Greeting (opening line for calls)</Label>
+              <Textarea value={form.greeting} onChange={(e) => set("greeting", e.target.value)} placeholder="Hi {{lead_name}}, this is {{agent_name}} from {{company_name}}..." rows={3} />
+              <p className="text-xs text-gray-500 mt-1">Supports template variables: {"{{lead_name}}, {{agent_name}}, {{company_name}}, {{current_time}}"}</p>
+            </div>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={form.isDefault} onChange={(e) => set("isDefault", e.target.checked)} className="rounded" />
@@ -467,6 +482,22 @@ export default function PersonasPage() {
           </div>
         )}
 
+        {/* Description */}
+        {p.description && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-400 mb-1">Description</h4>
+            <p className="text-sm bg-gray-900 rounded-lg p-3">{p.description}</p>
+          </div>
+        )}
+
+        {/* Greeting */}
+        {p.greeting && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-400 mb-1">Greeting</h4>
+            <p className="text-sm bg-blue-900/20 rounded-lg p-3 italic">&ldquo;{p.greeting}&rdquo;</p>
+          </div>
+        )}
+
         {/* Backstory */}
         {p.backstory && (
           <div>
@@ -574,8 +605,8 @@ export default function PersonasPage() {
         <div className="flex items-center gap-3">
           <Link href="/ai-sales"><ArrowLeft className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" /></Link>
           <div>
-            <h1 className="text-2xl font-bold">Voice Personas</h1>
-            <p className="text-sm text-gray-400">Create and manage AI sales personas — each a complete character identity</p>
+            <h1 className="text-2xl font-bold">Sales Agents</h1>
+            <p className="text-sm text-gray-400">Create and manage AI sales agents — each a complete character identity with voice, personality, and scripts</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

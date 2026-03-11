@@ -176,7 +176,7 @@ export default function AnalyticsPage() {
                           <p className="font-medium text-sm truncate">{a.name}</p>
                           <p className="text-xs text-muted-foreground">{a._count?.callSessions ?? 0} calls</p>
                         </div>
-                        <Badge variant="outline">{a.language || "en"}</Badge>
+                        <Badge variant="outline">{a.languages?.[0]?.split("-")[0] || "en"}</Badge>
                       </div>
                     ))}
                   </div>

@@ -341,7 +341,7 @@ export default function PlaygroundPage() {
                     <SelectItem key={a.id} value={a.id}>
                       <span className="flex items-center gap-2">
                         <span className={`h-2 w-2 rounded-full ${a.isActive ? "bg-emerald-500" : "bg-gray-300"}`} />
-                        {a.name} — {(a.language || "en").toUpperCase()}
+                        {a.name} — {(a.languages?.[0]?.split("-")[0] || "en").toUpperCase()}
                       </span>
                     </SelectItem>
                   ))}
@@ -351,7 +351,7 @@ export default function PlaygroundPage() {
             {selectedAgent && (
               <div className="text-sm space-y-0.5">
                 <p className="font-medium">{selectedAgent.name}</p>
-                <p className="text-xs text-muted-foreground">{selectedAgent.personality || "Default Personality"}</p>
+                <p className="text-xs text-muted-foreground">{selectedAgent.personalityDescription || "Default Personality"}</p>
               </div>
             )}
           </div>
@@ -586,7 +586,7 @@ export default function PlaygroundPage() {
                 <div>
                   <Label>Selected Agent</Label>
                   <Input value={selectedAgent?.name || "No agent selected"} disabled />
-                  <p className="text-xs text-muted-foreground mt-1">{selectedAgent?.personality || ""}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{selectedAgent?.personalityDescription || ""}</p>
                 </div>
               </div>
 
