@@ -616,9 +616,12 @@ export class AIAgentController {
     let ttsLatencyMs: number | undefined;
     let ttsProvider: string | undefined;
     const apiKey = this.config.get<string>("ELEVENLABS_API_KEY");
-    const voiceId = agent.voiceId || this.agentVoices.getDefaultVoice()?.voiceId;
+    const voiceId = agent.voiceId
+      || this.agentVoices.getDefaultVoice()?.voiceId
+      || "pFZP5JQG7iQjIQuC4Bku"; // Lily — ElevenLabs default multilingual female voice
     if (apiKey && voiceId && reply) {
       try {
+        this.logger.log(`TTS: voiceId=${voiceId}, reply length=${reply.length}`);
         const ttsStart = Date.now();
         const ttsResp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
           method: "POST",
@@ -637,10 +640,15 @@ export class AIAgentController {
           audioBase64 = buffer.toString("base64");
           ttsLatencyMs = Date.now() - ttsStart;
           ttsProvider = "elevenlabs";
+        } else {
+          const errBody = await ttsResp.text().catch(() => "");
+          this.logger.warn(`TTS HTTP ${ttsResp.status}: ${errBody.substring(0, 200)}`);
         }
       } catch (err: any) {
         this.logger.warn(`TTS failed: ${err.message}`);
       }
+    } else {
+      this.logger.warn(`TTS skipped: apiKey=${!!apiKey}, voiceId=${voiceId || "none"}, reply=${!!reply}`);
     }
 
     return {
@@ -693,10 +701,11 @@ export class AIAgentController {
     let ttsLatencyMs: number | undefined;
     const apiKey = this.config.get<string>("ELEVENLABS_API_KEY");
     const voice = this.agentVoices.getDefaultVoice();
-    if (apiKey && voice && reply) {
+    const chatVoiceId = voice?.voiceId || "pFZP5JQG7iQjIQuC4Bku"; // Lily fallback
+    if (apiKey && chatVoiceId && reply) {
       try {
         const ttsStart = Date.now();
-        const ttsResp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice.voiceId}`, {
+        const ttsResp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${chatVoiceId}`, {
           method: "POST",
           headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
           body: JSON.stringify({
