@@ -324,35 +324,19 @@ model KPIRecord {
 
 // ── 4. AI SALES TEAM (ElevenLabs) ───────────────────────────
 
-model AIAgent {
-  id              String       @id @default(uuid())
-  name            String       // "Priya — Sales Assistant"
-  description     String?      @db.Text // internal description of purpose
-  voiceId         String       // ElevenLabs voice ID
-  personality     String?      @db.Text // system prompt / personality desc
-  language        String       @default("en")
-  greeting        String?      @db.Text // opening line for calls
-  isActive        Boolean      @default(true)
-
-  scripts         AIScript[]
-  callSessions    CallSession[]
-  campaigns       Campaign[]
-
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-}
+// AIAgent model removed — merged into AgentVoice (the unified sales agent model)
 
 model AIScript {
-  id          String    @id @default(uuid())
+  id          String      @id @default(uuid())
   agentId     String
-  agent       AIAgent   @relation(fields: [agentId], references: [id])
-  name        String    // "Cold Call — Gold Buyers"
-  category    String    // cold_call, follow_up, upsell, support
-  content     String    @db.Text // the script/prompt template
-  variables   String[]  // dynamic placeholders: {{customerName}}, {{lastOrder}}
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  agent       AgentVoice  @relation(fields: [agentId], references: [id])
+  name        String      // "Cold Call — Gold Buyers"
+  category    String      // cold_call, follow_up, upsell, support
+  content     String      @db.Text // the script/prompt template
+  variables   String[]    // dynamic placeholders: {{customerName}}, {{lastOrder}}
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   @@index([agentId])
 }
@@ -485,7 +469,7 @@ enum LeadStage {
 model CallSession {
   id              String        @id @default(uuid())
   agentId         String?
-  agent           AIAgent?      @relation(fields: [agentId], references: [id])
+  agent           AgentVoice?   @relation(fields: [agentId], references: [id])
   leadId          String?
   lead            Lead?         @relation(fields: [leadId], references: [id])
   employeeId      String?       // if human-assisted
@@ -579,7 +563,7 @@ model Campaign {
   status          CampaignStatus @default(DRAFT)
 
   agentId         String?        // default AI agent for this campaign
-  agent           AIAgent?       @relation(fields: [agentId], references: [id])
+  agent           AgentVoice?    @relation(fields: [agentId], references: [id])
   scriptId        String?        // default script
   productId       String?
 
@@ -1141,6 +1125,10 @@ model AgentVoice {
   isDefault Boolean  @default(false)
   isActive  Boolean  @default(true)
 
+  // ── Merged from AIAgent ──
+  description String? @db.Text  // internal description of purpose
+  greeting    String? @db.Text  // opening line for calls
+
   // ── Persona Identity ──
   personalityDescription String? @db.Text  // Full personality brief the AI reads to "become" this persona
   speciality             String? // "rapport", "technical", "closing", "enterprise", "retention"
@@ -1173,6 +1161,11 @@ model AgentVoice {
   totalConversions       Int      @default(0)
   avgSatisfactionScore   Float?
   avgCallDurationSecs    Float?
+
+  // ── Relations (merged from AIAgent) ──
+  scripts      AIScript[]
+  callSessions CallSession[]
+  campaigns    Campaign[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

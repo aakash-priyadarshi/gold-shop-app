@@ -138,8 +138,8 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
     // Build conversation context from DB data
     const context: ConversationContext = {
       agentName: callSession.agent?.name ?? "Sales Agent",
-      agentPersonality: callSession.agent?.personality || undefined,
-      language: callSession.agent?.language || "en",
+      agentPersonality: callSession.agent?.personalityDescription || undefined,
+      language: callSession.agent?.languages?.[0]?.split("-")[0] || "en",
       greeting: callSession.agent?.greeting || undefined,
       leadName: callSession.lead?.name || undefined,
       leadCompany: callSession.lead?.company || undefined,

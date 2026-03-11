@@ -89,7 +89,7 @@ export default function AiSalesPage() {
           <p className="text-muted-foreground">Manage AI agents, leads, campaigns, and real-time calls</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/ai-sales/agents">
+          <Link href="/ai-sales/personas">
             <Button variant="outline" size="sm"><Bot className="mr-2 h-4 w-4" />Agents</Button>
           </Link>
           <Link href="/ai-sales/campaigns">
@@ -105,7 +105,7 @@ export default function AiSalesPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">AI Agents</CardTitle>
+            <CardTitle className="text-sm font-medium">Sales Agents</CardTitle>
             <Bot className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
@@ -184,7 +184,7 @@ export default function AiSalesPage() {
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-                <Link href="/ai-sales/agents" className="block">
+                <Link href="/ai-sales/personas" className="block">
                   <Button variant="outline" className="w-full justify-between">
                     <span className="flex items-center"><Bot className="mr-2 h-4 w-4" />Configure Agents</span>
                     <ArrowRight className="h-4 w-4" />
@@ -216,7 +216,7 @@ export default function AiSalesPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">Active Agents</CardTitle>
-                  <Link href="/ai-sales/agents"><Button variant="ghost" size="sm">View all</Button></Link>
+                  <Link href="/ai-sales/personas"><Button variant="ghost" size="sm">View all</Button></Link>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
