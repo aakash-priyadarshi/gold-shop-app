@@ -17,6 +17,7 @@ import {
   LogOut,
   Megaphone,
   Menu,
+  Mic,
   Phone,
   Play,
   Settings,
@@ -43,6 +44,7 @@ const navItems = [
     icon: Bot,
     subItems: [
       { href: "/ai-sales/agents", label: "Agents", icon: UserCircle },
+      { href: "/ai-sales/personas", label: "Voice Personas", icon: Mic },
       { href: "/ai-sales/leads", label: "Leads", icon: Users },
       { href: "/ai-sales/campaigns", label: "Campaigns", icon: Megaphone },
       { href: "/ai-sales/calls", label: "Calls", icon: Phone },
