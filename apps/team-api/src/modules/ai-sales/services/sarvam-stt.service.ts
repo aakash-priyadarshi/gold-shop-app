@@ -7,13 +7,13 @@ export interface SarvamSTTResult {
 }
 
 /**
- * SarvamSTTClient — Indian-language STT via Sarvam AI's Saarika v2 model.
+ * SarvamSTTClient — Indian-language STT via Sarvam AI's Saaras v3 model.
  *
  * Supports: Hindi, Bengali, Tamil, Telugu, Kannada, Malayalam, Marathi,
  * Odia, Punjabi, Gujarati, and Indian English — plus code-switching (Hindi-English mix).
  *
- * Audio arrives as raw mulaw/8000 from Twilio, gets wrapped in a WAV
- * container before sending to Sarvam.
+ * Telephony audio: raw mulaw/8000 from Twilio, wrapped in WAV before sending.
+ * Browser audio: WebM sent directly.
  *
  * Env var: SARVAM_API_KEY (api-subscription-key)
  */
@@ -35,7 +35,8 @@ export class SarvamSTTClient {
     try {
       const formData = new FormData();
       formData.append("file", new Blob([new Uint8Array(audioBuffer)], { type: "audio/webm" }), "audio.webm");
-      formData.append("model", "saarika:v2.5");
+      formData.append("model", "saaras:v3");
+      formData.append("mode", "transcribe");
       if (languageCode) {
         formData.append("language_code", languageCode);
       }
@@ -75,7 +76,8 @@ export class SarvamSTTClient {
       const wavBuffer = this.wrapMulawAsWav(audioBuffer);
       const formData = new FormData();
       formData.append("file", new Blob([new Uint8Array(wavBuffer)], { type: "audio/wav" }), "audio.wav");
-      formData.append("model", "saarika:v2.5");
+      formData.append("model", "saaras:v3");
+      formData.append("mode", "transcribe");
       if (languageCode) {
         formData.append("language_code", languageCode);
       }
@@ -116,7 +118,8 @@ export class SarvamSTTClient {
       const wavBuffer = this.wrapMulawAsWav(audioBuffer);
       const formData = new FormData();
       formData.append("file", new Blob([new Uint8Array(wavBuffer)], { type: "audio/wav" }), "audio.wav");
-      formData.append("model", "saarika:v2.5");
+      formData.append("model", "saaras:v3");
+      formData.append("mode", "translate");
 
       const response = await fetch(this.translateUrl, {
         method: "POST",
