@@ -22,10 +22,19 @@ export class PrismaService
 
   async onModuleInit() {
     try {
-      await this.$connect();
+      // Race $connect against a 10s timeout — Neon cold starts can hang forever
+      await Promise.race([
+        this.$connect(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("DB connect timeout (10s)")), 10_000),
+        ),
+      ]);
       this.logger.log("Team database connected");
     } catch (error) {
-      this.logger.error("Failed to connect to team database — will retry in background", (error as Error).message);
+      this.logger.error(
+        "Failed to connect to team database — app starting anyway, retrying in background",
+        (error as Error).message,
+      );
       this.retryConnect();
     }
   }

@@ -27,4 +27,5 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
 
 EXPOSE 3002
+ENV PORT=3002
 CMD ["node", "dist/main.js"]
