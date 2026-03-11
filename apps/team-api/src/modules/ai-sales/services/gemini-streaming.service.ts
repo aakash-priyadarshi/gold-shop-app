@@ -51,7 +51,7 @@ export class GeminiStreamingClient {
       });
 
       const model = this.genAI.getGenerativeModel({
-        model: "gemini-2.5-flash-lite-preview-06-17",
+        model: "gemini-2.0-flash",
         systemInstruction: systemPrompt,
         generationConfig: {
           temperature: 0.85,
