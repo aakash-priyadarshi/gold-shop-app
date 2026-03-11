@@ -13,9 +13,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { aiSalesApi } from "@/lib/api";
-import { Bot, Plus, Power, Pencil, ArrowLeft } from "lucide-react";
+import { Bot, Plus, Power, Pencil, ArrowLeft, Variable } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 const LANGUAGES = ["en", "hi", "ta", "te", "ml", "kn", "bn", "gu", "mr", "pa"];
@@ -26,6 +26,145 @@ const PERSONALITIES = [
   "Energetic & Enthusiastic",
   "Calm & Patient",
 ];
+
+/**
+ * Template variables available for greeting and script content.
+ * Grouped by category for easy browsing.
+ */
+const TEMPLATE_VARIABLES = [
+  { group: "Lead Info", vars: [
+    { token: "{{lead_name}}", label: "Lead Name", desc: "Full name of the lead" },
+    { token: "{{lead_preferred_name}}", label: "Preferred Name", desc: "Name they prefer to be called" },
+    { token: "{{lead_company}}", label: "Company", desc: "Lead's company name" },
+    { token: "{{lead_role}}", label: "Role", desc: "Job title / role" },
+    { token: "{{lead_city}}", label: "City", desc: "Lead's city" },
+    { token: "{{lead_country}}", label: "Country", desc: "Country code" },
+  ]},
+  { group: "Agent Info", vars: [
+    { token: "{{agent_name}}", label: "Agent Name", desc: "AI agent's name" },
+    { token: "{{agent_personality}}", label: "Personality", desc: "Agent personality style" },
+    { token: "{{company_name}}", label: "Company Name", desc: "Your company name (from memory)" },
+  ]},
+  { group: "Context", vars: [
+    { token: "{{current_time}}", label: "Time of Day", desc: "Good morning/afternoon/evening" },
+    { token: "{{call_number}}", label: "Call Number", desc: "Which call this is (1st, 2nd...)" },
+    { token: "{{last_call_summary}}", label: "Last Call Summary", desc: "AI summary of previous call" },
+    { token: "{{product_name}}", label: "Product Name", desc: "Product being discussed" },
+    { token: "{{deal_value}}", label: "Deal Value", desc: "Estimated deal value" },
+  ]},
+  { group: "Personalization", vars: [
+    { token: "{{lead_hobby}}", label: "Hobby", desc: "Lead's hobbies" },
+    { token: "{{open_loops}}", label: "Open Loops", desc: "Unresolved topics from last call" },
+    { token: "{{preferred_language}}", label: "Language", desc: "Lead's preferred language" },
+  ]},
+];
+
+/**
+ * TemplateEditor — a textarea with a variable insertion toolbar
+ */
+function TemplateEditor({
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  rows?: number;
+  label: string;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showVars, setShowVars] = useState(false);
+
+  const insertVariable = useCallback((token: string) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      onChange(value + token);
+      return;
+    }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const newVal = value.substring(0, start) + token + value.substring(end);
+    onChange(newVal);
+    // restore cursor after variable
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + token.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  }, [value, onChange]);
+
+  // Highlight preview — show variable tokens in a different style
+  const preview = value
+    ? value.replace(/\{\{[a-z_]+\}\}/g, (m) => `[${m}]`)
+    : "";
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label>{label}</Label>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs gap-1"
+          onClick={() => setShowVars(!showVars)}
+        >
+          <Variable className="h-3.5 w-3.5" />
+          {showVars ? "Hide Variables" : "Insert Variable"}
+        </Button>
+      </div>
+
+      {showVars && (
+        <div className="border rounded-lg p-3 bg-muted/30 space-y-3 max-h-56 overflow-y-auto">
+          {TEMPLATE_VARIABLES.map((group) => (
+            <div key={group.group}>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
+                {group.group}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {group.vars.map((v) => (
+                  <button
+                    key={v.token}
+                    type="button"
+                    onClick={() => insertVariable(v.token)}
+                    className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground transition-colors group"
+                    title={v.desc}
+                  >
+                    <span className="font-mono text-blue-600 dark:text-blue-400 text-[10px]">
+                      {v.token}
+                    </span>
+                    <span className="text-muted-foreground group-hover:text-foreground">
+                      {v.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        className="font-mono text-sm"
+      />
+
+      {value && /\{\{[a-z_]+\}\}/.test(value) && (
+        <p className="text-[11px] text-muted-foreground">
+          <span className="font-medium">Preview: </span>
+          {preview}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<any[]>([]);
@@ -127,10 +266,15 @@ export default function AgentsPage() {
           </Select>
         </div>
       </div>
-      <div>
-        <Label>Greeting</Label>
-        <Textarea value={form.greeting} onChange={(e) => setForm({ ...form, greeting: e.target.value })} placeholder="Hi {{lead_name}}, this is {{agent_name}} from..." rows={2} />
-      </div>
+
+      <TemplateEditor
+        label="Greeting"
+        value={form.greeting}
+        onChange={(v) => setForm({ ...form, greeting: v })}
+        placeholder="Hi {{lead_name}}, this is {{agent_name}} from {{company_name}}..."
+        rows={3}
+      />
+
       <div>
         <Label>Description</Label>
         <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Internal description of this agent's purpose..." rows={2} />

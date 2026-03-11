@@ -327,10 +327,11 @@ model KPIRecord {
 model AIAgent {
   id              String       @id @default(uuid())
   name            String       // "Priya — Sales Assistant"
+  description     String?      @db.Text // internal description of purpose
   voiceId         String       // ElevenLabs voice ID
   personality     String?      @db.Text // system prompt / personality desc
   language        String       @default("en")
-  greeting        String?      // opening line for calls
+  greeting        String?      @db.Text // opening line for calls
   isActive        Boolean      @default(true)
 
   scripts         AIScript[]
@@ -363,6 +364,7 @@ model Lead {
   mainShopId      String?
 
   name            String
+  preferredName   String?              // "Call me Raj, not Rajesh"
   email           String?
   phone           String?
   company         String?
@@ -373,6 +375,41 @@ model Lead {
   temperature     String?    @default("cold") // cold, warm, hot, converted, lost
   notes           String?    @db.Text
   tags            String[]
+
+  // ── Personality & Communication (AI-observed) ──
+  communicationStyle  String?          // analytical, expressive, driver, amiable
+  decisionStyle       String?          // impulsive, deliberate, consensus, data-driven, authority
+  pacePreference      String?          // fast, moderate, slow
+  tonePreference      String?          // formal, casual, humorous, direct
+  respondsWellTo      String[]         // e.g. ["data and numbers", "case studies"]
+  getsFrustratedBy    String[]         // e.g. ["being rushed", "jargon"]
+
+  // ── Personal Details (zero-party rapport builders) ──
+  familyDetails       String?          // "has two kids"
+  hobbies             String?          // "cricket, photography"
+  recentLifeEvents    String?          // "just moved offices"
+  notableQuotes       String?  @db.Text // exact phrases that reveal character
+
+  // ── Buying Intelligence ──
+  budgetRange         String?          // "50k-1L", "10k-20k"
+  budgetApprover      String?          // who else approves the spend?
+  urgency             String?          // none, low, medium, high, urgent
+  dealValue           Float?           // estimated deal value in INR
+  competitorsPros     String?  @db.Text // what competitors they liked
+  objectionsHistory   Json?    @default("[]") // [{objection, status, response}]
+
+  // ── Call Preferences ──
+  preferredCallTime   String?          // "10am-12pm"
+  preferredCallDays   String[]         // ["tuesday", "wednesday"]
+  preferredLanguage   String?          // actual preference (override)
+  preferredPersona    String?          // AI persona name they asked for
+
+  // ── AI Remarks (post-call notes written by AI) ──
+  lastCallSummary     String?  @db.Text
+  whatWorkedLastCall   String?  @db.Text
+  whatToAvoidNextCall  String?  @db.Text
+  openLoops           Json?    @default("[]") // unresolved topics
+  nextCallStrategy    String?  @db.Text
 
   // Contact intelligence
   timezone        String?              // e.g. "Asia/Kolkata"

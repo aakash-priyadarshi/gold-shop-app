@@ -10,6 +10,7 @@ import {
   Query,
   Res,
   Header,
+  Logger,
 } from "@nestjs/common";
 import { AIAgentService } from "./ai-agent.service";
 import { Roles } from "../../auth/roles.decorator";
@@ -19,10 +20,15 @@ import { LeadScoringService } from "./services/lead-scoring.service";
 import { AgentMemoryService } from "./services/agent-memory.service";
 import { BehaviorInsightService } from "./services/behavior-insight.service";
 import { AgentVoiceService } from "./services/agent-voice.service";
+import { ConversationBrainService } from "./services/conversation-brain.service";
+import { GeminiStreamingClient } from "./services/gemini-streaming.service";
+import { PrismaService } from "../../prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 
 @Controller("ai-sales")
 export class AIAgentController {
+  private readonly logger = new Logger(AIAgentController.name);
+
   constructor(
     private svc: AIAgentService,
     private campaigns: CampaignSchedulerService,
@@ -31,6 +37,9 @@ export class AIAgentController {
     private agentMemory: AgentMemoryService,
     private behaviorInsights: BehaviorInsightService,
     private agentVoices: AgentVoiceService,
+    private brain: ConversationBrainService,
+    private gemini: GeminiStreamingClient,
+    private prisma: PrismaService,
     private config: ConfigService,
   ) {}
 
@@ -443,5 +452,179 @@ export class AIAgentController {
   @Roles("ADMIN")
   seedVoices() {
     return this.agentVoices.seedDefaults();
+  }
+
+  /* ─── PLAYGROUND (test endpoints) ─── */
+
+  @Get("playground/test-services")
+  async testServices(@Query("agentId") agentId: string) {
+    const results: Record<string, { ok: boolean; latencyMs?: number; error?: string }> = {};
+
+    // Test Database
+    try {
+      const start = Date.now();
+      await this.prisma.$queryRaw`SELECT 1`;
+      results.database = { ok: true, latencyMs: Date.now() - start };
+    } catch (err: any) {
+      results.database = { ok: false, error: err.message };
+    }
+
+    // Test Gemini Flash
+    try {
+      const start = Date.now();
+      let reply = "";
+      for await (const chunk of this.gemini.streamResponse("Hello, who are you?", "You are a test assistant. Reply briefly.", 0)) {
+        reply += chunk;
+      }
+      results.gemini = { ok: !!reply, latencyMs: Date.now() - start, error: reply ? undefined : "Empty response" };
+    } catch (err: any) {
+      results.gemini = { ok: false, error: err.message };
+    }
+
+    // Test Claude Sonnet
+    try {
+      const start = Date.now();
+      const resp = await this.brain.getFullResponse({
+        agentName: "Test",
+        conversationHistory: [{ role: "user", content: "Say hello briefly." }],
+      });
+      results.claude = { ok: !!resp, latencyMs: Date.now() - start, error: resp ? undefined : "Empty response" };
+    } catch (err: any) {
+      results.claude = { ok: false, error: err.message };
+    }
+
+    // Test ElevenLabs TTS (ping API for available voices)
+    try {
+      const start = Date.now();
+      const apiKey = this.config.get<string>("ELEVENLABS_API_KEY");
+      if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set");
+      const resp = await fetch("https://api.elevenlabs.io/v1/voices", {
+        headers: { "xi-api-key": apiKey },
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      results.elevenLabsTTS = { ok: true, latencyMs: Date.now() - start };
+    } catch (err: any) {
+      results.elevenLabsTTS = { ok: false, error: err.message };
+    }
+
+    // Test Google STT (ping endpoint with empty audio to validate API key)
+    try {
+      const start = Date.now();
+      const apiKey = this.config.get<string>("GOOGLE_STT_API_KEY");
+      if (!apiKey) throw new Error("GOOGLE_STT_API_KEY not set");
+      const resp = await fetch(`https://speech.googleapis.com/v1/speech:recognize?key=${encodeURIComponent(apiKey)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          config: { encoding: "LINEAR16", sampleRateHertz: 8000, languageCode: "en-US" },
+          audio: { content: "" },
+        }),
+      });
+      // Google returns 200 even with empty audio (just empty results), or 400 — both mean API key works
+      // Only 403/401 means bad key
+      if (resp.status === 401 || resp.status === 403) throw new Error("Invalid API key");
+      results.googleSTT = { ok: true, latencyMs: Date.now() - start };
+    } catch (err: any) {
+      results.googleSTT = { ok: false, error: err.message };
+    }
+
+    return results;
+  }
+
+  @Post("playground/chat")
+  async playgroundChat(
+    @Body() body: {
+      agentId: string;
+      message: string;
+      history?: { role: string; text: string }[];
+    },
+  ) {
+    const agent = await this.svc.getAgent(body.agentId);
+    const conversationHistory = (body.history || []).map((m) => ({
+      role: m.role === "user" ? "user" as const : "assistant" as const,
+      content: m.text,
+    }));
+    conversationHistory.push({ role: "user", content: body.message });
+
+    // Use Gemini for standard turns
+    const start = Date.now();
+    const systemPrompt = this.brain.buildSystemPrompt({
+      agentName: agent.name,
+      agentPersonality: agent.personality || undefined,
+      language: agent.language || "en",
+      greeting: agent.greeting || undefined,
+      conversationHistory,
+    });
+
+    let reply = "";
+    for await (const chunk of this.gemini.streamResponse(body.message, systemPrompt, 0)) {
+      reply += chunk;
+    }
+    const llmLatencyMs = Date.now() - start;
+
+    // Optionally generate TTS
+    let audioBase64: string | undefined;
+    let ttsLatencyMs: number | undefined;
+    const apiKey = this.config.get<string>("ELEVENLABS_API_KEY");
+    const voice = this.agentVoices.getDefaultVoice();
+    if (apiKey && voice && reply) {
+      try {
+        const ttsStart = Date.now();
+        const ttsResp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice.voiceId}`, {
+          method: "POST",
+          headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: reply,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+          }),
+        });
+        if (ttsResp.ok) {
+          const buffer = Buffer.from(await ttsResp.arrayBuffer());
+          audioBase64 = buffer.toString("base64");
+          ttsLatencyMs = Date.now() - ttsStart;
+        }
+      } catch (err: any) {
+        this.logger.warn(`TTS failed: ${err.message}`);
+      }
+    }
+
+    return {
+      reply,
+      llmProvider: "gemini-flash",
+      llmLatencyMs,
+      ttsProvider: audioBase64 ? "elevenlabs" : undefined,
+      ttsLatencyMs,
+      audioBase64,
+    };
+  }
+
+  @Post("playground/call")
+  @Roles("ADMIN")
+  async playgroundCall(
+    @Body() body: { agentId: string; phoneNumber: string },
+  ) {
+    const webhookBaseUrl = this.config.get("WEBHOOK_BASE_URL") || "https://team-api.orivraa.com";
+    const agent = await this.svc.getAgent(body.agentId);
+
+    // Create a temporary lead for the test call
+    const lead = await this.svc.createLead({
+      name: "Playground Test",
+      phone: body.phoneNumber,
+      source: "MANUAL" as any,
+      notes: `Test call from playground at ${new Date().toISOString()}`,
+    });
+
+    const result = await this.calls.initiateCall({
+      agentId: agent.id,
+      leadId: lead.id,
+      webhookBaseUrl,
+    });
+
+    return {
+      message: `Calling ${body.phoneNumber} with agent ${agent.name}...`,
+      sessionId: result.id,
+      leadId: lead.id,
+    };
   }
 }

@@ -78,15 +78,22 @@ export class AIAgentService {
 
   /* ─── LEADS ─── */
 
-  async createLead(data: {
-    assignedToId?: string;
-    name: string;
-    phone?: string;
-    email?: string;
-    source?: any;
-    notes?: string;
-  }) {
-    return this.prisma.lead.create({ data });
+  async createLead(data: Record<string, any>) {
+    // Separate array fields and scalar fields
+    const {
+      respondsWellTo, getsFrustratedBy, preferredCallDays,
+      competitorsMentioned, tags,
+      ...rest
+    } = data;
+
+    const createData: any = { ...rest };
+    if (Array.isArray(respondsWellTo)) createData.respondsWellTo = respondsWellTo;
+    if (Array.isArray(getsFrustratedBy)) createData.getsFrustratedBy = getsFrustratedBy;
+    if (Array.isArray(preferredCallDays)) createData.preferredCallDays = preferredCallDays;
+    if (Array.isArray(competitorsMentioned)) createData.competitorsMentioned = competitorsMentioned;
+    if (Array.isArray(tags)) createData.tags = tags;
+
+    return this.prisma.lead.create({ data: createData });
   }
 
   async listLeads(filters?: {
