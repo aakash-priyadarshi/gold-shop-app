@@ -49,7 +49,7 @@ export class GeminiLiveClient {
           // Send setup message
           this.ws!.send(JSON.stringify({
             setup: {
-              model: "models/gemini-2.0-flash-live-001",
+              model: "models/gemini-2.5-flash-lite",
               generationConfig: {
                 responseModalities: ["AUDIO"],
                 speechConfig: {

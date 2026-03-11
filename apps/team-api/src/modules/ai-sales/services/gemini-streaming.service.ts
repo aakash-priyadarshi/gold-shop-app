@@ -50,16 +50,24 @@ export class GeminiStreamingClient {
         parts: [{ text: transcript }],
       });
 
+      const generationConfig: Record<string, unknown> = {
+        temperature: 0.85,
+        maxOutputTokens: 300,
+        stopSequences: ["\n\n"],
+      };
+
+      // Dynamic thinking budget: 0 = off (fast chit-chat), >0 = on (complex reasoning/objections)
+      if (thinkingBudget > 0) {
+        generationConfig.thinkingConfig = { thinkingBudget };
+      } else {
+        generationConfig.thinkingConfig = { thinkingBudget: 0 };
+      }
+
       const model = this.genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash-lite",
         systemInstruction: systemPrompt,
-        generationConfig: {
-          temperature: 0.85,
-          maxOutputTokens: 300,
-          stopSequences: ["\n\n"],
-          // thinkingConfig is set via request-level options below
-        } as any,
-      });
+        generationConfig,
+      } as any);
 
       const chat = model.startChat({
         history: this.conversationHistory.slice(0, -1), // all except last (we send it via sendMessageStream)
