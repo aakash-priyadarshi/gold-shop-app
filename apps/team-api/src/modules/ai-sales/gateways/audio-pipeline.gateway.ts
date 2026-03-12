@@ -320,8 +320,9 @@ ${voiceList}`;
     session.sttRawBuffer.push(rawChunk);
     session.sttBufferBytes += rawChunk.length;
 
-    // Batch process every ~2 seconds of audio (16000 bytes at 8kHz mulaw)
-    if (session.sttBufferBytes > 16000) {
+    // Batch process every ~4 seconds of audio (32000 bytes at 8kHz mulaw)
+    // Increased from 2s/16KB to capture full Hindi sentences
+    if (session.sttBufferBytes > 32000) {
       // VAD gate: skip silent buffers before sending to STT
       // Mu-law silence is 0xFF/0x7F. Compute energy of decoded samples.
       const combined = Buffer.concat(session.sttRawBuffer);
@@ -383,7 +384,9 @@ ${voiceList}`;
       if (intents.isLanguageSwitch && intents.language && intents.language !== session.context.language) {
         session.context.language = intents.language;
         session.detectedLanguage = intents.language;
-        this.logger.log(`Language switch detected → ${intents.language} (via LLM)`);
+        // Propagate to STT router so next transcription uses correct language hint
+        this.sttRouter.setSessionLanguage(session.sessionId, intents.language);
+        this.logger.log(`Language switch detected → ${intents.language} (via LLM, propagated to STT)`);
       }
 
       // Handle handoff (with cooldown to prevent duplicates)
@@ -500,9 +503,13 @@ ${voiceList}`;
             fillerPlaying = false;
           }
           firstSentence = false;
-          await this.synthesizeAndSend(session, responseText.trim());
-          session.transcript.push({ role: "assistant", content: responseText.trim(), timestamp: Date.now() });
-          session.context.conversationHistory.push({ role: "assistant", content: responseText.trim() });
+          // Strip stage directions like "(Pauses...)" before TTS
+          const cleanText = this.stripStageDirections(responseText);
+          if (cleanText.length > 1) {
+            await this.synthesizeAndSend(session, cleanText);
+            session.transcript.push({ role: "assistant", content: cleanText, timestamp: Date.now() });
+            session.context.conversationHistory.push({ role: "assistant", content: cleanText });
+          }
           responseText = "";
         }
       }
@@ -512,9 +519,12 @@ ${voiceList}`;
         if (firstSentence && fillerPlaying) {
           this.sendClear(session);
         }
-        await this.synthesizeAndSend(session, responseText.trim());
-        session.transcript.push({ role: "assistant", content: responseText.trim(), timestamp: Date.now() });
-        session.context.conversationHistory.push({ role: "assistant", content: responseText.trim() });
+        const cleanRemaining = this.stripStageDirections(responseText);
+        if (cleanRemaining.length > 1) {
+          await this.synthesizeAndSend(session, cleanRemaining);
+          session.transcript.push({ role: "assistant", content: cleanRemaining, timestamp: Date.now() });
+          session.context.conversationHistory.push({ role: "assistant", content: cleanRemaining });
+        }
       }
 
       // Check AI response for messaging triggers (fire-and-forget)
@@ -776,6 +786,20 @@ ${voiceList}`;
   }
 
   /** Detect STT hallucination — same short phrase repeated many times */
+  /**
+   * Strip stage directions / action descriptions from LLM output.
+   * Gemini sometimes outputs text like "(Pauses, waiting...)" or "*Waits patiently*"
+   * that should NEVER be spoken aloud via TTS.
+   */
+  private stripStageDirections(text: string): string {
+    return text
+      .replace(/\([^)]*\)/g, "")      // (Pauses, waiting for the user...)
+      .replace(/\*[^*]*\*/g, "")       // *Waits patiently*
+      .replace(/\[[^\]]*\]/g, "")      // [Softly, in Hindi]
+      .replace(/\s{2,}/g, " ")         // collapse multiple spaces
+      .trim();
+  }
+
   private isRepetitiveHallucination(text: string): boolean {
     const words = text.trim().split(/\s+/);
     if (words.length < 8) return false;
