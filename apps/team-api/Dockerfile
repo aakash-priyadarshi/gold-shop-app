@@ -43,10 +43,12 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
 
 EXPOSE 3002
 ENV PORT=3002
 
 # Start Xvfb (virtual display) + PulseAudio before the app
-CMD xvfb-run --server-args="-screen 0 1280x720x24" \
-    sh -c 'pulseaudio --start --exit-idle-time=-1 2>/dev/null; node dist/main.js'
+# start.sh runs prisma db push then node dist/main.js
+CMD ["sh", "-c", "xvfb-run --server-args='-screen 0 1280x720x24' sh -c 'pulseaudio --start --exit-idle-time=-1 2>/dev/null; ./start.sh'"]
