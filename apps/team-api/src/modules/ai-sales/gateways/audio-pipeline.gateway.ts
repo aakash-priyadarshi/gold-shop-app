@@ -260,9 +260,9 @@ ${voiceList}`;
       }
     }
 
-    // Send initial greeting via TTS (always greet — use fallback if none configured)
+    // Send initial greeting via TTS — keep it SHORT, ask if they have time
     const greeting = context.greeting
-      || `Hello${context.leadName ? `, ${context.leadName}` : ""}! This is ${context.agentName}. How can I help you today?`;
+      || `Hi${context.leadName ? ` ${context.leadName}` : ""}, this is ${context.agentName} from Orivraa. Do you have a quick minute?`;
     await this.synthesizeAndSend(session, greeting);
     session.greetingDoneAt = Date.now();
     session.transcript.push({ role: "assistant", content: greeting, timestamp: Date.now() });

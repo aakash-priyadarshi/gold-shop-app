@@ -78,6 +78,7 @@ export default function PlaygroundPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
+  const [sttProvider, setSttProvider] = useState("auto");
   const chatEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -247,6 +248,7 @@ export default function PlaygroundPage() {
           formData.append("audio", blob, "recording.webm");
           formData.append("agentId", selectedAgentId);
           formData.append("history", JSON.stringify(messages.map((m) => ({ role: m.role, text: m.text }))));
+          formData.append("sttProvider", sttProvider);
 
           const res = await aiSalesApi.playgroundVoice(formData);
           const data = res.data as any;
@@ -505,9 +507,24 @@ export default function PlaygroundPage() {
                   )}
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Type or use your microphone. Tests Google STT, Gemini/Claude, and ElevenLabs TTS — everything except Twilio.
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-muted-foreground flex-1">
+                  Type or use your microphone. Tests STT, Gemini/Claude, and ElevenLabs TTS — everything except Twilio.
+                </p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Label className="text-xs whitespace-nowrap">STT Engine</Label>
+                  <Select value={sttProvider} onValueChange={setSttProvider}>
+                    <SelectTrigger className="w-[180px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto (Sarvam → Google)</SelectItem>
+                      <SelectItem value="google_primary">Google Primary</SelectItem>
+                      <SelectItem value="sarvam_primary">Sarvam Primary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardHeader>
 
             {/* Chat messages */}

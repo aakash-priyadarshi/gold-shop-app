@@ -71,28 +71,7 @@ export class STTRouterService {
 
     // ─── Auto mode ───
 
-    // Always try Sarvam first — it handles Hindi, English, and all Indian languages well
-    const hasSarvam = !!this.config.get<string>("SARVAM_API_KEY");
-    if (hasSarvam) {
-      const result = await this.sarvam.transcribe(audioBuffer, detectedLang);
-      if (result.transcript) {
-        if (result.languageCode && result.languageCode !== "unknown") {
-          this.sessionLanguages.set(sessionId, result.languageCode);
-          if (!detectedLang) {
-            this.logger.log(
-              `Session ${sessionId}: detected language ${result.languageCode} via Sarvam`,
-            );
-          }
-        }
-        return {
-          transcript: result.transcript,
-          detectedLanguage: result.languageCode || detectedLang || hintLanguage,
-          provider: "sarvam",
-        };
-      }
-    }
-
-    // Sarvam returned empty or unavailable → try Google with hint language
+    // Try Google first — it natively supports MULAW at 8kHz with telephony model
     const hasGoogle = !!this.config.get<string>("GOOGLE_STT_API_KEY");
     if (hasGoogle) {
       const langHint = detectedLang || hintLanguage;
@@ -115,6 +94,27 @@ export class STTRouterService {
       this.logger.warn(`Google STT returned empty for session ${sessionId}`);
     }
 
+    // Google returned empty or unavailable → try Sarvam
+    const hasSarvam = !!this.config.get<string>("SARVAM_API_KEY");
+    if (hasSarvam) {
+      const result = await this.sarvam.transcribe(audioBuffer, detectedLang);
+      if (result.transcript) {
+        if (result.languageCode && result.languageCode !== "unknown") {
+          this.sessionLanguages.set(sessionId, result.languageCode);
+          if (!detectedLang) {
+            this.logger.log(
+              `Session ${sessionId}: detected language ${result.languageCode} via Sarvam`,
+            );
+          }
+        }
+        return {
+          transcript: result.transcript,
+          detectedLanguage: result.languageCode || detectedLang || hintLanguage,
+          provider: "sarvam",
+        };
+      }
+    }
+
     // Last resort → Deepgram (may not be available)
     return this.transcribeWithDeepgram(audioBuffer, detectedLang || hintLanguage);
   }
@@ -122,46 +122,69 @@ export class STTRouterService {
   /**
    * Transcribe browser-recorded audio (WebM OPUS format).
    * Used by the playground voice endpoint — NOT Twilio telephony.
+   * @param provider Optional override: "auto" | "google_primary" | "sarvam_primary"
    */
   async transcribeBrowserAudio(
     audioBuffer: Buffer,
     sessionId: string,
     hintLanguage: string = "en",
+    provider: string = "auto",
   ): Promise<STTResult> {
-    // Try Sarvam first (handles WebM natively)
+    const googleFirst = provider === "google_primary";
+    const sarvamFirst = provider === "sarvam_primary" || provider === "auto";
+
     const hasSarvam = !!this.config.get<string>("SARVAM_API_KEY");
-    if (hasSarvam) {
+    const hasGoogle = !!this.config.get<string>("GOOGLE_STT_API_KEY");
+
+    // Attempt primary provider
+    if (sarvamFirst && hasSarvam) {
       try {
         const result = await this.sarvam.transcribeBrowserAudio(audioBuffer, hintLanguage.includes("-") ? hintLanguage : undefined);
         if (result.transcript) {
-          return {
-            transcript: result.transcript,
-            detectedLanguage: result.languageCode,
-            provider: "sarvam",
-          };
+          return { transcript: result.transcript, detectedLanguage: result.languageCode, provider: "sarvam" };
         }
       } catch (err: any) {
         this.logger.warn(`Sarvam browser STT failed: ${err.message}`);
       }
     }
 
-    // Try Google STT with WEBM_OPUS encoding
-    const hasGoogle = !!this.config.get<string>("GOOGLE_STT_API_KEY");
-    if (hasGoogle) {
+    if (googleFirst && hasGoogle) {
       try {
         const langCode = hintLanguage.includes("-") ? hintLanguage : `${hintLanguage}-IN`;
         const result = await this.googleSTT.transcribeBrowserAudio(audioBuffer, langCode, [
           "hi-IN", "ta-IN", "te-IN", "bn-IN", "ne-NP",
         ]);
         if (result.transcript) {
-          return {
-            transcript: result.transcript,
-            detectedLanguage: result.detectedLanguage,
-            provider: "google",
-          };
+          return { transcript: result.transcript, detectedLanguage: result.detectedLanguage, provider: "google" };
         }
       } catch (err: any) {
         this.logger.warn(`Google browser STT failed: ${err.message}`);
+      }
+    }
+
+    // Attempt fallback provider (opposite of primary)
+    if (sarvamFirst && hasGoogle) {
+      try {
+        const langCode = hintLanguage.includes("-") ? hintLanguage : `${hintLanguage}-IN`;
+        const result = await this.googleSTT.transcribeBrowserAudio(audioBuffer, langCode, [
+          "hi-IN", "ta-IN", "te-IN", "bn-IN", "ne-NP",
+        ]);
+        if (result.transcript) {
+          return { transcript: result.transcript, detectedLanguage: result.detectedLanguage, provider: "google" };
+        }
+      } catch (err: any) {
+        this.logger.warn(`Google browser STT failed: ${err.message}`);
+      }
+    }
+
+    if (googleFirst && hasSarvam) {
+      try {
+        const result = await this.sarvam.transcribeBrowserAudio(audioBuffer, hintLanguage.includes("-") ? hintLanguage : undefined);
+        if (result.transcript) {
+          return { transcript: result.transcript, detectedLanguage: result.languageCode, provider: "sarvam" };
+        }
+      } catch (err: any) {
+        this.logger.warn(`Sarvam browser STT failed: ${err.message}`);
       }
     }
 
