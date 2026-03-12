@@ -40,24 +40,52 @@ export class GeminiStreamingClient {
     message: string,
     availableAgents: string[],
   ): Promise<{ isHandoff: boolean; agentName: string | null }> {
-    if (!this.genAI || availableAgents.length === 0) {
-      return { isHandoff: false, agentName: null };
-    }
+    const intents = await this.detectIntents(message, availableAgents);
+    return { isHandoff: intents.isHandoff, agentName: intents.agentName };
+  }
+
+  /**
+   * Combined intent detection — detects BOTH handoff requests AND language-switch
+   * in a single LLM call. Supports any language, phrasing, or accent.
+   * Cost: ~50-100 tokens per call, gemini-2.5-flash-lite with thinkingBudget=0.
+   */
+  async detectIntents(
+    message: string,
+    availableAgents: string[],
+  ): Promise<{
+    isHandoff: boolean;
+    agentName: string | null;
+    isLanguageSwitch: boolean;
+    language: string | null;
+  }> {
+    const noResult = { isHandoff: false, agentName: null, isLanguageSwitch: false, language: null };
+    if (!this.genAI) return noResult;
 
     try {
       const model = this.genAI.getGenerativeModel({
         model: "gemini-2.5-flash-lite",
         generationConfig: {
           temperature: 0,
-          maxOutputTokens: 50,
+          maxOutputTokens: 80,
           thinkingConfig: { thinkingBudget: 0 },
         },
       } as any);
 
-      const prompt = `Does this message request to speak/talk/connect with a specific person from this list?
-Available agents: ${availableAgents.join(", ")}
+      const agentList = availableAgents.length > 0
+        ? `Available agents: ${availableAgents.join(", ")}`
+        : "No agents available";
+
+      const prompt = `Analyze this customer message for two intents:
+1. HANDOFF: Does the customer want to speak/talk/connect with a specific person?
+2. LANGUAGE: Does the customer want to switch the conversation language?
+
+${agentList}
 Message: "${message}"
-Reply ONLY with JSON, no markdown: {"isHandoff":true,"agentName":"Name"} or {"isHandoff":false,"agentName":null}`;
+
+Reply ONLY with JSON, no markdown:
+{"isHandoff":false,"agentName":null,"isLanguageSwitch":false,"language":null}
+
+For language, use ISO 639-1 codes: "hi" for Hindi, "en" for English, "ta" for Tamil, "te" for Telugu, "ne" for Nepali, "bn" for Bengali, "mr" for Marathi, "gu" for Gujarati, "pa" for Punjabi, "kn" for Kannada, "ml" for Malayalam.`;
 
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim();
@@ -66,10 +94,12 @@ Reply ONLY with JSON, no markdown: {"isHandoff":true,"agentName":"Name"} or {"is
       return {
         isHandoff: !!parsed.isHandoff,
         agentName: parsed.agentName || null,
+        isLanguageSwitch: !!parsed.isLanguageSwitch,
+        language: parsed.language || null,
       };
     } catch (err: any) {
-      this.logger.warn(`Handoff detection failed: ${err.message}`);
-      return { isHandoff: false, agentName: null };
+      this.logger.warn(`Intent detection failed: ${err.message}`);
+      return noResult;
     }
   }
 
