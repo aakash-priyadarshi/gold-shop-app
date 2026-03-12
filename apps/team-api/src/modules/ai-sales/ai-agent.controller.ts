@@ -561,19 +561,20 @@ export class AIAgentController {
   @UseInterceptors(FileInterceptor("audio"))
   async playgroundVoice(
     @UploadedFile() file: { buffer: Buffer; originalname: string; mimetype: string },
-    @Body() body: { agentId: string; history?: string },
+    @Body() body: { agentId: string; history?: string; sttProvider?: string },
   ) {
     if (!file) throw new Error("No audio file uploaded");
 
     let agent = await this.svc.getAgent(body.agentId);
     const history: { role: string; text: string }[] = body.history ? JSON.parse(body.history) : [];
 
-    // 1. STT — transcribe audio
+    // 1. STT — transcribe audio (with optional provider override)
     const sttStart = Date.now();
     const sttResult = await this.sttRouter.transcribeBrowserAudio(
       file.buffer,
       `playground-${Date.now()}`,
       agent.languages?.[0] || "en",
+      body.sttProvider || "auto",
     );
     const sttLatencyMs = Date.now() - sttStart;
 
