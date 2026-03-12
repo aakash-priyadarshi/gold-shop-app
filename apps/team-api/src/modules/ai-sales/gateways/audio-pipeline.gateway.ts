@@ -49,6 +49,8 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
 
   private readonly logger = new Logger(AudioPipelineGateway.name);
   private activeSessions: Map<string, ActiveCallSession> = new Map();
+  /** Cache filler audio MULAW bytes keyed by "voiceId:fillerType" to skip TTS round-trip */
+  private fillerAudioCache: Map<string, Buffer> = new Map();
 
   constructor(
     private config: ConfigService,
@@ -296,6 +298,143 @@ ${voiceList}`;
     session.isSpeaking = false;
   }
 
+  /**
+   * Send filler audio — uses cached MULAW bytes when available (0ms TTS latency),
+   * falls back to live TTS on first use and caches the result for next time.
+   */
+  private async sendFiller(
+    session: ActiveCallSession,
+    fillerText: string,
+    fillerType: string,
+  ) {
+    const namedVoice = session.activeVoiceName
+      ? this.voiceService.getVoiceByName(session.activeVoiceName)
+      : null;
+    const activeVoice =
+      namedVoice || this.voiceService.getVoiceForLanguage(session.detectedLanguage);
+    const voiceId =
+      activeVoice?.voiceId ||
+      this.config.get("ELEVENLABS_VOICE_ID") ||
+      "21m00Tcm4TlvDq8ikWAM";
+    const cacheKey = `${voiceId}:${fillerType}`;
+
+    const cached = this.fillerAudioCache.get(cacheKey);
+    if (cached) {
+      this.sendCachedAudio(session, cached);
+      return;
+    }
+
+    // First use: synthesize via TTS and cache the raw bytes
+    const elevenLabsKey = this.config.get("ELEVENLABS_API_KEY");
+    if (!elevenLabsKey) {
+      this.logger.debug(`[Filler stub] ${fillerText}`);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=ulaw_8000`,
+        {
+          method: "POST",
+          headers: {
+            "xi-api-key": elevenLabsKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: fillerText,
+            model_id: "eleven_turbo_v2_5",
+            voice_settings: {
+              stability: activeVoice?.voiceStability ?? 0.5,
+              similarity_boost: activeVoice?.voiceSimilarityBoost ?? 0.75,
+              style: activeVoice?.voiceStyle ?? 0.0,
+              use_speaker_boost: activeVoice?.voiceUseSpeakerBoost ?? false,
+            },
+          }),
+        },
+      );
+
+      if (!response.ok || !response.body) return;
+
+      // Collect all chunks, stream to Twilio, and cache for next time
+      const chunks: Buffer[] = [];
+      const reader = response.body.getReader();
+
+      session.isSpeaking = true;
+      session.sttRawBuffer = [];
+      session.sttBufferBytes = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const buf = Buffer.from(value);
+        chunks.push(buf);
+        if (session.client.readyState === 1) {
+          session.client.send(
+            JSON.stringify({
+              event: "media",
+              streamSid: session.streamSid,
+              media: { payload: buf.toString("base64") },
+            }),
+          );
+        }
+      }
+
+      // Cache the combined audio for instant replay next time
+      const combined = Buffer.concat(chunks);
+      if (combined.length > 0) {
+        this.fillerAudioCache.set(cacheKey, combined);
+        this.logger.debug(`Cached filler audio: ${cacheKey} (${combined.length} bytes)`);
+      }
+
+      // Mark event so we know when playback finishes
+      session.markCounter++;
+      if (session.client.readyState === 1) {
+        session.client.send(
+          JSON.stringify({
+            event: "mark",
+            streamSid: session.streamSid,
+            mark: { name: `filler-done-${session.markCounter}` },
+          }),
+        );
+      }
+    } catch (err: any) {
+      this.logger.debug(`Filler TTS error: ${err.message}`);
+    }
+  }
+
+  /** Send pre-cached MULAW audio bytes directly to Twilio — zero TTS latency */
+  private sendCachedAudio(session: ActiveCallSession, audioBuffer: Buffer) {
+    session.isSpeaking = true;
+    session.sttRawBuffer = [];
+    session.sttBufferBytes = 0;
+
+    // Send in ~4KB chunks to match Twilio's expected packet size
+    const CHUNK_SIZE = 4000;
+    for (let offset = 0; offset < audioBuffer.length; offset += CHUNK_SIZE) {
+      const chunk = audioBuffer.subarray(offset, offset + CHUNK_SIZE);
+      if (session.client.readyState === 1) {
+        session.client.send(
+          JSON.stringify({
+            event: "media",
+            streamSid: session.streamSid,
+            media: { payload: chunk.toString("base64") },
+          }),
+        );
+      }
+    }
+
+    session.markCounter++;
+    if (session.client.readyState === 1) {
+      session.client.send(
+        JSON.stringify({
+          event: "mark",
+          streamSid: session.streamSid,
+          mark: { name: `filler-done-${session.markCounter}` },
+        }),
+      );
+    }
+  }
+
   /** Process incoming audio chunk — forward to Deepgram STT or Gemini Live */
   private async handleMediaChunk(client: any, msg: any) {
     const session = this.findSessionByClient(client);
@@ -511,7 +650,7 @@ ${voiceList}`;
       );
 
       // Play filler audio IN PARALLEL with LLM — fills silence while model thinks
-      // Filler fires as fire-and-forget; first real LLM sentence clears it via barge-in
+      // Uses cached MULAW bytes when available (0ms TTS overhead after first use)
       const fillerType = this.thinkingBudget.getFillerContext(budget);
       let fillerPlaying = false;
       if (fillerType !== "none") {
@@ -521,8 +660,8 @@ ${voiceList}`;
             ? "That's a great question..."
             : "You know, that's really important...";
         fillerPlaying = true;
-        // Fire-and-forget — don't await, LLM starts immediately below
-        this.synthesizeAndSend(session, fillerText).catch(() => {});
+        // Fire-and-forget — sendFiller checks cache first, falls back to TTS
+        this.sendFiller(session, fillerText, fillerType).catch(() => {});
       }
 
       // Inject pending messaging question if any (e.g. "Should I send this on WhatsApp?")

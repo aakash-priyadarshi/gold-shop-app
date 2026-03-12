@@ -14,6 +14,7 @@ import { AgentVoiceService } from "./services/agent-voice.service";
 import { BehaviorInsightService } from "./services/behavior-insight.service";
 import { CallOrchestratorService } from "./services/call-orchestrator.service";
 import { CallRecordingService } from "./services/call-recording.service";
+import { CallSchedulerDaemonService } from "./services/call-scheduler-daemon.service";
 import { CampaignSchedulerService } from "./services/campaign-scheduler.service";
 import { CentralBrainService } from "./services/central-brain.service";
 import { ConversationBrainService } from "./services/conversation-brain.service";
@@ -48,6 +49,7 @@ import { WebhookService } from "./services/webhook.service";
     GeminiLiveClient,
     EmotionEngineService,
     CallOrchestratorService,
+    CallSchedulerDaemonService,
     CampaignSchedulerService,
     LeadScoringService,
     AudioPipelineGateway,
