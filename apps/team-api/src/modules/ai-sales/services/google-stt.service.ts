@@ -176,6 +176,7 @@ export class GoogleSTTClient {
       "gu-IN",
       "kn-IN",
       "ml-IN",
+      "ne-NP",
     ]);
   }
 

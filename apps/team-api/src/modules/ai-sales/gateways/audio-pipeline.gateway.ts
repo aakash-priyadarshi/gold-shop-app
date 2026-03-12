@@ -305,10 +305,12 @@ ${voiceList}`;
         session.detectedLanguage = sttResult.detectedLanguage;
       }
 
-      // Detect voice-switch request ("I want to talk to Priya", "Can I speak with Raj?", "mujhe Raj se baat karni hai")
+      // Detect voice-switch request — English, Hindi, Nepali, Tamil, Telugu
       const voiceSwitchMatch = transcript.match(
-        /(?:talk to|speak (?:to|with)|want|give me|connect me (?:to|with)|switch to|mujhe\s+)([A-Z][a-z]{2,})(?:\s+se\s+(?:baat|connect|milao))?/i,
-      ) || transcript.match(/([A-Z][a-z]{2,})\s+se\s+(?:baat\s+kar(?:ni|o|ao)|connect\s+kar(?:o|ao)|milao)/i);
+        /(?:talk to|speak (?:to|with)|want|give me|connect me (?:to|with)|switch to|mujhe\s+|malai\s+|enakku\s+|naaku\s+)([A-Z][a-z]{2,})(?:\s+(?:se\s+(?:baat|connect|milao)|sanga\s+(?:kura|bolnu|jodnu)|kitta\s+(?:pesa|connect|pesanum)|tho\s+(?:matladali|matladandi|connect)))?/i,
+      ) || transcript.match(
+        /([A-Z][a-z]{2,})\s+(?:se\s+(?:baat\s+kar(?:ni|o|ao)|connect\s+kar(?:o|ao)|milao)|sanga\s+(?:kura\s+gar(?:nu|os)|bolnu|jod(?:nu|os))|kitta\s+(?:pesa\s+(?:venum|anum)|connect\s+pann?u)|tho\s+(?:matlad(?:ali|andi|u)|connect\s+che(?:yyi|yyandi)))/i,
+      );
       if (voiceSwitchMatch) {
         const requestedVoice = this.voiceService.getVoiceByName(voiceSwitchMatch[1]);
         if (requestedVoice) {
