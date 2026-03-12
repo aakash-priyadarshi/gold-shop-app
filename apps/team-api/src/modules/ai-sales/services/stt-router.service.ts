@@ -342,6 +342,12 @@ export class STTRouterService {
     return this.sessionLanguages.get(sessionId);
   }
 
+  /** Override session language (e.g. when LLM detects a language switch) */
+  setSessionLanguage(sessionId: string, language: string) {
+    this.sessionLanguages.set(sessionId, language);
+    this.logger.log(`Session ${sessionId}: language overridden to ${language}`);
+  }
+
   /** Clean up when call ends */
   clearSession(sessionId: string) {
     this.sessionLanguages.delete(sessionId);
