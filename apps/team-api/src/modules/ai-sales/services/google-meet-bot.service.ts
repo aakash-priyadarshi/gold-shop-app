@@ -164,6 +164,17 @@ export class GoogleMeetBotService {
 
       this.addLog(session, "stt", `Heard: "${transcript}" (${sttResult.provider})`);
 
+      // Track detected language — if customer switches language, follow them
+      if (sttResult.detectedLanguage && sttResult.detectedLanguage !== "unknown") {
+        const newLang = sttResult.detectedLanguage;
+        if (newLang !== session.context.language) {
+          this.addLog(session, "info", `Language switch detected: ${session.context.language} → ${newLang}`);
+          session.context.language = newLang;
+          // Rebuild system prompt with new language so LLM responds consistently
+          session.systemPrompt = this.brain.buildSystemPrompt(session.context);
+        }
+      }
+
       // Check if someone asked the bot to leave
       if (this.isLeaveIntent(transcript)) {
         this.addLog(session, "info", `Leave intent detected: "${transcript}"`);
@@ -446,9 +457,24 @@ export class GoogleMeetBotService {
     this.addLog(session, "info", "Waiting to be admitted to meeting...");
     session.status = "joining";
 
+    // Check if Google sign-in is required
+    const needsSignIn = await page.evaluate(() => {
+      const body = document.body.textContent?.toLowerCase() || "";
+      return body.includes("sign in") && (body.includes("to join") || body.includes("use your google account"));
+    }).catch(() => false);
+
+    if (needsSignIn) {
+      this.addLog(session, "error",
+        "This meeting requires a Google account to join. " +
+        "Either sign into Google on the server, or change the meeting settings to allow guests without Google accounts.");
+      session.status = "error";
+      return;
+    }
+
     // Wait up to 120s to be admitted
     const maxWaitMs = 120_000;
     const start = Date.now();
+    let consecutiveRejections = 0;
 
     while (Date.now() - start < maxWaitMs) {
       // Check if we're in the meeting (look for call controls)
@@ -465,22 +491,47 @@ export class GoogleMeetBotService {
         return;
       }
 
-      // Check for rejection
+      // Check for explicit rejection — use specific selectors, not full body text
+      // (full body text causes false positives from help text on the page)
       const rejected = await page.evaluate(() => {
+        // Look for specific rejection UI elements
         const body = document.body.textContent?.toLowerCase() || "";
-        return body.includes("you can't join") || body.includes("request was denied") || body.includes("meeting has ended");
+        // Only check for very specific rejection phrases that appear in prominent UI
+        const rejectionPhrases = [
+          "you can't join this meeting",
+          "your request to join was denied",
+          "you've been removed from the meeting",
+          "this meeting has been locked",
+        ];
+        // Check for a banner/dialog with the rejection text — exclude footer/help text
+        const mainContent = document.querySelector('[role="main"]')?.textContent?.toLowerCase()
+          || document.querySelector('[data-view-id]')?.textContent?.toLowerCase()
+          || "";
+        return rejectionPhrases.some(p => mainContent.includes(p) || body.startsWith(p));
       }).catch(() => false);
 
       if (rejected) {
-        this.addLog(session, "error", "Join request was denied or meeting has ended");
-        session.status = "error";
-        return;
+        consecutiveRejections++;
+        // Require 2 consecutive checks to avoid false positives
+        if (consecutiveRejections >= 2) {
+          this.addLog(session, "error", "Join request was denied or meeting is locked");
+          session.status = "error";
+          return;
+        }
+      } else {
+        consecutiveRejections = 0;
+      }
+
+      // Log progress every 10s
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      if (elapsed % 10 === 0 && elapsed > 0) {
+        this.addLog(session, "info", `Still waiting to be admitted... (${elapsed}s)`);
       }
 
       await this.delay(2000);
     }
 
-    this.addLog(session, "error", "Timed out waiting to be admitted (120s)");
+    this.addLog(session, "error", "Timed out waiting to be admitted (120s). Ask someone in the meeting to admit the bot.");
     session.status = "error";
   }
 
