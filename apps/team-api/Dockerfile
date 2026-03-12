@@ -47,6 +47,12 @@ COPY --from=build /app/package.json ./
 EXPOSE 3002
 ENV PORT=3002
 
-# Start Xvfb (virtual display) + PulseAudio before the app
-CMD xvfb-run --server-args="-screen 0 1280x720x24" \
-    sh -c 'pulseaudio --start --exit-idle-time=-1 2>/dev/null; node dist/main.js'
+# Start Xvfb + PulseAudio as background daemons (failures are tolerated —
+# Google Meet bot is optional; the API must start regardless).
+# xvfb-run is NOT used because it's a synchronous wrapper that kills the container
+# if the X server fails to start in restricted sandbox environments (Railway).
+CMD ["sh", "-c", \
+    "Xvfb :99 -screen 0 1280x720x24 -nolisten tcp 2>/dev/null & \
+     pulseaudio --start --exit-idle-time=-1 2>/dev/null || true; \
+     sleep 0.5; \
+     exec node dist/main.js"]
