@@ -152,7 +152,7 @@ export class STTRouterService {
       try {
         const langCode = hintLanguage.includes("-") ? hintLanguage : `${hintLanguage}-IN`;
         const result = await this.googleSTT.transcribeBrowserAudio(audioBuffer, langCode, [
-          "hi-IN", "ta-IN", "te-IN", "bn-IN", "ne-NP",
+          "hi-IN", "ta-IN", "te-IN", "bn-IN", "ne-NP", "mr-IN", "gu-IN", "kn-IN", "ml-IN", "pa-IN", "ur-IN", "ar-AE",
         ]);
         if (result.transcript) {
           return { transcript: result.transcript, detectedLanguage: result.detectedLanguage, provider: "google" };
@@ -167,7 +167,7 @@ export class STTRouterService {
       try {
         const langCode = hintLanguage.includes("-") ? hintLanguage : `${hintLanguage}-IN`;
         const result = await this.googleSTT.transcribeBrowserAudio(audioBuffer, langCode, [
-          "hi-IN", "ta-IN", "te-IN", "bn-IN", "ne-NP",
+          "hi-IN", "ta-IN", "te-IN", "bn-IN", "ne-NP", "mr-IN", "gu-IN", "kn-IN", "ml-IN", "pa-IN", "ur-IN", "ar-AE",
         ]);
         if (result.transcript) {
           return { transcript: result.transcript, detectedLanguage: result.detectedLanguage, provider: "google" };
