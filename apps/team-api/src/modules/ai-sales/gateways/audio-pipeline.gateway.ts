@@ -322,6 +322,15 @@ ${voiceList}`;
 
     // Batch process every ~2 seconds of audio (16000 bytes at 8kHz mulaw)
     if (session.sttBufferBytes > 16000) {
+      // VAD gate: skip silent buffers before sending to STT
+      // Mu-law silence is 0xFF/0x7F. Compute energy of decoded samples.
+      const combined = Buffer.concat(session.sttRawBuffer);
+      if (!this.hasVoiceActivity(combined)) {
+        this.logger.debug(`[VAD] ${session.sessionId}: silent buffer discarded (${session.sttBufferBytes} bytes)`);
+        session.sttRawBuffer = [];
+        session.sttBufferBytes = 0;
+        return;
+      }
       await this.processAudioBuffer(session);
     }
   }
@@ -742,21 +751,50 @@ ${voiceList}`;
     }
   }
 
-  /** Detect STT hallucination — same short phrase repeated 5+ times */
+  /**
+   * Energy-based Voice Activity Detection for raw mu-law audio.
+   * Decodes mu-law to linear PCM, computes RMS energy, returns true if speech is likely present.
+   * Threshold tuned for Twilio telephony background noise (~200-400 RMS for silence).
+   */
+  private hasVoiceActivity(mulawBuffer: Buffer): boolean {
+    let sumSquares = 0;
+    for (let i = 0; i < mulawBuffer.length; i++) {
+      // Fast mu-law decode (ITU-T G.711)
+      let b = ~mulawBuffer[i] & 0xff;
+      const sign = b & 0x80;
+      const exponent = (b & 0x70) >> 4;
+      const mantissa = b & 0x0f;
+      let magnitude = ((mantissa << 3) + 0x84) << exponent;
+      magnitude -= 0x84;
+      const sample = sign ? -magnitude : magnitude;
+      sumSquares += sample * sample;
+    }
+    const rms = Math.sqrt(sumSquares / mulawBuffer.length);
+    // Twilio silence/background noise is typically RMS 100-500
+    // Actual speech is typically RMS 1500+
+    return rms > 800;
+  }
+
+  /** Detect STT hallucination — same short phrase repeated many times */
   private isRepetitiveHallucination(text: string): boolean {
     const words = text.trim().split(/\s+/);
-    if (words.length < 10) return false;
+    if (words.length < 8) return false;
+
+    // Count unique words — hallucinations have very few unique words for long text
+    const uniqueWords = new Set(words);
+    if (words.length > 15 && uniqueWords.size <= 4) return true;
+    if (words.length > 30 && uniqueWords.size <= 6) return true;
 
     // Check 1–4 word repeating patterns
     for (let len = 1; len <= 4; len++) {
-      if (words.length < len * 5) continue;
+      if (words.length < len * 4) continue;
       const pattern = words.slice(0, len).join(" ");
       let matches = 0;
       for (let i = 0; i <= words.length - len; i += len) {
         if (words.slice(i, i + len).join(" ") === pattern) matches++;
       }
       const expected = Math.floor(words.length / len);
-      if (matches >= 5 && matches >= expected * 0.7) return true;
+      if (matches >= 4 && matches >= expected * 0.6) return true;
     }
     return false;
   }

@@ -158,40 +158,53 @@ export class SarvamSTTClient {
   }
 
   /**
-   * Convert raw mu-law bytes to linear PCM 16-bit and wrap in a standard WAV container.
-   * Format tag 1 (PCM), 16-bit, 8kHz mono — universally supported by all STT APIs.
+   * Convert raw mu-law 8kHz bytes → 16-bit PCM, upsample to 16kHz, wrap in WAV.
+   * Sarvam docs: "Use 16kHz sample rate for best results". Twilio sends 8kHz mu-law.
    */
-  private wrapMulawAsWav(mulawData: Buffer, sampleRate = 8000, channels = 1): Buffer {
-    // Decode mu-law → 16-bit linear PCM
+  private wrapMulawAsWav(mulawData: Buffer): Buffer {
+    const srcRate = 8000;
+    const dstRate = 16000;
+    const channels = 1;
+
+    // Step 1: Decode mu-law → 16-bit linear PCM at 8kHz
     const numSamples = mulawData.length;
-    const pcmData = Buffer.alloc(numSamples * 2);
+    const pcm8k = new Int16Array(numSamples);
     for (let i = 0; i < numSamples; i++) {
-      pcmData.writeInt16LE(this.mulawDecode(mulawData[i]), i * 2);
+      pcm8k[i] = this.mulawDecode(mulawData[i]);
     }
 
-    const dataSize = pcmData.length;
-    const header = Buffer.alloc(44);
+    // Step 2: Upsample 8kHz → 16kHz via linear interpolation
+    const ratio = srcRate / dstRate;
+    const outSamples = Math.floor(numSamples / ratio);
+    const pcm16k = Buffer.alloc(outSamples * 2);
+    for (let i = 0; i < outSamples; i++) {
+      const srcPos = i * ratio;
+      const idx = Math.floor(srcPos);
+      const frac = srcPos - idx;
+      const s0 = pcm8k[idx];
+      const s1 = idx + 1 < numSamples ? pcm8k[idx + 1] : s0;
+      const sample = Math.round(s0 + frac * (s1 - s0));
+      pcm16k.writeInt16LE(Math.max(-32768, Math.min(32767, sample)), i * 2);
+    }
 
-    // RIFF header
+    // Step 3: Wrap in WAV container (PCM, 16-bit, 16kHz mono)
+    const dataSize = pcm16k.length;
+    const header = Buffer.alloc(44);
     header.write("RIFF", 0);
     header.writeUInt32LE(36 + dataSize, 4);
     header.write("WAVE", 8);
-
-    // fmt chunk (16 bytes for PCM)
     header.write("fmt ", 12);
-    header.writeUInt32LE(16, 16);              // chunk size
+    header.writeUInt32LE(16, 16);
     header.writeUInt16LE(1, 20);               // format: PCM
     header.writeUInt16LE(channels, 22);
-    header.writeUInt32LE(sampleRate, 24);
-    header.writeUInt32LE(sampleRate * channels * 2, 28); // byte rate
-    header.writeUInt16LE(channels * 2, 32);    // block align
-    header.writeUInt16LE(16, 34);              // bits per sample
-
-    // data chunk
+    header.writeUInt32LE(dstRate, 24);
+    header.writeUInt32LE(dstRate * channels * 2, 28);
+    header.writeUInt16LE(channels * 2, 32);
+    header.writeUInt16LE(16, 34);
     header.write("data", 36);
     header.writeUInt32LE(dataSize, 40);
 
-    return Buffer.concat([header, pcmData]);
+    return Buffer.concat([header, pcm16k]);
   }
 
   /** Sarvam-supported language codes */
