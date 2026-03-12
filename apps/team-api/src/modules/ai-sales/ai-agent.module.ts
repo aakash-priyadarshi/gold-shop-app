@@ -32,6 +32,7 @@ import { FollowUpSequencerService } from "./services/follow-up-sequencer.service
 import { ObjectionPlaybookService } from "./services/objection-playbook.service";
 import { WebhookService } from "./services/webhook.service";
 import { CallRecordingService } from "./services/call-recording.service";
+import { GoogleMeetBotService } from "./services/google-meet-bot.service";
 
 @Module({
   imports: [PrismaModule, ConfigModule],
@@ -66,6 +67,7 @@ import { CallRecordingService } from "./services/call-recording.service";
     ObjectionPlaybookService,
     WebhookService,
     CallRecordingService,
+    GoogleMeetBotService,
   ],
   controllers: [AIAgentController],
   exports: [AIAgentService, CallOrchestratorService, CentralBrainService, WebhookService],

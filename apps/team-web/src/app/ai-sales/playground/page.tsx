@@ -13,7 +13,7 @@ import { aiSalesApi } from "@/lib/api";
 import {
     AlertTriangle,
     ArrowLeft, Bot, CheckCircle2, Loader2, Mic, MicOff,
-    Phone, PhoneOff, Send, Volume2, XCircle,
+    Phone, PhoneOff, Send, Video, Volume2, XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -87,6 +87,15 @@ export default function PlaygroundPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [callActive, setCallActive] = useState(false);
   const [callStatus, setCallStatus] = useState("");
+
+  // ── Google Meet mode ──
+  const [meetUrl, setMeetUrl] = useState("");
+  const [meetSessionId, setMeetSessionId] = useState("");
+  const [meetActive, setMeetActive] = useState(false);
+  const [meetStatus, setMeetStatus] = useState("");
+  const [meetLogs, setMeetLogs] = useState<{ time: number; type: string; message: string }[]>([]);
+  const [meetTranscript, setMeetTranscript] = useState<{ role: string; content: string; timestamp: number }[]>([]);
+  const meetLogsEndRef = useRef<HTMLDivElement>(null);
 
   // ── Load agents ──
   useEffect(() => {
@@ -377,6 +386,48 @@ export default function PlaygroundPage() {
     setCallStatus("Call ended");
   };
 
+  // ── Google Meet status polling ──
+  const meetPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopMeetPolling = useCallback(() => {
+    if (meetPollRef.current) {
+      clearInterval(meetPollRef.current);
+      meetPollRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => stopMeetPolling();
+  }, [stopMeetPolling]);
+
+  // Start polling when meetSessionId is set and meetActive is true
+  useEffect(() => {
+    if (!meetSessionId || !meetActive) return;
+    stopMeetPolling();
+    meetPollRef.current = setInterval(async () => {
+      try {
+        const res = await aiSalesApi.playgroundMeetStatus(meetSessionId);
+        const data = res.data as any;
+        if (data.status === "NOT_FOUND") return;
+        setMeetStatus(data.status);
+        if (data.logs) setMeetLogs(data.logs);
+        if (data.transcript) setMeetTranscript(data.transcript);
+        if (data.status === "ended" || data.status === "error") {
+          setMeetActive(false);
+          stopMeetPolling();
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 3000);
+    return () => stopMeetPolling();
+  }, [meetSessionId, meetActive, stopMeetPolling]);
+
+  // Auto-scroll meet logs
+  useEffect(() => {
+    meetLogsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [meetLogs]);
+
   const passCount = services.filter((s) => s.status === "pass").length;
   const failCount = services.filter((s) => s.status === "fail").length;
 
@@ -424,10 +475,13 @@ export default function PlaygroundPage() {
       </Card>
 
       <Tabs defaultValue="diagnostics" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="diagnostics">Service Diagnostics</TabsTrigger>
           <TabsTrigger value="browser">Browser Chat & Voice</TabsTrigger>
           <TabsTrigger value="phone">Phone Call Test</TabsTrigger>
+          <TabsTrigger value="meet" className="gap-1">
+            <Video className="h-3 w-3" /> Google Meet
+          </TabsTrigger>
         </TabsList>
 
         {/* ── TAB 1: Service Diagnostics ── */}
@@ -726,6 +780,207 @@ export default function PlaygroundPage() {
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── TAB 4: Google Meet Bot ── */}
+        <TabsContent value="meet" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Video className="h-5 w-5" /> Google Meet AI Agent
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Invite the AI agent to a Google Meet. It will join the meeting, listen to participants,
+                and respond using the full STT → LLM → TTS pipeline.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  <div className="text-sm text-amber-800 dark:text-amber-300 space-y-1">
+                    <p className="font-medium">Important notes:</p>
+                    <ul className="list-disc ml-4 text-xs space-y-0.5">
+                      <li>The bot runs on the server — requires Puppeteer with a visible browser (not headless)</li>
+                      <li>Someone in the meeting must <strong>admit</strong> the bot when it asks to join</li>
+                      <li>The bot joins as &quot;{selectedAgent?.name || "Agent"} (Orivraa AI)&quot; as a guest</li>
+                      <li>Camera is auto-disabled, microphone stays on for TTS playback</li>
+                      <li>Works best on meetings with 2-5 participants</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Google Meet Link</Label>
+                  <Input
+                    value={meetUrl}
+                    onChange={(e) => setMeetUrl(e.target.value)}
+                    placeholder="https://meet.google.com/abc-defg-hij"
+                    disabled={meetActive}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Paste the full meeting URL</p>
+                </div>
+                <div>
+                  <Label>Selected Agent</Label>
+                  <Input value={selectedAgent?.name || "No agent selected"} disabled />
+                  <p className="text-xs text-muted-foreground mt-1">{selectedAgent?.personalityDescription || ""}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                {!meetActive ? (
+                  <Button
+                    onClick={async () => {
+                      if (!meetUrl.trim() || !selectedAgentId) return;
+                      try {
+                        setMeetActive(true);
+                        setMeetStatus("joining");
+                        setMeetLogs([]);
+                        setMeetTranscript([]);
+                        const res = await aiSalesApi.playgroundMeetJoin({
+                          agentId: selectedAgentId,
+                          meetUrl: meetUrl.trim(),
+                        });
+                        const data = res.data as any;
+                        setMeetSessionId(data.sessionId);
+                        setMeetStatus(data.status);
+                        toast.success(`Bot joining as ${data.agentName}...`);
+                      } catch (err: any) {
+                        toast.error(err?.response?.data?.message || "Failed to join meeting");
+                        setMeetActive(false);
+                        setMeetStatus("error");
+                      }
+                    }}
+                    disabled={!meetUrl.trim() || !selectedAgentId}
+                    className="gap-2"
+                    size="lg"
+                  >
+                    <Video className="h-4 w-4" />
+                    Join Meeting
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={async () => {
+                      try {
+                        await aiSalesApi.playgroundMeetStop({ sessionId: meetSessionId });
+                        toast.info("Bot left the meeting");
+                      } catch {
+                        // ignore
+                      }
+                      setMeetActive(false);
+                      setMeetStatus("ended");
+                    }}
+                    variant="destructive"
+                    className="gap-2"
+                    size="lg"
+                  >
+                    <PhoneOff className="h-4 w-4" />
+                    Leave Meeting
+                  </Button>
+                )}
+
+                {meetStatus && (
+                  <Badge
+                    variant={
+                      meetStatus === "in-meeting" || meetStatus === "listening"
+                        ? "success"
+                        : meetStatus === "error" || meetStatus === "ended"
+                          ? "destructive"
+                          : "secondary"
+                    }
+                    className="text-sm py-1"
+                  >
+                    {meetStatus === "joining" && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                    {meetStatus}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Pipeline visualization */}
+              <div>
+                <p className="text-sm font-medium mb-3">Meet Bot Pipeline</p>
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  {[
+                    { label: "Google Meet", desc: "Captures audio" },
+                    { label: "→" },
+                    { label: "STT", desc: "Speech → text" },
+                    { label: "→" },
+                    { label: "Gemini Flash", desc: "Thinks & responds" },
+                    { label: "→" },
+                    { label: "ElevenLabs", desc: "Text → AI voice" },
+                    { label: "→" },
+                    { label: "Google Meet", desc: "Plays in meeting" },
+                  ].map((step, i) =>
+                    step.desc ? (
+                      <div key={i} className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg border bg-card">
+                        <span className="font-medium">{step.label}</span>
+                        <span className="text-[10px] text-muted-foreground">{step.desc}</span>
+                      </div>
+                    ) : (
+                      <span key={i} className="text-muted-foreground font-bold">{step.label}</span>
+                    ),
+                  )}
+                </div>
+              </div>
+
+              {/* Live logs + transcript (only shown when active or has data) */}
+              {(meetActive || meetLogs.length > 0) && (
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Logs */}
+                  <div>
+                    <p className="text-sm font-medium mb-2">Live Logs</p>
+                    <div className="h-64 overflow-y-auto rounded-lg border bg-black/5 dark:bg-white/5 p-3 font-mono text-xs space-y-1">
+                      {meetLogs.length === 0 && (
+                        <p className="text-muted-foreground">Waiting for logs...</p>
+                      )}
+                      {meetLogs.map((log, i) => (
+                        <div key={i} className={`flex gap-2 ${
+                          log.type === "error" ? "text-red-500" :
+                          log.type === "stt" ? "text-blue-500" :
+                          log.type === "llm" ? "text-purple-500" :
+                          log.type === "tts" ? "text-emerald-500" :
+                          "text-muted-foreground"
+                        }`}>
+                          <span className="opacity-50 shrink-0">
+                            {new Date(log.time).toLocaleTimeString()}
+                          </span>
+                          <span className="uppercase font-bold w-8 shrink-0">{log.type}</span>
+                          <span>{log.message}</span>
+                        </div>
+                      ))}
+                      <div ref={meetLogsEndRef} />
+                    </div>
+                  </div>
+
+                  {/* Transcript */}
+                  <div>
+                    <p className="text-sm font-medium mb-2">Conversation</p>
+                    <div className="h-64 overflow-y-auto rounded-lg border bg-black/5 dark:bg-white/5 p-3 text-sm space-y-3">
+                      {meetTranscript.length === 0 && (
+                        <p className="text-xs text-muted-foreground">No conversation yet...</p>
+                      )}
+                      {meetTranscript.map((msg, i) => (
+                        <div key={i} className={`flex ${msg.role === "user" ? "justify-start" : "justify-end"}`}>
+                          <div className={`max-w-[85%] rounded-lg px-3 py-2 ${
+                            msg.role === "user"
+                              ? "bg-gray-200 dark:bg-gray-700"
+                              : "bg-blue-600 text-white"
+                          }`}>
+                            <p className="text-[10px] opacity-60 mb-0.5">
+                              {msg.role === "user" ? "Participant" : selectedAgent?.name || "Agent"}
+                            </p>
+                            <p className="text-xs">{msg.content}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

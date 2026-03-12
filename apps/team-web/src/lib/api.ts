@@ -254,6 +254,14 @@ export const aiSalesApi = {
   playgroundCallStatus: (sessionId: string) =>
     api.get(`/ai-sales/playground/call-status/${sessionId}`),
 
+  // Playground — Google Meet Bot
+  playgroundMeetJoin: (data: { agentId: string; meetUrl: string }) =>
+    api.post("/ai-sales/playground/meet", data),
+  playgroundMeetStop: (data: { sessionId: string }) =>
+    api.post("/ai-sales/playground/meet-stop", data),
+  playgroundMeetStatus: (sessionId: string) =>
+    api.get(`/ai-sales/playground/meet-status/${sessionId}`),
+
   // Central Brain / Intelligence
   getBrainDashboard: () =>
     api.get("/ai-sales/intelligence/dashboard"),
