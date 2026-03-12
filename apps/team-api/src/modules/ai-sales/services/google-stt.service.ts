@@ -177,12 +177,17 @@ export class GoogleSTTClient {
       "kn-IN",
       "ml-IN",
       "ne-NP",
+      "pa-IN",
+      "ur-IN",
+      "ar-AE",
     ]);
   }
 
-  /** Google-supported Indian languages */
-  static readonly INDIAN_LANGUAGES = [
+  /** Google-supported target languages (India, Nepal, UK, USA, UAE) */
+  static readonly SUPPORTED_LANGUAGES = [
     "en-IN", // Indian English
+    "en-GB", // British English
+    "en-US", // American English
     "hi-IN", // Hindi
     "ta-IN", // Tamil
     "te-IN", // Telugu
@@ -195,5 +200,6 @@ export class GoogleSTTClient {
     "ur-IN", // Urdu
     "ne-NP", // Nepali
     "as-IN", // Assamese
+    "ar-AE", // Arabic (UAE)
   ];
 }

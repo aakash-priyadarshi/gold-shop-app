@@ -389,7 +389,11 @@ ${voiceList}`;
         // Propagate to STT router so next transcription uses correct language hint
         this.sttRouter.setSessionLanguage(session.sessionId, intents.language);
         // Update system prompt so LLM responds in the new language
-        const langNames: Record<string, string> = { hi: 'Hindi', ta: 'Tamil', te: 'Telugu', bn: 'Bengali', ne: 'Nepali', en: 'English' };
+        const langNames: Record<string, string> = {
+          en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', bn: 'Bengali',
+          ne: 'Nepali', mr: 'Marathi', gu: 'Gujarati', kn: 'Kannada',
+          ml: 'Malayalam', pa: 'Punjabi', ur: 'Urdu', as: 'Assamese', ar: 'Arabic',
+        };
         const newLangName = langNames[intents.language] || intents.language;
         session.systemPrompt = session.systemPrompt.replace(
           /- Language: .*/,

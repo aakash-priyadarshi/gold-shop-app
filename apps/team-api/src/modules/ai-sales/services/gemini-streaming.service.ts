@@ -85,7 +85,7 @@ Message: "${message}"
 Reply ONLY with JSON, no markdown:
 {"isHandoff":false,"agentName":null,"isLanguageSwitch":false,"language":null}
 
-For language, use ISO 639-1 codes: "hi" for Hindi, "en" for English, "ta" for Tamil, "te" for Telugu, "ne" for Nepali, "bn" for Bengali, "mr" for Marathi, "gu" for Gujarati, "pa" for Punjabi, "kn" for Kannada, "ml" for Malayalam.`;
+For language, use ISO 639-1 codes: "hi" for Hindi, "en" for English, "ta" for Tamil, "te" for Telugu, "ne" for Nepali, "bn" for Bengali, "mr" for Marathi, "gu" for Gujarati, "pa" for Punjabi, "kn" for Kannada, "ml" for Malayalam, "ur" for Urdu, "as" for Assamese, "ar" for Arabic.`;
 
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim();
