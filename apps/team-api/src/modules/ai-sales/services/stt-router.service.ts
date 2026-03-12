@@ -150,7 +150,7 @@ export class STTRouterService {
       try {
         const langCode = hintLanguage.includes("-") ? hintLanguage : `${hintLanguage}-IN`;
         const result = await this.googleSTT.transcribeBrowserAudio(audioBuffer, langCode, [
-          "hi-IN", "ta-IN", "te-IN", "bn-IN",
+          "hi-IN", "ta-IN", "te-IN", "bn-IN", "ne-NP",
         ]);
         if (result.transcript) {
           return {
