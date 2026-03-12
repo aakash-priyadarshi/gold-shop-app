@@ -181,6 +181,7 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
         brief,
         { description: context.productDescription, benefits: context.productBenefits, pricing: context.productPricing },
         context.culturalContext,
+        context.language,
       );
 
       // Prime Gemini with the strategic brief
@@ -382,11 +383,19 @@ ${voiceList}`;
 
       // Handle language switch
       if (intents.isLanguageSwitch && intents.language && intents.language !== session.context.language) {
+        const prevLang = session.context.language || 'en';
         session.context.language = intents.language;
         session.detectedLanguage = intents.language;
         // Propagate to STT router so next transcription uses correct language hint
         this.sttRouter.setSessionLanguage(session.sessionId, intents.language);
-        this.logger.log(`Language switch detected → ${intents.language} (via LLM, propagated to STT)`);
+        // Update system prompt so LLM responds in the new language
+        const langNames: Record<string, string> = { hi: 'Hindi', ta: 'Tamil', te: 'Telugu', bn: 'Bengali', ne: 'Nepali', en: 'English' };
+        const newLangName = langNames[intents.language] || intents.language;
+        session.systemPrompt = session.systemPrompt.replace(
+          /- Language: .*/,
+          `- Language: ${newLangName}`,
+        );
+        this.logger.log(`Language switch detected → ${intents.language} (via LLM, propagated to STT + system prompt)`);
       }
 
       // Handle handoff (with cooldown to prevent duplicates)

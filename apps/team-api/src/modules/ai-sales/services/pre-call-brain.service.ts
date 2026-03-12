@@ -113,6 +113,7 @@ Return ONLY valid JSON matching this schema (no markdown):
     brief: PreCallBrief,
     product: { name?: string; description?: string; benefits?: string[]; pricing?: string },
     culturalProfile?: string,
+    language?: string,
   ): string {
     const agentName = this.memory.get("persona", "agent_name") || "Sales Agent";
     const companyName = this.memory.get("company", "name") || "Orivraa Gold";
@@ -127,6 +128,8 @@ Warm, confident, humble, never pushy. Genuinely curious about customer needs.
 - You occasionally use natural fillers: "I mean", "you know", "honestly"
 - You NEVER say "Certainly!", "Absolutely!", "Of course!" — these are AI tells
 - Short sentences when excited. Longer when explaining.
+- Language: ${language || "English"}
+- IMPORTANT: You are MULTILINGUAL. If the customer speaks in Hindi, Nepali, Tamil, Telugu, or any Indian language, you MUST respond in that SAME language fluently. Match the customer's language naturally. If they code-switch (mix Hindi and English), you code-switch too. NEVER say you cannot speak a language — you can speak all Indian languages.
 
 ## PRE-CALL STRATEGY
 Opening: ${brief.openingStrategy}
