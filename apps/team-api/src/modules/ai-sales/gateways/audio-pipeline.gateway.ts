@@ -106,6 +106,10 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
           await this.handleMediaChunk(client, msg);
           break;
 
+        case "mark":
+          this.handleMark(client, msg);
+          break;
+
         case "stop":
           this.logger.log(`Twilio media stream stopped: ${msg.streamSid}`);
           break;
@@ -214,6 +218,7 @@ ${voiceList}`;
       isSpeaking: false,
       isProcessing: false,
       greetingDoneAt: 0,
+      markCounter: 0,
     };
 
     this.activeSessions.set(sessionId, session);
@@ -255,6 +260,32 @@ ${voiceList}`;
     session.greetingDoneAt = Date.now();
     session.transcript.push({ role: "assistant", content: greeting, timestamp: Date.now() });
     session.context.conversationHistory.push({ role: "assistant", content: greeting });
+  }
+
+  /** Handle Twilio mark event — playback of our audio is complete */
+  private handleMark(client: any, msg: any) {
+    const session = this.findSessionByClient(client);
+    if (!session) return;
+
+    const markName = msg.mark?.name;
+    if (markName === `tts-done-${session.markCounter}`) {
+      session.isSpeaking = false;
+      // Clear any audio that accumulated during playback
+      session.sttRawBuffer = [];
+      session.sttBufferBytes = 0;
+      this.logger.debug(`Playback complete (mark ${session.markCounter})`);
+    }
+  }
+
+  /** Send a clear message to Twilio to interrupt any buffered audio */
+  private sendClear(session: ActiveCallSession) {
+    if (session.client.readyState === 1) {
+      session.client.send(JSON.stringify({
+        event: "clear",
+        streamSid: session.streamSid,
+      }));
+    }
+    session.isSpeaking = false;
   }
 
   /** Process incoming audio chunk — forward to Deepgram STT or Gemini Live */
@@ -461,6 +492,11 @@ ${voiceList}`;
   }
   /** Synthesize text to speech and send audio back to Twilio (ElevenLabs or Inworld) */
   private async synthesizeAndSend(session: ActiveCallSession, text: string) {
+    // If already speaking, send clear first to avoid overlapping audio
+    if (session.isSpeaking) {
+      this.sendClear(session);
+    }
+
     session.isSpeaking = true;
     // Clear any buffered audio to prevent processing echo after TTS
     session.sttRawBuffer = [];
@@ -482,6 +518,15 @@ ${voiceList}`;
           if (session.client.readyState === 1) {
             session.client.send(mediaMsg);
           }
+        }
+        // Send mark to track when playback completes
+        session.markCounter++;
+        if (session.client.readyState === 1) {
+          session.client.send(JSON.stringify({
+            event: "mark",
+            streamSid: session.streamSid,
+            mark: { name: `tts-done-${session.markCounter}` },
+          }));
         }
         return;
       }
@@ -548,14 +593,25 @@ ${voiceList}`;
           session.client.send(mediaMsg);
         }
       }
+
+      // Send mark to track when Twilio finishes playing this audio
+      session.markCounter++;
+      if (session.client.readyState === 1) {
+        session.client.send(JSON.stringify({
+          event: "mark",
+          streamSid: session.streamSid,
+          mark: { name: `tts-done-${session.markCounter}` },
+        }));
+      }
     } catch (err: any) {
       this.logger.error(`TTS error: ${err.message}`);
-    } finally {
+      // On error, release the speaking lock so the pipeline isn't permanently stuck
       session.isSpeaking = false;
-      // Clear any audio that leaked in during TTS
       session.sttRawBuffer = [];
       session.sttBufferBytes = 0;
     }
+    // NOTE: isSpeaking stays true until Twilio sends back the mark event
+    // confirming actual playback completion. See handleMark().
   }
 
   /** Finalize call: save transcript, emotion arc, generate summary via Flash-Lite */
@@ -721,9 +777,10 @@ interface ActiveCallSession {
   pendingInjection?: string; // messaging question/confirmation to inject into next AI turn
   detectedLanguage?: string; // auto-detected from STT (e.g. "hi-IN", "en-IN")
   activeVoiceName?: string;  // current voice identity name (e.g. "Priya")
-  isSpeaking: boolean;       // true while TTS is streaming to Twilio (prevents echo)
+  isSpeaking: boolean;       // true while TTS audio is playing on Twilio (mark-based)
   isProcessing: boolean;     // true while processAudioBuffer is running (prevents flooding)
   greetingDoneAt: number;    // timestamp when greeting TTS finished (for cooldown)
+  markCounter: number;       // incremented per TTS utterance, used for mark event matching
 }
 
 interface TranscriptEntry {
