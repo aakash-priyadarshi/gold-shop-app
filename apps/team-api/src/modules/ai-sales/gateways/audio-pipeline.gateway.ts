@@ -402,6 +402,52 @@ ${voiceList}`;
         this.logger.log(`Language switch detected → ${intents.language} (via LLM, propagated to STT + system prompt)`);
       }
 
+      // Handle end-call intent — customer wants to hang up
+      if (intents.isEndCall) {
+        this.logger.log(`[EndCall] ${session.sessionId}: customer requested call end`);
+        session.transcript.push({ role: "user", content: transcript, timestamp: Date.now() });
+        session.context.conversationHistory.push({ role: "user", content: transcript });
+        const isHindi = session.context.language === "hi";
+        const farewell = isHindi
+          ? "ठीक है, आपका बहुत-बहुत धन्यवाद! आपका दिन शुभ हो। अलविदा!"
+          : "Thank you so much for your time! Have a wonderful day. Goodbye!";
+        await this.synthesizeAndSend(session, farewell);
+        session.transcript.push({ role: "assistant", content: farewell, timestamp: Date.now() });
+        session.context.conversationHistory.push({ role: "assistant", content: farewell });
+        // Wait for TTS to finish, then terminate the Twilio call
+        setTimeout(async () => {
+          try {
+            await this.callOrchestrator.endCall(session.sessionId);
+            this.logger.log(`[EndCall] ${session.sessionId}: Twilio call terminated by AI`);
+          } catch (err: any) {
+            this.logger.warn(`[EndCall] Could not terminate call: ${err.message}`);
+          }
+        }, 3000);
+        return;
+      }
+
+      // Handle reschedule intent — customer wants a follow-up call
+      if (intents.isReschedule) {
+        this.logger.log(`[Reschedule] ${session.sessionId}: ${intents.rescheduleTime} ${intents.rescheduleTimezone}`);
+        if (intents.rescheduleTime) {
+          try {
+            await this.prisma.callSchedule.create({
+              data: {
+                leadId: session.context.leadName ? (await this.prisma.lead.findFirst({ where: { name: session.context.leadName } }))?.id || "" : "",
+                agentId: undefined,
+                scheduledAt: new Date(intents.rescheduleTime),
+                timezone: intents.rescheduleTimezone || "Asia/Kolkata",
+                notes: `Rescheduled during call ${session.sessionId}`,
+              },
+            });
+            this.logger.log(`[Reschedule] Created CallSchedule for ${intents.rescheduleTime} ${intents.rescheduleTimezone}`);
+          } catch (err: any) {
+            this.logger.warn(`[Reschedule] Failed to create schedule: ${err.message}`);
+          }
+        }
+        // Let the LLM handle the conversation response naturally (confirm the reschedule)
+      }
+
       // Handle handoff (with cooldown to prevent duplicates)
       if (intents.isHandoff && intents.agentName && intents.agentName !== session.context.agentName && !inHandoffCooldown) {
         const requestedVoice = this.voiceService.getVoiceByName(intents.agentName);
