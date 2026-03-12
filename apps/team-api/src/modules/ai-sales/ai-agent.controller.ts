@@ -589,17 +589,22 @@ export class AIAgentController {
       };
     }
 
-    // Detect agent handoff via LLM (supports any language/phrasing)
+    // Detect agent handoff + language switch via LLM (supports any language/phrasing)
     const previousAgentName = agent.name;
     const availableAgents = this.agentVoices.getAllVoices().map((v) => v.name);
-    const handoff = await this.gemini.detectHandoff(sttResult.transcript, availableAgents);
-    if (handoff.isHandoff && handoff.agentName) {
-      const requestedAgent = this.agentVoices.getVoiceByName(handoff.agentName);
+    const intents = await this.gemini.detectIntents(sttResult.transcript, availableAgents);
+    if (intents.isHandoff && intents.agentName) {
+      const requestedAgent = this.agentVoices.getVoiceByName(intents.agentName);
       if (requestedAgent) {
         agent = requestedAgent as any;
         this.logger.log(`Playground voice handoff → ${requestedAgent.name} (${requestedAgent.id})`);
       }
     }
+
+    // Apply language switch if detected
+    const effectiveLanguage = intents.isLanguageSwitch && intents.language
+      ? intents.language
+      : agent.languages?.[0]?.split("-")[0] || "en";
 
     // 2. LLM — generate response
     const conversationHistory = history.map((m) => ({
@@ -609,7 +614,7 @@ export class AIAgentController {
     conversationHistory.push({ role: "user", content: sttResult.transcript });
 
     // If handoff happened, inject context so new agent introduces themselves
-    const handoffHappened = handoff.isHandoff && handoff.agentName && agent.name !== previousAgentName;
+    const handoffHappened = intents.isHandoff && intents.agentName && agent.name !== previousAgentName;
     if (handoffHappened) {
       conversationHistory.push({
         role: "user" as const,
@@ -739,12 +744,12 @@ export class AIAgentController {
   ) {
     let agent = await this.svc.getAgent(body.agentId);
 
-    // Detect agent handoff via LLM (supports any language/phrasing)
+    // Detect agent handoff + language switch via LLM (supports any language/phrasing)
     const previousAgentName = agent.name;
     const availableAgents = this.agentVoices.getAllVoices().map((v) => v.name);
-    const handoff = await this.gemini.detectHandoff(body.message, availableAgents);
-    if (handoff.isHandoff && handoff.agentName) {
-      const requestedAgent = this.agentVoices.getVoiceByName(handoff.agentName);
+    const intents = await this.gemini.detectIntents(body.message, availableAgents);
+    if (intents.isHandoff && intents.agentName) {
+      const requestedAgent = this.agentVoices.getVoiceByName(intents.agentName);
       if (requestedAgent) {
         agent = requestedAgent as any;
         this.logger.log(`Playground chat handoff → ${requestedAgent.name} (${requestedAgent.id})`);
@@ -758,7 +763,7 @@ export class AIAgentController {
     conversationHistory.push({ role: "user", content: body.message });
 
     // If handoff happened, inject context so new agent introduces themselves
-    const handoffHappened = handoff.isHandoff && handoff.agentName && agent.name !== previousAgentName;
+    const handoffHappened = intents.isHandoff && intents.agentName && agent.name !== previousAgentName;
     if (handoffHappened) {
       conversationHistory.push({
         role: "user" as const,

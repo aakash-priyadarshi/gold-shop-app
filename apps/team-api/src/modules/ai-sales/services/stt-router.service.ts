@@ -71,40 +71,40 @@ export class STTRouterService {
 
     // ─── Auto mode ───
 
-    // Already detected language for this session → route accordingly
-    if (detectedLang) {
-      if (detectedLang.startsWith("en")) {
-        return this.transcribeWithGoogle(audioBuffer, detectedLang);
-      }
-      // Hindi/regional → try Sarvam first, Google as fallback
-      return this.transcribeWithSarvamOrGoogle(audioBuffer, detectedLang);
-    }
-
-    // First chunk of call → use Sarvam for language detection
+    // Always try Sarvam first — it handles Hindi, English, and all Indian languages well
     const hasSarvam = !!this.config.get<string>("SARVAM_API_KEY");
     if (hasSarvam) {
-      const result = await this.sarvam.transcribe(audioBuffer);
-      if (result.transcript && result.languageCode !== "unknown") {
-        this.sessionLanguages.set(sessionId, result.languageCode);
-        this.logger.log(
-          `Session ${sessionId}: detected language ${result.languageCode} via Sarvam`,
-        );
+      const result = await this.sarvam.transcribe(audioBuffer, detectedLang);
+      if (result.transcript) {
+        if (result.languageCode && result.languageCode !== "unknown") {
+          this.sessionLanguages.set(sessionId, result.languageCode);
+          if (!detectedLang) {
+            this.logger.log(
+              `Session ${sessionId}: detected language ${result.languageCode} via Sarvam`,
+            );
+          }
+        }
         return {
           transcript: result.transcript,
-          detectedLanguage: result.languageCode,
+          detectedLanguage: result.languageCode || detectedLang || hintLanguage,
           provider: "sarvam",
         };
       }
     }
 
-    // Sarvam unavailable → try Google with auto language detection
+    // Sarvam returned empty or unavailable → try Google with hint language
     const hasGoogle = !!this.config.get<string>("GOOGLE_STT_API_KEY");
     if (hasGoogle) {
-      const gResult = await this.googleSTT.transcribeWithAutoDetect(audioBuffer);
+      const langHint = detectedLang || hintLanguage;
+      const gResult = detectedLang
+        ? await this.googleSTT.transcribe(audioBuffer, langHint.includes("-") ? langHint : `${langHint}-IN`)
+        : await this.googleSTT.transcribeWithAutoDetect(audioBuffer);
       if (gResult.transcript) {
-        this.sessionLanguages.set(sessionId, gResult.detectedLanguage);
+        if (gResult.detectedLanguage) {
+          this.sessionLanguages.set(sessionId, gResult.detectedLanguage);
+        }
         this.logger.log(
-          `Session ${sessionId}: detected language ${gResult.detectedLanguage} via Google`,
+          `Session ${sessionId}: transcribed via Google STT (lang: ${gResult.detectedLanguage})`,
         );
         return {
           transcript: gResult.transcript,
@@ -112,10 +112,11 @@ export class STTRouterService {
           provider: "google",
         };
       }
+      this.logger.warn(`Google STT returned empty for session ${sessionId}`);
     }
 
-    // Last resort → Deepgram
-    return this.transcribeWithDeepgram(audioBuffer, hintLanguage);
+    // Last resort → Deepgram (may not be available)
+    return this.transcribeWithDeepgram(audioBuffer, detectedLang || hintLanguage);
   }
 
   /**

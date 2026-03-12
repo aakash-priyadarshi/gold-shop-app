@@ -357,61 +357,44 @@ ${voiceList}`;
         session.detectedLanguage = sttResult.detectedLanguage;
       }
 
-      // Detect voice-switch request — lightweight keyword pre-filter + LLM
+      // Detect intents via LLM — handoff + language switch in one call (fully dynamic, no hardcoded patterns)
       const availableAgents = this.voiceService.getAllVoices().map((v) => v.name);
-      const lowerTranscript = transcript.toLowerCase();
-      const mightBeHandoff = availableAgents.some((n) => lowerTranscript.includes(n.toLowerCase()))
-        || /\b(speak|talk|connect|switch|transfer|put me|hand me|give me|let me talk|want to talk|बात|baat|bolna|bolo|se\s+baat|se\s+milao|bhejo)\b/i.test(transcript);
       const inHandoffCooldown = session.lastHandoffAt && (Date.now() - session.lastHandoffAt < 15_000);
+      const intents = await this.gemini.detectIntents(transcript, availableAgents);
 
-      if (mightBeHandoff && !inHandoffCooldown) {
-        const handoff = await this.gemini.detectHandoff(transcript, availableAgents);
-        if (handoff.isHandoff && handoff.agentName && handoff.agentName !== session.context.agentName) {
-          const requestedVoice = this.voiceService.getVoiceByName(handoff.agentName);
-          if (requestedVoice) {
-            const previousAgentName = session.context.agentName || "the previous agent";
-            session.activeVoiceName = requestedVoice.name;
-            // Full persona handoff — update system prompt and agent context
-            if (requestedVoice.personalityDescription) {
-              session.systemPrompt = session.systemPrompt.replace(
-                /You are .+?\./,
-                `You are ${requestedVoice.name}, ${requestedVoice.personalityDescription}.`,
-              );
-            }
-            // Keep the user's current language — don't override from voice config
-            session.context.agentName = requestedVoice.name;
-            session.lastHandoffAt = Date.now();
-            this.logger.log(`Full persona switch → ${requestedVoice.name} (voice: ${requestedVoice.voiceId})`);
-
-            // Synthesize a handoff greeting so the new agent introduces themselves
-            const handoffGreeting = `Hi! I'm ${requestedVoice.name}. ${previousAgentName} told me you wanted to speak with me. How can I help you?`;
-            session.transcript.push({ role: "user", content: transcript, timestamp: Date.now() });
-            session.context.conversationHistory.push({ role: "user", content: transcript });
-            session.transcript.push({ role: "assistant", content: handoffGreeting, timestamp: Date.now() });
-            session.context.conversationHistory.push({ role: "assistant", content: handoffGreeting });
-            await this.synthesizeAndSend(session, handoffGreeting);
-            return; // skip normal LLM response — greeting IS the response
-          }
-        }
+      // Handle language switch
+      if (intents.isLanguageSwitch && intents.language && intents.language !== session.context.language) {
+        session.context.language = intents.language;
+        session.detectedLanguage = intents.language;
+        this.logger.log(`Language switch detected → ${intents.language} (via LLM)`);
       }
 
-      // Detect language-switch request (e.g. "can we speak in Hindi" or "Hindi mein baat karo")
-      const langSwitchMatch = transcript.match(/\b(?:speak|talk|switch|baat|bol).*?\b(hindi|english|tamil|telugu|nepali|हिंदी|हिन्दी|अंग्रेजी|தமிழ்|తెలుగు)\b/i)
-        || transcript.match(/\b(hindi|english|tamil|telugu|nepali|हिंदी|हिन्दी)\b.*?\b(?:me|mein|mai|में|speak|talk|switch|baat|bol)\b/i);
-      if (langSwitchMatch) {
-        const langMap: Record<string, string> = {
-          hindi: "hi", हिंदी: "hi", हिन्दी: "hi",
-          english: "en", अंग्रेजी: "en",
-          tamil: "ta", தமிழ்: "ta",
-          telugu: "te", తెలుగు: "te",
-          nepali: "ne",
-        };
-        const detected = langSwitchMatch[1]?.toLowerCase();
-        const newLang = detected && langMap[detected];
-        if (newLang && newLang !== session.context.language) {
-          session.context.language = newLang;
-          session.detectedLanguage = newLang;
-          this.logger.log(`Language switch requested → ${newLang} (from transcript)`);
+      // Handle handoff (with cooldown to prevent duplicates)
+      if (intents.isHandoff && intents.agentName && intents.agentName !== session.context.agentName && !inHandoffCooldown) {
+        const requestedVoice = this.voiceService.getVoiceByName(intents.agentName);
+        if (requestedVoice) {
+          const previousAgentName = session.context.agentName || "the previous agent";
+          session.activeVoiceName = requestedVoice.name;
+          // Full persona handoff — update system prompt and agent context
+          if (requestedVoice.personalityDescription) {
+            session.systemPrompt = session.systemPrompt.replace(
+              /You are .+?\./,
+              `You are ${requestedVoice.name}, ${requestedVoice.personalityDescription}.`,
+            );
+          }
+          // Keep the user's current language — don't override from voice config
+          session.context.agentName = requestedVoice.name;
+          session.lastHandoffAt = Date.now();
+          this.logger.log(`Full persona switch → ${requestedVoice.name} (voice: ${requestedVoice.voiceId})`);
+
+          // Synthesize a handoff greeting so the new agent introduces themselves
+          const handoffGreeting = `Hi! I'm ${requestedVoice.name}. ${previousAgentName} told me you wanted to speak with me. How can I help you?`;
+          session.transcript.push({ role: "user", content: transcript, timestamp: Date.now() });
+          session.context.conversationHistory.push({ role: "user", content: transcript });
+          session.transcript.push({ role: "assistant", content: handoffGreeting, timestamp: Date.now() });
+          session.context.conversationHistory.push({ role: "assistant", content: handoffGreeting });
+          await this.synthesizeAndSend(session, handoffGreeting);
+          return; // skip normal LLM response — greeting IS the response
         }
       }
 
