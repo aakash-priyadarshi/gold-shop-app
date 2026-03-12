@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { aiSalesApi } from "@/lib/api";
 import {
-  ArrowLeft, Bot, CheckCircle2, Loader2, Mic, MicOff,
-  Phone, PhoneOff, Send, Volume2, XCircle, AlertTriangle,
+    AlertTriangle,
+    ArrowLeft, Bot, CheckCircle2, Loader2, Mic, MicOff,
+    Phone, PhoneOff, Send, Volume2, XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";

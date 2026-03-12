@@ -1,28 +1,28 @@
 import { Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import {
-  WebSocketGateway,
-  WebSocketServer,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    WebSocketGateway,
+    WebSocketServer,
 } from "@nestjs/websockets";
 import { Server } from "ws";
-import { ConfigService } from "@nestjs/config";
-import { ConversationBrainService, ConversationContext } from "../services/conversation-brain.service";
-import { GeminiStreamingClient } from "../services/gemini-streaming.service";
-import { ThinkingBudgetManager } from "../services/thinking-budget-manager.service";
-import { PreCallBrainService } from "../services/pre-call-brain.service";
-import { ModelRouter } from "../services/model-router.service";
-import { PostCallProcessor } from "../services/post-call-processor.service";
-import { InworldTTSClient } from "../services/inworld-tts.service";
-import { GeminiLiveClient } from "../services/gemini-live.service";
-import { EmotionEngineService } from "../services/emotion-engine.service";
-import { CallOrchestratorService } from "../services/call-orchestrator.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { InCallMessagingService } from "../messaging/in-call-messaging-service";
 import { MessagingTriggerDetector } from "../messaging/messaging-trigger-detector";
-import { STTRouterService } from "../services/stt-router.service";
 import { AgentMemoryService } from "../services/agent-memory.service";
 import { AgentVoiceService } from "../services/agent-voice.service";
+import { CallOrchestratorService } from "../services/call-orchestrator.service";
+import { ConversationBrainService, ConversationContext } from "../services/conversation-brain.service";
+import { EmotionEngineService } from "../services/emotion-engine.service";
+import { GeminiLiveClient } from "../services/gemini-live.service";
+import { GeminiStreamingClient } from "../services/gemini-streaming.service";
+import { InworldTTSClient } from "../services/inworld-tts.service";
+import { ModelRouter } from "../services/model-router.service";
+import { PostCallProcessor } from "../services/post-call-processor.service";
+import { PreCallBrainService } from "../services/pre-call-brain.service";
+import { STTRouterService } from "../services/stt-router.service";
+import { ThinkingBudgetManager } from "../services/thinking-budget-manager.service";
 
 /**
  * Audio Pipeline Gateway — handles Twilio Media Streams via WebSocket.
@@ -190,23 +190,25 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
       systemPrompt = this.brain.buildSystemPrompt(context);
     }
 
-    // Inject voice identity into system prompt
+    // Initialize activeVoiceName from the call's assigned agent voice
+    const assignedVoice = this.voiceService.getVoiceByName(callSession.agent?.name || "");
+    const initialVoiceName = assignedVoice?.name || this.voiceService.getDefaultVoice()?.name;
+    const speakingAs = initialVoiceName || context.agentName;
+
+    // Inject voice identity into system prompt — use the ASSIGNED voice, not DB default
     const voices = this.voiceService.getAllVoices();
     if (voices.length > 0) {
-      const defaultVoice = this.voiceService.getDefaultVoice();
       const voiceList = voices.map((v) => `- ${v.name} (${v.gender || "neutral"}, ${v.accent || "neutral"}, speaks ${v.languages.join(", ")})`).join("\n");
       systemPrompt += `\n\n## YOUR VOICE IDENTITY
-You are currently speaking as "${defaultVoice?.name || voices[0].name}".
-If a customer asks your name, tell them you are ${defaultVoice?.name || voices[0].name}.
+You are currently speaking as "${speakingAs}".
+If a customer asks your name, tell them you are ${speakingAs}.
 If a customer asks to speak with someone specific, acknowledge the request naturally.
 
 Available voice identities on this team:
 ${voiceList}`;
+      // Update context agentName to match the voice we're actually using
+      context.agentName = speakingAs;
     }
-
-    // Initialize activeVoiceName from the call's assigned agent voice
-    const assignedVoice = this.voiceService.getVoiceByName(callSession.agent?.name || "");
-    const initialVoiceName = assignedVoice?.name || this.voiceService.getDefaultVoice()?.name;
 
     const session: ActiveCallSession = {
       sessionId,
@@ -349,6 +351,12 @@ ${voiceList}`;
 
       const transcript = sttResult.transcript;
       if (!transcript || transcript.trim().length < 3) return;  // skip noise/empty
+
+      // Guard: detect STT hallucination (same short phrase repeated many times)
+      if (this.isRepetitiveHallucination(transcript)) {
+        this.logger.warn(`[STT] ${session.sessionId}: discarded repetitive hallucination (${transcript.substring(0, 40)}...)`);
+        return;
+      }
 
       this.logger.log(`[STT] ${session.sessionId}: "${transcript}" (lang: ${sttResult.detectedLanguage || 'unknown'})`);
 
@@ -732,6 +740,25 @@ ${voiceList}`;
     } catch (err: any) {
       this.logger.error(`Call finalization error: ${err.message}`);
     }
+  }
+
+  /** Detect STT hallucination — same short phrase repeated 5+ times */
+  private isRepetitiveHallucination(text: string): boolean {
+    const words = text.trim().split(/\s+/);
+    if (words.length < 10) return false;
+
+    // Check 1–4 word repeating patterns
+    for (let len = 1; len <= 4; len++) {
+      if (words.length < len * 5) continue;
+      const pattern = words.slice(0, len).join(" ");
+      let matches = 0;
+      for (let i = 0; i <= words.length - len; i += len) {
+        if (words.slice(i, i + len).join(" ") === pattern) matches++;
+      }
+      const expected = Math.floor(words.length / len);
+      if (matches >= 5 && matches >= expected * 0.7) return true;
+    }
+    return false;
   }
 
   private findSessionByClient(client: any): ActiveCallSession | undefined {
