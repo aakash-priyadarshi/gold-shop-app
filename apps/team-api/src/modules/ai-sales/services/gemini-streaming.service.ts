@@ -57,8 +57,12 @@ export class GeminiStreamingClient {
     agentName: string | null;
     isLanguageSwitch: boolean;
     language: string | null;
+    isEndCall: boolean;
+    isReschedule: boolean;
+    rescheduleTime: string | null;
+    rescheduleTimezone: string | null;
   }> {
-    const noResult = { isHandoff: false, agentName: null, isLanguageSwitch: false, language: null };
+    const noResult = { isHandoff: false, agentName: null, isLanguageSwitch: false, language: null, isEndCall: false, isReschedule: false, rescheduleTime: null, rescheduleTimezone: null };
     if (!this.genAI) return noResult;
 
     try {
@@ -66,7 +70,7 @@ export class GeminiStreamingClient {
         model: "gemini-2.5-flash-lite",
         generationConfig: {
           temperature: 0,
-          maxOutputTokens: 80,
+          maxOutputTokens: 120,
           thinkingConfig: { thinkingBudget: 0 },
         },
       } as any);
@@ -75,17 +79,20 @@ export class GeminiStreamingClient {
         ? `Available agents: ${availableAgents.join(", ")}`
         : "No agents available";
 
-      const prompt = `Analyze this customer message for two intents:
+      const prompt = `Analyze this customer message for intents:
 1. HANDOFF: Does the customer want to speak/talk/connect with a specific person?
 2. LANGUAGE: Does the customer want to switch the conversation language?
+3. END_CALL: Does the customer want to end/cut/hang up the call? (e.g. "bye", "phone cut karo", "call end karo", "goodbye", "chal bye", "rakhiye", "theek hai bye")
+4. RESCHEDULE: Does the customer want to schedule/reschedule a follow-up call? If yes, extract the time and timezone.
 
 ${agentList}
 Message: "${message}"
 
 Reply ONLY with JSON, no markdown:
-{"isHandoff":false,"agentName":null,"isLanguageSwitch":false,"language":null}
+{"isHandoff":false,"agentName":null,"isLanguageSwitch":false,"language":null,"isEndCall":false,"isReschedule":false,"rescheduleTime":null,"rescheduleTimezone":null}
 
-For language, use ISO 639-1 codes: "hi" for Hindi, "en" for English, "ta" for Tamil, "te" for Telugu, "ne" for Nepali, "bn" for Bengali, "mr" for Marathi, "gu" for Gujarati, "pa" for Punjabi, "kn" for Kannada, "ml" for Malayalam, "ur" for Urdu, "as" for Assamese, "ar" for Arabic.`;
+For language, use ISO 639-1 codes: "hi" for Hindi, "en" for English, "ta" for Tamil, "te" for Telugu, "ne" for Nepali, "bn" for Bengali, "mr" for Marathi, "gu" for Gujarati, "pa" for Punjabi, "kn" for Kannada, "ml" for Malayalam, "ur" for Urdu, "as" for Assamese, "ar" for Arabic.
+For rescheduleTime, use ISO 8601 format (e.g. "2026-03-13T10:00:00"). For rescheduleTimezone, use IANA timezone (e.g. "Asia/Kolkata", "America/New_York", "Asia/Dubai", "Europe/London").`;
 
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim();
@@ -96,6 +103,10 @@ For language, use ISO 639-1 codes: "hi" for Hindi, "en" for English, "ta" for Ta
         agentName: parsed.agentName || null,
         isLanguageSwitch: !!parsed.isLanguageSwitch,
         language: parsed.language || null,
+        isEndCall: !!parsed.isEndCall,
+        isReschedule: !!parsed.isReschedule,
+        rescheduleTime: parsed.rescheduleTime || null,
+        rescheduleTimezone: parsed.rescheduleTimezone || null,
       };
     } catch (err: any) {
       this.logger.warn(`Intent detection failed: ${err.message}`);

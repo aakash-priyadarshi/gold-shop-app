@@ -84,7 +84,13 @@ Return JSON matching this schema:
       });
 
       const text = result.response.text();
-      return JSON.parse(text) as CallReport;
+      // Clean up common LLM JSON issues (trailing commas, markdown fences)
+      const cleaned = text
+        .replace(/```json?\n?/g, "")
+        .replace(/```/g, "")
+        .replace(/,\s*([}\]])/g, "$1") // trailing commas
+        .trim();
+      return JSON.parse(cleaned) as CallReport;
     } catch (err: any) {
       this.logger.error(`Post-call report generation failed: ${err.message}`);
       return this.buildMinimalReport(call.transcript);

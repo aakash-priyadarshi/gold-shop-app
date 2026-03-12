@@ -245,7 +245,11 @@ export class InCallMessagingService {
         ...(message.mediaUrl && { mediaUrl: [message.mediaUrl] }),
       });
     } else {
-      const twilioPhone = this.memory.get("phones", "twilio_phone");
+      const twilioPhone = this.memory.get("phones", "twilio_phone") || this.config.get("TWILIO_PHONE_NUMBER");
+      if (!twilioPhone) {
+        this.logger.warn(`[Messaging] No FROM number configured — set 'twilio_phone' in Agent Memory or TWILIO_PHONE_NUMBER env`);
+        return;
+      }
       await client.messages.create({
         from: twilioPhone,
         to: ctx.leadPhone,
