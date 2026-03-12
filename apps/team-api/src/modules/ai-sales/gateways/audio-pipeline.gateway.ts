@@ -313,8 +313,8 @@ ${voiceList}`;
     session.sttRawBuffer.push(rawChunk);
     session.sttBufferBytes += rawChunk.length;
 
-    // Batch process every ~4 seconds of audio (32000 bytes at 8kHz mulaw)
-    if (session.sttBufferBytes > 32000) {
+    // Batch process every ~2 seconds of audio (16000 bytes at 8kHz mulaw)
+    if (session.sttBufferBytes > 16000) {
       await this.processAudioBuffer(session);
     }
   }
@@ -410,24 +410,18 @@ ${voiceList}`;
         return;
       }
 
-      // Calculate thinking budget for this turn
-      const budget = this.thinkingBudget.calculate(
-        transcript,
-        session.context.emotionState,
-        session.context.currentPhase,
-        session.context.conversationHistory,
+      // Calculate thinking budget for this turn (capped at 2048 for live calls)
+      const budget = Math.min(
+        this.thinkingBudget.calculate(
+          transcript,
+          session.context.emotionState,
+          session.context.currentPhase,
+          session.context.conversationHistory,
+        ),
+        2048,
       );
 
-      // Play filler audio while model thinks (budget > 0)
-      const fillerType = this.thinkingBudget.getFillerContext(budget);
-      if (fillerType !== "none") {
-        const fillerText = fillerType === "short"
-          ? "Hmm, let me think about that..."
-          : fillerType === "medium"
-            ? "That's a great question, give me just a moment..."
-            : "You know, that's really important, let me make sure I give you the right answer...";
-        await this.synthesizeAndSend(session, fillerText);
-      }
+      // Skip filler audio — stream LLM response immediately for lower latency
 
       // Inject pending messaging question if any (e.g. "Should I send this on WhatsApp?")
       let effectiveTranscript = transcript;
