@@ -566,7 +566,7 @@ export class AIAgentController {
   ) {
     if (!file) throw new Error("No audio file uploaded");
 
-    const agent = await this.svc.getAgent(body.agentId);
+    let agent = await this.svc.getAgent(body.agentId);
     const history: { role: string; text: string }[] = body.history ? JSON.parse(body.history) : [];
 
     // 1. STT — transcribe audio
@@ -587,6 +587,18 @@ export class AIAgentController {
         llmProvider: "none",
         llmLatencyMs: 0,
       };
+    }
+
+    // Detect agent handoff request ("Can I talk to Raj?", "Switch to Priya", "mujhe Raj se baat karni hai")
+    const handoffMatch = sttResult.transcript.match(
+      /(?:talk to|speak (?:to|with)|want|give me|connect me (?:to|with)|switch to|mujhe\s+)([A-Z][a-z]{2,})(?:\s+se\s+(?:baat|connect|milao))?/i,
+    ) || sttResult.transcript.match(/([A-Z][a-z]{2,})\s+se\s+(?:baat\s+kar(?:ni|o|ao)|connect\s+kar(?:o|ao)|milao)/i);
+    if (handoffMatch) {
+      const requestedAgent = this.agentVoices.getVoiceByName(handoffMatch[1]);
+      if (requestedAgent) {
+        agent = requestedAgent as any;
+        this.logger.log(`Playground voice handoff → ${requestedAgent.name} (${requestedAgent.id})`);
+      }
     }
 
     // 2. LLM — generate response
@@ -703,6 +715,8 @@ export class AIAgentController {
       ttsProvider,
       ttsLatencyMs,
       audioBase64,
+      switchedAgentId: agent.id !== body.agentId ? agent.id : undefined,
+      switchedAgentName: agent.id !== body.agentId ? agent.name : undefined,
     };
   }
 
@@ -714,7 +728,20 @@ export class AIAgentController {
       history?: { role: string; text: string }[];
     },
   ) {
-    const agent = await this.svc.getAgent(body.agentId);
+    let agent = await this.svc.getAgent(body.agentId);
+
+    // Detect agent handoff request ("Can I talk to Raj?", "Switch to Priya", "mujhe Raj se baat karni hai")
+    const handoffMatch = body.message.match(
+      /(?:talk to|speak (?:to|with)|want|give me|connect me (?:to|with)|switch to|mujhe\s+)([A-Z][a-z]{2,})(?:\s+se\s+(?:baat|connect|milao))?/i,
+    ) || body.message.match(/([A-Z][a-z]{2,})\s+se\s+(?:baat\s+kar(?:ni|o|ao)|connect\s+kar(?:o|ao)|milao)/i);
+    if (handoffMatch) {
+      const requestedAgent = this.agentVoices.getVoiceByName(handoffMatch[1]);
+      if (requestedAgent) {
+        agent = requestedAgent as any;
+        this.logger.log(`Playground chat handoff → ${requestedAgent.name} (${requestedAgent.id})`);
+      }
+    }
+
     const conversationHistory = (body.history || []).map((m) => ({
       role: m.role === "user" ? "user" as const : "assistant" as const,
       content: m.text,
@@ -737,31 +764,66 @@ export class AIAgentController {
     }
     const llmLatencyMs = Date.now() - start;
 
-    // Optionally generate TTS
+    // Optionally generate TTS (use switched agent's voice)
     let audioBase64: string | undefined;
     let ttsLatencyMs: number | undefined;
-    const apiKey = this.config.get<string>("ELEVENLABS_API_KEY");
-    const voice = this.agentVoices.getDefaultVoice();
-    const chatVoiceId = voice?.voiceId || "pFZP5JQG7iQjIQuC4Bku"; // Lily fallback
-    if (apiKey && chatVoiceId && reply) {
+    let ttsProvider: string | undefined;
+    const elevenLabsKey = this.config.get<string>("ELEVENLABS_API_KEY");
+    const chatVoiceId = agent.voiceId
+      || this.agentVoices.getDefaultVoice()?.voiceId
+      || "pFZP5JQG7iQjIQuC4Bku"; // Lily fallback
+    if (elevenLabsKey && chatVoiceId && reply) {
       try {
         const ttsStart = Date.now();
         const ttsResp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${chatVoiceId}`, {
           method: "POST",
-          headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
+          headers: { "xi-api-key": elevenLabsKey, "Content-Type": "application/json" },
           body: JSON.stringify({
             text: reply,
             model_id: "eleven_multilingual_v2",
-            voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+            voice_settings: {
+              stability: agent.voiceStability ?? 0.5,
+              similarity_boost: agent.voiceSimilarityBoost ?? 0.75,
+            },
           }),
         });
         if (ttsResp.ok) {
           const buffer = Buffer.from(await ttsResp.arrayBuffer());
           audioBase64 = buffer.toString("base64");
           ttsLatencyMs = Date.now() - ttsStart;
+          ttsProvider = "elevenlabs";
         }
       } catch (err: any) {
-        this.logger.warn(`TTS failed: ${err.message}`);
+        this.logger.warn(`ElevenLabs TTS failed: ${err.message}`);
+      }
+    }
+
+    // Sarvam TTS fallback
+    const sarvamKey = this.config.get<string>("SARVAM_API_KEY");
+    if (!audioBase64 && sarvamKey && reply) {
+      try {
+        const ttsStart = Date.now();
+        const lang = agent.languages?.[0] || "hi-IN";
+        const sarvamTtsResp = await fetch("https://api.sarvam.ai/text-to-speech", {
+          method: "POST",
+          headers: { "api-subscription-key": sarvamKey, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            inputs: [reply],
+            target_language_code: lang.includes("-") ? lang : `${lang}-IN`,
+            speaker: "meera",
+            model: "bulbul:v2",
+          }),
+        });
+        if (sarvamTtsResp.ok) {
+          const sarvamData = await sarvamTtsResp.json() as { audios?: string[] };
+          if (sarvamData.audios?.[0]) {
+            audioBase64 = sarvamData.audios[0];
+            ttsLatencyMs = Date.now() - ttsStart;
+            ttsProvider = "sarvam";
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(`Sarvam TTS failed: ${err.message}`);
       }
     }
 
@@ -769,9 +831,11 @@ export class AIAgentController {
       reply,
       llmProvider: "gemini-flash",
       llmLatencyMs,
-      ttsProvider: audioBase64 ? "elevenlabs" : undefined,
+      ttsProvider,
       ttsLatencyMs,
       audioBase64,
+      switchedAgentId: agent.id !== body.agentId ? agent.id : undefined,
+      switchedAgentName: agent.id !== body.agentId ? agent.name : undefined,
     };
   }
 

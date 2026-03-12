@@ -185,6 +185,16 @@ export default function PlaygroundPage() {
       });
       const data = res.data as any;
 
+      // Handle agent handoff
+      if (data.switchedAgentId) {
+        setSelectedAgentId(data.switchedAgentId);
+        setMessages((prev) => [...prev, {
+          role: "system",
+          text: `Switched to ${data.switchedAgentName || "new agent"}`,
+          timestamp: new Date(),
+        }]);
+      }
+
       const agentMsg: ChatMessage = {
         role: "agent",
         text: data.reply || "...",
@@ -247,6 +257,16 @@ export default function PlaygroundPage() {
               text: data.transcript,
               timestamp: new Date(),
               meta: { sttProvider: data.sttProvider, sttLatency: data.sttLatencyMs },
+            }]);
+          }
+
+          // Handle agent handoff
+          if (data.switchedAgentId) {
+            setSelectedAgentId(data.switchedAgentId);
+            setMessages((prev) => [...prev, {
+              role: "system",
+              text: `Switched to ${data.switchedAgentName || "new agent"}`,
+              timestamp: new Date(),
             }]);
           }
 

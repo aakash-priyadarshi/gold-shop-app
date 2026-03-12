@@ -72,6 +72,11 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
 
   async handleConnection(client: any) {
     this.logger.log("WebSocket connection established");
+
+    // Manually wire message handling — NestJS WsAdapter doesn't auto-route
+    // raw WebSocket messages to handleMessage without @SubscribeMessage decorators,
+    // and Twilio's message format doesn't match NestJS's expected {event, data} shape.
+    client.on("message", (data: any) => this.handleMessage(client, data));
   }
 
   async handleDisconnect(client: any) {
@@ -203,7 +208,8 @@ ${voiceList}`;
       systemPrompt,
       transcript: [],
       startTime: Date.now(),
-      sttBuffer: "",
+      sttRawBuffer: [],
+      sttBufferBytes: 0,
       tokenCount: { input: 0, output: 0 },
     };
 
@@ -239,12 +245,12 @@ ${voiceList}`;
       }
     }
 
-    // Send initial greeting via TTS
-    if (context.greeting) {
-      await this.synthesizeAndSend(session, context.greeting);
-      session.transcript.push({ role: "assistant", content: context.greeting, timestamp: Date.now() });
-      session.context.conversationHistory.push({ role: "assistant", content: context.greeting });
-    }
+    // Send initial greeting via TTS (always greet — use fallback if none configured)
+    const greeting = context.greeting
+      || `Hello${context.leadName ? `, ${context.leadName}` : ""}! This is ${context.agentName}. How can I help you today?`;
+    await this.synthesizeAndSend(session, greeting);
+    session.transcript.push({ role: "assistant", content: greeting, timestamp: Date.now() });
+    session.context.conversationHistory.push({ role: "assistant", content: greeting });
   }
 
   /** Process incoming audio chunk — forward to Deepgram STT or Gemini Live */
@@ -261,11 +267,13 @@ ${voiceList}`;
       return;
     }
 
-    // Standard mode: buffer and process through STT → LLM → TTS pipeline
-    session.sttBuffer += audioPayload;
+    // Standard mode: decode each chunk to raw bytes, then buffer
+    const rawChunk = Buffer.from(audioPayload, "base64");
+    session.sttRawBuffer.push(rawChunk);
+    session.sttBufferBytes += rawChunk.length;
 
     // Batch process every ~2 seconds of audio (16000 bytes at 8kHz mulaw)
-    if (session.sttBuffer.length > 16000) {
+    if (session.sttBufferBytes > 16000) {
       await this.processAudioBuffer(session);
     }
   }
@@ -277,12 +285,11 @@ ${voiceList}`;
    *       thinking budget → model route → Gemini Flash-Lite (99%) or Claude Sonnet (1%) → TTS → Twilio
    */
   private async processAudioBuffer(session: ActiveCallSession) {
-    const audioData = session.sttBuffer;
-    session.sttBuffer = "";
+    const audioBuffer = Buffer.concat(session.sttRawBuffer);
+    session.sttRawBuffer = [];
+    session.sttBufferBytes = 0;
 
     try {
-      const audioBuffer = Buffer.from(audioData, "base64");
-
       // Route to best STT provider (Deepgram for English, Sarvam for Hindi/regional, auto-detect)
       const sttResult = await this.sttRouter.transcribe(
         audioBuffer,
@@ -298,15 +305,26 @@ ${voiceList}`;
         session.detectedLanguage = sttResult.detectedLanguage;
       }
 
-      // Detect voice-switch request ("I want to talk to Priya", "Can I speak with Raj?")
+      // Detect voice-switch request ("I want to talk to Priya", "Can I speak with Raj?", "mujhe Raj se baat karni hai")
       const voiceSwitchMatch = transcript.match(
-        /(?:talk to|speak (?:to|with)|want|give me|connect me (?:to|with)|switch to)\s+([A-Z][a-z]{2,})/i,
-      );
+        /(?:talk to|speak (?:to|with)|want|give me|connect me (?:to|with)|switch to|mujhe\s+)([A-Z][a-z]{2,})(?:\s+se\s+(?:baat|connect|milao))?/i,
+      ) || transcript.match(/([A-Z][a-z]{2,})\s+se\s+(?:baat\s+kar(?:ni|o|ao)|connect\s+kar(?:o|ao)|milao)/i);
       if (voiceSwitchMatch) {
         const requestedVoice = this.voiceService.getVoiceByName(voiceSwitchMatch[1]);
         if (requestedVoice) {
           session.activeVoiceName = requestedVoice.name;
-          this.logger.log(`Voice switch → ${requestedVoice.name} (${requestedVoice.voiceId})`);
+          // Full persona handoff — update system prompt, language, agent context
+          if (requestedVoice.personalityDescription) {
+            session.systemPrompt = session.systemPrompt.replace(
+              /You are .+?\./,
+              `You are ${requestedVoice.name}, ${requestedVoice.personalityDescription}.`,
+            );
+          }
+          if (requestedVoice.languages?.[0]) {
+            session.context.language = requestedVoice.languages[0];
+          }
+          session.context.agentName = requestedVoice.name;
+          this.logger.log(`Full persona switch → ${requestedVoice.name} (voice: ${requestedVoice.voiceId})`);
         }
       }
 
@@ -489,10 +507,11 @@ ${voiceList}`;
       );
 
       if (!response.ok || !response.body) {
-        this.logger.error(`ElevenLabs TTS failed: ${response.status}`);
+        this.logger.error(`ElevenLabs TTS failed: ${response.status} ${response.statusText}`);
         return;
       }
 
+      this.logger.debug(`TTS streaming audio for: "${text.substring(0, 50)}..."`);
       // Stream audio chunks back to Twilio
       const reader = response.body.getReader();
       while (true) {
@@ -545,8 +564,21 @@ ${voiceList}`;
         }
       }
 
+      // Derive overall sentiment from emotion arc
+      let sentiment: "VERY_POSITIVE" | "POSITIVE" | "NEUTRAL" | "NEGATIVE" | "VERY_NEGATIVE" = "NEUTRAL";
+      if (emotionArc.length > 0) {
+        const lastEmotions = emotionArc.slice(-3);
+        const positiveEmotions = ["buying", "excited", "happy", "interested", "curious"];
+        const negativeEmotions = ["frustrated", "angry", "annoyed", "confused", "skeptical"];
+        const posCount = lastEmotions.filter((e) => positiveEmotions.includes(e.primary)).length;
+        const negCount = lastEmotions.filter((e) => negativeEmotions.includes(e.primary)).length;
+        if (posCount >= 2) sentiment = posCount === lastEmotions.length ? "VERY_POSITIVE" : "POSITIVE";
+        else if (negCount >= 2) sentiment = negCount === lastEmotions.length ? "VERY_NEGATIVE" : "NEGATIVE";
+      }
+
       // Save to database
       await this.callOrchestrator.endCall(session.sessionId, {
+        sentiment,
         transcript: fullTranscript,
         summary: summary || "No summary available.",
         emotionArc: emotionArc.map((e) => ({
@@ -659,7 +691,8 @@ interface ActiveCallSession {
   systemPrompt: string;
   transcript: TranscriptEntry[];
   startTime: number;
-  sttBuffer: string;
+  sttRawBuffer: Buffer[];  // raw decoded audio chunks (mulaw/8000)
+  sttBufferBytes: number;  // total bytes accumulated
   tokenCount: { input: number; output: number };
   pendingInjection?: string; // messaging question/confirmation to inject into next AI turn
   detectedLanguage?: string; // auto-detected from STT (e.g. "hi-IN", "en-IN")
