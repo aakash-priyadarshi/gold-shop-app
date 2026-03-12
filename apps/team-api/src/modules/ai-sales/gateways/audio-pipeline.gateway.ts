@@ -421,7 +421,20 @@ ${voiceList}`;
         2048,
       );
 
-      // Skip filler audio — stream LLM response immediately for lower latency
+      // Play filler audio IN PARALLEL with LLM — fills silence while model thinks
+      // Filler fires as fire-and-forget; first real LLM sentence clears it via barge-in
+      const fillerType = this.thinkingBudget.getFillerContext(budget);
+      let fillerPlaying = false;
+      if (fillerType !== "none") {
+        const fillerText = fillerType === "short"
+          ? "Hmm..."
+          : fillerType === "medium"
+            ? "That's a great question..."
+            : "You know, that's really important...";
+        fillerPlaying = true;
+        // Fire-and-forget — don't await, LLM starts immediately below
+        this.synthesizeAndSend(session, fillerText).catch(() => {});
+      }
 
       // Inject pending messaging question if any (e.g. "Should I send this on WhatsApp?")
       let effectiveTranscript = transcript;
@@ -449,10 +462,17 @@ ${voiceList}`;
           )
         : this.gemini.streamResponse(effectiveTranscript, session.systemPrompt, budget);
 
+      let firstSentence = true;
       for await (const chunk of responseStream) {
         responseText += chunk;
         // Send sentence-by-sentence for lower perceived latency
         if (chunk.includes(".") || chunk.includes("?") || chunk.includes("!")) {
+          // Clear filler audio before sending first real sentence (barge-in)
+          if (firstSentence && fillerPlaying) {
+            this.sendClear(session);
+            fillerPlaying = false;
+          }
+          firstSentence = false;
           await this.synthesizeAndSend(session, responseText.trim());
           session.transcript.push({ role: "assistant", content: responseText.trim(), timestamp: Date.now() });
           session.context.conversationHistory.push({ role: "assistant", content: responseText.trim() });
@@ -462,6 +482,9 @@ ${voiceList}`;
 
       // Send any remaining text
       if (responseText.trim()) {
+        if (firstSentence && fillerPlaying) {
+          this.sendClear(session);
+        }
         await this.synthesizeAndSend(session, responseText.trim());
         session.transcript.push({ role: "assistant", content: responseText.trim(), timestamp: Date.now() });
         session.context.conversationHistory.push({ role: "assistant", content: responseText.trim() });
