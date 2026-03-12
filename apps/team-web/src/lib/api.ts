@@ -251,6 +251,8 @@ export const aiSalesApi = {
     }),
   playgroundCall: (data: { agentId: string; phoneNumber: string }) =>
     api.post("/ai-sales/playground/call", data),
+  playgroundCallStatus: (sessionId: string) =>
+    api.get(`/ai-sales/playground/call-status/${sessionId}`),
 
   // Central Brain / Intelligence
   getBrainDashboard: () =>

@@ -590,6 +590,7 @@ export class AIAgentController {
     }
 
     // Detect agent handoff via LLM (supports any language/phrasing)
+    const previousAgentName = agent.name;
     const availableAgents = this.agentVoices.getAllVoices().map((v) => v.name);
     const handoff = await this.gemini.detectHandoff(sttResult.transcript, availableAgents);
     if (handoff.isHandoff && handoff.agentName) {
@@ -606,6 +607,15 @@ export class AIAgentController {
       content: m.text,
     }));
     conversationHistory.push({ role: "user", content: sttResult.transcript });
+
+    // If handoff happened, inject context so new agent introduces themselves
+    const handoffHappened = handoff.isHandoff && handoff.agentName && agent.name !== previousAgentName;
+    if (handoffHappened) {
+      conversationHistory.push({
+        role: "user" as const,
+        content: `[SYSTEM: You are now ${agent.name}. The customer was just transferred to you from ${previousAgentName}. Introduce yourself warmly — e.g. "Hi! I'm ${agent.name}, ${previousAgentName} told me you wanted to speak with me. How can I help you?" Do NOT continue the previous agent's conversation as if nothing changed.]`,
+      });
+    }
 
     const llmStart = Date.now();
     const systemPrompt = this.brain.buildSystemPrompt({
@@ -730,6 +740,7 @@ export class AIAgentController {
     let agent = await this.svc.getAgent(body.agentId);
 
     // Detect agent handoff via LLM (supports any language/phrasing)
+    const previousAgentName = agent.name;
     const availableAgents = this.agentVoices.getAllVoices().map((v) => v.name);
     const handoff = await this.gemini.detectHandoff(body.message, availableAgents);
     if (handoff.isHandoff && handoff.agentName) {
@@ -745,6 +756,15 @@ export class AIAgentController {
       content: m.text,
     }));
     conversationHistory.push({ role: "user", content: body.message });
+
+    // If handoff happened, inject context so new agent introduces themselves
+    const handoffHappened = handoff.isHandoff && handoff.agentName && agent.name !== previousAgentName;
+    if (handoffHappened) {
+      conversationHistory.push({
+        role: "user" as const,
+        content: `[SYSTEM: You are now ${agent.name}. The customer was just transferred to you from ${previousAgentName}. Introduce yourself warmly — e.g. "Hi! I'm ${agent.name}, ${previousAgentName} told me you wanted to speak with me. How can I help you?" Do NOT continue the previous agent's conversation as if nothing changed.]`,
+      });
+    }
 
     // Use Gemini for standard turns
     const start = Date.now();
@@ -864,6 +884,17 @@ export class AIAgentController {
       sessionId: result.id,
       leadId: lead.id,
     };
+  }
+
+  @Get("playground/call-status/:sessionId")
+  @Roles("ADMIN")
+  async playgroundCallStatus(@Param("sessionId") sessionId: string) {
+    const session = await this.prisma.callSession.findUnique({
+      where: { id: sessionId },
+      select: { status: true },
+    });
+    if (!session) return { status: "NOT_FOUND" };
+    return { status: session.status };
   }
 
   /* ─── CENTRAL BRAIN / INTELLIGENCE ─── */

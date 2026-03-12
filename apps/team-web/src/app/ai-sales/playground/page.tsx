@@ -315,6 +315,19 @@ export default function PlaygroundPage() {
   }, []);
 
   // ── Initiate real phone call ──
+  const callPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopCallPolling = useCallback(() => {
+    if (callPollRef.current) {
+      clearInterval(callPollRef.current);
+      callPollRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => stopCallPolling();
+  }, [stopCallPolling]);
+
   const startPhoneCall = async () => {
     if (!phoneNumber.trim() || !selectedAgentId) {
       toast.error("Enter a phone number and select an agent");
@@ -330,6 +343,24 @@ export default function PlaygroundPage() {
       const data = res.data as any;
       setCallStatus(data.message || "Call initiated! Check your phone.");
       toast.success("Call initiated — check your phone!");
+
+      // Poll call status to detect when call ends on Twilio's side
+      if (data.sessionId) {
+        stopCallPolling();
+        callPollRef.current = setInterval(async () => {
+          try {
+            const statusRes = await aiSalesApi.playgroundCallStatus(data.sessionId);
+            const s = (statusRes.data as any).status;
+            if (s === "COMPLETED" || s === "FAILED" || s === "NO_ANSWER" || s === "BUSY") {
+              setCallActive(false);
+              setCallStatus(`Call ${s.toLowerCase()}`);
+              stopCallPolling();
+            }
+          } catch {
+            // ignore polling errors
+          }
+        }, 4000);
+      }
     } catch (err: any) {
       setCallStatus("Failed to initiate call");
       toast.error(err?.response?.data?.message || "Call failed");
@@ -338,6 +369,7 @@ export default function PlaygroundPage() {
   };
 
   const endPhoneCall = async () => {
+    stopCallPolling();
     setCallActive(false);
     setCallStatus("Call ended");
   };
