@@ -144,39 +144,54 @@ export class SarvamSTTClient {
   }
 
   /**
-   * Wrap raw mulaw bytes in a WAV container.
-   * WAV format tag 7 = mu-law. This is universally accepted by STT APIs.
+   * Decode a single µ-law byte → 16-bit linear PCM sample (ITU-T G.711).
+   * Sarvam's model works best with PCM WAV, not raw mu-law WAV.
+   */
+  private mulawDecode(mulawByte: number): number {
+    mulawByte = ~mulawByte & 0xff;
+    const sign = mulawByte & 0x80;
+    const exponent = (mulawByte & 0x70) >> 4;
+    const mantissa = mulawByte & 0x0f;
+    let magnitude = ((mantissa << 3) + 0x84) << exponent;
+    magnitude -= 0x84;
+    return sign ? -magnitude : magnitude;
+  }
+
+  /**
+   * Convert raw mu-law bytes to linear PCM 16-bit and wrap in a standard WAV container.
+   * Format tag 1 (PCM), 16-bit, 8kHz mono — universally supported by all STT APIs.
    */
   private wrapMulawAsWav(mulawData: Buffer, sampleRate = 8000, channels = 1): Buffer {
-    const dataSize = mulawData.length;
-    const header = Buffer.alloc(58);
+    // Decode mu-law → 16-bit linear PCM
+    const numSamples = mulawData.length;
+    const pcmData = Buffer.alloc(numSamples * 2);
+    for (let i = 0; i < numSamples; i++) {
+      pcmData.writeInt16LE(this.mulawDecode(mulawData[i]), i * 2);
+    }
+
+    const dataSize = pcmData.length;
+    const header = Buffer.alloc(44);
 
     // RIFF header
     header.write("RIFF", 0);
-    header.writeUInt32LE(dataSize + 50, 4);
+    header.writeUInt32LE(36 + dataSize, 4);
     header.write("WAVE", 8);
 
-    // fmt chunk (18 bytes for non-PCM)
+    // fmt chunk (16 bytes for PCM)
     header.write("fmt ", 12);
-    header.writeUInt32LE(18, 16);       // chunk size
-    header.writeUInt16LE(7, 20);        // format: mu-law
+    header.writeUInt32LE(16, 16);              // chunk size
+    header.writeUInt16LE(1, 20);               // format: PCM
     header.writeUInt16LE(channels, 22);
     header.writeUInt32LE(sampleRate, 24);
-    header.writeUInt32LE(sampleRate * channels, 28); // byte rate
-    header.writeUInt16LE(channels, 32); // block align
-    header.writeUInt16LE(8, 34);        // bits per sample
-    header.writeUInt16LE(0, 36);        // extra format bytes
-
-    // fact chunk
-    header.write("fact", 38);
-    header.writeUInt32LE(4, 42);
-    header.writeUInt32LE(dataSize, 46); // sample count
+    header.writeUInt32LE(sampleRate * channels * 2, 28); // byte rate
+    header.writeUInt16LE(channels * 2, 32);    // block align
+    header.writeUInt16LE(16, 34);              // bits per sample
 
     // data chunk
-    header.write("data", 50);
-    header.writeUInt32LE(dataSize, 54);
+    header.write("data", 36);
+    header.writeUInt32LE(dataSize, 40);
 
-    return Buffer.concat([header, mulawData]);
+    return Buffer.concat([header, pcmData]);
   }
 
   /** Sarvam-supported language codes */
