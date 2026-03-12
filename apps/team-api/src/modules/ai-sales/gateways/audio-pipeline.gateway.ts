@@ -204,6 +204,10 @@ Available voice identities on this team:
 ${voiceList}`;
     }
 
+    // Initialize activeVoiceName from the call's assigned agent voice
+    const assignedVoice = this.voiceService.getVoiceByName(callSession.agent?.name || "");
+    const initialVoiceName = assignedVoice?.name || this.voiceService.getDefaultVoice()?.name;
+
     const session: ActiveCallSession = {
       sessionId,
       client,
@@ -215,6 +219,7 @@ ${voiceList}`;
       sttRawBuffer: [],
       sttBufferBytes: 0,
       tokenCount: { input: 0, output: 0 },
+      activeVoiceName: initialVoiceName,
       isSpeaking: false,
       isProcessing: false,
       greetingDoneAt: 0,
@@ -345,6 +350,8 @@ ${voiceList}`;
       const transcript = sttResult.transcript;
       if (!transcript || transcript.trim().length < 3) return;  // skip noise/empty
 
+      this.logger.log(`[STT] ${session.sessionId}: "${transcript}" (lang: ${sttResult.detectedLanguage || 'unknown'})`);
+
       // Track detected language for this session
       if (sttResult.detectedLanguage && sttResult.detectedLanguage !== "unknown") {
         session.detectedLanguage = sttResult.detectedLanguage;
@@ -354,7 +361,7 @@ ${voiceList}`;
       const availableAgents = this.voiceService.getAllVoices().map((v) => v.name);
       const lowerTranscript = transcript.toLowerCase();
       const mightBeHandoff = availableAgents.some((n) => lowerTranscript.includes(n.toLowerCase()))
-        || /\b(speak|talk|connect|switch|transfer|बात|baat|bolna|bolo|se\s+baat)\b/i.test(transcript);
+        || /\b(speak|talk|connect|switch|transfer|put me|hand me|give me|let me talk|want to talk|बात|baat|bolna|bolo|se\s+baat|se\s+milao|bhejo)\b/i.test(transcript);
       const inHandoffCooldown = session.lastHandoffAt && (Date.now() - session.lastHandoffAt < 15_000);
 
       if (mightBeHandoff && !inHandoffCooldown) {
@@ -385,6 +392,26 @@ ${voiceList}`;
             await this.synthesizeAndSend(session, handoffGreeting);
             return; // skip normal LLM response — greeting IS the response
           }
+        }
+      }
+
+      // Detect language-switch request (e.g. "can we speak in Hindi" or "Hindi mein baat karo")
+      const langSwitchMatch = transcript.match(/\b(?:speak|talk|switch|baat|bol).*?\b(hindi|english|tamil|telugu|nepali|हिंदी|हिन्दी|अंग्रेजी|தமிழ்|తెలుగు)\b/i)
+        || transcript.match(/\b(hindi|english|tamil|telugu|nepali|हिंदी|हिन्दी)\b.*?\b(?:me|mein|mai|में|speak|talk|switch|baat|bol)\b/i);
+      if (langSwitchMatch) {
+        const langMap: Record<string, string> = {
+          hindi: "hi", हिंदी: "hi", हिन्दी: "hi",
+          english: "en", अंग्रेजी: "en",
+          tamil: "ta", தமிழ்: "ta",
+          telugu: "te", తెలుగు: "te",
+          nepali: "ne",
+        };
+        const detected = langSwitchMatch[1]?.toLowerCase();
+        const newLang = detected && langMap[detected];
+        if (newLang && newLang !== session.context.language) {
+          session.context.language = newLang;
+          session.detectedLanguage = newLang;
+          this.logger.log(`Language switch requested → ${newLang} (from transcript)`);
         }
       }
 
@@ -593,10 +620,10 @@ ${voiceList}`;
             text,
             model_id: "eleven_turbo_v2_5",
             voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.75,
-              style: 0.0,
-              use_speaker_boost: false,
+              stability: activeVoice?.voiceStability ?? 0.5,
+              similarity_boost: activeVoice?.voiceSimilarityBoost ?? 0.75,
+              style: activeVoice?.voiceStyle ?? 0.0,
+              use_speaker_boost: activeVoice?.voiceUseSpeakerBoost ?? false,
             },
           }),
         },
@@ -607,7 +634,7 @@ ${voiceList}`;
         return;
       }
 
-      this.logger.debug(`TTS streaming audio for: "${text.substring(0, 50)}..."`);
+      this.logger.debug(`TTS [${activeVoice?.name || 'fallback'}/${voiceId}]: "${text.substring(0, 50)}..."`);
       // Stream audio chunks back to Twilio
       const reader = response.body.getReader();
       while (true) {
