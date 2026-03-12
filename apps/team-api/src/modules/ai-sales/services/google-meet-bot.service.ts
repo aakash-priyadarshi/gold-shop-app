@@ -164,6 +164,20 @@ export class GoogleMeetBotService {
 
       this.addLog(session, "stt", `Heard: "${transcript}" (${sttResult.provider})`);
 
+      // Check if someone asked the bot to leave
+      if (this.isLeaveIntent(transcript)) {
+        this.addLog(session, "info", `Leave intent detected: "${transcript}"`);
+        // Say goodbye, then leave
+        const farewell = "Thanks everyone! It was great being part of this meeting. Goodbye!";
+        session.transcript.push({ role: "user", content: transcript, timestamp: Date.now() });
+        session.transcript.push({ role: "assistant", content: farewell, timestamp: Date.now() });
+        await this.synthesizeAndPlayInMeet(session, farewell);
+        session.isProcessing = false;
+        // Auto-leave after farewell
+        await this.stopSession(session.id);
+        return farewell;
+      }
+
       // Update context
       session.transcript.push({ role: "user", content: transcript, timestamp: Date.now() });
       session.context.conversationHistory.push({ role: "user", content: transcript });
@@ -219,6 +233,31 @@ export class GoogleMeetBotService {
     } catch {
       return false;
     }
+  }
+
+  /** Detect if someone is asking the bot to leave the meeting */
+  private isLeaveIntent(transcript: string): boolean {
+    const t = transcript.toLowerCase().trim();
+    const leavePatterns = [
+      /\byou can leave\b/,
+      /\bplease leave\b/,
+      /\bleave the (call|meet|meeting)\b/,
+      /\byou('re| are) dismissed\b/,
+      /\bdisconnect (now|please|yourself)\b/,
+      /\bbye\b.*\b(bot|ai|agent|orivraa)\b/,
+      /\b(bot|ai|agent|orivraa)\b.*\bbye\b/,
+      /\bthanks.*you can go\b/,
+      /\bplease go\b/,
+      /\bstop listening\b/,
+      /\bend (the )?(session|call|meeting)\b/,
+      /\bleave now\b/,
+      /\bwe('re| are) done\b.*\b(leave|go|bye)\b/,
+      // Hindi
+      /\bja sakte h(o|ain)\b/,
+      /\bnikal(o| jao)\b/,
+      /\bband kar(o| do)\b/,
+    ];
+    return leavePatterns.some((p) => p.test(t));
   }
 
   private addLog(session: MeetSession, type: MeetSession["logs"][0]["type"], message: string) {
