@@ -234,14 +234,20 @@ export class GoogleMeetBotService {
   private async launchAndJoin(session: MeetSession) {
     this.addLog(session, "info", "Launching browser...");
 
+    // Use system Chromium if available (Docker), otherwise Puppeteer's bundled one
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+
     const browser = await puppeteer.launch({
-      headless: false, // Meet requires visible browser for WebRTC
+      headless: true, // Puppeteer v22+ uses new headless by default (supports WebRTC)
+      executablePath,
       args: [
-        "--use-fake-ui-for-media-stream",   // Auto-accept mic/camera permissions
-        "--use-fake-device-for-media-stream", // Use fake device if no real one
+        "--use-fake-ui-for-media-stream",     // Auto-accept mic/camera permissions
+        "--use-fake-device-for-media-stream",  // Use fake device if no real one
         "--disable-notifications",
         "--no-sandbox",
         "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",             // Avoid /dev/shm issues in Docker
+        "--disable-gpu",
         "--disable-web-security",
         "--autoplay-policy=no-user-gesture-required",
         "--enable-features=SharedArrayBuffer",
