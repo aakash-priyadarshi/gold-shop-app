@@ -92,6 +92,13 @@ export class CallOrchestratorService {
         where: { id: session.id },
         data: { status: "FAILED" },
       });
+      // Surface a user-friendly message for Twilio trial limitations
+      if (err.message?.includes("unverified")) {
+        throw new Error(
+          `This number is unverified. Twilio trial accounts can only call verified numbers. ` +
+          `Go to Twilio Console → Verified Caller IDs to add this number, or upgrade to a paid Twilio account.`,
+        );
+      }
       throw err;
     }
   }
@@ -205,7 +212,9 @@ export class CallOrchestratorService {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
-    <Stream url="${wsBaseUrl}/ai-sales-audio?sessionId=${sessionId}" />
+    <Stream url="${wsBaseUrl}/ai-sales-audio">
+      <Parameter name="sessionId" value="${sessionId}" />
+    </Stream>
   </Connect>
 </Response>`;
   }
