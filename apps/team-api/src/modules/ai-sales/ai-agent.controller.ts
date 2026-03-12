@@ -33,6 +33,7 @@ import { LeadScoringService } from "./services/lead-scoring.service";
 import { ObjectionPlaybookService } from "./services/objection-playbook.service";
 import { STTRouterService } from "./services/stt-router.service";
 import { WebhookService } from "./services/webhook.service";
+import { GoogleMeetBotService } from "./services/google-meet-bot.service";
 
 @Controller("ai-sales")
 export class AIAgentController {
@@ -57,6 +58,7 @@ export class AIAgentController {
     private webhooks: WebhookService,
     private recordings: CallRecordingService,
     private sttRouter: STTRouterService,
+    private meetBot: GoogleMeetBotService,
   ) {}
 
   /* ─── AGENTS ─── */
@@ -900,6 +902,43 @@ export class AIAgentController {
     });
     if (!session) return { status: "NOT_FOUND" };
     return { status: session.status };
+  }
+
+  /* ─── PLAYGROUND: GOOGLE MEET BOT ─── */
+
+  @Post("playground/meet")
+  @Roles("ADMIN")
+  async playgroundMeetJoin(
+    @Body() body: { agentId: string; meetUrl: string },
+  ) {
+    const session = await this.meetBot.startSession(body.meetUrl, body.agentId);
+    return {
+      sessionId: session.id,
+      agentName: session.agentName,
+      status: session.status,
+    };
+  }
+
+  @Post("playground/meet-stop")
+  @Roles("ADMIN")
+  async playgroundMeetStop(
+    @Body() body: { sessionId: string },
+  ) {
+    await this.meetBot.stopSession(body.sessionId);
+    return { status: "ended" };
+  }
+
+  @Get("playground/meet-status/:sessionId")
+  @Roles("ADMIN")
+  async playgroundMeetStatus(@Param("sessionId") sessionId: string) {
+    const session = this.meetBot.getSession(sessionId);
+    if (!session) return { status: "NOT_FOUND" };
+    return {
+      status: session.status,
+      logs: session.logs.slice(-50), // last 50 logs
+      transcript: session.transcript,
+      agentName: session.agentName,
+    };
   }
 
   /* ─── CENTRAL BRAIN / INTELLIGENCE ─── */
