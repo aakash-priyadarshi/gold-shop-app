@@ -589,19 +589,11 @@ export class AIAgentController {
       };
     }
 
-    // Detect agent handoff request — English, Hindi, Nepali, Tamil, Telugu
-    // EN: "Can I talk to Raj?", "Switch to Priya"
-    // HI: "mujhe Raj se baat karni hai", "Raj se connect karo"
-    // NE: "malai Raj sanga kura garnu hos", "Raj sanga jodnu"
-    // TA: "enakku Raj kitta pesa venum", "Raj kitta connect pannu"
-    // TE: "naaku Raj tho matladali", "Raj tho connect cheyyi"
-    const handoffMatch = sttResult.transcript.match(
-      /(?:talk to|speak (?:to|with)|want|give me|connect me (?:to|with)|switch to|mujhe\s+|malai\s+|enakku\s+|naaku\s+)([A-Z][a-z]{2,})(?:\s+(?:se\s+(?:baat|connect|milao)|sanga\s+(?:kura|bolnu|jodnu)|kitta\s+(?:pesa|connect|pesanum)|tho\s+(?:matladali|matladandi|connect)))?/i,
-    ) || sttResult.transcript.match(
-      /([A-Z][a-z]{2,})\s+(?:se\s+(?:baat\s+kar(?:ni|o|ao)|connect\s+kar(?:o|ao)|milao)|sanga\s+(?:kura\s+gar(?:nu|os)|bolnu|jod(?:nu|os))|kitta\s+(?:pesa\s+(?:venum|anum)|connect\s+pann?u)|tho\s+(?:matlad(?:ali|andi|u)|connect\s+che(?:yyi|yyandi)))/i,
-    );
-    if (handoffMatch) {
-      const requestedAgent = this.agentVoices.getVoiceByName(handoffMatch[1]);
+    // Detect agent handoff via LLM (supports any language/phrasing)
+    const availableAgents = this.agentVoices.getAllVoices().map((v) => v.name);
+    const handoff = await this.gemini.detectHandoff(sttResult.transcript, availableAgents);
+    if (handoff.isHandoff && handoff.agentName) {
+      const requestedAgent = this.agentVoices.getVoiceByName(handoff.agentName);
       if (requestedAgent) {
         agent = requestedAgent as any;
         this.logger.log(`Playground voice handoff → ${requestedAgent.name} (${requestedAgent.id})`);
@@ -737,14 +729,11 @@ export class AIAgentController {
   ) {
     let agent = await this.svc.getAgent(body.agentId);
 
-    // Detect agent handoff request — English, Hindi, Nepali, Tamil, Telugu
-    const handoffMatch = body.message.match(
-      /(?:talk to|speak (?:to|with)|want|give me|connect me (?:to|with)|switch to|mujhe\s+|malai\s+|enakku\s+|naaku\s+)([A-Z][a-z]{2,})(?:\s+(?:se\s+(?:baat|connect|milao)|sanga\s+(?:kura|bolnu|jodnu)|kitta\s+(?:pesa|connect|pesanum)|tho\s+(?:matladali|matladandi|connect)))?/i,
-    ) || body.message.match(
-      /([A-Z][a-z]{2,})\s+(?:se\s+(?:baat\s+kar(?:ni|o|ao)|connect\s+kar(?:o|ao)|milao)|sanga\s+(?:kura\s+gar(?:nu|os)|bolnu|jod(?:nu|os))|kitta\s+(?:pesa\s+(?:venum|anum)|connect\s+pann?u)|tho\s+(?:matlad(?:ali|andi|u)|connect\s+che(?:yyi|yyandi)))/i,
-    );
-    if (handoffMatch) {
-      const requestedAgent = this.agentVoices.getVoiceByName(handoffMatch[1]);
+    // Detect agent handoff via LLM (supports any language/phrasing)
+    const availableAgents = this.agentVoices.getAllVoices().map((v) => v.name);
+    const handoff = await this.gemini.detectHandoff(body.message, availableAgents);
+    if (handoff.isHandoff && handoff.agentName) {
+      const requestedAgent = this.agentVoices.getVoiceByName(handoff.agentName);
       if (requestedAgent) {
         agent = requestedAgent as any;
         this.logger.log(`Playground chat handoff → ${requestedAgent.name} (${requestedAgent.id})`);

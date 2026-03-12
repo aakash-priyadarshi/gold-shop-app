@@ -211,6 +211,9 @@ ${voiceList}`;
       sttRawBuffer: [],
       sttBufferBytes: 0,
       tokenCount: { input: 0, output: 0 },
+      isSpeaking: false,
+      isProcessing: false,
+      greetingDoneAt: 0,
     };
 
     this.activeSessions.set(sessionId, session);
@@ -249,6 +252,7 @@ ${voiceList}`;
     const greeting = context.greeting
       || `Hello${context.leadName ? `, ${context.leadName}` : ""}! This is ${context.agentName}. How can I help you today?`;
     await this.synthesizeAndSend(session, greeting);
+    session.greetingDoneAt = Date.now();
     session.transcript.push({ role: "assistant", content: greeting, timestamp: Date.now() });
     session.context.conversationHistory.push({ role: "assistant", content: greeting });
   }
@@ -267,13 +271,19 @@ ${voiceList}`;
       return;
     }
 
+    // Discard audio while AI is speaking (prevents echo loop) or processing
+    if (session.isSpeaking || session.isProcessing) return;
+
+    // Cooldown: ignore audio for 2s after greeting finishes (prevents processing greeting echo)
+    if (session.greetingDoneAt && Date.now() - session.greetingDoneAt < 2000) return;
+
     // Standard mode: decode each chunk to raw bytes, then buffer
     const rawChunk = Buffer.from(audioPayload, "base64");
     session.sttRawBuffer.push(rawChunk);
     session.sttBufferBytes += rawChunk.length;
 
-    // Batch process every ~2 seconds of audio (16000 bytes at 8kHz mulaw)
-    if (session.sttBufferBytes > 16000) {
+    // Batch process every ~4 seconds of audio (32000 bytes at 8kHz mulaw)
+    if (session.sttBufferBytes > 32000) {
       await this.processAudioBuffer(session);
     }
   }
@@ -285,6 +295,10 @@ ${voiceList}`;
    *       thinking budget → model route → Gemini Flash-Lite (99%) or Claude Sonnet (1%) → TTS → Twilio
    */
   private async processAudioBuffer(session: ActiveCallSession) {
+    // Prevent concurrent processing (flooding)
+    if (session.isProcessing) return;
+    session.isProcessing = true;
+
     const audioBuffer = Buffer.concat(session.sttRawBuffer);
     session.sttRawBuffer = [];
     session.sttBufferBytes = 0;
@@ -298,21 +312,18 @@ ${voiceList}`;
       );
 
       const transcript = sttResult.transcript;
-      if (!transcript || transcript.trim().length === 0) return;
+      if (!transcript || transcript.trim().length < 3) return;  // skip noise/empty
 
       // Track detected language for this session
       if (sttResult.detectedLanguage && sttResult.detectedLanguage !== "unknown") {
         session.detectedLanguage = sttResult.detectedLanguage;
       }
 
-      // Detect voice-switch request — English, Hindi, Nepali, Tamil, Telugu
-      const voiceSwitchMatch = transcript.match(
-        /(?:talk to|speak (?:to|with)|want|give me|connect me (?:to|with)|switch to|mujhe\s+|malai\s+|enakku\s+|naaku\s+)([A-Z][a-z]{2,})(?:\s+(?:se\s+(?:baat|connect|milao)|sanga\s+(?:kura|bolnu|jodnu)|kitta\s+(?:pesa|connect|pesanum)|tho\s+(?:matladali|matladandi|connect)))?/i,
-      ) || transcript.match(
-        /([A-Z][a-z]{2,})\s+(?:se\s+(?:baat\s+kar(?:ni|o|ao)|connect\s+kar(?:o|ao)|milao)|sanga\s+(?:kura\s+gar(?:nu|os)|bolnu|jod(?:nu|os))|kitta\s+(?:pesa\s+(?:venum|anum)|connect\s+pann?u)|tho\s+(?:matlad(?:ali|andi|u)|connect\s+che(?:yyi|yyandi)))/i,
-      );
-      if (voiceSwitchMatch) {
-        const requestedVoice = this.voiceService.getVoiceByName(voiceSwitchMatch[1]);
+      // Detect voice-switch request via LLM (supports any language/phrasing)
+      const availableAgents = this.voiceService.getAllVoices().map((v) => v.name);
+      const handoff = await this.gemini.detectHandoff(transcript, availableAgents);
+      if (handoff.isHandoff && handoff.agentName) {
+        const requestedVoice = this.voiceService.getVoiceByName(handoff.agentName);
         if (requestedVoice) {
           session.activeVoiceName = requestedVoice.name;
           // Full persona handoff — update system prompt, language, agent context
@@ -444,47 +455,53 @@ ${voiceList}`;
       }
     } catch (err: any) {
       this.logger.error(`Audio processing error: ${err.message}`);
+    } finally {
+      session.isProcessing = false;
     }
   }
-
   /** Synthesize text to speech and send audio back to Twilio (ElevenLabs or Inworld) */
   private async synthesizeAndSend(session: ActiveCallSession, text: string) {
-    const ttsProvider = (this.memory.get("advanced", "tts_provider") || "elevenlabs") as "elevenlabs" | "inworld";
-
-    // Inworld TTS path
-    if (ttsProvider === "inworld") {
-      const voiceId = this.memory.get("advanced", "inworld_voice_id") || "default";
-      for await (const chunk of this.inworldTTS.streamFromText(text, voiceId)) {
-        const base64Audio = chunk.toString("base64");
-        const mediaMsg = JSON.stringify({
-          event: "media",
-          streamSid: session.streamSid,
-          media: { payload: base64Audio },
-        });
-        if (session.client.readyState === 1) {
-          session.client.send(mediaMsg);
-        }
-      }
-      return;
-    }
-
-    // ElevenLabs TTS path (default)
-    const elevenLabsKey = this.config.get("ELEVENLABS_API_KEY");
-
-    // Multi-voice: pick voice by name request, then by detected language, then default
-    const namedVoice = session.activeVoiceName
-      ? this.voiceService.getVoiceByName(session.activeVoiceName)
-      : null;
-    const activeVoice = namedVoice || this.voiceService.getVoiceForLanguage(session.detectedLanguage);
-    const voiceId = activeVoice?.voiceId || this.config.get("ELEVENLABS_VOICE_ID") || "21m00Tcm4TlvDq8ikWAM";
-    if (activeVoice) session.activeVoiceName = activeVoice.name;
-
-    if (!elevenLabsKey) {
-      this.logger.debug(`[TTS stub] ${text}`);
-      return;
-    }
+    session.isSpeaking = true;
+    // Clear any buffered audio to prevent processing echo after TTS
+    session.sttRawBuffer = [];
+    session.sttBufferBytes = 0;
 
     try {
+      const ttsProvider = (this.memory.get("advanced", "tts_provider") || "elevenlabs") as "elevenlabs" | "inworld";
+
+      // Inworld TTS path
+      if (ttsProvider === "inworld") {
+        const voiceId = this.memory.get("advanced", "inworld_voice_id") || "default";
+        for await (const chunk of this.inworldTTS.streamFromText(text, voiceId)) {
+          const base64Audio = chunk.toString("base64");
+          const mediaMsg = JSON.stringify({
+            event: "media",
+            streamSid: session.streamSid,
+            media: { payload: base64Audio },
+          });
+          if (session.client.readyState === 1) {
+            session.client.send(mediaMsg);
+          }
+        }
+        return;
+      }
+
+      // ElevenLabs TTS path (default)
+      const elevenLabsKey = this.config.get("ELEVENLABS_API_KEY");
+
+      // Multi-voice: pick voice by name request, then by detected language, then default
+      const namedVoice = session.activeVoiceName
+        ? this.voiceService.getVoiceByName(session.activeVoiceName)
+        : null;
+      const activeVoice = namedVoice || this.voiceService.getVoiceForLanguage(session.detectedLanguage);
+      const voiceId = activeVoice?.voiceId || this.config.get("ELEVENLABS_VOICE_ID") || "21m00Tcm4TlvDq8ikWAM";
+      if (activeVoice) session.activeVoiceName = activeVoice.name;
+
+      if (!elevenLabsKey) {
+        this.logger.debug(`[TTS stub] ${text}`);
+        return;
+      }
+
       // ElevenLabs streaming TTS
       const response = await fetch(
         `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream`,
@@ -533,6 +550,11 @@ ${voiceList}`;
       }
     } catch (err: any) {
       this.logger.error(`TTS error: ${err.message}`);
+    } finally {
+      session.isSpeaking = false;
+      // Clear any audio that leaked in during TTS
+      session.sttRawBuffer = [];
+      session.sttBufferBytes = 0;
     }
   }
 
@@ -699,6 +721,9 @@ interface ActiveCallSession {
   pendingInjection?: string; // messaging question/confirmation to inject into next AI turn
   detectedLanguage?: string; // auto-detected from STT (e.g. "hi-IN", "en-IN")
   activeVoiceName?: string;  // current voice identity name (e.g. "Priya")
+  isSpeaking: boolean;       // true while TTS is streaming to Twilio (prevents echo)
+  isProcessing: boolean;     // true while processAudioBuffer is running (prevents flooding)
+  greetingDoneAt: number;    // timestamp when greeting TTS finished (for cooldown)
 }
 
 interface TranscriptEntry {

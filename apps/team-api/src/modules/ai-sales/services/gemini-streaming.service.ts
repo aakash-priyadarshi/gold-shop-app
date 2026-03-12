@@ -32,6 +32,47 @@ export class GeminiStreamingClient {
     this.conversationHistory = [];
   }
 
+  /**
+   * Lightweight LLM call to detect if a message requests to speak with a specific agent.
+   * Uses gemini-2.5-flash-lite with thinkingBudget=0 for minimal cost/latency (~100-300ms).
+   */
+  async detectHandoff(
+    message: string,
+    availableAgents: string[],
+  ): Promise<{ isHandoff: boolean; agentName: string | null }> {
+    if (!this.genAI || availableAgents.length === 0) {
+      return { isHandoff: false, agentName: null };
+    }
+
+    try {
+      const model = this.genAI.getGenerativeModel({
+        model: "gemini-2.5-flash-lite",
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 50,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      } as any);
+
+      const prompt = `Does this message request to speak/talk/connect with a specific person from this list?
+Available agents: ${availableAgents.join(", ")}
+Message: "${message}"
+Reply ONLY with JSON, no markdown: {"isHandoff":true,"agentName":"Name"} or {"isHandoff":false,"agentName":null}`;
+
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      const cleaned = text.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+      return {
+        isHandoff: !!parsed.isHandoff,
+        agentName: parsed.agentName || null,
+      };
+    } catch (err: any) {
+      this.logger.warn(`Handoff detection failed: ${err.message}`);
+      return { isHandoff: false, agentName: null };
+    }
+  }
+
   async *streamResponse(
     transcript: string,
     systemPrompt: string,
