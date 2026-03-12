@@ -350,35 +350,41 @@ ${voiceList}`;
         session.detectedLanguage = sttResult.detectedLanguage;
       }
 
-      // Detect voice-switch request via LLM (supports any language/phrasing)
+      // Detect voice-switch request — lightweight keyword pre-filter + LLM
       const availableAgents = this.voiceService.getAllVoices().map((v) => v.name);
-      const previousAgentName = session.context.agentName || "the previous agent";
-      const handoff = await this.gemini.detectHandoff(transcript, availableAgents);
-      if (handoff.isHandoff && handoff.agentName) {
-        const requestedVoice = this.voiceService.getVoiceByName(handoff.agentName);
-        if (requestedVoice) {
-          session.activeVoiceName = requestedVoice.name;
-          // Full persona handoff — update system prompt, language, agent context
-          if (requestedVoice.personalityDescription) {
-            session.systemPrompt = session.systemPrompt.replace(
-              /You are .+?\./,
-              `You are ${requestedVoice.name}, ${requestedVoice.personalityDescription}.`,
-            );
-          }
-          if (requestedVoice.languages?.[0]) {
-            session.context.language = requestedVoice.languages[0];
-          }
-          session.context.agentName = requestedVoice.name;
-          this.logger.log(`Full persona switch → ${requestedVoice.name} (voice: ${requestedVoice.voiceId})`);
+      const lowerTranscript = transcript.toLowerCase();
+      const mightBeHandoff = availableAgents.some((n) => lowerTranscript.includes(n.toLowerCase()))
+        || /\b(speak|talk|connect|switch|transfer|बात|baat|bolna|bolo|se\s+baat)\b/i.test(transcript);
+      const inHandoffCooldown = session.lastHandoffAt && (Date.now() - session.lastHandoffAt < 15_000);
 
-          // Synthesize a handoff greeting so the new agent introduces themselves
-          const handoffGreeting = `Hi! I'm ${requestedVoice.name}. ${previousAgentName} told me you wanted to speak with me. How can I help you?`;
-          session.transcript.push({ role: "user", content: transcript, timestamp: Date.now() });
-          session.context.conversationHistory.push({ role: "user", content: transcript });
-          session.transcript.push({ role: "assistant", content: handoffGreeting, timestamp: Date.now() });
-          session.context.conversationHistory.push({ role: "assistant", content: handoffGreeting });
-          await this.synthesizeAndSend(session, handoffGreeting);
-          return; // skip normal LLM response — greeting IS the response
+      if (mightBeHandoff && !inHandoffCooldown) {
+        const handoff = await this.gemini.detectHandoff(transcript, availableAgents);
+        if (handoff.isHandoff && handoff.agentName && handoff.agentName !== session.context.agentName) {
+          const requestedVoice = this.voiceService.getVoiceByName(handoff.agentName);
+          if (requestedVoice) {
+            const previousAgentName = session.context.agentName || "the previous agent";
+            session.activeVoiceName = requestedVoice.name;
+            // Full persona handoff — update system prompt and agent context
+            if (requestedVoice.personalityDescription) {
+              session.systemPrompt = session.systemPrompt.replace(
+                /You are .+?\./,
+                `You are ${requestedVoice.name}, ${requestedVoice.personalityDescription}.`,
+              );
+            }
+            // Keep the user's current language — don't override from voice config
+            session.context.agentName = requestedVoice.name;
+            session.lastHandoffAt = Date.now();
+            this.logger.log(`Full persona switch → ${requestedVoice.name} (voice: ${requestedVoice.voiceId})`);
+
+            // Synthesize a handoff greeting so the new agent introduces themselves
+            const handoffGreeting = `Hi! I'm ${requestedVoice.name}. ${previousAgentName} told me you wanted to speak with me. How can I help you?`;
+            session.transcript.push({ role: "user", content: transcript, timestamp: Date.now() });
+            session.context.conversationHistory.push({ role: "user", content: transcript });
+            session.transcript.push({ role: "assistant", content: handoffGreeting, timestamp: Date.now() });
+            session.context.conversationHistory.push({ role: "assistant", content: handoffGreeting });
+            await this.synthesizeAndSend(session, handoffGreeting);
+            return; // skip normal LLM response — greeting IS the response
+          }
         }
       }
 
@@ -790,6 +796,7 @@ interface ActiveCallSession {
   isProcessing: boolean;     // true while processAudioBuffer is running (prevents flooding)
   greetingDoneAt: number;    // timestamp when greeting TTS finished (for cooldown)
   markCounter: number;       // incremented per TTS utterance, used for mark event matching
+  lastHandoffAt?: number;    // timestamp of last persona handoff (15s cooldown)
 }
 
 interface TranscriptEntry {
