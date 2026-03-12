@@ -352,6 +352,7 @@ ${voiceList}`;
 
       // Detect voice-switch request via LLM (supports any language/phrasing)
       const availableAgents = this.voiceService.getAllVoices().map((v) => v.name);
+      const previousAgentName = session.context.agentName || "the previous agent";
       const handoff = await this.gemini.detectHandoff(transcript, availableAgents);
       if (handoff.isHandoff && handoff.agentName) {
         const requestedVoice = this.voiceService.getVoiceByName(handoff.agentName);
@@ -369,6 +370,15 @@ ${voiceList}`;
           }
           session.context.agentName = requestedVoice.name;
           this.logger.log(`Full persona switch → ${requestedVoice.name} (voice: ${requestedVoice.voiceId})`);
+
+          // Synthesize a handoff greeting so the new agent introduces themselves
+          const handoffGreeting = `Hi! I'm ${requestedVoice.name}. ${previousAgentName} told me you wanted to speak with me. How can I help you?`;
+          session.transcript.push({ role: "user", content: transcript, timestamp: Date.now() });
+          session.context.conversationHistory.push({ role: "user", content: transcript });
+          session.transcript.push({ role: "assistant", content: handoffGreeting, timestamp: Date.now() });
+          session.context.conversationHistory.push({ role: "assistant", content: handoffGreeting });
+          await this.synthesizeAndSend(session, handoffGreeting);
+          return; // skip normal LLM response — greeting IS the response
         }
       }
 
@@ -547,9 +557,9 @@ ${voiceList}`;
         return;
       }
 
-      // ElevenLabs streaming TTS
+      // ElevenLabs streaming TTS — output_format MUST be a query param (not body)
       const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream`,
+        `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=ulaw_8000`,
         {
           method: "POST",
           headers: {
@@ -559,7 +569,6 @@ ${voiceList}`;
           body: JSON.stringify({
             text,
             model_id: "eleven_turbo_v2_5",
-            output_format: "ulaw_8000",
             voice_settings: {
               stability: 0.5,
               similarity_boost: 0.75,
