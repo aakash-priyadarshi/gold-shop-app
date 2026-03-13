@@ -1046,7 +1046,7 @@ export class AIAgentController {
         );
       }
 
-      return { success: true, resendId: result.data?.id || result.id, from, to: body.to };
+      return { success: true, resendId: result.data?.id, from, to: body.to };
     } catch (err: any) {
       if (err instanceof HttpException) throw err;
       this.logger.error(`Playground email send failed: ${err.message}`);
