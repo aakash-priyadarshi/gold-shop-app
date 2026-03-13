@@ -1051,22 +1051,24 @@ model TeamSettings {
   id                    String   @id @default("singleton")
   companyName           String   @default("Orivraa")
   timezone              String   @default("Asia/Kolkata")
+  currency              String   @default("NPR")
   workingDaysPerWeek    Int      @default(6)
   workingHoursStart     String   @default("09:00")
   workingHoursEnd       String   @default("18:00")
-  slaResponseMinutes    Int      @default(120) // 2 hours
-  slaResolutionMinutes  Int      @default(1440) // 24 hours
-  elevenLabsApiKey      String?  // encrypted
-  mainApiUrl            String?  // URL to main orivraa API for cross-service calls
-  mainApiReadOnlyDsn    String?  // read-only connection to main DB (Neon)
-
-  // ── AI Sales Configuration ──
-  googleMeetBotEmail    String?  // The real Google Account email for the bot
-  googleMeetBotPassword String?  // The password for the bot's Google Account
-  googleMeetBotCookies  Json?    // Cached session cookies for the Google bot to skip 2FA
-  resendApiKey          String?  // API key for Resend email service
-  aiSalesFromEmail      String?  // e.g. "sales@orivraa.com"
-  
+  lateThresholdMinutes  Int      @default(15)
+  annualLeaveDays       Int      @default(18)
+  slaResponseMinutes    Int      @default(120)
+  slaResolutionMinutes  Int      @default(1440)
+  elevenLabsApiKey      String?
+  mainApiUrl            String?
+  mainApiReadOnlyDsn    String?
+  // Google Meet Bot — use Google App Password, not raw password
+  googleMeetBotEmail    String?
+  googleMeetBotPassword String?
+  googleMeetBotCookies  Json?    // Cached Google session cookies for Meet bot
+  // AI Sales Email
+  aiSalesFromEmail      String?
+  salesGreeting         String?
   updatedAt             DateTime @updatedAt
 }
 

@@ -1,9 +1,12 @@
 import {
+    BadRequestException,
     Body,
     Controller,
     Delete,
     Get,
     Header,
+    HttpException,
+    HttpStatus,
     Logger,
     Param,
     Patch,
@@ -34,9 +37,10 @@ import { GoogleMeetBotService } from "./services/google-meet-bot.service";
 import { LeadInteractionService } from "./services/lead-interaction.service";
 import { LeadScoringService } from "./services/lead-scoring.service";
 import { ObjectionPlaybookService } from "./services/objection-playbook.service";
+import { PostCallProcessor } from "./services/post-call-processor.service";
 import { STTRouterService } from "./services/stt-router.service";
 import { WebhookService } from "./services/webhook.service";
-import { PostCallProcessor } from "./services/post-call-processor.service";
+import { Resend } from "resend";
 
 @Controller("ai-sales")
 export class AIAgentController {
@@ -1000,14 +1004,21 @@ export class AIAgentController {
   async playgroundEmailSend(
     @Body() body: { to: string; subject: string; body: string; fromEmail?: string },
   ) {
-    // Direct send via Resend — bypasses lead lookup for playground testing
+    if (!body.to || !body.subject || !body.body) {
+      throw new BadRequestException("Missing required fields: to, subject, body");
+    }
+
     const resendKey = this.config.get<string>("RESEND_API_KEY");
-    if (!resendKey) throw new Error("RESEND_API_KEY is not configured. Add it to your .env file.");
+    if (!resendKey) {
+      throw new HttpException(
+        "RESEND_API_KEY is not configured. Add it in Railway environment variables.",
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
 
     try {
-      const { Resend } = require("resend");
       const resend = new Resend(resendKey);
-      const from = body.fromEmail || this.config.get<string>("AI_SALES_FROM_EMAIL") || this.config.get<string>("MAIL_FROM") || "sales@orivraa.com";
+      const from = body.fromEmail || this.config.get<string>("AI_SALES_FROM_EMAIL") || this.config.get<string>("MAIL_FROM") || "Orivraa Sales <onboarding@resend.dev>";
 
       const result = await resend.emails.send({
         from,
@@ -1026,10 +1037,28 @@ export class AIAgentController {
         </div>`,
       });
 
+      // Resend v6+ returns { data: { id }, error }
+      if (result.error) {
+        this.logger.error(`Resend error: ${JSON.stringify(result.error)}`);
+        throw new HttpException(
+          `Resend error: ${result.error.message || JSON.stringify(result.error)}`,
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
+
       return { success: true, resendId: result.data?.id || result.id, from, to: body.to };
     } catch (err: any) {
+      if (err instanceof HttpException) throw err;
       this.logger.error(`Playground email send failed: ${err.message}`);
-      throw new Error(`Email send failed: ${err.message}`);
+      // Common Resend errors: unverified domain, invalid from address
+      const msg = err.message || "Unknown error";
+      if (msg.includes("not a verified") || msg.includes("not verified")) {
+        throw new HttpException(
+          `Email domain not verified in Resend. Either verify your domain at resend.com/domains or use the default "onboarding@resend.dev" as the From address.`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      throw new HttpException(`Email send failed: ${msg}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

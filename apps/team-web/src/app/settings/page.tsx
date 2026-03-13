@@ -193,8 +193,12 @@ export default function SettingsPage() {
                     onChange={(e) =>
                       setSettings({ ...settings, googleMeetBotPassword: e.target.value })
                     }
-                    placeholder="password"
+                    placeholder={settings.googleMeetBotPasswordSet ? "••••••• (already set — leave blank to keep)" : "Google App Password"}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Use a <a href="https://myaccount.google.com/apppasswords" target="_blank" className="underline text-blue-500">Google App Password</a>, not your actual Google password.
+                    {settings.googleMeetBotPasswordSet && <span className="text-green-600 ml-1">✓ Password is configured</span>}
+                  </p>
                 </div>
               </div>
             </div>
