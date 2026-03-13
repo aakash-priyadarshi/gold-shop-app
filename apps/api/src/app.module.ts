@@ -8,6 +8,7 @@ import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { HttpClientModule } from "./common/http-client";
 import { RedisCacheInterceptor } from "./common/interceptors/cache.interceptor";
 import { RedisModule } from "./common/redis";
+import { AiSalesModule } from "./modules/ai-sales/ai-sales.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AiCreditsModule } from "./modules/ai-credits/ai-credits.module";
 import { AuditModule } from "./modules/audit/audit.module";
@@ -130,6 +131,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     PosModule,
     SubscriptionPlansModule,
     AiCreditsModule,
+    AiSalesModule,
     PaymentGatewayModule,
     EnterpriseModule,
     TranslationModule,
