@@ -1,5 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Prisma } from "@prisma/client";
+import { OAuth2Client } from "google-auth-library";
 import { Browser, Page } from "puppeteer";
 import * as puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
@@ -517,7 +519,7 @@ export class GoogleMeetBotService {
       // Invalidate old cookies to force re-auth on next join
       await this.prisma.teamSettings.update({
         where: { id: "singleton" },
-        data: { googleMeetBotCookies: null },
+        data: { googleMeetBotCookies: Prisma.JsonNull },
       });
     } catch (err: any) {
       throw new Error(`OAuth token refresh failed: ${err.message}. Try reconnecting the Google account.`);
