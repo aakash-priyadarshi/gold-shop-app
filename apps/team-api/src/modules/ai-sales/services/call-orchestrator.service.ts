@@ -1,6 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { PostCallProcessor } from "./post-call-processor.service";
+import { LeadInteractionService } from "./lead-interaction.service";
+import { LeadScoringService } from "./lead-scoring.service";
 
 @Injectable()
 export class CallOrchestratorService {
@@ -11,6 +14,9 @@ export class CallOrchestratorService {
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
+    private postCallProcessor: PostCallProcessor,
+    private interactionService: LeadInteractionService,
+    private leadScoring: LeadScoringService,
   ) {
     const accountSid = this.config.get("TWILIO_ACCOUNT_SID");
     const authToken = this.config.get("TWILIO_AUTH_TOKEN");
@@ -37,6 +43,7 @@ export class CallOrchestratorService {
     leadId: string;
     campaignId?: string;
     webhookBaseUrl: string;
+    goal?: string;
   }) {
     const lead = await this.prisma.lead.findUnique({ where: { id: params.leadId } });
     if (!lead?.phone) throw new Error("Lead has no phone number");
@@ -53,6 +60,7 @@ export class CallOrchestratorService {
         status: "RINGING",
         fromNumber: this.fromNumber,
         toNumber: lead.phone,
+        goalForCall: params.goal,
       },
     });
 
@@ -179,7 +187,144 @@ export class CallOrchestratorService {
       }
     }
 
+    // ── Post-call processing: update lead, create remark, record interaction ──
+    if (session.leadId) {
+      this.runPostCallProcessing(session.leadId, sessionId, updated).catch((err) =>
+        this.logger.error(`Post-call processing failed: ${err.message}`),
+      );
+    }
+
     return updated;
+  }
+
+  /** Run post-call processing asynchronously */
+  private async runPostCallProcessing(leadId: string, sessionId: string, session: any) {
+    const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
+    if (!lead) return;
+
+    const agent = session.agentId
+      ? await this.prisma.agentVoice.findUnique({ where: { id: session.agentId } })
+      : null;
+
+    // 1. Generate call report from transcript
+    let report: any = null;
+    if (session.transcript) {
+      report = await this.postCallProcessor.generateCallReport({
+        transcript: session.transcript,
+        durationSeconds: session.duration || 0,
+        leadName: lead.name,
+        agentName: agent?.name,
+      });
+    }
+
+    // 2. Extract personality insights
+    let personality: Record<string, any> = {};
+    if (session.transcript) {
+      personality = await this.postCallProcessor.extractPersonalityInsights(
+        session.transcript, lead.name,
+      );
+    }
+
+    // 3. Evaluate call goal
+    let goalResult: { achieved: boolean; notes: string } | null = null;
+    if (session.goalForCall && session.transcript) {
+      goalResult = await this.postCallProcessor.evaluateGoal(
+        session.transcript, session.goalForCall,
+      );
+      await this.prisma.callSession.update({
+        where: { id: sessionId },
+        data: {
+          goalAchieved: goalResult.achieved,
+          goalNotes: goalResult.notes,
+        },
+      });
+    }
+
+    // 4. Update lead profile with insights
+    const leadUpdate: any = {
+      totalCalls: { increment: 1 },
+      lastContactedAt: new Date(),
+    };
+    if (report) {
+      leadUpdate.lastCallSummary = report.summary;
+    }
+    if (session.summary) {
+      leadUpdate.lastCallSummary = session.summary;
+    }
+    // Merge personality insights (only overwrite if we got new data)
+    if (personality.communicationStyle) leadUpdate.communicationStyle = personality.communicationStyle;
+    if (personality.decisionStyle) leadUpdate.decisionStyle = personality.decisionStyle;
+    if (personality.pacePreference) leadUpdate.pacePreference = personality.pacePreference;
+    if (personality.tonePreference) leadUpdate.tonePreference = personality.tonePreference;
+    if (personality.respondsWellTo?.length) leadUpdate.respondsWellTo = personality.respondsWellTo;
+    if (personality.getsFrustratedBy?.length) leadUpdate.getsFrustratedBy = personality.getsFrustratedBy;
+    if (personality.familyDetails) leadUpdate.familyDetails = personality.familyDetails;
+    if (personality.hobbies) leadUpdate.hobbies = personality.hobbies;
+    if (personality.recentLifeEvents) leadUpdate.recentLifeEvents = personality.recentLifeEvents;
+    if (personality.notableQuotes) leadUpdate.notableQuotes = personality.notableQuotes;
+    if (personality.budgetRange) leadUpdate.budgetRange = personality.budgetRange;
+    if (personality.urgency) leadUpdate.urgency = personality.urgency;
+
+    // Set AI strategy notes
+    if (report?.recommendedNextSteps?.length) {
+      leadUpdate.nextCallStrategy = report.recommendedNextSteps.join("; ");
+    }
+    if (report?.objectionsRaised?.length) {
+      leadUpdate.whatToAvoidNextCall = `Previous objections: ${report.objectionsRaised.join(", ")}`;
+    }
+    if (session.buyingSignals?.length) {
+      leadUpdate.whatWorkedLastCall = `Buying signals: ${session.buyingSignals.join(", ")}`;
+    }
+
+    await this.prisma.lead.update({ where: { id: leadId }, data: leadUpdate });
+
+    // 5. Re-score the lead
+    try {
+      const score = await this.leadScoring.scoreLeead(leadId);
+      await this.prisma.lead.update({
+        where: { id: leadId },
+        data: { score: score.total, temperature: score.tier },
+      });
+    } catch (err: any) {
+      this.logger.warn(`Lead re-scoring failed: ${err.message}`);
+    }
+
+    // 6. Create CallRemark
+    const existingRemarks = await this.prisma.callRemark.count({ where: { leadId } });
+    await this.prisma.callRemark.create({
+      data: {
+        leadId,
+        callSessionId: sessionId,
+        callNumber: existingRemarks + 1,
+        personaUsed: agent?.name,
+        personaId: agent?.id,
+        summary: report?.summary || session.summary || "Call completed",
+        keyTopics: report?.keyTopics || session.keyTopics || [],
+        objectionsRaised: report?.objectionsRaised || session.objectionsEncountered || [],
+        buyingSignals: report?.buyingSignals || session.buyingSignals || [],
+        whatWorked: session.buyingSignals?.length ? ["Detected buying signals"] : [],
+        nextCallStrategy: report?.recommendedNextSteps?.join("; "),
+        personalDetailsCaptured: Object.keys(personality).filter(
+          (k) => !["communicationStyle", "decisionStyle", "pacePreference", "tonePreference"].includes(k),
+        ),
+        openLoops: report?.recommendedNextSteps?.map((s: string) => ({ topic: s, status: "open" })) || [],
+      },
+    });
+
+    // 7. Record interaction on timeline
+    await this.interactionService.recordCallInteraction({
+      leadId,
+      callSessionId: sessionId,
+      summary: report?.summary || session.summary,
+      durationSeconds: session.duration,
+      sentiment: session.sentiment,
+      agentName: agent?.name,
+      goalSet: session.goalForCall,
+      goalAchieved: goalResult?.achieved,
+      goalNotes: goalResult?.notes,
+    });
+
+    this.logger.log(`Post-call processing complete for lead ${leadId}, session ${sessionId}`);
   }
 
   /** Handle Twilio status webhook */

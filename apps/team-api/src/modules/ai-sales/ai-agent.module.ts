@@ -70,8 +70,10 @@ import { WebhookService } from "./services/webhook.service";
     WebhookService,
     CallRecordingService,
     GoogleMeetBotService,
+    LeadInteractionService,
+    AiEmailService,
   ],
   controllers: [AIAgentController],
-  exports: [AIAgentService, CallOrchestratorService, CentralBrainService, WebhookService],
+  exports: [AIAgentService, CallOrchestratorService, CentralBrainService, WebhookService, LeadInteractionService, AiEmailService],
 })
 export class AIAgentModule {}

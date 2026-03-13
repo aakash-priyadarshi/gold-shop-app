@@ -1,6 +1,6 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export interface CallReport {
   summary: string;
@@ -131,5 +131,104 @@ Return JSON matching this schema:
       dealProbability: 0.5,
       callQualityScore: 5,
     };
+  }
+
+  /**
+   * Evaluate whether a call goal was achieved based on transcript.
+   */
+  async evaluateGoal(transcript: string, goal: string): Promise<{ achieved: boolean; notes: string }> {
+    if (!this.genAI || !goal) return { achieved: false, notes: "No goal set or API unavailable" };
+
+    try {
+      const model = this.genAI.getGenerativeModel({
+        model: "gemini-2.5-flash-lite",
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.2,
+          maxOutputTokens: 300,
+          thinkingConfig: { thinkingBudget: 512 },
+        } as any,
+      });
+
+      const result = await model.generateContent({
+        contents: [{
+          role: "user",
+          parts: [{
+            text: `Evaluate whether the following call goal was achieved based on the transcript.
+
+Goal: ${goal}
+
+Transcript:
+${transcript}
+
+Return JSON: { "achieved": true/false, "notes": "brief explanation of why" }`,
+          }],
+        }],
+      });
+
+      const text = result.response.text()
+        .replace(/```json?\n?/g, "").replace(/```/g, "")
+        .replace(/,\s*([}\]])/g, "$1").trim();
+      return JSON.parse(text);
+    } catch (err: any) {
+      this.logger.error(`Goal evaluation failed: ${err.message}`);
+      return { achieved: false, notes: "Evaluation failed" };
+    }
+  }
+
+  /**
+   * Extract personality insights from transcript to update lead profile.
+   */
+  async extractPersonalityInsights(transcript: string, leadName?: string): Promise<Record<string, any>> {
+    if (!this.genAI) return {};
+
+    try {
+      const model = this.genAI.getGenerativeModel({
+        model: "gemini-2.5-flash-lite",
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.3,
+          maxOutputTokens: 500,
+          thinkingConfig: { thinkingBudget: 512 },
+        } as any,
+      });
+
+      const result = await model.generateContent({
+        contents: [{
+          role: "user",
+          parts: [{
+            text: `Analyze the customer's personality from this sales call transcript.
+Customer name: ${leadName || "Customer"}
+
+Transcript:
+${transcript}
+
+Return JSON with ONLY fields you are confident about (omit uncertain ones):
+{
+  "communicationStyle": "analytical|expressive|driver|amiable",
+  "decisionStyle": "impulsive|deliberate|consensus|data-driven|authority",
+  "pacePreference": "fast|moderate|slow",
+  "tonePreference": "formal|casual|humorous|direct",
+  "respondsWellTo": ["array of things they respond well to"],
+  "getsFrustratedBy": ["array of things that frustrate them"],
+  "familyDetails": "any family info mentioned",
+  "hobbies": "any hobbies mentioned",
+  "recentLifeEvents": "any life events mentioned",
+  "notableQuotes": "memorable exact phrases they said",
+  "budgetRange": "budget info if mentioned",
+  "urgency": "none|low|medium|high|urgent"
+}`,
+          }],
+        }],
+      });
+
+      const text = result.response.text()
+        .replace(/```json?\n?/g, "").replace(/```/g, "")
+        .replace(/,\s*([}\]])/g, "$1").trim();
+      return JSON.parse(text);
+    } catch (err: any) {
+      this.logger.error(`Personality extraction failed: ${err.message}`);
+      return {};
+    }
   }
 }

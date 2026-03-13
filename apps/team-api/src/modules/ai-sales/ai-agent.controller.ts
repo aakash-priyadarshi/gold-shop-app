@@ -21,6 +21,7 @@ import { AIAgentService } from "./ai-agent.service";
 import { ABTestingService } from "./services/ab-testing.service";
 import { AgentMemoryService } from "./services/agent-memory.service";
 import { AgentVoiceService } from "./services/agent-voice.service";
+import { AiEmailService } from "./services/ai-email.service";
 import { BehaviorInsightService } from "./services/behavior-insight.service";
 import { CallOrchestratorService } from "./services/call-orchestrator.service";
 import { CallRecordingService } from "./services/call-recording.service";
@@ -30,6 +31,7 @@ import { ConversationBrainService } from "./services/conversation-brain.service"
 import { FollowUpSequencerService } from "./services/follow-up-sequencer.service";
 import { GeminiStreamingClient } from "./services/gemini-streaming.service";
 import { GoogleMeetBotService } from "./services/google-meet-bot.service";
+import { LeadInteractionService } from "./services/lead-interaction.service";
 import { LeadScoringService } from "./services/lead-scoring.service";
 import { ObjectionPlaybookService } from "./services/objection-playbook.service";
 import { STTRouterService } from "./services/stt-router.service";
@@ -59,6 +61,8 @@ export class AIAgentController {
     private recordings: CallRecordingService,
     private sttRouter: STTRouterService,
     private meetBot: GoogleMeetBotService,
+    private aiEmail: AiEmailService,
+    private interactionService: LeadInteractionService,
   ) {}
 
   /* ─── AGENTS ─── */
@@ -287,7 +291,7 @@ export class AIAgentController {
 
   @Post("calls/initiate")
   @Roles("ADMIN")
-  initiateCall(@Body() body: { agentId: string; leadId: string; campaignId?: string }) {
+  initiateCall(@Body() body: { agentId: string; leadId: string; campaignId?: string; goal?: string }) {
     const webhookBaseUrl = this.config.get("WEBHOOK_BASE_URL") || "https://team-api.orivraa.com";
     return this.calls.initiateCall({ ...body, webhookBaseUrl });
   }
@@ -1338,5 +1342,129 @@ export class AIAgentController {
       orderBy: { timestamp: "asc" },
     });
     return emotions;
+  }
+
+  /* ─── LEAD INTERACTIONS / TIMELINE ─── */
+
+  @Get("leads/:id/interactions")
+  getLeadInteractions(
+    @Param("id") leadId: string,
+    @Query("limit") limit?: string,
+  ) {
+    return this.interactionService.getTimeline(leadId, limit ? parseInt(limit) : undefined);
+  }
+
+  @Get("leads/:id/interaction-stats")
+  getLeadInteractionStats(@Param("id") leadId: string) {
+    return this.interactionService.getLeadInteractionStats(leadId);
+  }
+
+  @Post("leads/:id/interactions")
+  recordInteraction(
+    @Param("id") leadId: string,
+    @Body() body: { type: string; summary?: string; details?: string; channel?: string },
+  ) {
+    return this.interactionService.recordInteraction({
+      leadId,
+      type: body.type as any,
+      channel: body.channel,
+      summary: body.summary,
+      details: body.details,
+    });
+  }
+
+  /* ─── AI EMAIL ─── */
+
+  @Post("email/send")
+  sendEmail(@Body() body: {
+    leadId: string;
+    subject: string;
+    body: string;
+    htmlBody?: string;
+    goalForEmail?: string;
+    meetLink?: string;
+    meetScheduledAt?: string;
+    fromEmail?: string;
+  }) {
+    return this.aiEmail.sendEmail({
+      ...body,
+      meetScheduledAt: body.meetScheduledAt ? new Date(body.meetScheduledAt) : undefined,
+    });
+  }
+
+  @Post("email/draft")
+  generateEmailDraft(@Body() body: {
+    leadId: string;
+    purpose: string;
+    includeMeetLink?: boolean;
+  }) {
+    return this.aiEmail.generateDraft(body);
+  }
+
+  @Post("email/inbound")
+  processInboundEmail(@Body() body: {
+    from: string;
+    to: string;
+    subject: string;
+    body: string;
+    htmlBody?: string;
+    messageId?: string;
+    inReplyTo?: string;
+  }) {
+    return this.aiEmail.processInbound(body);
+  }
+
+  @Get("leads/:id/emails")
+  getLeadEmails(@Param("id") leadId: string) {
+    return this.aiEmail.getLeadEmails(leadId);
+  }
+
+  @Get("email/:id")
+  getEmail(@Param("id") id: string) {
+    return this.aiEmail.getEmail(id);
+  }
+
+  /* ─── GOOGLE MEET SCHEDULING ─── */
+
+  @Post("meet/schedule")
+  async scheduleMeet(@Body() body: {
+    leadId: string;
+    agentId: string;
+    scheduledAt: string;
+    subject?: string;
+    notes?: string;
+  }) {
+    const lead = await this.prisma.lead.findUnique({ where: { id: body.leadId } });
+    if (!lead) throw new Error("Lead not found");
+
+    const agent = await this.prisma.agentVoice.findUnique({ where: { id: body.agentId } });
+
+    // Generate a Google Meet link placeholder
+    const meetCode = `${Math.random().toString(36).substring(2, 5)}-${Math.random().toString(36).substring(2, 6)}-${Math.random().toString(36).substring(2, 5)}`;
+    const meetLink = `https://meet.google.com/${meetCode}`;
+
+    // Record as interaction
+    await this.interactionService.recordMeetInteraction({
+      leadId: body.leadId,
+      meetSessionId: `meet-scheduled-${Date.now()}`,
+      summary: `Meet scheduled: ${body.subject || "Sales discussion"} at ${new Date(body.scheduledAt).toLocaleString()}`,
+      agentName: agent?.name,
+      meetUrl: meetLink,
+    });
+
+    // Send email with meet link if lead has email
+    if (lead.email) {
+      await this.aiEmail.sendEmail({
+        leadId: body.leadId,
+        subject: body.subject || `Meeting with ${agent?.name || "Orivraa"} — ${new Date(body.scheduledAt).toLocaleDateString()}`,
+        body: `Hi ${lead.preferredName || lead.name},\n\nWe've scheduled a meeting for ${new Date(body.scheduledAt).toLocaleString()}.\n\nJoin here: ${meetLink}\n\n${body.notes || "Looking forward to speaking with you!"}\n\nBest regards,\n${agent?.name || "Orivraa Team"}`,
+        meetLink,
+        meetScheduledAt: new Date(body.scheduledAt),
+        goalForEmail: "Schedule Google Meet",
+        fromEmail: agent?.agentEmail || undefined,
+      });
+    }
+
+    return { meetLink, scheduledAt: body.scheduledAt, leadId: body.leadId };
   }
 }

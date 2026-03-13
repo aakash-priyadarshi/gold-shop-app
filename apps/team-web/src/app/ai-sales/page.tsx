@@ -35,6 +35,9 @@ import {
   ArrowRight,
   Target,
   Zap,
+  Mail,
+  Video,
+  Gamepad2,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -184,6 +187,12 @@ export default function AiSalesPage() {
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
+                <Link href="/ai-sales/playground" className="block">
+                  <Button variant="outline" className="w-full justify-between">
+                    <span className="flex items-center"><Gamepad2 className="mr-2 h-4 w-4" />AI Playground</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
                 <Link href="/ai-sales/personas" className="block">
                   <Button variant="outline" className="w-full justify-between">
                     <span className="flex items-center"><Bot className="mr-2 h-4 w-4" />Configure Agents</span>
@@ -198,7 +207,7 @@ export default function AiSalesPage() {
                 </Link>
                 <Link href="/ai-sales/calls" className="block">
                   <Button variant="outline" className="w-full justify-between">
-                    <span className="flex items-center"><Phone className="mr-2 h-4 w-4" />View Call History</span>
+                    <span className="flex items-center"><Phone className="mr-2 h-4 w-4" />Call History</span>
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
