@@ -214,9 +214,70 @@ export default function SettingsPage() {
                 placeholder="sk-..."
               />
             </div>
-            <div>
+            <div className="pt-4 border-t">
+              <h4 className="text-sm font-medium mb-2">Google Meet Bot Credentials</h4>
+              <p className="text-xs text-muted-foreground mb-4">
+                Used to bypass Google's "Browser not secure" blockade by logging in with a real account.
+              </p>
+              <div className="grid gap-4">
+                <div>
+                  <Label>Google Account Email</Label>
+                  <Input
+                    type="email"
+                    value={settings.googleMeetBotEmail ?? ""}
+                    onChange={(e) =>
+                      setSettings({ ...settings, googleMeetBotEmail: e.target.value })
+                    }
+                    placeholder="bot@yourdomain.com"
+                  />
+                </div>
+                <div>
+                  <Label>Google Account Password</Label>
+                  <Input
+                    type="password"
+                    value={settings.googleMeetBotPassword ?? ""}
+                    onChange={(e) =>
+                      setSettings({ ...settings, googleMeetBotPassword: e.target.value })
+                    }
+                    placeholder="password"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="pt-4 border-t">
+              <h4 className="text-sm font-medium mb-2">Email Integration Settings</h4>
+              <p className="text-xs text-muted-foreground mb-4">
+                Used to send emails using Resend from the Playground and AI Agents.
+              </p>
+              <div className="grid gap-4">
+                <div>
+                  <Label>Resend API Key</Label>
+                  <Input
+                    type="password"
+                    value={settings.resendApiKey ?? ""}
+                    onChange={(e) =>
+                      setSettings({ ...settings, resendApiKey: e.target.value })
+                    }
+                    placeholder="re_..."
+                  />
+                </div>
+                <div>
+                  <Label>AI Sales From Email</Label>
+                  <Input
+                    type="email"
+                    value={settings.aiSalesFromEmail ?? ""}
+                    onChange={(e) =>
+                      setSettings({ ...settings, aiSalesFromEmail: e.target.value })
+                    }
+                    placeholder="sales@orivraa.com"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="pt-4 border-t">
               <Label>Default Sales Greeting</Label>
               <Textarea
+                className="mt-2"
                 value={settings.salesGreeting ?? ""}
                 onChange={(e) =>
                   setSettings({ ...settings, salesGreeting: e.target.value })

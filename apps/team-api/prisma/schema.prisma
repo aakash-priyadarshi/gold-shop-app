@@ -1059,6 +1059,13 @@ model TeamSettings {
   elevenLabsApiKey      String?  // encrypted
   mainApiUrl            String?  // URL to main orivraa API for cross-service calls
   mainApiReadOnlyDsn    String?  // read-only connection to main DB (Neon)
+
+  // ── AI Sales Configuration ──
+  googleMeetBotEmail    String?  // The real Google Account email for the bot
+  googleMeetBotPassword String?  // The password for the bot's Google Account
+  resendApiKey          String?  // API key for Resend email service
+  aiSalesFromEmail      String?  // e.g. "sales@orivraa.com"
+  
   updatedAt             DateTime @updatedAt
 }
 

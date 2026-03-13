@@ -27,6 +27,10 @@ export class SettingsService {
     slaResolutionMinutes?: number;
     elevenLabsApiKey?: string;
     mainApiUrl?: string;
+    googleMeetBotEmail?: string;
+    googleMeetBotPassword?: string;
+    resendApiKey?: string;
+    aiSalesFromEmail?: string;
   }) {
     const settings = await this.getSettings();
     return this.prisma.teamSettings.update({

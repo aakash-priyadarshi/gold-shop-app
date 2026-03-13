@@ -1,6 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import * as puppeteer from "puppeteer";
+import * as puppeteer from "puppeteer-extra";
+import { Browser, Page } from "puppeteer";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+puppeteer.default.use(StealthPlugin());
 import { PrismaService } from "../../../prisma/prisma.service";
 import { ConversationBrainService, ConversationContext } from "./conversation-brain.service";
 import { GeminiStreamingClient } from "./gemini-streaming.service";
@@ -19,8 +22,8 @@ export interface MeetSession {
   transcript: { role: "user" | "assistant"; content: string; timestamp: number }[];
   context: ConversationContext;
   systemPrompt: string;
-  browser?: puppeteer.Browser;
-  page?: puppeteer.Page;
+  browser?: Browser;
+  page?: Page;
   startTime: number;
   isProcessing: boolean;
 }
@@ -337,7 +340,7 @@ export class GoogleMeetBotService {
     // Use system Chromium if available (Docker), otherwise Puppeteer's bundled one
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
 
-    const browser = await puppeteer.launch({
+    const browser = await puppeteer.default.launch({
       headless: true, // Puppeteer v22+ uses new headless by default (supports WebRTC)
       executablePath,
       args: [
@@ -378,18 +381,36 @@ export class GoogleMeetBotService {
 
     // Click "Ask to join" or "Join now"
     await this.clickJoinButton(page, session);
-
-    // Wait for meeting to start
-    await this.waitForMeetingStart(page, session);
-
-    session.status = "listening";
-    this.addLog(session, "info", "Successfully joined the meeting! Listening...");
-
-    // Start the audio capture loop
-    this.startAudioCapture(page, session);
   }
 
-  private async dismissDialogs(page: puppeteer.Page, session: MeetSession) {
+  private async loginToGoogle(page: Page, session: MeetSession, email: string, pass: string) {
+    this.addLog(session, "info", "Authenticating with Google Account to bypass Quick Access restriction...");
+    try {
+      await page.goto("https://accounts.google.com/signin/v2/identifier", { waitUntil: "networkidle2" });
+      
+      const emailInput = await page.waitForSelector('input[type="email"]');
+      if (emailInput) {
+        await emailInput.type(email, { delay: 50 });
+        await page.keyboard.press("Enter");
+      }
+      
+      await this.delay(3000); // Wait for transition
+  
+      const passInput = await page.waitForSelector('input[type="password"]', { visible: true, timeout: 5000 });
+      if (passInput) {
+        await passInput.type(pass, { delay: 50 });
+        await page.keyboard.press("Enter");
+      }
+  
+      await this.delay(5000); // Wait for login to complete
+      
+      this.addLog(session, "info", "Google authentication successful!");
+    } catch (err: any) {
+      this.addLog(session, "info", `Google Auth failed/skipped: ${err.message}. Reverting to guest mode.`);
+    }
+  }
+
+  private async dismissDialogs(page: Page, session: MeetSession) {
     try {
       // Dismiss "Before you join" / "Got it" / cookie banners
       const dismissSelectors = [
@@ -417,7 +438,7 @@ export class GoogleMeetBotService {
     }
   }
 
-  private async enterGuestName(page: puppeteer.Page, session: MeetSession) {
+  private async enterGuestName(page: Page, session: MeetSession) {
     try {
       // Look for the "Your name" input field (guest join)
       const nameInput = await page.$('input[aria-label="Your name"]');
@@ -428,11 +449,11 @@ export class GoogleMeetBotService {
         await this.delay(500);
       }
     } catch (err: any) {
-      this.addLog(session, "info", "Could not set guest name (may need Google login)");
+      this.addLog(session, "info", "Could not set guest name (already logged in or UI changed)");
     }
   }
 
-  private async configureMediaDevices(page: puppeteer.Page, session: MeetSession) {
+  private async configureMediaDevices(page: Page, session: MeetSession) {
     try {
       // Turn off camera
       const cameraButton = await page.$('[aria-label*="camera" i]');
@@ -462,7 +483,7 @@ export class GoogleMeetBotService {
     }
   }
 
-  private async clickJoinButton(page: puppeteer.Page, session: MeetSession) {
+  private async clickJoinButton(page: Page, session: MeetSession) {
     this.addLog(session, "info", "Looking for join button...");
 
     // Try multiple selectors for join button
@@ -503,7 +524,7 @@ export class GoogleMeetBotService {
     }
   }
 
-  private async waitForMeetingStart(page: puppeteer.Page, session: MeetSession) {
+  private async waitForMeetingStart(page: Page, session: MeetSession) {
     this.addLog(session, "info", "Waiting to be admitted to meeting...");
     session.status = "joining";
 
@@ -586,7 +607,7 @@ export class GoogleMeetBotService {
   }
 
   /** Inject audio capture script into the Meet page */
-  private async startAudioCapture(page: puppeteer.Page, session: MeetSession) {
+  private async startAudioCapture(page: Page, session: MeetSession) {
     this.addLog(session, "info", "Setting up audio capture from meeting...");
 
     try {
@@ -670,7 +691,7 @@ export class GoogleMeetBotService {
   }
 
   /** Poll the page for captured audio and process through pipeline */
-  private async pollAudioChunks(page: puppeteer.Page, session: MeetSession) {
+  private async pollAudioChunks(page: Page, session: MeetSession) {
     while (session.status !== "ended" && session.status !== "error") {
       try {
         if (page.isClosed()) {

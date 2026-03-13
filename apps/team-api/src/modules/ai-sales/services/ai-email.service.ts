@@ -7,26 +7,33 @@ import { LeadInteractionService } from "./lead-interaction.service";
 @Injectable()
 export class AiEmailService {
   private readonly logger = new Logger(AiEmailService.name);
-  private resend: any = null;
   private genAI: GoogleGenerativeAI | null = null;
-  private fromEmail: string;
 
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
     private interactions: LeadInteractionService,
   ) {
-    const resendKey = this.config.get<string>("RESEND_API_KEY");
+    const geminiKey = this.config.get<string>("GEMINI_API_KEY");
+    if (geminiKey) this.genAI = new GoogleGenerativeAI(geminiKey);
+  }
+
+  private async getResendIntegration() {
+    const settings = await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } }) as any;
+    const resendKey = settings?.resendApiKey || this.config.get<string>("RESEND_API_KEY");
+    
+    let resendClient = null;
     if (resendKey) {
       try {
         const { Resend } = require("resend");
-        this.resend = new Resend(resendKey);
-      } catch { this.logger.warn("Resend SDK not available"); }
+        resendClient = new Resend(resendKey);
+      } catch {
+        this.logger.warn("Resend SDK not available");
+      }
     }
-    this.fromEmail = this.config.get<string>("AI_SALES_FROM_EMAIL") || this.config.get<string>("MAIL_FROM") || "sales@orivraa.com";
-
-    const geminiKey = this.config.get<string>("GEMINI_API_KEY");
-    if (geminiKey) this.genAI = new GoogleGenerativeAI(geminiKey);
+    
+    const fromEmail = settings?.aiSalesFromEmail || this.config.get<string>("AI_SALES_FROM_EMAIL") || this.config.get<string>("MAIL_FROM") || "sales@orivraa.com";
+    return { resend: resendClient, fromEmail };
   }
 
   /** Send an email to a lead */
@@ -43,7 +50,8 @@ export class AiEmailService {
     const lead = await this.prisma.lead.findUnique({ where: { id: params.leadId } });
     if (!lead?.email) throw new Error("Lead has no email address");
 
-    const from = params.fromEmail || this.fromEmail;
+    const { resend, fromEmail: defaultFrom } = await this.getResendIntegration();
+    const from = params.fromEmail || defaultFrom;
     const html = params.htmlBody || this.wrapInTemplate(params.body, lead.name, params.meetLink, params.meetScheduledAt);
 
     // Create DB record
@@ -64,9 +72,9 @@ export class AiEmailService {
     });
 
     // Send via Resend
-    if (this.resend) {
+    if (resend) {
       try {
-        const result = await this.resend.emails.send({
+        const result = await resend.emails.send({
           from,
           to: lead.email,
           subject: params.subject,
