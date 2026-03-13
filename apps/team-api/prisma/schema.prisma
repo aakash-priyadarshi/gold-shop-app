@@ -423,6 +423,9 @@ model Lead {
   messagingPreference           String?    // 'whatsapp' or 'sms'
   messagingPreferenceDetectedAt DateTime?
 
+  // Call tracking
+  totalCalls      Int        @default(0)
+
   assignedToId    String?    // employee handling this lead
   lastContactedAt DateTime?
 
@@ -431,6 +434,8 @@ model Lead {
   callSchedules   CallSchedule[]
   callMessages    CallMessage[]
   callRemarks     CallRemark[]
+  interactions    LeadInteraction[]
+  emails          LeadEmail[]
 
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -505,6 +510,11 @@ model CallSession {
   callbackAt      DateTime?
   followUpNeeded  Boolean       @default(false)
   followUpNotes   String?
+
+  // Call Goal
+  goalForCall     String?       @db.Text // what this call aims to achieve
+  goalAchieved    Boolean?      // null = not evaluated, true/false = evaluated
+  goalNotes       String?       @db.Text // AI explanation of goal evaluation
 
   // Cost tracking
   costTwilio      Float?        // Twilio cost in USD
@@ -1159,6 +1169,9 @@ model AgentVoice {
   targetSegments         String[] // e.g. ["region:india", "industry:saas", "size:startup"]
   languageAffinities     Json?    // { "hi-IN": 5, "en-IN": 4, "ta-IN": 3 } — quality rating 1-5
 
+  // ── Google Workspace Email (for Meet joining & email sending) ──
+  agentEmail             String?  // e.g. "priya@orivraa.com" — Google Workspace account
+
   // ── Performance Tracking ──
   totalCalls             Int      @default(0)
   totalConversions       Int      @default(0)
@@ -1609,4 +1622,122 @@ model CallAnnotation {
 
   @@index([recordingId])
   @@index([annotationType])
+}
+
+// ══════════════════════════════════════════════════════════════
+// LEAD INTERACTION TIMELINE — Unified chronological history
+// of all interactions with a lead (calls, emails, meets, notes).
+// ══════════════════════════════════════════════════════════════
+
+model LeadInteraction {
+  id              String   @id @default(uuid())
+  leadId          String
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  type            InteractionType
+  channel         String?  // "phone", "email", "gmeet", "whatsapp", "sms", "manual"
+  direction       String?  // "inbound", "outbound"
+
+  // Reference to source record
+  referenceId     String?  // CallSession id, LeadEmail id, meet session id, etc.
+  referenceType   String?  // "CallSession", "LeadEmail", "MeetSession", "FollowUpSequence"
+
+  // Content
+  summary         String?  @db.Text
+  details         String?  @db.Text // longer description or transcript snippet
+
+  // Goal tracking
+  goalSet         String?  @db.Text // what was the goal for this interaction
+  goalAchieved    Boolean? // null = no goal, true/false = evaluated
+  goalNotes       String?  @db.Text
+
+  // Metadata
+  metadata        Json?    @default("{}") // flexible extra data
+  durationSeconds Int?     // for calls/meets
+  sentiment       String?  // overall sentiment
+  agentName       String?  // AI agent used
+
+  createdAt       DateTime @default(now())
+
+  @@index([leadId])
+  @@index([type])
+  @@index([referenceId])
+  @@index([createdAt])
+}
+
+enum InteractionType {
+  CALL
+  EMAIL_SENT
+  EMAIL_RECEIVED
+  GMEET
+  FOLLOW_UP
+  NOTE
+  SMS
+  WHATSAPP
+}
+
+// ══════════════════════════════════════════════════════════════
+// LEAD EMAIL — Email threads with leads.
+// Sent via Resend, inbound via webhook.
+// ══════════════════════════════════════════════════════════════
+
+model LeadEmail {
+  id              String   @id @default(uuid())
+  leadId          String
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  direction       EmailDirection
+  subject         String
+  body            String   @db.Text  // plain text
+  htmlBody        String?  @db.Text  // HTML version
+
+  fromEmail       String
+  toEmail         String
+  ccEmails        String[] // CC recipients
+  messageId       String?  // email Message-ID header
+  inReplyTo       String?  // Message-ID of parent email
+  threadId        String?  // grouping thread ID
+
+  // AI metadata
+  aiGenerated     Boolean  @default(false)
+  aiDraftPrompt   String?  @db.Text // what prompt generated this draft
+  goalForEmail    String?  @db.Text // what this email aims to achieve
+  meetLink        String?  // Google Meet link if scheduling a meet
+  meetScheduledAt DateTime? // scheduled meet time
+
+  // Status
+  status          EmailStatus @default(DRAFT)
+  sentAt          DateTime?
+  receivedAt      DateTime?
+  openedAt        DateTime?
+  repliedAt       DateTime?
+
+  // Resend tracking
+  resendId        String?  // Resend message ID
+  resendStatus    String?  // delivery status from Resend
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([threadId])
+  @@index([messageId])
+  @@index([status])
+  @@index([direction])
+}
+
+enum EmailDirection {
+  SENT
+  RECEIVED
+}
+
+enum EmailStatus {
+  DRAFT
+  SENDING
+  SENT
+  DELIVERED
+  OPENED
+  REPLIED
+  BOUNCED
+  FAILED
 }

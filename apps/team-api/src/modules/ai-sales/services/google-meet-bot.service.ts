@@ -87,7 +87,7 @@ export class GoogleMeetBotService {
     return session;
   }
 
-  /** Stop a session — close browser and clean up */
+  /** Stop a session — close browser, save transcript, and clean up */
   async stopSession(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) return;
@@ -111,9 +111,42 @@ export class GoogleMeetBotService {
       // Ignore cleanup errors
     }
 
+    // Save transcript and create interaction
+    await this.saveMeetTranscript(session);
+
     session.browser = undefined;
     session.page = undefined;
     this.addLog(session, "info", "Meet bot stopped");
+  }
+
+  /** Save Meet transcript as a CallSession + LeadInteraction */
+  private async saveMeetTranscript(session: MeetSession) {
+    if (session.transcript.length === 0) return;
+
+    const durationSeconds = Math.round((Date.now() - session.startTime) / 1000);
+    const transcriptText = session.transcript
+      .map((t) => `[${t.role === "assistant" ? session.agentName : "Customer"}]: ${t.content}`)
+      .join("\n");
+
+    try {
+      // Create a CallSession record for this meet
+      const callSession = await this.prisma.callSession.create({
+        data: {
+          agentId: session.agentId,
+          direction: "OUTBOUND",
+          status: "COMPLETED",
+          duration: durationSeconds,
+          transcript: transcriptText,
+          summary: `Google Meet session with ${session.agentName}. Duration: ${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s. ${session.transcript.length} exchanges.`,
+          keyTopics: [],
+          startedAt: new Date(session.startTime),
+          endedAt: new Date(),
+        },
+      });
+      this.addLog(session, "info", `Meet transcript saved as CallSession ${callSession.id}`);
+    } catch (err: any) {
+      this.logger.error(`Failed to save Meet transcript: ${err.message}`);
+    }
   }
 
   /** Get session status and logs */

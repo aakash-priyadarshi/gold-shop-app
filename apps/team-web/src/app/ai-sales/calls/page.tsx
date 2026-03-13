@@ -7,7 +7,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { aiSalesApi } from "@/lib/api";
-import { Phone, ArrowLeft, Clock, DollarSign, TrendingUp, Volume2 } from "lucide-react";
+import { Phone, ArrowLeft, Clock, DollarSign, TrendingUp, Volume2, Target, CheckCircle2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -94,6 +94,7 @@ export default function CallsPage() {
               <th className="p-3 text-center">Duration</th>
               <th className="p-3 text-center">Sentiment</th>
               <th className="p-3 text-center">Phase</th>
+              <th className="p-3 text-center">Goal</th>
               <th className="p-3 text-right">Cost</th>
               <th className="p-3 text-left">Date</th>
             </tr>
@@ -125,12 +126,25 @@ export default function CallsPage() {
                   ) : "—"}
                 </td>
                 <td className="p-3 text-center text-xs">{call.callPhaseReached || "—"}</td>
+                <td className="p-3 text-center">
+                  {call.goalForCall ? (
+                    <div className="flex items-center justify-center gap-1">
+                      {call.goalAchieved === true ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                      ) : call.goalAchieved === false ? (
+                        <XCircle className="h-3.5 w-3.5 text-red-500" />
+                      ) : (
+                        <Target className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
+                    </div>
+                  ) : "—"}
+                </td>
                 <td className="p-3 text-right">{call.totalCost != null ? `$${call.totalCost.toFixed(4)}` : "—"}</td>
                 <td className="p-3 text-xs">{call.startedAt ? new Date(call.startedAt).toLocaleString() : "—"}</td>
               </tr>
             ))}
             {calls.length === 0 && (
-              <tr><td colSpan={9} className="p-8 text-center text-muted-foreground">No calls recorded yet</td></tr>
+              <tr><td colSpan={10} className="p-8 text-center text-muted-foreground">No calls recorded yet</td></tr>
             )}
           </tbody>
         </table>
@@ -174,6 +188,22 @@ export default function CallsPage() {
                       <div className="bg-muted/50 rounded p-2"><p className="text-muted-foreground">TTS</p><p className="font-bold">${selectedCall.costTts?.toFixed(4) ?? "0"}</p></div>
                       <div className="bg-muted/50 rounded p-2"><p className="text-muted-foreground">STT</p><p className="font-bold">${selectedCall.costStt?.toFixed(4) ?? "0"}</p></div>
                     </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Goal */}
+              {selectedCall.goalForCall && (
+                <Card className={selectedCall.goalAchieved === true ? "border-green-200 dark:border-green-900" : selectedCall.goalAchieved === false ? "border-red-200 dark:border-red-900" : ""}>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Target className="h-4 w-4" />
+                      <p className="text-sm font-medium">Call Goal</p>
+                      {selectedCall.goalAchieved === true && <Badge variant="success"><CheckCircle2 className="h-3 w-3 mr-1" />Achieved</Badge>}
+                      {selectedCall.goalAchieved === false && <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Not Achieved</Badge>}
+                    </div>
+                    <p className="text-sm">{selectedCall.goalForCall}</p>
+                    {selectedCall.goalNotes && <p className="text-xs text-muted-foreground mt-1">{selectedCall.goalNotes}</p>}
                   </CardContent>
                 </Card>
               )}

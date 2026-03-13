@@ -188,7 +188,7 @@ export const aiSalesApi = {
     api.get(`/ai-sales/campaigns/${id}/stats`),
 
   // Call orchestrator
-  initiateCall: (data: { agentId: string; leadId: string; campaignId?: string }) =>
+  initiateCall: (data: { agentId: string; leadId: string; campaignId?: string; goal?: string }) =>
     api.post("/ai-sales/calls/initiate", data),
   getActiveCallsCount: () => api.get("/ai-sales/calls/active-count"),
   getDetailedCallStats: (from?: string, to?: string) =>
@@ -375,6 +375,30 @@ export const aiSalesApi = {
   getLiveSentiment: () => api.get("/ai-sales/live/sentiment"),
   getCallSentimentHistory: (callSessionId: string) =>
     api.get(`/ai-sales/live/sentiment/history/${callSessionId}`),
+
+  // Lead Interactions / Timeline
+  getLeadInteractions: (leadId: string, limit?: number) =>
+    api.get(`/ai-sales/leads/${leadId}/interactions`, { params: limit ? { limit } : {} }),
+  getLeadInteractionStats: (leadId: string) =>
+    api.get(`/ai-sales/leads/${leadId}/interaction-stats`),
+  recordInteraction: (leadId: string, data: { type: string; summary?: string; details?: string; channel?: string }) =>
+    api.post(`/ai-sales/leads/${leadId}/interactions`, data),
+
+  // AI Email
+  sendEmail: (data: { leadId: string; subject: string; body: string; htmlBody?: string; goalForEmail?: string; meetLink?: string; meetScheduledAt?: string; fromEmail?: string }) =>
+    api.post("/ai-sales/email/send", data),
+  generateEmailDraft: (data: { leadId: string; purpose: string; includeMeetLink?: boolean }) =>
+    api.post("/ai-sales/email/draft", data),
+  processInboundEmail: (data: { from: string; to: string; subject: string; body: string }) =>
+    api.post("/ai-sales/email/inbound", data),
+  getLeadEmails: (leadId: string) =>
+    api.get(`/ai-sales/leads/${leadId}/emails`),
+  getEmailDetail: (id: string) =>
+    api.get(`/ai-sales/email/${id}`),
+
+  // Google Meet Scheduling
+  scheduleMeet: (data: { leadId: string; agentId: string; scheduledAt: string; subject?: string; notes?: string }) =>
+    api.post("/ai-sales/meet/schedule", data),
 };
 
 // ─── Certificates ───

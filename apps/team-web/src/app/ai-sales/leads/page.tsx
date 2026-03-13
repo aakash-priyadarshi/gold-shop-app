@@ -17,6 +17,8 @@ import { aiSalesApi } from "@/lib/api";
 import {
   Users, Plus, Search, ArrowLeft, Target, Thermometer, Star,
   Pencil, Brain, Heart, ShoppingCart, Clock, MessageSquare,
+  Phone, Mail, Video, Send, CalendarPlus, CheckCircle2, XCircle,
+  Activity,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -56,6 +58,28 @@ export default function LeadsPage() {
   const [scoring, setScoring] = useState(false);
   const [callRemarks, setCallRemarks] = useState<any[]>([]);
   const [remarksLoading, setRemarksLoading] = useState(false);
+
+  // New: Action dialogs state
+  const [agents, setAgents] = useState<any[]>([]);
+  const [callDialog, setCallDialog] = useState<any>(null); // lead to call
+  const [callGoal, setCallGoal] = useState("");
+  const [callAgentId, setCallAgentId] = useState("");
+  const [callLoading, setCallLoading] = useState(false);
+  const [emailDialog, setEmailDialog] = useState<any>(null); // lead to email
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [emailGoal, setEmailGoal] = useState("");
+  const [emailIncludeMeet, setEmailIncludeMeet] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [meetDialog, setMeetDialog] = useState<any>(null); // lead for meet
+  const [meetAgentId, setMeetAgentId] = useState("");
+  const [meetDate, setMeetDate] = useState("");
+  const [meetSubject, setMeetSubject] = useState("");
+  const [meetLoading, setMeetLoading] = useState(false);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [leadEmails, setLeadEmails] = useState<any[]>([]);
+  const [emailsLoading, setEmailsLoading] = useState(false);
 
   const [form, setForm] = useState({ ...EMPTY_FORM });
 
@@ -178,6 +202,101 @@ export default function LeadsPage() {
     } catch { setCallRemarks([]); }
     setRemarksLoading(false);
   }, []);
+
+  // Load agents for dropdowns
+  useEffect(() => {
+    aiSalesApi.listAgents().then((res) => {
+      setAgents(Array.isArray(res.data) ? res.data : (res.data?.data ?? []));
+    }).catch(() => {});
+  }, []);
+
+  const loadTimeline = useCallback(async (leadId: string) => {
+    setTimelineLoading(true);
+    try {
+      const res = await aiSalesApi.getLeadInteractions(leadId, 50);
+      setTimeline(Array.isArray(res.data) ? res.data : (res.data?.interactions ?? []));
+    } catch { setTimeline([]); }
+    setTimelineLoading(false);
+  }, []);
+
+  const loadLeadEmails = useCallback(async (leadId: string) => {
+    setEmailsLoading(true);
+    try {
+      const res = await aiSalesApi.getLeadEmails(leadId);
+      setLeadEmails(Array.isArray(res.data) ? res.data : []);
+    } catch { setLeadEmails([]); }
+    setEmailsLoading(false);
+  }, []);
+
+  const handleCallFromLead = async () => {
+    if (!callDialog || !callAgentId) { toast.error("Select an agent"); return; }
+    setCallLoading(true);
+    try {
+      await aiSalesApi.initiateCall({ agentId: callAgentId, leadId: callDialog.id, goal: callGoal || undefined });
+      toast.success("Call initiated!");
+      setCallDialog(null);
+      setCallGoal("");
+      setCallAgentId("");
+    } catch { toast.error("Failed to initiate call"); }
+    setCallLoading(false);
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailDialog || !emailSubject.trim() || !emailBody.trim()) { toast.error("Subject and body required"); return; }
+    setEmailLoading(true);
+    try {
+      await aiSalesApi.sendEmail({
+        leadId: emailDialog.id,
+        subject: emailSubject,
+        body: emailBody,
+        goalForEmail: emailGoal || undefined,
+        meetLink: emailIncludeMeet ? "auto" : undefined,
+      });
+      toast.success("Email sent!");
+      setEmailDialog(null);
+      setEmailSubject("");
+      setEmailBody("");
+      setEmailGoal("");
+      setEmailIncludeMeet(false);
+    } catch { toast.error("Failed to send email"); }
+    setEmailLoading(false);
+  };
+
+  const handleGenerateDraft = async () => {
+    if (!emailDialog) return;
+    setEmailLoading(true);
+    try {
+      const res = await aiSalesApi.generateEmailDraft({
+        leadId: emailDialog.id,
+        purpose: emailGoal || "Follow up and build relationship",
+        includeMeetLink: emailIncludeMeet,
+      });
+      const draft = res.data as any;
+      setEmailSubject(draft.subject || "");
+      setEmailBody(draft.body || "");
+      toast.success("AI draft generated");
+    } catch { toast.error("Failed to generate draft"); }
+    setEmailLoading(false);
+  };
+
+  const handleScheduleMeet = async () => {
+    if (!meetDialog || !meetAgentId || !meetDate) { toast.error("Fill all fields"); return; }
+    setMeetLoading(true);
+    try {
+      await aiSalesApi.scheduleMeet({
+        leadId: meetDialog.id,
+        agentId: meetAgentId,
+        scheduledAt: new Date(meetDate).toISOString(),
+        subject: meetSubject || undefined,
+      });
+      toast.success("Meet scheduled!");
+      setMeetDialog(null);
+      setMeetAgentId("");
+      setMeetDate("");
+      setMeetSubject("");
+    } catch { toast.error("Failed to schedule meet"); }
+    setMeetLoading(false);
+  };
 
   const tempColor = (t: string): "destructive" | "warning" | "secondary" =>
     t === "hot" ? "destructive" : t === "warm" ? "warning" : "secondary";
@@ -437,8 +556,14 @@ export default function LeadsPage() {
                     <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); openEdit(lead); }}>
                       <Pencil className="h-3 w-3 mr-1" />Edit
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); loadScore(lead.id); }}>
-                      <Target className="h-3 w-3 mr-1" />Score
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-green-600" onClick={(e) => { e.stopPropagation(); setCallDialog(lead); }}>
+                      <Phone className="h-3 w-3 mr-1" />Call
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600" onClick={(e) => { e.stopPropagation(); setEmailDialog(lead); }}>
+                      <Mail className="h-3 w-3 mr-1" />Email
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-purple-600" onClick={(e) => { e.stopPropagation(); setMeetDialog(lead); }}>
+                      <Video className="h-3 w-3 mr-1" />Meet
                     </Button>
                   </div>
                 </td>
@@ -473,17 +598,38 @@ export default function LeadsPage() {
           </DialogHeader>
           {selectedLead && (
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-6">
+              <TabsList className="grid w-full grid-cols-8">
                 <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+                <TabsTrigger value="timeline" className="text-xs" onClick={() => loadTimeline(selectedLead.id)}>
+                  <Activity className="h-3 w-3 mr-1" />Timeline
+                </TabsTrigger>
                 <TabsTrigger value="personality" className="text-xs">Personality</TabsTrigger>
                 <TabsTrigger value="personal" className="text-xs">Personal</TabsTrigger>
                 <TabsTrigger value="buying" className="text-xs">Buying</TabsTrigger>
                 <TabsTrigger value="ai-notes" className="text-xs">AI Notes</TabsTrigger>
-                <TabsTrigger value="call-history" className="text-xs" onClick={() => loadCallRemarks(selectedLead.id)}>Call History</TabsTrigger>
+                <TabsTrigger value="emails" className="text-xs" onClick={() => loadLeadEmails(selectedLead.id)}>
+                  <Mail className="h-3 w-3 mr-1" />Emails
+                </TabsTrigger>
+                <TabsTrigger value="call-history" className="text-xs" onClick={() => loadCallRemarks(selectedLead.id)}>Calls</TabsTrigger>
               </TabsList>
 
               {/* Overview */}
               <TabsContent value="overview" className="space-y-4 mt-4">
+                {/* Quick Actions */}
+                <div className="flex gap-2 flex-wrap">
+                  <Button size="sm" variant="outline" className="text-green-600" onClick={() => { setCallDialog(selectedLead); }}>
+                    <Phone className="h-3 w-3 mr-1" />Call via AI
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-blue-600" onClick={() => { setEmailDialog(selectedLead); }}>
+                    <Mail className="h-3 w-3 mr-1" />Send Email
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-purple-600" onClick={() => { setMeetDialog(selectedLead); }}>
+                    <Video className="h-3 w-3 mr-1" />Schedule Meet
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { loadScore(selectedLead.id); }}>
+                    <Target className="h-3 w-3 mr-1" />Score
+                  </Button>
+                </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div><p className="text-muted-foreground">Email</p><p>{selectedLead.email || "—"}</p></div>
                   <div><p className="text-muted-foreground">Phone</p><p>{selectedLead.phone || "—"}</p></div>
@@ -530,6 +676,63 @@ export default function LeadsPage() {
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Notes</p>
                     <p className="text-sm bg-muted/30 rounded p-2">{selectedLead.notes}</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Timeline */}
+              <TabsContent value="timeline" className="space-y-4 mt-4">
+                <div className="flex items-center gap-2 text-sm font-medium mb-2">
+                  <Activity className="h-4 w-4 text-indigo-500" />
+                  Interaction Timeline
+                </div>
+                {timelineLoading ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">Loading timeline...</p>
+                ) : timeline.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">No interactions yet — calls, emails, and meets will appear here.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {timeline.map((item: any) => {
+                      const iconMap: Record<string, any> = {
+                        CALL: <Phone className="h-3.5 w-3.5 text-green-500" />,
+                        EMAIL_SENT: <Send className="h-3.5 w-3.5 text-blue-500" />,
+                        EMAIL_RECEIVED: <Mail className="h-3.5 w-3.5 text-cyan-500" />,
+                        GMEET: <Video className="h-3.5 w-3.5 text-purple-500" />,
+                        FOLLOW_UP: <CalendarPlus className="h-3.5 w-3.5 text-orange-500" />,
+                        NOTE: <MessageSquare className="h-3.5 w-3.5 text-gray-500" />,
+                      };
+                      const colorMap: Record<string, string> = {
+                        CALL: "border-l-green-500",
+                        EMAIL_SENT: "border-l-blue-500",
+                        EMAIL_RECEIVED: "border-l-cyan-500",
+                        GMEET: "border-l-purple-500",
+                        FOLLOW_UP: "border-l-orange-500",
+                        NOTE: "border-l-gray-500",
+                      };
+                      return (
+                        <Card key={item.id} className={`border-l-4 ${colorMap[item.type] || "border-l-gray-300"}`}>
+                          <CardContent className="p-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                {iconMap[item.type] || <Activity className="h-3.5 w-3.5" />}
+                                <Badge variant="outline" className="text-xs">{(item.type || "").replace(/_/g, " ")}</Badge>
+                                {item.channel && <span className="text-[10px] text-muted-foreground">via {item.channel}</span>}
+                              </div>
+                              <span className="text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</span>
+                            </div>
+                            {item.summary && <p className="text-sm mt-1">{item.summary}</p>}
+                            {item.goalSet && (
+                              <div className="flex items-center gap-1 mt-1 text-xs">
+                                <Target className="h-3 w-3" />
+                                <span className="text-muted-foreground">Goal: {item.goalSet}</span>
+                                {item.goalAchieved === true && <CheckCircle2 className="h-3 w-3 text-green-500 ml-1" />}
+                                {item.goalAchieved === false && <XCircle className="h-3 w-3 text-red-500 ml-1" />}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>
@@ -653,6 +856,45 @@ export default function LeadsPage() {
                 )}
               </TabsContent>
 
+              {/* Emails Tab */}
+              <TabsContent value="emails" className="space-y-4 mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Mail className="h-4 w-4 text-blue-500" />
+                    Email History
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => { setEmailDialog(selectedLead); }}>
+                    <Send className="h-3 w-3 mr-1" />Compose
+                  </Button>
+                </div>
+                {emailsLoading ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">Loading emails...</p>
+                ) : leadEmails.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">No emails yet — send the first one above.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {leadEmails.map((em: any) => (
+                      <Card key={em.id} className={`border-l-4 ${em.direction === "SENT" ? "border-l-blue-500" : "border-l-cyan-500"}`}>
+                        <CardContent className="p-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={em.direction === "SENT" ? "default" : "secondary"} className="text-xs">
+                                {em.direction === "SENT" ? "Sent" : "Received"}
+                              </Badge>
+                              {em.aiGenerated && <Badge variant="outline" className="text-xs text-purple-600">AI</Badge>}
+                              {em.meetScheduledAt && <Badge variant="outline" className="text-xs text-green-600"><Video className="h-2.5 w-2.5 mr-0.5" />Meet</Badge>}
+                            </div>
+                            <span className="text-xs text-muted-foreground">{new Date(em.sentAt || em.receivedAt || em.createdAt).toLocaleString()}</span>
+                          </div>
+                          <p className="text-sm font-medium">{em.subject}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-3">{em.body}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
               {/* Call History (Remarks Timeline) */}
               <TabsContent value="call-history" className="space-y-4 mt-4">
                 <div className="flex items-center gap-2 text-sm font-medium mb-2">
@@ -720,6 +962,100 @@ export default function LeadsPage() {
               </TabsContent>
             </Tabs>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Call via AI Dialog */}
+      <Dialog open={!!callDialog} onOpenChange={(open) => { if (!open) { setCallDialog(null); setCallGoal(""); setCallAgentId(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Call {callDialog?.name} via AI</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>AI Agent</Label>
+              <Select value={callAgentId} onValueChange={setCallAgentId}>
+                <SelectTrigger><SelectValue placeholder="Select agent" /></SelectTrigger>
+                <SelectContent>
+                  {agents.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Call Goal (optional)</Label>
+              <Textarea
+                value={callGoal}
+                onChange={(e) => setCallGoal(e.target.value)}
+                placeholder="e.g., Schedule a demo, Confirm pricing interest, Follow up on last conversation..."
+                rows={3}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">AI will evaluate if this goal was achieved after the call</p>
+            </div>
+            {callDialog?.phone && (
+              <p className="text-sm text-muted-foreground">Calling: {callDialog.phone}</p>
+            )}
+            <Button onClick={handleCallFromLead} disabled={callLoading} className="w-full">
+              <Phone className="h-4 w-4 mr-2" />{callLoading ? "Initiating..." : "Start AI Call"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Email Dialog */}
+      <Dialog open={!!emailDialog} onOpenChange={(open) => { if (!open) { setEmailDialog(null); setEmailSubject(""); setEmailBody(""); setEmailGoal(""); setEmailIncludeMeet(false); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Email {emailDialog?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Email Goal (for AI context)</Label>
+              <Input value={emailGoal} onChange={(e) => setEmailGoal(e.target.value)} placeholder="e.g., Schedule a follow-up meeting" />
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="includeMeet" checked={emailIncludeMeet} onChange={(e) => setEmailIncludeMeet(e.target.checked)} className="rounded" />
+              <Label htmlFor="includeMeet" className="text-sm cursor-pointer">Include Google Meet link</Label>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleGenerateDraft} disabled={emailLoading}>
+              <Brain className="h-3 w-3 mr-1" />{emailLoading ? "Generating..." : "AI Draft"}
+            </Button>
+            <div>
+              <Label>Subject</Label>
+              <Input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} placeholder="Email subject" />
+            </div>
+            <div>
+              <Label>Body</Label>
+              <Textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} placeholder="Email body..." rows={6} />
+            </div>
+            <Button onClick={handleSendEmail} disabled={emailLoading} className="w-full">
+              <Send className="h-4 w-4 mr-2" />{emailLoading ? "Sending..." : "Send Email"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule Meet Dialog */}
+      <Dialog open={!!meetDialog} onOpenChange={(open) => { if (!open) { setMeetDialog(null); setMeetAgentId(""); setMeetDate(""); setMeetSubject(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Schedule Meet with {meetDialog?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>AI Agent</Label>
+              <Select value={meetAgentId} onValueChange={setMeetAgentId}>
+                <SelectTrigger><SelectValue placeholder="Select agent" /></SelectTrigger>
+                <SelectContent>
+                  {agents.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Date & Time</Label>
+              <Input type="datetime-local" value={meetDate} onChange={(e) => setMeetDate(e.target.value)} />
+            </div>
+            <div>
+              <Label>Subject (optional)</Label>
+              <Input value={meetSubject} onChange={(e) => setMeetSubject(e.target.value)} placeholder="Product demo, Follow-up discussion..." />
+            </div>
+            <Button onClick={handleScheduleMeet} disabled={meetLoading} className="w-full">
+              <Video className="h-4 w-4 mr-2" />{meetLoading ? "Scheduling..." : "Schedule Google Meet"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
