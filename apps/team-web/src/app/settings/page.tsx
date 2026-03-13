@@ -162,41 +162,6 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>
-              Configure notification preferences
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div>
-              <Label>Notification Email</Label>
-              <Input
-                type="email"
-                value={settings.notificationEmail ?? ""}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    notificationEmail: e.target.value,
-                  })
-                }
-                placeholder="team@orivraa.com"
-              />
-            </div>
-            <div>
-              <Label>Webhook URL (optional)</Label>
-              <Input
-                value={settings.webhookUrl ?? ""}
-                onChange={(e) =>
-                  setSettings({ ...settings, webhookUrl: e.target.value })
-                }
-                placeholder="https://hooks.slack.com/..."
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
             <CardTitle>AI Sales Configuration</CardTitle>
             <CardDescription>
               Configure AI-powered sales settings
@@ -204,20 +169,9 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="grid gap-4">
             <div>
-              <Label>ElevenLabs API Key</Label>
-              <Input
-                type="password"
-                value={settings.elevenLabsApiKey ?? ""}
-                onChange={(e) =>
-                  setSettings({ ...settings, elevenLabsApiKey: e.target.value })
-                }
-                placeholder="sk-..."
-              />
-            </div>
-            <div className="pt-4 border-t">
               <h4 className="text-sm font-medium mb-2">Google Meet Bot Credentials</h4>
               <p className="text-xs text-muted-foreground mb-4">
-                Used to bypass Google's "Browser not secure" blockade by logging in with a real account.
+                The bot will log into this Google Account to join meetings as an authenticated user.
               </p>
               <div className="grid gap-4">
                 <div>
@@ -245,33 +199,20 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="pt-4 border-t">
-              <h4 className="text-sm font-medium mb-2">Email Integration Settings</h4>
+              <h4 className="text-sm font-medium mb-2">AI Sales Email</h4>
               <p className="text-xs text-muted-foreground mb-4">
-                Used to send emails using Resend from the Playground and AI Agents.
+                The "From" address used when the AI sends emails. Can be an alias like sales@orivraa.com.
               </p>
-              <div className="grid gap-4">
-                <div>
-                  <Label>Resend API Key</Label>
-                  <Input
-                    type="password"
-                    value={settings.resendApiKey ?? ""}
-                    onChange={(e) =>
-                      setSettings({ ...settings, resendApiKey: e.target.value })
-                    }
-                    placeholder="re_..."
-                  />
-                </div>
-                <div>
-                  <Label>AI Sales From Email</Label>
-                  <Input
-                    type="email"
-                    value={settings.aiSalesFromEmail ?? ""}
-                    onChange={(e) =>
-                      setSettings({ ...settings, aiSalesFromEmail: e.target.value })
-                    }
-                    placeholder="sales@orivraa.com"
-                  />
-                </div>
+              <div>
+                <Label>AI Sales From Email</Label>
+                <Input
+                  type="email"
+                  value={settings.aiSalesFromEmail ?? ""}
+                  onChange={(e) =>
+                    setSettings({ ...settings, aiSalesFromEmail: e.target.value })
+                  }
+                  placeholder="sales@orivraa.com"
+                />
               </div>
             </div>
             <div className="pt-4 border-t">
