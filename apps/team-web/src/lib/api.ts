@@ -261,6 +261,12 @@ export const aiSalesApi = {
     api.post("/ai-sales/playground/meet-stop", data),
   playgroundMeetStatus: (sessionId: string) =>
     api.get(`/ai-sales/playground/meet-status/${sessionId}`),
+  playgroundEmailDraft: (data: { leadId?: string; purpose: string; includeMeetLink?: boolean }) =>
+    api.post("/ai-sales/playground/email-draft", data),
+  playgroundEmailSend: (data: { to: string; subject: string; body: string; fromEmail?: string }) =>
+    api.post("/ai-sales/playground/email-send", data),
+  playgroundSimulateChain: (data: { chain: any[]; currentIndex: number }) =>
+    api.post("/ai-sales/playground/simulate-chain", data),
 
   // Central Brain / Intelligence
   getBrainDashboard: () =>
