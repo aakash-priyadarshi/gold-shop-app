@@ -1063,6 +1063,7 @@ model TeamSettings {
   // ── AI Sales Configuration ──
   googleMeetBotEmail    String?  // The real Google Account email for the bot
   googleMeetBotPassword String?  // The password for the bot's Google Account
+  googleMeetBotCookies  Json?    // Cached session cookies for the Google bot to skip 2FA
   resendApiKey          String?  // API key for Resend email service
   aiSalesFromEmail      String?  // e.g. "sales@orivraa.com"
   

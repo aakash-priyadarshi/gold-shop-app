@@ -364,6 +364,16 @@ export class GoogleMeetBotService {
     // Set a reasonable viewport
     await page.setViewport({ width: 1280, height: 720 });
 
+    // Try to get cookies and login details from DB
+    const settings = (await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } })) as any;
+    
+    if (settings?.googleMeetBotCookies) {
+      this.addLog(session, "info", "Found cached Session Cookies. Bypassing Google Login...");
+      await page.setCookie(...(settings.googleMeetBotCookies as any[]));
+    } else if (settings?.googleMeetBotEmail && settings?.googleMeetBotPassword) {
+      await this.loginToGoogle(page, session, settings.googleMeetBotEmail, settings.googleMeetBotPassword);
+    }
+
     this.addLog(session, "info", "Navigating to Google Meet...");
     await page.goto(session.meetUrl, { waitUntil: "networkidle2", timeout: 30000 });
 
@@ -381,6 +391,15 @@ export class GoogleMeetBotService {
 
     // Click "Ask to join" or "Join now"
     await this.clickJoinButton(page, session);
+
+    // Wait for meeting to start
+    await this.waitForMeetingStart(page, session);
+
+    session.status = "listening";
+    this.addLog(session, "info", "Successfully joined the meeting! Listening...");
+
+    // Start the audio capture loop
+    this.startAudioCapture(page, session);
   }
 
   private async loginToGoogle(page: Page, session: MeetSession, email: string, pass: string) {
@@ -403,8 +422,15 @@ export class GoogleMeetBotService {
       }
   
       await this.delay(5000); // Wait for login to complete
+
+      // Save the cookies into the database to bypass login forever
+      const cookies = await page.cookies();
+      await this.prisma.teamSettings.update({
+        where: { id: "singleton" },
+        data: { googleMeetBotCookies: cookies as any },
+      });
       
-      this.addLog(session, "info", "Google authentication successful!");
+      this.addLog(session, "info", "Google authentication successful! Cookies cached for future meetings.");
     } catch (err: any) {
       this.addLog(session, "info", `Google Auth failed/skipped: ${err.message}. Reverting to guest mode.`);
     }
