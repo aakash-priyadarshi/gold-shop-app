@@ -1,17 +1,17 @@
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Header,
-    Logger,
-    Param,
-    Patch,
-    Post,
-    Put,
-    Query,
-    UploadedFile,
-    UseInterceptors
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  Logger,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  UploadedFile,
+  UseInterceptors
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { FileInterceptor } from "@nestjs/platform-express";
