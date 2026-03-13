@@ -11,6 +11,7 @@ import { MessagingTriggerDetector } from "./messaging/messaging-trigger-detector
 import { ABTestingService } from "./services/ab-testing.service";
 import { AgentMemoryService } from "./services/agent-memory.service";
 import { AgentVoiceService } from "./services/agent-voice.service";
+import { AiEmailService } from "./services/ai-email.service";
 import { BehaviorInsightService } from "./services/behavior-insight.service";
 import { CallOrchestratorService } from "./services/call-orchestrator.service";
 import { CallRecordingService } from "./services/call-recording.service";
@@ -25,6 +26,7 @@ import { GeminiStreamingClient } from "./services/gemini-streaming.service";
 import { GoogleMeetBotService } from "./services/google-meet-bot.service";
 import { GoogleSTTClient } from "./services/google-stt.service";
 import { InworldTTSClient } from "./services/inworld-tts.service";
+import { LeadInteractionService } from "./services/lead-interaction.service";
 import { LeadScoringService } from "./services/lead-scoring.service";
 import { ModelRouter } from "./services/model-router.service";
 import { ObjectionPlaybookService } from "./services/objection-playbook.service";
