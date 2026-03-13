@@ -978,6 +978,122 @@ export class AIAgentController {
     return { report, goalEval, insights };
   }
 
+  @Post("playground/simulate-chain")
+  @Roles("ADMIN")
+  async playgroundSimulateChain(
+    @Body() body: {
+      chain: Array<{
+        type: "call" | "email" | "sms" | "gmeet";
+        transcript: string;
+        summary?: string;
+        goal?: string;
+        aiResult?: any;
+      }>;
+      currentIndex: number;
+    },
+  ) {
+    const { chain, currentIndex } = body;
+    const current = chain[currentIndex];
+    if (!current) return { error: "Invalid index" };
+
+    const previousInteractions = chain.slice(0, currentIndex);
+    const transcript = current.transcript || "";
+    const durationSeconds = Math.max(10, Math.floor(transcript.split(" ").length * 2));
+
+    // 1. Run standard post-call analysis on the current interaction
+    const report = await this.postCallProcessor.generateCallReport({
+      transcript,
+      durationSeconds,
+    });
+    const goalEval = await this.postCallProcessor.evaluateGoal(
+      transcript,
+      current.goal || "Have a productive sales conversation.",
+    );
+    const insights = await this.postCallProcessor.extractPersonalityInsights(transcript);
+
+    // 2. Build chain context and ask Gemini to recommend next action
+    let nextAction: any = null;
+    const geminiApiKey = this.config.get<string>("GEMINI_API_KEY");
+    if (geminiApiKey) {
+      try {
+        const { GoogleGenerativeAI } = await import("@google/generative-ai");
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const model = genAI.getGenerativeModel({
+          model: "gemini-2.5-flash",
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.4,
+            maxOutputTokens: 1000,
+            thinkingConfig: { thinkingBudget: 2048 },
+          } as any,
+        });
+
+        const historyBlock = previousInteractions.map((p, i) => {
+          const r = p.aiResult?.report;
+          return `--- Interaction ${i + 1} (${p.type.toUpperCase()}) ---
+Summary: ${r?.summary || p.summary || "N/A"}
+Outcome: ${r?.outcome || "N/A"}
+Key Topics: ${(r?.keyTopics || []).join(", ") || "N/A"}
+Objections: ${(r?.objectionsRaised || []).join(", ") || "None"}
+Buying Signals: ${(r?.buyingSignals || []).join(", ") || "None"}
+Deal Probability: ${r?.dealProbability ?? "N/A"}`;
+        }).join("\n\n");
+
+        const result = await model.generateContent({
+          contents: [{
+            role: "user",
+            parts: [{
+              text: `You are a senior sales strategist. You are analyzing a chain of interactions with a lead.
+
+${historyBlock ? `## Previous Interactions:\n${historyBlock}\n\n` : "This is the FIRST interaction with this lead.\n\n"}## Current Interaction (${current.type.toUpperCase()}) — JUST COMPLETED:
+Transcript:
+${transcript}
+
+Current Analysis:
+- Outcome: ${report.outcome}
+- Key topics: ${report.keyTopics.join(", ")}
+- Objections: ${report.objectionsRaised.join(", ") || "None"}
+- Buying signals: ${report.buyingSignals.join(", ") || "None"}
+- Deal probability: ${report.dealProbability}
+- Personality insights: ${JSON.stringify(insights)}
+
+Based on ALL the interactions so far (${previousInteractions.length} previous + 1 current), recommend the BEST next action.
+
+Return JSON:
+{
+  "recommendedType": "call|email|sms|gmeet",
+  "urgency": "immediate|within_24h|within_week|not_urgent",
+  "reasoning": "2-3 sentence explanation of WHY this action type is best given the full history",
+  "suggestedContent": "Brief outline of what the next interaction should cover",
+  "leadTemperature": "hot|warm|cool|cold",
+  "riskFactors": ["array of things that could go wrong"],
+  "overallProgress": "A one-line summary of where this lead stands after all ${previousInteractions.length + 1} interactions"
+}`,
+            }],
+          }],
+        });
+
+        const text = result.response.text()
+          .replace(/```json?\n?/g, "").replace(/```/g, "")
+          .replace(/,\s*([}\]])/g, "$1").trim();
+        nextAction = JSON.parse(text);
+      } catch (err: any) {
+        this.logger.error(`Chain analysis failed: ${err.message}`);
+        nextAction = {
+          recommendedType: "call",
+          urgency: "within_24h",
+          reasoning: "Analysis failed — defaulting to follow-up call.",
+          suggestedContent: "Follow up on previous conversation.",
+          leadTemperature: "warm",
+          riskFactors: ["AI analysis unavailable"],
+          overallProgress: "Unable to evaluate."
+        };
+      }
+    }
+
+    return { report, goalEval, insights, nextAction };
+  }
+
   /* ─── CENTRAL BRAIN / INTELLIGENCE ─── */
 
   @Get("intelligence/dashboard")

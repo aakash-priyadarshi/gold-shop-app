@@ -15,6 +15,7 @@ import {
     AlertTriangle,
     ArrowLeft, Bot, CheckCircle2, Loader2, Mic, MicOff,
     Phone, PhoneOff, Send, Video, Volume2, XCircle, Mail, MessageSquare,
+    Plus, ChevronDown, ChevronUp, Sparkles, ArrowDown, Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -104,11 +105,19 @@ export default function PlaygroundPage() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailTo, setEmailTo] = useState("");
 
-  // ── Interaction Simulator ──
-  const [simTranscript, setSimTranscript] = useState("");
-  const [simGoal, setSimGoal] = useState("");
-  const [simResult, setSimResult] = useState<any>(null);
-  const [simLoading, setSimLoading] = useState(false);
+  // -- Interaction Chain Simulator --
+  type ChainNodeType = "call" | "email" | "sms" | "gmeet";
+  interface ChainNode {
+    id: string;
+    type: ChainNodeType;
+    transcript: string;
+    goal: string;
+    aiResult: any | null;
+    loading: boolean;
+    expanded: boolean;
+  }
+  const [chainNodes, setChainNodes] = useState<ChainNode[]>([]);
+  const [chainOverallGoal, setChainOverallGoal] = useState("");
 
   // ── Load agents ──
   useEffect(() => {
@@ -1110,95 +1119,332 @@ export default function PlaygroundPage() {
           </Card>
         </TabsContent>
 
-        {/* ── TAB 6: Interaction Simulator ── */}
+        {/* -- TAB 6: Interaction Chain Simulator -- */}
         <TabsContent value="simulator" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" /> Interaction & Post-Call Simulator
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Paste a transcript here to see how Gemini evaluates goals and extracts personality insights.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <div>
-                    <Label>Call Goal (Optional)</Label>
-                    <Input
-                      value={simGoal}
-                      onChange={(e) => setSimGoal(e.target.value)}
-                      placeholder="e.g. Qualify for budget > $5000"
-                      disabled={simLoading}
-                    />
-                  </div>
-                  <div>
-                    <Label>Raw Transcript</Label>
-                    <Textarea
-                      className="h-64 mt-1"
-                      value={simTranscript}
-                      onChange={(e) => setSimTranscript(e.target.value)}
-                      placeholder="Agent: Hi, how are you? \nCustomer: I'm looking for a premium solution..."
-                      disabled={simLoading}
-                    />
-                  </div>
-                  <Button
-                    onClick={async () => {
-                      if (!simTranscript.trim()) return;
-                      setSimLoading(true);
-                      setSimResult(null);
-                      try {
-                        const res = await aiSalesApi.playgroundSimulateInteraction({
-                          transcript: simTranscript,
-                          goal: simGoal,
-                        });
-                        setSimResult(res.data);
-                        toast.success("Simulation complete!");
-                      } catch (err: any) {
-                        toast.error("Failed to run simulation");
-                      }
-                      setSimLoading(false);
-                    }}
-                    disabled={!simTranscript.trim() || simLoading}
-                    className="w-full gap-2"
-                  >
-                    {simLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
-                    Analyze Interaction
-                  </Button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" /> Interaction Chain Simulator
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Build a chain of interactions to test how the AI understands the lead across calls, emails, SMS, and GMeets.
+                    Each node is analyzed in context of all previous interactions.
+                  </p>
                 </div>
-                
-                <div className="space-y-4 h-full">
-                  {simResult ? (
-                    <div className="rounded-lg border bg-black/5 dark:bg-white/5 p-4 h-full overflow-y-auto" style={{ maxHeight: "400px" }}>
-                      <div className="space-y-4">
-                        <div>
-                          <p className="font-semibold text-sm">Post-Call Report</p>
-                          <pre className="text-[10px] mt-1 p-2 bg-black/10 dark:bg-white/10 rounded overflow-x-auto">
-                            {JSON.stringify(simResult.report, null, 2)}
-                          </pre>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm">Goal Evaluation</p>
-                          <pre className="text-[10px] mt-1 p-2 bg-black/10 dark:bg-white/10 rounded overflow-x-auto">
-                            {JSON.stringify(simResult.goalEval, null, 2)}
-                          </pre>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm">Personality Insights</p>
-                          <pre className="text-[10px] mt-1 p-2 bg-black/10 dark:bg-white/10 rounded overflow-x-auto">
-                            {JSON.stringify(simResult.insights, null, 2)}
-                          </pre>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                     <div className="h-full min-h-[300px] flex items-center justify-center text-sm text-muted-foreground border border-dashed rounded-lg">
-                       Submit a transcript to see JSON results.
-                     </div>
+                <div className="flex items-center gap-2">
+                  {chainNodes.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => setChainNodes([])}>Reset Chain</Button>
                   )}
+                  <Badge variant="secondary">
+                    <Sparkles className="h-3 w-3 mr-1" /> Gemini 2.5 Flash
+                  </Badge>
                 </div>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Overall goal */}
+              <div>
+                <Label>Overall Sales Goal (applies to all interactions)</Label>
+                <Input
+                  value={chainOverallGoal}
+                  onChange={(e) => setChainOverallGoal(e.target.value)}
+                  placeholder="e.g. Close a $10k gold purchase deal"
+                />
+              </div>
+
+              {/* Chain timeline */}
+              <div className="space-y-0">
+                {chainNodes.map((node, idx) => {
+                  const typeColors: Record<string, string> = {
+                    call: "bg-blue-500",
+                    email: "bg-purple-500",
+                    sms: "bg-emerald-500",
+                    gmeet: "bg-orange-500",
+                  };
+                  const typeIcons: Record<string, React.ReactNode> = {
+                    call: <Phone className="h-3 w-3" />,
+                    email: <Mail className="h-3 w-3" />,
+                    sms: <Send className="h-3 w-3" />,
+                    gmeet: <Video className="h-3 w-3" />,
+                  };
+                  return (
+                    <div key={node.id}>
+                      {/* Connector line */}
+                      {idx > 0 && (
+                        <div className="flex justify-center py-1">
+                          <div className="flex flex-col items-center">
+                            <div className="w-0.5 h-4 bg-muted-foreground/30" />
+                            <ArrowDown className="h-3 w-3 text-muted-foreground/50" />
+                          </div>
+                        </div>
+                      )}
+                      {/* Node card */}
+                      <div className={`relative rounded-xl border-2 p-4 transition-all ${
+                        node.aiResult
+                          ? "border-emerald-500/40 bg-emerald-500/5"
+                          : node.loading
+                            ? "border-blue-500/40 bg-blue-500/5"
+                            : "border-muted-foreground/20"
+                      }`}>
+                        {/* Node header */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className={`${typeColors[node.type]} text-white rounded-full p-1.5 flex items-center justify-center`}>
+                              {typeIcons[node.type]}
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              Interaction #{idx + 1}
+                            </Badge>
+                            <Select value={node.type} onValueChange={(v) => {
+                              setChainNodes((prev) => prev.map((n) => n.id === node.id ? { ...n, type: v as ChainNodeType } : n));
+                            }}>
+                              <SelectTrigger className="w-[120px] h-7 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="call">Phone Call</SelectItem>
+                                <SelectItem value="email">Email</SelectItem>
+                                <SelectItem value="sms">SMS</SelectItem>
+                                <SelectItem value="gmeet">Google Meet</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {node.aiResult && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                                setChainNodes((prev) => prev.map((n) => n.id === node.id ? { ...n, expanded: !n.expanded } : n));
+                              }}>
+                                {node.expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700" onClick={() => {
+                              setChainNodes((prev) => prev.filter((n) => n.id !== node.id));
+                            }}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Transcript input */}
+                        <div className="space-y-2">
+                          <div>
+                            <Label className="text-xs">Goal for this interaction</Label>
+                            <Input
+                              className="h-8 text-xs"
+                              value={node.goal}
+                              onChange={(e) => setChainNodes((prev) => prev.map((n) => n.id === node.id ? { ...n, goal: e.target.value } : n))}
+                              placeholder={chainOverallGoal || "e.g. Qualify budget"}
+                              disabled={node.loading}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Transcript / Content</Label>
+                            <Textarea
+                              className="min-h-[80px] text-xs mt-1"
+                              value={node.transcript}
+                              onChange={(e) => setChainNodes((prev) => prev.map((n) => n.id === node.id ? { ...n, transcript: e.target.value } : n))}
+                              placeholder={node.type === "email"
+                                ? "Subject: Follow-up...\nBody: Hi Rahul, I wanted to..."
+                                : node.type === "sms"
+                                  ? "Hi Rahul, just checking in..."
+                                  : "Agent: Good afternoon!\nCustomer: Hi, so about the pricing..."}
+                              disabled={node.loading}
+                            />
+                          </div>
+
+                          {/* Action button */}
+                          <Button
+                            onClick={async () => {
+                              if (!node.transcript.trim()) return;
+                              setChainNodes((prev) => prev.map((n) => n.id === node.id ? { ...n, loading: true, aiResult: null } : n));
+                              try {
+                                const res = await aiSalesApi.playgroundSimulateChain({
+                                  chain: chainNodes.map((n) => ({
+                                    type: n.type,
+                                    transcript: n.transcript,
+                                    goal: n.goal || chainOverallGoal,
+                                    aiResult: n.aiResult,
+                                  })),
+                                  currentIndex: idx,
+                                });
+                                setChainNodes((prev) => prev.map((n) => n.id === node.id ? { ...n, aiResult: res.data, loading: false, expanded: true } : n));
+                                toast.success(`Interaction #${idx + 1} analyzed!`);
+                              } catch {
+                                toast.error("Analysis failed");
+                                setChainNodes((prev) => prev.map((n) => n.id === node.id ? { ...n, loading: false } : n));
+                              }
+                            }}
+                            disabled={!node.transcript.trim() || node.loading}
+                            size="sm"
+                            className="w-full gap-2"
+                          >
+                            {node.loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                            {node.loading ? "Analyzing..." : node.aiResult ? "Re-Analyze" : "Analyze with AI"}
+                          </Button>
+                        </div>
+
+                        {/* AI Results (expandable) */}
+                        {node.aiResult && node.expanded && (
+                          <div className="mt-4 pt-4 border-t space-y-3">
+                            {/* Report summary */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="rounded-lg bg-black/5 dark:bg-white/5 p-3">
+                                <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Summary</p>
+                                <p className="text-xs">{node.aiResult.report?.summary}</p>
+                              </div>
+                              <div className="rounded-lg bg-black/5 dark:bg-white/5 p-3">
+                                <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Goal Achieved?</p>
+                                <div className="flex items-center gap-2">
+                                  {node.aiResult.goalEval?.achieved
+                                    ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                    : <XCircle className="h-4 w-4 text-red-500" />
+                                  }
+                                  <p className="text-xs">{node.aiResult.goalEval?.notes}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Key metrics row */}
+                            <div className="flex gap-2 flex-wrap">
+                              <Badge variant={node.aiResult.report?.outcome === "positive" ? "success" : node.aiResult.report?.outcome === "negative" ? "destructive" : "secondary"}>
+                                {node.aiResult.report?.outcome}
+                              </Badge>
+                              <Badge variant="outline">Deal: {Math.round((node.aiResult.report?.dealProbability || 0) * 100)}%</Badge>
+                              <Badge variant="outline">Quality: {node.aiResult.report?.callQualityScore}/10</Badge>
+                              {node.aiResult.insights?.communicationStyle && (
+                                <Badge variant="outline">Style: {node.aiResult.insights.communicationStyle}</Badge>
+                              )}
+                              {node.aiResult.insights?.urgency && (
+                                <Badge variant="outline">Urgency: {node.aiResult.insights.urgency}</Badge>
+                              )}
+                            </div>
+
+                            {/* Objections & buying signals */}
+                            {(node.aiResult.report?.objectionsRaised?.length > 0 || node.aiResult.report?.buyingSignals?.length > 0) && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Objections</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {(node.aiResult.report?.objectionsRaised || []).map((o: string, i: number) => (
+                                      <Badge key={i} variant="destructive" className="text-[10px]">{o}</Badge>
+                                    ))}
+                                    {(!node.aiResult.report?.objectionsRaised?.length) && <span className="text-[10px] text-muted-foreground">None detected</span>}
+                                  </div>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Buying Signals</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {(node.aiResult.report?.buyingSignals || []).map((s: string, i: number) => (
+                                      <Badge key={i} variant="success" className="text-[10px]">{s}</Badge>
+                                    ))}
+                                    {(!node.aiResult.report?.buyingSignals?.length) && <span className="text-[10px] text-muted-foreground">None detected</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* AI Next Action Recommendation */}
+                            {node.aiResult.nextAction && (
+                              <div className="rounded-xl border-2 border-dashed border-blue-500/40 bg-blue-500/5 p-4">
+                                <p className="text-xs font-semibold flex items-center gap-1 mb-2">
+                                  <Sparkles className="h-3.5 w-3.5 text-blue-500" /> AI Recommended Next Action
+                                </p>
+                                <div className="grid grid-cols-3 gap-3 mb-2">
+                                  <div>
+                                    <p className="text-[10px] text-muted-foreground">Type</p>
+                                    <Badge className="mt-0.5">{node.aiResult.nextAction.recommendedType?.toUpperCase()}</Badge>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] text-muted-foreground">Urgency</p>
+                                    <Badge variant={node.aiResult.nextAction.urgency === "immediate" ? "destructive" : "secondary"} className="mt-0.5">
+                                      {node.aiResult.nextAction.urgency}
+                                    </Badge>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] text-muted-foreground">Lead Temp</p>
+                                    <Badge variant={
+                                      node.aiResult.nextAction.leadTemperature === "hot" ? "destructive"
+                                        : node.aiResult.nextAction.leadTemperature === "warm" ? "success"
+                                          : "secondary"
+                                    } className="mt-0.5">
+                                      {node.aiResult.nextAction.leadTemperature}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-1">{node.aiResult.nextAction.reasoning}</p>
+                                <div className="rounded-lg bg-black/5 dark:bg-white/5 p-2 mt-2">
+                                  <p className="text-[10px] font-semibold text-muted-foreground">Suggested Content</p>
+                                  <p className="text-xs mt-0.5">{node.aiResult.nextAction.suggestedContent}</p>
+                                </div>
+                                {node.aiResult.nextAction.overallProgress && (
+                                  <p className="text-[10px] text-muted-foreground mt-2 italic">
+                                    {node.aiResult.nextAction.overallProgress}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Collapsed AI summary */}
+                        {node.aiResult && !node.expanded && (
+                          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                            Analyzed &mdash; {node.aiResult.report?.outcome} | Deal: {Math.round((node.aiResult.report?.dealProbability || 0) * 100)}%
+                            {node.aiResult.nextAction && <> | Next: <Badge variant="outline" className="text-[10px]">{node.aiResult.nextAction.recommendedType}</Badge></>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Add node button */}
+              {chainNodes.length > 0 && (
+                <div className="flex justify-center">
+                  <div className="flex flex-col items-center">
+                    <div className="w-0.5 h-4 bg-muted-foreground/20" />
+                    <ArrowDown className="h-3 w-3 text-muted-foreground/30 mb-2" />
+                  </div>
+                </div>
+              )}
+              <Button
+                variant="outline"
+                className="w-full border-dashed gap-2 h-12"
+                onClick={() => {
+                  const prevNode = chainNodes[chainNodes.length - 1];
+                  const suggestedType = prevNode?.aiResult?.nextAction?.recommendedType || "call";
+                  setChainNodes((prev) => [...prev, {
+                    id: `node-${Date.now()}`,
+                    type: suggestedType as ChainNodeType,
+                    transcript: "",
+                    goal: chainOverallGoal,
+                    aiResult: null,
+                    loading: false,
+                    expanded: true,
+                  }]);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Add Interaction #{chainNodes.length + 1}
+                {chainNodes.length > 0 && chainNodes[chainNodes.length - 1]?.aiResult?.nextAction && (
+                  <Badge variant="secondary" className="ml-2 text-[10px]">
+                    AI suggests: {chainNodes[chainNodes.length - 1].aiResult.nextAction.recommendedType}
+                  </Badge>
+                )}
+              </Button>
+
+              {/* Empty state */}
+              {chainNodes.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MessageSquare className="h-10 w-10 mx-auto opacity-30 mb-3" />
+                  <p className="text-sm">Click &quot;Add Interaction #1&quot; to start building a chain.</p>
+                  <p className="text-xs mt-1">Each interaction builds on the previous ones &mdash; the AI considers the full history.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
