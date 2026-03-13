@@ -116,7 +116,17 @@ Return ONLY valid JSON matching this schema (no markdown):
     language?: string,
   ): string {
     const agentName = this.memory.get("persona", "agent_name") || "Sales Agent";
-    const companyName = this.memory.get("company", "name") || "Orivraa Gold";
+    const companyName = this.memory.get("company", "name") || "Orivraa";
+    const companyDescription = this.memory.get("company", "description");
+    const proofPoints = this.memory.get("company", "proof_points");
+    const targetCustomers = this.memory.get("company", "target_customers");
+    const productName = product.name || this.memory.get("product", "name") || "Orivraa Jewellery CRM";
+    const productPitch = product.description || this.memory.get("product", "elevator_pitch");
+    const coreFeatures = this.memory.get("product", "core_features");
+    const differentiators = this.memory.get("product", "differentiators");
+    const onboarding = this.memory.get("product", "onboarding");
+    const pricingSummary = product.pricing || this.memory.get("product", "pricing_summary");
+    const qualificationQuestions = this.memory.get("product", "qualification_questions");
 
     return `You are ${agentName}, a sales representative at ${companyName}.
 You are making a phone call — this is VOICE, not text.
@@ -145,13 +155,29 @@ ${brief.predictedObjections.map((o, i) => `${i + 1}. "${o}" → ${brief.recommen
 ## KEY SELLING POINTS
 ${brief.keySellingPoints.map((p) => `- ${p}`).join("\n")}
 
+## ORIVRAA CRM CONTEXT
+Company: ${companyDescription}
+Who it's for: ${targetCustomers}
+Proof: ${proofPoints}
+
+## PRODUCT KNOWLEDGE
+Product: ${productName}
+Pitch: ${productPitch}
+Core features: ${coreFeatures}
+Differentiators: ${differentiators}
+Onboarding: ${onboarding}
+Pricing summary: ${pricingSummary}
+
 ## DISCOVERY QUESTIONS
 ${brief.questionsToAsk.map((q) => `- ${q}`).join("\n")}
 
+## QUALIFICATION CHECKLIST
+${qualificationQuestions}
+
 ## THE PRODUCT
-${product.description || `${companyName} — premium gold jewelry and investment products`}
-Benefits: ${product.benefits?.join("; ") || "Premium quality, certified purity, competitive pricing"}
-Pricing: ${product.pricing || "Market-linked pricing with transparent making charges"}
+${productPitch}
+Benefits: ${product.benefits?.join("; ") || coreFeatures}
+Pricing: ${pricingSummary}
 
 ${culturalProfile ? `## CULTURAL CONTEXT\n${culturalProfile}` : ""}
 ${brief.culturalNotes ? `Cultural Notes: ${brief.culturalNotes}` : ""}
@@ -184,9 +210,9 @@ Follow this natural progression — don't skip stages:
 STAGE 1 - BUILD RAPPORT: Warm greeting, ask about their day, establish language preference
 STAGE 2 - DISCOVERY: Ask 2-3 open questions to understand their needs, situation, and past experience
 STAGE 3 - EDUCATE: Share relevant insights and information based on what they told you
-STAGE 4 - SOFT PITCH: Naturally introduce how your product addresses their specific needs
+STAGE 4 - SOFT PITCH: Naturally introduce how Orivraa CRM solves the specific operational pain they described
 STAGE 5 - HANDLE OBJECTIONS: Address concerns with empathy (Absorb → Diagnose → Reframe → Invite)
-STAGE 6 - CLOSE: If interested, suggest a concrete next step (follow-up call, website visit, purchase)
+STAGE 6 - CLOSE: If interested, suggest a concrete next step (signup, demo, seller guide, pricing page, or follow-up call)
 STAGE 7 - FAREWELL: Thank them warmly, confirm any next steps, end on a positive note
 
 ## RESPOND NOW
@@ -199,23 +225,24 @@ Respond with ONLY what you would say next — no stage directions. Just natural 
   ): PreCallBrief {
     return {
       openingStrategy: `Warm introduction to ${lead.name || "the customer"}, ask about their day`,
-      predictedObjections: ["pricing concern", "timing"],
+      predictedObjections: ["pricing concern", "already using another tool", "timing"],
       recommendedResponses: {
-        "pricing concern": "Focus on value and long-term investment returns",
+        "pricing concern": "Focus on lower upfront cost, fast setup, zero IT overhead, and all-in-one operational value.",
+        "already using another tool": "Position Orivraa as purpose-built for jewellers with catalogues, RFQ, marketplace, and purity-aware inventory.",
         timing: "Acknowledge their schedule, offer a brief overview now",
       },
       toneGuidance: lead.temperature === "hot" ? "Confident, direct" : "Warm, exploratory",
       culturalNotes: "",
-      keySellingPoints: product.benefits?.slice(0, 3) || ["Premium quality", "Certified purity", "Competitive pricing"],
-      questionsToAsk: ["What brings you to explore gold investments?", "What's your timeline looking like?"],
-      closingStrategy: "Soft close with next step",
+      keySellingPoints: product.benefits?.slice(0, 3) || ["Purpose-built jewellery CRM", "Marketplace + catalogues + RFQ", "Free to start and live in minutes"],
+      questionsToAsk: ["How are you currently managing inventory and billing?", "How do you handle catalogue sharing or customer enquiries today?"],
+      closingStrategy: "Soft close with a relevant next step like signup, pricing, seller guide, or follow-up demo",
       riskFactors: [],
       competitorIntel: "",
-      personalizedGreeting: `Hi ${lead.name || "there"}, this is calling from Orivraa Gold — how are you today?`,
+      personalizedGreeting: `Hi ${lead.name || "there"}, this is Aria from Orivraa — how are you today?`,
       estimatedCallDuration: 300,
       priorityLevel: lead.temperature === "hot" ? "high" : "medium",
       dealPotential: lead.temperature === "hot" ? 0.7 : 0.3,
-      conversationAnchors: ["investment value", "quality assurance"],
+      conversationAnchors: ["inventory workflow", "billing and CRM workflow", "digital catalogues and online selling"],
       avoidTopics: [],
     };
   }
