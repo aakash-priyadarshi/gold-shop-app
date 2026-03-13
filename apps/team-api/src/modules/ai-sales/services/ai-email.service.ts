@@ -20,7 +20,7 @@ export class AiEmailService {
 
   private async getResendIntegration() {
     const settings = await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } }) as any;
-    const resendKey = settings?.resendApiKey || this.config.get<string>("RESEND_API_KEY");
+    const resendKey = this.config.get<string>("RESEND_API_KEY");
     
     let resendClient = null;
     if (resendKey) {
