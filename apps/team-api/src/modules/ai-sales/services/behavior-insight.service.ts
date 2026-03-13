@@ -127,61 +127,94 @@ export class BehaviorInsightService {
 
   /** Seed initial behavior insights — run once */
   async seedDefaults(): Promise<number> {
-    const existing = await this.prisma.behaviorInsight.count();
-    if (existing > 0) return 0;
-
     const seeds = [
       {
         category: "greeting_response",
-        segment: "country:91",
-        pattern: "Indian customers respond well to warm, personal greetings that reference family or festivals",
-        response: "Use 'Namaste' or seasonal greetings. Ask about family. Reference upcoming festivals.",
-        confidence: 0.75,
-        sampleSize: 50,
+        segment: "all",
+        pattern: "Jewellers respond better when the opener sounds like a business conversation, not a generic software pitch.",
+        response: "Lead with business context: ask how they currently manage inventory, billing, or enquiries before mentioning features.",
+        confidence: 0.84,
+        sampleSize: 90,
       },
       {
         category: "objection_handling",
         segment: "all",
-        pattern: "Customer says 'too expensive' or 'price is high'",
-        response: "Acknowledge, then frame as investment. Compare to bank FD returns. Highlight purity certification.",
-        confidence: 0.8,
-        sampleSize: 120,
+        pattern: "Customer says they already manage things through Excel, WhatsApp, or manual registers.",
+        response: "Position Orivraa as the system that unifies CRM, inventory, billing, catalogues, and RFQ so they stop switching between tools.",
+        confidence: 0.88,
+        sampleSize: 110,
+      },
+      {
+        category: "objection_handling",
+        segment: "all",
+        pattern: "Customer compares Orivraa to Zoho, Marg ERP, Vyapar, or generic billing software.",
+        response: "Emphasize that Orivraa is purpose-built for jewellers with weight/purity tracking, RFQ, digital catalogues, marketplace selling, and faster setup.",
+        confidence: 0.86,
+        sampleSize: 72,
+      },
+      {
+        category: "buying_signal",
+        segment: "country:91",
+        pattern: "Customer asks about GST billing, making charges, purity, or old-gold exchange workflows.",
+        response: "Go deep on billing and inventory capabilities. These questions usually indicate genuine evaluation intent for operations software.",
+        confidence: 0.83,
+        sampleSize: 64,
       },
       {
         category: "buying_signal",
         segment: "all",
-        pattern: "Customer asks about delivery timeline or payment options",
-        response: "Provide specific timeline, immediately offer booking link. Time-sensitive framing works.",
-        confidence: 0.85,
-        sampleSize: 80,
+        pattern: "Customer asks about setup time, onboarding, product upload, or whether they can start free.",
+        response: "Use the under-5-minute onboarding story and free-plan entry point. Offer the seller guide or signup link immediately.",
+        confidence: 0.9,
+        sampleSize: 102,
       },
       {
         category: "preference",
         segment: "country:91",
-        pattern: "Indian customers overwhelmingly prefer WhatsApp over SMS",
-        response: "Default to WhatsApp for Indian numbers. Ask only if unsure.",
+        pattern: "Indian jewellers overwhelmingly prefer WhatsApp follow-up with catalogues or pricing details.",
+        response: "Default to WhatsApp when possible, especially for catalogue sharing, seller guide, or pricing plan follow-up.",
         confidence: 0.9,
         sampleSize: 200,
       },
       {
         category: "cultural",
         segment: "region:asia",
-        pattern: "Customers in Asia prefer relationship-building before hard pitch",
-        response: "Spend first 2-3 minutes on rapport. Ask about their needs before presenting product.",
-        confidence: 0.7,
-        sampleSize: 100,
+        pattern: "Jewellery sellers in South Asia prefer relationship-building and proof before a hard software pitch.",
+        response: "Start with rapport and current workflow questions, then introduce proof points like 2,000+ jewellers, 6+ countries, and no-install setup.",
+        confidence: 0.78,
+        sampleSize: 108,
       },
       {
         category: "pricing_reaction",
         segment: "all",
-        pattern: "Customers respond better to per-gram pricing than total cost",
-        response: "Break down pricing per gram first. Show making charges separately. Be transparent.",
-        confidence: 0.8,
-        sampleSize: 90,
+        pattern: "Customers question monthly pricing because they compare it to one-time software licenses.",
+        response: "Reframe around zero IT overhead, automatic updates, cloud access, data backups, and the ability to start at ₹0 instead of paying ₹50,000 to ₹5,00,000 upfront.",
+        confidence: 0.89,
+        sampleSize: 94,
+      },
+      {
+        category: "pricing_reaction",
+        segment: "all",
+        pattern: "Customer wants to know which plan fits their business.",
+        response: "Qualify on listings, branches, AI usage, and integration needs. Free for early-stage, Pro for active shops, Pro+ for AI/API heavy use, Enterprise for large operations.",
+        confidence: 0.87,
+        sampleSize: 76,
       },
     ];
 
-    await this.prisma.behaviorInsight.createMany({ data: seeds });
-    return seeds.length;
+    const existing = await this.prisma.behaviorInsight.findMany({
+      select: { category: true, segment: true, pattern: true },
+    });
+    const existingKeys = new Set(existing.map((entry) => `${entry.category}:${entry.segment}:${entry.pattern}`));
+
+    const newSeeds = seeds.filter(
+      (seed) => !existingKeys.has(`${seed.category}:${seed.segment}:${seed.pattern}`),
+    );
+
+    if (newSeeds.length > 0) {
+      await this.prisma.behaviorInsight.createMany({ data: newSeeds });
+    }
+
+    return newSeeds.length;
   }
 }

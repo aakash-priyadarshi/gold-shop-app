@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { AgentMemoryService } from "./agent-memory.service";
 
 export interface ConversationContext {
   leadName?: string;
@@ -30,7 +31,10 @@ export class ConversationBrainService {
   private readonly logger = new Logger(ConversationBrainService.name);
   private client: Anthropic | null = null;
 
-  constructor(private config: ConfigService) {
+  constructor(
+    private config: ConfigService,
+    private memory: AgentMemoryService,
+  ) {
     const apiKey = this.config.get<string>("ANTHROPIC_API_KEY");
     if (apiKey) {
       this.client = new Anthropic({ apiKey });
@@ -38,7 +42,18 @@ export class ConversationBrainService {
   }
 
   buildSystemPrompt(ctx: ConversationContext): string {
-    return `You are ${ctx.agentName}, a sales representative at Orivraa Gold.
+    const companyName = this.memory.get("company", "name") || "Orivraa";
+    const companyDescription = this.memory.get("company", "description");
+    const proofPoints = this.memory.get("company", "proof_points");
+    const targetCustomers = this.memory.get("company", "target_customers");
+    const productName = this.memory.get("product", "name") || "Orivraa Jewellery CRM";
+    const productPitch = ctx.productDescription || this.memory.get("product", "elevator_pitch");
+    const coreFeatures = ctx.productBenefits?.join("; ") || this.memory.get("product", "core_features");
+    const pricingSummary = ctx.productPricing || this.memory.get("product", "pricing_summary");
+    const differentiators = this.memory.get("product", "differentiators");
+    const onboarding = this.memory.get("product", "onboarding");
+
+    return `You are ${ctx.agentName}, a sales representative at ${companyName}.
 You are making a phone call — this is VOICE, not text.
 Respond conversationally, naturally, as a human would speak.
 
@@ -65,9 +80,17 @@ Personal Details: ${ctx.zeroPartyData ? JSON.stringify(ctx.zeroPartyData) : "Non
 Competitors Mentioned: ${ctx.competitorsMentioned?.join(", ") || "None"}
 
 ## THE PRODUCT
-${ctx.productDescription || "Orivraa Gold — premium gold jewelry and investment products"}
-Benefits: ${ctx.productBenefits?.join("; ") || "Premium quality, certified purity, competitive pricing"}
-Pricing: ${ctx.productPricing || "Market-linked pricing with transparent making charges"}
+${productPitch}
+Benefits: ${coreFeatures}
+Pricing: ${pricingSummary}
+
+## ORIVRAA CRM KNOWLEDGE
+Product: ${productName}
+Company: ${companyDescription}
+Who it's for: ${targetCustomers}
+Why it wins: ${differentiators}
+Onboarding: ${onboarding}
+Proof: ${proofPoints}
 
 ## OBJECTION HANDLING
 ${ctx.objectionResponses || "When handling objections: Absorb → Diagnose → Reframe → Invite"}
@@ -95,9 +118,9 @@ Follow this natural progression — don't skip stages:
 STAGE 1 - BUILD RAPPORT: Warm greeting, ask about their day, establish language preference
 STAGE 2 - DISCOVERY: Ask 2-3 open questions to understand their needs, situation, and past experience
 STAGE 3 - EDUCATE: Share relevant insights and information based on what they told you
-STAGE 4 - SOFT PITCH: Naturally introduce how your product addresses their specific needs
+STAGE 4 - SOFT PITCH: Naturally introduce how Orivraa CRM addresses their specific needs
 STAGE 5 - HANDLE OBJECTIONS: Address concerns with empathy (Absorb → Diagnose → Reframe → Invite)
-STAGE 6 - CLOSE: If interested, suggest a concrete next step (follow-up call, website visit, purchase)
+STAGE 6 - CLOSE: If interested, suggest a concrete next step (signup, seller guide, pricing page, demo, or follow-up call)
 STAGE 7 - FAREWELL: Thank them warmly, confirm any next steps, end on a positive note
 
 ## CURRENT EMOTIONAL STATE

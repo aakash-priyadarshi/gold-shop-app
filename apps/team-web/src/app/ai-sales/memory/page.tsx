@@ -70,11 +70,11 @@ const CATEGORY_ICONS: Record<string, typeof Brain> = {
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
-  company: "Company Information",
+  company: "Orivraa Business Identity",
   phones: "Phone Numbers",
   urls: "Links & URLs",
-  persona: "AI Persona",
-  product: "Product Info",
+  persona: "AI Sales Persona",
+  product: "CRM Product Knowledge",
   advanced: "Advanced Settings",
 };
 
@@ -240,10 +240,10 @@ export default function AgentMemoryPage() {
   const seedAll = async () => {
     try {
       await Promise.all([aiSalesApi.seedMemory(), aiSalesApi.seedBehaviorInsights()]);
-      toast.success("Default data seeded");
+      toast.success("Orivraa CRM defaults synced");
       await loadData();
     } catch {
-      toast.error("Failed to seed");
+      toast.error("Failed to sync defaults");
     }
   };
 
@@ -279,17 +279,16 @@ export default function AgentMemoryPage() {
             Agent Memory
           </h1>
           <p className="text-muted-foreground">
-            Company information, URLs, phone numbers, and customer behavior patterns.
-            Changes take effect within 60 seconds — no redeploy needed.
+            This memory powers every Orivraa AI sales conversation. Keep the business identity,
+            CRM product knowledge, links, persona, and behavior strategy aligned to the jewellery CRM
+            software you are selling. Changes take effect within 60 seconds.
           </p>
         </div>
         <div className="flex gap-2">
-          {memory.length === 0 && (
-            <Button variant="outline" onClick={seedAll}>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Seed Defaults
-            </Button>
-          )}
+          <Button variant="outline" onClick={seedAll}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Sync Orivraa CRM Defaults
+          </Button>
           <Button variant="outline" onClick={loadData}>
             <RefreshCcw className="mr-2 h-4 w-4" />
             Refresh
@@ -307,7 +306,7 @@ export default function AgentMemoryPage() {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          Business Config ({memory.length})
+          CRM Sales Memory ({memory.length})
         </button>
         <button
           onClick={() => setActiveTab("behavior")}
@@ -344,6 +343,20 @@ export default function AgentMemoryPage() {
       {/* ─── Memory Tab ─── */}
       {activeTab === "memory" && (
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>What This Memory Should Contain</CardTitle>
+              <CardDescription>
+                The AI is selling Orivraa&apos;s jewellery CRM and commerce platform, not a generic software tool.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2 text-sm text-muted-foreground">
+              <p>Company entries should explain who Orivraa serves, proof points, regions, support model, and business positioning.</p>
+              <p>Product entries should cover CRM, inventory, billing, catalogues, RFQ, analytics, marketplace reach, AI tools, onboarding, pricing, and differentiators.</p>
+              <p>URL entries should link the seller guide, pricing page, jewellery software page, signup path, and support resources the AI can send during calls.</p>
+            </CardContent>
+          </Card>
+
           {/* Save bar */}
           {hasUnsavedChanges && (
             <div className="flex items-center justify-between bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
@@ -368,11 +381,11 @@ export default function AgentMemoryPage() {
                     {CATEGORY_LABELS[category] || category}
                   </CardTitle>
                   <CardDescription>
-                    {category === "phones" && "Phone numbers used by the AI agent for calls and messaging"}
-                    {category === "urls" && "Links sent to customers during and after calls"}
-                    {category === "company" && "Company identity used in AI conversations"}
-                    {category === "persona" && "AI agent personality and behavior settings"}
-                    {category === "product" && "Product information for sales conversations"}
+                    {category === "phones" && "Phone numbers used by the AI agent for calls and follow-up messaging."}
+                    {category === "urls" && "Seller-guide, pricing, product, signup, and support links sent to jewellers during or after CRM sales calls."}
+                    {category === "company" && "Orivraa brand positioning, proof points, target customers, and public sales contact details used in AI conversations."}
+                    {category === "persona" && "How the AI should sound and what it should focus on while selling the CRM software."}
+                    {category === "product" && "Detailed Orivraa CRM knowledge: inventory, billing, catalogues, RFQ, marketplace, AI, onboarding, pricing, and differentiators."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4">
@@ -399,6 +412,7 @@ export default function AgentMemoryPage() {
                         variant="ghost"
                         size="icon"
                         className="mt-5 text-muted-foreground hover:text-destructive"
+                        disabled={entry.id.startsWith("default:")}
                         onClick={() => deleteEntry(entry.category, entry.key)}
                       >
                         <Trash2 className="h-4 w-4" />
