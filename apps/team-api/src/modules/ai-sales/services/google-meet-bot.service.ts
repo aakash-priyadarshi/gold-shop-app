@@ -4,6 +4,7 @@ import * as puppeteer from "puppeteer";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { ConversationBrainService, ConversationContext } from "./conversation-brain.service";
 import { GeminiStreamingClient } from "./gemini-streaming.service";
+import { LeadInteractionService } from "./lead-interaction.service";
 import { PreCallBrainService } from "./pre-call-brain.service";
 import { STTRouterService } from "./stt-router.service";
 
@@ -12,6 +13,7 @@ export interface MeetSession {
   meetUrl: string;
   agentId: string;
   agentName: string;
+  leadId?: string;
   status: "joining" | "in-meeting" | "speaking" | "listening" | "error" | "ended";
   logs: { time: number; type: "info" | "stt" | "llm" | "tts" | "error"; message: string }[];
   transcript: { role: "user" | "assistant"; content: string; timestamp: number }[];
@@ -35,10 +37,11 @@ export class GoogleMeetBotService {
     private sttRouter: STTRouterService,
     private preCallBrain: PreCallBrainService,
     private prisma: PrismaService,
+    private interactions: LeadInteractionService,
   ) {}
 
   /** Start a Meet bot session — launches Puppeteer, joins the meeting */
-  async startSession(meetUrl: string, agentId: string): Promise<MeetSession> {
+  async startSession(meetUrl: string, agentId: string, leadId?: string): Promise<MeetSession> {
     // Validate Google Meet URL
     if (!this.isValidMeetUrl(meetUrl)) {
       throw new Error("Invalid Google Meet URL. Expected format: https://meet.google.com/xxx-xxxx-xxx");
@@ -65,6 +68,7 @@ export class GoogleMeetBotService {
       meetUrl,
       agentId,
       agentName: agent.name,
+      leadId,
       status: "joining",
       logs: [],
       transcript: [],
@@ -133,6 +137,7 @@ export class GoogleMeetBotService {
       const callSession = await this.prisma.callSession.create({
         data: {
           agentId: session.agentId,
+          leadId: session.leadId,
           direction: "OUTBOUND",
           status: "COMPLETED",
           duration: durationSeconds,
@@ -144,6 +149,18 @@ export class GoogleMeetBotService {
         },
       });
       this.addLog(session, "info", `Meet transcript saved as CallSession ${callSession.id}`);
+
+      // Record interaction on lead timeline if a lead is linked
+      if (session.leadId) {
+        await this.interactions.recordMeetInteraction({
+          leadId: session.leadId,
+          meetSessionId: callSession.id,
+          summary: callSession.summary ?? undefined,
+          durationSeconds,
+          agentName: session.agentName,
+          meetUrl: session.meetUrl,
+        });
+      }
     } catch (err: any) {
       this.logger.error(`Failed to save Meet transcript: ${err.message}`);
     }
