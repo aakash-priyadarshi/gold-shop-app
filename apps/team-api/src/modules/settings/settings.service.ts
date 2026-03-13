@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
@@ -73,7 +74,7 @@ export class SettingsService {
     }
     // Invalidate cached cookies when email/password changes
     if (mapped.googleMeetBotEmail || mapped.googleMeetBotPassword) {
-      mapped.googleMeetBotCookies = null;
+      mapped.googleMeetBotCookies = Prisma.JsonNull;
     }
 
     return this.prisma.teamSettings.update({

@@ -22,6 +22,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { Response } from "express";
 import { OAuth2Client } from "google-auth-library";
 import { Roles } from "../../auth/roles.decorator";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AIAgentService } from "./ai-agent.service";
 import { ABTestingService } from "./services/ab-testing.service";
@@ -1019,12 +1020,12 @@ export class AIAgentController {
           id: "singleton",
           googleMeetBotRefreshToken: tokens.refresh_token,
           googleMeetBotAccountEmail: email,
-          googleMeetBotCookies: null,
+          googleMeetBotCookies: Prisma.JsonNull,
         },
         update: {
           googleMeetBotRefreshToken: tokens.refresh_token,
           googleMeetBotAccountEmail: email,
-          googleMeetBotCookies: null, // invalidate old cookies
+          googleMeetBotCookies: Prisma.JsonNull, // invalidate old cookies
         },
       });
 
@@ -1055,7 +1056,7 @@ export class AIAgentController {
       data: {
         googleMeetBotRefreshToken: null,
         googleMeetBotAccountEmail: null,
-        googleMeetBotCookies: null,
+        googleMeetBotCookies: Prisma.JsonNull,
         googleMeetBotEmail: null,
         googleMeetBotPassword: null,
       },
