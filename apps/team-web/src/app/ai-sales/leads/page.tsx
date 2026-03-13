@@ -4,21 +4,35 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { aiSalesApi } from "@/lib/api";
 import {
-  Users, Plus, Search, ArrowLeft, Target, Thermometer, Star,
-  Pencil, Brain, Heart, ShoppingCart, Clock, MessageSquare,
-  Phone, Mail, Video, Send, CalendarPlus, CheckCircle2, XCircle,
-  Activity,
+    Activity,
+    ArrowLeft,
+    Brain,
+    CalendarPlus, CheckCircle2,
+    Clock,
+    Heart,
+    Mail,
+    MessageSquare,
+    Pencil,
+    Phone,
+    Plus, Search,
+    Send,
+    ShoppingCart,
+    Star,
+    Target, Thermometer,
+    Users,
+    Video,
+    XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -230,6 +244,12 @@ export default function LeadsPage() {
 
   const handleCallFromLead = async () => {
     if (!callDialog || !callAgentId) { toast.error("Select an agent"); return; }
+    // Validate E.164 phone format
+    const phone = callDialog.phone?.trim();
+    if (!phone || !/^\+[1-9]\d{6,14}$/.test(phone)) {
+      toast.error("Invalid phone number — must be in E.164 format, e.g. +919876543210");
+      return;
+    }
     setCallLoading(true);
     try {
       await aiSalesApi.initiateCall({ agentId: callAgentId, leadId: callDialog.id, goal: callGoal || undefined });
@@ -237,7 +257,10 @@ export default function LeadsPage() {
       setCallDialog(null);
       setCallGoal("");
       setCallAgentId("");
-    } catch { toast.error("Failed to initiate call"); }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to initiate call";
+      toast.error(msg);
+    }
     setCallLoading(false);
   };
 
@@ -281,6 +304,7 @@ export default function LeadsPage() {
 
   const handleScheduleMeet = async () => {
     if (!meetDialog || !meetAgentId || !meetDate) { toast.error("Fill all fields"); return; }
+    if (new Date(meetDate) <= new Date()) { toast.error("Please choose a future date and time"); return; }
     setMeetLoading(true);
     try {
       await aiSalesApi.scheduleMeet({
@@ -294,7 +318,10 @@ export default function LeadsPage() {
       setMeetAgentId("");
       setMeetDate("");
       setMeetSubject("");
-    } catch { toast.error("Failed to schedule meet"); }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to schedule meet";
+      toast.error(msg);
+    }
     setMeetLoading(false);
   };
 
@@ -337,7 +364,9 @@ export default function LeadsPage() {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-          <div><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+91 98765 43210" /></div>
+          <div><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+91 98765 43210" />
+            <p className="text-[10px] text-muted-foreground mt-0.5">Must include country code, e.g. +91 98765 43210</p>
+          </div>
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div>
@@ -556,13 +585,31 @@ export default function LeadsPage() {
                     <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); openEdit(lead); }}>
                       <Pencil className="h-3 w-3 mr-1" />Edit
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs text-green-600" onClick={(e) => { e.stopPropagation(); setCallDialog(lead); }}>
+                    <Button
+                      variant="ghost" size="sm"
+                      className={`h-7 text-xs ${lead.phone ? "text-green-600" : "text-muted-foreground opacity-40 cursor-not-allowed"}`}
+                      disabled={!lead.phone}
+                      title={lead.phone ? `Call ${lead.phone}` : "No phone number on record"}
+                      onClick={(e) => { e.stopPropagation(); if (lead.phone) setCallDialog(lead); }}
+                    >
                       <Phone className="h-3 w-3 mr-1" />Call
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600" onClick={(e) => { e.stopPropagation(); setEmailDialog(lead); }}>
+                    <Button
+                      variant="ghost" size="sm"
+                      className={`h-7 text-xs ${lead.email ? "text-blue-600" : "text-muted-foreground opacity-40 cursor-not-allowed"}`}
+                      disabled={!lead.email}
+                      title={lead.email ? `Email ${lead.email}` : "No email address on record"}
+                      onClick={(e) => { e.stopPropagation(); if (lead.email) setEmailDialog(lead); }}
+                    >
                       <Mail className="h-3 w-3 mr-1" />Email
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs text-purple-600" onClick={(e) => { e.stopPropagation(); setMeetDialog(lead); }}>
+                    <Button
+                      variant="ghost" size="sm"
+                      className={`h-7 text-xs ${lead.email ? "text-purple-600" : "text-muted-foreground opacity-40 cursor-not-allowed"}`}
+                      disabled={!lead.email}
+                      title={lead.email ? "Schedule Google Meet" : "No email — needed to send Meet invite"}
+                      onClick={(e) => { e.stopPropagation(); if (lead.email) setMeetDialog(lead); }}
+                    >
                       <Video className="h-3 w-3 mr-1" />Meet
                     </Button>
                   </div>
@@ -617,14 +664,35 @@ export default function LeadsPage() {
               <TabsContent value="overview" className="space-y-4 mt-4">
                 {/* Quick Actions */}
                 <div className="flex gap-2 flex-wrap">
-                  <Button size="sm" variant="outline" className="text-green-600" onClick={() => { setCallDialog(selectedLead); }}>
+                  <Button
+                    size="sm" variant="outline"
+                    className={selectedLead.phone ? "text-green-600" : "text-muted-foreground opacity-50 cursor-not-allowed"}
+                    disabled={!selectedLead.phone}
+                    title={selectedLead.phone ? `Call ${selectedLead.phone}` : "No phone number — add one to enable calling"}
+                    onClick={() => { if (selectedLead.phone) setCallDialog(selectedLead); }}
+                  >
                     <Phone className="h-3 w-3 mr-1" />Call via AI
+                    {!selectedLead.phone && <span className="ml-1 text-[10px]">(no phone)</span>}
                   </Button>
-                  <Button size="sm" variant="outline" className="text-blue-600" onClick={() => { setEmailDialog(selectedLead); }}>
+                  <Button
+                    size="sm" variant="outline"
+                    className={selectedLead.email ? "text-blue-600" : "text-muted-foreground opacity-50 cursor-not-allowed"}
+                    disabled={!selectedLead.email}
+                    title={selectedLead.email ? `Email ${selectedLead.email}` : "No email address — add one to enable emailing"}
+                    onClick={() => { if (selectedLead.email) setEmailDialog(selectedLead); }}
+                  >
                     <Mail className="h-3 w-3 mr-1" />Send Email
+                    {!selectedLead.email && <span className="ml-1 text-[10px]">(no email)</span>}
                   </Button>
-                  <Button size="sm" variant="outline" className="text-purple-600" onClick={() => { setMeetDialog(selectedLead); }}>
+                  <Button
+                    size="sm" variant="outline"
+                    className={selectedLead.email ? "text-purple-600" : "text-muted-foreground opacity-50 cursor-not-allowed"}
+                    disabled={!selectedLead.email}
+                    title={selectedLead.email ? "Schedule Google Meet" : "No email — needed to send Meet invite"}
+                    onClick={() => { if (selectedLead.email) setMeetDialog(selectedLead); }}
+                  >
                     <Video className="h-3 w-3 mr-1" />Schedule Meet
+                    {!selectedLead.email && <span className="ml-1 text-[10px]">(no email)</span>}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => { loadScore(selectedLead.id); }}>
                     <Target className="h-3 w-3 mr-1" />Score
@@ -863,10 +931,20 @@ export default function LeadsPage() {
                     <Mail className="h-4 w-4 text-blue-500" />
                     Email History
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => { setEmailDialog(selectedLead); }}>
+                  <Button
+                    size="sm" variant="outline"
+                    disabled={!selectedLead.email}
+                    title={selectedLead.email ? "Compose email" : "No email address on record"}
+                    onClick={() => { if (selectedLead.email) setEmailDialog(selectedLead); }}
+                  >
                     <Send className="h-3 w-3 mr-1" />Compose
                   </Button>
                 </div>
+                {!selectedLead.email && (
+                  <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded p-2">
+                    ⚠️ No email address for this lead. Add one in Edit to enable emailing.
+                  </p>
+                )}
                 {emailsLoading ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">Loading emails...</p>
                 ) : leadEmails.length === 0 ? (
@@ -965,15 +1043,29 @@ export default function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Call via AI Dialog */}
       <Dialog open={!!callDialog} onOpenChange={(open) => { if (!open) { setCallDialog(null); setCallGoal(""); setCallAgentId(""); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Call {callDialog?.name} via AI</DialogTitle></DialogHeader>
           <div className="space-y-4">
+            {!callDialog?.phone && (
+              <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3">
+                ⚠️ <strong>No phone number on record.</strong> Add a phone number in Edit before calling.
+              </div>
+            )}
+            {callDialog?.phone && !/^\+[1-9]\d{6,14}$/.test(callDialog.phone.trim()) && (
+              <div className="text-sm text-red-700 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded p-3">
+                ⚠️ <strong>Invalid phone format.</strong> Phone must be in E.164 format (e.g. <code>+919876543210</code>). Edit the lead to fix it.
+              </div>
+            )}
+            {agents.length === 0 && (
+              <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3">
+                ⚠️ <strong>No AI agents configured.</strong> <a href="/ai-sales/personas" className="underline">Create an agent</a> first.
+              </div>
+            )}
             <div>
               <Label>AI Agent</Label>
               <Select value={callAgentId} onValueChange={setCallAgentId}>
-                <SelectTrigger><SelectValue placeholder="Select agent" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={agents.length === 0 ? "No agents available" : "Select agent"} /></SelectTrigger>
                 <SelectContent>
                   {agents.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                 </SelectContent>
@@ -990,9 +1082,19 @@ export default function LeadsPage() {
               <p className="text-[10px] text-muted-foreground mt-1">AI will evaluate if this goal was achieved after the call</p>
             </div>
             {callDialog?.phone && (
-              <p className="text-sm text-muted-foreground">Calling: {callDialog.phone}</p>
+              <p className="text-sm text-muted-foreground">Calling: <span className="font-mono">{callDialog.phone}</span></p>
             )}
-            <Button onClick={handleCallFromLead} disabled={callLoading} className="w-full">
+            <Button
+              onClick={handleCallFromLead}
+              disabled={
+                callLoading ||
+                !callDialog?.phone ||
+                agents.length === 0 ||
+                !callAgentId ||
+                (callDialog?.phone && !/^\+[1-9]\d{6,14}$/.test(callDialog.phone.trim()))
+              }
+              className="w-full"
+            >
               <Phone className="h-4 w-4 mr-2" />{callLoading ? "Initiating..." : "Start AI Call"}
             </Button>
           </div>
@@ -1004,6 +1106,14 @@ export default function LeadsPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Email {emailDialog?.name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
+            {!emailDialog?.email && (
+              <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3">
+                ⚠️ <strong>No email address on record.</strong> Add one in Edit before sending.
+              </div>
+            )}
+            {emailDialog?.email && (
+              <p className="text-xs text-muted-foreground">To: <span className="font-medium">{emailDialog.email}</span></p>
+            )}
             <div>
               <Label>Email Goal (for AI context)</Label>
               <Input value={emailGoal} onChange={(e) => setEmailGoal(e.target.value)} placeholder="e.g., Schedule a follow-up meeting" />
@@ -1012,7 +1122,7 @@ export default function LeadsPage() {
               <input type="checkbox" id="includeMeet" checked={emailIncludeMeet} onChange={(e) => setEmailIncludeMeet(e.target.checked)} className="rounded" />
               <Label htmlFor="includeMeet" className="text-sm cursor-pointer">Include Google Meet link</Label>
             </div>
-            <Button variant="outline" size="sm" onClick={handleGenerateDraft} disabled={emailLoading}>
+            <Button variant="outline" size="sm" onClick={handleGenerateDraft} disabled={emailLoading || !emailDialog?.email}>
               <Brain className="h-3 w-3 mr-1" />{emailLoading ? "Generating..." : "AI Draft"}
             </Button>
             <div>
@@ -1023,7 +1133,7 @@ export default function LeadsPage() {
               <Label>Body</Label>
               <Textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} placeholder="Email body..." rows={6} />
             </div>
-            <Button onClick={handleSendEmail} disabled={emailLoading} className="w-full">
+            <Button onClick={handleSendEmail} disabled={emailLoading || !emailDialog?.email} className="w-full">
               <Send className="h-4 w-4 mr-2" />{emailLoading ? "Sending..." : "Send Email"}
             </Button>
           </div>
@@ -1035,24 +1145,51 @@ export default function LeadsPage() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Schedule Meet with {meetDialog?.name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
+            {!meetDialog?.email && (
+              <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3">
+                ⚠️ <strong>No email address on record.</strong> An email is required to send the Meet invite.
+              </div>
+            )}
+            {meetDialog?.email && (
+              <p className="text-xs text-muted-foreground">Invite will be sent to: <span className="font-medium">{meetDialog.email}</span></p>
+            )}
+            {agents.length === 0 && (
+              <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3">
+                ⚠️ No AI agents configured. <a href="/ai-sales/personas" className="underline">Create one first.</a>
+              </div>
+            )}
             <div>
               <Label>AI Agent</Label>
               <Select value={meetAgentId} onValueChange={setMeetAgentId}>
-                <SelectTrigger><SelectValue placeholder="Select agent" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={agents.length === 0 ? "No agents available" : "Select agent"} /></SelectTrigger>
                 <SelectContent>
-                  {agents.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  {agents.map((a: any) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}{!a.agentEmail ? " ⚠️ no agent email" : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {meetAgentId && !agents.find((a: any) => a.id === meetAgentId)?.agentEmail && (
+                <p className="text-[11px] text-amber-600 mt-1">
+                  ⚠️ This agent has no Google Workspace email set. They will join the Meet as a guest and may be blocked if the meeting requires sign-in. Set an <code>agentEmail</code> in the agent settings.
+                </p>
+              )}
             </div>
             <div>
               <Label>Date & Time</Label>
-              <Input type="datetime-local" value={meetDate} onChange={(e) => setMeetDate(e.target.value)} />
+              <Input
+                type="datetime-local"
+                value={meetDate}
+                min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                onChange={(e) => setMeetDate(e.target.value)}
+              />
             </div>
             <div>
               <Label>Subject (optional)</Label>
               <Input value={meetSubject} onChange={(e) => setMeetSubject(e.target.value)} placeholder="Product demo, Follow-up discussion..." />
             </div>
-            <Button onClick={handleScheduleMeet} disabled={meetLoading} className="w-full">
+            <Button onClick={handleScheduleMeet} disabled={meetLoading || !meetDialog?.email} className="w-full">
               <Video className="h-4 w-4 mr-2" />{meetLoading ? "Scheduling..." : "Schedule Google Meet"}
             </Button>
           </div>
