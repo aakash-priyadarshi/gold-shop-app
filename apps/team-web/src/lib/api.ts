@@ -261,6 +261,8 @@ export const aiSalesApi = {
     api.post("/ai-sales/playground/meet-stop", data),
   playgroundMeetStatus: (sessionId: string) =>
     api.get(`/ai-sales/playground/meet-status/${sessionId}`),
+  playgroundSimulateInteraction: (data: { transcript: string; goal?: string; applyToLeadId?: string }) =>
+    api.post("/ai-sales/playground/simulate-interaction", data),
 
   // Central Brain / Intelligence
   getBrainDashboard: () =>
