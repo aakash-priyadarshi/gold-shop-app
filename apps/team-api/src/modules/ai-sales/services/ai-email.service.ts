@@ -87,7 +87,7 @@ export class AiEmailService {
           data: {
             status: "SENT",
             sentAt: new Date(),
-            resendId: result.data?.id || result.id,
+            resendId: result.data?.id,
           },
         });
       } catch (err: any) {
