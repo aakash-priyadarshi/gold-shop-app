@@ -1,39 +1,33 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Resend } from "resend";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { LeadInteractionService } from "./lead-interaction.service";
 
 @Injectable()
 export class AiEmailService {
   private readonly logger = new Logger(AiEmailService.name);
+  private resend: Resend | null = null;
   private genAI: GoogleGenerativeAI | null = null;
+  private fromEmail: string;
 
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
     private interactions: LeadInteractionService,
   ) {
+    const resendKey = this.config.get<string>("RESEND_API_KEY");
+    if (resendKey) {
+      this.resend = new Resend(resendKey);
+      this.logger.log("Resend email client initialized");
+    } else {
+      this.logger.warn("RESEND_API_KEY not set — emails will run in dry-run mode");
+    }
+    this.fromEmail = this.config.get<string>("AI_SALES_FROM_EMAIL") || this.config.get<string>("MAIL_FROM") || "Orivraa Sales <onboarding@resend.dev>";
+
     const geminiKey = this.config.get<string>("GEMINI_API_KEY");
     if (geminiKey) this.genAI = new GoogleGenerativeAI(geminiKey);
-  }
-
-  private async getResendIntegration() {
-    const settings = await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } }) as any;
-    const resendKey = this.config.get<string>("RESEND_API_KEY");
-    
-    let resendClient = null;
-    if (resendKey) {
-      try {
-        const { Resend } = require("resend");
-        resendClient = new Resend(resendKey);
-      } catch {
-        this.logger.warn("Resend SDK not available");
-      }
-    }
-    
-    const fromEmail = settings?.aiSalesFromEmail || this.config.get<string>("AI_SALES_FROM_EMAIL") || this.config.get<string>("MAIL_FROM") || "sales@orivraa.com";
-    return { resend: resendClient, fromEmail };
   }
 
   /** Send an email to a lead */
@@ -50,8 +44,12 @@ export class AiEmailService {
     const lead = await this.prisma.lead.findUnique({ where: { id: params.leadId } });
     if (!lead?.email) throw new Error("Lead has no email address");
 
-    const { resend, fromEmail: defaultFrom } = await this.getResendIntegration();
-    const from = params.fromEmail || defaultFrom;
+    // Resolve from address: explicit param > DB settings > env var > fallback
+    let from = params.fromEmail || this.fromEmail;
+    if (!params.fromEmail) {
+      const settings = await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } });
+      if (settings?.aiSalesFromEmail) from = settings.aiSalesFromEmail;
+    }
     const html = params.htmlBody || this.wrapInTemplate(params.body, lead.name, params.meetLink, params.meetScheduledAt);
 
     // Create DB record
@@ -72,9 +70,9 @@ export class AiEmailService {
     });
 
     // Send via Resend
-    if (resend) {
+    if (this.resend) {
       try {
-        const result = await resend.emails.send({
+        const result = await this.resend.emails.send({
           from,
           to: lead.email,
           subject: params.subject,
