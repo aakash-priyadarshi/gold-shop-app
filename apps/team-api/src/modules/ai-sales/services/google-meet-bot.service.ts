@@ -371,7 +371,18 @@ export class GoogleMeetBotService {
     
     if (settings?.googleMeetBotCookies) {
       this.addLog(session, "info", "Found cached session cookies. Injecting...");
-      await page.setCookie(...(settings.googleMeetBotCookies as any[]));
+      const cookies = settings.googleMeetBotCookies as any[];
+      // Use CDP to set cookies across all domains (not just current page)
+      const cdp = await page.createCDPSession();
+      for (const cookie of cookies) {
+        try {
+          await cdp.send("Network.setCookie", cookie);
+        } catch {
+          // Some cookies may fail — skip
+        }
+      }
+      await cdp.detach();
+      this.addLog(session, "info", `Injected ${cookies.length} cached cookies`);
     } else if (settings?.googleMeetBotRefreshToken) {
       this.addLog(session, "info", "OAuth connected — generating session cookies via refresh token...");
       await this.authenticateWithOAuth(page, session, settings.googleMeetBotRefreshToken);
@@ -386,6 +397,21 @@ export class GoogleMeetBotService {
 
     // Wait for the page to load
     await this.delay(3000);
+
+    // Debug: Log what the bot sees
+    const meetPageTitle = await page.title();
+    const meetPageUrl = page.url();
+    this.addLog(session, "info", `Meet page loaded — Title: "${meetPageTitle}", URL: ${meetPageUrl}`);
+
+    // Check if the page requires sign-in before we even try to join
+    const requiresSignIn = await page.evaluate(() => {
+      const text = document.body.innerText?.toLowerCase() || "";
+      return text.includes("sign in to join") || text.includes("use your google account to join");
+    }).catch(() => false);
+
+    if (requiresSignIn) {
+      this.addLog(session, "error", "Meeting page requires Google sign-in — OAuth session may not have taken effect. Try disconnecting and reconnecting the Google account.");
+    }
 
     // Try to dismiss any "Got it" or consent dialogs
     await this.dismissDialogs(page, session);
@@ -464,8 +490,7 @@ export class GoogleMeetBotService {
 
       this.addLog(session, "info", "Got fresh access token, merging into browser session...");
 
-      // Step 1: Navigate to Google and set the OAuth token as a cookie-exchange
-      // Use Google's OAuthLogin endpoint to convert access_token → browser session
+      // Step 1: Use OAuthLogin to get uberauth token
       const oauthLoginUrl = `https://accounts.google.com/OAuthLogin?source=ChromiumBrowser&issueuberauth=1`;
       await page.setExtraHTTPHeaders({ Authorization: `Bearer ${accessToken}` });
       await page.goto(oauthLoginUrl, { waitUntil: "networkidle2", timeout: 15000 });
@@ -473,23 +498,51 @@ export class GoogleMeetBotService {
       await page.setExtraHTTPHeaders({}); // clear auth header
 
       if (uberAuth && uberAuth.length > 10) {
-        this.addLog(session, "info", "Got uberauth token, merging session...");
-        // Step 2: Merge the uberauth into a full browser session
-        const mergeUrl = `https://accounts.google.com/MergeSession?uberauth=${uberAuth}&continue=https://meet.google.com`;
-        await page.goto(mergeUrl, { waitUntil: "networkidle2", timeout: 15000 });
+        this.addLog(session, "info", `Got uberauth token (${uberAuth.length} chars), merging session...`);
+
+        // Step 2: MergeSession to establish full browser cookies
+        const mergeUrl = `https://accounts.google.com/MergeSession?uberauth=${uberAuth}&continue=https://accounts.google.com/ManageAccount`;
+        await page.goto(mergeUrl, { waitUntil: "networkidle2", timeout: 20000 });
+        await this.delay(3000);
+
+        // Step 3: Visit Google Meet to ensure meet-specific cookies are set
+        await page.goto("https://meet.google.com", { waitUntil: "networkidle2", timeout: 15000 });
         await this.delay(2000);
 
-        // Save cookies for future use
-        const cookies = await page.cookies("https://accounts.google.com", "https://meet.google.com");
-        if (cookies.length > 0) {
+        // Step 4: Check if we are actually signed in
+        const pageTitle = await page.title();
+        const pageUrl = page.url();
+        this.addLog(session, "info", `After auth — Page: "${pageTitle}", URL: ${pageUrl}`);
+
+        // Check if signed in by looking for user avatar/profile
+        const isSignedIn = await page.evaluate(() => {
+          // Google Meet shows profile pic when signed in
+          return !!(
+            document.querySelector('img[data-origin-src]') || // profile picture
+            document.querySelector('[aria-label="Google Account"]') ||
+            document.querySelector('a[aria-label*="Account"]') ||
+            document.querySelector('[data-ogsr-up]') // signed-in user element
+          );
+        }).catch(() => false);
+
+        this.addLog(session, "info", `Signed in check: ${isSignedIn}`);
+
+        // Save ALL cookies from all domains the browser has visited
+        const cdp = await page.createCDPSession();
+        const { cookies: allCookies } = await cdp.send("Network.getAllCookies");
+        await cdp.detach();
+
+        if (allCookies.length > 0) {
           await this.prisma.teamSettings.update({
             where: { id: "singleton" },
-            data: { googleMeetBotCookies: cookies as any },
+            data: { googleMeetBotCookies: allCookies as any },
           });
-          this.addLog(session, "info", `OAuth session established! ${cookies.length} cookies cached.`);
+          this.addLog(session, "info", `OAuth session established! ${allCookies.length} cookies cached across all domains.`);
+        } else {
+          this.addLog(session, "error", "No cookies captured after OAuth flow");
         }
       } else {
-        this.addLog(session, "info", "OAuthLogin did not return uberauth — falling back to guest mode");
+        this.addLog(session, "error", `OAuthLogin returned unexpected response (${uberAuth?.length || 0} chars). May not have proper scopes.`);
       }
     } catch (err: any) {
       this.addLog(session, "error", `OAuth authentication failed: ${err.message}. Falling back to guest mode.`);
