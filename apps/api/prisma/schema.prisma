@@ -292,6 +292,11 @@ model Shop {
   demandForecasts         DemandForecast[]
   repricingRules          RepricingRule[]
 
+  // AI Sales CRM
+  agentVoices             AgentVoice[]     @relation("ShopAgentVoices")
+  leads                   Lead[]           @relation("ShopLeads")
+  callSessions            CallSession[]    @relation("ShopCallSessions")
+
   // AI Credit Auto-Recharge
   autoRechargeEnabled     Boolean               @default(false)
   autoRechargeThreshold   Int                   @default(5)   // trigger when balance drops below this
@@ -3201,4 +3206,212 @@ model BlogPost {
   @@index([isPublished, publishedAt])
   @@index([category])
   @@index([featured])
+}
+
+// ── AI Sales CRM ────────────────────────────────────────────────
+
+// Voice agent configuration
+model AgentVoice {
+  id          String   @id @default(uuid())
+  shopId      String
+  name        String
+  provider    String   @default("elevenlabs") // elevenlabs | google | openai
+  voiceId     String
+  language    String   @default("en")
+  accent      String?
+  speed       Float    @default(1.0)
+  pitch       Float    @default(1.0)
+  tone        String?
+  agentEmail  String?  // Google Workspace email this agent sends from
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shop         Shop          @relation("ShopAgentVoices", fields: [shopId], references: [id], onDelete: Cascade)
+  callSessions CallSession[]
+
+  @@index([shopId, isActive])
+}
+
+// CRM Lead record
+model Lead {
+  id          String        @id @default(uuid())
+  shopId      String
+  name        String
+  email       String?
+  phone       String?
+  company     String?
+  role        String?
+  stage       LeadStage     @default(NEW)
+  temperature LeadTemperature @default(COLD)
+  score       Int           @default(0)
+  source      String?       // "linkedin" | "referral" | "cold-call" | etc.
+  timezone    String?
+  countryCode String?
+
+  // Personality / communication
+  communicationStyle String?
+  decisionStyle      String?
+  pacePreference     String?
+  tonePreference     String?
+  respondsWellTo     String[]
+  getsFrustratedBy   String[]
+
+  // Personal
+  preferredName      String?
+  familyDetails      String?
+  hobbies            String[]
+  recentLifeEvents   String[]
+  notableQuotes      String[]
+  preferredCallDays  String[]
+
+  // Buying signals
+  budgetRange    String?
+  dealValue      Float?
+  budgetApprover String?
+  urgency        String?
+  competitorsPros String[]
+
+  // Post-call AI notes
+  totalCalls           Int      @default(0)
+  lastCallSummary      String?
+  whatWorkedLastCall   String?
+  whatToAvoidNextCall  String?
+  nextCallStrategy     String?
+  openLoops            String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shop         Shop              @relation("ShopLeads", fields: [shopId], references: [id], onDelete: Cascade)
+  callSessions CallSession[]
+  interactions LeadInteraction[]
+  emails       LeadEmail[]
+
+  @@index([shopId])
+  @@index([shopId, stage])
+  @@index([shopId, temperature])
+  @@index([email])
+}
+
+// A single AI-driven call session
+model CallSession {
+  id           String    @id @default(uuid())
+  shopId       String
+  leadId       String?
+  agentId      String?   // logical agent id (from ai-sales agents table)
+  agentVoiceId String?
+  direction    String    @default("OUTBOUND") // OUTBOUND | INBOUND
+  status       String    @default("PENDING")  // PENDING | ACTIVE | ENDED | FAILED
+  duration     Int?      // seconds
+  transcript   String?   @db.Text
+  summary      String?   @db.Text
+  sentiment    String?   // POSITIVE | NEUTRAL | NEGATIVE
+
+  // Goal tracking
+  goalForCall  String?
+  goalAchieved Boolean?
+  goalNotes    String?
+
+  // Cost breakdown
+  totalCost  Float?
+  costTwilio Float?
+  costLlm    Float?
+  costTts    Float?
+  costStt    Float?
+
+  // AI-extracted arrays
+  buyingSignals        String[]
+  objectionsEncountered String[]
+  keyTopics            String[]
+
+  startedAt   DateTime?
+  endedAt     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  shop       Shop        @relation("ShopCallSessions", fields: [shopId], references: [id], onDelete: Cascade)
+  lead       Lead?       @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  agentVoice AgentVoice? @relation(fields: [agentVoiceId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, status])
+  @@index([shopId, createdAt])
+  @@index([leadId])
+}
+
+// Unified interaction timeline entry for a lead
+model LeadInteraction {
+  id            String          @id @default(uuid())
+  shopId        String
+  leadId        String
+  callSessionId String?
+  emailId       String?
+  type          InteractionType
+  channel       String?         // "phone" | "email" | "video"
+  summary       String?
+  details       Json?
+  goalSet       String?
+  goalAchieved  Boolean?
+  createdAt     DateTime        @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+  @@index([shopId, createdAt])
+}
+
+// Email thread record linked to a lead
+model LeadEmail {
+  id              String         @id @default(uuid())
+  shopId          String
+  leadId          String
+  subject         String
+  body            String         @db.Text
+  htmlBody        String?        @db.Text
+  direction       EmailDirection
+  fromAddress     String
+  toAddress       String
+  aiGenerated     Boolean        @default(false)
+  goalForEmail    String?
+  meetLink        String?
+  meetScheduledAt DateTime?
+  sentAt          DateTime?
+  receivedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+  @@index([shopId, direction])
+}
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum LeadTemperature {
+  HOT
+  WARM
+  COLD
+}
+
+enum InteractionType {
+  CALL
+  EMAIL_SENT
+  EMAIL_RECEIVED
+  GMEET
+  FOLLOW_UP
+  NOTE
+}
+
+enum EmailDirection {
+  SENT
+  RECEIVED
 }
