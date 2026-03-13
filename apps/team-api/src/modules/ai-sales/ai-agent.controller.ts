@@ -947,6 +947,92 @@ export class AIAgentController {
     };
   }
 
+  /* ─── PLAYGROUND: EMAIL ─── */
+
+  @Post("playground/email-draft")
+  @Roles("ADMIN")
+  async playgroundEmailDraft(
+    @Body() body: { leadId?: string; purpose: string; includeMeetLink?: boolean },
+  ) {
+    try {
+      const draft = await this.aiEmail.generateDraft({
+        leadId: body.leadId || "playground-lead",
+        purpose: body.purpose,
+        includeMeetLink: body.includeMeetLink,
+      });
+      return draft;
+    } catch (err: any) {
+      // If lead not found, generate a standalone draft using Gemini directly
+      this.logger.warn(`Lead not found for draft, generating standalone: ${err.message}`);
+      const geminiApiKey = this.config.get<string>("GEMINI_API_KEY");
+      if (!geminiApiKey) throw new Error("GEMINI_API_KEY not configured");
+
+      const { GoogleGenerativeAI } = await import("@google/generative-ai");
+      const genAI = new GoogleGenerativeAI(geminiApiKey);
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash-lite",
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.7,
+          maxOutputTokens: 800,
+          thinkingConfig: { thinkingBudget: 1024 },
+        } as any,
+      });
+
+      const result = await model.generateContent({
+        contents: [{
+          role: "user",
+          parts: [{
+            text: `Draft a professional sales email.\n\nPurpose: ${body.purpose}\n${body.includeMeetLink ? "Include a mention of scheduling a Google Meet." : ""}\n\nReturn JSON: { "subject": "email subject", "body": "email body in plain text" }`,
+          }],
+        }],
+      });
+
+      const text = result.response.text()
+        .replace(/```json?\n?/g, "").replace(/```/g, "")
+        .replace(/,\s*([}\]])/g, "$1").trim();
+      return JSON.parse(text);
+    }
+  }
+
+  @Post("playground/email-send")
+  @Roles("ADMIN")
+  async playgroundEmailSend(
+    @Body() body: { to: string; subject: string; body: string; fromEmail?: string },
+  ) {
+    // Direct send via Resend — bypasses lead lookup for playground testing
+    const resendKey = this.config.get<string>("RESEND_API_KEY");
+    if (!resendKey) throw new Error("RESEND_API_KEY is not configured. Add it to your .env file.");
+
+    try {
+      const { Resend } = require("resend");
+      const resend = new Resend(resendKey);
+      const from = body.fromEmail || this.config.get<string>("AI_SALES_FROM_EMAIL") || this.config.get<string>("MAIL_FROM") || "sales@orivraa.com";
+
+      const result = await resend.emails.send({
+        from,
+        to: body.to,
+        subject: body.subject,
+        html: `<div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+          <div style="background:linear-gradient(135deg,#d4a843,#b8941f);padding:16px 24px;border-radius:12px 12px 0 0;">
+            <h2 style="color:#fff;margin:0;font-size:20px;">Orivraa</h2>
+          </div>
+          <div style="background:#fff;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;">
+            <p style="color:#4b5563;line-height:1.8;white-space:pre-wrap;">${body.body}</p>
+            <p style="color:#9ca3af;font-size:12px;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:16px;">
+              Sent from Orivraa AI Sales Playground
+            </p>
+          </div>
+        </div>`,
+      });
+
+      return { success: true, resendId: result.data?.id || result.id, from, to: body.to };
+    } catch (err: any) {
+      this.logger.error(`Playground email send failed: ${err.message}`);
+      throw new Error(`Email send failed: ${err.message}`);
+    }
+  }
+
   /* ─── PLAYGROUND: INTERACTION SIMULATOR ─── */
 
   @Post("playground/simulate-interaction")

@@ -1013,7 +1013,7 @@ export default function PlaygroundPage() {
           </Card>
         </TabsContent>
 
-        {/* ── TAB 5: AI Email & Drafting ── */}
+        {/* -- TAB 5: AI Email & Drafting -- */}
         <TabsContent value="email" className="space-y-4">
           <Card>
             <CardHeader>
@@ -1021,7 +1021,7 @@ export default function PlaygroundPage() {
                 <Mail className="h-5 w-5" /> AI Email Agent
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Test the Gemini Flash-Lite drafting system.
+                Test the AI email drafting (Gemini Flash-Lite) and sending (Resend API) pipeline.
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1039,12 +1039,11 @@ export default function PlaygroundPage() {
                   </div>
                   <Button
                     onClick={async () => {
-                      if (!emailPurpose.trim() || !selectedAgentId) return;
+                      if (!emailPurpose.trim()) return;
                       setEmailLoading(true);
                       setEmailDraft(null);
                       try {
-                        const res = await aiSalesApi.generateEmailDraft({
-                          leadId: "playground-lead", // Mock lead, assuming AI handles fallback
+                        const res = await aiSalesApi.playgroundEmailDraft({
                           purpose: emailPurpose,
                           includeMeetLink: true,
                         });
@@ -1055,7 +1054,7 @@ export default function PlaygroundPage() {
                       }
                       setEmailLoading(false);
                     }}
-                    disabled={!emailPurpose.trim() || !selectedAgentId || emailLoading}
+                    disabled={!emailPurpose.trim() || emailLoading}
                     className="w-full gap-2"
                   >
                     {emailLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
@@ -1076,7 +1075,7 @@ export default function PlaygroundPage() {
                       </div>
                       
                       <div className="pt-4 border-t mt-4">
-                        <Label>Send Real Email Address (uses Resend)</Label>
+                        <Label>Send to Email Address (uses Resend API)</Label>
                         <div className="flex gap-2 mt-2">
                           <Input
                             type="email"
@@ -1089,23 +1088,25 @@ export default function PlaygroundPage() {
                               if (!emailTo.trim()) return;
                               setEmailLoading(true);
                               try {
-                                await aiSalesApi.sendEmail({
-                                  leadId: "playground-lead-does-not-exist",
+                                const res = await aiSalesApi.playgroundEmailSend({
+                                  to: emailTo,
                                   subject: emailDraft.subject,
                                   body: emailDraft.body,
-                                  fromEmail: "sales@orivraa.com",
                                 });
-                                toast.success("Email request sent!");
+                                toast.success(`Email sent! Resend ID: ${res.data?.resendId || "OK"}`);
                               } catch (err: any) {
-                                toast.error(err?.response?.data?.message || "Failed to send email");
+                                toast.error(err?.response?.data?.message || "Failed to send email — check RESEND_API_KEY");
                               }
                               setEmailLoading(false);
                             }}
                             disabled={!emailTo.trim() || emailLoading}
                           >
-                            Send
+                            <Send className="h-3 w-3 mr-1" /> Send
                           </Button>
                         </div>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Requires RESEND_API_KEY in env and a verified domain in Resend dashboard.
+                        </p>
                       </div>
                     </div>
                   ) : (
