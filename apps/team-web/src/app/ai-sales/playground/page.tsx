@@ -9,11 +9,12 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { aiSalesApi } from "@/lib/api";
 import {
     AlertTriangle,
     ArrowLeft, Bot, CheckCircle2, Loader2, Mic, MicOff,
-    Phone, PhoneOff, Send, Video, Volume2, XCircle,
+    Phone, PhoneOff, Send, Video, Volume2, XCircle, Mail, MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -96,6 +97,18 @@ export default function PlaygroundPage() {
   const [meetLogs, setMeetLogs] = useState<{ time: number; type: string; message: string }[]>([]);
   const [meetTranscript, setMeetTranscript] = useState<{ role: string; content: string; timestamp: number }[]>([]);
   const meetLogsEndRef = useRef<HTMLDivElement>(null);
+
+  // ── Email mode ──
+  const [emailPurpose, setEmailPurpose] = useState("");
+  const [emailDraft, setEmailDraft] = useState<any>(null);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+
+  // ── Interaction Simulator ──
+  const [simTranscript, setSimTranscript] = useState("");
+  const [simGoal, setSimGoal] = useState("");
+  const [simResult, setSimResult] = useState<any>(null);
+  const [simLoading, setSimLoading] = useState(false);
 
   // ── Load agents ──
   useEffect(() => {
@@ -475,12 +488,18 @@ export default function PlaygroundPage() {
       </Card>
 
       <Tabs defaultValue="diagnostics" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-4 md:grid-cols-6 h-auto min-h-10">
           <TabsTrigger value="diagnostics">Service Diagnostics</TabsTrigger>
           <TabsTrigger value="browser">Browser Chat & Voice</TabsTrigger>
           <TabsTrigger value="phone">Phone Call Test</TabsTrigger>
           <TabsTrigger value="meet" className="gap-1">
             <Video className="h-3 w-3" /> Google Meet
+          </TabsTrigger>
+          <TabsTrigger value="email" className="gap-1">
+            <Mail className="h-3 w-3" /> Email
+          </TabsTrigger>
+          <TabsTrigger value="simulator" className="gap-1">
+            <MessageSquare className="h-3 w-3" /> Simulator
           </TabsTrigger>
         </TabsList>
 
@@ -981,6 +1000,205 @@ export default function PlaygroundPage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── TAB 5: AI Email & Drafting ── */}
+        <TabsContent value="email" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Mail className="h-5 w-5" /> AI Email Agent
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Test the Gemini Flash-Lite drafting system.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div>
+                    <Label>Email Purpose</Label>
+                    <Input
+                      value={emailPurpose}
+                      onChange={(e) => setEmailPurpose(e.target.value)}
+                      placeholder="e.g. Follow up on the latest sales call"
+                      disabled={emailLoading}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">What should the AI write about?</p>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      if (!emailPurpose.trim() || !selectedAgentId) return;
+                      setEmailLoading(true);
+                      setEmailDraft(null);
+                      try {
+                        const res = await aiSalesApi.generateEmailDraft({
+                          leadId: "playground-lead", // Mock lead, assuming AI handles fallback
+                          purpose: emailPurpose,
+                          includeMeetLink: true,
+                        });
+                        setEmailDraft(res.data);
+                        toast.success("Draft generated!");
+                      } catch (err: any) {
+                        toast.error(err?.response?.data?.message || "Failed to generate draft");
+                      }
+                      setEmailLoading(false);
+                    }}
+                    disabled={!emailPurpose.trim() || !selectedAgentId || emailLoading}
+                    className="w-full gap-2"
+                  >
+                    {emailLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+                    Generate Draft
+                  </Button>
+                </div>
+                
+                <div className="space-y-4">
+                  {emailDraft ? (
+                    <div className="rounded-lg border bg-black/5 dark:bg-white/5 p-4 space-y-3">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Subject</Label>
+                        <p className="text-sm font-medium">{emailDraft.subject}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Body</Label>
+                        <p className="text-sm whitespace-pre-wrap">{emailDraft.body}</p>
+                      </div>
+                      
+                      <div className="pt-4 border-t mt-4">
+                        <Label>Send Real Email Address (uses Resend)</Label>
+                        <div className="flex gap-2 mt-2">
+                          <Input
+                            type="email"
+                            value={emailTo}
+                            onChange={(e) => setEmailTo(e.target.value)}
+                            placeholder="you@example.com"
+                          />
+                          <Button
+                            onClick={async () => {
+                              if (!emailTo.trim()) return;
+                              setEmailLoading(true);
+                              try {
+                                await aiSalesApi.sendEmail({
+                                  leadId: "playground-lead-does-not-exist",
+                                  subject: emailDraft.subject,
+                                  body: emailDraft.body,
+                                  fromEmail: "sales@orivraa.com",
+                                });
+                                toast.success("Email request sent!");
+                              } catch (err: any) {
+                                toast.error(err?.response?.data?.message || "Failed to send email");
+                              }
+                              setEmailLoading(false);
+                            }}
+                            disabled={!emailTo.trim() || emailLoading}
+                          >
+                            Send
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                     <div className="h-full min-h-[200px] flex items-center justify-center text-sm text-muted-foreground border border-dashed rounded-lg">
+                       Submit a purpose to see the AI draft here.
+                     </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── TAB 6: Interaction Simulator ── */}
+        <TabsContent value="simulator" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" /> Interaction & Post-Call Simulator
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Paste a transcript here to see how Gemini evaluates goals and extracts personality insights.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div>
+                    <Label>Call Goal (Optional)</Label>
+                    <Input
+                      value={simGoal}
+                      onChange={(e) => setSimGoal(e.target.value)}
+                      placeholder="e.g. Qualify for budget > $5000"
+                      disabled={simLoading}
+                    />
+                  </div>
+                  <div>
+                    <Label>Raw Transcript</Label>
+                    <Textarea
+                      className="h-64 mt-1"
+                      value={simTranscript}
+                      onChange={(e) => setSimTranscript(e.target.value)}
+                      placeholder="Agent: Hi, how are you? \nCustomer: I'm looking for a premium solution..."
+                      disabled={simLoading}
+                    />
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      if (!simTranscript.trim()) return;
+                      setSimLoading(true);
+                      setSimResult(null);
+                      try {
+                        const res = await aiSalesApi.playgroundSimulateInteraction({
+                          transcript: simTranscript,
+                          goal: simGoal,
+                        });
+                        setSimResult(res.data);
+                        toast.success("Simulation complete!");
+                      } catch (err: any) {
+                        toast.error("Failed to run simulation");
+                      }
+                      setSimLoading(false);
+                    }}
+                    disabled={!simTranscript.trim() || simLoading}
+                    className="w-full gap-2"
+                  >
+                    {simLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+                    Analyze Interaction
+                  </Button>
+                </div>
+                
+                <div className="space-y-4 h-full">
+                  {simResult ? (
+                    <div className="rounded-lg border bg-black/5 dark:bg-white/5 p-4 h-full overflow-y-auto" style={{ maxHeight: "400px" }}>
+                      <div className="space-y-4">
+                        <div>
+                          <p className="font-semibold text-sm">Post-Call Report</p>
+                          <pre className="text-[10px] mt-1 p-2 bg-black/10 dark:bg-white/10 rounded overflow-x-auto">
+                            {JSON.stringify(simResult.report, null, 2)}
+                          </pre>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">Goal Evaluation</p>
+                          <pre className="text-[10px] mt-1 p-2 bg-black/10 dark:bg-white/10 rounded overflow-x-auto">
+                            {JSON.stringify(simResult.goalEval, null, 2)}
+                          </pre>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">Personality Insights</p>
+                          <pre className="text-[10px] mt-1 p-2 bg-black/10 dark:bg-white/10 rounded overflow-x-auto">
+                            {JSON.stringify(simResult.insights, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                     <div className="h-full min-h-[300px] flex items-center justify-center text-sm text-muted-foreground border border-dashed rounded-lg">
+                       Submit a transcript to see JSON results.
+                     </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

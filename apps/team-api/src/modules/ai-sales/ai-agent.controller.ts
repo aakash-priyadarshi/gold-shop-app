@@ -1,17 +1,17 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Header,
-  Logger,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
-  UploadedFile,
-  UseInterceptors
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Header,
+    Logger,
+    Param,
+    Patch,
+    Post,
+    Put,
+    Query,
+    UploadedFile,
+    UseInterceptors
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -36,6 +36,7 @@ import { LeadScoringService } from "./services/lead-scoring.service";
 import { ObjectionPlaybookService } from "./services/objection-playbook.service";
 import { STTRouterService } from "./services/stt-router.service";
 import { WebhookService } from "./services/webhook.service";
+import { PostCallProcessor } from "./services/post-call-processor.service";
 
 @Controller("ai-sales")
 export class AIAgentController {
@@ -63,6 +64,7 @@ export class AIAgentController {
     private meetBot: GoogleMeetBotService,
     private aiEmail: AiEmailService,
     private interactionService: LeadInteractionService,
+    private postCallProcessor: PostCallProcessor,
   ) {}
 
   /* ─── AGENTS ─── */
@@ -943,6 +945,37 @@ export class AIAgentController {
       transcript: session.transcript,
       agentName: session.agentName,
     };
+  }
+
+  /* ─── PLAYGROUND: INTERACTION SIMULATOR ─── */
+
+  @Post("playground/simulate-interaction")
+  @Roles("ADMIN")
+  async playgroundSimulateInteraction(
+    @Body() body: { transcript: string; goal?: string; applyToLeadId?: string },
+  ) {
+    const transcript = body.transcript || "";
+    // Estimate 2 seconds per word as a very rough conversation duration placeholder
+    const durationSeconds = Math.max(10, Math.floor(transcript.split(" ").length * 2));
+
+    const report = await this.postCallProcessor.generateCallReport({
+      transcript,
+      durationSeconds,
+    });
+    const goalEval = await this.postCallProcessor.evaluateGoal(transcript, body.goal || "Have a productive sales conversation.");
+    const insights = await this.postCallProcessor.extractPersonalityInsights(transcript);
+
+    if (body.applyToLeadId) {
+      // Create interaction and optionally update lead fields if we had a dedicated updater
+      await this.interactionService.recordInteraction({
+        leadId: body.applyToLeadId,
+        type: "SIMULATED_INTERACTION" as any,
+        summary: report.summary,
+        details: JSON.stringify({ report, goalEval, insights }, null, 2),
+      });
+    }
+
+    return { report, goalEval, insights };
   }
 
   /* ─── CENTRAL BRAIN / INTELLIGENCE ─── */
