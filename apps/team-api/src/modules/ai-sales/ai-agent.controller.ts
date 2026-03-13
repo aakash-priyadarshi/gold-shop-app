@@ -913,9 +913,9 @@ export class AIAgentController {
   @Post("playground/meet")
   @Roles("ADMIN")
   async playgroundMeetJoin(
-    @Body() body: { agentId: string; meetUrl: string },
+    @Body() body: { agentId: string; meetUrl: string; leadId?: string },
   ) {
-    const session = await this.meetBot.startSession(body.meetUrl, body.agentId);
+    const session = await this.meetBot.startSession(body.meetUrl, body.agentId, body.leadId);
     return {
       sessionId: session.id,
       agentName: session.agentName,
