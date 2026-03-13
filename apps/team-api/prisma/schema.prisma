@@ -1066,6 +1066,8 @@ model TeamSettings {
   googleMeetBotEmail    String?
   googleMeetBotPassword String?
   googleMeetBotCookies  Json?    // Cached Google session cookies for Meet bot
+  googleMeetBotRefreshToken String? // OAuth refresh token for bot account
+  googleMeetBotAccountEmail String? // The Google account email connected via OAuth
   // AI Sales Email
   aiSalesFromEmail      String?
   salesGreeting         String?

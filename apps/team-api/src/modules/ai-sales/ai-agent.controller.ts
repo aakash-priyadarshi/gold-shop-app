@@ -13,11 +13,14 @@ import {
     Post,
     Put,
     Query,
+    Res,
     UploadedFile,
     UseInterceptors
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { Response } from "express";
+import { OAuth2Client } from "google-auth-library";
 import { Roles } from "../../auth/roles.decorator";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AIAgentService } from "./ai-agent.service";
@@ -949,6 +952,136 @@ export class AIAgentController {
       transcript: session.transcript,
       agentName: session.agentName,
     };
+  }
+
+  /* ─── GOOGLE OAUTH FOR MEET BOT ─── */
+
+  @Get("google/auth-url")
+  @Roles("ADMIN")
+  async getGoogleAuthUrl() {
+    const oauth = this.getOAuth2Client();
+    if (!oauth) {
+      throw new HttpException(
+        "Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in environment variables.",
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+    const url = oauth.generateAuthUrl({
+      access_type: "offline",
+      prompt: "consent",
+      scope: [
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+      ],
+      state: "meet-bot-connect",
+    });
+    return { url };
+  }
+
+  @Get("google/callback")
+  async handleGoogleCallback(
+    @Query("code") code: string,
+    @Query("error") error: string,
+    @Query("state") state: string,
+    @Res() res: Response,
+  ) {
+    const frontendUrl = this.config.get<string>("TEAM_FRONTEND_URL") || "http://localhost:3001";
+
+    if (error || !code) {
+      return res.redirect(`${frontendUrl}/settings?google_auth=error&message=${encodeURIComponent(error || "No authorization code")}`);
+    }
+
+    if (state !== "meet-bot-connect") {
+      return res.redirect(`${frontendUrl}/settings?google_auth=error&message=${encodeURIComponent("Invalid state parameter")}`);
+    }
+
+    const oauth = this.getOAuth2Client();
+    if (!oauth) {
+      return res.redirect(`${frontendUrl}/settings?google_auth=error&message=${encodeURIComponent("OAuth not configured")}`);
+    }
+
+    try {
+      const { tokens } = await oauth.getToken(code);
+      if (!tokens.refresh_token) {
+        return res.redirect(`${frontendUrl}/settings?google_auth=error&message=${encodeURIComponent("No refresh token received. Try revoking app access at myaccount.google.com/permissions and reconnecting.")}`);
+      }
+
+      // Get user info
+      oauth.setCredentials(tokens);
+      const userInfo = await oauth.request({ url: "https://www.googleapis.com/oauth2/v2/userinfo" });
+      const email = (userInfo.data as any)?.email || "Unknown";
+
+      // Store in DB
+      await this.prisma.teamSettings.upsert({
+        where: { id: "singleton" },
+        create: {
+          id: "singleton",
+          googleMeetBotRefreshToken: tokens.refresh_token,
+          googleMeetBotAccountEmail: email,
+          googleMeetBotCookies: null,
+        },
+        update: {
+          googleMeetBotRefreshToken: tokens.refresh_token,
+          googleMeetBotAccountEmail: email,
+          googleMeetBotCookies: null, // invalidate old cookies
+        },
+      });
+
+      this.logger.log(`Google Meet bot account connected: ${email}`);
+      return res.redirect(`${frontendUrl}/settings?google_auth=success&email=${encodeURIComponent(email)}`);
+    } catch (err: any) {
+      this.logger.error(`Google OAuth callback failed: ${err.message}`);
+      return res.redirect(`${frontendUrl}/settings?google_auth=error&message=${encodeURIComponent(err.message)}`);
+    }
+  }
+
+  @Get("google/bot-status")
+  @Roles("ADMIN")
+  async getGoogleBotStatus() {
+    const settings = await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } });
+    return {
+      connected: !!settings?.googleMeetBotRefreshToken,
+      email: (settings as any)?.googleMeetBotAccountEmail || null,
+      hasCachedCookies: !!(settings as any)?.googleMeetBotCookies,
+    };
+  }
+
+  @Post("google/disconnect")
+  @Roles("ADMIN")
+  async disconnectGoogleBot() {
+    await this.prisma.teamSettings.update({
+      where: { id: "singleton" },
+      data: {
+        googleMeetBotRefreshToken: null,
+        googleMeetBotAccountEmail: null,
+        googleMeetBotCookies: null,
+        googleMeetBotEmail: null,
+        googleMeetBotPassword: null,
+      },
+    });
+    return { success: true };
+  }
+
+  @Post("google/refresh-cookies")
+  @Roles("ADMIN")
+  async refreshGoogleCookies() {
+    try {
+      await this.meetBot.refreshSessionCookies();
+      return { success: true, message: "Session cookies refreshed" };
+    } catch (err: any) {
+      throw new HttpException(`Failed to refresh cookies: ${err.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  private getOAuth2Client(): OAuth2Client | null {
+    const clientId = this.config.get<string>("GOOGLE_CLIENT_ID");
+    const clientSecret = this.config.get<string>("GOOGLE_CLIENT_SECRET");
+    if (!clientId || !clientSecret) return null;
+
+    const webhookBase = this.config.get<string>("WEBHOOK_BASE_URL") || "http://localhost:3002";
+    const callbackUrl = `${webhookBase}/api/ai-sales/google/callback`;
+    return new OAuth2Client(clientId, clientSecret, callbackUrl);
   }
 
   /* ─── PLAYGROUND: EMAIL ─── */

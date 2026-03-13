@@ -1,15 +1,15 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import * as puppeteer from "puppeteer-extra";
 import { Browser, Page } from "puppeteer";
+import * as puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
-puppeteer.default.use(StealthPlugin());
 import { PrismaService } from "../../../prisma/prisma.service";
 import { ConversationBrainService, ConversationContext } from "./conversation-brain.service";
 import { GeminiStreamingClient } from "./gemini-streaming.service";
 import { LeadInteractionService } from "./lead-interaction.service";
 import { PreCallBrainService } from "./pre-call-brain.service";
 import { STTRouterService } from "./stt-router.service";
+puppeteer.default.use(StealthPlugin());
 
 export interface MeetSession {
   id: string;
@@ -368,10 +368,15 @@ export class GoogleMeetBotService {
     const settings = (await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } })) as any;
     
     if (settings?.googleMeetBotCookies) {
-      this.addLog(session, "info", "Found cached Session Cookies. Bypassing Google Login...");
+      this.addLog(session, "info", "Found cached session cookies. Injecting...");
       await page.setCookie(...(settings.googleMeetBotCookies as any[]));
+    } else if (settings?.googleMeetBotRefreshToken) {
+      this.addLog(session, "info", "OAuth connected — generating session cookies via refresh token...");
+      await this.authenticateWithOAuth(page, session, settings.googleMeetBotRefreshToken);
     } else if (settings?.googleMeetBotEmail && settings?.googleMeetBotPassword) {
       await this.loginToGoogle(page, session, settings.googleMeetBotEmail, settings.googleMeetBotPassword);
+    } else {
+      this.addLog(session, "info", "No Google auth configured — joining as guest");
     }
 
     this.addLog(session, "info", "Navigating to Google Meet...");
@@ -433,6 +438,89 @@ export class GoogleMeetBotService {
       this.addLog(session, "info", "Google authentication successful! Cookies cached for future meetings.");
     } catch (err: any) {
       this.addLog(session, "info", `Google Auth failed/skipped: ${err.message}. Reverting to guest mode.`);
+    }
+  }
+
+  /** Authenticate Puppeteer via OAuth refresh token → access token → Google session merge */
+  private async authenticateWithOAuth(page: Page, session: MeetSession, refreshToken: string) {
+    try {
+      const clientId = this.config.get<string>("GOOGLE_CLIENT_ID");
+      const clientSecret = this.config.get<string>("GOOGLE_CLIENT_SECRET");
+      if (!clientId || !clientSecret) {
+        this.addLog(session, "info", "GOOGLE_CLIENT_ID/SECRET not set, skipping OAuth auth");
+        return;
+      }
+
+      const oauth = new OAuth2Client(clientId, clientSecret);
+      oauth.setCredentials({ refresh_token: refreshToken });
+      const { credentials } = await oauth.refreshAccessToken();
+      const accessToken = credentials.access_token;
+      if (!accessToken) {
+        this.addLog(session, "error", "Failed to get access token from refresh token");
+        return;
+      }
+
+      this.addLog(session, "info", "Got fresh access token, merging into browser session...");
+
+      // Step 1: Navigate to Google and set the OAuth token as a cookie-exchange
+      // Use Google's OAuthLogin endpoint to convert access_token → browser session
+      const oauthLoginUrl = `https://accounts.google.com/OAuthLogin?source=ChromiumBrowser&issueuberauth=1`;
+      await page.setExtraHTTPHeaders({ Authorization: `Bearer ${accessToken}` });
+      await page.goto(oauthLoginUrl, { waitUntil: "networkidle2", timeout: 15000 });
+      const uberAuth = await page.evaluate(() => document.body.innerText.trim());
+      await page.setExtraHTTPHeaders({}); // clear auth header
+
+      if (uberAuth && uberAuth.length > 10) {
+        this.addLog(session, "info", "Got uberauth token, merging session...");
+        // Step 2: Merge the uberauth into a full browser session
+        const mergeUrl = `https://accounts.google.com/MergeSession?uberauth=${uberAuth}&continue=https://meet.google.com`;
+        await page.goto(mergeUrl, { waitUntil: "networkidle2", timeout: 15000 });
+        await this.delay(2000);
+
+        // Save cookies for future use
+        const cookies = await page.cookies("https://accounts.google.com", "https://meet.google.com");
+        if (cookies.length > 0) {
+          await this.prisma.teamSettings.update({
+            where: { id: "singleton" },
+            data: { googleMeetBotCookies: cookies as any },
+          });
+          this.addLog(session, "info", `OAuth session established! ${cookies.length} cookies cached.`);
+        }
+      } else {
+        this.addLog(session, "info", "OAuthLogin did not return uberauth — falling back to guest mode");
+      }
+    } catch (err: any) {
+      this.addLog(session, "error", `OAuth authentication failed: ${err.message}. Falling back to guest mode.`);
+    }
+  }
+
+  /** Public method to refresh session cookies from OAuth token (called from controller) */
+  async refreshSessionCookies(): Promise<void> {
+    const settings = (await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } })) as any;
+    if (!settings?.googleMeetBotRefreshToken) {
+      throw new Error("No Google account connected. Connect one from Settings first.");
+    }
+
+    const clientId = this.config.get<string>("GOOGLE_CLIENT_ID");
+    const clientSecret = this.config.get<string>("GOOGLE_CLIENT_SECRET");
+    if (!clientId || !clientSecret) {
+      throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set");
+    }
+
+    const oauth = new OAuth2Client(clientId, clientSecret);
+    oauth.setCredentials({ refresh_token: settings.googleMeetBotRefreshToken });
+
+    try {
+      const { credentials } = await oauth.refreshAccessToken();
+      if (!credentials.access_token) throw new Error("No access token returned");
+      this.logger.log("OAuth refresh token is valid — session cookies will be generated on next Meet join");
+      // Invalidate old cookies to force re-auth on next join
+      await this.prisma.teamSettings.update({
+        where: { id: "singleton" },
+        data: { googleMeetBotCookies: null },
+      });
+    } catch (err: any) {
+      throw new Error(`OAuth token refresh failed: ${err.message}. Try reconnecting the Google account.`);
     }
   }
 
