@@ -11,23 +11,57 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { settingsApi } from "@/lib/api";
-import { Save } from "lucide-react";
-import { useEffect, useState } from "react";
+import { googleBotApi, settingsApi } from "@/lib/api";
+import { CheckCircle, ExternalLink, LogOut, RefreshCw, Save } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [botStatus, setBotStatus] = useState<{ connected: boolean; email: string | null; hasCachedCookies: boolean }>({
+    connected: false,
+    email: null,
+    hasCachedCookies: false,
+  });
+  const [connectingGoogle, setConnectingGoogle] = useState(false);
+  const searchParams = useSearchParams();
+
+  const loadBotStatus = useCallback(async () => {
+    try {
+      const res = await googleBotApi.getStatus();
+      setBotStatus(res.data);
+    } catch {
+      // OAuth not configured on backend
+    }
+  }, []);
 
   useEffect(() => {
-    settingsApi
-      .get()
-      .then((res) => setSettings(res.data ?? {}))
+    Promise.all([
+      settingsApi.get().then((res) => setSettings(res.data ?? {})),
+      loadBotStatus(),
+    ])
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [loadBotStatus]);
+
+  // Handle OAuth callback redirect
+  useEffect(() => {
+    const authResult = searchParams.get("google_auth");
+    if (authResult === "success") {
+      const email = searchParams.get("email");
+      toast.success(`Google account connected: ${email}`);
+      loadBotStatus();
+      // Clean URL
+      window.history.replaceState({}, "", "/settings");
+    } else if (authResult === "error") {
+      const message = searchParams.get("message");
+      toast.error(`Google auth failed: ${message || "Unknown error"}`);
+      window.history.replaceState({}, "", "/settings");
+    }
+  }, [searchParams, loadBotStatus]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -38,6 +72,38 @@ export default function SettingsPage() {
       toast.error("Failed to save settings");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleConnectGoogle = async () => {
+    setConnectingGoogle(true);
+    try {
+      const res = await googleBotApi.getAuthUrl();
+      // Open Google OAuth in the same window (will redirect back)
+      window.location.href = res.data.url;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to get auth URL");
+      setConnectingGoogle(false);
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    try {
+      await googleBotApi.disconnect();
+      setBotStatus({ connected: false, email: null, hasCachedCookies: false });
+      toast.success("Google account disconnected");
+    } catch {
+      toast.error("Failed to disconnect");
+    }
+  };
+
+  const handleRefreshCookies = async () => {
+    try {
+      await googleBotApi.refreshCookies();
+      await loadBotStatus();
+      toast.success("Session cookies refreshed");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to refresh cookies");
     }
   };
 
@@ -169,38 +235,37 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="grid gap-4">
             <div>
-              <h4 className="text-sm font-medium mb-2">Google Meet Bot Credentials</h4>
+              <h4 className="text-sm font-medium mb-2">Google Meet Bot Account</h4>
               <p className="text-xs text-muted-foreground mb-4">
-                The bot will log into this Google Account to join meetings as an authenticated user.
+                Connect a Google account so the AI bot can join Google Meet as an authenticated user (supports passkeys & 2FA).
               </p>
-              <div className="grid gap-4">
-                <div>
-                  <Label>Google Account Email</Label>
-                  <Input
-                    type="email"
-                    value={settings.googleMeetBotEmail ?? ""}
-                    onChange={(e) =>
-                      setSettings({ ...settings, googleMeetBotEmail: e.target.value })
-                    }
-                    placeholder="bot@yourdomain.com"
-                  />
+              {botStatus.connected ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-green-800 dark:text-green-200">Connected</p>
+                      <p className="text-xs text-green-600 dark:text-green-400">{botStatus.email}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={handleRefreshCookies} title="Refresh browser session">
+                        <RefreshCw className="h-3 w-3 mr-1" /> Refresh
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={handleDisconnectGoogle}>
+                        <LogOut className="h-3 w-3 mr-1" /> Disconnect
+                      </Button>
+                    </div>
+                  </div>
+                  {botStatus.hasCachedCookies && (
+                    <p className="text-xs text-muted-foreground">✓ Browser session cookies are cached for fast joins</p>
+                  )}
                 </div>
-                <div>
-                  <Label>Google Account Password</Label>
-                  <Input
-                    type="password"
-                    value={settings.googleMeetBotPassword ?? ""}
-                    onChange={(e) =>
-                      setSettings({ ...settings, googleMeetBotPassword: e.target.value })
-                    }
-                    placeholder={settings.googleMeetBotPasswordSet ? "••••••• (already set — leave blank to keep)" : "Google App Password"}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Use a <a href="https://myaccount.google.com/apppasswords" target="_blank" className="underline text-blue-500">Google App Password</a>, not your actual Google password.
-                    {settings.googleMeetBotPasswordSet && <span className="text-green-600 ml-1">✓ Password is configured</span>}
-                  </p>
-                </div>
-              </div>
+              ) : (
+                <Button onClick={handleConnectGoogle} disabled={connectingGoogle}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  {connectingGoogle ? "Redirecting to Google..." : "Connect Google Account"}
+                </Button>
+              )}
             </div>
             <div className="pt-4 border-t">
               <h4 className="text-sm font-medium mb-2">AI Sales Email</h4>

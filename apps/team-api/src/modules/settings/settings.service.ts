@@ -15,7 +15,7 @@ export class SettingsService {
       });
     }
     // Return with frontend-friendly aliases, omit sensitive cached data
-    const { googleMeetBotCookies, googleMeetBotPassword, ...safe } = settings as any;
+    const { googleMeetBotCookies, googleMeetBotPassword, googleMeetBotRefreshToken, ...safe } = settings as any;
     return {
       ...safe,
       workStartTime: settings.workingHoursStart,
@@ -63,6 +63,10 @@ export class SettingsService {
     delete mapped.updatedAt;
     delete mapped.createdAt;
     delete mapped.googleMeetBotPasswordSet;
+    // OAuth-managed fields — only changed via OAuth flow, not settings form
+    delete mapped.googleMeetBotRefreshToken;
+    delete mapped.googleMeetBotAccountEmail;
+    delete mapped.googleMeetBotCookies;
     // Don't overwrite password with empty string — only update if explicitly set
     if (!mapped.googleMeetBotPassword) {
       delete mapped.googleMeetBotPassword;

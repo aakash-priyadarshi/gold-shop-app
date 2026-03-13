@@ -511,6 +511,13 @@ export const settingsApi = {
   update: (data: Record<string, unknown>) => api.post("/settings", data),
 };
 
+export const googleBotApi = {
+  getAuthUrl: () => api.get("/ai-sales/google/auth-url"),
+  getStatus: () => api.get("/ai-sales/google/bot-status"),
+  disconnect: () => api.post("/ai-sales/google/disconnect"),
+  refreshCookies: () => api.post("/ai-sales/google/refresh-cookies"),
+};
+
 // ─── Health ───
 export const healthApi = {
   check: () => api.get("/health"),
