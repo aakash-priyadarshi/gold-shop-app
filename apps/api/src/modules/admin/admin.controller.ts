@@ -15,6 +15,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
+import { RedisService } from "../../common/redis/redis.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
@@ -36,6 +37,7 @@ export class AdminController {
     private notificationsService: NotificationsService,
     private mailService: MailService,
     private sellerEngagement: SellerEngagementService,
+    private redis: RedisService,
   ) {}
 
   // ═══════════════════════════════════════
@@ -465,8 +467,12 @@ export class AdminController {
   @ApiOperation({ summary: "Clear platform cache" })
   @HttpCode(HttpStatus.OK)
   async clearCache() {
-    // TODO: Integrate with Redis to clear cache
-    return { success: true, message: "Cache cleared" };
+    if (!this.redis.isAvailable()) {
+      return { success: true, message: "Cache cleared (Redis not configured)" };
+    }
+    const deletedCount = await this.redis.clearPattern("http_cache:*");
+    this.logger.log(`Admin cache clear: removed ${deletedCount} HTTP cache keys`);
+    return { success: true, message: `Cache cleared (${deletedCount} keys removed)` };
   }
 
   // ═══════════════════════════════════════

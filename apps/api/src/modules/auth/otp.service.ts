@@ -335,10 +335,36 @@ export class OtpService {
   }
 
   private async sendSmsOtp(phone: string, otp: string, type: OtpType): Promise<void> {
-    // TODO: Integrate with SMS service (Twilio, local SMS gateway)
-    this.logger.log(`[SMS OTP] Would send ${type} OTP ${otp} to ${phone}`);
-    
-    // For development, log the OTP
+    const sparrowToken = this.configService.get<string>('SPARROW_SMS_TOKEN');
+    const sparrowFrom = this.configService.get<string>('SPARROW_SMS_FROM') || 'Orivraa';
+
+    const message = type === 'LOGIN_2FA'
+      ? `Your Orivraa login code is ${otp}. Valid for 10 minutes. Do not share this code.`
+      : `Your Orivraa phone verification code is ${otp}. Valid for 10 minutes.`;
+
+    if (sparrowToken) {
+      try {
+        const url = new URL('https://api.sparrowsms.com/v2/sms/');
+        url.searchParams.set('token', sparrowToken);
+        url.searchParams.set('from', sparrowFrom);
+        url.searchParams.set('to', phone);
+        url.searchParams.set('text', message);
+
+        const response = await fetch(url.toString());
+        if (response.ok) {
+          this.logger.log(`SMS OTP sent via Sparrow SMS to ${this.maskTarget(phone, type)}`);
+          return;
+        }
+        const body = await response.text();
+        this.logger.warn(`Sparrow SMS delivery failed (${response.status}): ${body}`);
+      } catch (err: any) {
+        this.logger.error(`Sparrow SMS error: ${err.message}`);
+      }
+    } else {
+      this.logger.log(`[SMS OTP] Would send ${type} OTP to ${this.maskTarget(phone, type)}`);
+    }
+
+    // Always log in development for easy testing
     if (process.env.NODE_ENV !== 'production') {
       this.logger.debug(`📱 DEV SMS OTP: ${otp} for ${phone}`);
     }

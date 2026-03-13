@@ -138,6 +138,45 @@ export class RedisService {
     }
   }
 
+  /**
+   * Delete all keys matching a pattern (uses SCAN to avoid blocking)
+   */
+  async clearPattern(pattern: string): Promise<number> {
+    if (!this.isAvailable()) return 0;
+    try {
+      let cursor = 0;
+      let deletedCount = 0;
+      do {
+        const [nextCursor, keys] = await this.client.scan(cursor, {
+          match: pattern,
+          count: 100,
+        });
+        cursor = Number(nextCursor);
+        if (keys.length > 0) {
+          await Promise.all(keys.map((key) => this.client.del(key)));
+          deletedCount += keys.length;
+        }
+      } while (cursor !== 0);
+      return deletedCount;
+    } catch (error) {
+      this.logger.error(`Redis SCAN/DEL error for pattern ${pattern}: ${error.message}`);
+      return 0;
+    }
+  }
+
+  /**
+   * Flush all keys in the Redis database (use with caution)
+   */
+  async flushAll(): Promise<void> {
+    if (!this.isAvailable()) return;
+    try {
+      await this.client.flushall();
+      this.logger.warn("Redis: FLUSHALL executed — all keys removed");
+    } catch (error) {
+      this.logger.error(`Redis FLUSHALL error: ${error.message}`);
+    }
+  }
+
   // ===========================
   // Auth-specific cache methods
   // ===========================

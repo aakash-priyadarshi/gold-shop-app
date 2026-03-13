@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationType } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
 
 export interface CreateNotificationDto {
   userId: string;
@@ -16,7 +17,12 @@ export interface CreateNotificationDto {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(NotificationsService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService,
+  ) {}
 
   async create(dto: CreateNotificationDto) {
     const notification = await this.prisma.notification.create({
@@ -34,18 +40,64 @@ export class NotificationsService {
       },
     });
 
-    // TODO: Integrate with actual notification providers
-    // - Email: SendGrid, AWS SES, etc.
-    // - SMS: Twilio, local SMS gateway
-    // - Push: Firebase Cloud Messaging
-    // - WhatsApp: WhatsApp Business API
+    const deliveredVia: string[] = [];
 
-    // For now, just log
-    console.log(`Notification created: ${dto.type} for user ${dto.userId}`);
-    console.log(`Title: ${dto.titleKey}, Body: ${dto.bodyKey}`);
-    console.log(`Channels: ${dto.channels.join(', ')}`);
+    // Deliver via email when EMAIL channel is requested
+    if (dto.channels.includes('EMAIL')) {
+      try {
+        const user = await this.prisma.user.findUnique({
+          where: { id: dto.userId },
+          select: { email: true, firstName: true },
+        });
+
+        if (user?.email) {
+          const subject = this.resolveText(dto.titleKey, dto.titleParams);
+          const body = this.resolveText(dto.bodyKey, dto.bodyParams);
+
+          const result = await this.mailService.send({
+            to: user.email,
+            subject,
+            template: 'notification',
+            context: {
+              name: user.firstName || 'User',
+              title: subject,
+              message: body,
+              type: dto.type,
+            },
+          });
+
+          if (result.success) {
+            deliveredVia.push('EMAIL');
+            this.logger.log(`Email notification delivered to ${user.email} — ${dto.type}`);
+          } else {
+            this.logger.warn(`Email notification failed for ${user.email}: ${result.error}`);
+          }
+        }
+      } catch (err: any) {
+        this.logger.error(`Email notification error for user ${dto.userId}: ${err.message}`);
+      }
+    }
+
+    // Update deliveredVia if any channel succeeded
+    if (deliveredVia.length > 0) {
+      await this.prisma.notification.update({
+        where: { id: notification.id },
+        data: { deliveredVia },
+      });
+    }
 
     return notification;
+  }
+
+  /** Resolve a localisation key by substituting params */
+  private resolveText(key: string, params?: Record<string, unknown>): string {
+    if (!params) return key;
+    const entries = Object.entries(params);
+    if (entries.length === 0) return key;
+    return entries.reduce(
+      (text, [k, v]) => text.split(`{${k}}`).join(String(v)),
+      key,
+    );
   }
 
   async findAllForUser(userId: string, unreadOnly = false) {
