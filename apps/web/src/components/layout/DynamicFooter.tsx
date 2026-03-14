@@ -6,14 +6,14 @@ import { BRAND } from "@/config/brand";
 import { LANG_META, type Language } from "@/data/about-i18n";
 import { useMarket } from "@/hooks/useMarket";
 import {
-  Facebook,
-  Globe,
-  Instagram,
-  Linkedin,
-  Mail,
-  MapPin,
-  Phone,
-  Twitter,
+    Facebook,
+    Globe,
+    Instagram,
+    Linkedin,
+    Mail,
+    MapPin,
+    Phone,
+    Twitter,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -47,8 +47,7 @@ export function DynamicFooter() {
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
               <T>
-                Connecting buyers with verified jewellers across Nepal, India,
-                Dubai, USA & UK.
+                Orivraa is a SaaS platform and marketplace connecting buyers with verified jewellers across Nepal, India, Dubai, USA & UK for ready-made and custom jewelry orders.
               </T>
             </p>
             {/* Social Links */}

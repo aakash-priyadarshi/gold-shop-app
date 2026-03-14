@@ -13,16 +13,18 @@ const DynamicFooter = dynamic(
       default: m.DynamicFooter,
     })),
   {
-    ssr: false,
     loading: () => (
       <div className="bg-gray-900 border-t border-gray-800 text-gray-500 py-8 text-center text-sm">
-        <div className="flex justify-center gap-6">
-          <Link href="/privacy" className="hover:text-gold-400">
-            Privacy Policy
-          </Link>
-          <Link href="/terms" className="hover:text-gold-400">
-            Terms of Service
-          </Link>
+        <div className="flex justify-center flex-col md:flex-row gap-6">
+          <p>Orivraa is a SaaS platform connecting verified local jewellers with customers for ready-made & custom jewelry orders.</p>
+          <div className="flex justify-center gap-6 mt-4 md:mt-0">
+            <Link href="/privacy" className="hover:text-gold-400">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-gold-400">
+              Terms of Service
+            </Link>
+          </div>
         </div>
       </div>
     ),
