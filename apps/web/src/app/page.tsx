@@ -53,6 +53,29 @@ export default function HomePage() {
           <HeroSection videoSrc={videoSrc} />
 
           <HomeSections />
+
+          {/* Server-rendered section for SEO & OAuth verification crawlers */}
+          <section className="bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 py-10">
+            <div className="container mx-auto px-4 max-w-3xl text-center">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+                About Orivraa
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">
+                Orivraa is a SaaS marketplace platform that connects customers with verified local
+                jewellers across Nepal, India, Dubai, USA &amp; UK. Browse ready-made gold, silver
+                &amp; diamond pieces, request custom jewellery designs, receive competitive quotes,
+                and track your orders — all in one secure platform.
+              </p>
+              <div className="flex justify-center gap-6 text-sm">
+                <Link href="/privacy" className="text-gold-600 hover:text-gold-700 underline">
+                  Privacy Policy
+                </Link>
+                <Link href="/terms" className="text-gold-600 hover:text-gold-700 underline">
+                  Terms of Service
+                </Link>
+              </div>
+            </div>
+          </section>
         </main>
 
         <DynamicFooter />
