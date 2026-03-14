@@ -270,6 +270,9 @@ importers:
       "@google/generative-ai":
         specifier: ^0.24.1
         version: 0.24.1
+      "@nestjs/bullmq":
+        specifier: ^10.0.0
+        version: 10.2.3(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(bullmq@5.71.0)
       "@nestjs/common":
         specifier: ^10.3.0
         version: 10.4.20(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -315,6 +318,9 @@ importers:
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
+      bullmq:
+        specifier: ^5.0.0
+        version: 5.71.0
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1993,6 +1999,16 @@ packages:
       "@nestjs/common": ^8.0.0 || ^9.0.0 || ^10.0.0
       "@nestjs/core": ^8.0.0 || ^9.0.0 || ^10.0.0
       bull: ^3.3 || ^4.0.0
+
+  "@nestjs/bullmq@10.2.3":
+    resolution:
+      {
+        integrity: sha512-Lo4W5kWD61/246Y6H70RNgV73ybfRbZyKKS4CBRDaMELpxgt89O+EgYZUB4pdoNrWH16rKcaT0AoVsB/iDztKg==,
+      }
+    peerDependencies:
+      "@nestjs/common": ^8.0.0 || ^9.0.0 || ^10.0.0
+      "@nestjs/core": ^8.0.0 || ^9.0.0 || ^10.0.0
+      bullmq: ^3.0.0 || ^4.0.0 || ^5.0.0
 
   "@nestjs/cli@10.4.9":
     resolution:
@@ -5172,6 +5188,12 @@ packages:
       }
     engines: { node: ">=12" }
 
+  bullmq@5.71.0:
+    resolution:
+      {
+        integrity: sha512-aeNWh4drsafSKnAJeiNH/nZP/5O8ZdtdMbnOPZmpjXj7NZUP5YC901U3bIH41iZValm7d1i3c34ojv7q31m30w==,
+      }
+
   busboy@1.6.0:
     resolution:
       {
@@ -7431,6 +7453,13 @@ packages:
       }
     engines: { node: ">=12.22.0" }
 
+  ioredis@5.9.3:
+    resolution:
+      {
+        integrity: sha512-VI5tMCdeoxZWU5vjHWsiE/Su76JGhBvWF1MJnV9ZtGltHk9BmD48oDq8Tj8haZ85aceXZMxLNDQZRVo5QKNgXA==,
+      }
+    engines: { node: ">=12.22.0" }
+
   ip-address@10.1.0:
     resolution:
       {
@@ -8696,6 +8725,12 @@ packages:
         integrity: sha512-P0efT1C9jIdVRefqjzOQ9Xml57zpOXnIuS+csaB4MdZbTdmGDLo8XhzBG1N7aO11gKDDkJvBLULeFTo46wwreA==,
       }
     hasBin: true
+
+  msgpackr@1.11.5:
+    resolution:
+      {
+        integrity: sha512-UjkUHN0yqp9RWKy0Lplhh+wlpdt9oQBYgULZOiFhV3VclSF1JnSQWZ5r9gORQlNYaUKQoR8itv7g7z1xDDuACA==,
+      }
 
   msgpackr@1.11.8:
     resolution:
@@ -10186,6 +10221,14 @@ packages:
     engines: { node: ">=10" }
     hasBin: true
 
+  semver@7.7.4:
+    resolution:
+      {
+        integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==,
+      }
+    engines: { node: ">=10" }
+    hasBin: true
+
   send@0.19.0:
     resolution:
       {
@@ -11327,6 +11370,13 @@ packages:
     resolution:
       {
         integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==,
+      }
+    hasBin: true
+
+  uuid@11.1.0:
+    resolution:
+      {
+        integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==,
       }
     hasBin: true
 
@@ -12804,6 +12854,14 @@ snapshots:
       "@nestjs/common": 10.4.20(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       "@nestjs/core": 10.4.20(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@10.4.20)(@nestjs/websockets@10.4.22)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       bull: 4.16.5
+      tslib: 2.8.1
+
+  "@nestjs/bullmq@10.2.3(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(bullmq@5.71.0)":
+    dependencies:
+      "@nestjs/bull-shared": 10.2.3(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)
+      "@nestjs/common": 10.4.20(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      "@nestjs/core": 10.4.20(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@10.4.20)(@nestjs/websockets@10.4.22)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      bullmq: 5.71.0
       tslib: 2.8.1
 
   "@nestjs/cli@10.4.9":
@@ -15052,6 +15110,18 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  bullmq@5.71.0:
+    dependencies:
+      cron-parser: 4.9.0
+      ioredis: 5.9.3
+      msgpackr: 1.11.5
+      node-abort-controller: 3.1.1
+      semver: 7.7.4
+      tslib: 2.8.1
+      uuid: 11.1.0
+    transitivePeerDependencies:
+      - supports-color
+
   busboy@1.6.0:
     dependencies:
       streamsearch: 1.1.0
@@ -16617,6 +16687,20 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  ioredis@5.9.3:
+    dependencies:
+      "@ioredis/commands": 1.5.0
+      cluster-key-slot: 1.1.2
+      debug: 4.4.3
+      denque: 2.1.0
+      lodash.defaults: 4.2.0
+      lodash.isarguments: 3.1.0
+      redis-errors: 1.2.0
+      redis-parser: 3.0.0
+      standard-as-callback: 2.1.0
+    transitivePeerDependencies:
+      - supports-color
+
   ip-address@10.1.0: {}
 
   ipaddr.js@1.9.1: {}
@@ -17514,6 +17598,10 @@ snapshots:
       "@msgpackr-extract/msgpackr-extract-linux-x64": 3.0.3
       "@msgpackr-extract/msgpackr-extract-win32-x64": 3.0.3
     optional: true
+
+  msgpackr@1.11.5:
+    optionalDependencies:
+      msgpackr-extract: 3.0.3
 
   msgpackr@1.11.8:
     optionalDependencies:
@@ -18429,6 +18517,8 @@ snapshots:
 
   semver@7.7.3: {}
 
+  semver@7.7.4: {}
+
   send@0.19.0:
     dependencies:
       debug: 2.6.9
@@ -19237,6 +19327,8 @@ snapshots:
   utils-merge@1.0.1: {}
 
   uuid@10.0.0: {}
+
+  uuid@11.1.0: {}
 
   uuid@8.3.2: {}
 

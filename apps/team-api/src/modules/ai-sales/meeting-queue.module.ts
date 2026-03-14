@@ -19,20 +19,32 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
         const redisUrl = config.get<string>("REDIS_URL");
-        if (redisUrl) {
-          const url = new URL(redisUrl);
-          return {
-            connection: {
-              host: url.hostname,
-              port: parseInt(url.port) || 6379,
-              password: url.password || undefined,
-              tls: url.protocol === "rediss:" ? {} : undefined,
-            },
-          };
+        
+        try {
+          if (redisUrl && redisUrl.trim().length > 0) {
+            const url = new URL(redisUrl);
+            return {
+              connection: {
+                host: url.hostname,
+                port: parseInt(url.port) || 6379,
+                password: url.password || undefined,
+                tls: url.protocol === "rediss:" ? {} : undefined,
+              },
+            };
+          }
+        } catch (err) {
+          console.warn(
+            `Failed to parse REDIS_URL: ${redisUrl}. Falling back to individual vars...`,
+          );
         }
-        // Fallback to localhost for local dev
+
+        // Fallback to individual variables or localhost for local dev
         return {
-          connection: { host: "localhost", port: 6379 },
+          connection: {
+            host: config.get<string>("REDIS_HOST") || "localhost",
+            port: parseInt(config.get<string>("REDIS_PORT") || "6379"),
+            password: config.get<string>("REDIS_PASSWORD"),
+          },
         };
       },
     }),
