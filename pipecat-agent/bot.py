@@ -259,10 +259,14 @@ async def bot(runner_args: RunnerArguments):
         "daily": lambda: DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
+            audio_in_sample_rate=16000,
+            audio_out_sample_rate=24000,
         ),
         "webrtc": lambda: TransportParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
+            audio_in_sample_rate=16000,
+            audio_out_sample_rate=24000,
         ),
     }
 
