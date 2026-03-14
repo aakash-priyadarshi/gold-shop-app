@@ -31,6 +31,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     chromium \
     xvfb \
     pulseaudio \
+    ffmpeg \
     fonts-noto-color-emoji \
     fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*

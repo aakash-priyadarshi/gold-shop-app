@@ -522,6 +522,8 @@ export const googleBotApi = {
   getStatus: () => api.get("/ai-sales/google/bot-status"),
   disconnect: () => api.post("/ai-sales/google/disconnect"),
   refreshCookies: () => api.post("/ai-sales/google/refresh-cookies"),
+  createMeeting: (agentId: string, summary?: string) =>
+    api.post("/ai-sales/google/create-meeting", { agentId, summary }),
 };
 
 // ─── Health ───

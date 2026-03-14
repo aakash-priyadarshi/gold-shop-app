@@ -955,6 +955,22 @@ export class AIAgentController {
     };
   }
 
+  @Get("playground/meet-screenshot/:sessionId")
+  @Roles("ADMIN")
+  async playgroundMeetScreenshot(@Param("sessionId") sessionId: string) {
+    const screenshot = await this.meetBot.getScreenshot(sessionId);
+    if (!screenshot) return { error: "No screenshot available" };
+    return { screenshot }; // base64 PNG
+  }
+
+  @Get("playground/meet-debug/:sessionId")
+  @Roles("ADMIN")
+  async playgroundMeetDebug(@Param("sessionId") sessionId: string) {
+    const debug = await this.meetBot.getPageDebugInfo(sessionId);
+    if (!debug) return { error: "Session not found or page closed" };
+    return debug;
+  }
+
   /* ─── GOOGLE OAUTH FOR MEET BOT ─── */
 
   @Get("google/auth-url")
@@ -974,6 +990,7 @@ export class AIAgentController {
         "openid",
         "https://www.googleapis.com/auth/userinfo.email",
         "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/calendar.events",
       ],
       state: "meet-bot-connect",
     });
@@ -1064,14 +1081,23 @@ export class AIAgentController {
     return { success: true };
   }
 
+  /** @deprecated Cookie-based auth removed. Meetings are now created via Calendar API. */
   @Post("google/refresh-cookies")
   @Roles("ADMIN")
   async refreshGoogleCookies() {
+    return { success: false, message: "Cookie-based auth has been removed. Use createMeeting() via Calendar API instead." };
+  }
+
+  @Post("google/create-meeting")
+  @Roles("ADMIN")
+  async createGoogleMeeting(
+    @Body() body: { agentId: string; summary?: string },
+  ) {
     try {
-      await this.meetBot.refreshSessionCookies();
-      return { success: true, message: "Session cookies refreshed" };
+      const result = await this.meetBot.createMeeting(body.agentId, body.summary);
+      return result;
     } catch (err: any) {
-      throw new HttpException(`Failed to refresh cookies: ${err.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(err.message || "Failed to create meeting", HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { googleBotApi, settingsApi } from "@/lib/api";
-import { CheckCircle, ExternalLink, LogOut, RefreshCw, Save } from "lucide-react";
+import { CheckCircle, ExternalLink, LogOut, Save } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -94,16 +94,6 @@ export default function SettingsPage() {
       toast.success("Google account disconnected");
     } catch {
       toast.error("Failed to disconnect");
-    }
-  };
-
-  const handleRefreshCookies = async () => {
-    try {
-      await googleBotApi.refreshCookies();
-      await loadBotStatus();
-      toast.success("Session cookies refreshed");
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to refresh cookies");
     }
   };
 
@@ -237,7 +227,7 @@ export default function SettingsPage() {
             <div>
               <h4 className="text-sm font-medium mb-2">Google Meet Bot Account</h4>
               <p className="text-xs text-muted-foreground mb-4">
-                Connect a Google account so the AI bot can join Google Meet as an authenticated user (supports passkeys & 2FA).
+                Connect a Google account so the AI bot can create & join Google Meet meetings via Calendar API.
               </p>
               {botStatus.connected ? (
                 <div className="space-y-3">
@@ -248,17 +238,12 @@ export default function SettingsPage() {
                       <p className="text-xs text-green-600 dark:text-green-400">{botStatus.email}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={handleRefreshCookies} title="Refresh browser session">
-                        <RefreshCw className="h-3 w-3 mr-1" /> Refresh
-                      </Button>
                       <Button size="sm" variant="destructive" onClick={handleDisconnectGoogle}>
                         <LogOut className="h-3 w-3 mr-1" /> Disconnect
                       </Button>
                     </div>
                   </div>
-                  {botStatus.hasCachedCookies && (
-                    <p className="text-xs text-muted-foreground">✓ Browser session cookies are cached for fast joins</p>
-                  )}
+                  <p className="text-xs text-muted-foreground">✓ Bot can create Google Meet meetings via Calendar API</p>
                 </div>
               ) : (
                 <Button onClick={handleConnectGoogle} disabled={connectingGoogle}>
