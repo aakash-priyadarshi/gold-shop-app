@@ -1117,6 +1117,17 @@ export class AIAgentController {
     return { success: true, message: `Saved ${body.cookies.length} cookies. The Meet bot will use them when joining meetings.` };
   }
 
+  @Post("google/login-bot")
+  @Roles("ADMIN")
+  async loginBot() {
+    try {
+      const result = await this.meetBot.loginAndSaveProfile();
+      return result;
+    } catch (err: any) {
+      return { success: false, message: err.message || "Login failed" };
+    }
+  }
+
   @Post("google/create-meeting")
   @Roles("ADMIN")
   async createGoogleMeeting(

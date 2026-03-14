@@ -44,6 +44,7 @@ export class GoogleMeetBotService {
   private readonly logger = new Logger(GoogleMeetBotService.name);
   private sessions = new Map<string, MeetSession>();
   private pulseAudioReady = false;
+  private readonly profileDir: string;
 
   constructor(
     private config: ConfigService,
@@ -53,7 +54,13 @@ export class GoogleMeetBotService {
     private preCallBrain: PreCallBrainService,
     private prisma: PrismaService,
     private interactions: LeadInteractionService,
-  ) {}
+  ) {
+    // Persistent Chrome profile directory — survives restarts
+    this.profileDir = path.resolve(process.cwd(), "google-meet-profile");
+    if (!fs.existsSync(this.profileDir)) {
+      fs.mkdirSync(this.profileDir, { recursive: true });
+    }
+  }
 
   /** Create a Google Meet via Calendar API — bot is organizer so guests join without knocking */
   async createMeeting(agentId: string, summary?: string): Promise<{ meetUrl: string; eventId: string }> {
@@ -510,6 +517,138 @@ export class GoogleMeetBotService {
     }).filter((c) => c.name && c.value && c.domain);
   }
 
+  /** Check if the persistent profile is logged into Google */
+  private async checkGoogleLoginStatus(page: Page, session?: MeetSession): Promise<boolean> {
+    try {
+      await page.goto("https://myaccount.google.com", { waitUntil: "networkidle2", timeout: 15000 });
+      const url = page.url();
+      const loggedIn = !url.includes("accounts.google.com/v3/signin") &&
+                       !url.includes("ServiceLogin") &&
+                       !url.includes("identifier");
+      if (session) {
+        this.addLog(session, "info", loggedIn ? "Google profile is authenticated ✓" : "Google profile is NOT authenticated");
+      }
+      return loggedIn;
+    } catch {
+      return false;
+    }
+  }
+
+  /** 
+   * Launch a browser with the persistent profile and establish a Google session.
+   * Uses the existing OAuth connection (refresh token) to navigate through Google
+   * and let the browser pick up session cookies naturally.
+   */
+  async loginAndSaveProfile(): Promise<{ success: boolean; message: string }> {
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+
+    // Get OAuth credentials and stored data
+    const settings = (await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } })) as any;
+    const refreshToken = settings?.googleMeetBotRefreshToken;
+    const botEmail = settings?.googleMeetBotAccountEmail;
+    const clientId = this.config.get<string>("GOOGLE_CLIENT_ID");
+    const clientSecret = this.config.get<string>("GOOGLE_CLIENT_SECRET");
+    const storedCookies = settings?.googleMeetBotCookies;
+
+    const browser = await puppeteer.default.launch({
+      headless: true,
+      executablePath,
+      userDataDir: this.profileDir,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ],
+    });
+
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1280, height: 720 });
+
+      // Strategy 1: If we have stored cookies, seed them first
+      if (storedCookies && Array.isArray(storedCookies) && storedCookies.length > 0) {
+        const puppeteerCookies = this.normalizeCookies(storedCookies);
+        await page.setCookie(...puppeteerCookies);
+        this.logger.log(`Seeded ${puppeteerCookies.length} cookies into profile`);
+      }
+
+      // Strategy 2: Use OAuth to navigate through Google's auth flow
+      // This establishes the full browser session in the persistent profile
+      if (refreshToken && clientId && clientSecret && botEmail) {
+        this.logger.log("Attempting OAuth-based session establishment...");
+
+        // Build OAuth consent URL — login_hint pre-fills the email,
+        // and since the user already authorized this app, Google may auto-approve
+        const redirectUri = `${this.config.get<string>("WEBHOOK_BASE_URL") || "http://localhost:3002"}/api/ai-sales/google/callback`;
+        const scopes = "openid email profile https://www.googleapis.com/auth/calendar";
+        const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+          `client_id=${encodeURIComponent(clientId)}` +
+          `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+          `&response_type=code` +
+          `&scope=${encodeURIComponent(scopes)}` +
+          `&access_type=offline` +
+          `&login_hint=${encodeURIComponent(botEmail)}` +
+          `&prompt=none`;
+
+        // Navigate through OAuth — Google may set session cookies during this flow  
+        await page.goto(oauthUrl, { waitUntil: "networkidle2", timeout: 25000 }).catch(() => {});
+        await this.delay(3000);
+
+        // Even if OAuth redirected to an error page, the browser may have picked up cookies
+        // Now navigate across Google services to propagate the session
+        const googleServices = [
+          "https://accounts.google.com",
+          "https://myaccount.google.com", 
+          "https://meet.google.com",
+        ];
+
+        for (const url of googleServices) {
+          await page.goto(url, { waitUntil: "networkidle2", timeout: 15000 }).catch(() => {});
+          await this.delay(1500);
+        }
+      } else {
+        // No OAuth — just navigate with whatever cookies we have
+        const googleServices = [
+          "https://accounts.google.com",
+          "https://mail.google.com",
+          "https://meet.google.com",
+        ];
+        for (const url of googleServices) {
+          await page.goto(url, { waitUntil: "networkidle2", timeout: 20000 }).catch(() => {});
+          await this.delay(2000);
+        }
+      }
+
+      // Final check: are we logged in?
+      const isLoggedIn = await this.checkGoogleLoginStatus(page);
+
+      // Also check Meet specifically
+      await page.goto("https://meet.google.com", { waitUntil: "networkidle2", timeout: 15000 }).catch(() => {});
+      const meetUrl = page.url();
+      const meetAuthenticated = !meetUrl.includes("accounts.google.com") && !meetUrl.includes("ServiceLogin");
+
+      await browser.close();
+
+      if (isLoggedIn && meetAuthenticated) {
+        return { success: true, message: "Google session saved! The bot will now join meetings as an authenticated user." };
+      } else if (isLoggedIn && !meetAuthenticated) {
+        return { 
+          success: false, 
+          message: "Google account works but Meet still requires sign-in. Your Workspace may have extra security policies. Try exporting cookies specifically from meet.google.com using Cookie-Editor Chrome extension."
+        };
+      } else {
+        return { 
+          success: false, 
+          message: "Could not establish Google session. Make sure your Google account is connected via OAuth in Settings, and/or paste fresh cookies exported from meet.google.com."
+        };
+      }
+    } catch (err: any) {
+      await browser.close().catch(() => {});
+      return { success: false, message: `Login failed: ${err.message}` };
+    }
+  }
+
   /** Set up PulseAudio virtual sink for bot microphone input */
   private async setupPulseAudio(): Promise<void> {
     if (this.pulseAudioReady) return;
@@ -538,6 +677,7 @@ export class GoogleMeetBotService {
     const browser = await puppeteer.default.launch({
       headless: true,
       executablePath,
+      userDataDir: this.profileDir,       // ← Persist full Chrome profile (cookies, localStorage, IndexedDB)
       args: [
         "--use-fake-ui-for-media-stream",     // Auto-accept mic/camera permissions
         "--disable-notifications",
@@ -557,37 +697,31 @@ export class GoogleMeetBotService {
 
     await page.setViewport({ width: 1280, height: 720 });
 
-    // ── Inject stored Google session cookies so the bot is authenticated ──
-    try {
-      const settings = (await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } })) as any;
-      const storedCookies = settings?.googleMeetBotCookies;
-      if (storedCookies && Array.isArray(storedCookies) && storedCookies.length > 0) {
-        // Convert EditThisCookie / other formats to Puppeteer-compatible cookies
-        const puppeteerCookies = this.normalizeCookies(storedCookies);
-        // Set cookies directly on the browser context (no navigation needed)
-        await page.setCookie(...puppeteerCookies);
-        this.addLog(session, "info", `Injected ${puppeteerCookies.length} Google session cookies`);
+    // ── Ensure the persistent profile is authenticated ──
+    const isLoggedIn = await this.checkGoogleLoginStatus(page, session);
 
-        // Verify login by navigating to myaccount.google.com
-        await page.goto("https://myaccount.google.com", { waitUntil: "networkidle2", timeout: 15000 });
-        const loggedIn = await page.evaluate(() => {
-          const url = window.location.href;
-          // If redirected to sign-in page, cookies didn't work
-          return !url.includes("accounts.google.com/v3/signin") && !url.includes("ServiceLogin");
-        }).catch(() => false);
-
-        if (loggedIn) {
-          this.addLog(session, "info", "Google login verified — bot is authenticated");
+    if (!isLoggedIn) {
+      // Profile not authenticated yet — try seeding it with stored cookies
+      try {
+        const settings = (await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } })) as any;
+        const storedCookies = settings?.googleMeetBotCookies;
+        if (storedCookies && Array.isArray(storedCookies) && storedCookies.length > 0) {
+          const puppeteerCookies = this.normalizeCookies(storedCookies);
+          await page.setCookie(...puppeteerCookies);
+          this.addLog(session, "info", `Seeded profile with ${puppeteerCookies.length} cookies — checking login...`);
+          // Re-check after seeding
+          const seededLogin = await this.checkGoogleLoginStatus(page, session);
+          if (!seededLogin) {
+            this.addLog(session, "error",
+              "Profile not authenticated. Please run the Login Session from Settings to log the bot into Google once.");
+          }
         } else {
-          this.addLog(session, "error",
-            "Cookies were injected but Google still requires sign-in. " +
-            "The cookies may be expired. Re-export fresh cookies from Chrome (accounts.google.com) and save them in Settings.");
+          this.addLog(session, "info",
+            "Profile not authenticated and no cookies stored. Use the Login Session button in Settings to authenticate the bot.");
         }
-      } else {
-        this.addLog(session, "info", "No Google session cookies found — joining as guest. Save cookies in Settings to authenticate.");
+      } catch (err: any) {
+        this.addLog(session, "info", `Cookie seeding failed: ${err.message}`);
       }
-    } catch (err: any) {
-      this.addLog(session, "info", `Cookie injection skipped: ${err.message}`);
     }
 
     this.addLog(session, "info", "Navigating to Google Meet...");

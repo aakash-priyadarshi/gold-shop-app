@@ -297,8 +297,32 @@ export default function SettingsPage() {
                 <Save className="h-3 w-3 mr-1" /> Save Cookies
               </Button>
               {botStatus.hasCachedCookies && (
-                <p className="text-xs text-green-600 mt-2">✓ Session cookies are stored — bot will authenticate when joining meetings</p>
+                <p className="text-xs text-green-600 mt-2">✓ Session cookies are stored</p>
               )}
+              <div className="mt-3 pt-3 border-t border-dashed">
+                <p className="text-xs text-muted-foreground mb-2">
+                  After saving cookies (or if you have OAuth connected), click below to establish the bot&apos;s browser session:
+                </p>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    toast.info("Logging bot into Google... This may take 30 seconds.");
+                    try {
+                      const res = await googleBotApi.loginBot();
+                      const data = res.data as any;
+                      if (data.success) {
+                        toast.success(data.message);
+                      } else {
+                        toast.error(data.message);
+                      }
+                    } catch (err: any) {
+                      toast.error(err.response?.data?.message || "Login failed");
+                    }
+                  }}
+                >
+                  🔐 Login Bot to Google
+                </Button>
+              </div>
             </div>
             <div className="pt-4 border-t">
               <h4 className="text-sm font-medium mb-2">AI Sales Email</h4>

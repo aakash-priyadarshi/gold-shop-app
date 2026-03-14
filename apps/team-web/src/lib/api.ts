@@ -524,6 +524,7 @@ export const googleBotApi = {
   getStatus: () => api.get("/ai-sales/google/bot-status"),
   disconnect: () => api.post("/ai-sales/google/disconnect"),
   refreshCookies: (cookies: any[]) => api.post("/ai-sales/google/refresh-cookies", { cookies }),
+  loginBot: () => api.post("/ai-sales/google/login-bot"),
   createMeeting: (agentId: string, summary?: string) =>
     api.post("/ai-sales/google/create-meeting", { agentId, summary }),
 };
