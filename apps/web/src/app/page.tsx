@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/header";
 import { resolveHeroVideo } from "@/lib/geo";
 import dynamic from "next/dynamic";
 import { headers } from "next/headers";
+import Link from "next/link";
 
 // Lazy-load below-the-fold footer
 const DynamicFooter = dynamic(
@@ -11,7 +12,21 @@ const DynamicFooter = dynamic(
     import("@/components/layout/DynamicFooter").then((m) => ({
       default: m.DynamicFooter,
     })),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-gray-900 border-t border-gray-800 text-gray-500 py-8 text-center text-sm">
+        <div className="flex justify-center gap-6">
+          <Link href="/privacy" className="hover:text-gold-400">
+            Privacy Policy
+          </Link>
+          <Link href="/terms" className="hover:text-gold-400">
+            Terms of Service
+          </Link>
+        </div>
+      </div>
+    ),
+  },
 );
 
 export default function HomePage() {
