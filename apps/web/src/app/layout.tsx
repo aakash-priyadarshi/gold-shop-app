@@ -224,6 +224,22 @@ export default function RootLayout({
       <body
         className={`${inter.className} antialiased bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100`}
       >
+        {/* Fallback for crawlers/bots that don't execute JS */}
+        <noscript>
+          <div style={{ padding: "40px 20px", maxWidth: "800px", margin: "0 auto", textAlign: "center", fontFamily: "system-ui, sans-serif" }}>
+            <h1 style={{ fontSize: "24px", marginBottom: "16px" }}>Orivraa — Premium Jewellery Marketplace</h1>
+            <p style={{ fontSize: "14px", color: "#555", lineHeight: "1.6", marginBottom: "16px" }}>
+              Orivraa is a SaaS marketplace platform that connects customers with verified local
+              jewellers across Nepal, India, Dubai, USA &amp; UK. Browse ready-made gold, silver
+              &amp; diamond pieces, request custom jewellery designs, receive competitive quotes,
+              and track your orders — all in one secure platform.
+            </p>
+            <div style={{ display: "flex", justifyContent: "center", gap: "24px", fontSize: "14px" }}>
+              <a href="/privacy" style={{ color: "#B8941F" }}>Privacy Policy</a>
+              <a href="/terms" style={{ color: "#B8941F" }}>Terms of Service</a>
+            </div>
+          </div>
+        </noscript>
         <Providers>
           <InitialLoadScreen>
             <GeoMismatchBanner />

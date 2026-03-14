@@ -31,10 +31,9 @@ export default function InitialLoadScreen({
   return (
     <>
       {showOverlay && <OrivraaLoader />}
-      {/* Hide underlying content while overlay is active to prevent flash */}
-      <div style={showOverlay ? { visibility: "hidden" } : undefined}>
-        {children}
-      </div>
+      {/* Content remains in the DOM (no visibility:hidden) so crawlers/bots can
+          read it. The fixed-position overlay visually covers it via z-index. */}
+      {children}
     </>
   );
 }
