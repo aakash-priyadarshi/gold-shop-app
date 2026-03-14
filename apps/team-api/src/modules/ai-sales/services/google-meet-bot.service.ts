@@ -860,7 +860,7 @@ export class GoogleMeetBotService {
       }
     };
 
-    parec.stdout.on("data", (data: Buffer) => {
+    parec.stdout!.on("data", (data: Buffer) => {
       if (session.status === "ended") return;
       audioBuffer = Buffer.concat([audioBuffer, data]);
 
@@ -935,7 +935,7 @@ export class GoogleMeetBotService {
         Authorization: `Token ${apiKey}`,
         "Content-Type": "audio/raw;encoding=linear16;sample_rate=16000;channels=1",
       },
-      body: audioBuffer,
+      body: new Uint8Array(audioBuffer),
     });
     if (!response.ok) return "";
     const result = (await response.json()) as any;
@@ -961,8 +961,8 @@ export class GoogleMeetBotService {
     parec: ReturnType<typeof spawn>,
     deepgramApiKey: string,
   ) {
-    const sdk = await import("@deepgram/sdk");
-    const createFn = sdk.createClient || (sdk as any).default?.createClient;
+    const sdk = await import("@deepgram/sdk") as any;
+    const createFn = sdk.createClient || sdk.default?.createClient;
     if (!createFn) {
       this.addLog(session, "error", "Could not find Deepgram createClient function");
       session.status = "error";
@@ -1007,7 +1007,7 @@ export class GoogleMeetBotService {
       }
     });
 
-    parec.stdout.on("data", (chunk: Buffer) => {
+    parec.stdout!.on("data", (chunk: Buffer) => {
       if (session.status !== "ended") {
         try { connection.send(chunk); } catch { /* closing */ }
       }
