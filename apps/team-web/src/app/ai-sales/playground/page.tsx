@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { aiSalesApi } from "@/lib/api";
+import { aiSalesApi, googleBotApi } from "@/lib/api";
 import {
     AlertTriangle,
     ArrowLeft, Bot, CheckCircle2, Loader2, Mic, MicOff,
@@ -98,6 +98,7 @@ export default function PlaygroundPage() {
   const [meetLogs, setMeetLogs] = useState<{ time: number; type: string; message: string }[]>([]);
   const [meetTranscript, setMeetTranscript] = useState<{ role: string; content: string; timestamp: number }[]>([]);
   const meetLogsEndRef = useRef<HTMLDivElement>(null);
+  const [isCreatingMeet, setIsCreatingMeet] = useState(false);
 
   // ── Email mode ──
   const [emailPurpose, setEmailPurpose] = useState("");
@@ -861,8 +862,32 @@ export default function PlaygroundPage() {
 
               <div className="flex items-center gap-4">
                 {!meetActive ? (
-                  <Button
-                    onClick={async () => {
+                  <>
+                    <Button
+                      onClick={async () => {
+                        if (!selectedAgentId) return;
+                        try {
+                          setIsCreatingMeet(true);
+                          const res = await googleBotApi.createMeeting(selectedAgentId, "Orivraa AI Testing");
+                          const data = res.data as any;
+                          setMeetUrl(data.meetUrl);
+                          toast.success("Meeting created! Click Join Meeting to let the bot in.");
+                        } catch (err: any) {
+                          toast.error(err?.response?.data?.message || "Failed to create meeting. Is Google connected in Settings?");
+                        } finally {
+                          setIsCreatingMeet(false);
+                        }
+                      }}
+                      disabled={isCreatingMeet || !selectedAgentId}
+                      variant="outline"
+                      className="gap-2"
+                      size="lg"
+                    >
+                      {isCreatingMeet ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      Create Meeting
+                    </Button>
+                    <Button
+                      onClick={async () => {
                       if (!meetUrl.trim() || !selectedAgentId) return;
                       try {
                         setMeetActive(true);
@@ -890,6 +915,7 @@ export default function PlaygroundPage() {
                     <Video className="h-4 w-4" />
                     Join Meeting
                   </Button>
+                  </>
                 ) : (
                   <Button
                     onClick={async () => {
