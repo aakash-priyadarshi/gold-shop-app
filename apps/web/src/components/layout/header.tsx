@@ -4,40 +4,40 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
 } from "@/components/ui/sheet";
 import { T } from "@/components/ui/T";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { BRAND } from "@/config/brand";
 import { useCart } from "@/contexts/CartContext";
@@ -45,42 +45,42 @@ import { getDashboardRoute, useAuth, type UserRole } from "@/hooks/useAuth";
 import { chatApi, notificationsApi, ordersApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
-  COUNTRIES,
-  CURRENCIES,
-  LANGUAGES,
-  usePreferencesStore,
-  type CountryCode,
-  type CurrencyCode,
-  type Language,
+    COUNTRIES,
+    CURRENCIES,
+    LANGUAGES,
+    usePreferencesStore,
+    type CountryCode,
+    type CurrencyCode,
+    type Language,
 } from "@/store/preferences";
 import {
-  ArrowRightOnRectangleIcon,
-  Bars3Icon,
-  BellIcon,
-  BookOpenIcon,
-  BuildingOffice2Icon,
-  BuildingStorefrontIcon,
-  ChatBubbleLeftRightIcon,
-  ChevronRightIcon,
-  ClipboardDocumentListIcon,
-  Cog6ToothIcon,
-  ComputerDesktopIcon,
-  CreditCardIcon,
-  CubeIcon,
-  CurrencyDollarIcon,
-  DocumentTextIcon,
-  GlobeAltIcon,
-  HeartIcon,
-  InformationCircleIcon,
-  MapPinIcon,
-  ShieldCheckIcon,
-  ShoppingBagIcon,
-  ShoppingCartIcon,
-  SparklesIcon,
-  Squares2X2Icon,
-  TrashIcon,
-  TruckIcon,
-  UserIcon,
+    ArrowRightOnRectangleIcon,
+    Bars3Icon,
+    BellIcon,
+    BookOpenIcon,
+    BuildingOffice2Icon,
+    BuildingStorefrontIcon,
+    ChatBubbleLeftRightIcon,
+    ChevronRightIcon,
+    ClipboardDocumentListIcon,
+    Cog6ToothIcon,
+    ComputerDesktopIcon,
+    CreditCardIcon,
+    CubeIcon,
+    CurrencyDollarIcon,
+    DocumentTextIcon,
+    GlobeAltIcon,
+    HeartIcon,
+    InformationCircleIcon,
+    MapPinIcon,
+    ShieldCheckIcon,
+    ShoppingBagIcon,
+    ShoppingCartIcon,
+    SparklesIcon,
+    Squares2X2Icon,
+    TrashIcon,
+    TruckIcon,
+    UserIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -381,6 +381,18 @@ export function Header() {
       href: "/about",
       icon: InformationCircleIcon,
       desc: "Our story & mission",
+    },
+    {
+      name: "Privacy Policy",
+      href: "/privacy",
+      icon: ShieldCheckIcon,
+      desc: "How we protect your data",
+    },
+    {
+      name: "Terms of Service",
+      href: "/terms",
+      icon: DocumentTextIcon,
+      desc: "Usage terms & conditions",
     },
   ];
 
