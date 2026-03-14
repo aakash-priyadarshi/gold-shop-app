@@ -1102,11 +1102,19 @@ export class AIAgentController {
     return { success: true };
   }
 
-  /** @deprecated Cookie-based auth removed. Meetings are now created via Calendar API. */
+  /** Save Google session cookies so the Meet bot can join external meetings as an authenticated user. */
   @Post("google/refresh-cookies")
   @Roles("ADMIN")
-  async refreshGoogleCookies() {
-    return { success: false, message: "Cookie-based auth has been removed. Use createMeeting() via Calendar API instead." };
+  async refreshGoogleCookies(@Body() body: { cookies: any[] }) {
+    if (!body.cookies || !Array.isArray(body.cookies) || body.cookies.length === 0) {
+      return { success: false, message: "Please provide a non-empty array of cookies." };
+    }
+    await this.prisma.teamSettings.upsert({
+      where: { id: "singleton" },
+      create: { id: "singleton", googleMeetBotCookies: body.cookies as any },
+      update: { googleMeetBotCookies: body.cookies as any },
+    });
+    return { success: true, message: `Saved ${body.cookies.length} cookies. The Meet bot will use them when joining meetings.` };
   }
 
   @Post("google/create-meeting")

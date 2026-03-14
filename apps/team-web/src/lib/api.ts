@@ -523,7 +523,7 @@ export const googleBotApi = {
   getAuthUrl: () => api.get("/ai-sales/google/auth-url"),
   getStatus: () => api.get("/ai-sales/google/bot-status"),
   disconnect: () => api.post("/ai-sales/google/disconnect"),
-  refreshCookies: () => api.post("/ai-sales/google/refresh-cookies"),
+  refreshCookies: (cookies: any[]) => api.post("/ai-sales/google/refresh-cookies", { cookies }),
   createMeeting: (agentId: string, summary?: string) =>
     api.post("/ai-sales/google/create-meeting", { agentId, summary }),
 };

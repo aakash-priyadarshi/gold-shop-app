@@ -514,6 +514,22 @@ export class GoogleMeetBotService {
 
     await page.setViewport({ width: 1280, height: 720 });
 
+    // ── Inject stored Google session cookies so the bot is authenticated ──
+    try {
+      const settings = (await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } })) as any;
+      const storedCookies = settings?.googleMeetBotCookies;
+      if (storedCookies && Array.isArray(storedCookies) && storedCookies.length > 0) {
+        // Navigate to Google domain first so cookies can be set on the correct domain
+        await page.goto("https://accounts.google.com", { waitUntil: "networkidle2", timeout: 15000 }).catch(() => {});
+        await page.setCookie(...storedCookies);
+        this.addLog(session, "info", `Injected ${storedCookies.length} Google session cookies — bot is authenticated`);
+      } else {
+        this.addLog(session, "info", "No Google session cookies found — joining as guest. Save cookies in Settings to authenticate.");
+      }
+    } catch (err: any) {
+      this.addLog(session, "info", `Cookie injection skipped: ${err.message}`);
+    }
+
     this.addLog(session, "info", "Navigating to Google Meet...");
     await page.goto(session.meetUrl, { waitUntil: "networkidle2", timeout: 30000 });
 

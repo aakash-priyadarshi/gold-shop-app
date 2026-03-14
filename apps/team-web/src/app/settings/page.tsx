@@ -253,6 +253,54 @@ export default function SettingsPage() {
               )}
             </div>
             <div className="pt-4 border-t">
+              <h4 className="text-sm font-medium mb-2">Google Session Cookies (for joining invited meetings)</h4>
+              <p className="text-xs text-muted-foreground mb-2">
+                To let the bot join meetings it didn&apos;t create, paste your Google session cookies here.
+                Export them from Chrome using the <strong>EditThisCookie</strong> extension (visit accounts.google.com → export cookies as JSON).
+              </p>
+              <Textarea
+                className="mt-2 font-mono text-xs"
+                rows={5}
+                value={settings._cookieInput ?? ""}
+                onChange={(e) => setSettings({ ...settings, _cookieInput: e.target.value })}
+                placeholder='[{"name":"SID","value":"...","domain":".google.com",...}, ...]'
+              />
+              <Button
+                className="mt-2"
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  const raw = settings._cookieInput?.trim();
+                  if (!raw) {
+                    toast.error("Paste your cookies JSON array first.");
+                    return;
+                  }
+                  try {
+                    const parsed = JSON.parse(raw);
+                    if (!Array.isArray(parsed) || parsed.length === 0) {
+                      toast.error("Cookies must be a non-empty JSON array.");
+                      return;
+                    }
+                    const res = await googleBotApi.refreshCookies(parsed);
+                    const data = res.data as any;
+                    toast.success(data.message || "Cookies saved!");
+                    setSettings({ ...settings, _cookieInput: "" });
+                  } catch (err: any) {
+                    if (err instanceof SyntaxError) {
+                      toast.error("Invalid JSON. Make sure you paste the full array from EditThisCookie.");
+                    } else {
+                      toast.error(err.response?.data?.message || "Failed to save cookies");
+                    }
+                  }
+                }}
+              >
+                <Save className="h-3 w-3 mr-1" /> Save Cookies
+              </Button>
+              {botStatus.hasCachedCookies && (
+                <p className="text-xs text-green-600 mt-2">✓ Session cookies are stored — bot will authenticate when joining meetings</p>
+              )}
+            </div>
+            <div className="pt-4 border-t">
               <h4 className="text-sm font-medium mb-2">AI Sales Email</h4>
               <p className="text-xs text-muted-foreground mb-4">
                 The "From" address used when the AI sends emails. Can be an alias like sales@orivraa.com.
