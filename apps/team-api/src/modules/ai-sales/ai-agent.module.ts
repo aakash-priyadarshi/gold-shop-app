@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { PrismaModule } from "../../prisma/prisma.module";
+import { MeetingQueueModule } from "./meeting-queue.module";
 import { AIAgentController } from "./ai-agent.controller";
 import { AIAgentService } from "./ai-agent.service";
 import { AudioPipelineGateway } from "./gateways/audio-pipeline.gateway";
@@ -19,6 +20,7 @@ import { CallSchedulerDaemonService } from "./services/call-scheduler-daemon.ser
 import { CampaignSchedulerService } from "./services/campaign-scheduler.service";
 import { CentralBrainService } from "./services/central-brain.service";
 import { ConversationBrainService } from "./services/conversation-brain.service";
+import { DailyRoomService } from "./services/daily-room.service";
 import { EmotionEngineService } from "./services/emotion-engine.service";
 import { FollowUpSequencerService } from "./services/follow-up-sequencer.service";
 import { GeminiLiveClient } from "./services/gemini-live.service";
@@ -28,8 +30,13 @@ import { GoogleSTTClient } from "./services/google-stt.service";
 import { InworldTTSClient } from "./services/inworld-tts.service";
 import { LeadInteractionService } from "./services/lead-interaction.service";
 import { LeadScoringService } from "./services/lead-scoring.service";
+import { MeetingBaasService } from "./services/meetingbaas.service";
+import { MeetingNotificationService } from "./services/meeting-notification.service";
+import { MeetingOrchestratorService } from "./services/meeting-orchestrator.service";
+import { MeetingSchedulerService, MeetingReminderProcessor, MeetingLaunchProcessor } from "./services/meeting-scheduler.service";
 import { ModelRouter } from "./services/model-router.service";
 import { ObjectionPlaybookService } from "./services/objection-playbook.service";
+import { PipecatCloudService } from "./services/pipecat-cloud.service";
 import { PostCallProcessor } from "./services/post-call-processor.service";
 import { PreCallBrainService } from "./services/pre-call-brain.service";
 import { SarvamSTTClient } from "./services/sarvam-stt.service";
@@ -38,7 +45,7 @@ import { ThinkingBudgetManager } from "./services/thinking-budget-manager.servic
 import { WebhookService } from "./services/webhook.service";
 
 @Module({
-  imports: [PrismaModule, ConfigModule],
+  imports: [PrismaModule, ConfigModule, MeetingQueueModule],
   providers: [
     AIAgentService,
     ConversationBrainService,
@@ -74,6 +81,14 @@ import { WebhookService } from "./services/webhook.service";
     GoogleMeetBotService,
     LeadInteractionService,
     AiEmailService,
+    DailyRoomService,
+    PipecatCloudService,
+    MeetingOrchestratorService,
+    MeetingBaasService,
+    MeetingNotificationService,
+    MeetingSchedulerService,
+    MeetingReminderProcessor,
+    MeetingLaunchProcessor,
   ],
   controllers: [AIAgentController],
   exports: [AIAgentService, CallOrchestratorService, CentralBrainService, WebhookService, LeadInteractionService, AiEmailService],

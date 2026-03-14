@@ -2,19 +2,19 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { googleBotApi, settingsApi } from "@/lib/api";
 import { CheckCircle, ExternalLink, LogOut, Save } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -351,6 +351,41 @@ export default function SettingsPage() {
                 }
                 placeholder="Welcome to Orivraa! How can I help you today?"
               />
+            </div>
+            <div className="pt-4 border-t">
+              <h4 className="text-sm font-medium mb-2">Meeting Infrastructure API Keys</h4>
+              <p className="text-xs text-muted-foreground mb-4">
+                Configure API keys for Daily.co (video rooms), Pipecat Cloud (AI agent hosting), and MeetingBaas (external meeting bot).
+              </p>
+              <div className="space-y-3">
+                <div>
+                  <Label>Daily.co API Key</Label>
+                  <Input
+                    type="password"
+                    value={settings.dailyApiKey ?? ""}
+                    onChange={(e) => setSettings({ ...settings, dailyApiKey: e.target.value })}
+                    placeholder="Enter Daily.co API key from dashboard.daily.co"
+                  />
+                </div>
+                <div>
+                  <Label>Pipecat Cloud API Key</Label>
+                  <Input
+                    type="password"
+                    value={settings.pipecatCloudApiKey ?? ""}
+                    onChange={(e) => setSettings({ ...settings, pipecatCloudApiKey: e.target.value })}
+                    placeholder="Enter Pipecat Cloud API key from cloud.pipecat.ai"
+                  />
+                </div>
+                <div>
+                  <Label>MeetingBaas API Key</Label>
+                  <Input
+                    type="password"
+                    value={settings.meetingBaasApiKey ?? ""}
+                    onChange={(e) => setSettings({ ...settings, meetingBaasApiKey: e.target.value })}
+                    placeholder="Enter MeetingBaas API key from meetingbaas.com"
+                  />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

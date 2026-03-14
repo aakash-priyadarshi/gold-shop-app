@@ -100,6 +100,13 @@ export default function PlaygroundPage() {
   const meetLogsEndRef = useRef<HTMLDivElement>(null);
   const [isCreatingMeet, setIsCreatingMeet] = useState(false);
 
+  // ── Daily.co + Pipecat meeting mode ──
+  const [dailyRoomUrl, setDailyRoomUrl] = useState("");
+  const [dailyMeetingId, setDailyMeetingId] = useState("");
+  const [dailyActive, setDailyActive] = useState(false);
+  const [dailyStatus, setDailyStatus] = useState("");
+  const [dailyCreating, setDailyCreating] = useState(false);
+
   // ── Email mode ──
   const [emailPurpose, setEmailPurpose] = useState("");
   const [emailDraft, setEmailDraft] = useState<any>(null);
@@ -498,12 +505,15 @@ export default function PlaygroundPage() {
       </Card>
 
       <Tabs defaultValue="diagnostics" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 md:grid-cols-6 h-auto min-h-10">
+        <TabsList className="grid w-full grid-cols-4 md:grid-cols-7 h-auto min-h-10">
           <TabsTrigger value="diagnostics">Service Diagnostics</TabsTrigger>
           <TabsTrigger value="browser">Browser Chat & Voice</TabsTrigger>
           <TabsTrigger value="phone">Phone Call Test</TabsTrigger>
           <TabsTrigger value="meet" className="gap-1">
             <Video className="h-3 w-3" /> Google Meet
+          </TabsTrigger>
+          <TabsTrigger value="video-meeting" className="gap-1">
+            <Video className="h-3 w-3" /> Daily.co Meeting
           </TabsTrigger>
           <TabsTrigger value="email" className="gap-1">
             <Mail className="h-3 w-3" /> Email
@@ -1035,6 +1045,202 @@ export default function PlaygroundPage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── TAB: Daily.co + Pipecat Video Meeting ── */}
+        <TabsContent value="video-meeting" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Video className="h-5 w-5" /> Daily.co + Pipecat Meeting
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Create a Daily.co video room and deploy a Pipecat AI agent into it.
+                The agent uses your configured STT → LLM → TTS pipeline, hosted on Pipecat Cloud.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
+                  <p className="font-medium">How it works:</p>
+                  <ul className="list-disc ml-4 text-xs space-y-0.5">
+                    <li>A Daily.co room is created with your agent as participant</li>
+                    <li>Pipecat Cloud deploys a voice AI agent into the room ($0.01/min)</li>
+                    <li>You join via browser — no app needed</li>
+                    <li>Agent speaks using ElevenLabs TTS, listens via Google STT</li>
+                    <li>Meeting transcript is saved automatically on end</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Selected Agent</Label>
+                  <Input value={selectedAgent?.name || "No agent selected"} disabled />
+                  <p className="text-xs text-muted-foreground mt-1">{selectedAgent?.personalityDescription || "Select an agent above"}</p>
+                </div>
+                <div>
+                  <Label>Room URL</Label>
+                  <Input value={dailyRoomUrl || "Not created yet"} disabled />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {dailyRoomUrl ? "Share this link with anyone to join" : "Click Create to generate a room"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                {!dailyActive ? (
+                  <>
+                    <Button
+                      onClick={async () => {
+                        if (!selectedAgentId) {
+                          toast.error("Select an agent first");
+                          return;
+                        }
+                        try {
+                          setDailyCreating(true);
+                          setDailyStatus("creating room...");
+                          const res = await aiSalesApi.scheduleMeeting({
+                            agentId: selectedAgentId,
+                            scheduledAt: new Date().toISOString(),
+                            title: "Playground Test Meeting",
+                            type: "daily",
+                          });
+                          const data = res.data as any;
+                          setDailyRoomUrl(data.roomUrl);
+                          setDailyMeetingId(data.meetingId);
+                          setDailyStatus("room created");
+                          toast.success("Daily.co room created! Click Launch Agent to deploy the AI.");
+                        } catch (err: any) {
+                          toast.error(err?.response?.data?.message || "Failed to create room. Check Daily.co API key in Settings.");
+                          setDailyStatus("error");
+                        } finally {
+                          setDailyCreating(false);
+                        }
+                      }}
+                      disabled={dailyCreating || !selectedAgentId}
+                      variant="outline"
+                      className="gap-2"
+                      size="lg"
+                    >
+                      {dailyCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      Create Room
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        if (!dailyMeetingId) {
+                          toast.error("Create a room first");
+                          return;
+                        }
+                        try {
+                          setDailyActive(true);
+                          setDailyStatus("launching agent...");
+                          await aiSalesApi.launchMeeting(dailyMeetingId);
+                          setDailyStatus("agent active");
+                          toast.success("Pipecat agent deployed! Join the room to talk to it.");
+                        } catch (err: any) {
+                          toast.error(err?.response?.data?.message || "Failed to launch agent. Check Pipecat Cloud API key.");
+                          setDailyActive(false);
+                          setDailyStatus("error");
+                        }
+                      }}
+                      disabled={!dailyMeetingId || dailyActive}
+                      className="gap-2"
+                      size="lg"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Launch Agent
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={async () => {
+                      try {
+                        await aiSalesApi.cancelMeeting(dailyMeetingId);
+                        toast.info("Meeting ended, agent stopped");
+                      } catch {
+                        // ignore
+                      }
+                      setDailyActive(false);
+                      setDailyStatus("ended");
+                      setDailyRoomUrl("");
+                      setDailyMeetingId("");
+                    }}
+                    variant="destructive"
+                    className="gap-2"
+                    size="lg"
+                  >
+                    <PhoneOff className="h-4 w-4" />
+                    End Meeting
+                  </Button>
+                )}
+
+                {dailyRoomUrl && !dailyActive && dailyStatus === "room created" && (
+                  <a href={dailyRoomUrl} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="lg" className="gap-2">
+                      <Video className="h-4 w-4" />
+                      Open Room
+                    </Button>
+                  </a>
+                )}
+
+                {dailyRoomUrl && dailyActive && (
+                  <a href={dailyRoomUrl} target="_blank" rel="noopener noreferrer">
+                    <Button size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+                      <Video className="h-4 w-4" />
+                      Join & Talk to Agent
+                    </Button>
+                  </a>
+                )}
+
+                {dailyStatus && (
+                  <Badge
+                    variant={
+                      dailyStatus === "agent active" ? "success"
+                        : dailyStatus === "error" || dailyStatus === "ended" ? "destructive"
+                        : "secondary"
+                    }
+                    className="text-sm py-1"
+                  >
+                    {(dailyStatus === "creating room..." || dailyStatus === "launching agent...") && (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    )}
+                    {dailyStatus}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Pipeline visualization */}
+              <div>
+                <p className="text-sm font-medium mb-3">Pipecat Cloud Pipeline</p>
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  {[
+                    { label: "Daily.co Room", desc: "WebRTC audio" },
+                    { label: "→" },
+                    { label: "Google STT", desc: "Speech → text" },
+                    { label: "→" },
+                    { label: "Gemini Flash", desc: "Thinks & responds" },
+                    { label: "→" },
+                    { label: "ElevenLabs", desc: "Text → AI voice" },
+                    { label: "→" },
+                    { label: "Daily.co Room", desc: "Back to meeting" },
+                  ].map((step, i) =>
+                    step.desc ? (
+                      <div key={i} className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg border bg-card">
+                        <span className="font-medium">{step.label}</span>
+                        <span className="text-[10px] text-muted-foreground">{step.desc}</span>
+                      </div>
+                    ) : (
+                      <span key={i} className="text-muted-foreground font-bold">{step.label}</span>
+                    ),
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Hosted on Pipecat Cloud (agent-1x: 0.5 vCPU, 1GB RAM) • $0.01/min active
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -436,6 +436,7 @@ model Lead {
   callRemarks     CallRemark[]
   interactions    LeadInteraction[]
   emails          LeadEmail[]
+  meetingSessions MeetingSession[]
 
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -1071,6 +1072,10 @@ model TeamSettings {
   // AI Sales Email
   aiSalesFromEmail      String?
   salesGreeting         String?
+  // Meeting Infrastructure API Keys
+  dailyApiKey           String?
+  pipecatCloudApiKey    String?
+  meetingBaasApiKey     String?
   updatedAt             DateTime @updatedAt
 }
 
@@ -1191,9 +1196,10 @@ model AgentVoice {
   avgCallDurationSecs    Float?
 
   // ── Relations (merged from AIAgent) ──
-  scripts      AIScript[]
-  callSessions CallSession[]
-  campaigns    Campaign[]
+  scripts         AIScript[]
+  callSessions    CallSession[]
+  campaigns       Campaign[]
+  meetingSessions MeetingSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1682,6 +1688,7 @@ enum InteractionType {
   EMAIL_SENT
   EMAIL_RECEIVED
   GMEET
+  VIDEO_MEETING
   FOLLOW_UP
   NOTE
   SMS
@@ -1752,4 +1759,60 @@ enum EmailStatus {
   REPLIED
   BOUNCED
   FAILED
+}
+
+// ══════════════════════════════════════════════════════════════
+// MEETING SESSIONS — Daily.co + Pipecat Cloud & MeetingBaas
+// Scenario 1: Bot creates Daily.co room → Pipecat agent joins
+// Scenario 2: Lead shares Meet link → MeetingBaas joins
+// ══════════════════════════════════════════════════════════════
+
+model MeetingSession {
+  id              String   @id @default(uuid())
+  leadId          String?
+  lead            Lead?    @relation(fields: [leadId], references: [id])
+  agentId         String?
+  agent           AgentVoice? @relation(fields: [agentId], references: [id])
+
+  // Meeting type & status
+  type            String   // "daily" | "external"
+  status          String   @default("scheduled") // scheduled, reminder_sent, launching, active, completed, cancelled, no_show, error
+  scheduledAt     DateTime
+  title           String?  // "Sales call with Raj"
+
+  // Daily.co (Scenario 1)
+  dailyRoomName   String?
+  dailyRoomUrl    String?  // https://orivraa.daily.co/room-xyz
+  dailyRoomToken  String?  // meeting token for the lead
+
+  // External (Scenario 2 — MeetingBaas)
+  externalMeetUrl   String?  // Google Meet / Zoom / Teams URL
+  meetingBaasBotId  String?
+
+  // Pipecat Cloud
+  pipecatSessionId  String?
+
+  // Results
+  transcript      String?  @db.Text
+  summary         String?  @db.Text
+  actionItems     Json?    // [{"item": "...", "owner": "..."}]
+  duration        Int?     // seconds
+  leadScoreChange Int?     // +/- score change from this meeting
+
+  // Notification tracking
+  confirmationSentAt DateTime?
+  reminder24hSentAt  DateTime?
+  reminder30mSentAt  DateTime?
+  postMeetingSentAt  DateTime?
+
+  startedAt       DateTime?
+  endedAt         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([agentId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([type])
 }

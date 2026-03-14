@@ -40,6 +40,8 @@ import { GeminiStreamingClient } from "./services/gemini-streaming.service";
 import { GoogleMeetBotService } from "./services/google-meet-bot.service";
 import { LeadInteractionService } from "./services/lead-interaction.service";
 import { LeadScoringService } from "./services/lead-scoring.service";
+import { MeetingOrchestratorService } from "./services/meeting-orchestrator.service";
+import { MeetingSchedulerService } from "./services/meeting-scheduler.service";
 import { ObjectionPlaybookService } from "./services/objection-playbook.service";
 import { PostCallProcessor } from "./services/post-call-processor.service";
 import { STTRouterService } from "./services/stt-router.service";
@@ -73,6 +75,8 @@ export class AIAgentController {
     private aiEmail: AiEmailService,
     private interactionService: LeadInteractionService,
     private postCallProcessor: PostCallProcessor,
+    private meetingOrchestrator: MeetingOrchestratorService,
+    private meetingScheduler: MeetingSchedulerService,
   ) {}
 
   /* ─── AGENTS ─── */
@@ -1888,47 +1892,152 @@ Return JSON:
     return this.aiEmail.getEmail(id);
   }
 
-  /* ─── GOOGLE MEET SCHEDULING ─── */
+  /* ─── MEETINGS (Daily.co + Pipecat + MeetingBaas) ─── */
 
-  @Post("meet/schedule")
-  async scheduleMeet(@Body() body: {
-    leadId: string;
+  @Post("meetings/schedule")
+  @Roles("ADMIN")
+  async scheduleMeeting(@Body() body: {
+    leadId?: string;
     agentId: string;
     scheduledAt: string;
-    subject?: string;
-    notes?: string;
+    title?: string;
+    type?: "daily" | "external";
+    externalMeetUrl?: string;
   }) {
-    const lead = await this.prisma.lead.findUnique({ where: { id: body.leadId } });
-    if (!lead) throw new Error("Lead not found");
-
-    const agent = await this.prisma.agentVoice.findUnique({ where: { id: body.agentId } });
-
-    // Generate a Google Meet link placeholder
-    const meetCode = `${Math.random().toString(36).substring(2, 5)}-${Math.random().toString(36).substring(2, 6)}-${Math.random().toString(36).substring(2, 5)}`;
-    const meetLink = `https://meet.google.com/${meetCode}`;
-
-    // Record as interaction
-    await this.interactionService.recordMeetInteraction({
-      leadId: body.leadId,
-      meetSessionId: `meet-scheduled-${Date.now()}`,
-      summary: `Meet scheduled: ${body.subject || "Sales discussion"} at ${new Date(body.scheduledAt).toLocaleString()}`,
-      agentName: agent?.name,
-      meetUrl: meetLink,
-    });
-
-    // Send email with meet link if lead has email
-    if (lead.email) {
-      await this.aiEmail.sendEmail({
-        leadId: body.leadId,
-        subject: body.subject || `Meeting with ${agent?.name || "Orivraa"} — ${new Date(body.scheduledAt).toLocaleDateString()}`,
-        body: `Hi ${lead.preferredName || lead.name},\n\nWe've scheduled a meeting for ${new Date(body.scheduledAt).toLocaleString()}.\n\nJoin here: ${meetLink}\n\n${body.notes || "Looking forward to speaking with you!"}\n\nBest regards,\n${agent?.name || "Orivraa Team"}`,
-        meetLink,
-        meetScheduledAt: new Date(body.scheduledAt),
-        goalForEmail: "Schedule Google Meet",
-        fromEmail: agent?.agentEmail || undefined,
-      });
+    const scheduledAt = new Date(body.scheduledAt);
+    if (scheduledAt <= new Date()) {
+      throw new HttpException("Scheduled time must be in the future", HttpStatus.BAD_REQUEST);
     }
 
-    return { meetLink, scheduledAt: body.scheduledAt, leadId: body.leadId };
+    if (body.type === "external" && body.externalMeetUrl) {
+      const extResult = await this.meetingOrchestrator.scheduleExternalMeeting({
+        leadId: body.leadId,
+        agentId: body.agentId,
+        scheduledAt,
+        externalMeetUrl: body.externalMeetUrl,
+        title: body.title,
+      });
+      // Schedule BullMQ jobs for reminders + auto-launch
+      await this.meetingScheduler.scheduleJobs(extResult.meetingId, scheduledAt).catch(() => {});
+      return extResult;
+    }
+
+    // Default: create a Daily.co room
+    const result = await this.meetingOrchestrator.scheduleDailyMeeting({
+      leadId: body.leadId,
+      agentId: body.agentId,
+      scheduledAt,
+      title: body.title,
+    });
+
+    // Schedule BullMQ jobs for reminders
+    await this.meetingScheduler.scheduleJobs(result.meetingId, scheduledAt).catch(() => {});
+
+    // Send email with meeting link if lead has email
+    if (body.leadId) {
+      const lead = await this.prisma.lead.findUnique({ where: { id: body.leadId } });
+      const agent = await this.prisma.agentVoice.findUnique({ where: { id: body.agentId } });
+      if (lead?.email) {
+        await this.aiEmail.sendEmail({
+          leadId: body.leadId,
+          subject: body.title || `Meeting with ${agent?.name || "Orivraa"} — ${scheduledAt.toLocaleDateString()}`,
+          body: `Hi ${lead.preferredName || lead.name},\n\nWe've scheduled a video meeting for ${scheduledAt.toLocaleString()}.\n\nJoin here: ${result.roomUrl}\n\nLooking forward to speaking with you!\n\nBest regards,\n${agent?.name || "Orivraa Team"}`,
+          meetLink: result.roomUrl,
+          meetScheduledAt: scheduledAt,
+          goalForEmail: "Video meeting invitation",
+          fromEmail: agent?.agentEmail || undefined,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  @Get("meetings")
+  @Roles("ADMIN")
+  async listMeetings(
+    @Query("status") status?: string,
+    @Query("leadId") leadId?: string,
+    @Query("limit") limit?: string,
+  ) {
+    return this.meetingOrchestrator.listMeetings({
+      status,
+      leadId,
+      limit: limit ? parseInt(limit) : undefined,
+    });
+  }
+
+  @Get("meetings/:id")
+  @Roles("ADMIN")
+  async getMeeting(@Param("id") id: string) {
+    const meeting = await this.meetingOrchestrator.getMeeting(id);
+    if (!meeting) throw new HttpException("Meeting not found", HttpStatus.NOT_FOUND);
+    return meeting;
+  }
+
+  @Post("meetings/:id/launch")
+  @Roles("ADMIN")
+  async launchMeeting(@Param("id") id: string) {
+    try {
+      return await this.meetingOrchestrator.launchDailyAgent(id);
+    } catch (err: any) {
+      throw new HttpException(err.message || "Failed to launch meeting", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Post("meetings/:id/cancel")
+  @Roles("ADMIN")
+  async cancelMeeting(@Param("id") id: string) {
+    try {
+      await this.meetingOrchestrator.cancelMeeting(id);
+      await this.meetingScheduler.cancelJobs(id).catch(() => {});
+      return { success: true };
+    } catch (err: any) {
+      throw new HttpException(err.message || "Failed to cancel meeting", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Post("meetings/webhook/daily")
+  async dailyWebhook(@Body() body: any) {
+    this.logger.log(`Daily.co webhook: ${body.event}`);
+    // Handle Daily.co room events (participant-joined, participant-left, etc.)
+    if (body.event === "meeting.ended") {
+      const session = await this.prisma.meetingSession.findFirst({
+        where: { dailyRoomName: body.payload?.room_name },
+      });
+      if (session) {
+        await this.meetingOrchestrator.onMeetingEnd(session.id, body.payload?.transcript);
+      }
+    }
+    return { received: true };
+  }
+
+  @Post("meetings/webhook/pipecat")
+  async pipecatWebhook(@Body() body: any) {
+    this.logger.log(`Pipecat webhook: ${JSON.stringify(body).substring(0, 200)}`);
+    // Handle Pipecat session events (session.ended, etc.)
+    if (body.event === "session.ended" || body.status === "completed") {
+      const session = await this.prisma.meetingSession.findFirst({
+        where: { pipecatSessionId: body.session_id || body.sessionId },
+      });
+      if (session) {
+        await this.meetingOrchestrator.onMeetingEnd(session.id, body.transcript);
+      }
+    }
+    return { received: true };
+  }
+
+  @Post("meetings/webhook/meetingbaas")
+  async meetingBaasWebhook(@Body() body: any) {
+    this.logger.log(`MeetingBaas webhook: ${JSON.stringify(body).substring(0, 200)}`);
+    if (body.event === "bot.leave_call" || body.event === "complete") {
+      const session = await this.prisma.meetingSession.findFirst({
+        where: { meetingBaasBotId: body.bot_id || body.botId },
+      });
+      if (session) {
+        await this.meetingOrchestrator.onMeetingEnd(session.id, body.transcript);
+      }
+    }
+    return { received: true };
   }
 }

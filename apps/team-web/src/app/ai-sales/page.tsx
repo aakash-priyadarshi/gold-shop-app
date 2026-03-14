@@ -4,40 +4,37 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { aiSalesApi } from "@/lib/api";
 import {
-  Bot,
-  Phone,
-  Plus,
-  TrendingUp,
-  Users,
-  Megaphone,
-  BarChart3,
-  DollarSign,
-  Activity,
-  ArrowRight,
-  Target,
-  Zap,
-  Mail,
-  Video,
-  Gamepad2,
+    ArrowRight,
+    BarChart3,
+    Bot,
+    DollarSign,
+    Gamepad2,
+    Megaphone,
+    Phone,
+    Plus,
+    TrendingUp,
+    Users,
+    Video,
+    Zap
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -100,6 +97,9 @@ export default function AiSalesPage() {
           </Link>
           <Link href="/ai-sales/analytics">
             <Button variant="outline" size="sm"><BarChart3 className="mr-2 h-4 w-4" />Analytics</Button>
+          </Link>
+          <Link href="/ai-sales/meetings">
+            <Button variant="outline" size="sm"><Video className="mr-2 h-4 w-4" />Meetings</Button>
           </Link>
         </div>
       </div>
@@ -208,6 +208,12 @@ export default function AiSalesPage() {
                 <Link href="/ai-sales/calls" className="block">
                   <Button variant="outline" className="w-full justify-between">
                     <span className="flex items-center"><Phone className="mr-2 h-4 w-4" />Call History</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/ai-sales/meetings" className="block">
+                  <Button variant="outline" className="w-full justify-between">
+                    <span className="flex items-center"><Video className="mr-2 h-4 w-4" />Meetings</span>
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>

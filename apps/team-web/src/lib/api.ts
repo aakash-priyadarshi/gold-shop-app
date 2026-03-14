@@ -404,9 +404,21 @@ export const aiSalesApi = {
   getEmailDetail: (id: string) =>
     api.get(`/ai-sales/email/${id}`),
 
-  // Google Meet Scheduling
+  // Google Meet Scheduling (legacy)
   scheduleMeet: (data: { leadId: string; agentId: string; scheduledAt: string; subject?: string; notes?: string }) =>
     api.post("/ai-sales/meet/schedule", data),
+
+  // Meetings (Daily.co + Pipecat + MeetingBaas)
+  scheduleMeeting: (data: { leadId?: string; agentId: string; scheduledAt: string; title?: string; type?: "daily" | "external"; externalMeetUrl?: string }) =>
+    api.post("/ai-sales/meetings/schedule", data),
+  listMeetings: (params?: { status?: string; leadId?: string; limit?: string }) =>
+    api.get("/ai-sales/meetings", { params }),
+  getMeeting: (id: string) =>
+    api.get(`/ai-sales/meetings/${id}`),
+  launchMeeting: (id: string) =>
+    api.post(`/ai-sales/meetings/${id}/launch`),
+  cancelMeeting: (id: string) =>
+    api.post(`/ai-sales/meetings/${id}/cancel`),
 };
 
 // ─── Certificates ───
