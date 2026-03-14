@@ -86,6 +86,10 @@ export class GoogleMeetBotService {
         summary: summary || "Orivraa AI Meeting",
         start: { dateTime: startTime.toISOString() },
         end: { dateTime: endTime.toISOString() },
+        // Allow anyone with the link to join without knocking
+        guestsCanModify: true,
+        anyoneCanAddSelf: true,
+        visibility: "public",
         conferenceData: {
           createRequest: {
             requestId: `orivraa-${Date.now()}`,
@@ -467,6 +471,45 @@ export class GoogleMeetBotService {
     }
   }
 
+  /** Convert EditThisCookie / browser-exported cookies to Puppeteer-compatible format */
+  private normalizeCookies(raw: any[]): any[] {
+    return raw.map((c) => {
+      const cookie: any = {
+        name: c.name,
+        value: c.value,
+        domain: c.domain,
+        path: c.path || "/",
+      };
+      // EditThisCookie uses "expirationDate" (seconds since epoch), Puppeteer uses "expires"
+      if (c.expirationDate) {
+        cookie.expires = c.expirationDate;
+      } else if (c.expires) {
+        // If already in Puppeteer format or the cookie has "expires" as a number
+        cookie.expires = typeof c.expires === "number" ? c.expires : -1;
+      }
+      // Boolean flags
+      if (c.httpOnly !== undefined) cookie.httpOnly = !!c.httpOnly;
+      if (c.secure !== undefined) cookie.secure = !!c.secure;
+      // sameSite: EditThisCookie uses lowercase ("lax", "strict", "no_restriction"/"none")
+      // Puppeteer expects capitalized: "Strict", "Lax", "None"
+      if (c.sameSite) {
+        const ss = String(c.sameSite).toLowerCase();
+        if (ss === "no_restriction" || ss === "none" || ss === "unspecified") {
+          cookie.sameSite = "None";
+        } else if (ss === "lax") {
+          cookie.sameSite = "Lax";
+        } else if (ss === "strict") {
+          cookie.sameSite = "Strict";
+        }
+      }
+      // Puppeteer requires secure=true when sameSite=None
+      if (cookie.sameSite === "None") {
+        cookie.secure = true;
+      }
+      return cookie;
+    }).filter((c) => c.name && c.value && c.domain);
+  }
+
   /** Set up PulseAudio virtual sink for bot microphone input */
   private async setupPulseAudio(): Promise<void> {
     if (this.pulseAudioReady) return;
@@ -519,10 +562,27 @@ export class GoogleMeetBotService {
       const settings = (await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } })) as any;
       const storedCookies = settings?.googleMeetBotCookies;
       if (storedCookies && Array.isArray(storedCookies) && storedCookies.length > 0) {
-        // Navigate to Google domain first so cookies can be set on the correct domain
-        await page.goto("https://accounts.google.com", { waitUntil: "networkidle2", timeout: 15000 }).catch(() => {});
-        await page.setCookie(...storedCookies);
-        this.addLog(session, "info", `Injected ${storedCookies.length} Google session cookies — bot is authenticated`);
+        // Convert EditThisCookie / other formats to Puppeteer-compatible cookies
+        const puppeteerCookies = this.normalizeCookies(storedCookies);
+        // Set cookies directly on the browser context (no navigation needed)
+        await page.setCookie(...puppeteerCookies);
+        this.addLog(session, "info", `Injected ${puppeteerCookies.length} Google session cookies`);
+
+        // Verify login by navigating to myaccount.google.com
+        await page.goto("https://myaccount.google.com", { waitUntil: "networkidle2", timeout: 15000 });
+        const loggedIn = await page.evaluate(() => {
+          const url = window.location.href;
+          // If redirected to sign-in page, cookies didn't work
+          return !url.includes("accounts.google.com/v3/signin") && !url.includes("ServiceLogin");
+        }).catch(() => false);
+
+        if (loggedIn) {
+          this.addLog(session, "info", "Google login verified — bot is authenticated");
+        } else {
+          this.addLog(session, "error",
+            "Cookies were injected but Google still requires sign-in. " +
+            "The cookies may be expired. Re-export fresh cookies from Chrome (accounts.google.com) and save them in Settings.");
+        }
       } else {
         this.addLog(session, "info", "No Google session cookies found — joining as guest. Save cookies in Settings to authenticate.");
       }
