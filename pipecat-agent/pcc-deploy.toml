@@ -1,7 +1,7 @@
 agent_name = "orivraa-sales"
 secret_set = "orivraa-secrets"
 agent_profile = "agent-1x"
-region = "ap-south-1"
+region = "ap-south"
 
 [scaling]
   min_agents = 1
