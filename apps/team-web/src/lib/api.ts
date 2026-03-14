@@ -257,6 +257,8 @@ export const aiSalesApi = {
   // Playground — Google Meet Bot
   playgroundMeetJoin: (data: { agentId: string; meetUrl: string }) =>
     api.post("/ai-sales/playground/meet", data),
+  playgroundMeetCreateAndJoin: (data: { agentId: string; leadId?: string; summary?: string }) =>
+    api.post("/ai-sales/playground/meet-create-and-join", data),
   playgroundMeetStop: (data: { sessionId: string }) =>
     api.post("/ai-sales/playground/meet-stop", data),
   playgroundMeetStatus: (sessionId: string) =>

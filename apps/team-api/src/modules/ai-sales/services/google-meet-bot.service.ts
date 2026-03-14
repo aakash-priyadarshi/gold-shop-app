@@ -523,6 +523,23 @@ export class GoogleMeetBotService {
     const meetPageUrl = page.url();
     this.addLog(session, "info", `Meet page loaded — Title: "${meetPageTitle}", URL: ${meetPageUrl}`);
 
+    // Check for immediate rejection BEFORE trying to join
+    const pageBlocked = await page.evaluate(() => {
+      const text = document.body.innerText?.toLowerCase() || "";
+      return text.includes("you can't join this video call") ||
+        text.includes("you can\u2019t join this video call") ||
+        text.includes("not allowed to join") ||
+        text.includes("check with the meeting organiser");
+    }).catch(() => false);
+
+    if (pageBlocked) {
+      this.addLog(session, "error",
+        "Meeting blocked guest access. The bot is not signed into Google and cannot join. " +
+        "Use the 'Create Meeting' feature instead — the bot creates a meeting via Calendar API as organizer, so no sign-in is needed.");
+      session.status = "error";
+      return;
+    }
+
     // Try to dismiss any "Got it" or consent dialogs
     await this.dismissDialogs(page, session);
 
@@ -537,6 +554,8 @@ export class GoogleMeetBotService {
 
     // Wait for meeting to start
     await this.waitForMeetingStart(page, session);
+
+    if (session.status === "error") return; // waitForMeetingStart may have set error
 
     session.status = "listening";
     this.addLog(session, "info", "Successfully joined the meeting! Listening...");
@@ -650,13 +669,24 @@ export class GoogleMeetBotService {
       'button[aria-label="Join now"]',
       'button[jsname="Qx7uuf"]',
       '[data-idom-class*="join"] button',
+      'span[jsname="V67aGc"]',  // Google Meet's "Ask to join" span — click its parent
     ];
 
     for (const selector of joinSelectors) {
       try {
-        const btn = await page.$(selector);
-        if (btn) {
-          await btn.click();
+        const el = await page.$(selector);
+        if (el) {
+          // If it's a span, click the closest button ancestor
+          const tagName = await el.evaluate(e => e.tagName);
+          if (tagName === "SPAN") {
+            await el.evaluate(e => {
+              const btn = e.closest("button") || e.parentElement;
+              if (btn) (btn as HTMLElement).click();
+              else (e as HTMLElement).click();
+            });
+          } else {
+            await el.click();
+          }
           this.addLog(session, "info", `Clicked join button via selector: ${selector}`);
           return;
         }
@@ -665,7 +695,9 @@ export class GoogleMeetBotService {
       }
     }
 
+    // Broader fallback: find any element containing "Ask to join" or "Join now" text
     const clicked = await page.evaluate(() => {
+      // Check buttons and role=button elements
       const buttons = Array.from(document.querySelectorAll("button, [role='button']"));
       for (const b of buttons) {
         const text = b.textContent?.trim().toLowerCase() || "";
@@ -680,6 +712,17 @@ export class GoogleMeetBotService {
         ) {
           (b as HTMLElement).click();
           return `Clicked: "${b.textContent?.trim()}" (aria: ${b.getAttribute("aria-label")})`;
+        }
+      }
+      // Also check spans that might be the visible button text
+      const spans = Array.from(document.querySelectorAll("span"));
+      for (const s of spans) {
+        const text = s.textContent?.trim().toLowerCase() || "";
+        if (text === "ask to join" || text === "join now") {
+          const parent = s.closest("button") || s.parentElement;
+          if (parent) (parent as HTMLElement).click();
+          else (s as HTMLElement).click();
+          return `Clicked span: "${s.textContent?.trim()}"`;
         }
       }
       return null;

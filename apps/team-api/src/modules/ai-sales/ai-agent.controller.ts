@@ -933,6 +933,27 @@ export class AIAgentController {
     };
   }
 
+  /** Create a meeting via Calendar API then auto-join it with the bot */
+  @Post("playground/meet-create-and-join")
+  @Roles("ADMIN")
+  async playgroundMeetCreateAndJoin(
+    @Body() body: { agentId: string; leadId?: string; summary?: string },
+  ) {
+    try {
+      const { meetUrl, eventId } = await this.meetBot.createMeeting(body.agentId, body.summary);
+      const session = await this.meetBot.startSession(meetUrl, body.agentId, body.leadId);
+      return {
+        sessionId: session.id,
+        agentName: session.agentName,
+        status: session.status,
+        meetUrl,
+        eventId,
+      };
+    } catch (err: any) {
+      throw new HttpException(err.message || "Failed to create and join meeting", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   @Post("playground/meet-stop")
   @Roles("ADMIN")
   async playgroundMeetStop(
