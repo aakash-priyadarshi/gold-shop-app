@@ -1,7 +1,7 @@
 #
 # Orivraa AI Sales Voice Agent
 #
-# Pipecat pipeline: Google STT → Gemini 2.5 Flash → ElevenLabs TTS
+# Pipecat pipeline: Google STT (or Deepgram fallback) → Gemini 2.5 Flash → ElevenLabs TTS
 # Deploys to Pipecat Cloud with Daily.co WebRTC transport.
 #
 # Dynamic config (system_prompt, voice_id, greeting) is passed via
@@ -10,6 +10,7 @@
 
 import json
 import os
+import tempfile
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -35,7 +36,6 @@ from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 from pipecat.services.google.llm import GoogleLLMService
-from pipecat.services.google.stt import GoogleSTTService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 
@@ -102,28 +102,73 @@ def get_config(runner_args: RunnerArguments) -> dict:
     }
 
 
-def get_google_stt_credentials():
-    """Load Google STT credentials.
-    
-    Uses GOOGLE_STT_API_KEY (GCP API key) — same as teams.orivraa.com.
-    Falls back to service account if provided.
-    """
-    # Prefer API key (no service account needed)
-    stt_api_key = os.getenv("GOOGLE_STT_API_KEY")
-    if stt_api_key:
-        return {"api_key": stt_api_key}
-
-    # Fallback: service account JSON string
+def _write_google_creds_to_tempfile() -> str | None:
+    """Write GOOGLE_CREDENTIALS_JSON env var to a temp file, return path."""
     creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
-    if creds_json:
-        return {"credentials": creds_json}
+    if not creds_json:
+        return None
+    try:
+        # Validate it's real JSON
+        json.loads(creds_json)
+        fd, path = tempfile.mkstemp(suffix=".json", prefix="gcp_creds_")
+        with os.fdopen(fd, "w") as f:
+            f.write(creds_json)
+        logger.info(f"Wrote Google credentials to {path}")
+        return path
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"Failed to write Google credentials: {e}")
+        return None
 
-    # Fallback: service account file
+
+def create_stt_service(language: str):
+    """Create STT service — Google service account (primary), Deepgram (fallback).
+
+    Google STT gRPC streaming requires service account credentials, NOT a plain API key.
+    If no service account is available, falls back to Deepgram.
+    """
+    # --- Primary: Google STT with service account ---
     creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    if creds_path and os.path.exists(creds_path):
-        return {"credentials_path": creds_path}
+    if not creds_path:
+        creds_path = _write_google_creds_to_tempfile()
 
-    return {}
+    if creds_path and os.path.exists(creds_path):
+        try:
+            from pipecat.services.google.stt import GoogleSTTService
+
+            logger.info("Using Google STT (service account credentials)")
+            return GoogleSTTService(
+                credentials_path=creds_path,
+                settings=GoogleSTTService.Settings(
+                    languages=[language],
+                    model="latest_long",
+                    enable_automatic_punctuation=True,
+                    enable_interim_results=True,
+                ),
+            )
+        except Exception as e:
+            logger.warning(f"Google STT init failed: {e}, falling back to Deepgram")
+
+    # --- Fallback: Deepgram STT (plain API key) ---
+    deepgram_key = os.getenv("DEEPGRAM_API_KEY")
+    if deepgram_key:
+        try:
+            from pipecat.services.deepgram.stt import DeepgramSTTService
+
+            logger.info("Using Deepgram STT (fallback)")
+            return DeepgramSTTService(
+                api_key=deepgram_key,
+                settings=DeepgramSTTService.Settings(
+                    language=language,
+                    model="nova-3",
+                ),
+            )
+        except Exception as e:
+            logger.error(f"Deepgram STT init also failed: {e}")
+
+    raise RuntimeError(
+        "No STT provider available. Set GOOGLE_CREDENTIALS_JSON (service account) "
+        "or DEEPGRAM_API_KEY as a fallback."
+    )
 
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
@@ -132,16 +177,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         f"Starting bot: agent={config['agent_name']}, lang={config['language']}"
     )
 
-    # --- STT: Google Cloud Speech-to-Text (GCP API key) ---
-    stt = GoogleSTTService(
-        **get_google_stt_credentials(),
-        settings=GoogleSTTService.Settings(
-            languages=[config["language"]],
-            model="latest_long",
-            enable_automatic_punctuation=True,
-            enable_interim_results=True,
-        ),
-    )
+    # --- STT: Google (service account) or Deepgram (fallback) ---
+    stt = create_stt_service(config["language"])
 
     # --- LLM: Google Gemini 2.5 Flash ---
     llm = GoogleLLMService(

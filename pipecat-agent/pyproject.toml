@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Orivraa AI Sales Voice Agent - Google STT + Gemini + ElevenLabs"
 requires-python = ">=3.10"
 dependencies = [
-    "pipecat-ai[webrtc,daily,silero,google,elevenlabs,runner]",
+    "pipecat-ai[webrtc,daily,silero,google,elevenlabs,deepgram,runner]",
     "pipecat-ai-cli",
     "python-dotenv",
 ]
