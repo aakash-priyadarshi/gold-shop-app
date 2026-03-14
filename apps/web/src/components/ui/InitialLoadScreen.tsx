@@ -28,12 +28,17 @@ export default function InitialLoadScreen({
     return () => clearTimeout(timer);
   }, [isFirstLoad]);
 
+  // TEMPORARILY DISABLED for Google OAuth verification
+  // The full-screen loader overlay prevents Google's bot from reading page content.
+  // Re-enable after verification by uncommenting the overlay logic below.
+  return <>{children}</>
+
+  /* Original loader logic — uncomment after Google verification:
   return (
     <>
       {showOverlay && <OrivraaLoader />}
-      {/* Content remains in the DOM (no visibility:hidden) so crawlers/bots can
-          read it. The fixed-position overlay visually covers it via z-index. */}
       {children}
     </>
   );
+  */
 }
