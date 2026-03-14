@@ -4,16 +4,22 @@ import { PrismaService } from "../../../prisma/prisma.service";
 /**
  * Pipecat Cloud Service
  *
- * Deploys voice AI agents on Pipecat Cloud (owned by Daily.co).
- * Agents use Daily.co WebRTC transport for real-time audio.
- * Pricing: $0.01/min per running agent.
+ * Starts sessions of the deployed "orivraa-sales" agent on Pipecat Cloud.
+ * The Python bot (pipecat-agent/bot.py) must be deployed first via:
+ *   cd pipecat-agent && uv run pipecat cloud deploy
  *
- * API docs: https://docs.pipecat.ai/cloud/api-reference
+ * Agent uses: Google STT → Gemini 2.5 Flash → ElevenLabs TTS
+ * Transport: Daily.co WebRTC
+ * Pricing: $0.01/min per running agent (agent-1x profile)
+ *
+ * Docs: https://docs.pipecat.ai/deployment/pipecat-cloud
  */
 @Injectable()
 export class PipecatCloudService {
   private readonly logger = new Logger(PipecatCloudService.name);
   private readonly baseUrl = "https://api.pipecat.daily.co/v1";
+  // Must match agent_name in pipecat-agent/pcc-deploy.toml
+  private readonly agentName = "orivraa-sales";
 
   constructor(private prisma: PrismaService) {}
 
@@ -42,74 +48,58 @@ export class PipecatCloudService {
   }
 
   /**
-   * Deploy a voice agent to a Daily.co room.
-   * The agent runs STT → LLM → TTS in real-time.
+   * Start a new session of the deployed agent.
+   * Pipecat Cloud creates a Daily room and returns connection credentials.
+   *
+   * Dynamic config is passed via `body` and received in bot.py's runner_args.body
    */
   async deployAgent(opts: {
-    dailyRoomUrl: string;
-    agentName: string;
+    dailyRoomUrl?: string; // Optional: use pre-created room, otherwise Pipecat creates one
+    agentName?: string;
     systemPrompt: string;
-    voiceId: string; // ElevenLabs voice ID
+    voiceId: string;
     greeting?: string;
+    leadName?: string;
+    language?: string;
     webhookUrl?: string;
-  }): Promise<{ sessionId: string }> {
-    const data = await this.request("/agents/start", {
+  }): Promise<{ sessionId: string; roomUrl: string; token: string }> {
+    const data = await this.request(`/agents/${this.agentName}/start`, {
       method: "POST",
       body: JSON.stringify({
-        // Daily.co room to join
-        room_url: opts.dailyRoomUrl,
-
-        // Agent configuration
-        agent_name: opts.agentName,
-        config: {
-          // STT: Google Cloud Speech-to-Text (primary), Deepgram (fallback)
-          stt: {
-            provider: "google",
-            language: "en-IN",
-            model: "latest_long",
-          },
-
-          // LLM: The agent's brain
-          llm: {
-            provider: "google",
-            model: "gemini-2.5-flash",
-            system_prompt: opts.systemPrompt,
-            temperature: 0.7,
-          },
-
-          // TTS: ElevenLabs for natural voice
-          tts: {
-            provider: "elevenlabs",
-            voice_id: opts.voiceId,
-            model_id: "eleven_turbo_v2_5",
-            stability: 0.5,
-            similarity_boost: 0.75,
-          },
-
-          // Transport: Daily.co WebRTC
-          transport: {
-            provider: "daily",
-            room_url: opts.dailyRoomUrl,
-          },
+        // Pass dynamic config to bot.py via runner_args.body
+        body: {
+          system_prompt: opts.systemPrompt,
+          voice_id: opts.voiceId,
+          greeting: opts.greeting || `I'm calling from Orivraa. How are you today?`,
+          lead_name: opts.leadName || "",
+          agent_name: opts.agentName || "Orivraa Sales",
+          language: opts.language || "en-IN",
         },
-
-        // Initial greeting when agent joins
-        initial_message: opts.greeting || `Hello! I'm ${opts.agentName} from Orivraa. How can I help you today?`,
-
-        // Webhook for meeting-end events
-        webhook_url: opts.webhookUrl,
+        // Optional: join a pre-created Daily room
+        ...(opts.dailyRoomUrl && { room_url: opts.dailyRoomUrl }),
+        // Webhook for session lifecycle events
+        ...(opts.webhookUrl && { webhook_url: opts.webhookUrl }),
       }),
     });
 
-    this.logger.log(`Deployed Pipecat agent "${opts.agentName}" → session ${data.session_id}`);
-    return { sessionId: data.session_id };
+    this.logger.log(
+      `Started Pipecat session ${data.session_id} → room ${data.room_url || data.url}`,
+    );
+
+    return {
+      sessionId: data.session_id,
+      roomUrl: data.room_url || data.url || opts.dailyRoomUrl || "",
+      token: data.token || "",
+    };
   }
 
   /** Stop a running agent session */
   async stopAgent(sessionId: string): Promise<void> {
     try {
-      await this.request(`/agents/${sessionId}/stop`, { method: "POST" });
-      this.logger.log(`Stopped Pipecat agent session: ${sessionId}`);
+      await this.request(`/agents/${this.agentName}/sessions/${sessionId}/stop`, {
+        method: "POST",
+      });
+      this.logger.log(`Stopped Pipecat session: ${sessionId}`);
     } catch (err: any) {
       this.logger.warn(`Failed to stop session ${sessionId}: ${err.message}`);
     }
@@ -117,6 +107,11 @@ export class PipecatCloudService {
 
   /** Get session status */
   async getSessionStatus(sessionId: string): Promise<any> {
-    return this.request(`/agents/${sessionId}`);
+    return this.request(`/agents/${this.agentName}/sessions/${sessionId}`);
+  }
+
+  /** List all active sessions */
+  async listSessions(): Promise<any> {
+    return this.request(`/agents/${this.agentName}/sessions`);
   }
 }

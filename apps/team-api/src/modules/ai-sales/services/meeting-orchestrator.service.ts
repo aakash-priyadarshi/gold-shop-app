@@ -174,6 +174,7 @@ export class MeetingOrchestratorService {
         systemPrompt,
         voiceId: agent.voiceId,
         greeting: agent.greeting || undefined,
+        leadName: session.lead?.name || undefined,
         webhookUrl,
       });
 

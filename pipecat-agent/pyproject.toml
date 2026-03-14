@@ -1,0 +1,21 @@
+[project]
+name = "orivraa-sales-agent"
+version = "0.1.0"
+description = "Orivraa AI Sales Voice Agent - Google STT + Gemini + ElevenLabs"
+requires-python = ">=3.10"
+dependencies = [
+    "pipecat-ai[webrtc,daily,silero,google,elevenlabs,runner]",
+    "pipecat-ai-cli",
+    "python-dotenv",
+]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.404,<2",
+    "ruff>=0.12.11,<1",
+]
+
+[tool.ruff]
+line-length = 100
+[tool.ruff.lint]
+select = ["I"]
