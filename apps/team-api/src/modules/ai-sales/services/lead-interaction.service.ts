@@ -10,7 +10,7 @@ export class LeadInteractionService {
   /** Record a new interaction on a lead's timeline */
   async recordInteraction(data: {
     leadId: string;
-    type: "CALL" | "EMAIL_SENT" | "EMAIL_RECEIVED" | "GMEET" | "FOLLOW_UP" | "NOTE" | "SMS" | "WHATSAPP";
+    type: "CALL" | "EMAIL_SENT" | "EMAIL_RECEIVED" | "GMEET" | "VIDEO_MEETING" | "FOLLOW_UP" | "NOTE" | "SMS" | "WHATSAPP";
     channel?: string;
     direction?: string;
     referenceId?: string;

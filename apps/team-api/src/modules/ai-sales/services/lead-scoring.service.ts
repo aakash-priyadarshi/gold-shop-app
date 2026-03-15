@@ -28,6 +28,19 @@ export class LeadScoringService {
           orderBy: { startedAt: "desc" },
           take: 10,
         },
+        meetingSessions: {
+          where: { status: "completed" },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        },
+        interactions: {
+          orderBy: { createdAt: "desc" },
+          take: 15,
+        },
+        emails: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        },
       },
     });
     if (!lead) throw new Error("Lead not found");
@@ -36,11 +49,17 @@ export class LeadScoringService {
     const behavioral = this.scoreBehavioral(lead);
     const demographic = this.scoreDemographic(lead);
     const callHistory = this.scoreCallHistory(lead.callSessions);
+    const interactionBonus = this.scoreInteractions(lead);
 
+    // Weighted: engagement 25%, behavioral 20%, demographic 15%, calls 20%, interactions 20%
     const total = Math.min(
       100,
       Math.round(
-        engagement * 0.3 + behavioral * 0.25 + demographic * 0.2 + callHistory * 0.25,
+        engagement * 0.25 +
+        behavioral * 0.20 +
+        demographic * 0.15 +
+        callHistory * 0.20 +
+        interactionBonus * 0.20,
       ),
     );
 
@@ -195,6 +214,40 @@ export class LeadScoringService {
     // Negative: too many no-answers or failures
     const noAnswer = calls.filter((c) => c.status === "NO_ANSWER");
     score -= noAnswer.length * 5;
+
+    return Math.max(0, Math.min(score, 100));
+  }
+
+  /** Score based on all interactions (meetings, emails, enrichment quality) */
+  private scoreInteractions(lead: any): number {
+    let score = 0;
+
+    // Video meetings are high-value touchpoints
+    const meetings = lead.meetingSessions || [];
+    score += Math.min(meetings.length * 20, 40);
+
+    // Email engagement (received emails = lead is responding)
+    const emails = lead.emails || [];
+    const receivedEmails = emails.filter((e: any) => e.direction === "RECEIVED");
+    score += Math.min(receivedEmails.length * 10, 25);
+
+    // Total interactions = engagement breadth
+    const interactions = lead.interactions || [];
+    score += Math.min(interactions.length * 3, 15);
+
+    // Goal achievement from interactions
+    const goalsAchieved = interactions.filter((i: any) => i.goalAchieved === true);
+    score += goalsAchieved.length * 10;
+
+    // Buying intelligence completeness (enrichment quality)
+    if (lead.budgetRange) score += 10;
+    if (lead.urgency && lead.urgency !== "none") score += 5;
+    if (lead.communicationStyle) score += 5;
+    if (lead.dealValue) score += 5;
+
+    // Negative: goals not achieved repeatedly
+    const goalsFailed = interactions.filter((i: any) => i.goalAchieved === false);
+    if (goalsFailed.length > 3) score -= 10;
 
     return Math.max(0, Math.min(score, 100));
   }

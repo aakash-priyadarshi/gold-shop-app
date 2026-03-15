@@ -2,10 +2,14 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { CentralBrainService } from "./central-brain.service";
 import { DailyRoomService } from "./daily-room.service";
+import { LeadInteractionService } from "./lead-interaction.service";
 import { MeetingNotificationService } from "./meeting-notification.service";
 import { MeetingBaasService } from "./meetingbaas.service";
 import { PipecatCloudService } from "./pipecat-cloud.service";
+import { PostInteractionPipelineService } from "./post-interaction-pipeline.service";
+import { PreCallBrainService } from "./pre-call-brain.service";
 
 /**
  * Meeting Orchestrator Service
@@ -26,6 +30,10 @@ export class MeetingOrchestratorService {
     private pipecat: PipecatCloudService,
     private meetingBaas: MeetingBaasService,
     private notifications: MeetingNotificationService,
+    private centralBrain: CentralBrainService,
+    private preCallBrain: PreCallBrainService,
+    private interactions: LeadInteractionService,
+    private pipeline: PostInteractionPipelineService,
   ) {}
 
   // ── Schedule a new meeting (Scenario 1: Daily.co) ─────────────────────
@@ -161,9 +169,46 @@ export class MeetingOrchestratorService {
     const agent = session.agent;
     if (!agent) throw new Error("No agent assigned to this meeting");
 
-    // Build the system prompt from the agent's configuration
-    const systemPrompt = agent.systemPromptTemplate ||
-      `You are ${agent.name}, an AI sales representative from Orivraa. ${agent.personalityDescription || ""} ${agent.backstory || ""}`.trim();
+    // Generate goal via central intelligence if we have a lead
+    let meetingGoal = session.title || "Build rapport and progress the relationship";
+    let systemPrompt = "";
+
+    if (session.lead) {
+      try {
+        // Get intelligence from central brain
+        const intelligence = await this.centralBrain.queryForLead(session.lead as any);
+
+        // Generate pre-call brief via Claude for a full sales-oriented strategy
+        const previousCalls = await this.prisma.callSession.findMany({
+          where: { leadId: session.lead.id },
+          orderBy: { startedAt: "desc" },
+          take: 5,
+        });
+        const brief = await this.preCallBrain.generateBrief(
+          session.lead as any,
+          null, // product
+          null, // campaign
+          previousCalls,
+        );
+
+        // Build a sales persona system prompt (NOT a support bot)
+        meetingGoal = brief.closingStrategy || meetingGoal;
+        systemPrompt = this.buildVideoMeetingPrompt(agent, session.lead, brief, intelligence);
+
+        // Store the generated goal in the session
+        await this.prisma.meetingSession.update({
+          where: { id: meetingSessionId },
+          data: { metadata: { goal: meetingGoal, briefGenerated: true } as any },
+        });
+      } catch (err: any) {
+        this.logger.warn(`Pre-call brain unavailable for meeting: ${err.message}`);
+      }
+    }
+
+    // Fallback if no pre-call brain prompt was generated
+    if (!systemPrompt) {
+      systemPrompt = this.buildFallbackVideoPrompt(agent, session.lead);
+    }
 
     const webhookUrl = `${this.config.get<string>("WEBHOOK_BASE_URL") || "http://localhost:3002"}/api/ai-sales/meetings/webhook/pipecat`;
 
@@ -183,8 +228,8 @@ export class MeetingOrchestratorService {
         data: { status: "active", pipecatSessionId: result.sessionId },
       });
 
-      this.logger.log(`Agent "${agent.name}" launched into room ${session.dailyRoomName}`);
-      return { pipecatSessionId: result.sessionId };
+      this.logger.log(`Agent "${agent.name}" launched into room ${session.dailyRoomName} with sales persona`);
+      return { pipecatSessionId: result.sessionId, goal: meetingGoal };
     } catch (err: any) {
       await this.prisma.meetingSession.update({
         where: { id: meetingSessionId },
@@ -330,6 +375,33 @@ export class MeetingOrchestratorService {
     if (session.meetingBaasBotId) {
       await this.meetingBaas.leaveMeeting(session.meetingBaasBotId).catch(() => {});
     }
+
+    // Record outcome in central brain for institutional learning
+    if (session.leadId && session.agent) {
+      const sessionMeta = (session as any).metadata;
+      const callCount = await this.prisma.leadInteraction.count({
+        where: { leadId: session.leadId },
+      });
+      this.centralBrain.recordCallOutcome({
+        leadId: session.leadId,
+        callSessionId: meetingSessionId,
+        lead: session.lead,
+        outcome: leadScoreChange && leadScoreChange > 0 ? "positive" : leadScoreChange && leadScoreChange < 0 ? "negative" : "neutral",
+        duration: duration || 0,
+        summary: summary || "",
+        personaUsed: session.agent.name,
+        sentiment: leadScoreChange && leadScoreChange > 0 ? "positive" : "neutral",
+        callNumber: callCount,
+        transcript,
+        keyTopics: actionItems,
+      }).catch(err => this.logger.warn(`Central brain recording failed: ${err.message}`));
+    }
+
+    // Run post-interaction pipeline: enrich lead → re-score → auto-progress stage → strategy
+    if (session.leadId) {
+      this.pipeline.afterMeeting(session.leadId, meetingSessionId, transcript)
+        .catch(err => this.logger.error(`Post-meeting pipeline failed: ${err.message}`));
+    }
   }
 
   // ── Cancel a meeting ──────────────────────────────────────────────────
@@ -418,5 +490,98 @@ export class MeetingOrchestratorService {
       },
       data: { status: "no_show" },
     });
+  }
+
+  // ── Sales persona prompt builders ─────────────────────────────────────
+
+  /**
+   * Build a full sales-oriented system prompt for video meetings.
+   * Uses pre-call brief + central intelligence for a personalized, engaging persona.
+   */
+  private buildVideoMeetingPrompt(agent: any, lead: any, brief: any, intelligence: any): string {
+    const agentName = agent.name || "Orivraa Sales";
+    const leadName = lead?.preferredName || lead?.name || "the prospect";
+    const personality = agent.personalityDescription || "professional, warm, and knowledgeable";
+    const backstory = agent.backstory || "";
+
+    // Extract intelligence insights
+    const winningPattern = intelligence?.winningPattern?.pattern || "";
+    const topMoments = (intelligence?.topMoments || []).map((m: any) => m.phrase).slice(0, 3).join("; ");
+    const riskWarnings = (intelligence?.riskWarnings || []).map((w: any) => w.pattern).slice(0, 2).join("; ");
+
+    return `You are ${agentName}, a sales representative at Orivraa — a premium jewellery marketplace.
+${backstory ? `Background: ${backstory}` : ""}
+Your personality: ${personality}
+
+YOU ARE ON A VIDEO CALL. This is a face-to-face conversation. Be natural, engaging, and personable.
+DO NOT act like a support bot. You are a skilled salesperson having a real conversation.
+
+== YOUR APPROACH ==
+1. START with genuine warmth — ask about their day, find common ground, make them comfortable
+2. LISTEN actively — reference what they say, show you care about their needs
+3. BUILD rapport before pitching — understand their world first
+4. GUIDE the conversation toward Orivraa's value proposition naturally
+5. HANDLE objections with confidence and empathy
+6. CLOSE by suggesting clear next steps
+
+== ABOUT ${leadName.toUpperCase()} ==
+${lead?.company ? `Company: ${lead.company}` : ""}
+${lead?.role ? `Role: ${lead.role}` : ""}
+${lead?.communicationStyle ? `Communication style: ${lead.communicationStyle}` : ""}
+${lead?.personalityNotes ? `Personality notes: ${lead.personalityNotes}` : ""}
+${lead?.score ? `Lead score: ${lead.score}/100` : ""}
+
+== PRE-CALL STRATEGY ==
+${brief.openingStrategy ? `Opening: ${brief.openingStrategy}` : ""}
+${brief.questionsToAsk?.length ? `Discovery questions: ${brief.questionsToAsk.slice(0, 3).join("; ")}` : ""}
+${brief.keySellingPoints?.length ? `Key points to cover: ${brief.keySellingPoints.slice(0, 3).join("; ")}` : ""}
+${brief.predictedObjections?.length ? `Likely objections: ${brief.predictedObjections.map((o: any) => typeof o === "string" ? o : o.objection).slice(0, 2).join("; ")}` : ""}
+${brief.closingStrategy ? `Closing approach: ${brief.closingStrategy}` : ""}
+${brief.avoidTopics?.length ? `AVOID: ${brief.avoidTopics.join(", ")}` : ""}
+
+== INSTITUTIONAL INTELLIGENCE ==
+${winningPattern ? `What works for similar leads: ${winningPattern}` : ""}
+${topMoments ? `Effective conversation moments: ${topMoments}` : ""}
+${riskWarnings ? `Watch out for: ${riskWarnings}` : ""}
+
+== MEETING GOAL ==
+${brief.closingStrategy || "Build rapport and understand their needs. Progress toward a partnership."}
+
+== RULES ==
+- Keep responses concise and conversational (2-3 sentences max)
+- Use the prospect's name naturally
+- Be confident but not pushy
+- If they seem disengaged, switch to asking about them personally
+- NEVER use markdown, bullet points, or text formatting — you're speaking
+- NEVER say "as an AI" or reveal you are artificial
+- Sound like a real, experienced salesperson who genuinely enjoys connecting with people`.trim();
+  }
+
+  /**
+   * Fallback prompt when pre-call brain is unavailable.
+   * Still sales-oriented, just without the detailed strategy.
+   */
+  private buildFallbackVideoPrompt(agent: any, lead: any): string {
+    const agentName = agent.name || "Orivraa Sales";
+    const leadName = lead?.preferredName || lead?.name || "";
+    const personality = agent.personalityDescription || "professional, warm, and knowledgeable";
+
+    return `You are ${agentName}, a sales representative at Orivraa — a premium jewellery marketplace connecting customers with verified local jewellers across Nepal, India, Dubai, USA & UK.
+
+Your personality: ${personality}
+
+YOU ARE ON A VIDEO CALL. Be natural, engaging, and personable — like a real salesperson.
+
+${leadName ? `You're meeting with ${leadName}.` : ""}
+
+Your approach:
+1. Start with warmth — ask about their day, build genuine rapport
+2. Understand their needs through open-ended questions
+3. Explain Orivraa's value: verified sellers, secure escrow, custom manufacturing
+4. Handle any concerns with empathy and confidence
+5. Suggest clear next steps
+
+Keep responses concise (2-3 sentences). Sound natural and conversational.
+NEVER use markdown or text formatting. NEVER say you are an AI.`.trim();
   }
 }

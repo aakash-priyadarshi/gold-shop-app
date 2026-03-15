@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { Resend } from "resend";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { LeadInteractionService } from "./lead-interaction.service";
+import { PostInteractionPipelineService } from "./post-interaction-pipeline.service";
 
 @Injectable()
 export class AiEmailService {
@@ -16,6 +17,7 @@ export class AiEmailService {
     private config: ConfigService,
     private prisma: PrismaService,
     private interactions: LeadInteractionService,
+    private pipeline: PostInteractionPipelineService,
   ) {
     const resendKey = this.config.get<string>("RESEND_API_KEY");
     if (resendKey) {
@@ -122,6 +124,10 @@ export class AiEmailService {
       data: { lastContactedAt: new Date() },
     });
 
+    // Run post-interaction pipeline after sending (lightweight — mostly re-score + strategy)
+    this.pipeline.afterEmail(params.leadId, params.body, "sent")
+      .catch(err => this.logger.error(`Post-send-email pipeline failed: ${err.message}`));
+
     return email;
   }
 
@@ -212,6 +218,9 @@ Guidelines:
       threadId = parent?.threadId || parent?.id;
     }
 
+    // Detect Google Meet links in email body
+    const meetLinks = this.extractMeetLinks(params.body + " " + (params.htmlBody || ""));
+
     const email = await this.prisma.leadEmail.create({
       data: {
         leadId: lead.id,
@@ -226,6 +235,7 @@ Guidelines:
         threadId,
         status: "DELIVERED",
         receivedAt: new Date(),
+        meetLink: meetLinks.length > 0 ? meetLinks[0] : undefined,
       },
     });
 
@@ -235,9 +245,73 @@ Guidelines:
       emailId: email.id,
       direction: "RECEIVED",
       subject: params.subject,
+      meetLink: meetLinks.length > 0 ? meetLinks[0] : undefined,
     });
 
-    return email;
+    // If a Google Meet link was detected, log it for the strategy engine
+    if (meetLinks.length > 0) {
+      this.logger.log(`🔗 Detected Google Meet link in email from ${params.from}: ${meetLinks[0]}`);
+
+      // Create a pending meeting session so the AI can join
+      try {
+        await this.prisma.meetingSession.create({
+          data: {
+            leadId: lead.id,
+            type: "external",
+            status: "scheduled",
+            title: `Meeting invite from ${lead.name}: ${params.subject}`,
+            externalMeetUrl: meetLinks[0],
+            scheduledAt: this.extractMeetingTime(params.body) || new Date(),
+          },
+        });
+        this.logger.log(`Created pending meeting session for detected Meet link`);
+      } catch (err: any) {
+        this.logger.warn(`Failed to auto-create meeting session: ${err.message}`);
+      }
+    }
+
+    // Run post-interaction pipeline: enrich from email → re-score → strategy
+    this.pipeline.afterEmail(lead.id, params.body, "received")
+      .catch(err => this.logger.error(`Post-email pipeline failed: ${err.message}`));
+
+    return { email, meetLinksDetected: meetLinks, meetLinks, leadId: lead.id };
+  }
+
+  /**
+   * Extract Google Meet / Zoom / Teams links from text.
+   */
+  extractMeetLinks(text: string): string[] {
+    const patterns = [
+      /https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}/gi,
+      /https:\/\/[a-z0-9-]+\.zoom\.us\/j\/\d+/gi,
+      /https:\/\/teams\.microsoft\.com\/l\/meetup-join\/[^\s"<]+/gi,
+    ];
+    const links: string[] = [];
+    for (const pattern of patterns) {
+      const matches = text.match(pattern);
+      if (matches) links.push(...matches);
+    }
+    return [...new Set(links)]; // dedupe
+  }
+
+  /**
+   * Try to extract a meeting time from email body text.
+   * Falls back to now if unable to parse.
+   */
+  private extractMeetingTime(body: string): Date | null {
+    // Common patterns: "at 3:00 PM", "on March 15", "tomorrow at 2pm"
+    const timePatterns = [
+      /(?:scheduled|meeting|call).*?(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))/i,
+      /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/,
+    ];
+    for (const pattern of timePatterns) {
+      const match = body.match(pattern);
+      if (match) {
+        const date = new Date(match[1]);
+        if (!isNaN(date.getTime())) return date;
+      }
+    }
+    return null;
   }
 
   /** Get email thread for a lead */

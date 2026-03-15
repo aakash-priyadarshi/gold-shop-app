@@ -19,10 +19,11 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { Prisma } from "@prisma/client";
 import { Response } from "express";
 import { OAuth2Client } from "google-auth-library";
+import { Resend } from "resend";
 import { Roles } from "../../auth/roles.decorator";
-import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AIAgentService } from "./ai-agent.service";
 import { ABTestingService } from "./services/ab-testing.service";
@@ -40,13 +41,15 @@ import { GeminiStreamingClient } from "./services/gemini-streaming.service";
 import { GoogleMeetBotService } from "./services/google-meet-bot.service";
 import { LeadInteractionService } from "./services/lead-interaction.service";
 import { LeadScoringService } from "./services/lead-scoring.service";
+import { LeadStrategyService } from "./services/lead-strategy.service";
 import { MeetingOrchestratorService } from "./services/meeting-orchestrator.service";
 import { MeetingSchedulerService } from "./services/meeting-scheduler.service";
 import { ObjectionPlaybookService } from "./services/objection-playbook.service";
 import { PostCallProcessor } from "./services/post-call-processor.service";
+import { PostInteractionPipelineService } from "./services/post-interaction-pipeline.service";
 import { STTRouterService } from "./services/stt-router.service";
+import { StrategyExecutorService } from "./services/strategy-executor.service";
 import { WebhookService } from "./services/webhook.service";
-import { Resend } from "resend";
 
 @Controller("ai-sales")
 export class AIAgentController {
@@ -77,6 +80,9 @@ export class AIAgentController {
     private postCallProcessor: PostCallProcessor,
     private meetingOrchestrator: MeetingOrchestratorService,
     private meetingScheduler: MeetingSchedulerService,
+    private leadStrategy: LeadStrategyService,
+    private strategyExecutor: StrategyExecutorService,
+    private interactionPipeline: PostInteractionPipelineService,
   ) {}
 
   /* ─── AGENTS ─── */
@@ -1870,7 +1876,7 @@ Return JSON:
   }
 
   @Post("email/inbound")
-  processInboundEmail(@Body() body: {
+  async processInboundEmail(@Body() body: {
     from: string;
     to: string;
     subject: string;
@@ -1879,7 +1885,23 @@ Return JSON:
     messageId?: string;
     inReplyTo?: string;
   }) {
-    return this.aiEmail.processInbound(body);
+    const result = await this.aiEmail.processInbound(body);
+
+    // Auto-join detected meetings from inbound emails
+    if (result?.meetLinks?.length && result?.leadId) {
+      for (const meetUrl of result.meetLinks) {
+        this.strategyExecutor.autoJoinDetectedMeeting({
+          leadId: result.leadId,
+          meetUrl,
+          emailSubject: body.subject,
+        }).catch(err => {
+          // Non-blocking — log but don't fail the inbound processing
+          console.error(`Auto-join failed for ${meetUrl}:`, err.message);
+        });
+      }
+    }
+
+    return result;
   }
 
   @Get("leads/:id/emails")
@@ -2039,5 +2061,264 @@ Return JSON:
       }
     }
     return { received: true };
+  }
+
+  /* ─── LEAD STRATEGY (AI-powered next action) ─── */
+
+  @Get("leads/:id/suggest-action")
+  @Roles("ADMIN")
+  async suggestAction(@Param("id") leadId: string) {
+    return this.leadStrategy.suggestNextAction(leadId);
+  }
+
+  /* ─── INVITE LEAD TO BRANDED ORIVRAA MEETING ─── */
+
+  @Post("leads/:id/invite-meeting")
+  @Roles("ADMIN")
+  async inviteLeadToMeeting(
+    @Param("id") leadId: string,
+    @Body() body: {
+      agentId: string;
+      scheduledAt: string;
+      subject?: string;
+      message?: string;
+    },
+  ) {
+    const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
+    if (!lead) throw new HttpException("Lead not found", HttpStatus.NOT_FOUND);
+    if (!lead.email) throw new HttpException("Lead has no email — cannot send invite", HttpStatus.BAD_REQUEST);
+
+    const scheduledAt = new Date(body.scheduledAt);
+    if (scheduledAt <= new Date()) {
+      throw new HttpException("Scheduled time must be in the future", HttpStatus.BAD_REQUEST);
+    }
+
+    const agent = await this.prisma.agentVoice.findUnique({ where: { id: body.agentId } });
+    if (!agent) throw new HttpException("Agent not found", HttpStatus.NOT_FOUND);
+
+    // 1. Create a branded Daily.co room with Pipecat agent
+    const result = await this.meetingOrchestrator.scheduleDailyMeeting({
+      leadId,
+      agentId: body.agentId,
+      scheduledAt,
+      title: body.subject || `Orivraa Meeting with ${lead.name}`,
+    });
+
+    // 2. Schedule reminder jobs
+    await this.meetingScheduler.scheduleJobs(result.meetingId, scheduledAt).catch(() => {});
+
+    // 3. Send branded email invite
+    const meetLink = result.roomUrl;
+    const agentName = agent.name || "Orivraa";
+    const customMessage = body.message || `I'd love to have a quick video call to discuss how Orivraa can help you. I've set up a meeting for us.`;
+
+    await this.aiEmail.sendEmail({
+      leadId,
+      subject: body.subject || `${agentName} has invited you to a meeting — Orivraa`,
+      body: `Hi ${lead.preferredName || lead.name},\n\n${customMessage}\n\n📅 When: ${scheduledAt.toLocaleString()}\n🔗 Join the meeting: ${meetLink}\n\nLooking forward to connecting!\n\nBest,\n${agentName}\nOrivraa Sales Team`,
+      meetLink,
+      meetScheduledAt: scheduledAt,
+      goalForEmail: "Video meeting invitation — Orivraa branded session",
+      fromEmail: agent.agentEmail || undefined,
+    });
+
+    // 4. Record as interaction
+    await this.interactionService.recordInteraction({
+      leadId,
+      type: "GMEET",
+      channel: "daily",
+      direction: "outbound",
+      referenceId: result.meetingId,
+      referenceType: "MeetingSession",
+      summary: `Invited to Orivraa meeting: ${body.subject || "Video call"}`,
+      goalSet: "Video meeting with lead",
+      agentName: agentName,
+      metadata: {
+        meetingId: result.meetingId,
+        roomUrl: meetLink,
+        scheduledAt: scheduledAt.toISOString(),
+      },
+    });
+
+    return {
+      meetingId: result.meetingId,
+      roomUrl: meetLink,
+      scheduledAt,
+      emailSent: true,
+    };
+  }
+
+  /* ─── JOIN EXTERNAL MEETING (Google Meet / Zoom) ─── */
+
+  @Post("leads/:id/join-external-meeting")
+  @Roles("ADMIN")
+  async joinExternalMeeting(
+    @Param("id") leadId: string,
+    @Body() body: {
+      meetUrl: string;
+      agentId: string;
+    },
+  ) {
+    const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
+    if (!lead) throw new HttpException("Lead not found", HttpStatus.NOT_FOUND);
+
+    const agent = await this.prisma.agentVoice.findUnique({ where: { id: body.agentId } });
+    if (!agent) throw new HttpException("Agent not found", HttpStatus.NOT_FOUND);
+
+    // Create meeting session record
+    const session = await this.prisma.meetingSession.create({
+      data: {
+        leadId,
+        agentId: body.agentId,
+        type: "external",
+        status: "launching",
+        title: `Joining ${lead.name}'s meeting`,
+        externalMeetUrl: body.meetUrl,
+        startedAt: new Date(),
+      },
+    });
+
+    // Determine meeting type and join accordingly
+    const isGoogleMeet = body.meetUrl.includes("meet.google.com");
+
+    if (isGoogleMeet) {
+      // Use GoogleMeetBotService to join Google Meet
+      try {
+        const meetSession = await this.meetBot.startSession(
+          body.meetUrl,
+          body.agentId,
+          leadId,
+        );
+
+        await this.prisma.meetingSession.update({
+          where: { id: session.id },
+          data: { status: "active" },
+        });
+
+        return { meetingSessionId: session.id, botSessionId: meetSession.sessionId, status: "joining" };
+      } catch (err: any) {
+        await this.prisma.meetingSession.update({
+          where: { id: session.id },
+          data: { status: "error" },
+        });
+        throw new HttpException(`Failed to join Google Meet: ${err.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+    }
+
+    // Fallback: use MeetingBaas for other meeting types
+    try {
+      const extResult = await this.meetingOrchestrator.scheduleExternalMeeting({
+        leadId,
+        agentId: body.agentId,
+        scheduledAt: new Date(),
+        externalMeetUrl: body.meetUrl,
+        title: `Joining ${lead.name}'s meeting`,
+      });
+
+      return { meetingSessionId: session.id, status: "joining" };
+    } catch (err: any) {
+      await this.prisma.meetingSession.update({
+        where: { id: session.id },
+        data: { status: "error" },
+      });
+      throw new HttpException(`Failed to join meeting: ${err.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /* ─── DETECT MEET LINKS IN LEAD EMAILS ─── */
+
+  @Get("leads/:id/detected-meetings")
+  @Roles("ADMIN")
+  async getDetectedMeetings(@Param("id") leadId: string) {
+    // Find emails from this lead that contain meet links
+    const emails = await this.prisma.leadEmail.findMany({
+      where: {
+        leadId,
+        direction: "RECEIVED",
+        meetLink: { not: null },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    // Also find pending external meeting sessions for this lead
+    const pendingSessions = await this.prisma.meetingSession.findMany({
+      where: {
+        leadId,
+        type: "external",
+        status: { in: ["scheduled", "launching"] },
+      },
+      orderBy: { scheduledAt: "desc" },
+    });
+
+    return { emailsWithMeetLinks: emails, pendingMeetings: pendingSessions };
+  }
+
+  /* ─── AUTONOMOUS EXECUTION ─── */
+
+  @Post("leads/:id/auto-execute")
+  @Roles("ADMIN")
+  async autoExecuteStrategy(@Param("id") leadId: string) {
+    return this.strategyExecutor.executeStrategy(leadId);
+  }
+
+  @Post("leads/auto-execute-all")
+  @Roles("ADMIN")
+  async autoExecuteAll() {
+    const activeLeads = await this.prisma.lead.findMany({
+      where: {
+        status: { in: ["NEW", "CONTACTED", "INTERESTED", "FOLLOW_UP"] },
+      },
+      select: { id: true, name: true },
+    });
+
+    const results = [];
+    for (const lead of activeLeads) {
+      try {
+        const result = await this.strategyExecutor.executeStrategy(lead.id);
+        results.push({ leadId: lead.id, name: lead.name, ...result });
+      } catch (err) {
+        results.push({ leadId: lead.id, name: lead.name, error: err.message });
+      }
+    }
+    return { executed: results.length, results };
+  }
+
+  // ── Post-Interaction Pipeline ──────────────────────────────────────────
+
+  @Post("leads/:id/run-pipeline")
+  @Roles("ADMIN")
+  async runPipelineForLead(@Param("id") leadId: string) {
+    // Manually trigger the pipeline for a lead (re-score + stage + strategy)
+    await this.interactionPipeline.afterCall(leadId, "manual-trigger");
+    const lead = await this.prisma.lead.findUnique({
+      where: { id: leadId },
+      select: { id: true, name: true, score: true, temperature: true, stage: true, nextCallStrategy: true },
+    });
+    return { success: true, lead };
+  }
+
+  @Post("leads/run-pipeline-all")
+  @Roles("ADMIN")
+  async runPipelineForAll() {
+    const leads = await this.prisma.lead.findMany({
+      where: { stage: { notIn: ["WON", "LOST", "CHURNED"] } },
+      select: { id: true, name: true },
+    });
+
+    const results = [];
+    for (const lead of leads) {
+      try {
+        await this.interactionPipeline.afterCall(lead.id, "bulk-trigger");
+        const updated = await this.prisma.lead.findUnique({
+          where: { id: lead.id },
+          select: { score: true, temperature: true, stage: true, nextCallStrategy: true },
+        });
+        results.push({ leadId: lead.id, name: lead.name, ...updated });
+      } catch (err) {
+        results.push({ leadId: lead.id, name: lead.name, error: err.message });
+      }
+    }
+    return { processed: results.length, results };
   }
 }

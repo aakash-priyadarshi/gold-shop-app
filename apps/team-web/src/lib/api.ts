@@ -419,6 +419,34 @@ export const aiSalesApi = {
     api.post(`/ai-sales/meetings/${id}/launch`),
   cancelMeeting: (id: string) =>
     api.post(`/ai-sales/meetings/${id}/cancel`),
+
+  // Lead Strategy (AI-powered next action)
+  suggestAction: (leadId: string) =>
+    api.get(`/ai-sales/leads/${leadId}/suggest-action`),
+
+  // Branded Meeting Invites
+  inviteToMeeting: (leadId: string, data: { agentId: string; scheduledAt: string; subject?: string; message?: string }) =>
+    api.post(`/ai-sales/leads/${leadId}/invite-meeting`, data),
+
+  // Join External Meeting (Google Meet / Zoom)
+  joinExternalMeeting: (leadId: string, data: { meetUrl: string; agentId: string }) =>
+    api.post(`/ai-sales/leads/${leadId}/join-external-meeting`, data),
+
+  // Detected Meet links in lead emails
+  getDetectedMeetings: (leadId: string) =>
+    api.get(`/ai-sales/leads/${leadId}/detected-meetings`),
+
+  autoExecuteStrategy: (leadId: string) =>
+    api.post(`/ai-sales/leads/${leadId}/auto-execute`),
+
+  autoExecuteAll: () =>
+    api.post(`/ai-sales/leads/auto-execute-all`),
+
+  runPipeline: (leadId: string) =>
+    api.post(`/ai-sales/leads/${leadId}/run-pipeline`),
+
+  runPipelineAll: () =>
+    api.post(`/ai-sales/leads/run-pipeline-all`),
 };
 
 // ─── Certificates ───

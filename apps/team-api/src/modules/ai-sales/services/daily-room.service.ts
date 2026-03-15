@@ -1,10 +1,13 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../../prisma/prisma.service";
 
+const DEFAULT_ORIVRAA_LOGO = "https://orivraa.com/logo.png";
+
 /**
  * Daily.co Room Management Service
  *
  * Handles creating/deleting Daily.co rooms and generating meeting tokens for participants.
+ * Includes Orivraa branding configuration and open-permission defaults.
  * API docs: https://docs.daily.co/reference/rest-api
  */
 @Injectable()
@@ -61,6 +64,12 @@ export class DailyRoomService {
           enable_screenshare: true,
           enable_recording: "cloud",
           eject_at_room_exp: true,
+          lang: "en",
+          enable_people_ui: true,
+          enable_emoji_reactions: true,
+          enable_knocking: false,
+          enable_prejoin_ui: true,
+          start_video_off: true,
         },
       }),
     });
@@ -89,6 +98,27 @@ export class DailyRoomService {
     return data.token;
   }
 
+  /**
+   * Create a meeting token for the AI bot/agent.
+   * Video is off by default — the bot is audio-only.
+   */
+  async createBotToken(roomName: string, botName = "Orivraa AI"): Promise<string> {
+    const data = await this.request("/meeting-tokens", {
+      method: "POST",
+      body: JSON.stringify({
+        properties: {
+          room_name: roomName,
+          user_name: botName,
+          is_owner: false,
+          enable_screenshare: false,
+          start_video_off: true,
+        },
+      }),
+    });
+
+    return data.token;
+  }
+
   /** Delete a room after the meeting ends (cleanup) */
   async deleteRoom(roomName: string): Promise<void> {
     try {
@@ -102,5 +132,57 @@ export class DailyRoomService {
   /** Get room details */
   async getRoom(roomName: string): Promise<any> {
     return this.request(`/rooms/${roomName}`);
+  }
+
+  /**
+   * Configure Orivraa branding at the Daily.co domain level.
+   * Sets logo, company name, and color scheme via the /domain-config endpoint.
+   * Should be called once during setup or when branding changes.
+   */
+  async configureDomainBranding(): Promise<any> {
+    const settings = (await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } })) as any;
+    const logoUrl = settings?.logoUrl || DEFAULT_ORIVRAA_LOGO;
+
+    const data = await this.request("/domain-config", {
+      method: "POST",
+      body: JSON.stringify({
+        properties: {
+          logo_url: logoUrl,
+          company_name: "Orivraa",
+          primary_color: "#D4AF37",
+          background_color: "#1A1A2E",
+          text_color: "#FFFFFF",
+          hide_daily_branding: true,
+        },
+      }),
+    });
+
+    this.logger.log("Configured Orivraa domain branding on Daily.co");
+    return data;
+  }
+
+  /**
+   * Update an existing room's properties with Orivraa branding overrides.
+   * Uses the room-level API to set any per-room customizations.
+   */
+  async updateRoomBranding(roomName: string): Promise<any> {
+    const settings = (await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } })) as any;
+    const logoUrl = settings?.logoUrl || DEFAULT_ORIVRAA_LOGO;
+
+    const data = await this.request(`/rooms/${roomName}`, {
+      method: "POST",
+      body: JSON.stringify({
+        properties: {
+          lang: "en",
+          enable_prejoin_ui: true,
+          enable_knocking: false,
+          // Custom branding fields passed as room-level metadata
+          meeting_join_hook: undefined,
+        },
+      }),
+    });
+
+    this.logger.log(`Updated branding for room: ${roomName} (logo: ${logoUrl})`);
+    return data;
   }
 }

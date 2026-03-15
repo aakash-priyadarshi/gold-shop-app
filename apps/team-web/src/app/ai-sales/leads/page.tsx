@@ -25,14 +25,16 @@ import {
     MessageSquare,
     Pencil,
     Phone,
-    Plus, Search,
+    Plus, RefreshCw, Search,
     Send,
     ShoppingCart,
+    Sparkles,
     Star,
     Target, Thermometer,
     Users,
     Video,
     XCircle,
+    Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -89,11 +91,18 @@ export default function LeadsPage() {
   const [meetAgentId, setMeetAgentId] = useState("");
   const [meetDate, setMeetDate] = useState("");
   const [meetSubject, setMeetSubject] = useState("");
+  const [meetMessage, setMeetMessage] = useState("");
   const [meetLoading, setMeetLoading] = useState(false);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [leadEmails, setLeadEmails] = useState<any[]>([]);
   const [emailsLoading, setEmailsLoading] = useState(false);
+  const [strategy, setStrategy] = useState<any>(null);
+  const [strategyLoading, setStrategyLoading] = useState(false);
+  const [joinMeetDialog, setJoinMeetDialog] = useState<any>(null);
+  const [joinMeetUrl, setJoinMeetUrl] = useState("");
+  const [joinMeetAgentId, setJoinMeetAgentId] = useState("");
+  const [joinMeetLoading, setJoinMeetLoading] = useState(false);
 
   const [form, setForm] = useState({ ...EMPTY_FORM });
 
@@ -307,22 +316,80 @@ export default function LeadsPage() {
     if (new Date(meetDate) <= new Date()) { toast.error("Please choose a future date and time"); return; }
     setMeetLoading(true);
     try {
-      await aiSalesApi.scheduleMeet({
-        leadId: meetDialog.id,
+      const result = await aiSalesApi.inviteToMeeting(meetDialog.id, {
         agentId: meetAgentId,
         scheduledAt: new Date(meetDate).toISOString(),
         subject: meetSubject || undefined,
+        message: meetMessage || undefined,
       });
-      toast.success("Meet scheduled!");
+      toast.success(`Meeting invite sent! Room: ${(result as any).data?.roomUrl || "created"}`);
       setMeetDialog(null);
       setMeetAgentId("");
       setMeetDate("");
       setMeetSubject("");
+      setMeetMessage("");
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Failed to schedule meet";
+      const msg = err?.response?.data?.message || "Failed to invite to meeting";
       toast.error(msg);
     }
     setMeetLoading(false);
+  };
+
+  const handleSuggestAction = async (leadId: string) => {
+    setStrategyLoading(true);
+    setStrategy(null);
+    try {
+      const res = await aiSalesApi.suggestAction(leadId);
+      setStrategy((res as any).data);
+    } catch { toast.error("Failed to get AI suggestion"); }
+    setStrategyLoading(false);
+  };
+
+  const [autoExecLoading, setAutoExecLoading] = useState(false);
+  const handleAutoExecute = async (leadId: string) => {
+    setAutoExecLoading(true);
+    try {
+      const res = await aiSalesApi.autoExecuteStrategy(leadId);
+      const data = (res as any).data;
+      if (data.executed) {
+        toast.success(`✅ ${data.action}: ${data.details}`);
+        fetchLeads();
+      } else {
+        toast.info(`⏸ ${data.action}: ${data.details}`);
+      }
+    } catch { toast.error("Auto-execute failed"); }
+    setAutoExecLoading(false);
+  };
+
+  const [pipelineLoading, setPipelineLoading] = useState(false);
+  const handleRunPipeline = async (leadId: string) => {
+    setPipelineLoading(true);
+    try {
+      const res = await aiSalesApi.runPipeline(leadId);
+      const data = (res as any).data;
+      toast.success(`Pipeline complete — Score: ${data.lead?.score}, Stage: ${data.lead?.stage}`);
+      fetchLeads();
+    } catch { toast.error("Pipeline failed"); }
+    setPipelineLoading(false);
+  };
+
+  const handleJoinExternalMeet = async () => {
+    if (!joinMeetDialog || !joinMeetUrl || !joinMeetAgentId) { toast.error("Fill all fields"); return; }
+    setJoinMeetLoading(true);
+    try {
+      await aiSalesApi.joinExternalMeeting(joinMeetDialog.id, {
+        meetUrl: joinMeetUrl,
+        agentId: joinMeetAgentId,
+      });
+      toast.success("AI agent is joining the meeting!");
+      setJoinMeetDialog(null);
+      setJoinMeetUrl("");
+      setJoinMeetAgentId("");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to join meeting";
+      toast.error(msg);
+    }
+    setJoinMeetLoading(false);
   };
 
   const tempColor = (t: string): "destructive" | "warning" | "secondary" =>
@@ -548,7 +615,7 @@ export default function LeadsPage() {
                 <td className="p-3">
                   <p className="font-medium">{lead.name}</p>
                   {lead.company && <p className="text-xs text-muted-foreground">{lead.company}</p>}
-                  {lead.preferredName && <p className="text-[10px] text-blue-500">&ldquo;{lead.preferredName}&rdquo;</p>}
+                  {lead.nextCallStrategy && <p className="text-[10px] text-amber-600 truncate max-w-[200px]" title={lead.nextCallStrategy}>🎯 {lead.nextCallStrategy}</p>}
                 </td>
                 <td className="p-3">
                   <p className="text-xs">{lead.email || "—"}</p>
@@ -607,10 +674,10 @@ export default function LeadsPage() {
                       variant="ghost" size="sm"
                       className={`h-7 text-xs ${lead.email ? "text-purple-600" : "text-muted-foreground opacity-40 cursor-not-allowed"}`}
                       disabled={!lead.email}
-                      title={lead.email ? "Schedule Google Meet" : "No email — needed to send Meet invite"}
+                      title={lead.email ? "Invite to branded Orivraa meeting" : "No email — needed to send invite"}
                       onClick={(e) => { e.stopPropagation(); if (lead.email) setMeetDialog(lead); }}
                     >
-                      <Video className="h-3 w-3 mr-1" />Meet
+                      <Video className="h-3 w-3 mr-1" />Invite
                     </Button>
                   </div>
                 </td>
@@ -688,22 +755,96 @@ export default function LeadsPage() {
                     size="sm" variant="outline"
                     className={selectedLead.email ? "text-purple-600" : "text-muted-foreground opacity-50 cursor-not-allowed"}
                     disabled={!selectedLead.email}
-                    title={selectedLead.email ? "Schedule Google Meet" : "No email — needed to send Meet invite"}
+                    title={selectedLead.email ? "Invite to branded Orivraa meeting" : "No email — needed to send invite"}
                     onClick={() => { if (selectedLead.email) setMeetDialog(selectedLead); }}
                   >
-                    <Video className="h-3 w-3 mr-1" />Schedule Meet
+                    <Video className="h-3 w-3 mr-1" />Invite to Meeting
                     {!selectedLead.email && <span className="ml-1 text-[10px]">(no email)</span>}
+                  </Button>
+                  <Button
+                    size="sm" variant="outline" className="text-indigo-600"
+                    title="AI agent joins a Google Meet / Zoom link"
+                    onClick={() => setJoinMeetDialog(selectedLead)}
+                  >
+                    <Video className="h-3 w-3 mr-1" />Join Meet
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => { loadScore(selectedLead.id); }}>
                     <Target className="h-3 w-3 mr-1" />Score
                   </Button>
+                  <Button
+                    size="sm" variant="outline" className="text-amber-600"
+                    disabled={strategyLoading}
+                    onClick={() => handleSuggestAction(selectedLead.id)}
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" />{strategyLoading ? "Thinking..." : "AI Suggest"}
+                  </Button>
+                  <Button
+                    size="sm" variant="default" className="bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+                    disabled={autoExecLoading}
+                    onClick={() => handleAutoExecute(selectedLead.id)}
+                  >
+                    <Zap className="h-3 w-3 mr-1" />{autoExecLoading ? "Executing..." : "Auto Execute"}
+                  </Button>
+                  <Button
+                    size="sm" variant="outline" className="text-blue-600"
+                    disabled={pipelineLoading}
+                    onClick={() => handleRunPipeline(selectedLead.id)}
+                  >
+                    <RefreshCw className={`h-3 w-3 mr-1 ${pipelineLoading ? "animate-spin" : ""}`} />{pipelineLoading ? "Processing..." : "Re-Score"}
+                  </Button>
                 </div>
+
+                {/* AI Strategy Recommendation */}
+                {strategy && (
+                  <Card className="border-amber-200 bg-amber-50/50">
+                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1"><Sparkles className="h-4 w-4 text-amber-500" />AI Recommendation</CardTitle></CardHeader>
+                    <CardContent className="text-sm space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={strategy.priority === "high" ? "destructive" : strategy.priority === "medium" ? "warning" : "secondary"}>
+                          {strategy.priority}
+                        </Badge>
+                        <Badge variant="outline">{strategy.action?.replace(/_/g, " ")}</Badge>
+                      </div>
+                      <p className="text-muted-foreground">{strategy.reason}</p>
+                      {strategy.suggestedGoal && <p><strong>Goal:</strong> {strategy.suggestedGoal}</p>}
+                      {strategy.suggestedMessage && (
+                        <div className="bg-white p-2 rounded border text-xs">
+                          <p className="text-muted-foreground mb-1">Suggested message:</p>
+                          <p>{strategy.suggestedMessage}</p>
+                        </div>
+                      )}
+                      {strategy.action === "INVITE_MEETING" && (
+                        <Button size="sm" className="mt-2" onClick={() => { setMeetDialog(selectedLead); if (strategy.meetingSubject) setMeetSubject(strategy.meetingSubject); }}>
+                          <Video className="h-3 w-3 mr-1" />Create Meeting Invite
+                        </Button>
+                      )}
+                      {strategy.action === "CALL" && selectedLead.phone && (
+                        <Button size="sm" className="mt-2" onClick={() => { setCallDialog(selectedLead); }}>
+                          <Phone className="h-3 w-3 mr-1" />Call Now
+                        </Button>
+                      )}
+                      {strategy.action === "EMAIL" && selectedLead.email && (
+                        <Button size="sm" className="mt-2" onClick={() => { setEmailDialog(selectedLead); }}>
+                          <Mail className="h-3 w-3 mr-1" />Compose Email
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div><p className="text-muted-foreground">Email</p><p>{selectedLead.email || "—"}</p></div>
                   <div><p className="text-muted-foreground">Phone</p><p>{selectedLead.phone || "—"}</p></div>
                   <div><p className="text-muted-foreground">Company</p><p>{selectedLead.company || "—"}</p></div>
                   <div><p className="text-muted-foreground">Role</p><p>{selectedLead.role || "—"}</p></div>
-                  <div><p className="text-muted-foreground">Stage</p><Badge>{selectedLead.stage}</Badge></div>
+                  <div><p className="text-muted-foreground">Stage</p>
+                    <Badge variant={
+                      selectedLead.stage === "WON" ? "success" :
+                      selectedLead.stage === "LOST" ? "destructive" :
+                      selectedLead.stage === "NEGOTIATION" || selectedLead.stage === "PROPOSAL" ? "warning" :
+                      "secondary"
+                    }>{selectedLead.stage}</Badge>
+                  </div>
                   <div><p className="text-muted-foreground">Temperature</p>
                     {selectedLead.temperature ? <Badge variant={tempColor(selectedLead.temperature)}>{selectedLead.temperature}</Badge> : <span>—</span>}
                   </div>
@@ -745,6 +886,23 @@ export default function LeadsPage() {
                     <p className="text-sm text-muted-foreground mb-1">Notes</p>
                     <p className="text-sm bg-muted/30 rounded p-2">{selectedLead.notes}</p>
                   </div>
+                )}
+
+                {/* Buying Intelligence & Enrichment */}
+                {(selectedLead.budgetRange || selectedLead.urgency || selectedLead.communicationStyle || selectedLead.predictedConcern || selectedLead.dealValue) && (
+                  <Card className="border-blue-200">
+                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1"><Target className="h-4 w-4 text-blue-500" />Buying Intelligence</CardTitle></CardHeader>
+                    <CardContent className="text-sm">
+                      <div className="grid grid-cols-2 gap-2">
+                        {selectedLead.budgetRange && <div><p className="text-muted-foreground">Budget</p><p className="font-medium">{selectedLead.budgetRange}</p></div>}
+                        {selectedLead.urgency && <div><p className="text-muted-foreground">Urgency</p><Badge variant={selectedLead.urgency === "high" || selectedLead.urgency === "urgent" ? "destructive" : "secondary"}>{selectedLead.urgency}</Badge></div>}
+                        {selectedLead.communicationStyle && <div><p className="text-muted-foreground">Comm Style</p><p className="font-medium capitalize">{selectedLead.communicationStyle}</p></div>}
+                        {selectedLead.decisionStyle && <div><p className="text-muted-foreground">Decision Style</p><p className="font-medium capitalize">{selectedLead.decisionStyle}</p></div>}
+                        {selectedLead.dealValue && <div><p className="text-muted-foreground">Deal Value</p><p className="font-medium">₹{selectedLead.dealValue.toLocaleString()}</p></div>}
+                        {selectedLead.predictedConcern && <div className="col-span-2"><p className="text-muted-foreground">Predicted Concern</p><p className="bg-red-50 dark:bg-red-950/20 rounded p-1">{selectedLead.predictedConcern}</p></div>}
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
               </TabsContent>
 
@@ -1140,18 +1298,18 @@ export default function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Schedule Meet Dialog */}
-      <Dialog open={!!meetDialog} onOpenChange={(open) => { if (!open) { setMeetDialog(null); setMeetAgentId(""); setMeetDate(""); setMeetSubject(""); } }}>
+      {/* Invite to Branded Meeting Dialog */}
+      <Dialog open={!!meetDialog} onOpenChange={(open) => { if (!open) { setMeetDialog(null); setMeetAgentId(""); setMeetDate(""); setMeetSubject(""); setMeetMessage(""); } }}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Schedule Meet with {meetDialog?.name}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Invite {meetDialog?.name} to Orivraa Meeting</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {!meetDialog?.email && (
               <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3">
-                ⚠️ <strong>No email address on record.</strong> An email is required to send the Meet invite.
+                ⚠️ <strong>No email address on record.</strong> An email is required to send the invite.
               </div>
             )}
             {meetDialog?.email && (
-              <p className="text-xs text-muted-foreground">Invite will be sent to: <span className="font-medium">{meetDialog.email}</span></p>
+              <p className="text-xs text-muted-foreground">Branded meeting invite will be sent to: <span className="font-medium">{meetDialog.email}</span></p>
             )}
             {agents.length === 0 && (
               <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3">
@@ -1164,17 +1322,10 @@ export default function LeadsPage() {
                 <SelectTrigger><SelectValue placeholder={agents.length === 0 ? "No agents available" : "Select agent"} /></SelectTrigger>
                 <SelectContent>
                   {agents.map((a: any) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name}{!a.agentEmail ? " ⚠️ no agent email" : ""}
-                    </SelectItem>
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {meetAgentId && !agents.find((a: any) => a.id === meetAgentId)?.agentEmail && (
-                <p className="text-[11px] text-amber-600 mt-1">
-                  ⚠️ This agent has no Google Workspace email set. They will join the Meet as a guest and may be blocked if the meeting requires sign-in. Set an <code>agentEmail</code> in the agent settings.
-                </p>
-              )}
             </div>
             <div>
               <Label>Date & Time</Label>
@@ -1189,8 +1340,46 @@ export default function LeadsPage() {
               <Label>Subject (optional)</Label>
               <Input value={meetSubject} onChange={(e) => setMeetSubject(e.target.value)} placeholder="Product demo, Follow-up discussion..." />
             </div>
-            <Button onClick={handleScheduleMeet} disabled={meetLoading || !meetDialog?.email} className="w-full">
-              <Video className="h-4 w-4 mr-2" />{meetLoading ? "Scheduling..." : "Schedule Google Meet"}
+            <div>
+              <Label>Personal Message (optional)</Label>
+              <Textarea value={meetMessage} onChange={(e) => setMeetMessage(e.target.value)} placeholder="Custom message for the invite email..." rows={3} />
+            </div>
+            <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/30 p-2 rounded">
+              💡 This creates a <strong>branded Orivraa video room</strong> with AI agent ready. The lead will receive an email invite with the meeting link.
+            </div>
+            <Button onClick={handleScheduleMeet} disabled={meetLoading || !meetDialog?.email || !meetAgentId || !meetDate} className="w-full">
+              <Video className="h-4 w-4 mr-2" />{meetLoading ? "Sending Invite..." : "Send Meeting Invite"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Join External Meeting Dialog */}
+      <Dialog open={!!joinMeetDialog} onOpenChange={(open) => { if (!open) { setJoinMeetDialog(null); setJoinMeetUrl(""); setJoinMeetAgentId(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Join {joinMeetDialog?.name}&apos;s Meeting</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Meeting URL</Label>
+              <Input value={joinMeetUrl} onChange={(e) => setJoinMeetUrl(e.target.value)} placeholder="https://meet.google.com/xxx-yyyy-zzz" />
+              <p className="text-xs text-muted-foreground mt-1">Supports Google Meet, Zoom, and Teams links</p>
+            </div>
+            <div>
+              <Label>AI Agent</Label>
+              <Select value={joinMeetAgentId} onValueChange={setJoinMeetAgentId}>
+                <SelectTrigger><SelectValue placeholder="Select agent to join meeting" /></SelectTrigger>
+                <SelectContent>
+                  {agents.map((a: any) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-xs text-muted-foreground bg-indigo-50 dark:bg-indigo-950/30 p-2 rounded">
+              🤖 The AI agent will join the meeting, listen, speak, and save the transcript automatically.
+            </div>
+            <Button onClick={handleJoinExternalMeet} disabled={joinMeetLoading || !joinMeetUrl || !joinMeetAgentId} className="w-full">
+              <Video className="h-4 w-4 mr-2" />{joinMeetLoading ? "Joining..." : "Join Meeting"}
             </Button>
           </div>
         </DialogContent>
