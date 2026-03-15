@@ -1,10 +1,15 @@
 import {
+  Body,
   Controller,
+  DefaultValuePipe,
+  Delete,
   Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
   Query,
   UseGuards,
-  ParseIntPipe,
-  DefaultValuePipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SupportService } from './support.service';
@@ -54,5 +59,35 @@ export class SupportController {
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
   ) {
     return this.supportService.getRecentActivity(limit);
+  }
+
+  @Get('ai-analytics')
+  @ApiOperation({ summary: 'Get AI chatbot analytics' })
+  async getAiAnalytics() {
+    return this.supportService.getAiAnalytics();
+  }
+
+  @Get('contacts')
+  @ApiOperation({ summary: 'Get all global support contacts (Admin)' })
+  async getContacts() {
+    return this.supportService.getGlobalContacts(false);
+  }
+
+  @Post('contacts')
+  @ApiOperation({ summary: 'Create global support contact' })
+  async createContact(@Body() body: { country: string, countryFlag: string, type: string, value: string, isActive: boolean }) {
+    return this.supportService.upsertGlobalContact(body);
+  }
+
+  @Patch('contacts/:id')
+  @ApiOperation({ summary: 'Update global support contact' })
+  async updateContact(@Param('id') id: string, @Body() body: { country: string, countryFlag: string, type: string, value: string, isActive: boolean }) {
+    return this.supportService.upsertGlobalContact({ ...body, id });
+  }
+
+  @Delete('contacts/:id')
+  @ApiOperation({ summary: 'Delete global support contact' })
+  async deleteContact(@Param('id') id: string) {
+    return this.supportService.deleteGlobalContact(id);
   }
 }

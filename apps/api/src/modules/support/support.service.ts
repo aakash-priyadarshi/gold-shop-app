@@ -140,6 +140,74 @@ export class SupportService {
       },
     });
   }
+
+  // ─── AI Chat Logs & Analytics ───
+  async logAiChat(
+    sessionId: string | null,
+    role: "user" | "assistant",
+    content: string,
+    actionTaken?: string,
+    confidence?: number,
+    ipAddress?: string
+  ) {
+    return this.prisma.aiChatLog.create({
+      data: {
+        sessionId,
+        role,
+        content,
+        actionTaken,
+        confidence,
+        ipAddress,
+      },
+    });
+  }
+
+  async getAiAnalytics() {
+    const totalChats = await this.prisma.aiChatLog.count({
+      where: { role: 'user' }
+    });
+    
+    const actionsTaken = await this.prisma.aiChatLog.count({
+      where: { actionTaken: { not: null } }
+    });
+
+    const recentLogs = await this.prisma.aiChatLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+
+    return {
+      totalChats,
+      actionsTaken,
+      recentLogs
+    };
+  }
+
+  // ─── Global Contacts ───
+  async getGlobalContacts(onlyActive = true) {
+    return this.prisma.supportContact.findMany({
+      where: onlyActive ? { isActive: true } : undefined,
+      orderBy: { country: 'asc' }
+    });
+  }
+
+  async upsertGlobalContact(data: { id?: string, country: string, countryFlag: string, type: string, value: string, isActive: boolean }) {
+    if (data.id) {
+       return this.prisma.supportContact.update({
+          where: { id: data.id },
+          data
+       });
+    }
+    return this.prisma.supportContact.create({
+       data
+    });
+  }
+
+  async deleteGlobalContact(id: string) {
+    return this.prisma.supportContact.delete({
+       where: { id }
+    });
+  }
 }
 
 function last24Hours() {

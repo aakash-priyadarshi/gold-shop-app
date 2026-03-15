@@ -1,11 +1,8 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-
-/**
- * AI-powered support chatbot using Gemini Flash.
- * Handles basic queries and returns structured responses.
- * Indicates when the user should escalate to a human support ticket.
- */
+import { AuthService } from "../auth/auth.service";
+import { TicketsService } from "./tickets.service";
+import { SupportService } from "./support.service";
 
 export interface AiChatResponse {
   reply: string;
@@ -21,7 +18,13 @@ export class AiChatbotService {
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
   private readonly apiKey: string;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private authService: AuthService,
+    @Inject(forwardRef(() => TicketsService))
+    private ticketsService: TicketsService,
+    private supportService: SupportService
+  ) {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
   }
 
@@ -31,18 +34,54 @@ export class AiChatbotService {
       role: "user" | "assistant";
       content: string;
     }> = [],
+    ipAddress?: string
   ): Promise<AiChatResponse> {
     if (!this.apiKey) {
       return this.fallbackResponse(message);
     }
 
     try {
+      // Log the incoming message
+      await this.supportService.logAiChat(null, "user", message, undefined, undefined, ipAddress);
+
       const systemPrompt = this.buildSystemPrompt();
       const contents = this.buildContents(
         systemPrompt,
         conversationHistory,
         message,
       );
+
+      const tools = [
+        {
+          functionDeclarations: [
+            {
+              name: "sendPasswordReset",
+              description: "Sends a secure password reset link to the user's email address if they forgot their password.",
+              parameters: {
+                type: "OBJECT",
+                properties: {
+                  email: { type: "STRING", description: "The email address of the user who needs the reset link." }
+                },
+                required: ["email"]
+              }
+            },
+            {
+              name: "autoEscalateTicket",
+              description: "Automatically creates a high-priority support ticket when a user appeals suspension, gets locked out, or has a complex issue that requires human intervention.",
+              parameters: {
+                type: "OBJECT",
+                properties: {
+                  guestName: { type: "STRING", description: "The user's full name. Ask for this if not provided." },
+                  guestEmail: { type: "STRING", description: "The user's email address. Ask for this if not provided." },
+                  issueType: { type: "STRING", description: "Must be exactly one of: LOGIN_ISSUE, ACCOUNT_SUSPENSION, ORDER_ISSUE, REFUND_ISSUE, OTHER" },
+                  summary: { type: "STRING", description: "A detailed summary of the issue to attach to the ticket for human review." }
+                },
+                required: ["guestName", "guestEmail", "issueType", "summary"]
+              }
+            }
+          ]
+        }
+      ];
 
       const response = await fetch(
         `${this.GEMINI_API_URL}?key=${this.apiKey}`,
@@ -51,6 +90,7 @@ export class AiChatbotService {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents,
+            tools,
             generationConfig: {
               temperature: 0.3,
               maxOutputTokens: 500,
@@ -66,41 +106,88 @@ export class AiChatbotService {
       }
 
       const data = await response.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const firstPart = data?.candidates?.[0]?.content?.parts?.[0];
 
-      return this.parseAiResponse(text);
+      // Check if Gemini invoked a function
+      if (firstPart && firstPart.functionCall) {
+         return this.handleFunctionCall(firstPart.functionCall, ipAddress);
+      }
+
+      const text = firstPart?.text || "";
+
+      // Fallback manual parsing if Gemini responded as JSON string instead of function structure
+      const parsed = this.parseAiResponse(text);
+      await this.supportService.logAiChat(null, "assistant", parsed.reply, undefined, parsed.confidence, ipAddress);
+      return parsed;
     } catch (error) {
       this.logger.error("AI chatbot error:", error);
       return this.fallbackResponse(message);
     }
   }
 
+  private async handleFunctionCall(functionCall: any, ipAddress?: string): Promise<AiChatResponse> {
+     try {
+       const { name, args } = functionCall;
+       
+       if (name === "sendPasswordReset") {
+          await this.authService.forgotPassword(args.email, ipAddress || "");
+          const reply = `I have successfully sent a password reset link to ${args.email}. Please check your inbox and spam folder.`;
+          await this.supportService.logAiChat(null, "assistant", reply, "sendPasswordReset", 1.0, ipAddress);
+          return {
+             reply,
+             shouldEscalate: false,
+             confidence: 1.0
+          };
+       }
+
+       if (name === "autoEscalateTicket") {
+          const ticket = await this.ticketsService.createTicket({
+             type: args.issueType as any,
+             subject: `AI Escalated: ${args.issueType}`,
+             description: args.summary,
+             guestEmail: args.guestEmail,
+             guestName: args.guestName,
+             priority: "URGENT" as any,
+          } as any);
+
+          const reply = `I have escalated this issue and a high-priority ticket (#${ticket.ticketNumber}) has been created for your account. Our human support team has been notified and will email you at ${args.guestEmail} shortly.`;
+          await this.supportService.logAiChat(null, "assistant", reply, "autoEscalateTicket", 1.0, ipAddress);
+          return {
+             reply,
+             shouldEscalate: false, 
+             confidence: 1.0
+          };
+       }
+
+       return {
+          reply: "I tried to perform an action but it seems I do not have the right permissions.",
+          shouldEscalate: true,
+          confidence: 0.5
+       };
+
+     } catch (err: any) {
+        this.logger.error("Function call error", err);
+        return {
+           reply: "I encountered an error while trying to process your request. Please manually log a support ticket via the 'Raise a Ticket' tab.",
+           shouldEscalate: true,
+           confidence: 0.5
+        };
+     }
+  }
+
   private buildSystemPrompt(): string {
-    return `You are a helpful support assistant for OriVraa, an Indian jewellery marketplace platform.
-Your role is to answer common questions about:
-- How the platform works (buying/selling jewellery online)
-- Order tracking and delivery
-- Payment methods and refund policies
-- Account management (registration, login, KYC verification)
-- Platform rules (no sharing personal contact info in chats)
-- How to list products (for shopkeepers)
-- RFQ (Request for Quote) system
-- Custom jewellery orders
+    return `You are Gemini Support Core, an advanced AI support agent for OriVraa, an Indian jewellery marketplace.
+Your role is to answer questions AND take actions on behalf of the user using the tools provided to you.
 
-IMPORTANT RULES:
-1. Be concise and helpful. Keep answers under 150 words.
-2. Answer in the same language the user writes in (Hindi, English, or Hinglish).
-3. If the user's question requires personal account investigation, account changes, refund processing, or involves a specific order/transaction issue, set shouldEscalate to true.
-4. If the question is about a suspended/blocked account, set shouldEscalate to true with suggestedTicketType "ACCOUNT_SUSPENSION".
-5. If it's about an order problem, set suggestedTicketType "ORDER_ISSUE".
-6. If it's a payment/refund issue, set suggestedTicketType "REFUND_ISSUE".
-7. If it's a login/security issue, set suggestedTicketType "LOGIN_ISSUE".
-8. For questions you can answer directly (general info, how-to, policies), set shouldEscalate to false.
+AVAILABLE TOOLS & INSTRUCTIONS:
+1. sendPasswordReset: Call this if the user says they forgot their password and provides an email. If they ask to reset password but don't give an email, nicely ask for their email address first.
+2. autoEscalateTicket: Call this to create a ticket urgently if the user is locked out, suspended, or has a complex issue (like missing refund, fraud, technical bug). You must ask for their name and email first if you don't have it in the chat history.
 
-RESPONSE FORMAT (JSON):
-{"reply": "your helpful answer here", "shouldEscalate": false, "suggestedTicketType": null, "confidence": 0.9}
-
-Always respond with valid JSON only. No markdown, no extra text.`;
+GENERAL RULES:
+- Be concise and polite.
+- Always ask for required information (like email) before attempting a tool call.
+- For basic info (policies, tracking), respond normally without tools.
+- Never output markdown JSON like the old model did, just output normal readable text unless making a function call.`;
   }
 
   private buildContents(
@@ -117,7 +204,7 @@ Always respond with valid JSON only. No markdown, no extra text.`;
         role: "model",
         parts: [
           {
-            text: '{"reply": "Hello! I\'m the OriVraa support assistant. How can I help you today?", "shouldEscalate": false, "suggestedTicketType": null, "confidence": 1.0}',
+            text: "Hello! I'm Gemini Support Core. How can I assist you today?",
           },
         ],
       },
@@ -142,106 +229,32 @@ Always respond with valid JSON only. No markdown, no extra text.`;
 
   private parseAiResponse(text: string): AiChatResponse {
     try {
-      // Try to extract JSON from the response
+      // Try to extract JSON from the response if it still hallucinates JSON format
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         return {
           reply:
-            parsed.reply || "I apologize, I could not process your request.",
+            parsed.reply || text,
           shouldEscalate: !!parsed.shouldEscalate,
           suggestedTicketType: parsed.suggestedTicketType || undefined,
-          confidence: parsed.confidence || 0.5,
+          confidence: parsed.confidence || 0.8,
         };
       }
     } catch {
-      // If parsing fails, use the raw text
+      // ignore
     }
 
     return {
-      reply:
-        text ||
-        "I apologize, I could not process your request. Please try again.",
+      reply: text || "I apologize, I could not process your request. Please try again or create a ticket.",
       shouldEscalate: false,
-      confidence: 0.3,
+      confidence: 0.8,
     };
   }
 
   private fallbackResponse(message: string): AiChatResponse {
-    const lower = message.toLowerCase();
-
-    if (
-      lower.includes("order") ||
-      lower.includes("delivery") ||
-      lower.includes("track")
-    ) {
-      return {
-        reply:
-          "For order-related queries, please check your order status in Dashboard → My Orders. If you need further help, please create a support ticket and our team will assist you.",
-        shouldEscalate: true,
-        suggestedTicketType: "ORDER_ISSUE",
-        confidence: 0.6,
-      };
-    }
-
-    if (
-      lower.includes("refund") ||
-      lower.includes("return") ||
-      lower.includes("money back")
-    ) {
-      return {
-        reply:
-          'For refund requests, go to your order details and click "Request Refund". If the option is not available or you need help, create a support ticket.',
-        shouldEscalate: true,
-        suggestedTicketType: "REFUND_ISSUE",
-        confidence: 0.6,
-      };
-    }
-
-    if (
-      lower.includes("suspend") ||
-      lower.includes("block") ||
-      lower.includes("ban")
-    ) {
-      return {
-        reply:
-          "If your account has been suspended, it may be due to a policy violation. Please create a support ticket to appeal the suspension.",
-        shouldEscalate: true,
-        suggestedTicketType: "ACCOUNT_SUSPENSION",
-        confidence: 0.7,
-      };
-    }
-
-    if (
-      lower.includes("login") ||
-      lower.includes("password") ||
-      lower.includes("sign in")
-    ) {
-      return {
-        reply:
-          "For login issues, try resetting your password on the login page. If you still cannot access your account, please create a support ticket.",
-        shouldEscalate: true,
-        suggestedTicketType: "LOGIN_ISSUE",
-        confidence: 0.6,
-      };
-    }
-
-    if (
-      lower.includes("kyc") ||
-      lower.includes("verification") ||
-      lower.includes("verify")
-    ) {
-      return {
-        reply:
-          "KYC verification is required for shopkeepers. Upload your ID documents in Dashboard → Profile → KYC. Verification typically takes 24-48 hours.",
-        shouldEscalate: false,
-        confidence: 0.7,
-      };
-    }
-
     return {
-      reply:
-        "I can help with general questions about OriVraa — orders, payments, account management, and more. For specific issues, please create a support ticket and our team will assist you personally.",
+      reply: "I can help with general questions about OriVraa. For specific issues, please create a support ticket and our team will assist you.",
       shouldEscalate: false,
       confidence: 0.4,
     };

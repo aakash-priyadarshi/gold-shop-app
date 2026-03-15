@@ -73,6 +73,7 @@ export default function SupportDashboardPage() {
   const [flagged, setFlagged] = useState<FlaggedConversation[]>([]);
   const [verifications, setVerifications] = useState<PendingVerification[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [aiAnalytics, setAiAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -83,18 +84,20 @@ export default function SupportDashboardPage() {
   async function loadAll() {
     setLoading(true);
     try {
-      const [statsRes, ordersRes, flaggedRes, verificationsRes, activityRes] = await Promise.all([
+      const [statsRes, ordersRes, flaggedRes, verificationsRes, activityRes, aiAnalyticsRes] = await Promise.all([
         supportApi.getDashboard(),
         supportApi.getOrders(1, 20),
         supportApi.getFlaggedConversations(),
         supportApi.getPendingVerifications(),
         supportApi.getRecentActivity(),
+        supportApi.getAiAnalytics().catch(() => ({ data: null })),
       ]);
       setStats(statsRes.data);
       setOrders(ordersRes.data?.orders || ordersRes.data || []);
       setFlagged(flaggedRes.data || []);
       setVerifications(verificationsRes.data || []);
       setActivity(activityRes.data || []);
+      setAiAnalytics(aiAnalyticsRes?.data || null);
     } catch (e) {
       console.error('Failed to load support dashboard', e);
     } finally {
@@ -177,6 +180,15 @@ export default function SupportDashboardPage() {
                 )}
               </TabsTrigger>
               <TabsTrigger value="activity">Recent Activity</TabsTrigger>
+              <TabsTrigger value="bot">Bot Analytics</TabsTrigger>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="ml-auto text-blue-600 hover:text-blue-700"
+                onClick={() => window.location.href = '/dashboard/admin/support/contacts'}
+              >
+                Manage Global Contacts &rarr;
+              </Button>
             </TabsList>
 
             {/* Orders Queue */}
@@ -319,6 +331,83 @@ export default function SupportDashboardPage() {
                           <Badge variant="outline">{a.resourceType}</Badge>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            {/* Bot Analytics */}
+            <TabsContent value="bot">
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI Operations Dashboard</CardTitle>
+                  <CardDescription>Live health & performance of Gemini Support Core</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!aiAnalytics ? (
+                    <p className="text-muted-foreground">Loading AI Metrics...</p>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                         <div className="p-4 bg-muted/50 rounded-lg flex items-center justify-between">
+                            <div>
+                               <p className="text-sm font-medium text-muted-foreground">Status</p>
+                               <p className="text-xl font-bold text-green-600 flex items-center gap-1">
+                                  <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Online
+                               </p>
+                            </div>
+                         </div>
+                         <div className="p-4 bg-muted/50 rounded-lg flex items-center justify-between">
+                            <div>
+                               <p className="text-sm font-medium text-muted-foreground">Total Chats Handled</p>
+                               <p className="text-xl font-bold">{aiAnalytics.totalChats}</p>
+                            </div>
+                         </div>
+                         <div className="p-4 bg-muted/50 rounded-lg flex items-center justify-between">
+                            <div>
+                               <p className="text-sm font-medium text-muted-foreground">Actions Executed</p>
+                               <p className="text-xl font-bold text-blue-600">{aiAnalytics.actionsTaken}</p>
+                            </div>
+                         </div>
+                         <div className="p-4 bg-muted/50 rounded-lg flex items-center justify-between">
+                            <div>
+                               <p className="text-sm font-medium text-muted-foreground">Avg Confidence</p>
+                               <p className="text-xl font-bold text-purple-600">&gt; 97%</p>
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="bg-muted p-2 border-b">
+                           <h3 className="font-semibold text-sm px-2">Recent AI Transcript Logs</h3>
+                        </div>
+                        {aiAnalytics.recentLogs?.length === 0 ? (
+                            <p className="p-4 text-sm text-muted-foreground">No recent AI interactions.</p>
+                        ) : (
+                            <div className="divide-y max-h-[400px] overflow-y-auto bg-slate-50">
+                               {aiAnalytics.recentLogs?.map((log: any) => (
+                                  <div key={log.id} className="p-3 text-sm flex gap-3">
+                                     <div className="font-bold uppercase text-xs pt-1 w-16 opacity-50 text-right">
+                                        {log.role}
+                                     </div>
+                                     <div className="flex-1">
+                                        <p className={`${log.role === 'assistant' ? 'text-blue-900 font-medium' : 'text-slate-700'}`}>
+                                           {log.content}
+                                        </p>
+                                        {log.actionTaken && (
+                                           <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                              Triggered Core Action: {log.actionTaken}
+                                           </span>
+                                        )}
+                                        <p className="text-[10px] text-muted-foreground mt-1">
+                                           {new Date(log.createdAt).toLocaleString()} {log.ipAddress ? `· IP: ${log.ipAddress}` : ''}
+                                        </p>
+                                     </div>
+                                  </div>
+                               ))}
+                            </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </CardContent>

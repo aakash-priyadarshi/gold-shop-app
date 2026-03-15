@@ -3219,3 +3219,32 @@ model BlogPost {
   @@index([category])
   @@index([featured])
 }
+
+// ── Support Contacts ───────────────────────────────────────────
+model SupportContact {
+  id          String   @id @default(uuid())
+  country     String
+  countryFlag String
+  type        String   // PHONE, WHATSAPP, EMAIL
+  value       String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([country, isActive])
+}
+
+// ── AI Chat Logs ──────────────────────────────────────────────
+model AiChatLog {
+  id           String   @id @default(uuid())
+  sessionId    String?
+  role         String   // user or assistant
+  content      String   @db.Text
+  actionTaken  String?
+  confidence   Float?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([createdAt])
+}

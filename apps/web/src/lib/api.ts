@@ -788,6 +788,11 @@ export const supportApi = {
   getPendingVerifications: () => api.get("/support/pending-verifications"),
   getRecentActivity: (limit = 50) =>
     api.get("/support/activity", { params: { limit } }),
+  getAiAnalytics: () => api.get("/support/ai-analytics"),
+  getContacts: () => api.get("/support/contacts"),
+  createContact: (data: any) => api.post("/support/contacts", data),
+  updateContact: (id: string, data: any) => api.patch(`/support/contacts/${id}`, data),
+  deleteContact: (id: string) => api.delete(`/support/contacts/${id}`),
 };
 
 // ─── Tickets API ───
@@ -842,6 +847,8 @@ export const ticketsApi = {
     message: string;
     history?: Array<{ role: "user" | "assistant"; content: string }>;
   }) => api.post("/tickets/ai-chat", data),
+  // Public contacts
+  getPublicContacts: () => api.get("/tickets/contacts"),
 };
 
 // ─── Product Variants API ───

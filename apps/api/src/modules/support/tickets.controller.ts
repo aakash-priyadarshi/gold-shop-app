@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -17,6 +18,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { AiChatbotService } from "./ai-chatbot.service";
+import { SupportService } from "./support.service";
 import {
   AddTicketMessageDto,
   CreateTicketDto,
@@ -30,19 +32,28 @@ export class TicketsController {
   constructor(
     private ticketsService: TicketsService,
     private aiChatbot: AiChatbotService,
+    private supportService: SupportService
   ) {}
+
+  // ─── Public: Global Contacts ───
+  @Get("contacts")
+  @ApiOperation({ summary: "Get active global support contacts (public)" })
+  async getPublicContacts() {
+    return this.supportService.getGlobalContacts(true);
+  }
 
   // ─── Public: AI Chatbot (no auth required) ───
   @Post("ai-chat")
   @ApiOperation({ summary: "AI chatbot for basic support queries (public)" })
   async aiChat(
+    @Req() req: any,
     @Body()
     body: {
       message: string;
       history?: Array<{ role: "user" | "assistant"; content: string }>;
     },
   ) {
-    return this.aiChatbot.chat(body.message, body.history || []);
+    return this.aiChatbot.chat(body.message, body.history || [], req.ip);
   }
 
   // ─── Public: Create ticket (guest — no auth required) ───
