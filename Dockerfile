@@ -32,6 +32,7 @@ ENV DISPLAY=:99
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     chromium \
     xvfb \
+    xauth \
     pulseaudio \
     fonts-noto-color-emoji \
     fonts-noto-cjk \
