@@ -128,7 +128,7 @@ function seededRandom(seed: number) {
 }
 
 function layoutPoints(points: VectorPoint[], width: number, height: number) {
-  const categories = [...new Set(points.map((p) => p.payload?.category || "default"))];
+  const categories = Array.from(new Set(points.map((p) => p.payload?.category || "default")));
   const catCount = categories.length;
   const padding = 80;
   const usableW = width - padding * 2;
@@ -440,7 +440,7 @@ function VectorBrainTab() {
         {[
           { label: "Knowledge Points", value: points.length, color: "text-purple-400", icon: <Brain className="h-4 w-4 text-purple-400" /> },
           { label: "Call Transcripts", value: transcriptPoints.length, color: "text-cyan-400", icon: <Database className="h-4 w-4 text-cyan-400" /> },
-          { label: "Categories", value: [...new Set(points.map((p) => p.payload?.category))].filter(Boolean).length, color: "text-yellow-400", icon: <Sparkles className="h-4 w-4 text-yellow-400" /> },
+          { label: "Categories", value: Array.from(new Set(points.map((p) => p.payload?.category))).filter(Boolean).length, color: "text-yellow-400", icon: <Sparkles className="h-4 w-4 text-yellow-400" /> },
           { label: "Total Vectors", value: points.length + transcriptPoints.length, color: "text-green-400", icon: <TrendingUp className="h-4 w-4 text-green-400" /> },
         ].map((s) => (
           <Card key={s.label} className="bg-gray-900/80 border-gray-800">
