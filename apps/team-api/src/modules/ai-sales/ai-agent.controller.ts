@@ -2174,6 +2174,7 @@ Return JSON:
         status: "launching",
         title: `Joining ${lead.name}'s meeting`,
         externalMeetUrl: body.meetUrl,
+        scheduledAt: new Date(),
         startedAt: new Date(),
       },
     });
@@ -2195,7 +2196,7 @@ Return JSON:
           data: { status: "active" },
         });
 
-        return { meetingSessionId: session.id, botSessionId: meetSession.sessionId, status: "joining" };
+        return { meetingSessionId: session.id, botSessionId: meetSession.id, status: "joining" };
       } catch (err: any) {
         await this.prisma.meetingSession.update({
           where: { id: session.id },
@@ -2267,7 +2268,7 @@ Return JSON:
   async autoExecuteAll() {
     const activeLeads = await this.prisma.lead.findMany({
       where: {
-        status: { in: ["NEW", "CONTACTED", "INTERESTED", "FOLLOW_UP"] },
+        stage: { in: ["NEW", "CONTACTED", "QUALIFIED", "DEMO"] },
       },
       select: { id: true, name: true },
     });

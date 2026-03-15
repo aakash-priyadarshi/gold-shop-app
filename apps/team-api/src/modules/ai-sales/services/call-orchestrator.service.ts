@@ -4,6 +4,7 @@ import { PrismaService } from "../../../prisma/prisma.service";
 import { LeadInteractionService } from "./lead-interaction.service";
 import { LeadScoringService } from "./lead-scoring.service";
 import { PostCallProcessor } from "./post-call-processor.service";
+import { PostInteractionPipelineService } from "./post-interaction-pipeline.service";
 
 @Injectable()
 export class CallOrchestratorService {

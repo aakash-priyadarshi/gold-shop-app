@@ -128,9 +128,8 @@ export class StrategyExecutorService {
             type: "external",
             status: "scheduled",
             scheduledAt,
-            title: subject,
+            title: `${subject} [gcal:${gcalResult.eventId}]`,
             externalMeetUrl: meetLink,
-            metadata: { googleEventId: gcalResult.eventId, autoCreated: true } as any,
           },
         });
         meetingId = session.id;
@@ -297,10 +296,10 @@ export class StrategyExecutorService {
       },
     });
 
-    // Update lead's follow-up date
+    // Store follow-up info in the lead's strategy notes
     await this.prisma.lead.update({
       where: { id: lead.id },
-      data: { followUpDate: followUpAt },
+      data: { nextCallStrategy: `Follow-up scheduled for ${followUpAt.toISOString()}: ${rec.reason}` },
     });
 
     this.logger.log(`✅ Follow-up scheduled for ${lead.name} at ${followUpAt.toLocaleString()}`);

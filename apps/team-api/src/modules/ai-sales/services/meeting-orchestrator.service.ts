@@ -186,8 +186,8 @@ export class MeetingOrchestratorService {
         });
         const brief = await this.preCallBrain.generateBrief(
           session.lead as any,
-          null, // product
-          null, // campaign
+          {} as any, // product
+          undefined, // campaign
           previousCalls,
         );
 
@@ -195,10 +195,10 @@ export class MeetingOrchestratorService {
         meetingGoal = brief.closingStrategy || meetingGoal;
         systemPrompt = this.buildVideoMeetingPrompt(agent, session.lead, brief, intelligence);
 
-        // Store the generated goal in the session
+        // Store the generated goal in the session title
         await this.prisma.meetingSession.update({
           where: { id: meetingSessionId },
-          data: { metadata: { goal: meetingGoal, briefGenerated: true } as any },
+          data: { title: `${session.title || "Meeting"} | Goal: ${meetingGoal}` },
         });
       } catch (err: any) {
         this.logger.warn(`Pre-call brain unavailable for meeting: ${err.message}`);

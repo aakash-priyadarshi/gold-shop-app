@@ -353,7 +353,7 @@ export default function LeadsPage() {
       const data = (res as any).data;
       if (data.executed) {
         toast.success(`✅ ${data.action}: ${data.details}`);
-        fetchLeads();
+        load();
       } else {
         toast.info(`⏸ ${data.action}: ${data.details}`);
       }
@@ -368,7 +368,7 @@ export default function LeadsPage() {
       const res = await aiSalesApi.runPipeline(leadId);
       const data = (res as any).data;
       toast.success(`Pipeline complete — Score: ${data.lead?.score}, Stage: ${data.lead?.stage}`);
-      fetchLeads();
+      load();
     } catch { toast.error("Pipeline failed"); }
     setPipelineLoading(false);
   };
