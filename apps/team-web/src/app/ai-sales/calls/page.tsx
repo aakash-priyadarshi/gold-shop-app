@@ -4,10 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+    Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { aiSalesApi } from "@/lib/api";
-import { Phone, ArrowLeft, Clock, DollarSign, TrendingUp, Volume2, Target, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, DollarSign, Phone, Target, TrendingUp, Volume2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 

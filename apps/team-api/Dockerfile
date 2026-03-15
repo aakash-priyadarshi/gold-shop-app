@@ -1,5 +1,5 @@
 FROM node:20-slim AS base
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
 
 # Chromium + virtual display + audio for Google Meet bot (Puppeteer)
