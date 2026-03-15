@@ -2414,7 +2414,7 @@ Return JSON:
   @Get("vector-brain/points")
   async getVectorBrainPoints(@Query("collection") collection?: string) {
     try {
-      const col = collection === "transcripts" ? "call_transcripts" : "agent_knowledge";
+      const col = collection === "transcripts" ? "call_transcripts_v2" : "agent_knowledge_v2";
       // Scroll all points from the collection for visualization
       const raw = await (this.vectorBrain as any).qdrantClient?.scroll(col, {
         limit: 200,

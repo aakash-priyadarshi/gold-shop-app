@@ -10,8 +10,12 @@ export class VectorMemoryService implements OnModuleInit {
   private genAI: GoogleGenerativeAI | null = null;
   private isEnabled = false;
 
-  private readonly MEMORY_COLLECTION = "agent_knowledge";
-  private readonly TRANSCRIPTS_COLLECTION = "call_transcripts";
+  // Configuration for Gemini Embedding 001
+  private readonly EMBEDDING_MODEL = "gemini-embedding-001";
+  private readonly VECTOR_SIZE = 3072; // Gemini 001 default is 3072
+
+  private readonly MEMORY_COLLECTION = "agent_knowledge_v2";
+  private readonly TRANSCRIPTS_COLLECTION = "call_transcripts_v2";
 
   constructor(private config: ConfigService) {
     const qdrantUrl = this.config.get<string>("QDRANT_URL");
@@ -32,87 +36,70 @@ export class VectorMemoryService implements OnModuleInit {
       await this.ensureCollection(this.MEMORY_COLLECTION);
       await this.ensureCollection(this.TRANSCRIPTS_COLLECTION);
     } catch (err: any) {
-      this.logger.error(`Failed to initialize Qdrant collections: ${err.message}`);
+      this.logger.error(`Failed to initialize Qdrant: ${err.message}`);
       this.isEnabled = false;
     }
   }
 
   private async ensureCollection(collectionName: string) {
     const collections = await this.qdrantClient!.getCollections();
-    const exists = collections.collections.some((c) => c.name === collectionName);
-    
+    const exists = collections.collections.find((c) => c.name === collectionName);
+
     if (!exists) {
-      this.logger.log(`Creating Qdrant collection: ${collectionName}`);
+      this.logger.log(`Creating Qdrant collection: ${collectionName} with ${this.VECTOR_SIZE} dims`);
       await this.qdrantClient!.createCollection(collectionName, {
-        vectors: { size: 768, distance: "Cosine" }, // text-embedding-004 is 768 dims
+        vectors: { size: this.VECTOR_SIZE, distance: "Cosine" },
       });
+    } else {
+      this.logger.log(`Collection ${collectionName} already exists.`);
     }
   }
 
   private async getEmbedding(text: string): Promise<number[]> {
     if (!this.genAI) throw new Error("Gemini AI not initialized");
-    const model = this.genAI.getGenerativeModel({ model: "embedding-001" });
+    
+    // According to Google's official docs, the valid model for generating embeddings is currently `text-embedding-004`
+    const model = this.genAI.getGenerativeModel({ model: "text-embedding-004" });
     const result = await model.embedContent(text);
     return result.embedding.values;
   }
 
-  /**
-   * Save a generalized piece of knowledge (UI settings, guidelines, etc.)
-   */
   async upsertKnowledge(id: string, text: string, metadata: Record<string, any> = {}) {
     if (!this.isEnabled) return;
     try {
       const vector = await this.getEmbedding(text);
       await this.qdrantClient!.upsert(this.MEMORY_COLLECTION, {
         wait: true,
-        points: [
-          {
-            id: this.uuidFromSequence(id),
-            vector,
-            payload: { text, ...metadata },
-          },
-        ],
+        points: [{
+          id: this.uuidFromSequence(id),
+          vector,
+          payload: { text, ...metadata },
+        }],
       });
       this.logger.debug(`Upserted knowledge to Qdrant: ${id}`);
     } catch (err: any) {
-      this.logger.warn(`Failed to upsert knowledge: ${err.message}`);
+      this.logger.error(`Upsert failed: ${err.message}`);
     }
   }
 
-  /**
-   * Search generalized knowledge base.
-   */
   async searchKnowledge(query: string, limit: number = 3): Promise<any[]> {
     if (!this.isEnabled) return [];
     try {
       const vector = await this.getEmbedding(query);
-      const results = await this.qdrantClient!.search(this.MEMORY_COLLECTION, {
-        vector,
-        limit,
-      });
-      return results;
+      return await this.qdrantClient!.search(this.MEMORY_COLLECTION, { vector, limit });
     } catch (err: any) {
       this.logger.warn(`Failed to search knowledge: ${err.message}`);
       return [];
     }
   }
 
-  /**
-   * Save an entire post-call transcript summary for semantic matching in the future.
-   */
   async upsertTranscript(sessionId: string, transcriptSummary: string, metadata: Record<string, any> = {}) {
     if (!this.isEnabled) return;
     try {
       const vector = await this.getEmbedding(transcriptSummary);
       await this.qdrantClient!.upsert(this.TRANSCRIPTS_COLLECTION, {
         wait: true,
-        points: [
-          {
-            id: sessionId,
-            vector,
-            payload: { transcriptSummary, ...metadata },
-          },
-        ],
+        points: [{ id: sessionId, vector, payload: { transcriptSummary, ...metadata } }],
       });
       this.logger.log(`Upserted call transcript memory for session: ${sessionId}`);
     } catch (err: any) {
@@ -120,37 +107,24 @@ export class VectorMemoryService implements OnModuleInit {
     }
   }
 
-  /**
-   * Search past transcripts for objection handling style, persona matching, etc.
-   */
   async searchTranscripts(query: string, limit: number = 3, filter?: any): Promise<any[]> {
     if (!this.isEnabled) return [];
     try {
       const vector = await this.getEmbedding(query);
-      const results = await this.qdrantClient!.search(this.TRANSCRIPTS_COLLECTION, {
-        vector,
-        limit,
-        filter,
-      });
-      return results;
+      return await this.qdrantClient!.search(this.TRANSCRIPTS_COLLECTION, { vector, limit, filter });
     } catch (err: any) {
       this.logger.warn(`Failed to search transcripts: ${err.message}`);
       return [];
     }
   }
 
-  /**
-   * Helper to convert an arbitrary string/key into a valid UUID v5 for Qdrant IDs.
-   * Qdrant requires UUIDs or unsigned integers.
-   */
   private uuidFromSequence(seq: string): string {
-    // Generate a pseudo-UUID based on a simple string hash
     let hash = 0;
     for (let i = 0; i < seq.length; i++) {
         hash = (hash << 5) - hash + seq.charCodeAt(i);
         hash |= 0;
     }
     const hex = Math.abs(hash).toString(16).padStart(32, "0");
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(12, 15)}-a${hex.slice(16, 19)}-${hex.slice(20, 32)}`;
   }
 }
