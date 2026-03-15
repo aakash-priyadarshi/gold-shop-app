@@ -1,4 +1,4 @@
-﻿# Internal deployment and checklist notes
+# Internal deployment and checklist notes
 deployment-notes.txt
 *.prompt-checklist.txt
 
@@ -49,7 +49,6 @@ credentials/
 !**/token/
 
 # Railway/Vercel deployment secrets
-railway.json
 .railway/
 .vercel/token
 
