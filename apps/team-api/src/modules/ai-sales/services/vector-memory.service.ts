@@ -59,7 +59,7 @@ export class VectorMemoryService implements OnModuleInit {
     if (!this.genAI) throw new Error("Gemini AI not initialized");
     
     // According to Google's official docs, the valid model for generating embeddings is currently `text-embedding-004`
-    const model = this.genAI.getGenerativeModel({ model: "text-embedding-004" });
+    const model = this.genAI.getGenerativeModel({ model: this.EMBEDDING_MODEL });
     const result = await model.embedContent(text);
     return result.embedding.values;
   }
