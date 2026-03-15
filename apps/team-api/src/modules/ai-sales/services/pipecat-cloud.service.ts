@@ -63,34 +63,39 @@ export class PipecatCloudService {
     language?: string;
     webhookUrl?: string;
   }): Promise<{ sessionId: string; roomUrl: string; token: string }> {
-    const data = await this.request(`/agents/${this.agentName}/start`, {
-      method: "POST",
-      body: JSON.stringify({
-        // Pass dynamic config to bot.py via runner_args.body
-        body: {
-          system_prompt: opts.systemPrompt,
-          voice_id: opts.voiceId,
-          greeting: opts.greeting || `I'm calling from Orivraa. How are you today?`,
-          lead_name: opts.leadName || "",
-          agent_name: opts.agentName || "Orivraa Sales",
-          language: opts.language || "en-IN",
-        },
-        // Optional: join a pre-created Daily room
-        ...(opts.dailyRoomUrl && { room_url: opts.dailyRoomUrl }),
-        // Webhook for session lifecycle events
+    // Pipecat Cloud REST API: POST /v1/public/{service}/start
+    // Docs: https://docs.pipecat.ai/deployment/pipecat-cloud/fundamentals/active-sessions
+    const payload: Record<string, any> = {
+      createDailyRoom: !opts.dailyRoomUrl, // Let Pipecat create a room if we don't have one
+      body: {
+        system_prompt: opts.systemPrompt,
+        voice_id: opts.voiceId,
+        greeting: opts.greeting || `I'm calling from Orivraa. How are you today?`,
+        lead_name: opts.leadName || "",
+        agent_name: opts.agentName || "Orivraa Sales",
+        language: opts.language || "en-IN",
         ...(opts.webhookUrl && { webhook_url: opts.webhookUrl }),
-      }),
+        ...(opts.dailyRoomUrl && { room_url: opts.dailyRoomUrl }),
+      },
+    };
+
+    if (opts.dailyRoomUrl) {
+      payload.dailyRoomProperties = { start_video_off: true };
+    }
+
+    const data = await this.request(`/public/${this.agentName}/start`, {
+      method: "POST",
+      body: JSON.stringify(payload),
     });
 
-    this.logger.log(
-      `Started Pipecat session ${data.session_id} → room ${data.room_url || data.url}`,
-    );
+    // Response: { sessionId, dailyRoom, dailyToken, ... }
+    const roomUrl = data.dailyRoom || data.room_url || data.url || opts.dailyRoomUrl || "";
+    const token = data.dailyToken || data.token || "";
+    const sessionId = data.sessionId || data.session_id || "";
 
-    return {
-      sessionId: data.session_id,
-      roomUrl: data.room_url || data.url || opts.dailyRoomUrl || "",
-      token: data.token || "",
-    };
+    this.logger.log(`Started Pipecat session ${sessionId} → room ${roomUrl}`);
+
+    return { sessionId, roomUrl, token };
   }
 
   /** Stop a running agent session */
