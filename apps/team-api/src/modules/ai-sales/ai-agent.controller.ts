@@ -1927,8 +1927,14 @@ Return JSON:
     externalMeetUrl?: string;
   }) {
     const scheduledAt = new Date(body.scheduledAt);
-    if (scheduledAt <= new Date()) {
+    // Allow a 2-minute grace window so "schedule now" from the playground works
+    const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000);
+    if (scheduledAt < twoMinAgo) {
       throw new HttpException("Scheduled time must be in the future", HttpStatus.BAD_REQUEST);
+    }
+    // If scheduledAt is in the past (within grace), bump to now + 10s
+    if (scheduledAt <= new Date()) {
+      scheduledAt.setTime(Date.now() + 10_000);
     }
 
     if (body.type === "external" && body.externalMeetUrl) {
@@ -2089,8 +2095,12 @@ Return JSON:
     if (!lead.email) throw new HttpException("Lead has no email — cannot send invite", HttpStatus.BAD_REQUEST);
 
     const scheduledAt = new Date(body.scheduledAt);
-    if (scheduledAt <= new Date()) {
+    const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000);
+    if (scheduledAt < twoMinAgo) {
       throw new HttpException("Scheduled time must be in the future", HttpStatus.BAD_REQUEST);
+    }
+    if (scheduledAt <= new Date()) {
+      scheduledAt.setTime(Date.now() + 10_000);
     }
 
     const agent = await this.prisma.agentVoice.findUnique({ where: { id: body.agentId } });
