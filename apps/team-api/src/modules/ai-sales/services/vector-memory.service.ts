@@ -51,7 +51,7 @@ export class VectorMemoryService implements OnModuleInit {
 
   private async getEmbedding(text: string): Promise<number[]> {
     if (!this.genAI) throw new Error("Gemini AI not initialized");
-    const model = this.genAI.getGenerativeModel({ model: "text-embedding-004" });
+    const model = this.genAI.getGenerativeModel({ model: "embedding-001" });
     const result = await model.embedContent(text);
     return result.embedding.values;
   }
