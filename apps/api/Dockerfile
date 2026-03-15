@@ -22,8 +22,8 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 WORKDIR /app/apps/api
 RUN npx prisma@5.22.0 generate
 
-# Build the NestJS application
-RUN pnpm build
+# Build the NestJS application directly (avoid pnpm walking up to run turbo)
+RUN npx nest build
 
 EXPOSE 3001
 
