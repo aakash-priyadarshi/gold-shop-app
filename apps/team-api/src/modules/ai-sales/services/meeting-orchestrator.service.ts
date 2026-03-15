@@ -188,7 +188,7 @@ export class MeetingOrchestratorService {
           session.lead as any,
           {} as any, // product
           undefined, // campaign
-          previousCalls,
+          previousCalls as any,
         );
 
         // Build a sales persona system prompt (NOT a support bot)
