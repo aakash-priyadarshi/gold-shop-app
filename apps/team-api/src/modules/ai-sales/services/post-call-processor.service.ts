@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { VectorMemoryService } from "./vector-memory.service";
 
 export interface CallReport {
   summary: string;
@@ -27,7 +28,10 @@ export class PostCallProcessor {
   private readonly logger = new Logger(PostCallProcessor.name);
   private genAI: GoogleGenerativeAI | null = null;
 
-  constructor(private config: ConfigService) {
+  constructor(
+    private config: ConfigService,
+    private vectorMemory: VectorMemoryService,
+  ) {
     const apiKey = this.config.get<string>("GEMINI_API_KEY");
     if (apiKey) {
       this.genAI = new GoogleGenerativeAI(apiKey);
@@ -40,6 +44,7 @@ export class PostCallProcessor {
     leadName?: string;
     agentName?: string;
     campaignName?: string;
+    sessionId?: string;
   }): Promise<CallReport> {
     if (!this.genAI) {
       this.logger.warn("GEMINI_API_KEY not set — returning minimal report");
@@ -90,7 +95,21 @@ Return JSON matching this schema:
         .replace(/```/g, "")
         .replace(/,\s*([}\]])/g, "$1") // trailing commas
         .trim();
-      return JSON.parse(cleaned) as CallReport;
+      const parsed = JSON.parse(cleaned) as CallReport;
+
+      // Async push to Qdrant Vector Memory
+      if (call.sessionId) {
+        this.vectorMemory.upsertTranscript(call.sessionId, parsed.summary, {
+          outcome: parsed.outcome,
+          agentName: call.agentName,
+          leadName: call.leadName,
+          objections: parsed.objectionsRaised,
+          quality: parsed.callQualityScore,
+          duration: call.durationSeconds,
+        });
+      }
+
+      return parsed;
     } catch (err: any) {
       this.logger.error(`Post-call report generation failed: ${err.message}`);
       return this.buildMinimalReport(call.transcript);

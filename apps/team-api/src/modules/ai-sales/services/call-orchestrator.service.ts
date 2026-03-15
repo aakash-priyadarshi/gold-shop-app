@@ -256,6 +256,7 @@ export class CallOrchestratorService {
         durationSeconds: session.duration || 0,
         leadName: lead.name,
         agentName: agent?.name,
+        sessionId: sessionId,
       });
     }
 

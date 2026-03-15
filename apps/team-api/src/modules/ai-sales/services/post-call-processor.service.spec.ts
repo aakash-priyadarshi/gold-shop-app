@@ -4,7 +4,7 @@ import { PostCallProcessor } from "./post-call-processor.service";
 describe("PostCallProcessor", () => {
   it("returns a minimal report when Gemini is unavailable", async () => {
     const config = { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService;
-    const service = new PostCallProcessor(config);
+    const service = new PostCallProcessor(config, { upsertTranscript: jest.fn() } as any);
 
     const report = await service.generateCallReport({
       transcript: "Customer asked for pricing.",
@@ -18,7 +18,7 @@ describe("PostCallProcessor", () => {
 
   it("cleans fenced JSON with trailing commas before parsing", async () => {
     const config = { get: jest.fn().mockReturnValue("test-key") } as unknown as ConfigService;
-    const service = new PostCallProcessor(config);
+    const service = new PostCallProcessor(config, { upsertTranscript: jest.fn() } as any);
 
     (service as any).genAI = {
       getGenerativeModel: jest.fn().mockReturnValue({
@@ -42,7 +42,7 @@ describe("PostCallProcessor", () => {
 
   it("falls back to a minimal report when parsing fails", async () => {
     const config = { get: jest.fn().mockReturnValue("test-key") } as unknown as ConfigService;
-    const service = new PostCallProcessor(config);
+    const service = new PostCallProcessor(config, { upsertTranscript: jest.fn() } as any);
 
     (service as any).genAI = {
       getGenerativeModel: jest.fn().mockReturnValue({
@@ -61,7 +61,7 @@ describe("PostCallProcessor", () => {
 
   it("generateSimpleSummary returns a safe fallback without Gemini", async () => {
     const config = { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService;
-    const service = new PostCallProcessor(config);
+    const service = new PostCallProcessor(config, { upsertTranscript: jest.fn() } as any);
 
     await expect(service.generateSimpleSummary("Hello")).resolves.toBe(
       "Summary unavailable — API key not configured.",

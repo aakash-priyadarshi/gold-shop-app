@@ -3,7 +3,7 @@ import { AgentMemoryService } from "./agent-memory.service";
 
 describe("AgentMemoryService", () => {
   it("returns curated CRM defaults for missing entries", () => {
-    const service = new AgentMemoryService({} as PrismaService);
+    const service = new AgentMemoryService({} as PrismaService, {} as any);
 
     expect(service.get("company", "description")).toContain("jewellery business CRM");
     expect(service.get("product", "pricing_summary")).toContain("₹299/month");
@@ -24,7 +24,7 @@ describe("AgentMemoryService", () => {
         ]),
       },
     } as unknown as PrismaService;
-    const service = new AgentMemoryService(prisma);
+    const service = new AgentMemoryService(prisma, {} as any);
 
     const rows = await service.getAll();
 
@@ -43,7 +43,7 @@ describe("AgentMemoryService", () => {
         upsert,
       },
     } as unknown as PrismaService;
-    const service = new AgentMemoryService(prisma);
+    const service = new AgentMemoryService(prisma, {} as any);
     jest.spyOn(service as any, "loadAll").mockResolvedValue(undefined);
 
     await service.seedDefaults();

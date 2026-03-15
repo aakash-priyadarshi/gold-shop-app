@@ -47,6 +47,7 @@ import { STTRouterService } from "./services/stt-router.service";
 import { StrategyExecutorService } from "./services/strategy-executor.service";
 import { ThinkingBudgetManager } from "./services/thinking-budget-manager.service";
 import { WebhookService } from "./services/webhook.service";
+import { VectorMemoryService } from "./services/vector-memory.service";
 
 @Module({
   imports: [PrismaModule, ConfigModule, MeetingQueueModule],
@@ -98,6 +99,7 @@ import { WebhookService } from "./services/webhook.service";
     PostInteractionPipelineService,
     InteractionQueueService,
     InteractionQueueProcessor,
+    VectorMemoryService,
   ],
   controllers: [AIAgentController],
   exports: [AIAgentService, CallOrchestratorService, CentralBrainService, WebhookService, LeadInteractionService, AiEmailService, InteractionQueueService],

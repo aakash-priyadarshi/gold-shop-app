@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { VectorMemoryService } from "./vector-memory.service";
 
 type MemorySeed = { category: string; key: string; value: string; label: string };
 
@@ -104,7 +105,10 @@ export class AgentMemoryService implements OnModuleInit {
     CURATED_MEMORY_SEEDS.map((entry) => [`${entry.category}:${entry.key}`, entry.label]),
   );
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private vectorMemory: VectorMemoryService,
+  ) {}
 
   async onModuleInit() {
     try {
@@ -193,6 +197,15 @@ export class AgentMemoryService implements OnModuleInit {
     });
     // Update cache immediately
     this.cache.set(`${category}:${key}`, value);
+
+    // Sync to Qdrant Vector Memory
+    const entryLabel = label || this.DEFAULT_LABELS[`${category}:${key}`] || key;
+    await this.vectorMemory.upsertKnowledge(`${category}:${key}`, value, {
+      category,
+      key,
+      label: entryLabel,
+      type: "agent_memory",
+    });
   }
 
   /** Bulk upsert — for saving form data from the UI */
