@@ -38,7 +38,7 @@ COPY packages/ ./packages/
 COPY apps/api/package.json ./apps/api/
 
 # Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Copy built files from builder
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
