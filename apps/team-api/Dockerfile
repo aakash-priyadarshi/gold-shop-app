@@ -30,6 +30,7 @@ ENV NODE_ENV=production
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     chromium \
     xvfb \
+    xauth \
     pulseaudio \
     ffmpeg \
     fonts-noto-color-emoji \
