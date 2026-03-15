@@ -15,19 +15,25 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 
-# Install all dependencies
+# Install all dependencies (dev included — needed for @nestjs/cli and prisma)
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# Generate Prisma client (pinned to match @prisma/client@5.22.0)
+# Switch into the api app context
 WORKDIR /app/apps/api
+
+# Generate Prisma client (pinned to match @prisma/client@5.22.0 in package.json)
 RUN npx prisma@5.22.0 generate
 
-# Build the NestJS application directly (avoid pnpm walking up to run turbo)
-RUN npx nest build
+# Build using the locally installed nest CLI (via pnpm exec to guarantee local binary)
+RUN pnpm exec nest build
+
+# Verify dist/main.js was actually produced — fail fast if not
+RUN test -f dist/main.js || (echo "ERROR: dist/main.js not found after nest build!" && ls -la dist/ && exit 1)
 
 EXPOSE 3001
 
 ENV NODE_ENV=production
 ENV PORT=3001
 
-CMD ["node", "dist/main"]
+# Use absolute path to eliminate any WORKDIR ambiguity
+CMD ["node", "/app/apps/api/dist/main"]
