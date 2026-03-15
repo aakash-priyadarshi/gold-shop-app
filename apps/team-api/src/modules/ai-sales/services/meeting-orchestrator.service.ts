@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { ABTestingService } from "./ab-testing.service";
+import { AgentMemoryService } from "./agent-memory.service";
 import { CentralBrainService } from "./central-brain.service";
 import { DailyRoomService } from "./daily-room.service";
 import { LeadInteractionService } from "./lead-interaction.service";
