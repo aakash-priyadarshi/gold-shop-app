@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { ABTestingService } from "./ab-testing.service";
 import { CentralBrainService } from "./central-brain.service";
 import { DailyRoomService } from "./daily-room.service";
 import { LeadInteractionService } from "./lead-interaction.service";
@@ -36,6 +37,7 @@ export class MeetingOrchestratorService {
     private interactions: LeadInteractionService,
     private pipeline: PostInteractionPipelineService,
     private interactionQueue: InteractionQueueService,
+    private abTesting: ABTestingService,
   ) {}
 
   // ── Schedule a new meeting (Scenario 1: Daily.co) ─────────────────────
@@ -203,8 +205,51 @@ export class MeetingOrchestratorService {
 
     const webhookUrl = `${this.config.get<string>("WEBHOOK_BASE_URL") || "http://localhost:3002"}/api/ai-sales/meetings/webhook/pipecat`;
 
-    // Load all available agents for persona switching
+    // Load all available agents for persona switching in the video call
     const allAgents = await this.prisma.agentVoice.findMany({ where: { isActive: true } });
+
+    // ── Persona Selection Intelligence ────────────────────────────────────
+    // For new leads: use A/B testing to randomly assign a persona experiment variant
+    // For returning leads: use central brain's best-performing persona for the segment
+    let selectedAgent = agent;
+    if (session.leadId && session.lead) {
+      try {
+        const previousMeetings = await this.prisma.meetingSession.count({
+          where: { leadId: session.leadId, status: { in: ["completed", "active"] } },
+        });
+
+        if (previousMeetings === 0) {
+          // NEW LEAD: check if there's an active persona A/B experiment
+          const abVariant = await this.abTesting.getActiveVariantForLead(
+            session.leadId,
+            "persona",
+          );
+          if (abVariant?.variantConfig?.agentId) {
+            const abAgent = allAgents.find(a => a.id === abVariant.variantConfig.agentId);
+            if (abAgent) {
+              selectedAgent = abAgent;
+              this.logger.log(`A/B persona test: assigned variant ${abVariant.variant} → ${abAgent.name}`);
+            }
+          }
+        } else {
+          // RETURNING LEAD: pick the best persona from central brain intelligence
+          const intelligence = await this.centralBrain.queryForLead(session.lead as any);
+          const topPersona = intelligence?.personaRecommendations?.[0];
+          if (topPersona?.personaId) {
+            const brainAgent = allAgents.find(a => a.id === topPersona.personaId);
+            if (brainAgent && brainAgent.id !== agent.id) {
+              selectedAgent = brainAgent;
+              this.logger.log(
+                `Central brain persona: ${brainAgent.name} (${(topPersona.conversionRate * 100).toFixed(1)}% conv rate)`,
+              );
+            }
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(`Persona intelligence selection failed, using assigned agent: ${err.message}`);
+      }
+    }
+
     const agentList = allAgents.map(a => ({
       name: a.name,
       voice_id: a.voiceId,
@@ -214,10 +259,10 @@ export class MeetingOrchestratorService {
 
     try {
       const result = await this.pipecat.deployAgent({
-        agentName: agent.name,
+        agentName: selectedAgent.name,
         systemPrompt,
-        voiceId: agent.voiceId,
-        greeting: agent.greeting || undefined,
+        voiceId: selectedAgent.voiceId,
+        greeting: selectedAgent.greeting || undefined,
         leadName: session.lead?.name || undefined,
         webhookUrl,
         availableAgents: agentList,

@@ -1,8 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { ABTestingService } from "./ab-testing.service";
 import { AiEmailService } from "./ai-email.service";
 import { CallOrchestratorService } from "./call-orchestrator.service";
+import { CentralBrainService } from "./central-brain.service";
 import { DailyRoomService } from "./daily-room.service";
 import { GoogleMeetBotService } from "./google-meet-bot.service";
 import { LeadInteractionService } from "./lead-interaction.service";
@@ -48,6 +50,8 @@ export class StrategyExecutorService {
     private meetBot: GoogleMeetBotService,
     private interactions: LeadInteractionService,
     private notifications: MeetingNotificationService,
+    private abTesting: ABTestingService,
+    private centralBrain: CentralBrainService,
   ) {}
 
   /**
@@ -372,27 +376,62 @@ export class StrategyExecutorService {
 
   /**
    * Pick the best AI agent for a lead.
-   * Prefers the agent who last interacted with this lead.
+   * - Returning leads (have interactions): Check central brain for best performing persona, or default to last interaction agent
+   * - New leads: Check A/B testing for random persona experiment variant
+   * - Fallback to first active agent
    */
   private async pickAgent(lead: any) {
-    // Check if there's an agent who previously called this lead
-    const lastInteraction = await this.prisma.leadInteraction.findFirst({
-      where: { leadId: lead.id, agentName: { not: null } },
-      orderBy: { createdAt: "desc" },
+    const allAgents = await this.prisma.agentVoice.findMany({ where: { isActive: true } });
+    if (!allAgents.length) return null;
+
+    const previousInteractions = await this.prisma.leadInteraction.count({
+      where: { leadId: lead.id },
     });
 
-    if (lastInteraction?.agentName) {
-      const agent = await this.prisma.agentVoice.findFirst({
-        where: { name: lastInteraction.agentName, isActive: true },
+    if (previousInteractions === 0) {
+      // NEW LEAD: A/B testing for persona
+      try {
+        const abVariant = await this.abTesting.getActiveVariantForLead(lead.id, "persona");
+        if (abVariant?.variantConfig?.agentId) {
+          const abAgent = allAgents.find((a) => a.id === abVariant.variantConfig.agentId);
+          if (abAgent) {
+            this.logger.log(`[Strategy] A/B test assigned persona ${abVariant.variant} → ${abAgent.name}`);
+            return abAgent;
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(`Failed to process A/B persona test: ${err.message}`);
+      }
+    } else {
+      // RETURNING LEAD: Try central brain intelligence first
+      try {
+        const intelligence = await this.centralBrain.queryForLead(lead as any);
+        const topPersona = intelligence?.personaRecommendations?.[0];
+        if (topPersona?.personaId) {
+          const brainAgent = allAgents.find((a) => a.id === topPersona.personaId);
+          if (brainAgent) {
+            this.logger.log(`[Strategy] Central Brain selected persona ${brainAgent.name} (${(topPersona.conversionRate * 100).toFixed(1)}% conv rate)`);
+            return brainAgent;
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(`Failed to query central brain for persona: ${err.message}`);
+      }
+
+      // Fall back to agent who previously called this lead
+      const lastInteraction = await this.prisma.leadInteraction.findFirst({
+        where: { leadId: lead.id, agentName: { not: null } },
+        orderBy: { createdAt: "desc" },
       });
-      if (agent) return agent;
+
+      if (lastInteraction?.agentName) {
+        const prevAgent = allAgents.find((a) => a.name === lastInteraction.agentName);
+        if (prevAgent) return prevAgent;
+      }
     }
 
     // Fallback: first active agent
-    return this.prisma.agentVoice.findFirst({
-      where: { isActive: true },
-      orderBy: { createdAt: "asc" },
-    });
+    return allAgents[0];
   }
 
   private parseDelay(delay: string): number {

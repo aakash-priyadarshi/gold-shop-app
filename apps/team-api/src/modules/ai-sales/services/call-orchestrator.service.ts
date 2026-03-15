@@ -1,6 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { ABTestingService } from "./ab-testing.service";
+import { CentralBrainService } from "./central-brain.service";
 import { InteractionQueueService } from "./interaction-queue.service";
 import { LeadInteractionService } from "./lead-interaction.service";
 import { LeadScoringService } from "./lead-scoring.service";
@@ -21,6 +23,8 @@ export class CallOrchestratorService {
     private leadScoring: LeadScoringService,
     private pipeline: PostInteractionPipelineService,
     private interactionQueue: InteractionQueueService,
+    private abTesting: ABTestingService,
+    private centralBrain: CentralBrainService,
   ) {
     const accountSid = this.config.get("TWILIO_ACCOUNT_SID");
     const authToken = this.config.get("TWILIO_AUTH_TOKEN");
@@ -54,10 +58,44 @@ export class CallOrchestratorService {
 
     if (lead.doNotCall) throw new Error("Lead is on Do Not Call list");
 
+    // ── Persona Selection Intelligence ────────────────────────────────────
+    let selectedAgentId = params.agentId;
+    try {
+      const allAgents = await this.prisma.agentVoice.findMany({ where: { isActive: true } });
+      const previousMeetings = await this.prisma.callSession.count({
+        where: { leadId: params.leadId, status: { in: ["COMPLETED", "IN_PROGRESS"] } },
+      });
+
+      if (previousMeetings === 0) {
+        // NEW LEAD: check if there's an active persona A/B experiment
+        const abVariant = await this.abTesting.getActiveVariantForLead(params.leadId, "persona");
+        if (abVariant?.variantConfig?.agentId) {
+          const abAgent = allAgents.find((a) => a.id === abVariant.variantConfig.agentId);
+          if (abAgent) {
+            selectedAgentId = abAgent.id;
+            this.logger.log(`A/B persona test (call): assigned variant ${abVariant.variant} → ${abAgent.name}`);
+          }
+        }
+      } else {
+        // RETURNING LEAD: pick the best persona from central brain intelligence
+        const intelligence = await this.centralBrain.queryForLead(lead as any);
+        const topPersona = intelligence?.personaRecommendations?.[0];
+        if (topPersona?.personaId) {
+          const brainAgent = allAgents.find((a) => a.id === topPersona.personaId);
+          if (brainAgent && brainAgent.id !== params.agentId) {
+            selectedAgentId = brainAgent.id;
+            this.logger.log(`Central brain persona (call): ${brainAgent.name} (${(topPersona.conversionRate * 100).toFixed(1)}% conv rate)`);
+          }
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Persona intelligence selection failed for call, using assigned: ${err.message}`);
+    }
+
     // Create the call session record first
     const session = await this.prisma.callSession.create({
       data: {
-        agentId: params.agentId,
+        agentId: selectedAgentId,
         leadId: params.leadId,
         campaignId: params.campaignId,
         direction: "OUTBOUND",

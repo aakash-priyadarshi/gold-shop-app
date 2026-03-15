@@ -248,6 +248,7 @@ class PersonaSwitchDetector(FrameProcessor):
         tts: ElevenLabsTTSService,
         context: LLMContext,
         current_agent_name: str,
+        task=None,
     ):
         super().__init__()
         self.available_agents = {a["name"].lower(): a for a in available_agents}
@@ -255,15 +256,15 @@ class PersonaSwitchDetector(FrameProcessor):
         self.tts = tts
         self.context = context
         self.current_agent = current_agent_name
+        self.task = task  # PipelineTask reference to queue frames
         self._switch_cooldown = 0.0
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
-        # Only check user speech (TranscriptionFrame from STT)
+        # Check user speech (TranscriptionFrame from STT) for explicit handoff requests
         if isinstance(frame, TranscriptionFrame) and frame.text.strip():
             text_lower = frame.text.strip().lower()
-            # Check for handoff phrases
             if self._is_handoff_request(text_lower) and time.time() > self._switch_cooldown:
                 requested = self._find_requested_agent(text_lower)
                 if requested and requested["name"].lower() != self.current_agent.lower():
@@ -277,7 +278,8 @@ class PersonaSwitchDetector(FrameProcessor):
             "talk to", "speak to", "speak with", "connect me to",
             "transfer me to", "switch to", "let me talk to",
             "can i talk to", "i want to talk to", "put me through to",
-            "i'd like to speak with", "can you transfer me",
+            "i'd like to speak with", "can you transfer me", "switch me to",
+            "get me", "i need to speak with", "put me through",
         ]
         return any(phrase in text for phrase in handoff_phrases)
 
@@ -293,30 +295,49 @@ class PersonaSwitchDetector(FrameProcessor):
         return None
 
     async def _switch_persona(self, new_agent: dict):
-        """Switch to a new agent persona (voice + context)."""
+        """Switch to a new agent persona (voice + context + immediate LLM re-trigger)."""
         old_name = self.current_agent
         new_name = new_agent["name"]
         new_voice = new_agent.get("voice_id", "")
+        new_greeting = new_agent.get("greeting", "")
 
-        logger.info(f"🔄 Persona switch: {old_name} → {new_name}")
+        logger.info(f"🔄 Persona switch: {old_name} → {new_name} (voice: {new_voice})")
 
-        # 1. Switch TTS voice
+        # 1. Switch TTS voice using the proper public API
         if new_voice:
-            self.tts._settings.voice = new_voice
-            logger.info(f"TTS voice changed to {new_voice} ({new_name})")
+            try:
+                await self.tts.set_voice(new_voice)
+                logger.info(f"✅ TTS voice switched to {new_voice} ({new_name})")
+            except Exception as e:
+                logger.warning(f"set_voice() failed, trying direct property: {e}")
+                # Fallback: some pipecat versions use _voice_id directly
+                try:
+                    self.tts._voice_id = new_voice
+                    logger.info(f"✅ TTS voice set via _voice_id ({new_name})")
+                except Exception as e2:
+                    logger.error(f"Could not switch TTS voice: {e2}")
 
-        # 2. Inject transfer context into LLM conversation
-        transfer_msg = (
-            f"[SYSTEM: You are now {new_name}. The customer was just transferred to you "
-            f"from {old_name}. Introduce yourself warmly — e.g. 'Hi! I'm {new_name}, "
-            f"{old_name} told me you wanted to speak with me. How can I help you?' "
-            f"Do NOT continue the previous agent's conversation as if nothing changed.]"
-        )
-        self.context.add_message({"role": "user", "content": transfer_msg})
-
+        # 2. Update current agent
         self.current_agent = new_name
-        # Cooldown: don't switch again for 10 seconds
-        self._switch_cooldown = time.time() + 10
+        # Cooldown: don't switch again for 15 seconds
+        self._switch_cooldown = time.time() + 15
+
+        # 3. If we have a task reference, speak the greeting as the new persona immediately
+        #    This bypasses the LLM entirely for an instant, clean handoff
+        if self.task:
+            intro = (
+                new_greeting
+                or f"Hi! I'm {new_name}. {old_name} told me you wanted to speak with me. How can I help you?"
+            )
+            logger.info(f"Speaking handoff greeting as {new_name}: {intro}")
+            await self.task.queue_frames([TTSSpeakFrame(text=intro)])
+
+        # 4. Inject system context so FUTURE LLM turns use the new persona identity
+        transfer_msg = (
+            f"[HANDOFF COMPLETE: You are now {new_name}. The customer was transferred from {old_name}. "
+            f"Continue the conversation as {new_name}. Do NOT mention {old_name} again unless asked.]"
+        )
+        self.context.add_message({"role": "system", "content": transfer_msg})
 
 
 def build_persona_aware_prompt(system_prompt: str, available_agents: list[dict], current_agent: str) -> str:
@@ -330,8 +351,9 @@ def build_persona_aware_prompt(system_prompt: str, available_agents: list[dict],
 
     persona_section = (
         f"\n\nYou are currently {current_agent}. Your team members are: {', '.join(agent_names)}. "
-        f"If the customer asks to speak with another team member, acknowledge the request and "
-        f"say you'll transfer them right away. The transfer happens automatically."
+        f"If the customer asks to speak with another team member BY NAME, say something like "
+        f"'I'll connect you to {agent_names[0]} right now!' — then STOP talking immediately. "
+        f"The system handles the transfer instantly. Do NOT say 'give me a minute' or make the customer wait."
     )
     return system_prompt + persona_section
 
@@ -476,12 +498,14 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     ]
 
     # Add persona switch detector if multiple agents available
+    # task=None for now; we set it after PipelineTask is created below
     if len(available_agents) > 1:
         persona_detector = PersonaSwitchDetector(
             available_agents=available_agents,
             tts=tts,
             context=context,
             current_agent_name=config["agent_name"],
+            task=None,  # will be set after task creation
         )
         processors.append(persona_detector)
         logger.info(f"Persona switch enabled: {[a['name'] for a in available_agents]}")
@@ -504,6 +528,11 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             enable_usage_metrics=True,
         ),
     )
+
+    # Wire task into persona detector now that it's been created
+    if persona_detector is not None:
+        persona_detector.task = task
+
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
