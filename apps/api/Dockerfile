@@ -1,65 +1,59 @@
-# Build stage
-FROM node:18-alpine AS builder
+# ─── Build Stage ───────────────────────────────────────────────────────────────
+FROM node:20-slim AS builder
+
+# Prisma requires OpenSSL
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Set working directory
 WORKDIR /app
 
-# Copy workspace files
+# Copy workspace manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 
-# Copy all packages and apps for workspace resolution
+# Copy all source needed for workspace resolution
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 
-# Install ALL dependencies (including dev for build tools)
+# Install all dependencies (dev included for build tools)
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# Generate Prisma client (from apps/api context)
+# Generate Prisma client using the exact version that matches @prisma/client
 WORKDIR /app/apps/api
-RUN npx prisma generate
+RUN npx prisma@5.22.0 generate
 
-# Build the API
+# Build the NestJS app
 RUN pnpm build
 
-# Production stage
-FROM node:18-alpine AS runner
+# ─── Production Stage ──────────────────────────────────────────────────────────
+FROM node:20-slim AS runner
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Prisma requires OpenSSL at runtime too
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy workspace files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/ ./packages/
-COPY apps/api/package.json ./apps/api/
+# Copy the entire node_modules from builder (avoids all pnpm symlink copy issues)
+# This includes the .pnpm virtual store + all generated Prisma engine files
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod --ignore-scripts
-
-# Copy prisma schema so we can run prisma generate
-COPY apps/api/prisma ./apps/api/prisma
-
-# Re-run prisma generate in runner using npx (downloads prisma CLI transiently)
-# This is needed because pnpm hoists prisma client to the pnpm store which isn't copyable
-WORKDIR /app/apps/api
-RUN npx --yes prisma generate
-
-# Copy compiled application from builder
-WORKDIR /app
+# Copy compiled app
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
+# Copy prisma schema (needed at runtime for migrations / db push)
+COPY apps/api/prisma ./apps/api/prisma
+
+# Copy package manifests (needed for module resolution)
+COPY package.json pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+
 WORKDIR /app/apps/api
 
-# Expose port
 EXPOSE 3001
 
-# Set environment
 ENV NODE_ENV=production
 ENV PORT=3001
 
-# Run the app
 CMD ["node", "dist/main"]
