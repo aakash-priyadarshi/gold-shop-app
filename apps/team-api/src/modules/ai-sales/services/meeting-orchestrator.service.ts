@@ -22,6 +22,7 @@ import { PreCallBrainService } from "./pre-call-brain.service";
 @Injectable()
 export class MeetingOrchestratorService {
   private readonly logger = new Logger(MeetingOrchestratorService.name);
+  private brandingConfigured = false;
 
   constructor(
     private prisma: PrismaService,
@@ -35,6 +36,17 @@ export class MeetingOrchestratorService {
     private interactions: LeadInteractionService,
     private pipeline: PostInteractionPipelineService,
   ) {}
+
+  /** Ensure Orivraa domain branding is configured (runs once) */
+  private async ensureBranding() {
+    if (this.brandingConfigured) return;
+    try {
+      await this.dailyRoom.configureDomainBranding();
+      this.brandingConfigured = true;
+    } catch (err: any) {
+      this.logger.warn(`Domain branding setup failed: ${err.message}`);
+    }
+  }
 
   // ── Schedule a new meeting (Scenario 1: Daily.co) ─────────────────────
 
@@ -151,6 +163,8 @@ export class MeetingOrchestratorService {
   // ── Launch the agent into a Daily.co meeting ──────────────────────────
 
   async launchDailyAgent(meetingSessionId: string) {
+    await this.ensureBranding();
+
     const session = await this.prisma.meetingSession.findUnique({
       where: { id: meetingSessionId },
       include: { agent: true, lead: true },
@@ -214,7 +228,6 @@ export class MeetingOrchestratorService {
 
     try {
       const result = await this.pipecat.deployAgent({
-        dailyRoomUrl: session.dailyRoomUrl,
         agentName: agent.name,
         systemPrompt,
         voiceId: agent.voiceId,
@@ -223,13 +236,31 @@ export class MeetingOrchestratorService {
         webhookUrl,
       });
 
+      // Pipecat Cloud creates its own Daily room — use that URL so the user
+      // joins the same room the agent is in.
+      const pipecatRoomUrl = result.roomUrl;
+      const pipecatRoomName = pipecatRoomUrl ? pipecatRoomUrl.split("/").pop() || session.dailyRoomName : session.dailyRoomName;
+
       await this.prisma.meetingSession.update({
         where: { id: meetingSessionId },
-        data: { status: "active", pipecatSessionId: result.sessionId },
+        data: {
+          status: "active",
+          pipecatSessionId: result.sessionId,
+          ...(pipecatRoomUrl && {
+            dailyRoomUrl: pipecatRoomUrl,
+            dailyRoomName: pipecatRoomName,
+            dailyRoomToken: result.token || session.dailyRoomToken,
+          }),
+        },
       });
 
-      this.logger.log(`Agent "${agent.name}" launched into room ${session.dailyRoomName} with sales persona`);
-      return { pipecatSessionId: result.sessionId, goal: meetingGoal };
+      // Clean up the pre-created room if Pipecat gave us a different one
+      if (pipecatRoomUrl && session.dailyRoomUrl && pipecatRoomUrl !== session.dailyRoomUrl && session.dailyRoomName) {
+        this.dailyRoom.deleteRoom(session.dailyRoomName).catch(() => {});
+      }
+
+      this.logger.log(`Agent "${agent.name}" launched into room ${pipecatRoomName} with sales persona`);
+      return { pipecatSessionId: result.sessionId, roomUrl: pipecatRoomUrl, token: result.token, goal: meetingGoal };
     } catch (err: any) {
       await this.prisma.meetingSession.update({
         where: { id: meetingSessionId },

@@ -54,7 +54,6 @@ export class PipecatCloudService {
    * Dynamic config is passed via `body` and received in bot.py's runner_args.body
    */
   async deployAgent(opts: {
-    dailyRoomUrl?: string; // Optional: use pre-created room, otherwise Pipecat creates one
     agentName?: string;
     systemPrompt: string;
     voiceId: string;
@@ -64,9 +63,10 @@ export class PipecatCloudService {
     webhookUrl?: string;
   }): Promise<{ sessionId: string; roomUrl: string; token: string }> {
     // Pipecat Cloud REST API: POST /v1/public/{service}/start
-    // Docs: https://docs.pipecat.ai/deployment/pipecat-cloud/fundamentals/active-sessions
+    // MUST use createDailyRoom: true so Pipecat Cloud sets runner_args.room_url/token
+    // for the agent's DailyTransport. Without it the agent starts headless.
     const payload: Record<string, any> = {
-      createDailyRoom: !opts.dailyRoomUrl, // Let Pipecat create a room if we don't have one
+      createDailyRoom: true,
       body: {
         system_prompt: opts.systemPrompt,
         voice_id: opts.voiceId,
@@ -75,13 +75,18 @@ export class PipecatCloudService {
         agent_name: opts.agentName || "Orivraa Sales",
         language: opts.language || "en-IN",
         ...(opts.webhookUrl && { webhook_url: opts.webhookUrl }),
-        ...(opts.dailyRoomUrl && { room_url: opts.dailyRoomUrl }),
+      },
+      dailyRoomProperties: {
+        max_participants: 10,
+        enable_chat: true,
+        enable_screenshare: true,
+        enable_recording: "cloud",
+        enable_people_ui: true,
+        enable_emoji_reactions: true,
+        enable_prejoin_ui: true,
+        start_video_off: true,
       },
     };
-
-    if (opts.dailyRoomUrl) {
-      payload.dailyRoomProperties = { start_video_off: true };
-    }
 
     const data = await this.request(`/public/${this.agentName}/start`, {
       method: "POST",
@@ -89,7 +94,7 @@ export class PipecatCloudService {
     });
 
     // Response: { sessionId, dailyRoom, dailyToken, ... }
-    const roomUrl = data.dailyRoom || data.room_url || data.url || opts.dailyRoomUrl || "";
+    const roomUrl = data.dailyRoom || data.room_url || data.url || "";
     const token = data.dailyToken || data.token || "";
     const sessionId = data.sessionId || data.session_id || "";
 

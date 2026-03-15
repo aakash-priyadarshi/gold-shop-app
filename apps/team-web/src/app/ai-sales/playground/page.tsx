@@ -916,7 +916,9 @@ export default function PlaygroundPage() {
                               try {
                                 setDailyActive(true);
                                 setDailyStatus("launching agent...");
-                                await aiSalesApi.launchMeeting(dailyMeetingId);
+                                const launchRes = await aiSalesApi.launchMeeting(dailyMeetingId);
+                                const newRoomUrl = (launchRes.data as any)?.roomUrl;
+                                if (newRoomUrl) setDailyRoomUrl(newRoomUrl);
                                 setDailyStatus("agent active");
                                 toast.success("AI agent deployed! Join to talk.");
                               } catch (err: any) {
@@ -1236,7 +1238,9 @@ export default function PlaygroundPage() {
                         try {
                           setDailyActive(true);
                           setDailyStatus("launching agent...");
-                          await aiSalesApi.launchMeeting(dailyMeetingId);
+                          const launchRes = await aiSalesApi.launchMeeting(dailyMeetingId);
+                          const newRoomUrl = (launchRes.data as any)?.roomUrl;
+                          if (newRoomUrl) setDailyRoomUrl(newRoomUrl);
                           setDailyStatus("agent active");
                           toast.success("Pipecat agent deployed! Join the room to talk to it.");
                         } catch (err: any) {
