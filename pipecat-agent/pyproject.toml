@@ -7,6 +7,8 @@ dependencies = [
     "pipecat-ai[webrtc,daily,silero,google,elevenlabs,deepgram,runner]",
     "pipecat-ai-cli",
     "python-dotenv",
+    "aiohttp",
+    "google-generativeai",
 ]
 
 [dependency-groups]

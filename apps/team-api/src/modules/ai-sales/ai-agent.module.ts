@@ -40,6 +40,7 @@ import { ObjectionPlaybookService } from "./services/objection-playbook.service"
 import { PipecatCloudService } from "./services/pipecat-cloud.service";
 import { PostCallProcessor } from "./services/post-call-processor.service";
 import { PostInteractionPipelineService } from "./services/post-interaction-pipeline.service";
+import { InteractionQueueService, InteractionQueueProcessor } from "./services/interaction-queue.service";
 import { PreCallBrainService } from "./services/pre-call-brain.service";
 import { SarvamSTTClient } from "./services/sarvam-stt.service";
 import { STTRouterService } from "./services/stt-router.service";
@@ -95,8 +96,10 @@ import { WebhookService } from "./services/webhook.service";
     LeadStrategyService,
     StrategyExecutorService,
     PostInteractionPipelineService,
+    InteractionQueueService,
+    InteractionQueueProcessor,
   ],
   controllers: [AIAgentController],
-  exports: [AIAgentService, CallOrchestratorService, CentralBrainService, WebhookService, LeadInteractionService, AiEmailService],
+  exports: [AIAgentService, CallOrchestratorService, CentralBrainService, WebhookService, LeadInteractionService, AiEmailService, InteractionQueueService],
 })
 export class AIAgentModule {}

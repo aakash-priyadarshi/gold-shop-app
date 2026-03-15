@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { Resend } from "resend";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { LeadInteractionService } from "./lead-interaction.service";
+import { InteractionQueueService } from "./interaction-queue.service";
 import { PostInteractionPipelineService } from "./post-interaction-pipeline.service";
 
 @Injectable()
@@ -18,6 +19,7 @@ export class AiEmailService {
     private prisma: PrismaService,
     private interactions: LeadInteractionService,
     private pipeline: PostInteractionPipelineService,
+    private interactionQueue: InteractionQueueService,
   ) {
     const resendKey = this.config.get<string>("RESEND_API_KEY");
     if (resendKey) {
@@ -124,9 +126,9 @@ export class AiEmailService {
       data: { lastContactedAt: new Date() },
     });
 
-    // Run post-interaction pipeline after sending (lightweight — mostly re-score + strategy)
-    this.pipeline.afterEmail(params.leadId, params.body, "sent")
-      .catch(err => this.logger.error(`Post-send-email pipeline failed: ${err.message}`));
+    // Run post-interaction pipeline via resilient queue
+    this.interactionQueue.enqueueEmail(params.leadId, email.id, "sent")
+      .catch(err => this.logger.error(`Failed to enqueue email processing: ${err.message}`));
 
     return email;
   }
@@ -270,9 +272,9 @@ Guidelines:
       }
     }
 
-    // Run post-interaction pipeline: enrich from email → re-score → strategy
-    this.pipeline.afterEmail(lead.id, params.body, "received")
-      .catch(err => this.logger.error(`Post-email pipeline failed: ${err.message}`));
+    // Run post-interaction pipeline via resilient queue
+    this.interactionQueue.enqueueEmail(lead.id, email.id, "received")
+      .catch(err => this.logger.error(`Failed to enqueue email processing: ${err.message}`));
 
     return { email, meetLinksDetected: meetLinks, meetLinks, leadId: lead.id };
   }

@@ -880,7 +880,7 @@ export default function PlaygroundPage() {
                         if (!selectedAgentId) { toast.error("Select an agent first"); return; }
                         try {
                           setDailyCreating(true);
-                          setDailyStatus("creating room...");
+                          setDailyStatus("scheduling...");
                           const res = await aiSalesApi.scheduleMeeting({
                             agentId: selectedAgentId,
                             scheduledAt: new Date().toISOString(),
@@ -888,55 +888,57 @@ export default function PlaygroundPage() {
                             type: "daily",
                           });
                           const data = res.data as any;
-                          setDailyRoomUrl(data.roomUrl);
                           setDailyMeetingId(data.meetingId);
-                          setDailyStatus("room created");
-                          toast.success("Orivraa meeting created! Launch the AI agent to start.");
+                          setDailyStatus("scheduled — launch agent to create room");
+                          toast.success("Meeting scheduled! Launch the AI agent to create the room and start.");
                         } catch (err: any) {
-                          toast.error(err?.response?.data?.message || "Failed to create meeting");
+                          toast.error(err?.response?.data?.message || "Failed to schedule meeting");
                           setDailyStatus("error");
                         } finally {
                           setDailyCreating(false);
                         }
                       }}
-                      disabled={dailyCreating || !selectedAgentId}
+                      disabled={dailyCreating || !selectedAgentId || !!dailyMeetingId}
                       className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
                     >
                       {dailyCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                      Create Meeting
+                      Schedule Meeting
                     </Button>
-                    {dailyRoomUrl && (
+                    {dailyMeetingId && (
                       <div className="space-y-2">
-                        <Input value={dailyRoomUrl} disabled className="text-xs" />
+                        {dailyRoomUrl && <Input value={dailyRoomUrl} disabled className="text-xs" />}
                         <div className="flex gap-2">
-                          <Button
-                            size="sm" variant="outline"
-                            onClick={async () => {
-                              if (!dailyMeetingId) return;
-                              try {
-                                setDailyActive(true);
-                                setDailyStatus("launching agent...");
-                                const launchRes = await aiSalesApi.launchMeeting(dailyMeetingId);
-                                const newRoomUrl = (launchRes.data as any)?.roomUrl;
-                                if (newRoomUrl) setDailyRoomUrl(newRoomUrl);
-                                setDailyStatus("agent active");
-                                toast.success("AI agent deployed! Join to talk.");
-                              } catch (err: any) {
-                                toast.error(err?.response?.data?.message || "Failed to launch agent");
-                                setDailyActive(false);
-                                setDailyStatus("error");
-                              }
-                            }}
-                            disabled={dailyActive}
-                            className="flex-1 gap-1"
-                          >
-                            <Sparkles className="h-3 w-3" /> Launch Agent
-                          </Button>
-                          <a href={dailyRoomUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
-                            <Button size="sm" className="w-full gap-1 bg-emerald-600 hover:bg-emerald-700">
-                              <Video className="h-3 w-3" /> Join Room
+                          {!dailyActive && (
+                            <Button
+                              size="sm" variant="outline"
+                              onClick={async () => {
+                                if (!dailyMeetingId) return;
+                                try {
+                                  setDailyActive(true);
+                                  setDailyStatus("launching agent...");
+                                  const launchRes = await aiSalesApi.launchMeeting(dailyMeetingId);
+                                  const newRoomUrl = (launchRes.data as any)?.roomUrl;
+                                  if (newRoomUrl) setDailyRoomUrl(newRoomUrl);
+                                  setDailyStatus("agent active");
+                                  toast.success("AI agent deployed! Join the room to talk.");
+                                } catch (err: any) {
+                                  toast.error(err?.response?.data?.message || "Failed to launch agent");
+                                  setDailyActive(false);
+                                  setDailyStatus("error");
+                                }
+                              }}
+                              className="flex-1 gap-1"
+                            >
+                              <Sparkles className="h-3 w-3" /> Launch Agent
                             </Button>
-                          </a>
+                          )}
+                          {dailyRoomUrl && (
+                            <a href={dailyRoomUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
+                              <Button size="sm" className="w-full gap-1 bg-emerald-600 hover:bg-emerald-700">
+                                <Video className="h-3 w-3" /> Join Room
+                              </Button>
+                            </a>
+                          )}
                         </div>
                         {dailyActive && (
                           <Button
@@ -1203,7 +1205,7 @@ export default function PlaygroundPage() {
                         }
                         try {
                           setDailyCreating(true);
-                          setDailyStatus("creating room...");
+                          setDailyStatus("scheduling...");
                           const res = await aiSalesApi.scheduleMeeting({
                             agentId: selectedAgentId,
                             scheduledAt: new Date().toISOString(),
@@ -1211,28 +1213,27 @@ export default function PlaygroundPage() {
                             type: "daily",
                           });
                           const data = res.data as any;
-                          setDailyRoomUrl(data.roomUrl);
                           setDailyMeetingId(data.meetingId);
-                          setDailyStatus("room created");
-                          toast.success("Orivraa meeting room created! Click Launch Agent to deploy the AI.");
+                          setDailyStatus("scheduled — click Launch Agent");
+                          toast.success("Meeting scheduled! Click Launch Agent to deploy the AI and create the room.");
                         } catch (err: any) {
-                          toast.error(err?.response?.data?.message || "Failed to create room. Check Daily.co API key in Settings.");
+                          toast.error(err?.response?.data?.message || "Failed to schedule meeting.");
                           setDailyStatus("error");
                         } finally {
                           setDailyCreating(false);
                         }
                       }}
-                      disabled={dailyCreating || !selectedAgentId}
+                      disabled={dailyCreating || !selectedAgentId || !!dailyMeetingId}
                       className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
                       size="lg"
                     >
                       {dailyCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                      Create Orivraa Room
+                      Schedule Meeting
                     </Button>
                     <Button
                       onClick={async () => {
                         if (!dailyMeetingId) {
-                          toast.error("Create a room first");
+                          toast.error("Schedule a meeting first");
                           return;
                         }
                         try {
@@ -1278,15 +1279,6 @@ export default function PlaygroundPage() {
                     <PhoneOff className="h-4 w-4" />
                     End Meeting
                   </Button>
-                )}
-
-                {dailyRoomUrl && !dailyActive && dailyStatus === "room created" && (
-                  <a href={dailyRoomUrl} target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" size="lg" className="gap-2">
-                      <Video className="h-4 w-4" />
-                      Open Room
-                    </Button>
-                  </a>
                 )}
 
                 {dailyRoomUrl && dailyActive && (

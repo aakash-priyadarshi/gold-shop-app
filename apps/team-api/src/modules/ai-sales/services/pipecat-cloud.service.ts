@@ -61,6 +61,7 @@ export class PipecatCloudService {
     leadName?: string;
     language?: string;
     webhookUrl?: string;
+    availableAgents?: Array<{ name: string; voice_id: string; personality?: string; greeting?: string }>;
   }): Promise<{ sessionId: string; roomUrl: string; token: string }> {
     // Pipecat Cloud REST API: POST /v1/public/{service}/start
     // MUST use createDailyRoom: true so Pipecat Cloud sets runner_args.room_url/token
@@ -75,6 +76,7 @@ export class PipecatCloudService {
         agent_name: opts.agentName || "Orivraa Sales",
         language: opts.language || "en-IN",
         ...(opts.webhookUrl && { webhook_url: opts.webhookUrl }),
+        ...(opts.availableAgents && { available_agents: opts.availableAgents }),
       },
       dailyRoomProperties: {
         max_participants: 10,

@@ -2063,7 +2063,19 @@ Return JSON:
         where: { meetingBaasBotId: body.bot_id || body.botId },
       });
       if (session) {
-        await this.meetingOrchestrator.onMeetingEnd(session.id, body.transcript);
+        // MeetingBaas sends transcript as array of {speaker, words, ...} or as string
+        let transcript = "";
+        if (typeof body.transcript === "string") {
+          transcript = body.transcript;
+        } else if (Array.isArray(body.transcript)) {
+          transcript = body.transcript
+            .map((t: any) => `${t.speaker || "Unknown"}: ${t.words || t.text || ""}`)
+            .join("\n");
+        } else if (body.mp4) {
+          // Some MeetingBaas events include recording URL but no inline transcript
+          this.logger.log(`MeetingBaas recording available: ${body.mp4}`);
+        }
+        await this.meetingOrchestrator.onMeetingEnd(session.id, transcript || undefined);
       }
     }
     return { received: true };

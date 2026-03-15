@@ -8,6 +8,7 @@ import { LeadInteractionService } from "./lead-interaction.service";
 import { MeetingNotificationService } from "./meeting-notification.service";
 import { MeetingBaasService } from "./meetingbaas.service";
 import { PipecatCloudService } from "./pipecat-cloud.service";
+import { InteractionQueueService } from "./interaction-queue.service";
 import { PostInteractionPipelineService } from "./post-interaction-pipeline.service";
 import { PreCallBrainService } from "./pre-call-brain.service";
 
@@ -22,7 +23,6 @@ import { PreCallBrainService } from "./pre-call-brain.service";
 @Injectable()
 export class MeetingOrchestratorService {
   private readonly logger = new Logger(MeetingOrchestratorService.name);
-  private brandingConfigured = false;
 
   constructor(
     private prisma: PrismaService,
@@ -35,18 +35,8 @@ export class MeetingOrchestratorService {
     private preCallBrain: PreCallBrainService,
     private interactions: LeadInteractionService,
     private pipeline: PostInteractionPipelineService,
+    private interactionQueue: InteractionQueueService,
   ) {}
-
-  /** Ensure Orivraa domain branding is configured (runs once) */
-  private async ensureBranding() {
-    if (this.brandingConfigured) return;
-    try {
-      await this.dailyRoom.configureDomainBranding();
-      this.brandingConfigured = true;
-    } catch (err: any) {
-      this.logger.warn(`Domain branding setup failed: ${err.message}`);
-    }
-  }
 
   // ── Schedule a new meeting (Scenario 1: Daily.co) ─────────────────────
 
@@ -56,24 +46,17 @@ export class MeetingOrchestratorService {
     scheduledAt: Date;
     title?: string;
   }) {
-    // 1. Create Daily.co room
-    const room = await this.dailyRoom.createRoom({
-      scheduledAt: opts.scheduledAt,
-      title: opts.title,
-    });
+    // Don't pre-create a Daily room here — Pipecat Cloud creates its own room
+    // when launchDailyAgent() is called with createDailyRoom: true.
+    // Pre-creating causes the user to join room A while agent joins room B.
 
-    // 2. Generate meeting token for the lead (if we know them)
-    let token: string | null = null;
     let leadName = "Guest";
     if (opts.leadId) {
       const lead = await this.prisma.lead.findUnique({ where: { id: opts.leadId } });
-      if (lead) {
-        leadName = lead.name;
-        token = await this.dailyRoom.createMeetingToken(room.name, lead.name);
-      }
+      if (lead) leadName = lead.name;
     }
 
-    // 3. Store the meeting session
+    // Store the meeting session (room URL populated on agent launch)
     const session = await this.prisma.meetingSession.create({
       data: {
         leadId: opts.leadId,
@@ -82,9 +65,6 @@ export class MeetingOrchestratorService {
         status: "scheduled",
         scheduledAt: opts.scheduledAt,
         title: opts.title || `Meeting with ${leadName}`,
-        dailyRoomName: room.name,
-        dailyRoomUrl: room.url,
-        dailyRoomToken: token,
       },
     });
 
@@ -101,7 +81,7 @@ export class MeetingOrchestratorService {
           leadEmail: lead.email || undefined,
           leadPhone: lead.phone || undefined,
           agentName: agent?.name || "Orivraa AI",
-          meetLink: room.url,
+          meetLink: "", // Room URL will be available after agent launch
           scheduledAt: opts.scheduledAt,
           title: opts.title,
         }).catch(err => this.logger.error(`Confirmation notification failed: ${err.message}`));
@@ -110,8 +90,8 @@ export class MeetingOrchestratorService {
 
     return {
       meetingId: session.id,
-      roomUrl: room.url,
-      token,
+      roomUrl: "", // Room created on agent launch
+      token: null,
       scheduledAt: opts.scheduledAt,
     };
   }
@@ -163,8 +143,6 @@ export class MeetingOrchestratorService {
   // ── Launch the agent into a Daily.co meeting ──────────────────────────
 
   async launchDailyAgent(meetingSessionId: string) {
-    await this.ensureBranding();
-
     const session = await this.prisma.meetingSession.findUnique({
       where: { id: meetingSessionId },
       include: { agent: true, lead: true },
@@ -172,7 +150,6 @@ export class MeetingOrchestratorService {
 
     if (!session) throw new Error("Meeting session not found");
     if (session.type !== "daily") throw new Error("Not a Daily.co meeting");
-    if (!session.dailyRoomUrl) throw new Error("No Daily.co room URL");
 
     // Update status
     await this.prisma.meetingSession.update({
@@ -226,6 +203,15 @@ export class MeetingOrchestratorService {
 
     const webhookUrl = `${this.config.get<string>("WEBHOOK_BASE_URL") || "http://localhost:3002"}/api/ai-sales/meetings/webhook/pipecat`;
 
+    // Load all available agents for persona switching
+    const allAgents = await this.prisma.agentVoice.findMany({ where: { isActive: true } });
+    const agentList = allAgents.map(a => ({
+      name: a.name,
+      voice_id: a.voiceId,
+      personality: (a as any).personality || "",
+      greeting: a.greeting || "",
+    }));
+
     try {
       const result = await this.pipecat.deployAgent({
         agentName: agent.name,
@@ -234,30 +220,23 @@ export class MeetingOrchestratorService {
         greeting: agent.greeting || undefined,
         leadName: session.lead?.name || undefined,
         webhookUrl,
+        availableAgents: agentList,
       });
 
-      // Pipecat Cloud creates its own Daily room — use that URL so the user
-      // joins the same room the agent is in.
+      // Pipecat Cloud creates the Daily room — use that URL
       const pipecatRoomUrl = result.roomUrl;
-      const pipecatRoomName = pipecatRoomUrl ? pipecatRoomUrl.split("/").pop() || session.dailyRoomName : session.dailyRoomName;
+      const pipecatRoomName = pipecatRoomUrl ? pipecatRoomUrl.split("/").pop() || "" : "";
 
       await this.prisma.meetingSession.update({
         where: { id: meetingSessionId },
         data: {
           status: "active",
           pipecatSessionId: result.sessionId,
-          ...(pipecatRoomUrl && {
-            dailyRoomUrl: pipecatRoomUrl,
-            dailyRoomName: pipecatRoomName,
-            dailyRoomToken: result.token || session.dailyRoomToken,
-          }),
+          dailyRoomUrl: pipecatRoomUrl,
+          dailyRoomName: pipecatRoomName,
+          dailyRoomToken: result.token || null,
         },
       });
-
-      // Clean up the pre-created room if Pipecat gave us a different one
-      if (pipecatRoomUrl && session.dailyRoomUrl && pipecatRoomUrl !== session.dailyRoomUrl && session.dailyRoomName) {
-        this.dailyRoom.deleteRoom(session.dailyRoomName).catch(() => {});
-      }
 
       this.logger.log(`Agent "${agent.name}" launched into room ${pipecatRoomName} with sales persona`);
       return { pipecatSessionId: result.sessionId, roomUrl: pipecatRoomUrl, token: result.token, goal: meetingGoal };
@@ -428,10 +407,10 @@ export class MeetingOrchestratorService {
       }).catch(err => this.logger.warn(`Central brain recording failed: ${err.message}`));
     }
 
-    // Run post-interaction pipeline: enrich lead → re-score → auto-progress stage → strategy
+    // Run post-interaction pipeline via resilient queue
     if (session.leadId) {
-      this.pipeline.afterMeeting(session.leadId, meetingSessionId, transcript)
-        .catch(err => this.logger.error(`Post-meeting pipeline failed: ${err.message}`));
+      this.interactionQueue.enqueueMeeting(session.leadId, meetingSessionId, transcript)
+        .catch(err => this.logger.error(`Failed to enqueue meeting processing: ${err.message}`));
     }
   }
 

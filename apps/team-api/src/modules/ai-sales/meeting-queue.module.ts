@@ -51,6 +51,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
     BullModule.registerQueue(
       { name: "meeting-reminders" },
       { name: "meeting-launch" },
+      { name: "interaction-processing" },
     ),
   ],
   exports: [BullModule],

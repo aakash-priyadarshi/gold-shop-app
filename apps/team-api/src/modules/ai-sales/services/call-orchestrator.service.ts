@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { InteractionQueueService } from "./interaction-queue.service";
 import { LeadInteractionService } from "./lead-interaction.service";
 import { LeadScoringService } from "./lead-scoring.service";
 import { PostCallProcessor } from "./post-call-processor.service";
@@ -19,6 +20,7 @@ export class CallOrchestratorService {
     private interactionService: LeadInteractionService,
     private leadScoring: LeadScoringService,
     private pipeline: PostInteractionPipelineService,
+    private interactionQueue: InteractionQueueService,
   ) {
     const accountSid = this.config.get("TWILIO_ACCOUNT_SID");
     const authToken = this.config.get("TWILIO_AUTH_TOKEN");
@@ -326,8 +328,8 @@ export class CallOrchestratorService {
       goalNotes: goalResult?.notes,
     });
 
-    // 8. Run post-interaction pipeline: auto-progress stage + generate next strategy
-    await this.pipeline.afterCall(leadId, sessionId);
+    // 8. Run post-interaction pipeline via resilient queue (retries on failure)
+    await this.interactionQueue.enqueueCall(leadId, sessionId);
 
     this.logger.log(`Post-call processing complete for lead ${leadId}, session ${sessionId}`);
   }
