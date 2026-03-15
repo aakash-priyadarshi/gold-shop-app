@@ -796,8 +796,8 @@ export class SecurityService {
     }
   }
 
-  /** Clean up expired blocks every 10 minutes */
-  @Cron(CronExpression.EVERY_10_MINUTES)
+  /** Clean up expired blocks every 30 minutes */
+  @Cron(CronExpression.EVERY_30_MINUTES)
   async handleExpiredBlocks(): Promise<void> {
     try {
       const result = await this.prisma.blockedIp.deleteMany({

@@ -2967,6 +2967,23 @@ model MetricsSnapshot {
   @@index([createdAt])
 }
 
+// ─── Cron Job Metrics ──────────────────────────────────────
+model CronJobLog {
+  id            String   @id @default(cuid())
+  jobName       String   // e.g. "metrics-snapshot", "pos-expiry", "call-scheduler"
+  app           String   // "api" or "team-api"
+  frequency     String   // e.g. "EVERY_30_MINUTES", "DAILY_3AM"
+  status        String   // "success", "error", "skipped"
+  durationMs    Int      @default(0)
+  recordsProcessed Int   @default(0)
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+
+  @@index([jobName, createdAt])
+  @@index([app, createdAt])
+  @@index([createdAt])
+}
+
 // ─── Security Shield ───────────────────────────────────────
 model SecurityEvent {
   id        String   @id @default(cuid())

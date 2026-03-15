@@ -46,7 +46,7 @@ export class AgentVoiceService implements OnModuleInit {
     } catch (err: any) {
       this.logger.warn(`Initial voice load failed (table may not exist yet): ${err.message}`);
     }
-    this.refreshTimer = setInterval(() => this.refresh(), 60_000);
+    this.refreshTimer = setInterval(() => this.refresh(), 300_000);
   }
 
   /** Reload voices from DB into memory cache */

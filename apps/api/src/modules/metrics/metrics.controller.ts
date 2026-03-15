@@ -3,6 +3,7 @@ import { ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { PrismaService } from "../../prisma/prisma.service";
 import { SkipSecurity } from "../security/security.guard";
+import { CronMetricsService } from "./cron-metrics.service";
 import { MetricsSnapshotService } from "./metrics-snapshot.service";
 import { MetricsService } from "./metrics.service";
 
@@ -13,6 +14,7 @@ export class MetricsController {
   constructor(
     private readonly metricsService: MetricsService,
     private readonly snapshotService: MetricsSnapshotService,
+    private readonly cronMetrics: CronMetricsService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -155,5 +157,56 @@ export class MetricsController {
         latencyMs: Math.round((performance.now() - start) * 100) / 100,
       };
     }
+  }
+
+  // ── Cron Job Metrics ──────────────────────────────────────
+
+  @Get("cron/summary")
+  @ApiOperation({
+    summary: "Cron job summary",
+    description: "Returns summary of all cron jobs with latest stats",
+  })
+  async getCronSummary() {
+    return this.cronMetrics.getSummary();
+  }
+
+  @Get("cron/logs")
+  @ApiOperation({
+    summary: "Cron job logs",
+    description: "Returns cron job execution logs, optionally filtered by date/app/job",
+  })
+  @ApiQuery({ name: "date", required: false, type: String })
+  @ApiQuery({ name: "app", required: false, type: String })
+  @ApiQuery({ name: "jobName", required: false, type: String })
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  async getCronLogs(
+    @Query("date") date?: string,
+    @Query("app") app?: string,
+    @Query("jobName") jobName?: string,
+    @Query("limit") limit?: string,
+  ) {
+    return this.cronMetrics.getLogs({
+      date,
+      app,
+      jobName,
+      limit: limit ? parseInt(limit, 10) : 200,
+    });
+  }
+
+  @Get("cron/date-wise")
+  @ApiOperation({
+    summary: "Date-wise cron logs",
+    description: "Returns cron job stats aggregated by date",
+  })
+  @ApiQuery({ name: "days", required: false, type: Number })
+  @ApiQuery({ name: "jobName", required: false, type: String })
+  async getCronDateWise(
+    @Query("days") days?: string,
+    @Query("jobName") jobName?: string,
+  ) {
+    return this.cronMetrics.getDateWiseLogs({
+      days: days ? parseInt(days, 10) : 7,
+      jobName,
+    });
   }
 }

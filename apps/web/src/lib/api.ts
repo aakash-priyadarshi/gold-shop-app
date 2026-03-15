@@ -1070,6 +1070,21 @@ export const metricsApi = {
     dashboardUid?: string;
   }) => api.patch("/metrics/grafana-settings", data),
   getDbPerformance: () => api.get("/metrics/db-performance"),
+  getCronSummary: () => api.get("/metrics/cron/summary"),
+  getCronLogs: (params?: { date?: string; app?: string; jobName?: string; limit?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.date) q.set("date", params.date);
+    if (params?.app) q.set("app", params.app);
+    if (params?.jobName) q.set("jobName", params.jobName);
+    if (params?.limit) q.set("limit", String(params.limit));
+    return api.get(`/metrics/cron/logs?${q.toString()}`);
+  },
+  getCronDateWise: (params?: { days?: number; jobName?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.days) q.set("days", String(params.days));
+    if (params?.jobName) q.set("jobName", params.jobName);
+    return api.get(`/metrics/cron/date-wise?${q.toString()}`);
+  },
 };
 
 // ─── Security Shield API ───

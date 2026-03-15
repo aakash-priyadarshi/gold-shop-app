@@ -112,12 +112,12 @@ export class AgentMemoryService implements OnModuleInit {
     } catch (err: any) {
       this.logger.warn(`Initial cache load failed (table may not exist yet): ${err.message}`);
     }
-    // Refresh cache every 60 seconds
+    // Refresh cache every 5 minutes
     this.refreshInterval = setInterval(() => {
       this.loadAll().catch((err) =>
         this.logger.warn("Cache refresh failed", err.message),
       );
-    }, 60_000);
+    }, 300_000);
   }
 
   /** Load all memory entries into cache */

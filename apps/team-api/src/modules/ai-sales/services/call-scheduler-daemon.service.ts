@@ -17,8 +17,8 @@ export class CallSchedulerDaemonService {
     this.logger.log("Call scheduler daemon initialized");
   }
 
-  /** Runs every 60 seconds — picks up pending CallSchedule records and dials */
-  @Cron(CronExpression.EVERY_MINUTE)
+  /** Runs every 5 minutes — picks up pending CallSchedule records and dials */
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async processPendingSchedules() {
     if (this.isProcessing) return;
     this.isProcessing = true;

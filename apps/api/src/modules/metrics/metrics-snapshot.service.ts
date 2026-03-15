@@ -1,13 +1,14 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../../prisma/prisma.service";
+import { CronMetricsService } from "./cron-metrics.service";
 import { MetricsService } from "./metrics.service";
 
 /**
  * Periodically snapshots Prometheus metrics to the database
  * for historical trend charts on the admin dashboard.
  *
- * - Takes a snapshot every 5 minutes
+ * - Takes a snapshot every 30 minutes
  * - Cleans up snapshots older than 30 days
  * - Provides query methods for the admin API
  */
@@ -18,40 +19,45 @@ export class MetricsSnapshotService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly metricsService: MetricsService,
+    private readonly cronMetrics: CronMetricsService,
   ) {}
 
   /**
-   * Take a snapshot of current metrics every 5 minutes
+   * Take a snapshot of current metrics every 30 minutes
    */
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_30_MINUTES)
   async takeSnapshot(): Promise<void> {
-    try {
-      const summary = await this.metricsService.getAdminSummary();
+    await this.cronMetrics.trackExecution(
+      "metrics-snapshot",
+      "api",
+      "EVERY_30_MINUTES",
+      async () => {
+        const summary = await this.metricsService.getAdminSummary();
 
-      await this.prisma.metricsSnapshot.create({
-        data: {
-          requests: summary.requests.total,
-          errors: summary.requests.errors,
-          errorRate: parseFloat(summary.requests.errorRate) || 0,
-          avgLatency: summary.latency.avgMs,
-          p95Latency: summary.latency.p95Ms,
-          p99Latency: summary.latency.p99Ms,
-          memoryMB: summary.memory.rssMB,
-          cpuSeconds: summary.cpu.totalSeconds,
-          rfqsCreated: summary.business.rfqsCreated,
-          ordersCreated: summary.business.ordersCreated,
-          wsConnections: summary.websockets.active,
-          inFlight: summary.requests.inFlight,
-          uptime: summary.uptime,
-        },
-      });
+        await this.prisma.metricsSnapshot.create({
+          data: {
+            requests: summary.requests.total,
+            errors: summary.requests.errors,
+            errorRate: parseFloat(summary.requests.errorRate) || 0,
+            avgLatency: summary.latency.avgMs,
+            p95Latency: summary.latency.p95Ms,
+            p99Latency: summary.latency.p99Ms,
+            memoryMB: summary.memory.rssMB,
+            cpuSeconds: summary.cpu.totalSeconds,
+            rfqsCreated: summary.business.rfqsCreated,
+            ordersCreated: summary.business.ordersCreated,
+            wsConnections: summary.websockets.active,
+            inFlight: summary.requests.inFlight,
+            uptime: summary.uptime,
+          },
+        });
 
-      this.logger.debug(
-        `Metrics snapshot saved — ${summary.requests.total} requests, ${summary.memory.rssMB}MB memory`,
-      );
-    } catch (error) {
-      this.logger.error(`Failed to save metrics snapshot: ${error.message}`);
-    }
+        this.logger.debug(
+          `Metrics snapshot saved — ${summary.requests.total} requests, ${summary.memory.rssMB}MB memory`,
+        );
+        return 1;
+      },
+    );
   }
 
   /**
@@ -60,20 +66,27 @@ export class MetricsSnapshotService {
    */
   @Cron("0 3 * * *")
   async cleanupOldSnapshots(): Promise<void> {
-    try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    await this.cronMetrics.trackExecution(
+      "metrics-cleanup",
+      "api",
+      "DAILY_3AM",
+      async () => {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const result = await this.prisma.metricsSnapshot.deleteMany({
-        where: { createdAt: { lt: thirtyDaysAgo } },
-      });
+        const result = await this.prisma.metricsSnapshot.deleteMany({
+          where: { createdAt: { lt: thirtyDaysAgo } },
+        });
 
-      if (result.count > 0) {
-        this.logger.log(`Cleaned up ${result.count} old metrics snapshots`);
-      }
-    } catch (error) {
-      this.logger.error(`Failed to clean up snapshots: ${error.message}`);
-    }
+        // Also cleanup old cron logs
+        await this.cronMetrics.cleanup();
+
+        if (result.count > 0) {
+          this.logger.log(`Cleaned up ${result.count} old metrics snapshots`);
+        }
+        return result.count;
+      },
+    );
   }
 
   /**

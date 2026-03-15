@@ -2,6 +2,7 @@ import { Global, Module, OnModuleInit } from "@nestjs/common";
 import { APP_INTERCEPTOR } from "@nestjs/core";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { PrismaService } from "../../prisma/prisma.service";
+import { CronMetricsService } from "./cron-metrics.service";
 import { MetricsSnapshotService } from "./metrics-snapshot.service";
 import { MetricsController } from "./metrics.controller";
 import { MetricsInterceptor } from "./metrics.interceptor";
@@ -14,13 +15,14 @@ import { MetricsService } from "./metrics.service";
   providers: [
     MetricsService,
     MetricsSnapshotService,
+    CronMetricsService,
     // Register interceptor globally so every HTTP request is tracked
     {
       provide: APP_INTERCEPTOR,
       useClass: MetricsInterceptor,
     },
   ],
-  exports: [MetricsService, MetricsSnapshotService],
+  exports: [MetricsService, MetricsSnapshotService, CronMetricsService],
 })
 export class MetricsModule implements OnModuleInit {
   constructor(

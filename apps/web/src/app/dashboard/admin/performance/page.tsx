@@ -5,11 +5,11 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,24 +18,24 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { metricsApi } from "@/lib/api";
 import {
-  Activity,
-  AlertTriangle,
-  BarChart3,
-  Clock,
-  Cpu,
-  Database,
-  ExternalLink,
-  FileText,
-  Globe,
-  HardDrive,
-  RefreshCw,
-  Server,
-  Settings,
-  ShoppingCart,
-  Timer,
-  TrendingUp,
-  Wifi,
-  Zap,
+    Activity,
+    AlertTriangle,
+    BarChart3,
+    Clock,
+    Cpu,
+    Database,
+    ExternalLink,
+    FileText,
+    Globe,
+    HardDrive,
+    RefreshCw,
+    Server,
+    Settings,
+    ShoppingCart,
+    Timer,
+    TrendingUp,
+    Wifi,
+    Zap,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
@@ -190,6 +190,16 @@ export default function AdminPerformancePage() {
   const [dbPerf, setDbPerf] = useState<DbPerformance | null>(null);
   const [dbLoading, setDbLoading] = useState(false);
 
+  // Cron Job Metrics
+  const [cronSummary, setCronSummary] = useState<any[]>([]);
+  const [cronLogs, setCronLogs] = useState<any[]>([]);
+  const [cronDateWise, setCronDateWise] = useState<any[]>([]);
+  const [cronLoading, setCronLoading] = useState(false);
+  const [cronSelectedDate, setCronSelectedDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [cronSelectedJob, setCronSelectedJob] = useState<string>("");
+
   // ── Data Fetching ──
 
   const loadMetrics = useCallback(async () => {
@@ -242,12 +252,35 @@ export default function AdminPerformancePage() {
     }
   }, []);
 
+  const loadCronMetrics = useCallback(async () => {
+    setCronLoading(true);
+    try {
+      const [summaryRes, dateWiseRes, logsRes] = await Promise.all([
+        metricsApi.getCronSummary(),
+        metricsApi.getCronDateWise({ days: 7, jobName: cronSelectedJob || undefined }),
+        metricsApi.getCronLogs({
+          date: cronSelectedDate,
+          jobName: cronSelectedJob || undefined,
+          limit: 100,
+        }),
+      ]);
+      setCronSummary(summaryRes.data || []);
+      setCronDateWise(dateWiseRes.data || []);
+      setCronLogs(logsRes.data || []);
+    } catch {
+      // Cron metrics may not have data yet
+    } finally {
+      setCronLoading(false);
+    }
+  }, [cronSelectedDate, cronSelectedJob]);
+
   useEffect(() => {
     loadMetrics();
     loadHistory();
     loadGrafanaSettings();
     loadDbPerformance();
-  }, [loadMetrics, loadHistory, loadGrafanaSettings, loadDbPerformance]);
+    loadCronMetrics();
+  }, [loadMetrics, loadHistory, loadGrafanaSettings, loadDbPerformance, loadCronMetrics]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -258,6 +291,11 @@ export default function AdminPerformancePage() {
     }, 10_000);
     return () => clearInterval(interval);
   }, [autoRefresh, loadMetrics, loadHistory, loadDbPerformance]);
+
+  // Reload cron logs when filter changes
+  useEffect(() => {
+    loadCronMetrics();
+  }, [cronSelectedDate, cronSelectedJob, loadCronMetrics]);
 
   // ── Grafana Pro Toggle ──
 
@@ -383,6 +421,10 @@ export default function AdminPerformancePage() {
                 <TabsTrigger value="grafana">
                   <Settings className="h-3.5 w-3.5 mr-1" />
                   Grafana Pro
+                </TabsTrigger>
+                <TabsTrigger value="crons">
+                  <Clock className="h-3.5 w-3.5 mr-1" />
+                  Cron Jobs
                 </TabsTrigger>
               </TabsList>
 
@@ -1249,6 +1291,346 @@ export default function AdminPerformancePage() {
                         </span>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* ════════ Tab 5: Cron Jobs ════════ */}
+              <TabsContent value="crons" className="space-y-4">
+                {/* Cron Summary Cards */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Clock className="h-5 w-5" />
+                          Cron Job Overview
+                        </CardTitle>
+                        <CardDescription>
+                          All scheduled jobs across api &amp; team-api — frequencies slowed for Neon free tier
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadCronMetrics}
+                        disabled={cronLoading}
+                      >
+                        <RefreshCw
+                          className={`h-3.5 w-3.5 mr-1 ${cronLoading ? "animate-spin" : ""}`}
+                        />
+                        Refresh
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {cronSummary.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No cron job data yet. Logs will appear after cron jobs execute.
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-muted-foreground">
+                              <th className="text-left py-2 pr-4">Job Name</th>
+                              <th className="text-left py-2 pr-4">App</th>
+                              <th className="text-left py-2 pr-4">Frequency</th>
+                              <th className="text-right py-2 pr-4">Avg Duration</th>
+                              <th className="text-right py-2 pr-4">Runs (24h)</th>
+                              <th className="text-right py-2 pr-4">Errors (24h)</th>
+                              <th className="text-left py-2">Last Run</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cronSummary.map((job: any) => (
+                              <tr
+                                key={`${job.app}-${job.jobName}`}
+                                className="border-b hover:bg-muted/50 cursor-pointer"
+                                onClick={() =>
+                                  setCronSelectedJob(
+                                    cronSelectedJob === job.jobName ? "" : job.jobName,
+                                  )
+                                }
+                              >
+                                <td className="py-2 pr-4 font-medium">
+                                  {cronSelectedJob === job.jobName && (
+                                    <span className="text-primary mr-1">▸</span>
+                                  )}
+                                  {job.jobName}
+                                </td>
+                                <td className="py-2 pr-4">
+                                  <Badge
+                                    variant="outline"
+                                    className={
+                                      job.app === "api"
+                                        ? "border-blue-300 text-blue-700"
+                                        : "border-purple-300 text-purple-700"
+                                    }
+                                  >
+                                    {job.app}
+                                  </Badge>
+                                </td>
+                                <td className="py-2 pr-4 text-muted-foreground">
+                                  {job.frequency}
+                                </td>
+                                <td className="py-2 pr-4 text-right font-mono">
+                                  {job.avgDurationMs}ms
+                                </td>
+                                <td className="py-2 pr-4 text-right">{job.runs24h}</td>
+                                <td className="py-2 pr-4 text-right">
+                                  <span
+                                    className={
+                                      job.errors24h > 0
+                                        ? "text-red-600 font-bold"
+                                        : "text-green-600"
+                                    }
+                                  >
+                                    {job.errors24h}
+                                  </span>
+                                </td>
+                                <td className="py-2 text-muted-foreground text-xs">
+                                  {job.lastRun
+                                    ? new Date(job.lastRun).toLocaleString()
+                                    : "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Scale-up Reference */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Zap className="h-4 w-4" />
+                      Scale-up Reference
+                    </CardTitle>
+                    <CardDescription>
+                      When you upgrade Neon, restore these frequencies for better responsiveness
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-muted-foreground">
+                            <th className="text-left py-2 pr-4">Job</th>
+                            <th className="text-left py-2 pr-4">Current (Slow)</th>
+                            <th className="text-left py-2 pr-4">Recommended (Scaled)</th>
+                            <th className="text-left py-2">Purpose</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-xs">
+                          {[
+                            { job: "call-scheduler", current: "5 min", scaled: "1 min", purpose: "Dial pending CallSchedule records" },
+                            { job: "meeting-auto-launch", current: "5 min", scaled: "1 min", purpose: "Launch meetings at scheduled time" },
+                            { job: "30m-reminders", current: "5 min", scaled: "1 min", purpose: "Send 30-min meeting reminders" },
+                            { job: "external-meetings", current: "5 min", scaled: "1 min", purpose: "Auto-launch external meetings" },
+                            { job: "24h-reminders", current: "30 min", scaled: "5 min", purpose: "Send 24-hour meeting reminders" },
+                            { job: "mark-no-shows", current: "30 min", scaled: "5 min", purpose: "Mark no-show meetings" },
+                            { job: "agent-voice-cache", current: "5 min", scaled: "1 min", purpose: "Refresh voice configs from DB" },
+                            { job: "agent-memory-cache", current: "5 min", scaled: "1 min", purpose: "Refresh agent memory cache" },
+                            { job: "metrics-snapshot", current: "30 min", scaled: "5 min", purpose: "Save performance metrics to DB" },
+                            { job: "pos-expiry", current: "30 min", scaled: "5 min", purpose: "Expire overdue POS sessions" },
+                          ].map((row) => (
+                            <tr key={row.job} className="border-b">
+                              <td className="py-2 pr-4 font-medium">{row.job}</td>
+                              <td className="py-2 pr-4">
+                                <Badge variant="secondary">{row.current}</Badge>
+                              </td>
+                              <td className="py-2 pr-4">
+                                <Badge variant="outline" className="border-green-300 text-green-700">
+                                  {row.scaled}
+                                </Badge>
+                              </td>
+                              <td className="py-2 text-muted-foreground">{row.purpose}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Date-wise Logs */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <FileText className="h-4 w-4" />
+                          Date-wise Execution Logs
+                        </CardTitle>
+                        <CardDescription>
+                          Daily aggregation of cron job runs
+                          {cronSelectedJob && (
+                            <Badge variant="secondary" className="ml-2">
+                              Filtered: {cronSelectedJob}
+                              <button
+                                className="ml-1 text-xs"
+                                onClick={() => setCronSelectedJob("")}
+                              >
+                                ✕
+                              </button>
+                            </Badge>
+                          )}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {cronDateWise.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No date-wise data yet.
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-muted-foreground">
+                              <th className="text-left py-2 pr-4">Date</th>
+                              <th className="text-right py-2 pr-4">Total Runs</th>
+                              <th className="text-right py-2 pr-4">Successes</th>
+                              <th className="text-right py-2 pr-4">Errors</th>
+                              <th className="text-right py-2 pr-4">Skipped</th>
+                              <th className="text-right py-2 pr-4">Avg Duration</th>
+                              <th className="text-right py-2">Records</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cronDateWise.map((d: any) => (
+                              <tr
+                                key={d.date}
+                                className={`border-b hover:bg-muted/50 cursor-pointer ${
+                                  cronSelectedDate === d.date ? "bg-muted/30" : ""
+                                }`}
+                                onClick={() => setCronSelectedDate(d.date)}
+                              >
+                                <td className="py-2 pr-4 font-medium">{d.date}</td>
+                                <td className="py-2 pr-4 text-right">{d.totalRuns}</td>
+                                <td className="py-2 pr-4 text-right text-green-600">
+                                  {d.successes}
+                                </td>
+                                <td className="py-2 pr-4 text-right">
+                                  <span
+                                    className={
+                                      d.errors > 0
+                                        ? "text-red-600 font-bold"
+                                        : "text-muted-foreground"
+                                    }
+                                  >
+                                    {d.errors}
+                                  </span>
+                                </td>
+                                <td className="py-2 pr-4 text-right text-muted-foreground">
+                                  {d.skipped}
+                                </td>
+                                <td className="py-2 pr-4 text-right font-mono">
+                                  {d.avgDurationMs}ms
+                                </td>
+                                <td className="py-2 text-right">{d.totalRecords}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Individual Logs for selected date */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Activity className="h-4 w-4" />
+                          Execution Logs — {cronSelectedDate}
+                        </CardTitle>
+                        <CardDescription>
+                          Individual cron executions
+                          <Input
+                            type="date"
+                            value={cronSelectedDate}
+                            onChange={(e) => setCronSelectedDate(e.target.value)}
+                            className="inline-block w-40 ml-2 h-7 text-xs"
+                          />
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {cronLogs.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No logs for {cronSelectedDate}.
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead className="sticky top-0 bg-background">
+                            <tr className="border-b text-muted-foreground">
+                              <th className="text-left py-2 pr-3">Time</th>
+                              <th className="text-left py-2 pr-3">Job</th>
+                              <th className="text-left py-2 pr-3">App</th>
+                              <th className="text-left py-2 pr-3">Status</th>
+                              <th className="text-right py-2 pr-3">Duration</th>
+                              <th className="text-right py-2 pr-3">Records</th>
+                              <th className="text-left py-2">Error</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cronLogs.map((log: any) => (
+                              <tr key={log.id} className="border-b hover:bg-muted/50">
+                                <td className="py-1.5 pr-3 font-mono text-muted-foreground">
+                                  {new Date(log.createdAt).toLocaleTimeString()}
+                                </td>
+                                <td className="py-1.5 pr-3 font-medium">{log.jobName}</td>
+                                <td className="py-1.5 pr-3">
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[10px] ${
+                                      log.app === "api"
+                                        ? "border-blue-300 text-blue-700"
+                                        : "border-purple-300 text-purple-700"
+                                    }`}
+                                  >
+                                    {log.app}
+                                  </Badge>
+                                </td>
+                                <td className="py-1.5 pr-3">
+                                  <Badge
+                                    variant={
+                                      log.status === "success"
+                                        ? "default"
+                                        : log.status === "error"
+                                          ? "destructive"
+                                          : "secondary"
+                                    }
+                                    className="text-[10px]"
+                                  >
+                                    {log.status}
+                                  </Badge>
+                                </td>
+                                <td className="py-1.5 pr-3 text-right font-mono">
+                                  {log.durationMs}ms
+                                </td>
+                                <td className="py-1.5 pr-3 text-right">
+                                  {log.recordsProcessed}
+                                </td>
+                                <td className="py-1.5 text-red-500 truncate max-w-48">
+                                  {log.errorMessage || "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
