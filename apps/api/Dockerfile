@@ -27,13 +27,13 @@ RUN npx prisma@5.22.0 generate
 # Build using the locally installed nest CLI (via pnpm exec to guarantee local binary)
 RUN pnpm exec nest build
 
-# Verify dist/main.js was actually produced — fail fast if not
-RUN test -f dist/main.js || (echo "ERROR: dist/main.js not found after nest build!" && ls -la dist/ && exit 1)
+# Verify dist/src/main.js was produced (tsc outputs to dist/src/ because tsconfig includes both src/ and prisma/)
+RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found! Listing dist/:" && ls -laR dist/ && exit 1)
 
 EXPOSE 3001
 
 ENV NODE_ENV=production
 ENV PORT=3001
 
-# Use absolute path to eliminate any WORKDIR ambiguity
-CMD ["node", "/app/apps/api/dist/main"]
+# Absolute path: tsc outputs src/main.ts → dist/src/main.js (rootDir inferred as . due to prisma include)
+CMD ["node", "/app/apps/api/dist/src/main"]
