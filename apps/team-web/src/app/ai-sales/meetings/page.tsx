@@ -307,7 +307,7 @@ export default function MeetingsPage() {
                   </div>
                   <div className="flex items-center gap-2 ml-4">
                     {m.dailyRoomUrl && (
-                      <a href={m.dailyRoomUrl} target="_blank" rel="noopener noreferrer">
+                      <a href={m.dailyRoomToken ? `${m.dailyRoomUrl}?t=${m.dailyRoomToken}` : m.dailyRoomUrl} target="_blank" rel="noopener noreferrer">
                         <Button variant="outline" size="sm">
                           <ExternalLink className="h-3 w-3 mr-1" /> Join
                         </Button>
@@ -377,7 +377,7 @@ export default function MeetingsPage() {
               {selectedMeeting.dailyRoomUrl && (
                 <div>
                   <span className="font-medium text-sm">Room URL:</span>
-                  <a href={selectedMeeting.dailyRoomUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm ml-2 hover:underline">
+                  <a href={selectedMeeting.dailyRoomToken ? `${selectedMeeting.dailyRoomUrl}?t=${selectedMeeting.dailyRoomToken}` : selectedMeeting.dailyRoomUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm ml-2 hover:underline">
                     {selectedMeeting.dailyRoomUrl}
                   </a>
                 </div>

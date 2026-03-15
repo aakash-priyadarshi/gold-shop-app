@@ -111,6 +111,7 @@ export default function PlaygroundPage() {
 
   // ── Daily.co + Pipecat meeting mode ──
   const [dailyRoomUrl, setDailyRoomUrl] = useState("");
+  const [dailyToken, setDailyToken] = useState("");
   const [dailyMeetingId, setDailyMeetingId] = useState("");
   const [dailyActive, setDailyActive] = useState(false);
   const [dailyStatus, setDailyStatus] = useState("");
@@ -918,7 +919,9 @@ export default function PlaygroundPage() {
                                   setDailyStatus("launching agent...");
                                   const launchRes = await aiSalesApi.launchMeeting(dailyMeetingId);
                                   const newRoomUrl = (launchRes.data as any)?.roomUrl;
+                                  const newToken = (launchRes.data as any)?.token;
                                   if (newRoomUrl) setDailyRoomUrl(newRoomUrl);
+                                  if (newToken) setDailyToken(newToken);
                                   setDailyStatus("agent active");
                                   toast.success("AI agent deployed! Join the room to talk.");
                                 } catch (err: any) {
@@ -933,7 +936,7 @@ export default function PlaygroundPage() {
                             </Button>
                           )}
                           {dailyRoomUrl && (
-                            <a href={dailyRoomUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
+                            <a href={dailyToken ? `${dailyRoomUrl}?t=${dailyToken}` : dailyRoomUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
                               <Button size="sm" className="w-full gap-1 bg-emerald-600 hover:bg-emerald-700">
                                 <Video className="h-3 w-3" /> Join Room
                               </Button>
@@ -948,6 +951,7 @@ export default function PlaygroundPage() {
                               setDailyActive(false);
                               setDailyStatus("ended");
                               setDailyRoomUrl("");
+                              setDailyToken("");
                               setDailyMeetingId("");
                               toast.info("Meeting ended");
                             }}
@@ -1241,7 +1245,9 @@ export default function PlaygroundPage() {
                           setDailyStatus("launching agent...");
                           const launchRes = await aiSalesApi.launchMeeting(dailyMeetingId);
                           const newRoomUrl = (launchRes.data as any)?.roomUrl;
+                          const newToken = (launchRes.data as any)?.token;
                           if (newRoomUrl) setDailyRoomUrl(newRoomUrl);
+                          if (newToken) setDailyToken(newToken);
                           setDailyStatus("agent active");
                           toast.success("Pipecat agent deployed! Join the room to talk to it.");
                         } catch (err: any) {
@@ -1270,6 +1276,7 @@ export default function PlaygroundPage() {
                       setDailyActive(false);
                       setDailyStatus("ended");
                       setDailyRoomUrl("");
+                      setDailyToken("");
                       setDailyMeetingId("");
                     }}
                     variant="destructive"
@@ -1282,7 +1289,7 @@ export default function PlaygroundPage() {
                 )}
 
                 {dailyRoomUrl && dailyActive && (
-                  <a href={dailyRoomUrl} target="_blank" rel="noopener noreferrer">
+                  <a href={dailyToken ? `${dailyRoomUrl}?t=${dailyToken}` : dailyRoomUrl} target="_blank" rel="noopener noreferrer">
                     <Button size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700">
                       <Video className="h-4 w-4" />
                       Join & Talk to Agent

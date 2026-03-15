@@ -79,6 +79,7 @@ export class PipecatCloudService {
         ...(opts.availableAgents && { available_agents: opts.availableAgents }),
       },
       dailyRoomProperties: {
+        privacy: "public",
         max_participants: 10,
         enable_chat: true,
         enable_screenshare: true,
