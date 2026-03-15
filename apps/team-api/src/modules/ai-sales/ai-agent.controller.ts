@@ -50,6 +50,7 @@ import { PostInteractionPipelineService } from "./services/post-interaction-pipe
 import { STTRouterService } from "./services/stt-router.service";
 import { StrategyExecutorService } from "./services/strategy-executor.service";
 import { WebhookService } from "./services/webhook.service";
+import { VectorMemoryService } from "./services/vector-memory.service";
 
 @Controller("ai-sales")
 export class AIAgentController {
@@ -83,6 +84,7 @@ export class AIAgentController {
     private leadStrategy: LeadStrategyService,
     private strategyExecutor: StrategyExecutorService,
     private interactionPipeline: PostInteractionPipelineService,
+    private vectorBrain: VectorMemoryService,
   ) {}
 
   /* ─── AGENTS ─── */
@@ -2343,5 +2345,86 @@ Return JSON:
       }
     }
     return { processed: results.length, results };
+  }
+
+  /* ─── VECTOR BRAIN (Qdrant Visualization) ─── */
+
+  @Post("vector-brain/seed")
+  @Roles("ADMIN")
+  async seedVectorBrain() {
+    const seeds = [
+      // Company Identity
+      { id: "company:name", text: "Orivraa is a premium jewellery marketplace and CRM software platform for gold and jewellery shop owners across India.", category: "company", key: "name", label: "Company Identity" },
+      { id: "company:mission", text: "Orivraa's mission is to digitally transform every jewellery business in India with AI-powered CRM, automated follow-ups, and intelligent sales agents.", category: "company", key: "mission", label: "Mission Statement" },
+      { id: "company:usp", text: "Orivraa is the only jewellery-specific CRM with built-in AI calling agents, automated WhatsApp follow-ups, video meeting bots, and Qdrant vector memory for intelligent sales.", category: "company", key: "usp", label: "Unique Selling Point" },
+
+      // Product Knowledge
+      { id: "product:pricing_starter", text: "Orivraa Starter Plan costs ₹299/month and includes up to 500 leads, basic CRM features, and 50 AI call minutes per month.", category: "product", key: "pricing_starter", label: "Starter Pricing" },
+      { id: "product:pricing_pro", text: "Orivraa Professional Plan at ₹799/month includes unlimited leads, full AI calling suite, WhatsApp automation, meeting bots, and analytics dashboard.", category: "product", key: "pricing_pro", label: "Pro Pricing" },
+      { id: "product:pricing_enterprise", text: "Orivraa Enterprise Plan is custom-priced for large jewellery chains with multiple branches, dedicated AI agents per branch, and white-label options.", category: "product", key: "pricing_enterprise", label: "Enterprise Pricing" },
+      { id: "product:features_ai", text: "AI Sales Agent features include: automatic outbound calling, multilingual support (Hindi, English, Tamil, Telugu, Gujarati), voice cloning, real-time emotion detection, and smart objection handling.", category: "product", key: "features_ai", label: "AI Agent Features" },
+      { id: "product:features_crm", text: "CRM features include customer profiles, purchase history tracking, gold rate alerts, birthday and anniversary follow-ups, WhatsApp campaigns, and lead pipeline management.", category: "product", key: "features_crm", label: "CRM Features" },
+
+      // Sales Strategies
+      { id: "strategy:opening", text: "Best opening approach: Start with a personal reference or festival greeting. Avoid cold openers. Mention the customer's last purchase or a relevant gold rate update to establish rapport instantly.", category: "strategy", key: "opening", label: "Opening Strategy" },
+      { id: "strategy:objection_price", text: "When customer says price is too high: Acknowledge the concern first, then highlight that Orivraa saves 2-3 hours daily per staff member, equivalent to ₹15,000+ monthly savings. Offer a 14-day free trial.", category: "strategy", key: "objection_price", label: "Price Objection" },
+      { id: "strategy:objection_competitor", text: "When customer mentions a competitor like Kycaid or Codematics: Ask what specific feature they value most. Then demonstrate Orivraa's AI calling differentiation — no competitor offers automated voice agents with multilingual support for jewellery.", category: "strategy", key: "objection_competitor", label: "Competitor Objection" },
+      { id: "strategy:closing_trial", text: "Best closing technique for hot leads: Offer a 14-day free trial with full onboarding support. Say 'Let me set up your account right now — you'll see results in the first week or we refund you completely.'", category: "strategy", key: "closing_trial", label: "Trial Close" },
+      { id: "strategy:follow_up_cold", text: "For cold leads who showed interest: Wait 3 days, then call with a personalized hook like today's gold rate or a new feature launch. Mention their specific shop type for relevance.", category: "strategy", key: "follow_up_cold", label: "Cold Follow-up Strategy" },
+
+      // Customer Segments
+      { id: "segment:small_shops", text: "Small jewellery shops (1-5 staff): Focus on WhatsApp automation and basic CRM. They value simplicity and cost savings. Typical pain point: losing customer follow-up after festival season.", category: "segment", key: "small_shops", label: "Small Shop Segment" },
+      { id: "segment:medium_chains", text: "Medium jewellery chains (5-20 stores): Focus on AI calling automation, campaign management, and analytics. Pain point: managing consistent customer experience across branches.", category: "segment", key: "medium_chains", label: "Medium Chain Segment" },
+      { id: "segment:gold_traders", text: "Gold traders and bullion dealers: Focus on gold rate alerts, bulk SMS/WhatsApp campaigns, and lead tracking. They value speed of communication during rate fluctuations.", category: "segment", key: "gold_traders", label: "Gold Trader Segment" },
+
+      // Market Intelligence
+      { id: "market:india_jewellery", text: "India's organised jewellery retail market is worth over ₹6 lakh crore. Only 12% use any digital CRM. This represents Orivraa's massive untapped opportunity.", category: "market", key: "india_jewellery", label: "India Market Size" },
+      { id: "market:festivals", text: "Peak selling seasons in Indian jewellery: Dhanteras (October/November), Akshaya Tritiya (April/May), wedding season (November-February). AI agents should intensify outreach 3 weeks before these dates.", category: "market", key: "festivals", label: "Festival Season Strategy" },
+
+      // AI Brain Guidelines
+      { id: "ai:tone", text: "AI agent tone should be: warm, confident, consultative. Never pushy. Always lead with empathy — understand the shop owner's challenges before presenting solutions. Speak in the customer's preferred language.", category: "ai", key: "tone", label: "AI Tone Guideline" },
+      { id: "ai:language_switch", text: "Detect language preference from first 2 sentences. If customer speaks Hindi, switch to Hindi immediately. If mixed Hindi-English (Hinglish), use Hinglish. Never force English on a Hindi-speaking customer.", category: "ai", key: "language_switch", label: "Language Behavior" },
+    ];
+
+    let seeded = 0;
+    for (const seed of seeds) {
+      await this.vectorBrain.upsertKnowledge(seed.id, seed.text, {
+        category: seed.category,
+        key: seed.key,
+        label: seed.label,
+        seeded: true,
+      });
+      seeded++;
+    }
+
+    return { success: true, seeded, message: `Seeded ${seeded} knowledge points into the AI brain` };
+  }
+
+  @Get("vector-brain/search")
+  async searchVectorBrain(@Query("q") query: string, @Query("collection") collection?: string) {
+    if (!query) return { results: [] };
+    if (collection === "transcripts") {
+      const results = await this.vectorBrain.searchTranscripts(query, 5);
+      return { results };
+    }
+    const results = await this.vectorBrain.searchKnowledge(query, 5);
+    return { results };
+  }
+
+  @Get("vector-brain/points")
+  async getVectorBrainPoints(@Query("collection") collection?: string) {
+    try {
+      const col = collection === "transcripts" ? "call_transcripts" : "agent_knowledge";
+      // Scroll all points from the collection for visualization
+      const raw = await (this.vectorBrain as any).qdrantClient?.scroll(col, {
+        limit: 200,
+        with_payload: true,
+        with_vector: false,
+      });
+      if (!raw) return { points: [], total: 0 };
+      return { points: raw.points || [], total: raw.points?.length || 0 };
+    } catch {
+      return { points: [], total: 0 };
+    }
   }
 }

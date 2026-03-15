@@ -447,6 +447,14 @@ export const aiSalesApi = {
 
   runPipelineAll: () =>
     api.post(`/ai-sales/leads/run-pipeline-all`),
+
+  // Vector Brain (Qdrant)
+  seedVectorBrain: () =>
+    api.post("/ai-sales/vector-brain/seed"),
+  searchVectorBrain: (q: string, collection?: string) =>
+    api.get("/ai-sales/vector-brain/search", { params: { q, collection } }),
+  getVectorBrainPoints: (collection?: string) =>
+    api.get("/ai-sales/vector-brain/points", { params: collection ? { collection } : {} }),
 };
 
 // ─── Certificates ───

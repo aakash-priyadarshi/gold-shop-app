@@ -6,7 +6,7 @@ import { QdrantClient } from "@qdrant/js-client-rest";
 @Injectable()
 export class VectorMemoryService implements OnModuleInit {
   private readonly logger = new Logger(VectorMemoryService.name);
-  private qdrantClient: QdrantClient | null = null;
+  readonly qdrantClient: QdrantClient | null = null;
   private genAI: GoogleGenerativeAI | null = null;
   private isEnabled = false;
 
