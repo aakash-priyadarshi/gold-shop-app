@@ -14,10 +14,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install ALL dependencies (including dev for build tools)
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# Generate Prisma client
+# Generate Prisma client (from apps/api context)
 WORKDIR /app/apps/api
 RUN npx prisma generate
 
@@ -32,7 +32,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copy package files
+# Copy workspace files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/ ./packages/
 COPY apps/api/package.json ./apps/api/
@@ -40,11 +40,17 @@ COPY apps/api/package.json ./apps/api/
 # Install production dependencies only
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
-# Copy built files from builder
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+# Copy prisma schema so we can run prisma generate
 COPY apps/api/prisma ./apps/api/prisma
+
+# Re-run prisma generate in runner using npx (downloads prisma CLI transiently)
+# This is needed because pnpm hoists prisma client to the pnpm store which isn't copyable
+WORKDIR /app/apps/api
+RUN npx --yes prisma generate
+
+# Copy compiled application from builder
+WORKDIR /app
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
 WORKDIR /app/apps/api
 
