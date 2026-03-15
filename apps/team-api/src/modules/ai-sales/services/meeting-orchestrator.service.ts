@@ -38,6 +38,7 @@ export class MeetingOrchestratorService {
     private pipeline: PostInteractionPipelineService,
     private interactionQueue: InteractionQueueService,
     private abTesting: ABTestingService,
+    private memory: AgentMemoryService,
   ) {}
 
   // ── Schedule a new meeting (Scenario 1: Daily.co) ─────────────────────
@@ -554,7 +555,9 @@ export class MeetingOrchestratorService {
    * Uses pre-call brief + central intelligence for a personalized, engaging persona.
    */
   private buildVideoMeetingPrompt(agent: any, lead: any, brief: any, intelligence: any): string {
-    const agentName = agent.name || "Orivraa Sales";
+    const companyName = this.memory.get("company", "name") || "your company";
+    const companyDesc = this.memory.get("company", "description") || "";
+    const agentName = agent.name || `${companyName} Sales`;
     const leadName = lead?.preferredName || lead?.name || "the prospect";
     const personality = agent.personalityDescription || "professional, warm, and knowledgeable";
     const backstory = agent.backstory || "";
@@ -564,7 +567,8 @@ export class MeetingOrchestratorService {
     const topMoments = (intelligence?.topMoments || []).map((m: any) => m.phrase).slice(0, 3).join("; ");
     const riskWarnings = (intelligence?.riskWarnings || []).map((w: any) => w.pattern).slice(0, 2).join("; ");
 
-    return `You are ${agentName}, a sales representative at Orivraa — a premium jewellery marketplace.
+    return `You are ${agentName}, a sales representative at ${companyName}.
+${companyDesc ? `About your company: ${companyDesc}` : ""}
 ${backstory ? `Background: ${backstory}` : ""}
 Your personality: ${personality}
 
@@ -575,7 +579,7 @@ DO NOT act like a support bot. You are a skilled salesperson having a real conve
 1. START with genuine warmth — ask about their day, find common ground, make them comfortable
 2. LISTEN actively — reference what they say, show you care about their needs
 3. BUILD rapport before pitching — understand their world first
-4. GUIDE the conversation toward Orivraa's value proposition naturally
+4. GUIDE the conversation toward the value proposition naturally
 5. HANDLE objections with confidence and empathy
 6. CLOSE by suggesting clear next steps
 
@@ -617,11 +621,14 @@ ${brief.closingStrategy || "Build rapport and understand their needs. Progress t
    * Still sales-oriented, just without the detailed strategy.
    */
   private buildFallbackVideoPrompt(agent: any, lead: any): string {
-    const agentName = agent.name || "Orivraa Sales";
+    const companyName = this.memory.get("company", "name") || "your company";
+    const companyDesc = this.memory.get("company", "description") || "";
+    const agentName = agent.name || `${companyName} Sales`;
     const leadName = lead?.preferredName || lead?.name || "";
     const personality = agent.personalityDescription || "professional, warm, and knowledgeable";
 
-    return `You are ${agentName}, a sales representative at Orivraa — a premium jewellery marketplace connecting customers with verified local jewellers across Nepal, India, Dubai, USA & UK.
+    return `You are ${agentName}, a sales representative at ${companyName}.
+${companyDesc ? `About your company: ${companyDesc}` : ""}
 
 Your personality: ${personality}
 
@@ -632,7 +639,7 @@ ${leadName ? `You're meeting with ${leadName}.` : ""}
 Your approach:
 1. Start with warmth — ask about their day, build genuine rapport
 2. Understand their needs through open-ended questions
-3. Explain Orivraa's value: verified sellers, secure escrow, custom manufacturing
+3. Explain your company's value properly
 4. Handle any concerns with empathy and confidence
 5. Suggest clear next steps
 
