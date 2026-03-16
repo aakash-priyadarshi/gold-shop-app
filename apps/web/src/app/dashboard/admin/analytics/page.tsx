@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExternalLink, Shield } from "lucide-react";
 
 export default function AnalyticsPage() {
-  // This is your official Umami Share URL using the Website ID you provided
-  const UMAMI_URL = "https://umami-production-1a7e.up.railway.app/share/016b6603-4f42-4679-b8c6-26fe5f23b3ab";
+  // This is your official Umami Share URL with the public viewing token
+  const UMAMI_URL = "https://umami-production-1a7e.up.railway.app/share/nDfuQi5Nb1Ofxrt8";
 
   return (
     <div className="flex flex-col gap-6 p-6">
