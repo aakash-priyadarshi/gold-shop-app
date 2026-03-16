@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import OrivraaLoader, { claimInitialAnimation } from "./OrivraaLoader";
+import { claimInitialAnimation } from "./OrivraaLoader";
 
 /**
  * Root-level overlay that plays the premium Orivraa loader animation

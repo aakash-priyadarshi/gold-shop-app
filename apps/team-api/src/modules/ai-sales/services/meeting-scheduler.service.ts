@@ -4,8 +4,8 @@ import { ConfigService } from "@nestjs/config";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { Job, Queue } from "bullmq";
 import { PrismaService } from "../../../prisma/prisma.service";
-import { MeetingBaasService } from "./meetingbaas.service";
 import { MeetingNotificationService } from "./meeting-notification.service";
+import { MeetingBaasService } from "./meetingbaas.service";
 
 /**
  * Meeting Scheduler Service

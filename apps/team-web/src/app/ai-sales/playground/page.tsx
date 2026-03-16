@@ -1,5 +1,6 @@
 "use client";
 
+import { DailyMeeting } from "@/components/DailyMeeting";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +30,6 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { DailyMeeting } from "@/components/DailyMeeting";
 
 // ── Status indicator ──
 type ServiceStatus = "idle" | "testing" | "pass" | "fail";
@@ -946,11 +946,11 @@ export default function PlaygroundPage() {
                             </Button>
                           )}
                           {dailyRoomUrl && (
-                            <a href={dailyToken ? `${dailyRoomUrl}?t=${dailyToken}` : dailyRoomUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
-                              <Button size="sm" className="w-full gap-1 bg-emerald-600 hover:bg-emerald-700">
-                                <Video className="h-3 w-3" /> Join Room
-                              </Button>
-                            </a>
+                            <Button size="sm" className="flex-1 gap-1 bg-[#C9A227] hover:bg-[#B69221] text-white"
+                              onClick={() => setShowBrandedMeeting(true)}
+                            >
+                              <Video className="h-3 w-3" /> Join Branded Room
+                            </Button>
                           )}
                         </div>
                         {dailyActive && (

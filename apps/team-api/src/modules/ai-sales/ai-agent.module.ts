@@ -27,6 +27,7 @@ import { GeminiLiveClient } from "./services/gemini-live.service";
 import { GeminiStreamingClient } from "./services/gemini-streaming.service";
 import { GoogleMeetBotService } from "./services/google-meet-bot.service";
 import { GoogleSTTClient } from "./services/google-stt.service";
+import { InteractionQueueProcessor, InteractionQueueService } from "./services/interaction-queue.service";
 import { InworldTTSClient } from "./services/inworld-tts.service";
 import { LeadInteractionService } from "./services/lead-interaction.service";
 import { LeadScoringService } from "./services/lead-scoring.service";
@@ -40,14 +41,13 @@ import { ObjectionPlaybookService } from "./services/objection-playbook.service"
 import { PipecatCloudService } from "./services/pipecat-cloud.service";
 import { PostCallProcessor } from "./services/post-call-processor.service";
 import { PostInteractionPipelineService } from "./services/post-interaction-pipeline.service";
-import { InteractionQueueService, InteractionQueueProcessor } from "./services/interaction-queue.service";
 import { PreCallBrainService } from "./services/pre-call-brain.service";
 import { SarvamSTTClient } from "./services/sarvam-stt.service";
-import { STTRouterService } from "./services/stt-router.service";
 import { StrategyExecutorService } from "./services/strategy-executor.service";
+import { STTRouterService } from "./services/stt-router.service";
 import { ThinkingBudgetManager } from "./services/thinking-budget-manager.service";
-import { WebhookService } from "./services/webhook.service";
 import { VectorMemoryService } from "./services/vector-memory.service";
+import { WebhookService } from "./services/webhook.service";
 
 @Module({
   imports: [PrismaModule, ConfigModule, MeetingQueueModule],

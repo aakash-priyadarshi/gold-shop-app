@@ -6,11 +6,11 @@ import { ABTestingService } from "./ab-testing.service";
 import { AgentMemoryService } from "./agent-memory.service";
 import { CentralBrainService } from "./central-brain.service";
 import { DailyRoomService } from "./daily-room.service";
+import { InteractionQueueService } from "./interaction-queue.service";
 import { LeadInteractionService } from "./lead-interaction.service";
 import { MeetingNotificationService } from "./meeting-notification.service";
 import { MeetingBaasService } from "./meetingbaas.service";
 import { PipecatCloudService } from "./pipecat-cloud.service";
-import { InteractionQueueService } from "./interaction-queue.service";
 import { PostInteractionPipelineService } from "./post-interaction-pipeline.service";
 import { PreCallBrainService } from "./pre-call-brain.service";
 

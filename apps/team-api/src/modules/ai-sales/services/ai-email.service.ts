@@ -3,8 +3,8 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Resend } from "resend";
 import { PrismaService } from "../../../prisma/prisma.service";
-import { LeadInteractionService } from "./lead-interaction.service";
 import { InteractionQueueService } from "./interaction-queue.service";
+import { LeadInteractionService } from "./lead-interaction.service";
 import { PostInteractionPipelineService } from "./post-interaction-pipeline.service";
 
 @Injectable()

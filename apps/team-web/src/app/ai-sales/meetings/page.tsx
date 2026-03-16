@@ -1,38 +1,37 @@
 "use client";
 
+import { DailyMeeting } from "@/components/DailyMeeting";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { aiSalesApi } from "@/lib/api";
 import {
-    Calendar,
-    Clock,
-    ExternalLink,
-    Play,
-    Plus,
-    Video,
-    X
+  Calendar,
+  Clock,
+  Play,
+  Plus,
+  Video,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { DailyMeeting } from "@/components/DailyMeeting";
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-blue-100 text-blue-800",
