@@ -1,4 +1,5 @@
 import { AuthenticatedLayout } from "@/components/authenticated-layout";
+import { UmamiTracker } from "@/components/layout/umami-tracker";
 import { Providers } from "@/components/providers";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
@@ -21,7 +22,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
-          <AuthenticatedLayout>{children}</AuthenticatedLayout>
+          <AuthenticatedLayout>
+            {children}
+            <UmamiTracker />
+          </AuthenticatedLayout>
         </Providers>
       </body>
     </html>

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import api from "@/lib/api";
 import {
+  Activity,
   AlertCircle,
   ArrowDownRight,
   ArrowUpRight,
@@ -564,6 +565,15 @@ export default function AdminDashboard() {
                   >
                     <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6" />
                     <span className="text-xs lg:text-sm">View Reports</span>
+                  </Button>
+                </Link>
+                <Link href="/dashboard/admin/analytics">
+                  <Button
+                    variant="outline"
+                    className="w-full h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target"
+                  >
+                    <Activity className="h-5 w-5 lg:h-6 lg:w-6" />
+                    <span className="text-xs lg:text-sm">Analytics</span>
                   </Button>
                 </Link>
                 <Link href="/dashboard/admin/settings/market">

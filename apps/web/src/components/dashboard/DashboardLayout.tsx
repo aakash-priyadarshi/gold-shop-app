@@ -194,6 +194,12 @@ const navItems: NavItem[] = [
     badgeKey: "openReports",
   },
   {
+    label: "Analytics",
+    href: "/dashboard/admin/analytics",
+    icon: Activity,
+    roles: ["ADMIN"],
+  },
+  {
     label: "Billing & Plans",
     href: "/dashboard/admin/billing",
     icon: CreditCard,
