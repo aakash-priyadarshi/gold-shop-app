@@ -88,20 +88,6 @@ export class PipecatCloudService {
         enable_emoji_reactions: true,
         enable_prejoin_ui: true,
         start_video_off: true,
-        theme: {
-          colors: {
-            accent: "#C9A227",
-            accentText: "#FFFFFF",
-            background: "#1a1a2e",
-            backgroundAccent: "#242445",
-            baseText: "#FFFFFF",
-            border: "#3e3e5e",
-            mainAreaBg: "#0f0f1b",
-          },
-          logo: {
-            url: "https://www.orivraa.com/brand/orivraa-logo.svg",
-          },
-        },
       },
     };
 

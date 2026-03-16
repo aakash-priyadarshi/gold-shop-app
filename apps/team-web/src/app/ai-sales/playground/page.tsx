@@ -66,6 +66,14 @@ interface ChatMessage {
   };
 }
 
+const BRAND_COLORS = {
+  accent: "#C9A227",
+  background: "#1a1a2e",
+  text: "#f8fafc",
+};
+
+const BRAND_LOGO = "https://www.orivraa.com/brand/orivraa-logo.svg";
+
 export default function PlaygroundPage() {
   // ── Agent selection ──
   const [agents, setAgents] = useState<any[]>([]);
@@ -1170,7 +1178,7 @@ export default function PlaygroundPage() {
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
                 <div className="text-sm text-amber-800 dark:text-amber-300 space-y-1">
                   <p className="font-medium flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[10px] font-bold">O</div>
+                    <img src={BRAND_LOGO} alt="Orivraa" className="h-5 w-auto" />
                     Orivraa Branded Experience
                   </p>
                   <ul className="list-disc ml-4 text-xs space-y-0.5">
@@ -1289,12 +1297,34 @@ export default function PlaygroundPage() {
                 )}
 
                 {dailyRoomUrl && dailyActive && (
-                  <a href={dailyToken ? `${dailyRoomUrl}?t=${dailyToken}` : dailyRoomUrl} target="_blank" rel="noopener noreferrer">
-                    <Button size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-                      <Video className="h-4 w-4" />
-                      Join & Talk to Agent
-                    </Button>
-                  </a>
+                  <div className="flex flex-col gap-3">
+                    <a 
+                      href={(() => {
+                        const url = new URL(dailyRoomUrl);
+                        if (dailyToken) url.searchParams.append("t", dailyToken);
+                        url.searchParams.append("ui_show_logo", "true");
+                        url.searchParams.append("ui_logo_url", BRAND_LOGO);
+                        url.searchParams.append("theme_accent_color", "#C9A227");
+                        url.searchParams.append("theme_accent_text_color", "#FFFFFF");
+                        url.searchParams.append("theme_background_color", "#1a1a2e");
+                        url.searchParams.append("theme_background_accent_color", "#242445");
+                        url.searchParams.append("theme_base_text_color", "#FFFFFF");
+                        url.searchParams.append("theme_border_color", "#3e3e5e");
+                        url.searchParams.append("theme_main_area_bg_color", "#0f0f1b");
+                        return url.toString();
+                      })()} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      <Button size="lg" className="w-full gap-2 bg-[#C9A227] hover:bg-[#B69221] text-white font-bold shadow-lg shadow-amber-500/20">
+                        <Video className="h-5 w-5" />
+                        Enter Orivraa Branded Room
+                      </Button>
+                    </a>
+                    <p className="text-[10px] text-center text-muted-foreground">
+                      Powered by Daily.co & Pipecat Cloud • Branded for Orivraa
+                    </p>
+                  </div>
                 )}
 
                 {dailyStatus && (

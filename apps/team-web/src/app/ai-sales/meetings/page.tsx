@@ -44,6 +44,14 @@ const statusColors: Record<string, string> = {
   error: "bg-red-100 text-red-800",
 };
 
+const BRAND_COLORS = {
+  accent: "#C9A227",
+  background: "#1a1a2e",
+  text: "#f8fafc",
+};
+
+const BRAND_LOGO = "https://www.orivraa.com/brand/orivraa-logo.svg";
+
 export default function MeetingsPage() {
   const [meetings, setMeetings] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
@@ -307,9 +315,30 @@ export default function MeetingsPage() {
                   </div>
                   <div className="flex items-center gap-2 ml-4">
                     {m.dailyRoomUrl && (
-                      <a href={m.dailyRoomToken ? `${m.dailyRoomUrl}?t=${m.dailyRoomToken}` : m.dailyRoomUrl} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="sm">
-                          <ExternalLink className="h-3 w-3 mr-1" /> Join
+                      <a 
+                        href={(() => {
+                          const url = new URL(m.dailyRoomUrl);
+                          if (m.dailyRoomToken) url.searchParams.append("t", m.dailyRoomToken);
+                          url.searchParams.append("ui_show_logo", "true");
+                          url.searchParams.append("ui_logo_url", BRAND_LOGO);
+                          url.searchParams.append("theme_accent_color", "#C9A227");
+                          url.searchParams.append("theme_accent_text_color", "#FFFFFF");
+                          url.searchParams.append("theme_background_color", "#1a1a2e");
+                          url.searchParams.append("theme_background_accent_color", "#242445");
+                          url.searchParams.append("theme_base_text_color", "#FFFFFF");
+                          url.searchParams.append("theme_border_color", "#3e3e5e");
+                          url.searchParams.append("theme_main_area_bg_color", "#0f0f1b");
+                          return url.toString();
+                        })()} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                      >
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="border-[#C9A227] text-[#C9A227] hover:bg-[#C9A227] hover:text-white"
+                        >
+                          <Video className="h-3 w-3 mr-1" /> Join Branded
                         </Button>
                       </a>
                     )}
@@ -376,9 +405,27 @@ export default function MeetingsPage() {
 
               {selectedMeeting.dailyRoomUrl && (
                 <div>
-                  <span className="font-medium text-sm">Room URL:</span>
-                  <a href={selectedMeeting.dailyRoomToken ? `${selectedMeeting.dailyRoomUrl}?t=${selectedMeeting.dailyRoomToken}` : selectedMeeting.dailyRoomUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm ml-2 hover:underline">
-                    {selectedMeeting.dailyRoomUrl}
+                  <span className="font-medium text-sm">Branded Room URL:</span>
+                  <a 
+                    href={(() => {
+                      const url = new URL(selectedMeeting.dailyRoomUrl);
+                      if (selectedMeeting.dailyRoomToken) url.searchParams.append("t", selectedMeeting.dailyRoomToken);
+                      url.searchParams.append("ui_show_logo", "true");
+                      url.searchParams.append("ui_logo_url", BRAND_LOGO);
+                      url.searchParams.append("theme_accent_color", "#C9A227");
+                      url.searchParams.append("theme_accent_text_color", "#FFFFFF");
+                      url.searchParams.append("theme_background_color", "#1a1a2e");
+                      url.searchParams.append("theme_background_accent_color", "#242445");
+                      url.searchParams.append("theme_base_text_color", "#FFFFFF");
+                      url.searchParams.append("theme_border_color", "#3e3e5e");
+                      url.searchParams.append("theme_main_area_bg_color", "#0f0f1b");
+                      return url.toString();
+                    })()} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-[#C9A227] text-sm ml-2 hover:underline font-medium"
+                  >
+                    Open Orivraa Meeting Room
                   </a>
                 </div>
               )}

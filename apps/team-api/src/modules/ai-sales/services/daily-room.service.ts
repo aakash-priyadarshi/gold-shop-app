@@ -149,9 +149,9 @@ export class DailyRoomService {
         properties: {
           logo_url: logoUrl,
           company_name: "Orivraa",
-          primary_color: "#D4AF37",
-          background_color: "#1A1A2E",
-          text_color: "#FFFFFF",
+          primary_color: "#C9A227",
+          background_color: "#1a1a2e",
+          text_color: "#f8fafc",
           hide_daily_branding: true,
         },
       }),
