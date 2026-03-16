@@ -1302,15 +1302,28 @@ export default function PlaygroundPage() {
                       href={(() => {
                         const url = new URL(dailyRoomUrl);
                         if (dailyToken) url.searchParams.append("t", dailyToken);
+                        
+                        // Use both individual params AND the config object for maximum compatibility
                         url.searchParams.append("ui_show_logo", "true");
                         url.searchParams.append("ui_logo_url", BRAND_LOGO);
-                        url.searchParams.append("theme_accent_color", "#C9A227");
-                        url.searchParams.append("theme_accent_text_color", "#FFFFFF");
-                        url.searchParams.append("theme_background_color", "#1a1a2e");
-                        url.searchParams.append("theme_background_accent_color", "#242445");
-                        url.searchParams.append("theme_base_text_color", "#FFFFFF");
-                        url.searchParams.append("theme_border_color", "#3e3e5e");
-                        url.searchParams.append("theme_main_area_bg_color", "#0f0f1b");
+                        url.searchParams.append("userName", "Orivraa User");
+
+                        const config = {
+                          theme: {
+                            colors: {
+                              accent: "#C9A227",
+                              accentText: "#FFFFFF",
+                              background: "#1a1a2e",
+                              backgroundAccent: "#242445",
+                              baseText: "#FFFFFF",
+                              border: "#3e3e5e",
+                              mainAreaBg: "#0f0f1b",
+                            },
+                          },
+                          prejoin_ui: true,
+                        };
+                        url.searchParams.append("config", JSON.stringify(config));
+
                         return url.toString();
                       })()} 
                       target="_blank" 
