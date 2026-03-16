@@ -1,6 +1,6 @@
 import { BullModule } from "@nestjs/bull";
 import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 
@@ -71,10 +71,32 @@ import { PrismaModule } from "./prisma/prisma.module";
     ]),
 
     // Redis/Bull queues for background jobs
-    BullModule.forRoot({
-      redis: {
-        host: process.env.REDIS_HOST || "localhost",
-        port: parseInt(process.env.REDIS_PORT || "6379"),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const redisUrl = config.get<string>("REDIS_URL");
+        if (redisUrl) {
+          try {
+            const url = new URL(redisUrl);
+            return {
+              redis: {
+                host: url.hostname,
+                port: parseInt(url.port) || 6379,
+                password: url.password || undefined,
+              },
+            };
+          } catch (e) {
+            // fallback if URL is invalid
+          }
+        }
+        return {
+          redis: {
+            host: config.get<string>("REDIS_HOST") || "localhost",
+            port: parseInt(config.get<string>("REDIS_PORT") || "6379"),
+            password: config.get<string>("REDIS_PASSWORD"),
+          },
+        };
       },
     }),
 

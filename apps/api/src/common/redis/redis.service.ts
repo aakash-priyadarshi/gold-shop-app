@@ -1,41 +1,59 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
-import { Redis } from "@upstash/redis";
+import Redis from "ioredis";
 
 @Injectable()
-export class RedisService {
+export class RedisService implements OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
-  private readonly client: Redis;
+  private readonly client: Redis | null = null;
 
   constructor() {
-    const restUrl = process.env.UPSTASH_REDIS_REST_URL;
-    const restToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+    const redisUrl = process.env.REDIS_URL;
 
-    if (!restUrl || !restToken) {
+    if (!redisUrl) {
       this.logger.warn(
-        "Upstash Redis credentials not found. Redis caching will be disabled.",
+        "REDIS_URL not found. Redis caching will be disabled.",
       );
-      // Create a dummy client that won't be used
-      this.client = null as any;
+      this.client = null;
       return;
     }
 
-    this.client = new Redis({
-      url: restUrl,
-      token: restToken,
-    });
+    try {
+      this.client = new Redis(redisUrl, {
+        maxRetriesPerRequest: 3,
+        retryStrategy: (times) => {
+          const delay = Math.min(times * 50, 2000);
+          return delay;
+        },
+      });
 
-    this.logger.log("Connected to Upstash Redis");
+      this.client.on("error", (err) => {
+        this.logger.error(`Redis connection error: ${err.message}`);
+      });
+
+      this.client.on("connect", () => {
+        this.logger.log("Connected to Railway Redis");
+      });
+    } catch (error) {
+      this.logger.error(`Failed to initialize Redis: ${error.message}`);
+      this.client = null;
+    }
+  }
+
+  onModuleDestroy() {
+    if (this.client) {
+      this.client.disconnect();
+    }
   }
 
   /**
-   * Keep-alive ping — runs every 3 days to prevent Upstash from archiving the free-tier DB
+   * Keep-alive ping — runs every 3 days
    */
   @Cron("0 0 */3 * *") // At midnight every 3 days
   async keepAlive(): Promise<void> {
     if (!this.isAvailable()) return;
     try {
-      const result = await this.client.ping();
+      const result = await this.client!.ping();
       this.logger.log(`Redis keep-alive ping: ${result}`);
     } catch (error) {
       this.logger.error(`Redis keep-alive ping failed: ${error.message}`);
@@ -55,7 +73,7 @@ export class RedisService {
   async get(key: string): Promise<string | null> {
     if (!this.isAvailable()) return null;
     try {
-      const value = await this.client.get<string>(key);
+      const value = await this.client!.get(key);
       return value;
     } catch (error) {
       this.logger.error(`Redis GET error for key ${key}: ${error.message}`);
@@ -70,9 +88,9 @@ export class RedisService {
     if (!this.isAvailable()) return;
     try {
       if (ttlSeconds) {
-        await this.client.setex(key, ttlSeconds, value);
+        await this.client!.set(key, value, "EX", ttlSeconds);
       } else {
-        await this.client.set(key, value);
+        await this.client!.set(key, value);
       }
     } catch (error) {
       this.logger.error(`Redis SET error for key ${key}: ${error.message}`);
@@ -85,7 +103,7 @@ export class RedisService {
   async del(key: string): Promise<void> {
     if (!this.isAvailable()) return;
     try {
-      await this.client.del(key);
+      await this.client!.del(key);
     } catch (error) {
       this.logger.error(`Redis DEL error for key ${key}: ${error.message}`);
     }
@@ -97,7 +115,7 @@ export class RedisService {
   async exists(key: string): Promise<boolean> {
     if (!this.isAvailable()) return false;
     try {
-      const result = await this.client.exists(key);
+      const result = await this.client!.exists(key);
       return result === 1;
     } catch (error) {
       this.logger.error(`Redis EXISTS error for key ${key}: ${error.message}`);
@@ -115,9 +133,9 @@ export class RedisService {
   ): Promise<void> {
     if (!this.isAvailable()) return;
     try {
-      await this.client.hset(key, data);
+      await this.client!.hset(key, data);
       if (ttlSeconds) {
-        await this.client.expire(key, ttlSeconds);
+        await this.client!.expire(key, ttlSeconds);
       }
     } catch (error) {
       this.logger.error(`Redis HSET error for key ${key}: ${error.message}`);
@@ -130,7 +148,7 @@ export class RedisService {
   async hgetall(key: string): Promise<Record<string, string> | null> {
     if (!this.isAvailable()) return null;
     try {
-      const result = await this.client.hgetall<Record<string, string>>(key);
+      const result = await this.client!.hgetall(key);
       return result && Object.keys(result).length > 0 ? result : null;
     } catch (error) {
       this.logger.error(`Redis HGETALL error for key ${key}: ${error.message}`);
