@@ -579,18 +579,23 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
 async def bot(runner_args: RunnerArguments):
     """Main bot entry point for Pipecat Cloud."""
+    config = get_config(runner_args)
+    agent_name = config.get("agent_name", "Orivraa Sales")
+
     transport_params = {
         "daily": lambda: DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
             audio_in_sample_rate=16000,
             audio_out_sample_rate=24000,
+            participant_name=agent_name,
         ),
         "webrtc": lambda: TransportParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
             audio_in_sample_rate=16000,
             audio_out_sample_rate=24000,
+            participant_name=agent_name,
         ),
     }
 
