@@ -1,21 +1,21 @@
 import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Header,
-  HttpException,
-  HttpStatus,
-  Logger,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
-  Res,
-  UploadedFile,
-  UseInterceptors
+    BadRequestException,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Header,
+    HttpException,
+    HttpStatus,
+    Logger,
+    Param,
+    Patch,
+    Post,
+    Put,
+    Query,
+    Res,
+    UploadedFile,
+    UseInterceptors
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { FileInterceptor } from "@nestjs/platform-express";

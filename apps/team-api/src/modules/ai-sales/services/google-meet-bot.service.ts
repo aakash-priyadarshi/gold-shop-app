@@ -62,6 +62,15 @@ export class GoogleMeetBotService {
     }
   }
 
+  /** Remove stale Chrome profile lock files so a new browser can launch */
+  private cleanProfileLocks() {
+    const lockFiles = ["SingletonLock", "SingletonSocket", "SingletonCookie"];
+    for (const f of lockFiles) {
+      const p = path.join(this.profileDir, f);
+      try { fs.unlinkSync(p); } catch { /* doesn't exist — fine */ }
+    }
+  }
+
   /** Create a Google Meet via Calendar API — bot is organizer so guests join without knocking */
   async createMeeting(agentId: string, summary?: string): Promise<{ meetUrl: string; eventId: string }> {
     const settings = (await this.prisma.teamSettings.findUnique({ where: { id: "singleton" } })) as any;
@@ -550,6 +559,7 @@ export class GoogleMeetBotService {
     const clientSecret = this.config.get<string>("GOOGLE_CLIENT_SECRET");
     const storedCookies = settings?.googleMeetBotCookies;
 
+    this.cleanProfileLocks();
     const browser = await puppeteer.default.launch({
       headless: true,
       executablePath,
@@ -674,6 +684,7 @@ export class GoogleMeetBotService {
 
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
 
+    this.cleanProfileLocks();
     const browser = await puppeteer.default.launch({
       headless: true,
       executablePath,

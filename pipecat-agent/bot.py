@@ -18,7 +18,7 @@ import aiohttp
 from dotenv import load_dotenv
 from loguru import logger
 
-print("🚀 Starting Orivraa AI Sales Agent...")
+print("🚀 Starting Orivraa AI Sales Agent v2.1.0 (2026-03-16)")
 print("⏳ Loading models and imports (first run only)\n")
 
 logger.info("Loading Silero VAD model...")
@@ -613,4 +613,4 @@ if __name__ == "__main__":
 
     main()
 
-# Force rebuild for image push - v2 (2026-03-16 14:15:00)
+# Force rebuild for image push - v2 (2026-03-16 14:29:00)
