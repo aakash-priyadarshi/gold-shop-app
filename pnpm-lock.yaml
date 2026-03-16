@@ -451,6 +451,9 @@ importers:
 
   apps/team-web:
     dependencies:
+      "@daily-co/daily-js":
+        specifier: ^0.89.0
+        version: 0.89.0
       "@hookform/resolvers":
         specifier: ^3.3.4
         version: 3.10.0(react-hook-form@7.70.0(react@18.3.1))
@@ -1319,6 +1322,13 @@ packages:
         integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==,
       }
     engines: { node: ">=12" }
+
+  "@daily-co/daily-js@0.89.0":
+    resolution:
+      {
+        integrity: sha512-WzgTdgHISnt1AQrdx7imfNJLV0QHytucRCZTv2bRNUY+liY/tm9X3XrigZRNtZZP2xl71ZFAqOIzJgUXSLA6Ig==,
+      }
+    engines: { node: ">=22.14.0" }
 
   "@deepgram/sdk@5.0.0":
     resolution:
@@ -3223,6 +3233,48 @@ packages:
       {
         integrity: sha512-ojSshQPKwVvSMR8yT2L/QtUkV5SXi/IfDiJ4/8d6UbTPjiHVmxZzUAzGD8Tzks1b9+qQkZa0isUOvYObedITaw==,
       }
+
+  "@sentry-internal/browser-utils@8.55.0":
+    resolution:
+      {
+        integrity: sha512-ROgqtQfpH/82AQIpESPqPQe0UyWywKJsmVIqi3c5Fh+zkds5LUxnssTj3yNd1x+kxaPDVB023jAP+3ibNgeNDw==,
+      }
+    engines: { node: ">=14.18" }
+
+  "@sentry-internal/feedback@8.55.0":
+    resolution:
+      {
+        integrity: sha512-cP3BD/Q6pquVQ+YL+rwCnorKuTXiS9KXW8HNKu4nmmBAyf7urjs+F6Hr1k9MXP5yQ8W3yK7jRWd09Yu6DHWOiw==,
+      }
+    engines: { node: ">=14.18" }
+
+  "@sentry-internal/replay-canvas@8.55.0":
+    resolution:
+      {
+        integrity: sha512-nIkfgRWk1091zHdu4NbocQsxZF1rv1f7bbp3tTIlZYbrH62XVZosx5iHAuZG0Zc48AETLE7K4AX9VGjvQj8i9w==,
+      }
+    engines: { node: ">=14.18" }
+
+  "@sentry-internal/replay@8.55.0":
+    resolution:
+      {
+        integrity: sha512-roCDEGkORwolxBn8xAKedybY+Jlefq3xYmgN2fr3BTnsXjSYOPC7D1/mYqINBat99nDtvgFvNfRcZPiwwZ1hSw==,
+      }
+    engines: { node: ">=14.18" }
+
+  "@sentry/browser@8.55.0":
+    resolution:
+      {
+        integrity: sha512-1A31mCEWCjaMxJt6qGUK+aDnLDcK6AwLAZnqpSchNysGni1pSn1RWSmk9TBF8qyTds5FH8B31H480uxMPUJ7Cw==,
+      }
+    engines: { node: ">=14.18" }
+
+  "@sentry/core@8.55.0":
+    resolution:
+      {
+        integrity: sha512-6g7jpbefjHYs821Z+EBJ8r4Z7LT5h80YSWRJaylGS4nW5W5Z2KXzpdnyFarv37O7QjauzVC2E+PABmpkw5/JGA==,
+      }
+    engines: { node: ">=14.18" }
 
   "@sinclair/typebox@0.27.8":
     resolution:
@@ -6010,6 +6062,13 @@ packages:
         integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==,
       }
     engines: { node: ">= 0.8" }
+
+  dequal@2.0.3:
+    resolution:
+      {
+        integrity: sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==,
+      }
+    engines: { node: ">=6" }
 
   destr@2.0.5:
     resolution:
@@ -12423,6 +12482,14 @@ snapshots:
     dependencies:
       "@jridgewell/trace-mapping": 0.3.9
 
+  "@daily-co/daily-js@0.89.0":
+    dependencies:
+      "@babel/runtime": 7.28.4
+      "@sentry/browser": 8.55.0
+      bowser: 2.13.1
+      dequal: 2.0.3
+      events: 3.3.0
+
   "@deepgram/sdk@5.0.0":
     dependencies:
       ws: 8.19.0
@@ -13830,6 +13897,34 @@ snapshots:
   "@rtsao/scc@1.1.0": {}
 
   "@rushstack/eslint-patch@1.15.0": {}
+
+  "@sentry-internal/browser-utils@8.55.0":
+    dependencies:
+      "@sentry/core": 8.55.0
+
+  "@sentry-internal/feedback@8.55.0":
+    dependencies:
+      "@sentry/core": 8.55.0
+
+  "@sentry-internal/replay-canvas@8.55.0":
+    dependencies:
+      "@sentry-internal/replay": 8.55.0
+      "@sentry/core": 8.55.0
+
+  "@sentry-internal/replay@8.55.0":
+    dependencies:
+      "@sentry-internal/browser-utils": 8.55.0
+      "@sentry/core": 8.55.0
+
+  "@sentry/browser@8.55.0":
+    dependencies:
+      "@sentry-internal/browser-utils": 8.55.0
+      "@sentry-internal/feedback": 8.55.0
+      "@sentry-internal/replay": 8.55.0
+      "@sentry-internal/replay-canvas": 8.55.0
+      "@sentry/core": 8.55.0
+
+  "@sentry/core@8.55.0": {}
 
   "@sinclair/typebox@0.27.8": {}
 
@@ -15577,6 +15672,8 @@ snapshots:
   denque@2.1.0: {}
 
   depd@2.0.0: {}
+
+  dequal@2.0.3: {}
 
   destr@2.0.5: {}
 

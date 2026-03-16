@@ -29,6 +29,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { DailyMeeting } from "@/components/DailyMeeting";
 
 // ── Status indicator ──
 type ServiceStatus = "idle" | "testing" | "pass" | "fail";
@@ -124,6 +125,7 @@ export default function PlaygroundPage() {
   const [dailyActive, setDailyActive] = useState(false);
   const [dailyStatus, setDailyStatus] = useState("");
   const [dailyCreating, setDailyCreating] = useState(false);
+  const [showBrandedMeeting, setShowBrandedMeeting] = useState(false);
 
   // ── Email mode ──
   const [emailPurpose, setEmailPurpose] = useState("");
@@ -1298,46 +1300,27 @@ export default function PlaygroundPage() {
 
                 {dailyRoomUrl && dailyActive && (
                   <div className="flex flex-col gap-3">
-                    <a 
-                      href={(() => {
-                        const url = new URL(dailyRoomUrl);
-                        if (dailyToken) url.searchParams.append("t", dailyToken);
-                        
-                        // Use both individual params AND the config object for maximum compatibility
-                        url.searchParams.append("ui_show_logo", "true");
-                        url.searchParams.append("ui_logo_url", BRAND_LOGO);
-                        url.searchParams.append("userName", "Orivraa User");
-
-                        const config = {
-                          theme: {
-                            colors: {
-                              accent: "#C9A227",
-                              accentText: "#FFFFFF",
-                              background: "#1a1a2e",
-                              backgroundAccent: "#242445",
-                              baseText: "#FFFFFF",
-                              border: "#3e3e5e",
-                              mainAreaBg: "#0f0f1b",
-                            },
-                          },
-                          prejoin_ui: true,
-                        };
-                        url.searchParams.append("config", JSON.stringify(config));
-
-                        return url.toString();
-                      })()} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
+                    <Button 
+                      size="lg" 
+                      className="w-full gap-2 bg-[#C9A227] hover:bg-[#B69221] text-white font-bold shadow-lg shadow-amber-500/20"
+                      onClick={() => setShowBrandedMeeting(true)}
                     >
-                      <Button size="lg" className="w-full gap-2 bg-[#C9A227] hover:bg-[#B69221] text-white font-bold shadow-lg shadow-amber-500/20">
-                        <Video className="h-5 w-5" />
-                        Enter Orivraa Branded Room
-                      </Button>
-                    </a>
+                      <Video className="h-5 w-5" />
+                      Enter Orivraa Branded Room
+                    </Button>
                     <p className="text-[10px] text-center text-muted-foreground">
                       Powered by Daily.co & Pipecat Cloud • Branded for Orivraa
                     </p>
                   </div>
+                )}
+
+                {showBrandedMeeting && dailyRoomUrl && (
+                  <DailyMeeting
+                    url={dailyRoomUrl}
+                    token={dailyToken || undefined}
+                    userName="Orivraa User"
+                    onClose={() => setShowBrandedMeeting(false)}
+                  />
                 )}
 
                 {dailyStatus && (

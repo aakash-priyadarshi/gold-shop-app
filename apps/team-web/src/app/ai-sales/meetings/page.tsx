@@ -32,6 +32,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { DailyMeeting } from "@/components/DailyMeeting";
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-blue-100 text-blue-800",
@@ -60,6 +61,7 @@ export default function MeetingsPage() {
   const [filter, setFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
+  const [joinModal, setJoinModal] = useState({ open: false, url: "", token: "" });
 
   // Schedule form state
   const [form, setForm] = useState({
@@ -314,45 +316,16 @@ export default function MeetingsPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    {m.dailyRoomUrl && (
-                      <a 
-                        href={(() => {
-                          const url = new URL(m.dailyRoomUrl);
-                          if (m.dailyRoomToken) url.searchParams.append("t", m.dailyRoomToken);
-                          url.searchParams.append("ui_show_logo", "true");
-                          url.searchParams.append("ui_logo_url", BRAND_LOGO);
-                          url.searchParams.append("userName", "Orivraa User");
-
-                          const config = {
-                            theme: {
-                              colors: {
-                                accent: "#C9A227",
-                                accentText: "#FFFFFF",
-                                background: "#1a1a2e",
-                                backgroundAccent: "#242445",
-                                baseText: "#FFFFFF",
-                                border: "#3e3e5e",
-                                mainAreaBg: "#0f0f1b",
-                              },
-                            },
-                            prejoin_ui: true,
-                          };
-                          url.searchParams.append("config", JSON.stringify(config));
-
-                          return url.toString();
-                        })()} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                      >
+                      {m.dailyRoomUrl && (
                         <Button 
                           variant="outline" 
                           size="sm" 
                           className="border-[#C9A227] text-[#C9A227] hover:bg-[#C9A227] hover:text-white"
+                          onClick={() => setJoinModal({ open: true, url: m.dailyRoomUrl, token: m.dailyRoomToken || "" })}
                         >
                           <Video className="h-3 w-3 mr-1" /> Join Branded
                         </Button>
-                      </a>
-                    )}
+                      )}
                     {["scheduled", "reminder_sent"].includes(m.status) && m.type === "daily" && (
                       <Button variant="outline" size="sm" onClick={() => handleLaunch(m.id)}>
                         <Play className="h-3 w-3 mr-1" /> Launch
@@ -417,38 +390,13 @@ export default function MeetingsPage() {
               {selectedMeeting.dailyRoomUrl && (
                 <div>
                   <span className="font-medium text-sm">Branded Room URL:</span>
-                  <a 
-                    href={(() => {
-                      const url = new URL(selectedMeeting.dailyRoomUrl);
-                      if (selectedMeeting.dailyRoomToken) url.searchParams.append("t", selectedMeeting.dailyRoomToken);
-                      url.searchParams.append("ui_show_logo", "true");
-                      url.searchParams.append("ui_logo_url", BRAND_LOGO);
-                      url.searchParams.append("userName", "Orivraa User");
-
-                      const config = {
-                        theme: {
-                          colors: {
-                            accent: "#C9A227",
-                            accentText: "#FFFFFF",
-                            background: "#1a1a2e",
-                            backgroundAccent: "#242445",
-                            baseText: "#FFFFFF",
-                            border: "#3e3e5e",
-                            mainAreaBg: "#0f0f1b",
-                          },
-                        },
-                        prejoin_ui: true,
-                      };
-                      url.searchParams.append("config", JSON.stringify(config));
-
-                      return url.toString();
-                    })()} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-[#C9A227] text-sm ml-2 hover:underline font-medium"
+                  <Button
+                    variant="link"
+                    className="text-[#C9A227] h-auto p-0 ml-2 hover:underline font-medium"
+                    onClick={() => setJoinModal({ open: true, url: selectedMeeting.dailyRoomUrl, token: selectedMeeting.dailyRoomToken || "" })}
                   >
                     Open Orivraa Meeting Room
-                  </a>
+                  </Button>
                 </div>
               )}
 
@@ -483,6 +431,14 @@ export default function MeetingsPage() {
             </div>
           </DialogContent>
         </Dialog>
+      )}
+      {joinModal.open && (
+        <DailyMeeting
+          url={joinModal.url}
+          token={joinModal.token || undefined}
+          userName="Orivraa User"
+          onClose={() => setJoinModal({ open: false, url: "", token: "" })}
+        />
       )}
     </div>
   );

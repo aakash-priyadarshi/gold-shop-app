@@ -580,7 +580,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 async def bot(runner_args: RunnerArguments):
     """Main bot entry point for Pipecat Cloud."""
     config = get_config(runner_args)
-    agent_name = config.get("agent_name", "Orivraa Sales")
+    # Be flexible with naming and force Orivraa if it defaults to pipecat
+    agent_name = config.get("agent_name") or config.get("agentName") or "Orivraa Sales"
+    if "pipecat" in agent_name.lower():
+        agent_name = "Orivraa Sales"
+    
+    logger.info(f"Setting participant name to: {agent_name}")
 
     transport_params = {
         "daily": lambda: DailyParams(
