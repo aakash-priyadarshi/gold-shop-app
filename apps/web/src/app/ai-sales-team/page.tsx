@@ -295,26 +295,45 @@ function PipelineVisualizer() {
 
     const STEP_DELAYS = [600, 500, 700, 600, 400];
 
-    const advance = () => {
+    const advance = async () => {
       step += 1;
       if (step === 2) setTranscribedText('"I want to see gold necklaces under ₹50,000"');
       if (step === 3) setAgentText("We have 12 stunning designs in that range. Our Kasu Mala collection is a bestseller—shall I walk you through it?");
       if (step >= PIPELINE_STEPS.length) {
         setActiveStep(PIPELINE_STEPS.length - 1);
-        // Play TTS audio via browser speech synthesis as a demo
+        // Try ElevenLabs TTS first, fall back to browser speechSynthesis
         try {
-          const utterance = new SpeechSynthesisUtterance(
-            "We have twelve stunning designs in that range. Our Kasu Mala collection is a bestseller."
-          );
-          utterance.rate = 1.05;
-          utterance.pitch = 1.0;
-          utterance.onend = () => {
-            setActiveStep(-1);
-            setRunning(false);
-          };
-          speechSynthesis.speak(utterance);
+          const ttsRes = await fetch("/api/demo-tts", { method: "POST" });
+          if (ttsRes.ok && ttsRes.headers.get("content-type")?.includes("audio")) {
+            const blob = await ttsRes.blob();
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audio.onended = () => {
+              URL.revokeObjectURL(url);
+              setActiveStep(-1);
+              setRunning(false);
+            };
+            audio.onerror = () => {
+              URL.revokeObjectURL(url);
+              setActiveStep(-1);
+              setRunning(false);
+            };
+            audio.play();
+          } else {
+            throw new Error("TTS unavailable");
+          }
         } catch {
-          setTimeout(() => { setActiveStep(-1); setRunning(false); }, 2000);
+          // Fallback to browser speech synthesis
+          try {
+            const utterance = new SpeechSynthesisUtterance(
+              "We have twelve stunning designs in that range. Our Kasu Mala collection is a bestseller."
+            );
+            utterance.rate = 1.05;
+            utterance.onend = () => { setActiveStep(-1); setRunning(false); };
+            speechSynthesis.speak(utterance);
+          } catch {
+            setTimeout(() => { setActiveStep(-1); setRunning(false); }, 2000);
+          }
         }
         return;
       }
