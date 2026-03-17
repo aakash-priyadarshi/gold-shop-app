@@ -1,18 +1,18 @@
 "use client";
 
 import DailyIframe, {
-    DailyCall,
-    DailyParticipant,
+  DailyCall,
+  DailyParticipant,
 } from "@daily-co/daily-js";
 import {
-    Loader2,
-    Mic,
-    MicOff,
-    PhoneOff,
-    Video,
-    VideoOff,
-    Volume2,
-    X,
+  Loader2,
+  Mic,
+  MicOff,
+  PhoneOff,
+  Video,
+  VideoOff,
+  Volume2,
+  X,
 } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "./ui/button";

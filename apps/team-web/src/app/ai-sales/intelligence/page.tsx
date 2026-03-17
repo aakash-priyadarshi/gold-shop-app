@@ -4,20 +4,20 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { aiSalesApi } from "@/lib/api";
 import {
-    ArrowLeft,
-    Award,
-    Brain,
-    Clock,
-    Database,
-    Lightbulb,
-    RefreshCw,
-    Search,
-    Shield,
-    Sparkles,
-    TrendingDown,
-    TrendingUp,
-    Users,
-    Zap,
+  ArrowLeft,
+  Award,
+  Brain,
+  Clock,
+  Database,
+  Lightbulb,
+  RefreshCw,
+  Search,
+  Shield,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  Users,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
