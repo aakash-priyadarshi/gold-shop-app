@@ -9,33 +9,33 @@ import { BRAND } from "@/config/brand";
 import { subscriptionPlansApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
-  COUNTRIES,
-  CURRENCIES,
-  usePreferencesStore,
-  type CountryCode,
-  type CurrencyCode,
+    COUNTRIES,
+    CURRENCIES,
+    usePreferencesStore,
+    type CountryCode,
+    type CurrencyCode,
 } from "@/store/preferences";
 import {
-  ArrowRight,
-  BarChart3,
-  Brain,
-  Check,
-  ChevronDown,
-  Crown,
-  FileText,
-  Globe,
-  Headphones,
-  Loader2,
-  Package,
-  Palette,
-  RefreshCw,
-  ShieldCheck,
-  Sparkles,
-  Star,
-  TrendingUp,
-  Users,
-  X,
-  Zap,
+    ArrowRight,
+    BarChart3,
+    Brain,
+    Check,
+    ChevronDown,
+    Crown,
+    FileText,
+    Globe,
+    Headphones,
+    Loader2,
+    Package,
+    Palette,
+    RefreshCw,
+    ShieldCheck,
+    Sparkles,
+    Star,
+    TrendingUp,
+    Users,
+    X,
+    Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -741,7 +741,7 @@ export default function PricingPage() {
               const features = buildFeatureList(plan);
               const isEnterprise = plan.name === "ENTERPRISE";
               const ctaLink = isEnterprise
-                ? `mailto:${BRAND.salesEmail}?subject=Enterprise%20Plan%20Inquiry`
+                ? "/contact?interest=Enterprise+%2F+Multi-branch"
                 : "/dashboard/shop/billing";
 
               // Use DB values if set, else fall back to TIER_META
@@ -1165,7 +1165,7 @@ export default function PricingPage() {
               </Button>
             </Link>
             <Link
-              href={`mailto:${BRAND.salesEmail}?subject=Enterprise%20Plan%20Inquiry`}
+              href="/contact?interest=Enterprise+%2F+Multi-branch"
             >
               <Button size="lg" variant="outline" className="px-8">
                 <T>Talk to Sales</T>

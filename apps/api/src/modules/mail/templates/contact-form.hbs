@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Contact Form Submission</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f5f5f5; color: #333333; line-height: 1.6; }
+    .wrapper { width: 100%; background-color: #f5f5f5; padding: 40px 0; }
+    .main { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+    .header { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); padding: 30px 40px; text-align: center; }
+    .logo { font-size: 28px; font-weight: bold; color: #ffffff; text-decoration: none; }
+    .content { padding: 40px; }
+    .footer { background-color: #f9fafb; padding: 30px 40px; text-align: center; border-top: 1px solid #e5e7eb; }
+    .footer p { margin: 5px 0; font-size: 13px; color: #6b7280; }
+    h1 { font-size: 22px; font-weight: 600; color: #111827; margin: 0 0 20px 0; }
+    p { margin: 0 0 16px 0; color: #4b5563; }
+    .info-box { background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+    .detail-row { padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-key { font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+    .detail-value { font-size: 15px; color: #111827; margin-top: 4px; }
+    .message-box { background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .source-badge { display: inline-block; padding: 4px 12px; background-color: #fef3c7; color: #92400e; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="main">
+      <div class="header">
+        <a href="{{appUrl}}" class="logo">💬 {{appName}} — New Inquiry</a>
+      </div>
+      <div class="content">
+        <h1>New Contact Form Submission</h1>
+
+        <span class="source-badge">Source: {{source}}</span>
+
+        <div style="margin-top: 20px;">
+          <div class="detail-row">
+            <div class="detail-key">Name</div>
+            <div class="detail-value">{{name}}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-key">Email</div>
+            <div class="detail-value"><a href="mailto:{{email}}" style="color: #d97706;">{{email}}</a></div>
+          </div>
+          {{#if phone}}
+          <div class="detail-row">
+            <div class="detail-key">Phone</div>
+            <div class="detail-value">{{phone}}</div>
+          </div>
+          {{/if}}
+          {{#if company}}
+          <div class="detail-row">
+            <div class="detail-key">Company</div>
+            <div class="detail-value">{{company}}</div>
+          </div>
+          {{/if}}
+          {{#if interest}}
+          <div class="detail-row">
+            <div class="detail-key">Interest</div>
+            <div class="detail-value">{{interest}}</div>
+          </div>
+          {{/if}}
+        </div>
+
+        <div class="message-box">
+          <div class="detail-key" style="margin-bottom: 8px;">Message</div>
+          <p style="white-space: pre-wrap; margin: 0; color: #111827;">{{message}}</p>
+        </div>
+
+        <div class="info-box">
+          <strong>💡 Reply directly to this email to respond to the customer.</strong>
+          <p style="margin: 8px 0 0 0; font-size: 14px;">
+            The reply-to is set to {{email}} so your response goes straight to them.
+          </p>
+        </div>
+      </div>
+      <div class="footer">
+        <p>© {{year}} {{appName}}. All rights reserved.</p>
+        <p>This email was sent from the contact form at <a href="{{appUrl}}" style="color: #d97706;">{{appUrl}}</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

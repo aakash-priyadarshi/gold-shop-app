@@ -1216,4 +1216,17 @@ export const testingApi = {
   deleteGitHubTokenConfig: () => api.delete("/testing/github-token"),
 };
 
+// ─── Contact Form API (public) ───
+export const contactApi = {
+  submit: (data: {
+    name: string;
+    email: string;
+    phone?: string;
+    company?: string;
+    interest?: string;
+    message: string;
+    source?: string;
+  }) => api.post("/public/contact", data),
+};
+
 export default api;

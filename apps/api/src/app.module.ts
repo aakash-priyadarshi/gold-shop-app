@@ -136,6 +136,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     AdminModule,
     MarketConfigModule,
     CommissionModule,
+    ContactModule,
     ShopQuotesModule,
     DesignsModule,
     PlatformConfigModule,

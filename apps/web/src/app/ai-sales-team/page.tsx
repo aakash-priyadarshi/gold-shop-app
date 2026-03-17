@@ -7,20 +7,23 @@ import {
     ArrowRight,
     Bot,
     Brain,
+    Calendar,
     ChevronDown,
     ChevronRight,
     Clock,
     Globe,
     Headphones,
     Layers,
+    Mail,
     MessageSquare,
     Mic,
     Phone,
     Play,
     Send,
+    Smartphone,
     Sparkles,
     Users,
-    Wand2,
+    Video,
     Zap,
 } from "lucide-react";
 import Link from "next/link";
@@ -117,16 +120,16 @@ const PIPELINE_STEPS = [
   },
   {
     id: "stt",
-    label: "Deepgram STT",
+    label: "Google STT",
     sublabel: "Speech → Text",
     icon: Headphones,
     color: "purple",
-    ms: "~180ms",
+    ms: "~150ms",
   },
   {
     id: "llm",
     label: "Gemini Flash",
-    sublabel: "Reasoning & Memory",
+    sublabel: "Reasoning + Vector Memory",
     icon: Brain,
     color: "amber",
     ms: "~320ms",
@@ -181,9 +184,9 @@ const SANDBOX_SCRIPT: { role: "user" | "agent"; text: string }[] = [
 ];
 
 const STATS = [
-  { value: "800+", label: "Calls handled daily", icon: Phone },
-  { value: "42", label: "Languages supported", icon: Globe },
-  { value: "<800ms", label: "End-to-end latency", icon: Zap },
+  { value: "9+", label: "Channels connected", icon: Globe },
+  { value: "42", label: "Languages supported", icon: MessageSquare },
+  { value: "<700ms", label: "End-to-end latency", icon: Zap },
   { value: "24 / 7", label: "Always available", icon: Clock },
 ];
 
@@ -224,8 +227,20 @@ const FAQS = [
     a: "If a question is outside its training or requires a human decision, the agent gracefully defers: 'Let me have our specialist call you back within the hour.' A task is immediately logged in your CRM.",
   },
   {
+    q: "Can the AI make outbound calls and send emails?",
+    a: "Yes. You can schedule AI outbound calls with specific goals (e.g., 'follow up on the Kasu Mala necklace'). It also drafts and sends personalised follow-up emails, and incoming replies are tracked in the lead timeline.",
+  },
+  {
+    q: "Does it work with Google Meet and Zoom?",
+    a: "The AI bot can join scheduled Google Meet or Zoom calls automatically. It participates in the conversation, captures full transcripts, and feeds that context back into the lead's memory for future interactions.",
+  },
+  {
     q: "Is the conversation private?",
     a: "All calls are end-to-end encrypted via Daily.co. Transcripts are stored only in your Orivraa account and never used to train public models.",
+  },
+  {
+    q: "What channels does the AI support?",
+    a: "Phone calls (via Twilio), HD video calls (via Daily.co), Google Meet, Zoom, email, SMS, WhatsApp, website widget, and the Orivraa marketplace. All interactions sync to one unified lead timeline.",
   },
   {
     q: "What languages are supported?",
@@ -266,28 +281,53 @@ function WaveformBars({ active }: { active: boolean }) {
 function PipelineVisualizer() {
   const [activeStep, setActiveStep] = useState<number>(-1);
   const [running, setRunning] = useState(false);
+  const [transcribedText, setTranscribedText] = useState("");
+  const [agentText, setAgentText] = useState("");
   const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const simulate = () => {
     if (running) return;
     setRunning(true);
     setActiveStep(0);
+    setTranscribedText("");
+    setAgentText("");
     let step = 0;
-    intervalRef.current = setInterval(() => {
+
+    const STEP_DELAYS = [600, 500, 700, 600, 400];
+
+    const advance = () => {
       step += 1;
+      if (step === 2) setTranscribedText('"I want to see gold necklaces under ₹50,000"');
+      if (step === 3) setAgentText("We have 12 stunning designs in that range. Our Kasu Mala collection is a bestseller—shall I walk you through it?");
       if (step >= PIPELINE_STEPS.length) {
-        setActiveStep(-1);
-        setRunning(false);
-        if (intervalRef.current) clearInterval(intervalRef.current);
+        setActiveStep(PIPELINE_STEPS.length - 1);
+        // Play TTS audio via browser speech synthesis as a demo
+        try {
+          const utterance = new SpeechSynthesisUtterance(
+            "We have twelve stunning designs in that range. Our Kasu Mala collection is a bestseller."
+          );
+          utterance.rate = 1.05;
+          utterance.pitch = 1.0;
+          utterance.onend = () => {
+            setActiveStep(-1);
+            setRunning(false);
+          };
+          speechSynthesis.speak(utterance);
+        } catch {
+          setTimeout(() => { setActiveStep(-1); setRunning(false); }, 2000);
+        }
         return;
       }
       setActiveStep(step);
-    }, 520);
+      intervalRef.current = setTimeout(advance, STEP_DELAYS[step] || 500);
+    };
+
+    intervalRef.current = setTimeout(advance, STEP_DELAYS[0]);
   };
 
   useEffect(() => {
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) clearTimeout(intervalRef.current);
     };
   }, []);
 
@@ -361,12 +401,30 @@ function PipelineVisualizer() {
           className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white font-semibold px-6 py-2.5 rounded-full transition-colors"
         >
           <Play className="w-4 h-4" />
-          {running ? "Simulating…" : "Simulate a turn"}
+          {running ? "Simulating…" : "Simulate a voice turn"}
         </button>
         <p className="mt-2 text-xs text-gray-400">
-          Total round-trip ≈ 720ms · Streamed output starts at ~500ms
+          Total round-trip ≈ 690ms · Streamed output starts at ~470ms · Audio plays at the end
         </p>
       </div>
+
+      {/* Live transcript display */}
+      {(transcribedText || agentText) && (
+        <div className="grid sm:grid-cols-2 gap-4 mt-4">
+          {transcribedText && (
+            <div className="rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 p-3">
+              <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wide mb-1">Customer (STT output)</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 italic">{transcribedText}</p>
+            </div>
+          )}
+          {agentText && (
+            <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-3">
+              <p className="text-[10px] font-semibold text-green-500 uppercase tracking-wide mb-1">Agent (TTS input)</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{agentText}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -376,12 +434,14 @@ function PipelineVisualizer() {
 /* ─────────────────────────────────────────────────────────────── */
 
 const MEMORY_NODES = [
-  { label: "Prefers white gold", score: 0.97, x: 20, y: 15 },
-  { label: "Budget: $3,000", score: 0.95, x: 60, y: 10 },
-  { label: "Minimalist style", score: 0.93, x: 40, y: 40 },
-  { label: "Oval cut interest", score: 0.88, x: 75, y: 55 },
-  { label: "Anniversary buyer", score: 0.71, x: 15, y: 70 },
-  { label: "Asked about clarity", score: 0.66, x: 55, y: 80 },
+  { label: "Prefers white gold", score: 0.97, x: 20, y: 15, source: "Call #1 — 3 days ago" },
+  { label: "Budget: ₹1,50,000", score: 0.95, x: 60, y: 10, source: "Call #2 — 2 days ago" },
+  { label: "Minimalist style", score: 0.93, x: 40, y: 40, source: "Call #1 — 3 days ago" },
+  { label: "Oval cut interest", score: 0.88, x: 75, y: 55, source: "Call #2 — 2 days ago" },
+  { label: "Anniversary in March", score: 0.85, x: 10, y: 60, source: "Email thread" },
+  { label: "Wife's name: Priya", score: 0.71, x: 15, y: 70, source: "Call #1 — 3 days ago" },
+  { label: "Asked about GIA cert", score: 0.66, x: 55, y: 80, source: "Call #2 — 2 days ago" },
+  { label: "Compared with Tanishq", score: 0.62, x: 80, y: 30, source: "Call #2 — 2 days ago" },
 ];
 
 function VectorMemoryXray() {
@@ -394,26 +454,51 @@ function VectorMemoryXray() {
     setSearching(true);
     setResults([]);
     setTimeout(() => {
+      // Simple keyword matching to simulate vector similarity search
+      const q = query.toLowerCase();
+      const scored = MEMORY_NODES.map((node) => {
+        const label = node.label.toLowerCase();
+        let relevance = 0;
+        if (q.includes("ring") || q.includes("gift") || q.includes("anniversary"))
+          if (label.includes("anniversary") || label.includes("wife") || label.includes("oval") || label.includes("budget")) relevance = 1;
+        if (q.includes("budget") || q.includes("price") || q.includes("cost"))
+          if (label.includes("budget") || label.includes("compared") || label.includes("minimalist")) relevance = 1;
+        if (q.includes("gold") || q.includes("style") || q.includes("preference"))
+          if (label.includes("white gold") || label.includes("minimalist") || label.includes("oval")) relevance = 1;
+        if (q.includes("quality") || q.includes("certification") || q.includes("gia"))
+          if (label.includes("gia") || label.includes("compared") || label.includes("oval")) relevance = 1;
+        return { ...node, relevance };
+      });
+      const filtered = scored.filter((n) => n.relevance > 0);
+      const finalResults = filtered.length > 0 ? filtered : scored.slice(0, 4);
       setSearching(false);
-      const shuffled = [...MEMORY_NODES].sort(() => 0.5 - Math.random());
-      setResults(shuffled.slice(0, 4).sort((a, b) => b.score - a.score));
+      setResults(finalResults.sort((a, b) => b.score - a.score));
     }, 900);
   };
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
-      {/* Left: chat */}
+      {/* Left: conversation + explanation */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-          Live Conversation
+        <p className="text-xs font-semibold text-amber-500 uppercase tracking-wide">
+          How it works
         </p>
-        <div className="space-y-2 text-sm">
+        <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
+          <p>
+            <strong>Scenario:</strong> A customer called your store twice last week asking about engagement rings. The AI remembered everything — style preference, budget, even the wife&apos;s name.
+          </p>
+          <p>
+            Now when the same customer calls back, the AI instantly retrieves those facts from vector memory. No awkward &quot;can you repeat your budget?&quot; — it picks up right where it left off.
+          </p>
+        </div>
+        <div className="space-y-2 text-sm border-t border-gray-100 dark:border-gray-700 pt-3">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Live conversation (Call #3)</p>
           <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2 max-w-[90%]">
             She prefers white gold and minimalist designs.
           </div>
           <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2 ml-auto max-w-[90%] text-right">
-            The Elara solitaire in 18K white gold is popular with customers who
-            value clean lines.
+            <span className="text-[9px] text-amber-500 font-medium block mb-0.5">🧠 Memory: &quot;Prefers white gold&quot; + &quot;Minimalist style&quot;</span>
+            The Elara solitaire in 18K white gold is popular with customers who value clean lines.
           </div>
           <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2 max-w-[90%]">
             What stone cut would suit her?
@@ -424,7 +509,7 @@ function VectorMemoryXray() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            placeholder="Query the memory…"
+            placeholder="Try: anniversary gift, budget, gold preference…"
             className="flex-1 text-sm border border-gray-200 dark:border-gray-700 bg-transparent rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
           <button
@@ -438,8 +523,11 @@ function VectorMemoryXray() {
 
       {/* Right: vector space */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
           3072-dim Vector Space (2D projection)
+        </p>
+        <p className="text-[10px] text-gray-400 mb-3">
+          Each dot = a fact the AI remembers. Gold dots = facts relevant to your query.
         </p>
         <div className="relative bg-gray-50 dark:bg-gray-800 rounded-xl h-48 overflow-hidden">
           {/* Grid overlay */}
@@ -471,17 +559,16 @@ function VectorMemoryXray() {
           )}
         </div>
         {results.length > 0 && (
-          <div className="mt-3 space-y-1">
+          <div className="mt-3 space-y-2">
+            <p className="text-[10px] font-semibold text-green-500 uppercase tracking-wide">✓ Retrieved from memory</p>
             {results.map((r, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between text-xs"
-              >
-                <span className="text-gray-600 dark:text-gray-300">
-                  {r.label}
-                </span>
-                <span className="font-mono text-amber-600 dark:text-amber-400">
-                  {r.score.toFixed(2)}
+              <div key={i} className="flex items-center justify-between text-xs bg-amber-50 dark:bg-amber-900/10 rounded-lg px-2.5 py-1.5">
+                <div>
+                  <span className="text-gray-700 dark:text-gray-200 font-medium">{r.label}</span>
+                  <span className="text-[10px] text-gray-400 ml-2">from {r.source}</span>
+                </div>
+                <span className="font-mono text-amber-600 dark:text-amber-400 font-semibold">
+                  {(r.score * 100).toFixed(0)}%
                 </span>
               </div>
             ))}
@@ -489,7 +576,7 @@ function VectorMemoryXray() {
         )}
         {!searching && results.length === 0 && (
           <p className="text-center text-xs text-gray-400 mt-3">
-            Type a query and press Enter to see retrieval in action
+            Type a query like &quot;anniversary gift&quot; to see which memories the AI retrieves
           </p>
         )}
       </div>
@@ -502,33 +589,47 @@ function VectorMemoryXray() {
 /* ─────────────────────────────────────────────────────────────── */
 
 function InteractiveSandbox() {
-  const [messages, setMessages] = useState(SANDBOX_SCRIPT.slice(0, 1));
+  const [messages, setMessages] = useState<{ role: "user" | "agent"; text: string }[]>([
+    SANDBOX_SCRIPT[0],
+  ]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const send = () => {
+  const send = async () => {
     if (!input.trim() || thinking) return;
     const userMsg = { role: "user" as const, text: input };
-    setMessages((m) => [...m, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInput("");
     setThinking(true);
-    const nextIdx = messages.length; // current length after push
-    const nextScripted = SANDBOX_SCRIPT[nextIdx + 1];
-    setTimeout(() => {
-      const reply = nextScripted
-        ? nextScripted
-        : {
-            role: "agent" as const,
-            text: "That's a great question! Our specialists would love to answer that in more detail. Want me to schedule a quick 10-minute call with one of our master jewellers?",
-          };
-      setMessages((m) => [...m, reply]);
+
+    try {
+      const res = await fetch("/api/demo-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMessages }),
+      });
+      const data = await res.json();
+      setMessages((m) => [...m, { role: "agent", text: data.reply }]);
+    } catch {
+      setMessages((m) => [
+        ...m,
+        {
+          role: "agent",
+          text: "That's a wonderful question! Our specialists would love to discuss that in detail. Shall I schedule a call?",
+        },
+      ]);
+    } finally {
       setThinking(false);
-    }, 900 + Math.random() * 600);
+    }
   };
 
+  // Scroll within container only (not the page)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
   }, [messages, thinking]);
 
   return (
@@ -553,12 +654,12 @@ function InteractiveSandbox() {
       <div className="px-4 pt-3">
         <div className="inline-flex items-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 rounded-full px-3 py-1">
           <Sparkles className="w-3 h-3" />
-          Scenario: Engagement ring consultation · Try to stump our AI
+          Scenario: Engagement ring consultation · Powered by Gemini
         </div>
       </div>
 
       {/* Messages */}
-      <div className="h-72 overflow-y-auto px-4 py-3 space-y-3">
+      <div ref={containerRef} className="h-72 overflow-y-auto px-4 py-3 space-y-3">
         {messages.map((m, i) => (
           <div
             key={i}
@@ -598,7 +699,6 @@ function InteractiveSandbox() {
             </div>
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input */}
@@ -756,8 +856,9 @@ export default function AISalesTeamPage() {
               <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
                 <T>
                   Unlike black-box solutions, Orivraa AI is fully transparent.
-                  Click simulate to watch a live voice turn travel from customer
-                  speech to agent reply.
+                  Google STT converts speech to text, Gemini Flash reasons with
+                  vector memory, and ElevenLabs synthesizes natural voice — all
+                  in under 700ms. Click simulate to watch it live and hear the agent speak.
                 </T>
               </p>
             </div>
@@ -778,9 +879,7 @@ export default function AISalesTeamPage() {
               </h2>
               <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
                 <T>
-                  Every fact from every conversation is encoded into a 3072-dim
-                  semantic vector. Query the memory in real time below — watch
-                  the relevant context surface instantly.
+                  Your AI remembers every detail from every past call, email, and meeting — style preferences, budgets, family occasions, even names. When a returning customer calls, the AI picks up right where it left off. Try a search below to see it in action.
                 </T>
               </p>
             </div>
@@ -867,13 +966,13 @@ export default function AISalesTeamPage() {
                 <T>Interactive Demo</T>
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                <T>Try to stump our AI rep</T>
+                <T>Chat with our AI — live, right now</T>
               </h2>
               <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
                 <T>
-                  You&apos;re buying an engagement ring. Ask anything — pricing,
-                  stone quality, comparisons, or try to break the script. See
-                  how Aria handles it.
+                  This is a real AI conversation powered by Gemini. You&apos;re buying
+                  an engagement ring — ask about pricing, stone quality, gold purity,
+                  or try to go off-script. Aria handles it all.
                 </T>
               </p>
             </div>
@@ -931,33 +1030,48 @@ export default function AISalesTeamPage() {
               {[
                 {
                   icon: Phone,
-                  title: "Phone / Twilio",
-                  desc: "Inbound & outbound telephone calls via your existing number",
+                  title: "Phone Calls",
+                  desc: "AI makes and receives calls via Twilio. Your customers talk to a natural voice agent from your own business number.",
                 },
                 {
-                  icon: Wand2,
-                  title: "Daily.co Video",
-                  desc: "Branded HD video meetings with AI in-room from day one",
+                  icon: Video,
+                  title: "Video Calls (Daily.co)",
+                  desc: "Branded HD video meetings with AI agent visible on screen. Customers get a face-to-face sales experience.",
                 },
                 {
                   icon: Bot,
-                  title: "Google Meet",
-                  desc: "AI bot joins scheduled Google Meet links automatically",
+                  title: "Google Meet / Zoom",
+                  desc: "AI bot automatically joins scheduled Google Meet or Zoom calls and captures full transcripts.",
                 },
                 {
-                  icon: MessageSquare,
-                  title: "WhatsApp Chat",
-                  desc: "Text-based AI sales agent on your WhatsApp Business number",
+                  icon: Mail,
+                  title: "Email Outreach",
+                  desc: "AI drafts and sends personalized follow-up emails. Replies are tracked and fed back into conversation memory.",
+                },
+                {
+                  icon: Smartphone,
+                  title: "SMS & WhatsApp",
+                  desc: "Send follow-up messages via SMS or WhatsApp Business. Supports text + rich media for product photos.",
+                },
+                {
+                  icon: Calendar,
+                  title: "Meeting Scheduler",
+                  desc: "AI schedules Google Meet or in-store appointments. Sends calendar invites with automatic 30-min and 24-hr reminders.",
                 },
                 {
                   icon: Globe,
                   title: "Website Widget",
-                  desc: "Embed a chat or call button on any page in 2 lines of code",
+                  desc: "Embed a chat or call button on any page in 2 lines of code. Visitors talk to your AI sales agent instantly.",
                 },
                 {
                   icon: Sparkles,
                   title: "Orivraa Marketplace",
-                  desc: "Buyers browsing your shop can speak directly with the AI",
+                  desc: "Buyers browsing your shop can speak directly with the AI agent while exploring your products.",
+                },
+                {
+                  icon: Brain,
+                  title: "Unified Intelligence",
+                  desc: "Every interaction across all channels feeds into one vector memory — so the AI never forgets a customer detail.",
                 },
               ].map((item) => {
                 const Icon = item.icon;

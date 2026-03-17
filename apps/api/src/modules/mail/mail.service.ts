@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
-import * as handlebars from 'handlebars';
 import * as fs from 'fs';
+import * as handlebars from 'handlebars';
+import * as nodemailer from 'nodemailer';
 import * as path from 'path';
 import { Resend } from 'resend';
 
@@ -535,6 +535,25 @@ export class MailService {
       template: 'quote-accepted',
       context: data,
       from: `Orivraa Orders <${EMAIL_SENDERS.ORDERS}>`,
+    });
+  }
+
+  async sendContactForm(data: {
+    name: string;
+    email: string;
+    phone?: string;
+    company?: string;
+    interest?: string;
+    message: string;
+    source?: string;
+  }): Promise<SendResult> {
+    return this.send({
+      to: 'sales@orivraa.com',
+      subject: `💬 New Inquiry from ${data.name}${data.interest ? ` — ${data.interest}` : ''}`,
+      template: 'contact-form',
+      context: { ...data, source: data.source || 'Website' },
+      from: `Orivraa <${EMAIL_SENDERS.NO_REPLY}>`,
+      replyTo: data.email,
     });
   }
 }
