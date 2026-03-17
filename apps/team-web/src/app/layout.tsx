@@ -1,5 +1,5 @@
 import { AuthenticatedLayout } from "@/components/authenticated-layout";
-import { UmamiTracker } from "@/components/layout/umami-tracker";
+
 import { Providers } from "@/components/providers";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
@@ -24,7 +24,7 @@ export default function RootLayout({
         <Providers>
           <AuthenticatedLayout>
             {children}
-            <UmamiTracker />
+
           </AuthenticatedLayout>
         </Providers>
       </body>

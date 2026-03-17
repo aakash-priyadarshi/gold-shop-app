@@ -1,5 +1,5 @@
 import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
-import { UmamiTracker } from "@/components/layout/UmamiTracker";
+
 import { Providers } from "@/components/providers";
 import InitialLoadScreen from "@/components/ui/InitialLoadScreen";
 import { Toaster } from "@/components/ui/toaster";
@@ -247,7 +247,7 @@ export default function RootLayout({
             {children}
             <Toaster />
             <SpeedInsights />
-            <UmamiTracker />
+
           </InitialLoadScreen>
         </Providers>
       </body>
