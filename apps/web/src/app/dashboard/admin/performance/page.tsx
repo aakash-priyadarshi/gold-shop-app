@@ -731,7 +731,7 @@ export default function AdminPerformancePage() {
                           </div>
                           <Badge variant="secondary">
                             <Database className="h-3 w-3 mr-1" />
-                            Neon PostgreSQL
+                            Railway PostgreSQL
                           </Badge>
                         </div>
                       </CardContent>
@@ -1000,7 +1000,7 @@ export default function AdminPerformancePage() {
                       </CardHeader>
                       <CardContent className="text-sm space-y-2">
                         <p>
-                          <strong>DB Ping</strong> — Raw round-trip time to Neon
+                          <strong>DB Ping</strong> — Raw round-trip time to Railway
                           PostgreSQL. Under 50ms is excellent.
                         </p>
                         <p>
@@ -1654,60 +1654,6 @@ export default function AdminPerformancePage() {
                         </table>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-
-                {/* Scale-up Reference */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Zap className="h-4 w-4" />
-                      Scale-up Reference
-                    </CardTitle>
-                    <CardDescription>
-                      When you upgrade Neon, restore these frequencies for better responsiveness
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b text-muted-foreground">
-                            <th className="text-left py-2 pr-4">Job</th>
-                            <th className="text-left py-2 pr-4">Current (Slow)</th>
-                            <th className="text-left py-2 pr-4">Recommended (Scaled)</th>
-                            <th className="text-left py-2">Purpose</th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-xs">
-                          {[
-                            { job: "call-scheduler", current: "5 min", scaled: "1 min", purpose: "Dial pending CallSchedule records" },
-                            { job: "meeting-auto-launch", current: "5 min", scaled: "1 min", purpose: "Launch meetings at scheduled time" },
-                            { job: "30m-reminders", current: "5 min", scaled: "1 min", purpose: "Send 30-min meeting reminders" },
-                            { job: "external-meetings", current: "5 min", scaled: "1 min", purpose: "Auto-launch external meetings" },
-                            { job: "24h-reminders", current: "30 min", scaled: "5 min", purpose: "Send 24-hour meeting reminders" },
-                            { job: "mark-no-shows", current: "30 min", scaled: "5 min", purpose: "Mark no-show meetings" },
-                            { job: "agent-voice-cache", current: "5 min", scaled: "1 min", purpose: "Refresh voice configs from DB" },
-                            { job: "agent-memory-cache", current: "5 min", scaled: "1 min", purpose: "Refresh agent memory cache" },
-                            { job: "metrics-snapshot", current: "30 min", scaled: "5 min", purpose: "Save performance metrics to DB" },
-                            { job: "pos-expiry", current: "30 min", scaled: "5 min", purpose: "Expire overdue POS sessions" },
-                          ].map((row) => (
-                            <tr key={row.job} className="border-b">
-                              <td className="py-2 pr-4 font-medium">{row.job}</td>
-                              <td className="py-2 pr-4">
-                                <Badge variant="secondary">{row.current}</Badge>
-                              </td>
-                              <td className="py-2 pr-4">
-                                <Badge variant="outline" className="border-green-300 text-green-700">
-                                  {row.scaled}
-                                </Badge>
-                              </td>
-                              <td className="py-2 text-muted-foreground">{row.purpose}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
                   </CardContent>
                 </Card>
 
