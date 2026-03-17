@@ -20,7 +20,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { toast } from "sonner";
+
 
 const INTEREST_OPTIONS = [
   "Jewellery Shop Software",
@@ -52,12 +52,14 @@ export default function ContactPage() {
   }, [searchParams]);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) return;
 
     setSending(true);
+    setError("");
     try {
       const res = await contactApi.submit({
         ...form,
@@ -65,15 +67,14 @@ export default function ContactPage() {
       });
       if (res.data?.success) {
         setSent(true);
-        toast.success("Message sent! We'll get back to you soon.");
       } else {
-        toast.error(
+        setError(
           res.data?.message ||
             "Failed to send. Please email us at sales@orivraa.com",
         );
       }
     } catch {
-      toast.error("Something went wrong. Please email sales@orivraa.com");
+      setError("Something went wrong. Please email sales@orivraa.com");
     } finally {
       setSending(false);
     }
@@ -288,6 +289,12 @@ export default function ContactPage() {
                       placeholder="Tell us about your business and what you're looking for…"
                     />
                   </div>
+
+                  {error && (
+                    <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2">
+                      {error}
+                    </div>
+                  )}
 
                   <button
                     type="submit"
