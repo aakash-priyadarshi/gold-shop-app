@@ -23,14 +23,14 @@ export class MetricsSnapshotService {
   ) {}
 
   /**
-   * Take a snapshot of current metrics every 30 minutes
+   * Take a snapshot of current metrics every 5 minutes
    */
-  @Cron(CronExpression.EVERY_30_MINUTES)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async takeSnapshot(): Promise<void> {
     await this.cronMetrics.trackExecution(
       "metrics-snapshot",
       "api",
-      "EVERY_30_MINUTES",
+      "EVERY_5_MINUTES",
       async () => {
         const summary = await this.metricsService.getAdminSummary();
 

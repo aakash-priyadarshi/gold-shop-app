@@ -200,6 +200,12 @@ export default function AdminPerformancePage() {
   );
   const [cronSelectedJob, setCronSelectedJob] = useState<string>("");
 
+  // Cron Job Configuration
+  const [cronConfigs, setCronConfigs] = useState<any[]>([]);
+  const [cronConfigLoading, setCronConfigLoading] = useState(false);
+  const [cronConfigEdits, setCronConfigEdits] = useState<Record<string, number>>({});
+  const [cronConfigSaving, setCronConfigSaving] = useState<string | null>(null);
+
   // ── Data Fetching ──
 
   const loadMetrics = useCallback(async () => {
@@ -274,13 +280,72 @@ export default function AdminPerformancePage() {
     }
   }, [cronSelectedDate, cronSelectedJob]);
 
+  // Load cron configs
+  const loadCronConfigs = useCallback(async () => {
+    setCronConfigLoading(true);
+    try {
+      const res = await metricsApi.getCronConfigs();
+      setCronConfigs(res.data || []);
+      // Initialize edits with current values
+      const edits: Record<string, number> = {};
+      for (const cfg of res.data || []) {
+        edits[cfg.jobName] = cfg.intervalMinutes;
+      }
+      setCronConfigEdits(edits);
+    } catch {
+      // Config may not exist yet
+    } finally {
+      setCronConfigLoading(false);
+    }
+  }, []);
+
+  const saveCronConfig = async (jobName: string) => {
+    const newInterval = cronConfigEdits[jobName];
+    if (newInterval === undefined) return;
+    setCronConfigSaving(jobName);
+    try {
+      await metricsApi.updateCronConfig(jobName, { intervalMinutes: newInterval });
+      await loadCronConfigs();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Failed to update cron config");
+    } finally {
+      setCronConfigSaving(null);
+    }
+  };
+
+  const resetAllCronConfigs = async () => {
+    if (!confirm("Reset all cron jobs to recommended settings?")) return;
+    setCronConfigLoading(true);
+    try {
+      await metricsApi.resetAllCronConfigs();
+      await loadCronConfigs();
+    } catch {
+      alert("Failed to reset cron configs");
+    } finally {
+      setCronConfigLoading(false);
+    }
+  };
+
+  const toggleCronEnabled = async (jobName: string, enabled: boolean) => {
+    setCronConfigSaving(jobName);
+    try {
+      await metricsApi.updateCronConfig(jobName, { enabled });
+      await loadCronConfigs();
+    } catch {
+      alert("Failed to toggle cron job");
+    } finally {
+      setCronConfigSaving(null);
+    }
+  };
+
   useEffect(() => {
     loadMetrics();
     loadHistory();
     loadGrafanaSettings();
     loadDbPerformance();
     loadCronMetrics();
-  }, [loadMetrics, loadHistory, loadGrafanaSettings, loadDbPerformance, loadCronMetrics]);
+    loadCronConfigs();
+  }, [loadMetrics, loadHistory, loadGrafanaSettings, loadDbPerformance, loadCronMetrics, loadCronConfigs]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -1297,6 +1362,195 @@ export default function AdminPerformancePage() {
 
               {/* ════════ Tab 5: Cron Jobs ════════ */}
               <TabsContent value="crons" className="space-y-4">
+
+                {/* ── Cron Job Configuration ── */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Settings className="h-5 w-5" />
+                          Cron Job Configuration
+                        </CardTitle>
+                        <CardDescription>
+                          Adjust cron job frequencies in real-time. Changes take effect on next server restart or deploy.
+                        </CardDescription>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={loadCronConfigs}
+                          disabled={cronConfigLoading}
+                        >
+                          <RefreshCw className={`h-3.5 w-3.5 mr-1 ${cronConfigLoading ? "animate-spin" : ""}`} />
+                          Refresh
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={resetAllCronConfigs}
+                          disabled={cronConfigLoading}
+                        >
+                          <Zap className="h-3.5 w-3.5 mr-1" />
+                          Reset All to Recommended
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {cronConfigs.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No cron config data yet. Configs will be seeded on next server startup.
+                      </p>
+                    ) : (
+                      <div className="space-y-6">
+                        {/* Group by category */}
+                        {["scheduling", "monitoring", "cleanup", "cache", "general"].map((category) => {
+                          const categoryJobs = cronConfigs.filter((c: any) => c.category === category);
+                          if (categoryJobs.length === 0) return null;
+                          return (
+                            <div key={category}>
+                              <h3 className="text-sm font-semibold capitalize mb-3 flex items-center gap-2">
+                                {category === "scheduling" && <Timer className="h-4 w-4 text-blue-500" />}
+                                {category === "monitoring" && <Activity className="h-4 w-4 text-green-500" />}
+                                {category === "cleanup" && <HardDrive className="h-4 w-4 text-orange-500" />}
+                                {category === "cache" && <Cpu className="h-4 w-4 text-purple-500" />}
+                                {category === "general" && <Settings className="h-4 w-4 text-gray-500" />}
+                                {category}
+                              </h3>
+                              <div className="space-y-3">
+                                {categoryJobs.map((cfg: any) => {
+                                  const editVal = cronConfigEdits[cfg.jobName] ?? cfg.intervalMinutes;
+                                  const isChanged = editVal !== cfg.intervalMinutes;
+                                  const isRecommended = editVal === cfg.recommended;
+                                  const isSaving = cronConfigSaving === cfg.jobName;
+
+                                  return (
+                                    <div
+                                      key={cfg.jobName}
+                                      className={`border rounded-lg p-4 transition-all ${
+                                        !cfg.enabled ? "opacity-50 bg-muted/20" : "bg-card"
+                                      } ${isChanged ? "border-primary shadow-sm" : ""}`}
+                                    >
+                                      <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <span className="font-mono text-sm font-semibold">{cfg.jobName}</span>
+                                            <Badge
+                                              variant="outline"
+                                              className={`text-[10px] ${
+                                                cfg.app === "api"
+                                                  ? "border-blue-300 text-blue-700"
+                                                  : "border-purple-300 text-purple-700"
+                                              }`}
+                                            >
+                                              {cfg.app}
+                                            </Badge>
+                                            {isRecommended && (
+                                              <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-700">
+                                                ✓ Recommended
+                                              </Badge>
+                                            )}
+                                            {isChanged && (
+                                              <Badge variant="default" className="text-[10px]">
+                                                Unsaved
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <p className="text-xs text-muted-foreground mb-1">{cfg.description}</p>
+                                          <p className="text-[11px] text-muted-foreground/70 italic">{cfg.impact}</p>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                          <Switch
+                                            checked={cfg.enabled}
+                                            onCheckedChange={(checked: boolean) => toggleCronEnabled(cfg.jobName, checked)}
+                                            disabled={isSaving}
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {cfg.enabled && (
+                                        <div className="mt-3 space-y-2">
+                                          <div className="flex items-center gap-3">
+                                            <Label className="text-xs w-20 shrink-0">Interval:</Label>
+                                            <input
+                                              type="range"
+                                              min={cfg.minInterval}
+                                              max={cfg.maxInterval}
+                                              value={editVal}
+                                              onChange={(e) =>
+                                                setCronConfigEdits((prev) => ({
+                                                  ...prev,
+                                                  [cfg.jobName]: parseInt(e.target.value, 10),
+                                                }))
+                                              }
+                                              className="flex-1 h-2 accent-primary cursor-pointer"
+                                            />
+                                            <div className="flex items-center gap-1">
+                                              <Input
+                                                type="number"
+                                                min={cfg.minInterval}
+                                                max={cfg.maxInterval}
+                                                value={editVal}
+                                                onChange={(e) => {
+                                                  const v = parseInt(e.target.value, 10);
+                                                  if (!isNaN(v)) {
+                                                    setCronConfigEdits((prev) => ({
+                                                      ...prev,
+                                                      [cfg.jobName]: Math.max(cfg.minInterval, Math.min(cfg.maxInterval, v)),
+                                                    }));
+                                                  }
+                                                }}
+                                                className="w-16 h-7 text-center text-xs"
+                                              />
+                                              <span className="text-xs text-muted-foreground">min</span>
+                                            </div>
+                                          </div>
+
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                                              <span>Min: {cfg.minInterval}m</span>
+                                              <span>•</span>
+                                              <span className="text-green-600 font-medium">
+                                                Recommended: {cfg.recommended}m
+                                              </span>
+                                              <span>•</span>
+                                              <span>Max: {cfg.maxInterval}m</span>
+                                              <span>•</span>
+                                              <span>Current: {cfg.intervalMinutes}m</span>
+                                            </div>
+                                            {isChanged && (
+                                              <Button
+                                                size="sm"
+                                                onClick={() => saveCronConfig(cfg.jobName)}
+                                                disabled={isSaving}
+                                                className="h-6 text-xs px-3"
+                                              >
+                                                {isSaving ? (
+                                                  <RefreshCw className="h-3 w-3 animate-spin mr-1" />
+                                                ) : (
+                                                  <Zap className="h-3 w-3 mr-1" />
+                                                )}
+                                                Save
+                                              </Button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 {/* Cron Summary Cards */}
                 <Card>
                   <CardHeader>
@@ -1307,7 +1561,7 @@ export default function AdminPerformancePage() {
                           Cron Job Overview
                         </CardTitle>
                         <CardDescription>
-                          All scheduled jobs across api &amp; team-api — frequencies slowed for Neon free tier
+                          All scheduled jobs across api &amp; team-api — Railway hosted DB
                         </CardDescription>
                       </div>
                       <Button

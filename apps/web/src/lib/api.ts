@@ -1092,6 +1092,15 @@ export const metricsApi = {
     if (params?.jobName) q.set("jobName", params.jobName);
     return api.get(`/metrics/cron/date-wise?${q.toString()}`);
   },
+  // Cron config management
+  getCronConfigs: () => api.get("/metrics/cron/config"),
+  updateCronConfig: (jobName: string, data: { intervalMinutes?: number; enabled?: boolean }) =>
+    api.patch(`/metrics/cron/config/${encodeURIComponent(jobName)}`, data),
+  bulkUpdateCronConfigs: (updates: Array<{ jobName: string; intervalMinutes?: number; enabled?: boolean }>) =>
+    api.patch("/metrics/cron/config", { updates }),
+  resetAllCronConfigs: () => api.post("/metrics/cron/config/reset-all"),
+  resetCronConfig: (jobName: string) =>
+    api.post(`/metrics/cron/config/${encodeURIComponent(jobName)}/reset`),
 };
 
 // ─── Security Shield API ───

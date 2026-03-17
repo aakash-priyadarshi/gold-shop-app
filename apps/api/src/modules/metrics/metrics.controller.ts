@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Patch, Query, Res } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Res } from "@nestjs/common";
 import { ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { PrismaService } from "../../prisma/prisma.service";
 import { SkipSecurity } from "../security/security.guard";
 import { CronMetricsService } from "./cron-metrics.service";
+import { DynamicCronService } from "./dynamic-cron.service";
 import { MetricsSnapshotService } from "./metrics-snapshot.service";
 import { MetricsService } from "./metrics.service";
 
@@ -15,6 +16,7 @@ export class MetricsController {
     private readonly metricsService: MetricsService,
     private readonly snapshotService: MetricsSnapshotService,
     private readonly cronMetrics: CronMetricsService,
+    private readonly dynamicCron: DynamicCronService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -208,5 +210,55 @@ export class MetricsController {
       days: days ? parseInt(days, 10) : 7,
       jobName,
     });
+  }
+
+  // ── Cron Job Configuration (Dynamic) ───────────────────────
+
+  @Get("cron/config")
+  @ApiOperation({
+    summary: "Get all cron job configurations",
+    description: "Returns configurable cron jobs with intervals, recommendations, and impact info",
+  })
+  async getCronConfigs() {
+    return this.dynamicCron.getConfigs();
+  }
+
+  @Patch("cron/config/:jobName")
+  @ApiOperation({
+    summary: "Update a cron job configuration",
+    description: "Change interval or enable/disable a cron job",
+  })
+  async updateCronConfig(
+    @Param("jobName") jobName: string,
+    @Body() body: { intervalMinutes?: number; enabled?: boolean },
+  ) {
+    return this.dynamicCron.updateConfig(jobName, body);
+  }
+
+  @Patch("cron/config")
+  @ApiOperation({
+    summary: "Bulk update cron job configurations",
+    description: "Update multiple cron jobs at once",
+  })
+  async bulkUpdateCronConfigs(
+    @Body() body: { updates: Array<{ jobName: string; intervalMinutes?: number; enabled?: boolean }> },
+  ) {
+    return this.dynamicCron.bulkUpdate(body.updates);
+  }
+
+  @Post("cron/config/reset-all")
+  @ApiOperation({
+    summary: "Reset all cron jobs to recommended settings",
+  })
+  async resetAllCronConfigs() {
+    return this.dynamicCron.resetAllToRecommended();
+  }
+
+  @Post("cron/config/:jobName/reset")
+  @ApiOperation({
+    summary: "Reset a single cron job to recommended settings",
+  })
+  async resetCronConfig(@Param("jobName") jobName: string) {
+    return this.dynamicCron.resetToRecommended(jobName);
   }
 }

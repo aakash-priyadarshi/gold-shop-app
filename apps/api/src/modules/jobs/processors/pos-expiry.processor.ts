@@ -13,15 +13,15 @@ export class PosExpiryProcessor {
   ) {}
 
   /**
-   * Cron job: every 30 minutes, expire overdue POS sessions
+   * Cron job: every 5 minutes, expire overdue POS sessions
    * and release their stock reservations.
    */
-  @Cron(CronExpression.EVERY_30_MINUTES)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async handlePosExpiry() {
     await this.cronMetrics.trackExecution(
       "pos-expiry",
       "api",
-      "EVERY_30_MINUTES",
+      "EVERY_5_MINUTES",
       async () => {
         const now = new Date();
 

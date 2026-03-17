@@ -2984,6 +2984,22 @@ model CronJobLog {
   @@index([createdAt])
 }
 
+model CronJobConfig {
+  id              String   @id @default(cuid())
+  jobName         String   @unique // e.g. "call-scheduler", "metrics-snapshot"
+  app             String   // "api" or "team-api"
+  intervalMinutes Int      // current frequency in minutes
+  recommended     Int      // recommended frequency in minutes
+  minInterval     Int      @default(1)  // minimum allowed interval
+  maxInterval     Int      @default(60) // maximum allowed interval
+  enabled         Boolean  @default(true)
+  description     String?  // human-readable description
+  impact          String?  // impact description for the UI
+  category        String   @default("general") // "scheduling", "monitoring", "cache", "cleanup"
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+}
+
 // ─── Security Shield ───────────────────────────────────────
 model SecurityEvent {
   id        String   @id @default(cuid())

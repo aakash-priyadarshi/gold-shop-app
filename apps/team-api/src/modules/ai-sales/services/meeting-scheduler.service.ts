@@ -158,7 +158,7 @@ export class MeetingSchedulerService implements OnModuleInit {
 
   // ── Cron fallback (runs when BullMQ is unavailable) ─────────────────────
 
-  @Cron(CronExpression.EVERY_30_MINUTES)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async cronSend24hReminders() {
     if (this.bullAvailable) return; // BullMQ handles this
     const now = new Date();
@@ -193,7 +193,7 @@ export class MeetingSchedulerService implements OnModuleInit {
     }
   }
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_MINUTE)
   async cronSend30mReminders() {
     if (this.bullAvailable) return;
     const now = new Date();
@@ -228,7 +228,7 @@ export class MeetingSchedulerService implements OnModuleInit {
     }
   }
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_MINUTE)
   async cronAutoLaunchExternalMeetings() {
     if (this.bullAvailable) return;
     const now = new Date();

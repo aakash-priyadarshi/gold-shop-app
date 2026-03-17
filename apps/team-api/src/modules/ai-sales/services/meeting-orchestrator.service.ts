@@ -508,7 +508,7 @@ export class MeetingOrchestratorService {
 
   // ── Cron: Auto-launch agents at scheduled time ────────────────────────
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_MINUTE)
   async autoLaunchScheduledMeetings() {
     const now = new Date();
     // Find meetings scheduled in the next 60 seconds that haven't been launched
@@ -537,7 +537,7 @@ export class MeetingOrchestratorService {
 
   // ── Cron: Mark no-shows (meeting scheduled 30+ min ago, never started) ──
 
-  @Cron(CronExpression.EVERY_30_MINUTES)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async markNoShows() {
     const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
     await this.prisma.meetingSession.updateMany({
