@@ -16,6 +16,7 @@ import { BlogModule } from "./modules/blog/blog.module";
 import { CatalogueModule } from "./modules/catalogue/catalogue.module";
 import { ChatModule } from "./modules/chat/chat.module";
 import { CommissionModule } from "./modules/commission/commission.module";
+import { ContactModule } from "./modules/contact/contact.module";
 import { CrashReportsModule } from "./modules/crash-reports/crash-reports.module";
 import { CustomerCrmModule } from "./modules/customer-crm/customer-crm.module";
 import { DesignsModule } from "./modules/designs/designs.module";
