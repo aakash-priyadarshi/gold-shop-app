@@ -4,20 +4,20 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { aiSalesApi } from "@/lib/api";
 import {
-  ArrowLeft,
-  Award,
-  Brain,
-  Clock,
-  Database,
-  Lightbulb,
-  RefreshCw,
-  Search,
-  Shield,
-  Sparkles,
-  TrendingDown,
-  TrendingUp,
-  Users,
-  Zap,
+    ArrowLeft,
+    Award,
+    Brain,
+    Clock,
+    Database,
+    Lightbulb,
+    RefreshCw,
+    Search,
+    Shield,
+    Sparkles,
+    TrendingDown,
+    TrendingUp,
+    Users,
+    Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -102,14 +102,17 @@ type Tab = "overview" | "winning" | "lost" | "moments" | "timing" | "personas" |
 /* ─── Category colour palette ─── */
 
 const CATEGORY_COLORS: Record<string, { bg: string; glow: string; text: string; border: string }> = {
-  company:  { bg: "#7c3aed", glow: "rgba(124,58,237,0.6)",  text: "#c4b5fd", border: "#7c3aed" },
-  product:  { bg: "#0ea5e9", glow: "rgba(14,165,233,0.6)",  text: "#7dd3fc", border: "#0ea5e9" },
-  strategy: { bg: "#10b981", glow: "rgba(16,185,129,0.6)",  text: "#6ee7b7", border: "#10b981" },
-  segment:  { bg: "#f59e0b", glow: "rgba(245,158,11,0.6)",  text: "#fcd34d", border: "#f59e0b" },
-  market:   { bg: "#f43f5e", glow: "rgba(244,63,94,0.6)",   text: "#fda4af", border: "#f43f5e" },
-  ai:       { bg: "#a855f7", glow: "rgba(168,85,247,0.6)",  text: "#d8b4fe", border: "#a855f7" },
-  transcript: { bg: "#06b6d4", glow: "rgba(6,182,212,0.6)", text: "#67e8f9", border: "#06b6d4" },
-  default:  { bg: "#6b7280", glow: "rgba(107,114,128,0.5)", text: "#d1d5db", border: "#6b7280" },
+  company:    { bg: "#7c3aed", glow: "rgba(124,58,237,0.6)",  text: "#c4b5fd", border: "#7c3aed" },
+  product:    { bg: "#0ea5e9", glow: "rgba(14,165,233,0.6)",  text: "#7dd3fc", border: "#0ea5e9" },
+  strategy:   { bg: "#10b981", glow: "rgba(16,185,129,0.6)",  text: "#6ee7b7", border: "#10b981" },
+  segment:    { bg: "#f59e0b", glow: "rgba(245,158,11,0.6)",  text: "#fcd34d", border: "#f59e0b" },
+  market:     { bg: "#f43f5e", glow: "rgba(244,63,94,0.6)",   text: "#fda4af", border: "#f43f5e" },
+  ai:         { bg: "#a855f7", glow: "rgba(168,85,247,0.6)",  text: "#d8b4fe", border: "#a855f7" },
+  psychology: { bg: "#ec4899", glow: "rgba(236,72,153,0.6)",  text: "#f9a8d4", border: "#ec4899" },
+  operations: { bg: "#14b8a6", glow: "rgba(20,184,166,0.6)",  text: "#5eead4", border: "#14b8a6" },
+  industry:   { bg: "#f97316", glow: "rgba(249,115,22,0.6)",  text: "#fdba74", border: "#f97316" },
+  transcript: { bg: "#06b6d4", glow: "rgba(6,182,212,0.6)",   text: "#67e8f9", border: "#06b6d4" },
+  default:    { bg: "#6b7280", glow: "rgba(107,114,128,0.5)", text: "#d1d5db", border: "#6b7280" },
 };
 
 function getColor(category?: string) {
