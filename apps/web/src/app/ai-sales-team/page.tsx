@@ -449,7 +449,7 @@ function PipelineVisualizer() {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/*  VECTOR MEMORY X-RAY                                            */
+/*  VECTOR MEMORY X-RAY  (auto-animates on scroll)                 */
 /* ─────────────────────────────────────────────────────────────── */
 
 const MEMORY_NODES = [
@@ -463,28 +463,41 @@ const MEMORY_NODES = [
   { label: "Compared with Tanishq", score: 0.62, x: 80, y: 30, source: "Call #2 — 2 days ago" },
 ];
 
+const CHAT_BUBBLES = [
+  { role: "customer", text: "She prefers white gold and minimalist designs." },
+  { role: "memory", label: '🧠 Memory: "Prefers white gold" + "Minimalist style"' },
+  { role: "agent", text: "The Elara solitaire in 18K white gold is popular with customers who value clean lines." },
+  { role: "customer", text: "What stone cut would suit her?" },
+  { role: "memory", label: '🧠 Memory: "Oval cut interest" + "Anniversary in March"' },
+  { role: "agent", text: "Based on her taste, an oval brilliant would be perfect — elegant yet unique. And since your anniversary is in March, we can have it ready with a custom setting." },
+];
+
+const AUTO_QUERY = "anniversary gift";
+
 function VectorMemoryXray() {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<typeof MEMORY_NODES>([]);
+  const [visibleBubbles, setVisibleBubbles] = useState(0);
+  const [autoPlayed, setAutoPlayed] = useState(false);
+  const [typingQuery, setTypingQuery] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
 
-  const handleSearch = () => {
-    if (!query.trim()) return;
+  const doSearch = (q: string) => {
     setSearching(true);
     setResults([]);
     setTimeout(() => {
-      // Simple keyword matching to simulate vector similarity search
-      const q = query.toLowerCase();
+      const lower = q.toLowerCase();
       const scored = MEMORY_NODES.map((node) => {
         const label = node.label.toLowerCase();
         let relevance = 0;
-        if (q.includes("ring") || q.includes("gift") || q.includes("anniversary"))
+        if (lower.includes("ring") || lower.includes("gift") || lower.includes("anniversary"))
           if (label.includes("anniversary") || label.includes("wife") || label.includes("oval") || label.includes("budget")) relevance = 1;
-        if (q.includes("budget") || q.includes("price") || q.includes("cost"))
+        if (lower.includes("budget") || lower.includes("price") || lower.includes("cost"))
           if (label.includes("budget") || label.includes("compared") || label.includes("minimalist")) relevance = 1;
-        if (q.includes("gold") || q.includes("style") || q.includes("preference"))
+        if (lower.includes("gold") || lower.includes("style") || lower.includes("preference"))
           if (label.includes("white gold") || label.includes("minimalist") || label.includes("oval")) relevance = 1;
-        if (q.includes("quality") || q.includes("certification") || q.includes("gia"))
+        if (lower.includes("quality") || lower.includes("certification") || lower.includes("gia"))
           if (label.includes("gia") || label.includes("compared") || label.includes("oval")) relevance = 1;
         return { ...node, relevance };
       });
@@ -495,8 +508,52 @@ function VectorMemoryXray() {
     }, 900);
   };
 
+  const handleSearch = () => {
+    if (!query.trim()) return;
+    doSearch(query);
+  };
+
+  // Auto-play animation on scroll into view
+  useEffect(() => {
+    if (autoPlayed) return;
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setAutoPlayed(true);
+          observer.disconnect();
+          // Staggered reveal of chat bubbles
+          CHAT_BUBBLES.forEach((_, i) => {
+            setTimeout(() => setVisibleBubbles(i + 1), (i + 1) * 1200);
+          });
+          // After bubbles, auto-type query
+          const typeDelay = (CHAT_BUBBLES.length + 1) * 1200;
+          setTimeout(() => {
+            setTypingQuery(true);
+            let charIdx = 0;
+            const typeInterval = setInterval(() => {
+              charIdx++;
+              setQuery(AUTO_QUERY.slice(0, charIdx));
+              if (charIdx >= AUTO_QUERY.length) {
+                clearInterval(typeInterval);
+                setTimeout(() => {
+                  setTypingQuery(false);
+                  doSearch(AUTO_QUERY);
+                }, 400);
+              }
+            }, 80);
+          }, typeDelay);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [autoPlayed]);
+
   return (
-    <div className="grid md:grid-cols-2 gap-6">
+    <div ref={sectionRef} className="grid md:grid-cols-2 gap-6">
       {/* Left: conversation + explanation */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3">
         <p className="text-xs font-semibold text-amber-500 uppercase tracking-wide">
@@ -510,18 +567,29 @@ function VectorMemoryXray() {
             Now when the same customer calls back, the AI instantly retrieves those facts from vector memory. No awkward &quot;can you repeat your budget?&quot; — it picks up right where it left off.
           </p>
         </div>
-        <div className="space-y-2 text-sm border-t border-gray-100 dark:border-gray-700 pt-3">
+        <div className="space-y-2 text-sm border-t border-gray-100 dark:border-gray-700 pt-3 min-h-[180px]">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Live conversation (Call #3)</p>
-          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2 max-w-[90%]">
-            She prefers white gold and minimalist designs.
-          </div>
-          <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2 ml-auto max-w-[90%] text-right">
-            <span className="text-[9px] text-amber-500 font-medium block mb-0.5">🧠 Memory: &quot;Prefers white gold&quot; + &quot;Minimalist style&quot;</span>
-            The Elara solitaire in 18K white gold is popular with customers who value clean lines.
-          </div>
-          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2 max-w-[90%]">
-            What stone cut would suit her?
-          </div>
+          {CHAT_BUBBLES.slice(0, visibleBubbles).map((b, i) => (
+            <div
+              key={i}
+              className={`transition-all duration-500 animate-in fade-in slide-in-from-bottom-2 ${
+                b.role === "memory" ? "" : b.role === "agent" ? "ml-auto max-w-[90%]" : "max-w-[90%]"
+              }`}
+              style={{ animationDelay: `${i * 100}ms` }}
+            >
+              {b.role === "memory" ? (
+                <div className="text-[9px] text-amber-500 font-medium py-0.5">{b.label}</div>
+              ) : b.role === "agent" ? (
+                <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2 text-right">
+                  {b.text}
+                </div>
+              ) : (
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2">
+                  {b.text}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
         <div className="flex gap-2 pt-1">
           <input
@@ -529,7 +597,11 @@ function VectorMemoryXray() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Try: anniversary gift, budget, gold preference…"
-            className="flex-1 text-sm border border-gray-200 dark:border-gray-700 bg-transparent rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className={`flex-1 text-sm border bg-transparent rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-colors ${
+              typingQuery
+                ? "border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/30"
+                : "border-gray-200 dark:border-gray-700"
+            }`}
           />
           <button
             onClick={handleSearch}
@@ -560,12 +632,19 @@ function VectorMemoryXray() {
           {MEMORY_NODES.map((n, i) => (
             <div
               key={i}
-              className={`absolute w-2.5 h-2.5 rounded-full border-2 transition-all duration-500 ${
+              className={`absolute w-2.5 h-2.5 rounded-full border-2 transition-all duration-700 ${
                 results.find((r) => r.label === n.label)
-                  ? "bg-amber-400 border-amber-600 scale-150"
-                  : "bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500"
+                  ? "bg-amber-400 border-amber-600 scale-[2] shadow-lg shadow-amber-400/50"
+                  : autoPlayed
+                    ? "bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500"
+                    : "bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 opacity-0"
               }`}
-              style={{ left: `${n.x}%`, top: `${n.y}%` }}
+              style={{
+                left: `${n.x}%`,
+                top: `${n.y}%`,
+                transitionDelay: autoPlayed && !results.length ? `${i * 150}ms` : "0ms",
+                opacity: autoPlayed ? 1 : 0,
+              }}
               title={n.label}
             />
           ))}
@@ -581,7 +660,11 @@ function VectorMemoryXray() {
           <div className="mt-3 space-y-2">
             <p className="text-[10px] font-semibold text-green-500 uppercase tracking-wide">✓ Retrieved from memory</p>
             {results.map((r, i) => (
-              <div key={i} className="flex items-center justify-between text-xs bg-amber-50 dark:bg-amber-900/10 rounded-lg px-2.5 py-1.5">
+              <div
+                key={i}
+                className="flex items-center justify-between text-xs bg-amber-50 dark:bg-amber-900/10 rounded-lg px-2.5 py-1.5 animate-in fade-in slide-in-from-bottom-1"
+                style={{ animationDelay: `${i * 150}ms`, animationFillMode: "both" }}
+              >
                 <div>
                   <span className="text-gray-700 dark:text-gray-200 font-medium">{r.label}</span>
                   <span className="text-[10px] text-gray-400 ml-2">from {r.source}</span>
@@ -595,7 +678,7 @@ function VectorMemoryXray() {
         )}
         {!searching && results.length === 0 && (
           <p className="text-center text-xs text-gray-400 mt-3">
-            Type a query like &quot;anniversary gift&quot; to see which memories the AI retrieves
+            {autoPlayed ? "Waiting for query…" : "Type a query like \"anniversary gift\" to see which memories the AI retrieves"}
           </p>
         )}
       </div>
@@ -607,19 +690,48 @@ function VectorMemoryXray() {
 /*  SANDBOX CHAT                                                   */
 /* ─────────────────────────────────────────────────────────────── */
 
+/* ─────────────────────────────────────────────────────────────── */
+/*  SANDBOX CHAT (auto-animates on scroll, then becomes interactive)*/
+/* ─────────────────────────────────────────────────────────────── */
+
+const DEMO_CONVERSATION: { role: "user" | "agent"; text: string }[] = [
+  {
+    role: "user",
+    text: "Hi, I'm looking for an engagement ring",
+  },
+  {
+    role: "agent",
+    text: "How exciting! 💍 Congratulations on this big step. Could you tell me a bit about your partner's style — does she prefer classic, modern, or minimalist designs?",
+  },
+  {
+    role: "user",
+    text: "She likes minimalist. Budget around ₹2 lakh.",
+  },
+  {
+    role: "agent",
+    text: "Great taste! For ₹2 lakh, I'd recommend our Elara solitaire in 18K white gold — 0.5ct oval, VS2 clarity, G-colour. Oval cuts appear 15% larger per carat. Shall I show you options?",
+  },
+];
+
 function InteractiveSandbox() {
   const [messages, setMessages] = useState<{ role: "user" | "agent"; text: string }[]>([
     SANDBOX_SCRIPT[0],
   ]);
+  const [displayedMessages, setDisplayedMessages] = useState<{ role: "user" | "agent"; text: string }[]>([]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [autoPlayed, setAutoPlayed] = useState(false);
+  const [autoPlaying, setAutoPlaying] = useState(false);
+  const [typingText, setTypingText] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
 
   const send = async () => {
-    if (!input.trim() || thinking) return;
+    if (!input.trim() || thinking || autoPlaying) return;
     const userMsg = { role: "user" as const, text: input };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
+    setDisplayedMessages((m) => [...m, userMsg]);
     setInput("");
     setThinking(true);
 
@@ -630,29 +742,96 @@ function InteractiveSandbox() {
         body: JSON.stringify({ messages: newMessages }),
       });
       const data = await res.json();
-      setMessages((m) => [...m, { role: "agent", text: data.reply }]);
+      const agentMsg = { role: "agent" as const, text: data.reply };
+      setMessages((m) => [...m, agentMsg]);
+      setDisplayedMessages((m) => [...m, agentMsg]);
     } catch {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "agent",
-          text: "That's a wonderful question! Our specialists would love to discuss that in detail. Shall I schedule a call?",
-        },
-      ]);
+      const fallback = {
+        role: "agent" as const,
+        text: "That's a wonderful question! Our specialists would love to discuss that in detail. Shall I schedule a call?",
+      };
+      setMessages((m) => [...m, fallback]);
+      setDisplayedMessages((m) => [...m, fallback]);
     } finally {
       setThinking(false);
     }
   };
 
-  // Scroll within container only (not the page)
+  // Scroll within container only
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
-  }, [messages, thinking]);
+  }, [displayedMessages, thinking, typingText]);
+
+  // Auto-play demo conversation on scroll
+  useEffect(() => {
+    if (autoPlayed) return;
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setAutoPlayed(true);
+          setAutoPlaying(true);
+          observer.disconnect();
+
+          // Show initial agent greeting
+          setDisplayedMessages([SANDBOX_SCRIPT[0]]);
+
+          let delay = 1500;
+          const allMsgs = [SANDBOX_SCRIPT[0]];
+
+          DEMO_CONVERSATION.forEach((msg, idx) => {
+            const currentDelay = delay;
+            if (msg.role === "user") {
+              // Simulate typing the user message
+              setTimeout(() => {
+                let charIdx = 0;
+                setTypingText("");
+                const typeInterval = setInterval(() => {
+                  charIdx++;
+                  setTypingText(msg.text.slice(0, charIdx));
+                  if (charIdx >= msg.text.length) {
+                    clearInterval(typeInterval);
+                    // After typing finishes, show as sent message
+                    setTimeout(() => {
+                      setTypingText("");
+                      allMsgs.push(msg);
+                      setDisplayedMessages([...allMsgs]);
+                      setMessages([...allMsgs]);
+                    }, 300);
+                  }
+                }, 40);
+              }, currentDelay);
+              delay += msg.text.length * 40 + 800;
+            } else {
+              // Show thinking dots, then reveal agent message
+              setTimeout(() => setThinking(true), currentDelay);
+              setTimeout(() => {
+                setThinking(false);
+                allMsgs.push(msg);
+                setDisplayedMessages([...allMsgs]);
+                setMessages([...allMsgs]);
+              }, currentDelay + 1500);
+              delay += 2000;
+            }
+
+            // End auto-play after last message
+            if (idx === DEMO_CONVERSATION.length - 1) {
+              setTimeout(() => setAutoPlaying(false), delay + 500);
+            }
+          });
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [autoPlayed]);
 
   return (
-    <div className="rounded-2xl border border-amber-200 dark:border-amber-800 overflow-hidden bg-white dark:bg-gray-900 max-w-2xl mx-auto">
+    <div ref={sectionRef} className="rounded-2xl border border-amber-200 dark:border-amber-800 overflow-hidden bg-white dark:bg-gray-900 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800">
         <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center">
@@ -679,10 +858,10 @@ function InteractiveSandbox() {
 
       {/* Messages */}
       <div ref={containerRef} className="h-72 overflow-y-auto px-4 py-3 space-y-3">
-        {messages.map((m, i) => (
+        {displayedMessages.map((m, i) => (
           <div
             key={i}
-            className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
           >
             {m.role === "agent" && (
               <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center mr-2 mt-0.5 flex-shrink-0">
@@ -700,8 +879,17 @@ function InteractiveSandbox() {
             </div>
           </div>
         ))}
+        {/* Typing text indicator (user typing animation) */}
+        {typingText && (
+          <div className="flex justify-end animate-in fade-in duration-200">
+            <div className="max-w-[80%] text-sm rounded-2xl px-3 py-2 leading-relaxed bg-amber-500 text-white rounded-br-sm">
+              {typingText}
+              <span className="inline-block w-0.5 h-4 bg-white/70 ml-0.5 animate-pulse align-middle" />
+            </div>
+          </div>
+        )}
         {thinking && (
-          <div className="flex justify-start">
+          <div className="flex justify-start animate-in fade-in duration-200">
             <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center mr-2 mt-0.5">
               <Bot className="w-3 h-3 text-white" />
             </div>
@@ -723,16 +911,16 @@ function InteractiveSandbox() {
       {/* Input */}
       <div className="flex gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800">
         <input
-          value={input}
+          value={autoPlaying ? "" : input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder="Ask anything about the ring, gemstones, pricing…"
-          disabled={thinking}
+          placeholder={autoPlaying ? "Watch the demo, then try it yourself…" : "Ask anything about the ring, gemstones, pricing…"}
+          disabled={thinking || autoPlaying}
           className="flex-1 text-sm border border-gray-200 dark:border-gray-700 bg-transparent rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
         />
         <button
           onClick={send}
-          disabled={thinking || !input.trim()}
+          disabled={thinking || autoPlaying || !input.trim()}
           className="bg-amber-500 hover:bg-amber-600 disabled:bg-amber-200 text-white rounded-full p-2.5"
         >
           <Send className="w-4 h-4" />
