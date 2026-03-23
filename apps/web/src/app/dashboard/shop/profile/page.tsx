@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { needsCountryCode } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
@@ -33,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PhoneVerificationDialog } from "@/components/verification/PhoneVerificationDialog";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
@@ -106,6 +108,8 @@ export default function ShopkeeperProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [phoneVerificationOpen, setPhoneVerificationOpen] = useState(false);
+  const [originalPhone, setOriginalPhone] = useState("");
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -154,6 +158,7 @@ export default function ShopkeeperProfilePage() {
     try {
       const response = await api.get("/users/me");
       setProfile(response.data);
+      setOriginalPhone(response.data.phone || "");
     } catch (error) {
       console.error("Failed to load profile:", error);
       toast({
@@ -314,6 +319,7 @@ export default function ShopkeeperProfilePage() {
         preferredLanguage: profile.preferredLanguage,
       });
       await refreshUser();
+      setOriginalPhone(profile.phone || "");
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully",
@@ -418,6 +424,10 @@ export default function ShopkeeperProfilePage() {
       </ShopGuard>
     );
   }
+
+  const isCurrentProfilePhone = (profile.phone || "") === originalPhone;
+  const canVerifyPhone =
+    !!profile.phone && isCurrentProfilePhone && !needsCountryCode(profile.phone);
 
   return (
     <ShopGuard>
@@ -589,6 +599,25 @@ export default function ShopkeeperProfilePage() {
                           Changing your phone number will require
                           re-verification
                         </p>
+                      )}
+                      {!authUser?.phoneVerifiedAt && profile.phone && (
+                        <div className="pt-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPhoneVerificationOpen(true)}
+                            disabled={!canVerifyPhone}
+                          >
+                            <Shield className="h-4 w-4 mr-2" />
+                            <T>Verify Phone</T>
+                          </Button>
+                          {!isCurrentProfilePhone && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                              <T>Save your profile first, then verify your updated phone number.</T>
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1141,6 +1170,21 @@ export default function ShopkeeperProfilePage() {
 
           {/* Appearance */}
           <AppearanceSettings />
+
+          <PhoneVerificationDialog
+            open={phoneVerificationOpen}
+            onOpenChange={setPhoneVerificationOpen}
+            phoneNumber={profile.phone || ""}
+            onVerified={async () => {
+              await Promise.all([refreshUser(), loadProfile()]);
+              toast({
+                title: "Phone Verified",
+                description: "Your shopkeeper account phone is now verified.",
+              });
+            }}
+            title="Verify your phone number"
+            description="Phone verification helps secure your seller account and trust badge checks."
+          />
         </div>
       </DashboardLayout>
     </ShopGuard>

@@ -1,9 +1,6 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -12,9 +9,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Phone, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { otpApi } from '@/lib/api';
+import { CheckCircle, Loader2, Phone } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface PhoneVerificationDialogProps {
   open: boolean;
@@ -39,6 +39,12 @@ export function PhoneVerificationDialog({
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    if (open) {
+      setPhone(phoneNumber || '');
+    }
+  }, [open, phoneNumber]);
 
   const handleSendOtp = async () => {
     if (!phone) {
@@ -121,18 +127,18 @@ export function PhoneVerificationDialog({
     }, 1000);
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
-    // Reset after dialog closes
-    setTimeout(() => {
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen);
+
+    if (!nextOpen) {
       setStep('phone');
       setOtpCode('');
       setCountdown(0);
-    }, 200);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -166,7 +172,7 @@ export function PhoneVerificationDialog({
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
+              <Button variant="outline" onClick={() => handleDialogOpenChange(false)}>
                 Cancel
               </Button>
               <Button onClick={handleSendOtp} disabled={sending || !phone}>

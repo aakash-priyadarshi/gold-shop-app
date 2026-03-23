@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
+import { PhoneVerificationDialog } from "@/components/verification/PhoneVerificationDialog";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api, { authApi } from "@/lib/api";
@@ -132,6 +133,7 @@ export default function CustomerSettingsPage() {
     exists: boolean | null;
     originalPhone: string;
   }>({ checking: false, exists: null, originalPhone: "" });
+  const [phoneVerificationOpen, setPhoneVerificationOpen] = useState(false);
   const phoneCheckTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Check phone availability with debounce
@@ -425,6 +427,13 @@ export default function CustomerSettingsPage() {
     );
   }
 
+  const isCurrentProfilePhone = profile.phone === phoneCheckState.originalPhone;
+  const canVerifyPhone =
+    !!profile.phone &&
+    isCurrentProfilePhone &&
+    !needsCountryCode(profile.phone) &&
+    phoneCheckState.exists !== true;
+
   return (
     <CustomerGuard>
       <DashboardLayout>
@@ -565,6 +574,26 @@ export default function CustomerSettingsPage() {
                         </T>
                       </p>
                     )}
+
+                  {!user?.phoneVerifiedAt && profile.phone && (
+                    <div className="pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPhoneVerificationOpen(true)}
+                        disabled={!canVerifyPhone}
+                      >
+                        <Shield className="h-4 w-4 mr-2" />
+                        <T>Verify Phone</T>
+                      </Button>
+                      {!isCurrentProfilePhone && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          <T>Save your profile first, then verify your updated phone number.</T>
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -1217,6 +1246,21 @@ export default function CustomerSettingsPage() {
 
           {/* Appearance */}
           <AppearanceSettings />
+
+          <PhoneVerificationDialog
+            open={phoneVerificationOpen}
+            onOpenChange={setPhoneVerificationOpen}
+            phoneNumber={profile.phone || ""}
+            onVerified={async () => {
+              await Promise.all([refreshUser?.(), loadProfile()]);
+              toast({
+                title: "Phone Verified",
+                description: "Your account phone number is now verified.",
+              });
+            }}
+            title="Verify your phone number"
+            description="Phone verification is required for secure account actions and order communications."
+          />
         </div>
       </DashboardLayout>
     </CustomerGuard>

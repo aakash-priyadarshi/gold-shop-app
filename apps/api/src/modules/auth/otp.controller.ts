@@ -1,17 +1,18 @@
 import {
-  Controller,
-  Post,
   Body,
-  UseGuards,
+  Controller,
+  ForbiddenException,
   HttpCode,
   HttpStatus,
+  Post,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { OtpService } from './otp.service';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { CurrentUser } from './decorators/current-user.decorator';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { OtpType } from '@prisma/client';
-import { IsEnum, IsString, Length, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { OtpService } from './otp.service';
 
 class SendOtpDto {
   @IsEnum(['EMAIL_VERIFICATION', 'PHONE_VERIFICATION', 'PASSWORD_RESET'])
@@ -36,6 +37,12 @@ class VerifyOtpDto {
 export class OtpController {
   constructor(private otpService: OtpService) {}
 
+  private assertPhoneVerificationAllowed(user: any): void {
+    if (user?.role !== 'CUSTOMER' && user?.role !== 'SHOPKEEPER') {
+      throw new ForbiddenException('Phone verification is only available for customer and shopkeeper accounts.');
+    }
+  }
+
   @Post('send')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -46,6 +53,10 @@ export class OtpController {
     @CurrentUser() user: any,
     @Body() dto: SendOtpDto,
   ) {
+    if (dto.type === 'PHONE_VERIFICATION') {
+      this.assertPhoneVerificationAllowed(user);
+    }
+
     // If target is provided, use it; otherwise use user's email/phone
     if (dto.target) {
       return this.otpService.sendOtp(userId, dto.type, dto.target);
@@ -60,8 +71,13 @@ export class OtpController {
   @HttpCode(HttpStatus.OK)
   async verifyOtp(
     @CurrentUser('id') userId: string,
+    @CurrentUser() user: any,
     @Body() dto: VerifyOtpDto,
   ) {
+    if (dto.type === 'PHONE_VERIFICATION') {
+      this.assertPhoneVerificationAllowed(user);
+    }
+
     return this.otpService.verifyOtp(userId, dto.type, dto.code);
   }
 
@@ -72,8 +88,13 @@ export class OtpController {
   @HttpCode(HttpStatus.OK)
   async resendOtp(
     @CurrentUser('id') userId: string,
+    @CurrentUser() user: any,
     @Body() dto: SendOtpDto,
   ) {
+    if (dto.type === 'PHONE_VERIFICATION') {
+      this.assertPhoneVerificationAllowed(user);
+    }
+
     return this.otpService.resendOtp(userId, dto.type);
   }
 }

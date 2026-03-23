@@ -431,6 +431,11 @@ export const adminApi = {
   getSellerNotes: (shopId: string) => api.get(`/admin/sellers/${shopId}/notes`),
   updateSeller: (shopId: string, data: Record<string, any>) =>
     api.patch(`/admin/sellers/${shopId}`, data),
+
+  // Health & Monitoring
+  checkApisHealth: () => api.get("/admin/health/apis"),
+  testSmsSendingWithTwilio: (phoneNumber: string) =>
+    api.post("/admin/health/test-sms", { phoneNumber }),
 };
 
 // Materials API

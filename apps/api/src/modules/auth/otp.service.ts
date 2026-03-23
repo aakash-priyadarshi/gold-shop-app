@@ -1,9 +1,10 @@
-import { Injectable, BadRequestException, NotFoundException, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../prisma/prisma.service';
 import { OtpType } from '@prisma/client';
+import axios from 'axios';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 
 // Rate limiting configuration
@@ -74,7 +75,18 @@ export class OtpService {
     // Normalize target (email to lowercase)
     const normalizedTarget = type === 'EMAIL_VERIFICATION' || type === 'PASSWORD_RESET'
       ? target.toLowerCase().trim()
-      : target.trim();
+      : this.normalizePhoneNumber(target);
+
+    if (type === 'PHONE_VERIFICATION' || type === 'LOGIN_2FA') {
+      const existingOwner = await this.prisma.user.findUnique({
+        where: { phone: normalizedTarget },
+        select: { id: true },
+      });
+
+      if (existingOwner && existingOwner.id !== userId) {
+        throw new BadRequestException('This phone number is already registered with another account.');
+      }
+    }
 
     // Rate limit checks
     this.checkRateLimit(`otp:email:${normalizedTarget}`, this.rateLimitConfig.maxPerEmail);
@@ -110,7 +122,7 @@ export class OtpService {
     if (type === 'EMAIL_VERIFICATION' || type === 'PASSWORD_RESET') {
       await this.sendEmailOtp(target, otp, type, userName);
     } else if (type === 'PHONE_VERIFICATION' || type === 'LOGIN_2FA') {
-      await this.sendSmsOtp(target, otp, type);
+      await this.sendSmsOtp(normalizedTarget, otp, type);
     }
 
     this.logger.log(`OTP sent for ${type} to ${this.maskTarget(target, type)}`);
@@ -335,13 +347,76 @@ export class OtpService {
   }
 
   private async sendSmsOtp(phone: string, otp: string, type: OtpType): Promise<void> {
-    // TODO: Integrate with SMS service (Twilio, local SMS gateway)
-    this.logger.log(`[SMS OTP] Would send ${type} OTP ${otp} to ${phone}`);
-    
-    // For development, log the OTP
-    if (process.env.NODE_ENV !== 'production') {
-      this.logger.debug(`📱 DEV SMS OTP: ${otp} for ${phone}`);
+    const accountSid = this.configService.get<string>('TWILIO_ACCOUNT_SID');
+    const authToken = this.configService.get<string>('TWILIO_AUTH_TOKEN');
+    const fromNumber = this.configService.get<string>('TWILIO_PHONE_NUMBER');
+    const messagingServiceSid = this.configService.get<string>('TWILIO_MESSAGING_SERVICE_SID');
+
+    if (!accountSid || !authToken || (!fromNumber && !messagingServiceSid)) {
+      this.logger.warn('Twilio SMS not configured; skipping actual SMS send and using development fallback log');
+
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.debug(`DEV SMS OTP (${type}): ${otp} for ${phone}`);
+        return;
+      }
+
+      throw new BadRequestException('SMS service is not configured. Please contact support.');
     }
+
+    const body = `Your verification code is ${otp}. This code expires in 10 minutes.`;
+
+    try {
+      const payload = new URLSearchParams({
+        To: phone,
+        Body: body,
+      });
+
+      if (messagingServiceSid) {
+        payload.append('MessagingServiceSid', messagingServiceSid);
+      } else if (fromNumber) {
+        payload.append('From', fromNumber);
+      }
+
+      const response = await axios.post(
+        `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+        payload,
+        {
+          auth: {
+            username: accountSid,
+            password: authToken,
+          },
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          timeout: 15000,
+        },
+      );
+
+      this.logger.debug(`Twilio SMS sent for ${type} to ${this.maskTarget(phone, type)} (sid: ${response.data?.sid || 'n/a'})`);
+    } catch (error: any) {
+      const twilioMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+        error?.message ||
+        'Unknown Twilio error';
+
+      this.logger.error(`Failed to send SMS OTP via Twilio: ${twilioMessage}`);
+      throw new BadRequestException('Failed to send SMS code. Please check your phone number and try again.');
+    }
+  }
+
+  private normalizePhoneNumber(phone: string): string {
+    const normalized = (phone || '').trim().replace(/[\s\-()]/g, '');
+
+    if (!normalized) {
+      throw new BadRequestException('Phone number is required.');
+    }
+
+    if (!/^\+[1-9]\d{6,14}$/.test(normalized)) {
+      throw new BadRequestException('Please enter a valid phone number in international format (for example: +9779812345678).');
+    }
+
+    return normalized;
   }
 
   private maskTarget(target: string, type: OtpType): string {

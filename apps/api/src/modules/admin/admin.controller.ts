@@ -1,19 +1,22 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Logger,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
+    BadRequestException,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Logger,
+    Param,
+    Patch,
+    Post,
+    Query,
+    UseGuards,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
+import axios from "axios";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -36,6 +39,7 @@ export class AdminController {
     private notificationsService: NotificationsService,
     private mailService: MailService,
     private sellerEngagement: SellerEngagementService,
+    private configService: ConfigService,
   ) {}
 
   // ═══════════════════════════════════════
@@ -1123,5 +1127,212 @@ export class AdminController {
   @ApiOperation({ summary: "Get all notes for a seller" })
   async getSellerNotes(@Param("shopId") shopId: string) {
     return this.sellerEngagement.getSellerNotes(shopId);
+  }
+
+  // ═══════════════════════════════════════
+  // SYSTEM HEALTH & MONITORING
+  // ═══════════════════════════════════════
+
+  @Get("health/apis")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Check health of all connected APIs" })
+  @HttpCode(HttpStatus.OK)
+  async checkApisHealth() {
+    const results: Record<string, any> = {};
+    
+    // Check Database - use Prisma direct query
+    try {
+      const start = Date.now();
+      await this.prisma.$queryRaw`SELECT 1`;
+      results.database = {
+        status: "up",
+        latency: Date.now() - start,
+        type: "PostgreSQL (Prisma)",
+        message: "Connection successful",
+      };
+    } catch (error: any) {
+      this.logger.error("Database health check failed:", error);
+      results.database = {
+        status: "down",
+        type: "PostgreSQL (Prisma)",
+        message: error?.message || "Connection failed",
+        error: true,
+      };
+    }
+
+    // Check Twilio SMS API
+    const twilioStatus = await this.checkTwilioHealth();
+    results.twilio = twilioStatus;
+
+    // Check Email Service (Mail configuration)
+    const emailStatus = this.mailService.getProviderInfo();
+    results.email = {
+      status: emailStatus.configured ? "up" : "not-configured",
+      provider: emailStatus.provider,
+      sender: emailStatus.sender,
+      message: emailStatus.configured ? "Email service ready" : "Email service not configured",
+    };
+
+    // Determine overall status
+    const hasErrors = Object.values(results).some((r: any) => r.status === "down" || r.error);
+    
+    return {
+      overallStatus: hasErrors ? "degraded" : "healthy",
+      timestamp: new Date().toISOString(),
+      checks: results,
+    };
+  }
+
+  @Post("health/test-sms")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Send a test SMS via Twilio to verify SMS configuration" })
+  @HttpCode(HttpStatus.OK)
+  async testTwilioSms(
+    @Body() data: { phoneNumber: string },
+    @CurrentUser("id") adminId: string,
+  ) {
+    if (!data.phoneNumber) {
+      return { success: false, error: "Phone number is required" };
+    }
+
+    // Normalize phone number
+    const normalizedPhone = this.normalizePhoneNumber(data.phoneNumber);
+
+    // Check Twilio configuration
+    const accountSid = this.configService.get<string>("TWILIO_ACCOUNT_SID");
+    const authToken = this.configService.get<string>("TWILIO_AUTH_TOKEN");
+    const fromNumber = this.configService.get<string>("TWILIO_PHONE_NUMBER");
+    const messagingServiceSid = this.configService.get<string>("TWILIO_MESSAGING_SERVICE_SID");
+
+    if (!accountSid || !authToken || (!fromNumber && !messagingServiceSid)) {
+      return {
+        success: false,
+        error: "Twilio SMS is not configured. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and either TWILIO_PHONE_NUMBER or TWILIO_MESSAGING_SERVICE_SID.",
+      };
+    }
+
+    const testMessage = `🟢 Orivraa Admin Test - SMS Gateway Working! [${new Date().toISOString()}]`;
+
+    try {
+      const payload = new URLSearchParams({
+        To: normalizedPhone,
+        Body: testMessage,
+      });
+
+      if (messagingServiceSid) {
+        payload.append("MessagingServiceSid", messagingServiceSid);
+      } else if (fromNumber) {
+        payload.append("From", fromNumber);
+      }
+
+      const response = await axios.post(
+        `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+        payload,
+        {
+          auth: {
+            username: accountSid,
+            password: authToken,
+          },
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          timeout: 15000,
+        },
+      );
+
+      this.logger.log(
+        `Admin ${adminId} sent test SMS to ${this.maskPhoneNumber(normalizedPhone)} - SID: ${response.data?.sid}`,
+      );
+
+      return {
+        success: true,
+        message: "Test SMS sent successfully",
+        messageSid: response.data?.sid,
+        sentTo: this.maskPhoneNumber(normalizedPhone),
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+        error?.message ||
+        "Unknown Twilio error";
+
+      this.logger.error(`Failed to send test SMS: ${errorMessage}`);
+
+      return {
+        success: false,
+        error: `Failed to send test SMS: ${errorMessage}`,
+        details: error?.response?.data,
+      };
+    }
+  }
+
+  // Helper method to check Twilio API health
+  private async checkTwilioHealth(): Promise<any> {
+    const accountSid = this.configService.get<string>("TWILIO_ACCOUNT_SID");
+    const authToken = this.configService.get<string>("TWILIO_AUTH_TOKEN");
+
+    if (!accountSid || !authToken) {
+      return {
+        status: "not-configured",
+        message: "Twilio credentials not configured",
+        service: "Twilio SMS API",
+      };
+    }
+
+    try {
+      const start = Date.now();
+      
+      // Try to verify account by making a simple API call
+      const response = await axios.get(
+        `https://api.twilio.com/2010-04-01/Accounts/${accountSid}`,
+        {
+          auth: {
+            username: accountSid,
+            password: authToken,
+          },
+          timeout: 10000,
+        },
+      );
+
+      return {
+        status: "up",
+        latency: Date.now() - start,
+        service: "Twilio SMS API",
+        accountStatus: response.data?.status,
+        message: "Twilio API accessible",
+      };
+    } catch (error: any) {
+      this.logger.error("Twilio health check failed:", error?.message);
+      return {
+        status: "down",
+        service: "Twilio SMS API",
+        message: error?.response?.data?.message || error?.message || "API check failed",
+        error: true,
+      };
+    }
+  }
+
+  // Helper method to normalize phone number
+  private normalizePhoneNumber(phone: string): string {
+    const normalized = (phone || "").trim().replace(/[\s\-()]/g, "");
+
+    if (!normalized) {
+      throw new BadRequestException("Phone number is required.");
+    }
+
+    if (!/^\+[1-9]\d{6,14}$/.test(normalized)) {
+      throw new BadRequestException(
+        "Please enter a valid phone number in international format (for example: +9779812345678).",
+      );
+    }
+
+    return normalized;
+  }
+
+  // Helper method to mask phone number for logging
+  private maskPhoneNumber(phone: string): string {
+    return `***${phone.slice(-4)}`;
   }
 }
