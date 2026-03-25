@@ -2,6 +2,7 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { HomeSections } from "@/components/home/HomeSections";
 import { Header } from "@/components/layout/header";
 import { resolveHeroVideo } from "@/lib/geo";
+import { T } from "@/components/ui/T";
 import { Lock, ShieldCheck, Store, User } from "lucide-react";
 import dynamic from "next/dynamic";
 import { headers } from "next/headers";
@@ -63,10 +64,12 @@ export default function HomePage() {
                   <ShieldCheck className="w-8 h-8" />
                 </div>
                 <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight">
-                  Platform Purpose &amp; Application Features
+                  <T>Platform Purpose &amp; Application Features</T>
                 </h2>
                 <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-4xl mx-auto">
-                  Orivraa is a dual-purpose platform: a comprehensive <strong>Jewelry Shop CRM Software</strong> for businesses, and a world-class <strong>Global Jewelry Marketplace</strong> for customers. We empower jewelry store owners with intelligent inventory management, POS tools, and sales software, while providing buyers a unified application to discover, customize, and securely purchase from these verified artisans.
+                  <T>
+                    Orivraa is a dual-purpose platform: a comprehensive <strong>Jewelry Shop CRM Software</strong> for businesses, and a world-class <strong>Global Jewelry Marketplace</strong> for customers. We empower jewelry store owners with intelligent inventory management, POS tools, and sales software, while providing buyers a unified application to discover, customize, and securely purchase from these verified artisans.
+                  </T>
                 </p>
               </div>
               
@@ -78,20 +81,20 @@ export default function HomePage() {
                     <div className="p-2.5 bg-amber-50 dark:bg-amber-900/30 rounded-xl text-amber-600 dark:text-amber-400">
                       <Store className="w-6 h-6" />
                     </div>
-                    For Jewelers (CRM & POS Software)
+                    <T>For Jewelers (CRM & POS Software)</T>
                   </h3>
                   <ul className="space-y-4 text-gray-600 dark:text-gray-400">
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><strong>Store &amp; Inventory Management:</strong> Complete software to manage products, automated pricing by live metal weight, stock, and offline/online sales.</span>
+                      <span className="leading-relaxed"><T><strong>Store &amp; Inventory Management:</strong> Complete software to manage products, automated pricing by live metal weight, stock, and offline/online sales.</T></span>
                     </li>
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><strong>Smart Dashboard &amp; Analytics:</strong> Track shop revenue, popular pieces, inventory movement, and conversion rates efficiently.</span>
+                      <span className="leading-relaxed"><T><strong>Smart Dashboard &amp; Analytics:</strong> Track shop revenue, popular pieces, inventory movement, and conversion rates efficiently.</T></span>
                     </li>
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><strong>Client Management:</strong> Receive custom design requests, manage customer relationships, and respond securely to global buyers.</span>
+                      <span className="leading-relaxed"><T><strong>Client Management:</strong> Receive custom design requests, manage customer relationships, and respond securely to global buyers.</T></span>
                     </li>
                   </ul>
                 </div>
@@ -103,20 +106,20 @@ export default function HomePage() {
                     <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400">
                       <User className="w-6 h-6" />
                     </div>
-                    For Customers (Marketplace App)
+                    <T>For Customers (Marketplace App)</T>
                   </h3>
                   <ul className="space-y-4 text-gray-600 dark:text-gray-400">
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><strong>Personalized Dashboard:</strong> Manage your jewelry requests, favorite items, and order history seamlessly.</span>
+                      <span className="leading-relaxed"><T><strong>Personalized Dashboard:</strong> Manage your jewelry requests, favorite items, and order history seamlessly.</T></span>
                     </li>
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><strong>Secure Identity Verification:</strong> We use Google OAuth to quickly verify real buyer profiles, ensuring a safe platform for high-value transactions without tedious manual form-filling.</span>
+                      <span className="leading-relaxed"><T><strong>Secure Identity Verification:</strong> We use Google OAuth to quickly verify real buyer profiles, ensuring a safe platform for high-value transactions without tedious manual form-filling.</T></span>
                     </li>
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><strong>Secure Communication:</strong> Chat directly with verified jewelry makers, share references, and negotiate custom variations in a protected environment.</span>
+                      <span className="leading-relaxed"><T><strong>Secure Communication:</strong> Chat directly with verified jewelry makers, share references, and negotiate custom variations in a protected environment.</T></span>
                     </li>
                   </ul>
                 </div>
@@ -125,17 +128,19 @@ export default function HomePage() {
               <div className="mt-12 bg-amber-50/50 dark:bg-amber-900/10 rounded-2xl p-8 border border-amber-100/50 dark:border-amber-900/30 text-center max-w-3xl mx-auto">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center justify-center gap-2">
                   <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                  Account Data &amp; Privacy (OAuth)
+                  <T>Account Data &amp; Privacy (OAuth)</T>
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 text-[15px] mb-6 leading-relaxed">
-                  When accessing either the CRM dashboard (as a Jeweler) or the Marketplace App (as a Customer) using Google Authentication, we strictly request minimal profile information (Name and Email address). This data is exclusively used to securely authenticate your session, prevent fraud in high-value transactions, and power your personalized dashboard.
+                  <T>
+                    When accessing either the CRM dashboard (as a Jeweler) or the Marketplace App (as a Customer) using Google Authentication, we strictly request minimal profile information (Name and Email address). This data is exclusively used to securely authenticate your session, prevent fraud in high-value transactions, and power your personalized dashboard.
+                  </T>
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Link href="/privacy" className="inline-flex justify-center items-center px-6 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
-                    Read Privacy Policy
+                    <T>Read Privacy Policy</T>
                   </Link>
                   <Link href="/terms" className="inline-flex justify-center items-center px-6 py-2.5 bg-transparent border border-transparent rounded-xl text-sm font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
-                    Terms of Service
+                    <T>Terms of Service</T>
                   </Link>
                 </div>
               </div>
