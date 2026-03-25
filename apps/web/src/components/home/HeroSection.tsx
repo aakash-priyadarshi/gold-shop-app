@@ -87,6 +87,9 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
               }`}
             >
               {t(subheadline)}
+              <span className="block mt-2 font-medium">
+                <T>Connect securely, request custom designs, and track your orders seamlessly.</T>
+              </span>
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               <Link href="/shop">
