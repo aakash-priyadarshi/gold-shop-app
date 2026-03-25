@@ -135,9 +135,13 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   const t = useCallback(
     (text: string) => {
       if (locale === "en") return text;
+      if (!dict[text]) {
+        // Queue registration async to avoid calling setState during render
+        setTimeout(() => register(text), 0);
+      }
       return dict[text] || text;
     },
-    [locale, dict],
+    [locale, dict, register],
   );
 
   return (
