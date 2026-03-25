@@ -4,15 +4,15 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { T } from "@/components/ui/T";
-import { 
-  Shield, 
-  Eye, 
-  Lock, 
-  UserCheck, 
-  Scale, 
-  Mail,
-  History,
-  Sparkles 
+import {
+    Eye,
+    History,
+    Lock,
+    Mail,
+    Scale,
+    Shield,
+    Sparkles,
+    UserCheck
 } from "lucide-react";
 
 export default function PrivacyPage() {
@@ -55,7 +55,7 @@ export default function PrivacyPage() {
           
           <div className="mt-8 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 font-medium">
             <History className="w-4 h-4" />
-            <span>Last updated: March 14, 2026</span>
+            <span><T>Last updated: March 14, 2026</T></span>
           </div>
         </div>
       </section>
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
           <aside className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24 space-y-1">
               <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4 px-3">
-                Contents
+                <T>Contents</T>
               </p>
               {sections.map((section) => (
                 <a
@@ -77,7 +77,7 @@ export default function PrivacyPage() {
                   className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-600 dark:hover:text-amber-400 transition-all"
                 >
                   <section.icon className="w-4 h-4" />
-                  {section.title.split(". ")[1]}
+                  <T>{section.title.split(". ")[1]}</T>
                 </a>
               ))}
             </div>
@@ -95,66 +95,66 @@ export default function PrivacyPage() {
               
               <h2 id="introduction">
                 <Sparkles className="w-5 h-5 text-amber-500" />
-                1. Introduction
+                <T>1. Introduction</T>
               </h2>
               <p>
-                Welcome to Orivraa. This Privacy Policy explains how we collect, use, process, and protect your 
+                <T>Welcome to Orivraa. This Privacy Policy explains how we collect, use, process, and protect your 
                 information when you use our website, mobile applications, and desktop software (including our 
                 offline-capable shop management applications). We are committed to safeguarding the privacy of 
-                our buyers, artisans, and jewelry business partners across the globe.
+                our buyers, artisans, and jewelry business partners across the globe.</T>
               </p>
               
               <h2 id="collection">
                 <Eye className="w-5 h-5 text-amber-500" />
-                2. Information We Collect
+                <T>2. Information We Collect</T>
               </h2>
               <p>
-                We collect various types of information to provide a seamless and secure experience on our 
-                B2B/B2C jewelry marketplace and shop management platform:
+                <T>We collect various types of information to provide a seamless and secure experience on our 
+                B2B/B2C jewelry marketplace and shop management platform:</T>
               </p>
               <ul>
-                <li><strong>Account & Profile Data:</strong> Name, email address, phone number, physical address, and business verification details when you register as a buyer or seller.</li>
-                <li><strong>CRM & Communications:</strong> Data from customer relationship management processes, including built-in chat logs, RFQ (Request for Quote) discussions, and customer support interactions.</li>
-                <li><strong>Transaction & Financial Data:</strong> Information related to orders, custom manufacturing requests, invoices, payment history, and payment gateway processing details.</li>
-                <li><strong>Inventory & Shop Data:</strong> For sellers using our desktop application, we process and securely synchronize local inventory, catalogue data, and sales analytics with our cloud services.</li>
-                <li><strong>Marketplace Intelligence:</strong> Browsing behavior, search history, device information, and platform interactions to provide sales analytics, personalized recommendations, and market intelligence insights.</li>
+                <li><strong><T>Account & Profile Data:</T></strong> <T>Name, email address, phone number, physical address, and business verification details when you register as a buyer or seller.</T></li>
+                <li><strong><T>CRM & Communications:</T></strong> <T>Data from customer relationship management processes, including built-in chat logs, RFQ (Request for Quote) discussions, and customer support interactions.</T></li>
+                <li><strong><T>Transaction & Financial Data:</T></strong> <T>Information related to orders, custom manufacturing requests, invoices, payment history, and payment gateway processing details.</T></li>
+                <li><strong><T>Inventory & Shop Data:</T></strong> <T>For sellers using our desktop application, we process and securely synchronize local inventory, catalogue data, and sales analytics with our cloud services.</T></li>
+                <li><strong><T>Marketplace Intelligence:</T></strong> <T>Browsing behavior, search history, device information, and platform interactions to provide sales analytics, personalized recommendations, and market intelligence insights.</T></li>
               </ul>
 
               <h2 id="usage">
                 <UserCheck className="w-5 h-5 text-amber-500" />
-                3. How We Use Your Information
+                <T>3. How We Use Your Information</T>
               </h2>
-              <p>Your data is essential for us to deliver our comprehensive suite of services. We use your data to:</p>
+              <p><T>Your data is essential for us to deliver our comprehensive suite of services. We use your data to:</T></p>
               <ul>
-                <li>Facilitate secure transactions, custom order routing, and order fulfillment between global buyers and verified sellers.</li>
-                <li>Synchronize your offline shop inventory with your online global storefront using our desktop client.</li>
-                <li>Operate our built-in real-time chat, negotiation tools, and CRM systems for seamless communication.</li>
-                <li>Process payments securely via our integrated international payment gateways.</li>
-                <li>Analyze marketplace trends to generate actionable intelligence reports and sales analytics for our partners.</li>
-                <li>Maintain platform security, prevent fraud, and verify the quality and purity standards of our artisans.</li>
+                <li><T>Facilitate secure transactions, custom order routing, and order fulfillment between global buyers and verified sellers.</T></li>
+                <li><T>Synchronize your offline shop inventory with your online global storefront using our desktop client.</T></li>
+                <li><T>Operate our built-in real-time chat, negotiation tools, and CRM systems for seamless communication.</T></li>
+                <li><T>Process payments securely via our integrated international payment gateways.</T></li>
+                <li><T>Analyze marketplace trends to generate actionable intelligence reports and sales analytics for our partners.</T></li>
+                <li><T>Maintain platform security, prevent fraud, and verify the quality and purity standards of our artisans.</T></li>
               </ul>
 
               <h2 id="security">
                 <Lock className="w-5 h-5 text-amber-500" />
-                4. Data Sharing and Security
+                <T>4. Data Sharing and Security</T>
               </h2>
               <p>
-                We absolutely do not sell your personal data. We share data only with trusted third-party service 
+                <T>We absolutely do not sell your personal data. We share data only with trusted third-party service 
                 providers (such as payment processors, shipping logistics partners, and security verification 
                 services) strictly necessary to operate our platform. We employ robust, industry-standard 
                 cryptographic and security measures to protect your sensitive business inventory and personal 
-                information from unauthorized access.
+                information from unauthorized access.</T>
               </p>
 
               <h2 id="rights">
                 <Scale className="w-5 h-5 text-amber-500" />
-                5. Your Rights and Choices
+                <T>5. Your Rights and Choices</T>
               </h2>
               <p>
-                You have the right to access, correct, update, or request the deletion of your personal data. 
+                <T>You have the right to access, correct, update, or request the deletion of your personal data. 
                 Sellers may also manage their synced inventory data via their dedicated dashboard. For any 
                 privacy-related inquiries, data requests, or to exercise your rights, please contact our 
-                dedicated Data Protection team.
+                dedicated Data Protection team.</T>
               </p>
               
               <div className="mt-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-800 flex flex-col md:flex-row items-center gap-6">
@@ -162,8 +162,8 @@ export default function PrivacyPage() {
                   <Mail className="w-6 h-6 text-amber-500" />
                 </div>
                 <div className="text-center md:text-left">
-                  <h4 className="text-lg font-bold text-gray-900 dark:text-white m-0 truncate">Contact Support</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-0">Our team is here to help with any privacy questions.</p>
+                  <h4 className="text-lg font-bold text-gray-900 dark:text-white m-0 truncate"><T>Contact Support</T></h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-0"><T>Our team is here to help with any privacy questions.</T></p>
                 </div>
                 <a 
                   href="mailto:support@orivraa.com" 

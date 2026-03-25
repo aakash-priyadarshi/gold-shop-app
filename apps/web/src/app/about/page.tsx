@@ -6,25 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
 import {
-  COMING_SOON_PLATFORMS,
-  LANG_META,
-  LIVE_PLATFORMS,
-  SUPPORTED_ABOUT_LANGS,
-  TESTIMONIALS,
+    COMING_SOON_PLATFORMS,
+    LANG_META,
+    LIVE_PLATFORMS,
+    SUPPORTED_ABOUT_LANGS,
+    TESTIMONIALS,
 } from "@/data/about-i18n";
-import { useT } from "@/providers/translation-provider";
 import {
-  ArrowRightIcon,
-  BuildingStorefrontIcon,
-  ChartBarIcon,
-  CheckBadgeIcon,
-  GlobeAltIcon,
-  HeartIcon,
-  ShieldCheckIcon,
-  SparklesIcon,
-  StarIcon,
-  TruckIcon,
-  UserGroupIcon,
+    ArrowRightIcon,
+    BuildingStorefrontIcon,
+    ChartBarIcon,
+    CheckBadgeIcon,
+    GlobeAltIcon,
+    HeartIcon,
+    ShieldCheckIcon,
+    SparklesIcon,
+    StarIcon,
+    TruckIcon,
+    UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -100,7 +99,6 @@ const team = [
 ];
 
 export default function AboutPage() {
-  const t = useT();
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
@@ -166,7 +164,7 @@ export default function AboutPage() {
                   {stat.value}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300">
-                  {t(stat.label)}
+                  <T>{stat.label}</T>
                 </div>
               </motion.div>
             ))}
@@ -246,10 +244,10 @@ export default function AboutPage() {
                       </div>
                       <div>
                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                          {t(value.title)}
+                          <T>{value.title}</T>
                         </h3>
                         <p className="text-gray-600 dark:text-gray-300">
-                          {t(value.description)}
+                          <T>{value.description}</T>
                         </p>
                       </div>
                     </div>
@@ -288,10 +286,10 @@ export default function AboutPage() {
                   <feature.icon className="h-8 w-8 text-amber-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  {t(feature.title)}
+                  <T>{feature.title}</T>
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 text-sm">
-                  {t(feature.description)}
+                  <T>{feature.description}</T>
                 </p>
               </motion.div>
             ))}
@@ -502,7 +500,7 @@ export default function AboutPage() {
                   ].map((item, index) => (
                     <li key={index} className="flex items-center gap-3">
                       <CheckBadgeIcon className="h-5 w-5 text-amber-500" />
-                      <span className="text-gray-200">{t(item)}</span>
+                      <span className="text-gray-200"><T>{item}</T></span>
                     </li>
                   ))}
                 </ul>

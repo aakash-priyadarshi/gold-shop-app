@@ -4,24 +4,23 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
-import { useT } from "@/providers/translation-provider";
 import {
-  ArrowRight,
-  Award,
-  BarChart3,
-  Building2,
-  Crown,
-  Globe,
-  LayoutDashboard,
-  Megaphone,
-  Package,
-  Percent,
-  ShieldCheck,
-  Sparkles,
-  Store,
-  TrendingUp,
-  Users,
-  Zap,
+    ArrowRight,
+    Award,
+    BarChart3,
+    Building2,
+    Crown,
+    Globe,
+    LayoutDashboard,
+    Megaphone,
+    Package,
+    Percent,
+    ShieldCheck,
+    Sparkles,
+    Store,
+    TrendingUp,
+    Users,
+    Zap,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -152,7 +151,6 @@ const STATS = [
 /* ────────────────────────────────────────────────────────────── */
 
 export default function PartnerPage() {
-  const t = useT();
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
@@ -206,7 +204,7 @@ export default function PartnerPage() {
                   {s.value}
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {t(s.label)}
+                  <T>{s.label}</T>
                 </div>
               </div>
             ))}
@@ -237,10 +235,10 @@ export default function PartnerPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {t(b.title)}
+                    <T>{b.title}</T>
                   </h3>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {t(b.desc)}
+                    <T>{b.desc}</T>
                   </p>
                 </div>
               </div>
@@ -269,13 +267,13 @@ export default function PartnerPage() {
                     <pt.icon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {t(pt.title)}
+                    <T>{pt.title}</T>
                   </h3>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {t(pt.desc)}
+                    <T>{pt.desc}</T>
                   </p>
                   <p className="mt-3 text-xs text-amber-600 dark:text-amber-400 font-medium">
-                    <T>Ideal for:</T> {t(pt.ideal)}
+                    <T>Ideal for:</T> <T>{pt.ideal}</T>
                   </p>
                 </div>
               ))}
@@ -298,10 +296,10 @@ export default function PartnerPage() {
                 </div>
                 <div className="flex-1 pt-1">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {t(s.title)}
+                    <T>{s.title}</T>
                   </h3>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {t(s.desc)}
+                    <T>{s.desc}</T>
                   </p>
                 </div>
               </div>
@@ -323,7 +321,7 @@ export default function PartnerPage() {
                 >
                   <p.icon className="h-4 w-4 text-amber-100 flex-shrink-0" />
                   <span className="text-sm text-white font-medium">
-                    {t(p.text)}
+                    <T>{p.text}</T>
                   </span>
                 </div>
               ))}
@@ -345,13 +343,13 @@ export default function PartnerPage() {
                 className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden"
               >
                 <summary className="flex items-center justify-between cursor-pointer px-6 py-4 font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors list-none [&::-webkit-details-marker]:hidden">
-                  {t(faq.q)}
+                  <T>{faq.q}</T>
                   <span className="ml-4 text-gray-400 group-open:rotate-180 transition-transform">
                     ▾
                   </span>
                 </summary>
                 <div className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {t(faq.a)}
+                  <T>{faq.a}</T>
                 </div>
               </details>
             ))}

@@ -1,8 +1,8 @@
 import { HeroSection } from "@/components/home/HeroSection";
 import { HomeSections } from "@/components/home/HomeSections";
 import { Header } from "@/components/layout/header";
-import { resolveHeroVideo } from "@/lib/geo";
 import { T } from "@/components/ui/T";
+import { resolveHeroVideo } from "@/lib/geo";
 import { Lock, ShieldCheck, Store, User } from "lucide-react";
 import dynamic from "next/dynamic";
 import { headers } from "next/headers";
@@ -68,7 +68,7 @@ export default function HomePage() {
                 </h2>
                 <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-4xl mx-auto">
                   <T>
-                    Orivraa is a dual-purpose platform: a comprehensive <strong>Jewelry Shop CRM Software</strong> for businesses, and a world-class <strong>Global Jewelry Marketplace</strong> for customers. We empower jewelry store owners with intelligent inventory management, POS tools, and sales software, while providing buyers a unified application to discover, customize, and securely purchase from these verified artisans.
+                    Orivraa is a dual-purpose platform: a comprehensive Jewelry Shop CRM Software for businesses, and a world-class Global Jewelry Marketplace for customers. We empower jewelry store owners with intelligent inventory management, POS tools, and sales software, while providing buyers a unified application to discover, customize, and securely purchase from these verified artisans.
                   </T>
                 </p>
               </div>
@@ -86,15 +86,15 @@ export default function HomePage() {
                   <ul className="space-y-4 text-gray-600 dark:text-gray-400">
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><T><strong>Store &amp; Inventory Management:</strong> Complete software to manage products, automated pricing by live metal weight, stock, and offline/online sales.</T></span>
+                      <span className="leading-relaxed"><T>Store &amp; Inventory Management: Complete software to manage products, automated pricing by live metal weight, stock, and offline/online sales.</T></span>
                     </li>
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><T><strong>Smart Dashboard &amp; Analytics:</strong> Track shop revenue, popular pieces, inventory movement, and conversion rates efficiently.</T></span>
+                      <span className="leading-relaxed"><T>Smart Dashboard &amp; Analytics: Track shop revenue, popular pieces, inventory movement, and conversion rates efficiently.</T></span>
                     </li>
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><T><strong>Client Management:</strong> Receive custom design requests, manage customer relationships, and respond securely to global buyers.</T></span>
+                      <span className="leading-relaxed"><T>Client Management: Receive custom design requests, manage customer relationships, and respond securely to global buyers.</T></span>
                     </li>
                   </ul>
                 </div>
@@ -111,15 +111,15 @@ export default function HomePage() {
                   <ul className="space-y-4 text-gray-600 dark:text-gray-400">
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><T><strong>Personalized Dashboard:</strong> Manage your jewelry requests, favorite items, and order history seamlessly.</T></span>
+                      <span className="leading-relaxed"><T>Personalized Dashboard: Manage your jewelry requests, favorite items, and order history seamlessly.</T></span>
                     </li>
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><T><strong>Secure Identity Verification:</strong> We use Google OAuth to quickly verify real buyer profiles, ensuring a safe platform for high-value transactions without tedious manual form-filling.</T></span>
+                      <span className="leading-relaxed"><T>Secure Identity Verification: We use Google OAuth to quickly verify real buyer profiles, ensuring a safe platform for high-value transactions without tedious manual form-filling.</T></span>
                     </li>
                     <li className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2.5 flex-shrink-0" />
-                      <span className="leading-relaxed"><T><strong>Secure Communication:</strong> Chat directly with verified jewelry makers, share references, and negotiate custom variations in a protected environment.</T></span>
+                      <span className="leading-relaxed"><T>Secure Communication: Chat directly with verified jewelry makers, share references, and negotiate custom variations in a protected environment.</T></span>
                     </li>
                   </ul>
                 </div>

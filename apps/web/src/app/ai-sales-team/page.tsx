@@ -384,10 +384,10 @@ function PipelineVisualizer() {
                   className={`w-5 h-5 mb-1 ${isActive ? "" : "text-gray-400"}`}
                 />
                 <span className="text-xs font-semibold text-center leading-tight">
-                  {s.label}
+                  <T>{s.label}</T>
                 </span>
                 <span className="text-[10px] text-gray-400 text-center">
-                  {s.sublabel}
+                  <T>{s.sublabel}</T>
                 </span>
                 {s.ms && (
                   <span
@@ -420,10 +420,10 @@ function PipelineVisualizer() {
           className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white font-semibold px-6 py-2.5 rounded-full transition-colors"
         >
           <Play className="w-4 h-4" />
-          {running ? "Simulating…" : "Simulate a voice turn"}
+          {running ? <T>Simulating…</T> : <T>Simulate a voice turn</T>}
         </button>
         <p className="mt-2 text-xs text-gray-400">
-          Total round-trip ≈ 690ms · Streamed output starts at ~470ms · Audio plays at the end
+          <T>Total round-trip ≈ 690ms · Streamed output starts at ~470ms · Audio plays at the end</T>
         </p>
       </div>
 
@@ -432,13 +432,13 @@ function PipelineVisualizer() {
         <div className="grid sm:grid-cols-2 gap-4 mt-4">
           {transcribedText && (
             <div className="rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 p-3">
-              <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wide mb-1">Customer (STT output)</p>
+              <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wide mb-1"><T>Customer (STT output)</T></p>
               <p className="text-sm text-gray-700 dark:text-gray-300 italic">{transcribedText}</p>
             </div>
           )}
           {agentText && (
             <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-3">
-              <p className="text-[10px] font-semibold text-green-500 uppercase tracking-wide mb-1">Agent (TTS input)</p>
+              <p className="text-[10px] font-semibold text-green-500 uppercase tracking-wide mb-1"><T>Agent (TTS input)</T></p>
               <p className="text-sm text-gray-700 dark:text-gray-300">{agentText}</p>
             </div>
           )}
@@ -557,18 +557,18 @@ function VectorMemoryXray() {
       {/* Left: conversation + explanation */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3">
         <p className="text-xs font-semibold text-amber-500 uppercase tracking-wide">
-          How it works
+          <T>How it works</T>
         </p>
         <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
           <p>
-            <strong>Scenario:</strong> A customer called your store twice last week asking about engagement rings. The AI remembered everything — style preference, budget, even the wife&apos;s name.
+            <strong><T>Scenario:</T></strong> <T>A customer called your store twice last week asking about engagement rings. The AI remembered everything — style preference, budget, even the wife&apos;s name.</T>
           </p>
           <p>
-            Now when the same customer calls back, the AI instantly retrieves those facts from vector memory. No awkward &quot;can you repeat your budget?&quot; — it picks up right where it left off.
+            <T>Now when the same customer calls back, the AI instantly retrieves those facts from vector memory. No awkward &quot;can you repeat your budget?&quot; — it picks up right where it left off.</T>
           </p>
         </div>
         <div className="space-y-2 text-sm border-t border-gray-100 dark:border-gray-700 pt-3 min-h-[180px]">
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Live conversation (Call #3)</p>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide"><T>Live conversation (Call #3)</T></p>
           {CHAT_BUBBLES.slice(0, visibleBubbles).map((b, i) => (
             <div
               key={i}
@@ -596,7 +596,7 @@ function VectorMemoryXray() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            placeholder="Try: anniversary gift, budget, gold preference…"
+            placeholder={"Try: anniversary gift, budget, gold preference…"}
             className={`flex-1 text-sm border bg-transparent rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-colors ${
               typingQuery
                 ? "border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/30"
@@ -615,7 +615,7 @@ function VectorMemoryXray() {
       {/* Right: vector space */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-          3072-dim Vector Space (2D projection)
+          <T>3072-dim Vector Space (2D projection)</T>
         </p>
         <p className="text-[10px] text-gray-400 mb-3">
           Each dot = a fact the AI remembers. Gold dots = facts relevant to your query.
@@ -838,9 +838,9 @@ function InteractiveSandbox() {
           <Bot className="w-4 h-4 text-white" />
         </div>
         <div>
-          <p className="text-sm font-semibold">Aria · Premium Consultant</p>
+          <p className="text-sm font-semibold"><T>Aria · Premium Consultant</T></p>
           <p className="text-xs text-green-600 dark:text-green-400">
-            ● Online
+            <T>● Online</T>
           </p>
         </div>
         <div className="ml-auto">
@@ -852,7 +852,7 @@ function InteractiveSandbox() {
       <div className="px-4 pt-3">
         <div className="inline-flex items-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 rounded-full px-3 py-1">
           <Sparkles className="w-3 h-3" />
-          Scenario: Engagement ring consultation · Powered by Gemini
+          <T>Scenario: Engagement ring consultation · Powered by Gemini</T>
         </div>
       </div>
 

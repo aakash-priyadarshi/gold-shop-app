@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import { subscriptionPlansApi } from "@/lib/api";
-import { useT } from "@/providers/translation-provider";
 import {
     COUNTRIES,
     CURRENCIES,
@@ -562,7 +561,6 @@ export default function PricingPage() {
   const [showComparison, setShowComparison] = useState(false);
   const [plans, setPlans] = useState<PlanFromAPI[]>([]);
   const [loading, setLoading] = useState(true);
-  const t = useT();
 
   const country = usePreferencesStore((s) => s.country);
   const setCountry = usePreferencesStore((s) => s.setCountry);
@@ -660,7 +658,7 @@ export default function PricingPage() {
                   }`}
                   title={COUNTRIES[code].name}
                 >
-                  {(
+                  <T>{(
                     {
                       NP: "Nepal",
                       IN: "India",
@@ -669,7 +667,7 @@ export default function PricingPage() {
                       EU: "EU",
                       US: "USA",
                     } as Record<string, string>
-                  )[code] ?? code}
+                  )[code] ?? code}</T>
                 </button>
               ))}
             </div>
@@ -722,8 +720,10 @@ export default function PricingPage() {
         ) : sortedPlans.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
             <p>
+              <T>
               No plans available for this region yet. Please check back soon or
               try another country.
+              </T>
             </p>
           </div>
         ) : (
@@ -770,7 +770,7 @@ export default function PricingPage() {
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                       <Badge className="bg-amber-500 text-white border-0 px-4 py-1 text-xs font-semibold shadow-md">
                         <Star className="w-3 h-3 mr-1 fill-white" />
-                        {badge}
+                        <T>{badge}</T>
                       </Badge>
                     </div>
                   )}
@@ -791,7 +791,7 @@ export default function PricingPage() {
                       {isEnterprise ? (
                         <div className="flex items-baseline gap-1">
                           <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                            Custom
+                            <T>Custom</T>
                           </span>
                         </div>
                       ) : (
@@ -806,13 +806,13 @@ export default function PricingPage() {
                               )}
                             </span>
                             <span className="text-gray-500 dark:text-gray-400 text-sm">
-                              /month
+                              <T>/month</T>
                             </span>
                           </div>
                           {billing === "annual" && plan.annualPrice > 0 && (
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               {formatPrice(plan.annualPrice, plan.currency)}{" "}
-                              billed annually
+                              <T>billed annually</T>
                             </p>
                           )}
                         </>
@@ -820,7 +820,7 @@ export default function PricingPage() {
                     </div>
 
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 min-h-[40px]">
-                      {plan.description}
+                      <T>{plan.description}</T>
                     </p>
 
                     {/* CTA */}
@@ -831,7 +831,7 @@ export default function PricingPage() {
                         size="lg"
                         style={btnStyle}
                       >
-                        {meta.cta}
+                        <T>{meta.cta}</T>
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
@@ -839,16 +839,16 @@ export default function PricingPage() {
                     {/* AI credits info */}
                     {plan.includesAi && plan.monthlyAiCredits > 0 && (
                       <p className="mt-3 text-xs text-center text-amber-600 dark:text-amber-400 font-medium">
-                        {plan.monthlyAiCredits} AI credits/month included
+                        {plan.monthlyAiCredits} <T>AI credits/month included</T>
                       </p>
                     )}
                     {!plan.includesAi &&
                       plan.extraCreditPrice > 0 &&
                       plan.features?.purchasableAiCredits && (
                         <p className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">
-                          AI credits from{" "}
+                          <T>AI credits from</T>{" "}
                           {formatPrice(plan.extraCreditPrice, plan.currency)}
-                          /credit
+                          <T>/credit</T>
                         </p>
                       )}
 
@@ -868,7 +868,7 @@ export default function PricingPage() {
                                 : "text-gray-400 dark:text-gray-600"
                             }`}
                           >
-                            {f.text}
+                            <T>{f.text}</T>
                           </span>
                         </div>
                       ))}
@@ -889,8 +889,8 @@ export default function PricingPage() {
               onClick={() => setShowComparison(!showComparison)}
               className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium transition-colors"
             >
-              {showComparison ? t("Hide") : t("Show")}{" "}
-              {t("Full Feature Comparison")}
+              {showComparison ? <T>Hide</T> : <T>Show</T>}{" "}
+              <T>Full Feature Comparison</T>
               <ChevronDown
                 className={`h-4 w-4 transition-transform ${showComparison ? "rotate-180" : ""}`}
               />
@@ -903,7 +903,7 @@ export default function PricingPage() {
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-800">
                     <th className="text-left px-6 py-4 font-medium text-gray-500 dark:text-gray-400 w-1/3">
-                      Feature
+                      <T>Feature</T>
                     </th>
                     {sortedPlans.map((p) => (
                       <th
@@ -932,7 +932,7 @@ export default function PricingPage() {
                           colSpan={sortedPlans.length + 1}
                           className="px-6 py-3 font-semibold text-gray-900 dark:text-white text-xs uppercase tracking-wider"
                         >
-                          {cat.category}
+                          <T>{cat.category}</T>
                         </td>
                       </tr>
                       {cat.features.map((f) => (
@@ -941,7 +941,7 @@ export default function PricingPage() {
                           className="border-t border-gray-100 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
                         >
                           <td className="px-6 py-3 text-gray-700 dark:text-gray-300">
-                            {f.label}
+                            <T>{f.label}</T>
                           </td>
                           {f.values.map((val, i) => (
                             <td key={i} className="text-center px-4 py-3">
@@ -953,7 +953,7 @@ export default function PricingPage() {
                                 )
                               ) : (
                                 <span className="font-medium text-gray-900 dark:text-white">
-                                  {val}
+                                  <T>{val}</T>
                                 </span>
                               )}
                             </td>
@@ -978,19 +978,19 @@ export default function PricingPage() {
               className="mb-4 border-blue-300 text-blue-700 dark:border-blue-600 dark:text-blue-400 px-4 py-1.5"
             >
               <TrendingUp className="w-3.5 h-3.5 mr-1.5" />
-              Why Choose {BRAND.name}
+              <T>Why Choose</T> {BRAND.name}
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-              Why Our Monthly Software Beats
+              <T>Why Our Monthly Software Beats</T>
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">
-                a One-Time CRM Purchase
+                <T>a One-Time CRM Purchase</T>
               </span>
             </h2>
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Traditional one-time CRM software quickly becomes outdated, needs
+              <T>Traditional one-time CRM software quickly becomes outdated, needs
               costly upgrades, and leaves you managing servers. Here&apos;s why
-              smart jewellers choose {BRAND.name}.
+              smart jewellers choose</T> {BRAND.name}.
             </p>
           </div>
 
@@ -1004,10 +1004,10 @@ export default function PricingPage() {
                   <item.icon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  {t(item.title)}
+                  <T>{item.title}</T>
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {t(item.description)}
+                  <T>{item.description}</T>
                 </p>
               </div>
             ))}
@@ -1038,13 +1038,13 @@ export default function PricingPage() {
                 } border-b border-gray-100 dark:border-gray-800/50 last:border-0`}
               >
                 <div className="px-6 py-3.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {t(row.label)}
+                  <T>{row.label}</T>
                 </div>
                 <div className="px-6 py-3.5 text-sm text-center text-green-700 dark:text-green-400 font-medium">
-                  {t(row.saas)}
+                  <T>{row.saas}</T>
                 </div>
                 <div className="px-6 py-3.5 text-sm text-center text-gray-500 dark:text-gray-400">
-                  {t(row.legacy)}
+                  <T>{row.legacy}</T>
                 </div>
               </div>
             ))}
@@ -1103,10 +1103,10 @@ export default function PricingPage() {
             >
               <item.icon className="h-8 w-8 text-amber-500 mb-4" />
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                {t(item.title)}
+                <T>{item.title}</T>
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                {t(item.desc)}
+                <T>{item.desc}</T>
               </p>
             </div>
           ))}
@@ -1128,12 +1128,12 @@ export default function PricingPage() {
               >
                 <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {t(item.q)}
+                    <T>{item.q}</T>
                   </span>
                   <ChevronDown className="h-4 w-4 text-gray-400 group-open:rotate-180 transition-transform flex-shrink-0 ml-4" />
                 </summary>
                 <div className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {t(item.a)}
+                  <T>{item.a}</T>
                 </div>
               </details>
             ))}

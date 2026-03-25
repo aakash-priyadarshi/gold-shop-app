@@ -4,17 +4,16 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { T } from "@/components/ui/T";
-import { 
-  FileText, 
-  CheckCircle, 
-  UserCheck, 
-  CreditCard, 
-  Laptop, 
-  ShieldAlert, 
-  Gavel,
-  History,
-  Sparkles,
-  HelpCircle
+import {
+    CreditCard,
+    FileText,
+    Gavel,
+    HelpCircle,
+    History,
+    Laptop,
+    ShieldAlert,
+    Sparkles,
+    UserCheck
 } from "lucide-react";
 
 export default function TermsPage() {
@@ -58,7 +57,7 @@ export default function TermsPage() {
           
           <div className="mt-8 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 font-medium">
             <History className="w-4 h-4" />
-            <span>Last updated: March 14, 2026</span>
+            <span><T>Last updated: March 14, 2026</T></span>
           </div>
         </div>
       </section>
@@ -71,7 +70,7 @@ export default function TermsPage() {
           <aside className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24 space-y-1">
               <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4 px-3">
-                Contents
+                <T>Contents</T>
               </p>
               {sections.map((section) => (
                 <a
@@ -80,7 +79,7 @@ export default function TermsPage() {
                   className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-600 dark:hover:text-amber-400 transition-all"
                 >
                   <section.icon className="w-4 h-4" />
-                  {section.title.split(". ")[1]}
+                  <T>{section.title.split(". ")[1]}</T>
                 </a>
               ))}
             </div>
@@ -98,67 +97,67 @@ export default function TermsPage() {
               
               <h2 id="acceptance">
                 <Sparkles className="w-5 h-5 text-amber-500" />
-                1. Acceptance of Terms
+                <T>1. Acceptance of Terms</T>
               </h2>
               <p>
-                By accessing and using Orivraa's website, mobile applications, or desktop software, you agree to 
+                <T>By accessing and using Orivraa&apos;s website, mobile applications, or desktop software, you agree to 
                 comply with and be bound by these Terms of Service. If you do not agree to these terms, 
-                please do not use our platform.
+                please do not use our platform.</T>
               </p>
               
               <h2 id="service">
                 <Laptop className="w-5 h-5 text-amber-500" />
-                2. Description of Service
+                <T>2. Description of Service</T>
               </h2>
               <p>
-                Orivraa provides an integrated B2B and B2C jewelry marketplace connecting buyers with worldwide 
+                <T>Orivraa provides an integrated B2B and B2C jewelry marketplace connecting buyers with worldwide 
                 verified artisans. Furthermore, we offer a comprehensive suite of tools for jewelry businesses, 
                 including shop management, inventory tracking (with offline desktop syncing capabilities), 
                 Customer Relationship Management (CRM), Request for Quote (RFQ) processing, marketplace 
-                intelligence, and integrated chat functionality.
+                intelligence, and integrated chat functionality.</T>
               </p>
 
               <h2 id="responsibilities">
                 <UserCheck className="w-5 h-5 text-amber-500" />
-                3. User and Partner Responsibilities
+                <T>3. User and Partner Responsibilities</T>
               </h2>
               <ul>
-                <li><strong>Accuracy of Information:</strong> You must provide accurate and complete information when creating an account, registering a shop, or listing inventory.</li>
-                <li><strong>Quality and Purity Standards:</strong> Sellers are strictly obligated to ensure that all jewelry listed meets the described purity (e.g., 22K gold), quality standards, and matches the custom manufacturing specifications requested by buyers.</li>
-                <li><strong>Platform Conduct:</strong> You agree not to misuse our chat, CRM, or RFQ systems for spam, harassment, fraudulent activities, or to bypass the Orivraa secure checkout process.</li>
+                <li><strong><T>Accuracy of Information:</T></strong> <T>You must provide accurate and complete information when creating an account, registering a shop, or listing inventory.</T></li>
+                <li><strong><T>Quality and Purity Standards:</T></strong> <T>Sellers are strictly obligated to ensure that all jewelry listed meets the described purity (e.g., 22K gold), quality standards, and matches the custom manufacturing specifications requested by buyers.</T></li>
+                <li><strong><T>Platform Conduct:</T></strong> <T>You agree not to misuse our chat, CRM, or RFQ systems for spam, harassment, fraudulent activities, or to bypass the Orivraa secure checkout process.</T></li>
               </ul>
 
               <h2 id="payments">
                 <CreditCard className="w-5 h-5 text-amber-500" />
-                4. Transactions, Quotes, and Payments
+                <T>4. Transactions, Quotes, and Payments</T>
               </h2>
               <p>
-                All payments, custom manufacturing quotes, and invoices generated through our platform are subject 
+                <T>All payments, custom manufacturing quotes, and invoices generated through our platform are subject 
                 to the terms of our integrated international payment gateways. While Orivraa implements strict 
                 verification for artisans and offers Buyer Protection policies, users agree that final contracts 
-                for custom manufacturing are executed subject to the agreed-upon digital quotes within our system.
+                for custom manufacturing are executed subject to the agreed-upon digital quotes within our system.</T>
               </p>
 
               <h2 id="software">
                 <FileText className="w-5 h-5 text-amber-500" />
-                5. Software License and Desktop Application
+                <T>5. Software License and Desktop Application</T>
               </h2>
               <p>
-                For jewelry partners utilizing our desktop shop management software: Orivraa grants you a limited, 
+                <T>For jewelry partners utilizing our desktop shop management software: Orivraa grants you a limited, 
                 non-exclusive, non-transferable license to use the software for managing your store. You are 
                 responsible for maintaining a stable internet connection for regular syncs to ensure data 
-                consistency between your local database and the Orivraa cloud platform.
+                consistency between your local database and the Orivraa cloud platform.</T>
               </p>
 
               <h2 id="liability">
                 <ShieldAlert className="w-5 h-5 text-amber-500" />
-                6. Limitation of Liability
+                <T>6. Limitation of Liability</T>
               </h2>
               <p>
-                Orivraa provides its platform on an "as-is" basis. To the maximum extent permitted by law, 
+                <T>Orivraa provides its platform on an "as-is" basis. To the maximum extent permitted by law, 
                 Orivraa shall not be liable for indirect, incidental, or consequential damages resulting from 
                 the use or inability to use our services, including but not limited to lost profits, delayed 
-                logistics, or data loss resulting from a failure to synchronize desktop inventory.
+                logistics, or data loss resulting from a failure to synchronize desktop inventory.</T>
               </p>
               
               <div className="mt-12 bg-amber-50 dark:bg-amber-900/10 rounded-xl p-6 border border-amber-100 dark:border-amber-900/20 flex flex-col md:flex-row items-center gap-6">
@@ -166,14 +165,14 @@ export default function TermsPage() {
                   <HelpCircle className="w-6 h-6 text-amber-500" />
                 </div>
                 <div className="text-center md:text-left">
-                  <h4 className="text-lg font-bold text-gray-900 dark:text-white m-0">Need clarification?</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-0">Our support team is available to help explain any part of these terms.</p>
+                  <h4 className="text-lg font-bold text-gray-900 dark:text-white m-0"><T>Need clarification?</T></h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-0"><T>Our support team is available to help explain any part of these terms.</T></p>
                 </div>
                 <a 
                   href="/support" 
                   className="md:ml-auto inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold transition-all shadow-md active:scale-95 no-underline"
                 >
-                  Contact Support
+                  <T>Contact Support</T>
                 </a>
               </div>
             </div>

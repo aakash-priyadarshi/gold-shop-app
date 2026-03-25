@@ -4,20 +4,19 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
 import { api } from "@/lib/api";
-import { useT } from "@/providers/translation-provider";
 import {
-  ArrowDownTrayIcon,
-  ComputerDesktopIcon,
-  CpuChipIcon,
-  ServerIcon,
+    ArrowDownTrayIcon,
+    ComputerDesktopIcon,
+    CpuChipIcon,
+    ServerIcon,
 } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -76,7 +75,6 @@ const platformIcon = {
 };
 
 export default function DownloadPage() {
-  const t = useT();
   const [latestReleases, setLatestReleases] = useState<Release[]>([]);
   const [olderReleases, setOlderReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,10 +154,19 @@ export default function DownloadPage() {
               </p>
               <p className="text-sm text-muted-foreground/60">
                 {detectedPlatform === "WINDOWS"
-                  ? t("We detected you're on Windows")
+                  ? ""
                   : detectedPlatform === "MACOS"
-                    ? t("We detected you're on macOS")
-                    : t("We detected you're on Linux")}
+                    ? ""
+                    : ""}
+                {detectedPlatform === "WINDOWS" && (
+                  <T>We detected you're on Windows</T>
+                )}
+                {detectedPlatform === "MACOS" && (
+                  <T>We detected you're on macOS</T>
+                )}
+                {detectedPlatform === "LINUX" && (
+                  <T>We detected you're on Linux</T>
+                )}
               </p>
             </motion.div>
 
@@ -186,7 +193,7 @@ export default function DownloadPage() {
                       {platformIcon[selectedPlatform]}
                     </div>
                     <CardTitle className="text-xl">
-                      {t(`Orivraa for ${platformLabel[selectedPlatform]}`)}
+                      <T>{`Orivraa for ${platformLabel[selectedPlatform]}`}</T>
                     </CardTitle>
                     <CardDescription>
                       Version {primaryRelease.version} &middot;{" "}
@@ -244,9 +251,9 @@ export default function DownloadPage() {
                   <CardContent className="flex flex-col items-center py-12 gap-4">
                     <ComputerDesktopIcon className="w-12 h-12 text-muted-foreground/40" />
                     <p className="text-muted-foreground">
-                      {t(
-                        `No release available for ${platformLabel[selectedPlatform]} yet.`,
-                      )}
+                      <T>
+                        {`No release available for ${platformLabel[selectedPlatform]} yet.`}
+                      </T>
                     </p>
                     <p className="text-sm text-muted-foreground/60">
                       <T>Try switching platforms or check back later.</T>
@@ -302,7 +309,7 @@ export default function DownloadPage() {
               </div>
               {primaryRelease.architecture && (
                 <p className="text-xs text-center text-muted-foreground mt-4">
-                  Architecture: {primaryRelease.architecture}
+                  <T>Architecture:</T> {primaryRelease.architecture}
                 </p>
               )}
             </div>
@@ -313,7 +320,7 @@ export default function DownloadPage() {
         <section className="py-16 border-t border-border/50">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-2xl font-bold text-center mb-10">
-              Why Desktop?
+              <T>Why Desktop?</T>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[
@@ -360,10 +367,10 @@ export default function DownloadPage() {
                       <span className="text-2xl shrink-0">{feature.icon}</span>
                       <div>
                         <p className="font-semibold text-sm">
-                          {t(feature.title)}
+                          <T>{feature.title}</T>
                         </p>
                         <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                          {t(feature.desc)}
+                          <T>{feature.desc}</T>
                         </p>
                       </div>
                     </CardContent>

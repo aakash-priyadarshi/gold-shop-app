@@ -490,7 +490,7 @@ export function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <item.icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                    {t(item.name)}
+                    <T>{item.name}</T>
                   </Link>
                 ))}
 
@@ -507,7 +507,7 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <item.icon className="h-5 w-5 text-gold-500" />
-                      {t(item.name)}
+                      <T>{item.name}</T>
                     </Link>
                   ))}
                 </div>
@@ -525,7 +525,7 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <item.icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                      {t(item.name)}
+                      <T>{item.name}</T>
                     </Link>
                   ))}
                 </div>
@@ -688,7 +688,7 @@ export function Header() {
               href={item.href}
               className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
-              {t(item.name)}
+              <T>{item.name}</T>
             </Link>
           ))}
 
@@ -732,10 +732,10 @@ export function Header() {
                       <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0" />
                       <div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {t(item.name)}
+                          <T>{item.name}</T>
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {t(item.desc)}
+                          <T>{item.desc}</T>
                         </div>
                       </div>
                     </Link>
@@ -784,10 +784,10 @@ export function Header() {
                       <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0" />
                       <div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {t(item.name)}
+                          <T>{item.name}</T>
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {t(item.desc)}
+                          <T>{item.desc}</T>
                         </div>
                       </div>
                     </Link>
@@ -905,7 +905,7 @@ export function Header() {
                       </PopoverTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{t("Dashboard")}</p>
+                      <p><T>Dashboard</T></p>
                     </TooltipContent>
                   </Tooltip>
                   <PopoverContent className="w-56 p-2" align="end">
@@ -986,7 +986,7 @@ export function Header() {
                       </PopoverTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{t("Shop Dashboard")}</p>
+                      <p><T>Shop Dashboard</T></p>
                     </TooltipContent>
                   </Tooltip>
                   <PopoverContent className="w-56 p-2" align="end">
@@ -1105,7 +1105,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <BuildingStorefrontIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">{t("Shops & CRM")}</span>
+                          <span className="text-sm"><T>Shops & CRM</T></span>
                         </div>
                       </Link>
                       <Link
@@ -1179,7 +1179,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <BuildingStorefrontIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">{t("Shops & CRM")}</span>
+                          <span className="text-sm"><T>Shops & CRM</T></span>
                         </div>
                       </Link>
                       <Link
@@ -1426,7 +1426,7 @@ export function Header() {
                             variant="link"
                             className="mt-2 text-amber-600"
                           >
-                            {t("Browse Shops")}
+                            <T>Browse Shops</T>
                           </Button>
                         </Link>
                       </div>

@@ -4,24 +4,23 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
-import { useT } from "@/providers/translation-provider";
 import {
-  ArrowRight,
-  BarChart3,
-  BookOpen,
-  Camera,
-  CheckCircle2,
-  Globe,
-  LayoutDashboard,
-  MessageSquare,
-  Package,
-  Rocket,
-  ShieldCheck,
-  Sparkles,
-  Store,
-  TrendingUp,
-  Users,
-  Zap,
+    ArrowRight,
+    BarChart3,
+    BookOpen,
+    Camera,
+    CheckCircle2,
+    Globe,
+    LayoutDashboard,
+    MessageSquare,
+    Package,
+    Rocket,
+    ShieldCheck,
+    Sparkles,
+    Store,
+    TrendingUp,
+    Users,
+    Zap,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -154,7 +153,6 @@ const FAQS = [
 /* ────────────────────────────────────────────────────────────── */
 
 export default function SellerGuidePage() {
-  const t = useT();
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
@@ -217,7 +215,7 @@ export default function SellerGuidePage() {
                     <s.icon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                   </div>
                   <span className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-1">
-                    Step {s.step}
+                    <T>Step</T> {s.step}
                   </span>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     <T>{s.title}</T>
@@ -359,9 +357,9 @@ export default function SellerGuidePage() {
               <T>Ready to Grow Your Jewellery Business?</T>
             </h2>
             <p className="mt-3 text-gray-400 max-w-lg mx-auto">
-              {t(
-                `Join thousands of jewellers selling on ${BRAND.name}. Free to start, no contracts, cancel anytime.`,
-              )}
+              <T>
+                {`Join thousands of jewellers selling on ${BRAND.name}. Free to start, no contracts, cancel anytime.`}
+              </T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
