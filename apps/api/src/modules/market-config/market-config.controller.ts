@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { SkipSecurity } from '../security/security.guard';
 
 @Controller('market')
 export class MarketConfigController {
@@ -28,6 +29,7 @@ export class MarketConfigController {
    * Cached for 5 minutes — config rarely changes
    */
   @Get('config')
+  @SkipSecurity()
   async getConfig(
     @Query('country') country?: string,
     @Res({ passthrough: true }) res?: Response,

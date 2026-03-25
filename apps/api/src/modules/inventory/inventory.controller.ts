@@ -21,6 +21,7 @@ import {
   UpdateInventoryItemDto,
   InventoryFilterDto,
 } from "./dto/inventory.dto";
+import { SkipSecurity } from "../security/security.guard";
 
 @ApiTags("inventory")
 @Controller("inventory")
@@ -29,12 +30,14 @@ export class InventoryController {
 
   // Public endpoints
   @Get()
+  @SkipSecurity()
   @ApiOperation({ summary: "Search inventory items" })
   async findAll(@Query() filters: InventoryFilterDto) {
     return this.inventoryService.findAll(filters);
   }
 
   @Get(":id")
+  @SkipSecurity()
   @ApiOperation({ summary: "Get inventory item details" })
   async findOne(@Param("id") id: string) {
     return this.inventoryService.findOne(id);

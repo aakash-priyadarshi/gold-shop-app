@@ -15,11 +15,13 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { SkipSecurity } from "../security/security.guard";
 import { CatalogueService } from "./catalogue.service";
 import { UnlockCatalogueDto } from "./dto/unlock-catalogue.dto";
 
 @ApiTags("public-catalogues")
 @Controller("public/catalogues")
+@SkipSecurity() // All endpoints in this controller are public
 export class CataloguePublicController {
   constructor(private catalogueService: CatalogueService) {}
 

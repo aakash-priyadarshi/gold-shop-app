@@ -16,6 +16,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { SkipSecurity } from "../security/security.guard";
 import {
   CreatePlanDto,
   DisablePlanWithSuccessorDto,
@@ -34,6 +35,7 @@ export class SubscriptionPlansController {
   // ─── Public ──────────────────────────────────────────
 
   @Get("available")
+  @SkipSecurity() // Public endpoint — must bypass IP-block checks
   @ApiOperation({ summary: "List active plans for a country (public)" })
   async getAvailable(@Query("country") country: string) {
     return this.plansService.getAvailablePlans(country);

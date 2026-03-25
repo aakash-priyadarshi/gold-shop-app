@@ -1,6 +1,7 @@
 import { Body, Controller, HttpCode, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
+import { SkipSecurity } from "../security/security.guard";
 import { IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
 import { MailService } from "../mail/mail.service";
 
@@ -42,6 +43,7 @@ class ContactFormDto {
 
 @ApiTags("contact")
 @Controller("public/contact")
+@SkipSecurity()
 export class ContactController {
   constructor(private mail: MailService) {}
 

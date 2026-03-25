@@ -17,6 +17,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { SkipSecurity } from "../security/security.guard";
 import { AiChatbotService } from "./ai-chatbot.service";
 import { SupportService } from "./support.service";
 import {
@@ -37,6 +38,7 @@ export class TicketsController {
 
   // ─── Public: Global Contacts ───
   @Get("contacts")
+  @SkipSecurity()
   @ApiOperation({ summary: "Get active global support contacts (public)" })
   async getPublicContacts() {
     return this.supportService.getGlobalContacts(true);
@@ -44,6 +46,7 @@ export class TicketsController {
 
   // ─── Public: AI Chatbot (no auth required) ───
   @Post("ai-chat")
+  @SkipSecurity()
   @ApiOperation({ summary: "AI chatbot for basic support queries (public)" })
   async aiChat(
     @Req() req: any,
@@ -58,6 +61,7 @@ export class TicketsController {
 
   // ─── Public: Create ticket (guest — no auth required) ───
   @Post("guest")
+  @SkipSecurity()
   @ApiOperation({
     summary: "Create a support ticket (guest, no login required)",
   })

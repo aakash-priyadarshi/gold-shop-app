@@ -1,9 +1,11 @@
 import { Body, Controller, HttpCode, Post } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
+import { SkipSecurity } from "../security/security.guard";
 import { TranslateBatchDto, TranslateHtmlDto } from "./dto/translate.dto";
 import { TranslationService } from "./translation.service";
 
 @Controller("translation")
+@SkipSecurity() // Translation endpoints are public — frontend calls them for i18n
 export class TranslationController {
   constructor(private readonly translationService: TranslationService) {}
 

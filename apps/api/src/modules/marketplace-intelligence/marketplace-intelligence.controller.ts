@@ -19,6 +19,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { SkipSecurity } from "../security/security.guard";
 import { AiRfqBuilderService } from "./ai-rfq-builder.service";
 import {
   AiRfqBuilderDto,
@@ -44,6 +45,7 @@ export class MarketplaceIntelligenceController {
   // ═══════════════════════════════════════
 
   @Post("rfq-builder")
+  @SkipSecurity()
   @UseGuards(OptionalJwtAuthGuard)
   @Throttle({ default: { ttl: 3600000, limit: 30 } })
   @ApiBearerAuth()
@@ -87,6 +89,7 @@ export class MarketplaceIntelligenceController {
   // ═══════════════════════════════════════
 
   @Post("feasibility-check")
+  @SkipSecurity()
   @UseGuards(OptionalJwtAuthGuard)
   @Throttle({ default: { ttl: 3600000, limit: 20 } })
   @ApiBearerAuth()
@@ -102,6 +105,7 @@ export class MarketplaceIntelligenceController {
   // ═══════════════════════════════════════
 
   @Get("tooltips")
+  @SkipSecurity()
   @ApiOperation({ summary: "Get AI-generated tooltips for UI elements" })
   async getTooltips(@Query("category") category?: string) {
     return this.rfqBuilderService.getTooltips(category);
@@ -136,6 +140,7 @@ export class MarketplaceIntelligenceController {
   // ═══════════════════════════════════════
 
   @Get("trust-profile/:shopId")
+  @SkipSecurity()
   @ApiOperation({ summary: "Get trust-first shop profile data" })
   async getTrustProfile(@Param("shopId") shopId: string) {
     return this.intelligenceService.getTrustProfile(shopId);

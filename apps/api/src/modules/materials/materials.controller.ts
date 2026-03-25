@@ -12,9 +12,11 @@ import { MaterialsService } from './materials.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { SkipSecurity } from '../security/security.guard';
 
 @ApiTags('materials')
 @Controller('materials')
+@SkipSecurity() // Materials reference data is public
 export class MaterialsController {
   constructor(private materialsService: MaterialsService) {}
 

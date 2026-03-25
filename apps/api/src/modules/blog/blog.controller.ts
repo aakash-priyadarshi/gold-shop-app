@@ -17,6 +17,7 @@ import {
   UpdateBlogPostDto,
 } from "./dto/blog-post.dto";
 import { BlogService } from "./blog.service";
+import { SkipSecurity } from "../security/security.guard";
 
 @Controller("blog")
 export class BlogController {
@@ -76,12 +77,14 @@ export class BlogController {
 
   /** List published posts — GET /api/blog */
   @Get()
+  @SkipSecurity()
   async listPublished() {
     return this.blogService.listPublished();
   }
 
   /** Get published post by slug — GET /api/blog/:slug */
   @Get(":slug")
+  @SkipSecurity()
   async getBySlug(@Param("slug") slug: string) {
     return this.blogService.getBySlug(slug);
   }

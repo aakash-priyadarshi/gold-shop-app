@@ -1,0 +1,32 @@
+ORIVRAA: NEXT-GENERATION JEWELLERY INFRASTRUCTURE & AI SALES ECOSYSTEM
+----------------------------------------------------------------------
+
+1. PROJECT OVERVIEW: ORIVRAA
+Orivraa is a comprehensive enterprise-grade platform designed to revolutionize the traditional gold and jewellery retail industry. It bridges the gap between traditional craftsmanship and modern digital commerce through a multi-layered ecosystem:
+
+- Core Retail Infrastructure: A robust ERP/POS system (apps/api) that manages global gold/platinum/silver price syncing in real-time, omnichannel inventory, and complex B2B RFQ (Request for Quote) workflows.
+- B2B & B2C Marketplace: A unified portal for verified artisans and global buyers, featuring secure payment gateways, cryptographic audit logs, and automated tax/fee calculation engines across multiple regions (Nepal, India, Dubai, USA, UK).
+- Omnichannel Presence: Integrated web (Next.js) and desktop (Tauri) applications providing a seamless experience for both shop owners and end customers.
+
+2. THE AI SALES TEAM: BEYOND CHATBOTS
+The flagship innovation of Orivraa is its "Autonomous AI Sales Department." This is not just a support bot, but a proactive sales force integrated directly into the CRM and communication pipeline:
+
+- Autonomous AI Callers: Integrated via Pipecat and Daily.co, these agents perform outbound voice calls to qualify leads, handle objections, and schedule follow-ups using natural language processing.
+- Emotion & Sentiment Intelligence: A real-time "Emotion Engine" that analyzes customer sentiment during calls and video meetings, allowing the AI to pivot its strategy dynamically (frustrated, excited, skeptical).
+- Long-term Contextual Memory: Orivraa agents maintain cross-session memory of customer preferences, past negotiations, and personal details to build genuine rapport over the entire customer lifecycle.
+- Meeting Intelligence: Specialized bots that join Google Meet/Zoom sessions to provide live transcriptions, summarized action items, and real-time sales coaching for human representatives.
+- Thinking Budget Optimization: Advanced logic that manages the computational cost vs. response quality of AI agents, ensuring high-value leads receive deeper "thinking" cycles from models like Gemini 1.5/2.5 Pro/Flash.
+
+3. RESEARCH & PHD ALIGNMENT
+This project serves as a practical implementation and research platform for several advanced AI domains:
+- Autonomous Agent Coordination: Orchestrating multi-modal AI agents (Voice, Text, Video) in high-stakes financial environments.
+- Sentiment-Driven Conversational AI: Researching how emotional intelligence can be quantified and utilized to improve conversion rates in high-ticket retail.
+- Persistent LLM Architectures: Implementing advanced Long-term Memory (RAG) and state management for autonomous entities.
+- AI-Driven FinTech Trust: Ensuring transparency and regulatory compliance in AI-handled transactions for commodities like gold and precious stones.
+
+Technical Stack Summary:
+- Backend/Orchestration: NestJS, Node.js, Python (Pipecat Agents).
+- Frontend: Next.js (Web), Tauri (Desktop).
+- AI/ML Layers: Google Gemini (1.5/2.5 Pro/Flash), OpenAI, Pipecat Cloud (Real-time Voice).
+- Communication: Daily.co (WebRTC), MeetingBaas (Meeting Bot Integration).
+- Database/Durability: Prisma, PostgreSQL, Redis (Memory/Queuing).

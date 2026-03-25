@@ -5,6 +5,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { SkipSecurity } from "../security/security.guard";
 import { PlatformConfigService } from "./platform-config.service";
 
 @ApiTags("platform-config")
@@ -13,6 +14,7 @@ export class PlatformConfigController {
   constructor(private configService: PlatformConfigService) {}
 
   @Get()
+  @SkipSecurity()
   @ApiOperation({ summary: "Get all platform configuration values" })
   async getAll() {
     const configs = await this.configService.getAll();
@@ -20,6 +22,7 @@ export class PlatformConfigController {
   }
 
   @Get("public")
+  @SkipSecurity()
   @ApiOperation({
     summary: "Get public platform config (commission %, making charge caps)",
   })

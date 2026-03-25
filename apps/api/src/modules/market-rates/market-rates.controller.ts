@@ -8,9 +8,11 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CURRENCY_TO_DEFAULT_REGION, COUNTRY_CURRENCIES, REGION_TO_DEFAULT_CURRENCY } from './country-adjustments';
 import { CacheTTL } from '../../common';
+import { SkipSecurity } from '../security/security.guard';
 
 @ApiTags('Market Rates')
 @Controller('market-rates')
+@SkipSecurity() // Market rates are public data
 export class MarketRatesController {
   constructor(private readonly marketRatesService: MarketRatesService) {}
 

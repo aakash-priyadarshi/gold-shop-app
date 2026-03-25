@@ -22,6 +22,7 @@ import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
 import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
 import { ShopsService } from "./shops.service";
+import { SkipSecurity } from "../security/security.guard";
 import { CacheTTL } from '../../common';
 
 @ApiTags("shops")
@@ -34,6 +35,7 @@ export class ShopsController {
 
   // Public endpoint for verified shops listing (for /shops page)
   @Get("public")
+  @SkipSecurity()
   @CacheTTL(120) // Cache public shops listing for 2 minutes
   @ApiOperation({ summary: "List all verified public shops" })
   async findPublicShops(
@@ -76,6 +78,7 @@ export class ShopsController {
 
   // Public endpoint for finding matching sellers for an RFQ
   @Get("matching")
+  @SkipSecurity()
   @ApiOperation({ summary: "Find matching sellers for an RFQ with pricing" })
   async findMatchingSellers(
     @Query("jewelleryType") jewelleryType: string,
@@ -143,6 +146,7 @@ export class ShopsController {
   }
 
   @Get()
+  @SkipSecurity()
   @ApiOperation({ summary: "List all shops" })
   async findAll(
     @Query("country") country?: string,
