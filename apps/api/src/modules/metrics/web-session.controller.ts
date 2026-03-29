@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { WebSessionService } from './web-session.service';
@@ -23,6 +24,7 @@ export class WebSessionController {
   constructor(private readonly webSessionService: WebSessionService) {}
 
   @Post('start')
+  @UseGuards(OptionalJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Start a new web session' })
   async start(
@@ -44,11 +46,19 @@ export class WebSessionController {
   }
 
   @Post('heartbeat')
+  @UseGuards(OptionalJwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Throttle({ default: { ttl: 55000, limit: 2 } }) // max 2 per 55s per IP
   @ApiOperation({ summary: 'Session heartbeat — keep alive and count page view' })
-  async heartbeat(@Body() body: { sessionToken: string }) {
-    await this.webSessionService.heartbeat(body.sessionToken);
+  async heartbeat(
+    @Body() body: { sessionToken: string },
+    @Request() req: any,
+  ) {
+    await this.webSessionService.heartbeat({
+      sessionToken: body.sessionToken,
+      userId: req.user?.id,
+      role: req.user?.role,
+    });
   }
 
   @Post('end')

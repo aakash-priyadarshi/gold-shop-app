@@ -110,6 +110,11 @@ export function useSessionTracker() {
 
   // Re-attach user info when session changes (login happening mid-tab)
   useEffect(() => {
-    // no-op — user info flows through the bearer token in apiClient interceptors
+    // When session becomes available (login finishes), immediately send a heartbeat
+    // to link the anonymous web session to the user.
+    const t = getToken();
+    if (t && session?.user) {
+      api.post('/sessions/web/heartbeat', { sessionToken: t }).catch(() => {});
+    }
   }, [session]);
 }

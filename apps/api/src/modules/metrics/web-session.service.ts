@@ -34,10 +34,21 @@ export class WebSessionService {
   }
 
   /** Heartbeat — update lastActive and increment pageViews */
-  async heartbeat(sessionToken: string) {
+  async heartbeat(_data: { sessionToken: string; userId?: string; role?: string }) {
+    const dataToUpdate: any = {
+      lastActive: new Date(),
+      pageViews: { increment: 1 },
+    };
+
+    // Link session to user if they just logged in mid-session
+    if (_data.userId) {
+      dataToUpdate.userId = _data.userId;
+      dataToUpdate.role = _data.role || 'CUSTOMER';
+    }
+
     await this.prisma.webSession.updateMany({
-      where: { sessionToken, endedAt: null },
-      data: { lastActive: new Date(), pageViews: { increment: 1 } },
+      where: { sessionToken: _data.sessionToken, endedAt: null },
+      data: dataToUpdate,
     });
   }
 
