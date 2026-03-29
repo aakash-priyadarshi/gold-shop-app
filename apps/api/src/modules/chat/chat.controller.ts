@@ -191,6 +191,16 @@ export class ChatController {
     return this.chatService.getBlockedMessageOriginal(messageId);
   }
 
+  @Patch("admin/messages/:messageId/unblock")
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Unblock a message flagged as a false positive" })
+  async unblockMessage(
+    @CurrentUser("id") adminId: string,
+    @Param("messageId") messageId: string,
+  ) {
+    return this.chatService.unblockMessage(messageId, adminId);
+  }
+
   @Patch("admin/conversations/:id/unlock")
   @Roles("ADMIN")
   @ApiOperation({ summary: "Unlock a locked conversation" })

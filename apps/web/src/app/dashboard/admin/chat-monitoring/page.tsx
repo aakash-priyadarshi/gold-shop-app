@@ -69,6 +69,7 @@ interface UserViolationDetail {
     id: string;
     content: string;
     violationType: string;
+    isBlocked: boolean;
     createdAt: string;
     conversation: {
       id: string;
@@ -102,6 +103,7 @@ export default function AdminChatMonitoringPage() {
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState<string | null>(null);
   const [unblocking, setUnblocking] = useState<string | null>(null);
+  const [messageUnblocking, setMessageUnblocking] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserViolationDetail | null>(
     null,
   );
@@ -161,6 +163,24 @@ export default function AdminChatMonitoringPage() {
       alert(e.response?.data?.message || "Failed to unblock user");
     } finally {
       setUnblocking(null);
+    }
+  }
+
+  async function handleUnblockMessage(messageId: string) {
+    if (!confirm("Are you sure you want to unblock this message? It will be marked as a false positive and delivered to the recipient.")) {
+      return;
+    }
+    setMessageUnblocking(messageId);
+    try {
+      await chatApi.unblockMessage(messageId);
+      loadData();
+      if (selectedUserId) {
+        loadUserHistory(selectedUserId);
+      }
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Failed to unblock message");
+    } finally {
+      setMessageUnblocking(null);
     }
   }
 
@@ -461,12 +481,25 @@ export default function AdminChatMonitoringPage() {
                             {new Date(v.createdAt).toLocaleString()}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Badge variant="secondary">{v.violationType}</Badge>
-                          <span className="text-muted-foreground">
-                            in {v.conversation.buyer.firstName} ↔{" "}
-                            {v.conversation.shop.shopName}
-                          </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Badge variant="secondary">{v.violationType}</Badge>
+                            <span className="text-muted-foreground">
+                              in {v.conversation.buyer.firstName} ↔{" "}
+                              {v.conversation.shop.shopName}
+                            </span>
+                          </div>
+                          {v.isBlocked && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUnblockMessage(v.id)}
+                              disabled={messageUnblocking === v.id}
+                            >
+                              <Unlock className="h-3 w-3 mr-1" />
+                              {messageUnblocking === v.id ? "Unblocking..." : "Unblock Message"}
+                            </Button>
+                          )}
                         </div>
                         <p className="text-sm bg-red-50 dark:bg-red-950/20 p-2 rounded border border-red-200 dark:border-red-900 font-mono">
                           {v.content.substring(0, 200)}
@@ -593,9 +626,22 @@ export default function AdminChatMonitoringPage() {
                                     {v.violationType}
                                   </Badge>
                                 </div>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(v.createdAt).toLocaleString()}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(v.createdAt).toLocaleString()}
+                                  </span>
+                                  {v.isBlocked && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleUnblockMessage(v.id)}
+                                      disabled={messageUnblocking === v.id}
+                                    >
+                                      <Unlock className="h-3 w-3 mr-1" />
+                                      {messageUnblocking === v.id ? "Unblocking..." : "Unblock"}
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                               <p className="text-sm text-muted-foreground">
                                 {v.conversation.buyer.firstName} ↔{" "}

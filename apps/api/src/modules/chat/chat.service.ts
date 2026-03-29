@@ -257,22 +257,35 @@ export class ChatService {
     // Authorize
     this.authorizeConversationAccess(conversation, senderId, senderRole);
 
-    // ── Layer 1: Regex scan ──
-    const regexResult = this.masking.mask(content);
+    const isAdminOrSystem = ["ADMIN", "SALES", "SUPPORT", "SYSTEM", "SUPER_ADMIN"].includes(senderRole);
 
-    // ── Layer 2: Gemini AI deep scan (async, catches obfuscated attempts) ──
-    const scanResult = await this.masking.deepScan(content, regexResult);
+    let scanResult = {
+      maskedContent: content,
+      hasViolation: false,
+      violationType: null as string | null,
+      originalMatches: [] as string[],
+      aiDetected: false,
+      confidence: 0,
+    };
 
-    // ── Layer 3: Image attachment scan ──
-    if (attachmentUrl && attachmentType === "image") {
-      const imageResult = await this.masking.analyzeImage(attachmentUrl);
-      if (imageResult.hasContactInfo && imageResult.confidence >= 0.7) {
-        // Treat image violation same as text violation
-        scanResult.hasViolation = true;
-        scanResult.violationType = "IMAGE_CONTACT_INFO";
-        scanResult.originalMatches.push(`[Image: ${imageResult.description}]`);
-        scanResult.aiDetected = true;
-        scanResult.confidence = imageResult.confidence;
+    if (!isAdminOrSystem) {
+      // ── Layer 1: Regex scan ──
+      const regexResult = this.masking.mask(content);
+
+      // ── Layer 2: Gemini AI deep scan (async, catches obfuscated attempts) ──
+      scanResult = await this.masking.deepScan(content, regexResult);
+
+      // ── Layer 3: Image attachment scan ──
+      if (attachmentUrl && attachmentType === "image") {
+        const imageResult = await this.masking.analyzeImage(attachmentUrl);
+        if (imageResult.hasContactInfo && imageResult.confidence >= 0.7) {
+          // Treat image violation same as text violation
+          scanResult.hasViolation = true;
+          scanResult.violationType = "IMAGE_CONTACT_INFO";
+          scanResult.originalMatches.push(`[Image: ${imageResult.description}]`);
+          scanResult.aiDetected = true;
+          scanResult.confidence = imageResult.confidence;
+        }
       }
     }
 
@@ -845,6 +858,40 @@ export class ChatService {
 
     if (!message) throw new NotFoundException("Message not found");
     return message;
+  }
+
+  // ─── Admin: unblock false positive message ───
+  async unblockMessage(messageId: string, adminId: string) {
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!message) throw new NotFoundException("Message not found");
+
+    if (!message.isBlocked) {
+      throw new BadRequestException("This message is not blocked.");
+    }
+
+    const unblockedMessage = await this.prisma.message.update({
+      where: { id: messageId },
+      data: {
+        isBlocked: false,
+        hasViolation: false,
+        violationType: null,
+        maskedContent: null,
+      },
+    });
+
+    await this.audit.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: "MESSAGE_UNBLOCKED_FALSE_POSITIVE",
+      resourceType: "Message",
+      resourceId: messageId,
+    });
+
+    // The message is now visible. It will appear on next reload.
+    return { success: true, message: unblockedMessage };
   }
 
   // ─── Authorization helper ───

@@ -53,7 +53,7 @@ export class ContactMaskingService {
     // Instagram
     {
       type: 'INSTAGRAM',
-      regex: /instagram|insta\s*gram|ig\s*:?\s*@?[a-zA-Z0-9_.]+/gi,
+      regex: /instagram|insta\s*gram|\big\b\s*:?\s*@?[a-zA-Z0-9_.]+/gi,
     },
     // Facebook / Messenger
     {

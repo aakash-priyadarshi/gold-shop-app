@@ -767,6 +767,8 @@ export const chatApi = {
     api.get(`/chat/admin/violations/user/${userId}`),
   getBlockedMessage: (messageId: string) =>
     api.get(`/chat/admin/messages/${messageId}`),
+  unblockMessage: (messageId: string) =>
+    api.patch(`/chat/admin/messages/${messageId}/unblock`),
   unlockConversation: (conversationId: string) =>
     api.patch(`/chat/admin/conversations/${conversationId}/unlock`),
   unblockUser: (userId: string) =>
