@@ -35,9 +35,18 @@ export class WebSessionService {
 
   /** Heartbeat — update lastActive and increment pageViews */
   async heartbeat(_data: { sessionToken: string; userId?: string; role?: string }) {
+    const session = await this.prisma.webSession.findUnique({
+      where: { sessionToken: _data.sessionToken }
+    });
+    if (!session || session.endedAt) return;
+
+    const now = new Date();
+    const durationSec = Math.floor((now.getTime() - session.startedAt.getTime()) / 1000);
+
     const dataToUpdate: any = {
-      lastActive: new Date(),
+      lastActive: now,
       pageViews: { increment: 1 },
+      durationSec,
     };
 
     // Link session to user if they just logged in mid-session
@@ -46,8 +55,8 @@ export class WebSessionService {
       dataToUpdate.role = _data.role || 'CUSTOMER';
     }
 
-    await this.prisma.webSession.updateMany({
-      where: { sessionToken: _data.sessionToken, endedAt: null },
+    await this.prisma.webSession.update({
+      where: { sessionToken: _data.sessionToken },
       data: dataToUpdate,
     });
   }
