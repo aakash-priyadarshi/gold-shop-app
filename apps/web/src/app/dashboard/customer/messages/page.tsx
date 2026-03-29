@@ -6,6 +6,7 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -471,12 +472,16 @@ export default function CustomerMessagesPage() {
                     </div>
                   ) : (
                     <div className="p-3 border-t flex gap-2">
-                      <Input
+                      <AutoResizeTextarea
+                        className="max-h-[200px] min-h-[44px]"
                         value={newMessage}
                         onChange={(e) => handleInputChange(e.target.value)}
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && !e.shiftKey && handleSend()
-                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSend();
+                          }
+                        }}
                         placeholder="Type a message..."
                         disabled={sending}
                       />

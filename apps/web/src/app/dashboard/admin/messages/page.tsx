@@ -2,9 +2,11 @@
 
 import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { adminApi, chatApi } from "@/lib/api";
 import { Lock, MessageSquare, Send, Shield, Store, Users, Search, Wand2, Loader2 } from "lucide-react";
@@ -439,13 +441,16 @@ export default function AdminMessagesPage() {
                     >
                       <Wand2 className="h-4 w-4" />
                     </Button>
-                    <Input
-                      className="flex-1"
+                    <AutoResizeTextarea
+                      className="flex-1 max-h-[200px] min-h-[44px]"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && !e.shiftKey && handleSend()
-                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSend();
+                        }
+                      }}
                       placeholder="Send a message as Admin..."
                       disabled={sending}
                     />
