@@ -10,6 +10,11 @@ export interface MaskingResult {
   confidence: number; // 0-1 confidence score from AI
 }
 
+export interface ScanOptions {
+  allowlist?: string[];      // Phrases that should NEVER be flagged
+  falsePositives?: string[]; // Examples of things that were incorrectly flagged before
+}
+
 /**
  * Contact masking service — multi-layer detection:
  *   Layer 1: Regex patterns (instant, deterministic)
@@ -94,11 +99,26 @@ export class ContactMaskingService {
    * Layer 2: Gemini AI (for obfuscated attempts) — async, non-blocking.
    * Returns the masked content along with violation metadata.
    */
-  mask(content: string): MaskingResult {
+  mask(content: string, options?: ScanOptions): MaskingResult {
     let maskedContent = content;
     let hasViolation = false;
     let violationType: string | null = null;
     const originalMatches: string[] = [];
+
+    // Pre-check allowlist to temporarily protect phrases
+    const placeholderMap: Map<string, string> = new Map();
+    if (options?.allowlist && options.allowlist.length > 0) {
+      options.allowlist.forEach((phrase, idx) => {
+        const placeholder = `__ALLOWLIST_${idx}__`;
+        // Use a safe way to replace all occurrences without regex collisions
+        let lastInx = -1;
+        while ((lastInx = maskedContent.toLowerCase().indexOf(phrase.toLowerCase())) !== -1) {
+          const originalText = maskedContent.substring(lastInx, lastInx + phrase.length);
+          placeholderMap.set(placeholder, originalText);
+          maskedContent = maskedContent.substring(0, lastInx) + placeholder + maskedContent.substring(lastInx + phrase.length);
+        }
+      });
+    }
 
     for (const pattern of this.patterns) {
       const matches = maskedContent.match(pattern.regex);
@@ -113,6 +133,11 @@ export class ContactMaskingService {
         }
       }
     }
+
+    // Restore allowlisted phrases
+    placeholderMap.forEach((originalText, placeholder) => {
+      maskedContent = maskedContent.replace(new RegExp(placeholder, 'g'), originalText);
+    });
 
     if (hasViolation) {
       this.logger.warn(
@@ -136,7 +161,7 @@ export class ContactMaskingService {
    * Called after regex pass — if regex already caught it, AI is optional.
    * Returns updated MaskingResult with AI findings.
    */
-  async deepScan(content: string, regexResult: MaskingResult): Promise<MaskingResult> {
+  async deepScan(content: string, regexResult: MaskingResult, options?: ScanOptions): Promise<MaskingResult> {
     // If regex already caught it with high confidence, skip AI
     if (regexResult.hasViolation && regexResult.originalMatches.length >= 2) {
       return regexResult;
@@ -147,7 +172,7 @@ export class ContactMaskingService {
     }
 
     try {
-      const aiResult = await this.analyzeWithGemini(content);
+      const aiResult = await this.analyzeWithGemini(content, options);
 
       if (aiResult.isViolation && !regexResult.hasViolation) {
         // AI caught something regex missed
@@ -180,24 +205,36 @@ export class ContactMaskingService {
   /**
    * Call Gemini Flash to analyze message for hidden contact attempts.
    */
-  private async analyzeWithGemini(content: string): Promise<{
+  private async analyzeWithGemini(content: string, options?: ScanOptions): Promise<{
     isViolation: boolean;
     violationType: string | null;
     confidence: number;
     detectedFragments: string[];
     reasoning: string;
   }> {
+    let exampleContext = '';
+    if (options?.falsePositives && options.falsePositives.length > 0) {
+      exampleContext = `\n\nCRITICAL: The following are examples of messages that were PREVIOUSLY INCORRECTLY FLAGGED. Do NOT flag these or similar looking phrases:
+${options.falsePositives.map(m => `- "${m}"`).join('\n')}`;
+    }
+
     const prompt = `You are a chat moderation AI for a jewellery marketplace. Your job is to detect if a message contains any attempt to share personal contact information or move communication off-platform.
+${exampleContext}
 
 Detect ALL of these:
 1. Phone numbers (any format, any country, obfuscated like "nine-eight-seven...")
 2. Email addresses (even partially hidden like "john at gmail dot com")
 3. Social media handles (WhatsApp, Instagram, Telegram, Facebook, Viber, Signal, etc.)
-4. URLs or website addresses
+4. URLs or website addresses that are NOT for orivraa.com
 5. Physical addresses given for direct contact
 6. Coded language trying to share contacts ("check my profile", "my shop name + google", etc.)
 7. Requests to move communication off-platform ("let's talk elsewhere", "DM me", etc.)
 8. Number sequences that look like phone numbers even if separated by words/spaces
+
+IGNORE these:
+1. Mentions of "OriVraa" or "orivraa.com"
+2. Technical shop settings or tutorial instructions
+3. Registration or login links to orivraa.com
 
 Message to analyze:
 "${content.replace(/"/g, '\\"').substring(0, 1000)}"

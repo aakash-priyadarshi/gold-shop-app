@@ -58,6 +58,7 @@ model User {
   // Chat
   sentMessages         Message[]          @relation("MessageSender")
   buyerConversations   Conversation[]     @relation("BuyerConversations")
+  chatAllowlistEntries ChatAllowlist[]
   // Support Tickets
   supportTickets       SupportTicket[]    @relation("UserTickets")
   assignedTickets      SupportTicket[]    @relation("AssignedTickets")
@@ -2172,6 +2173,7 @@ model Message {
   readAt           DateTime?
   isSystem         Boolean      @default(false) // System-generated messages (warnings, etc.)
   isBlocked        Boolean      @default(false) // Blocked by moderation — not delivered to recipient
+  isFalsePositive  Boolean      @default(false) // Admin manually confirmed this was NOT a violation
   createdAt        DateTime     @default(now())
 
   conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -3385,4 +3387,20 @@ model SurveyAnswer {
   question    SurveyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([responseId, questionId])
+}
+
+// ── Moderation Allowlist ─────────────────────────────────────
+// Phrases or domains that are explicitly allowed in chats (e.g. orivraa.com)
+model ChatAllowlist {
+  id          String   @id @default(uuid())
+  pattern     String   @unique
+  type        String   @default("PHRASE") // PHRASE, DOMAIN, REGEX
+  reason      String?
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator     User?    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([pattern])
 }
