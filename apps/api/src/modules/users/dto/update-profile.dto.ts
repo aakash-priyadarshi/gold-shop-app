@@ -18,6 +18,16 @@ export class UpdateProfileDto {
   @IsString()
   name?: string; // Combined name field (will be split into firstName/lastName)
 
+  @ApiPropertyOptional({ example: "1990-01-01T00:00:00.000Z" })
+  @IsOptional()
+  @IsString()
+  dateOfBirth?: string;
+
+  @ApiPropertyOptional({ example: "MALE" })
+  @IsOptional()
+  @IsString()
+  gender?: string;
+
   @ApiPropertyOptional({ example: "+9779812345678" })
   @IsOptional()
   @IsString()

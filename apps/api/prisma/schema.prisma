@@ -74,6 +74,13 @@ model User {
   desktopSessions      DesktopSession[]
   // Web app sessions
   webSessions          WebSession[]
+  
+  // Custom Profile Enrivhment fields
+  dateOfBirth          DateTime?
+  gender               String?    // e.g. "MALE", "FEMALE", "OTHER"
+
+  // Survey responses
+  surveyResponses      SurveyResponse[]
 
   // Google People API enriched data
   googleBirthday       String?    // "YYYY-MM-DD" or partial
@@ -3316,4 +3323,66 @@ model WebSession {
   @@index([startedAt])
   @@index([role, startedAt])
   @@index([userId, startedAt])
+}
+
+// -----------------------------------------------------------------------------
+// SURVEY SYSTEM
+// -----------------------------------------------------------------------------
+
+model Survey {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  isActive    Boolean  @default(false)
+  targetRole  String?  // e.g., "CUSTOMER", "SHOPKEEPER", or null for everyone
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  questions   SurveyQuestion[]
+  responses   SurveyResponse[]
+
+  @@index([isActive])
+}
+
+model SurveyQuestion {
+  id          String   @id @default(uuid())
+  surveyId    String
+  text        String
+  type        String   // "RATING", "TEXT", "MULTIPLE_CHOICE"
+  options     Json?    // Array of string options for multiple choice
+  isRequired  Boolean  @default(true)
+  orderIdx    Int      @default(0)
+
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  answers     SurveyAnswer[]
+
+  @@index([surveyId])
+  @@index([surveyId, orderIdx])
+}
+
+model SurveyResponse {
+  id          String   @id @default(uuid())
+  surveyId    String
+  userId      String
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers     SurveyAnswer[]
+
+  @@unique([surveyId, userId]) // A user can only respond once per survey
+  @@index([userId])
+}
+
+model SurveyAnswer {
+  id          String   @id @default(uuid())
+  responseId  String
+  questionId  String
+  value       String   // Stringified answer
+  
+  response    SurveyResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question    SurveyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([responseId, questionId])
 }

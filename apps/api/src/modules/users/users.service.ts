@@ -16,6 +16,8 @@ interface UpdateProfileData {
   firstName?: string;
   lastName?: string;
   name?: string;
+  dateOfBirth?: string;
+  gender?: string;
   phone?: string;
   country?: string;
   state?: string;
@@ -116,6 +118,8 @@ export class UsersService {
     if (data.country !== undefined) updateData.preferredCountry = data.country;
     if (data.state !== undefined) updateData.preferredState = data.state;
     if (data.city !== undefined) updateData.preferredCity = data.city;
+    if (data.dateOfBirth !== undefined) updateData.dateOfBirth = new Date(data.dateOfBirth);
+    if (data.gender !== undefined) updateData.gender = data.gender;
 
     return this.prisma.user.update({
       where: { id: userId },

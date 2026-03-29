@@ -596,17 +596,11 @@ export class AuthService {
     }
 
     // User doesn't exist
-    // If mode is 'login', indicate account not found instead of creating
-    if (mode === "login") {
-      this.logger.log(
-        `Google OAuth login attempted for non-existent account: ${googleUser.email}`,
-      );
-      throw new NotFoundException({
-        message: "No account found with this email. Please register first.",
-        code: "ACCOUNT_NOT_FOUND",
-        email: googleUser.email,
-      });
-    }
+    // User doesn't exist yet but tried to log in using Google Auth
+    // Instead of throwing an error, we seamlessly auto-register them using the role requested.
+    this.logger.log(
+      `Auto-registering new Google account via OAuth: ${googleUser.email} (Role: ${requestedRole})`,
+    );
 
     // Mode is 'register' - create new user from Google account
     const newUser = await this.prisma.user.create({
