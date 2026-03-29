@@ -269,27 +269,11 @@ export class ChatService {
     };
 
     if (!isAdminOrSystem) {
-      // ── Layer 0: Fetch allowlist and recent false positives ──
-      const [allowlistEntries, recentFalsePositives] = await Promise.all([
-        this.prisma.chatAllowlist.findMany({ select: { pattern: true } }),
-        this.prisma.message.findMany({
-          where: { isFalsePositive: true },
-          orderBy: { createdAt: "desc" },
-          take: 10,
-          select: { content: true },
-        }),
-      ]);
-
-      const scanOptions = {
-        allowlist: allowlistEntries.map((e) => e.pattern),
-        falsePositives: recentFalsePositives.map((m) => m.content),
-      };
-
       // ── Layer 1: Regex scan ──
-      const regexResult = this.masking.mask(content, scanOptions);
+      const regexResult = this.masking.mask(content);
 
       // ── Layer 2: Gemini AI deep scan (async, catches obfuscated attempts) ──
-      scanResult = await this.masking.deepScan(content, regexResult, scanOptions);
+      scanResult = await this.masking.deepScan(content, regexResult);
 
       // ── Layer 3: Image attachment scan ──
       if (attachmentUrl && attachmentType === "image") {
