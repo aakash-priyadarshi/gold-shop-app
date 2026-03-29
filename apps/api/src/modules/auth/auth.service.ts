@@ -629,7 +629,7 @@ export class AuthService {
         ...(googleUser.googleBirthday && { googleBirthday: googleUser.googleBirthday }),
         ...(googleUser.googleGender && { googleGender: googleUser.googleGender }),
         ...(googleUser.googlePhoneRaw && { googlePhoneRaw: googleUser.googlePhoneRaw }),
-        ...(googleUser.googleAddressRaw && { googleAddressRaw: googleUser.googleAddressRaw }),
+        ...(googleUser.googleAddressRaw && { googleAddressRaw: googleUser.googleAddressRaw as any }),
         ...(googleUser.googleLocale && { googleLocale: googleUser.googleLocale }),
         ...(googleUser.googlePicture && { googlePicture: googleUser.googlePicture }),
       },

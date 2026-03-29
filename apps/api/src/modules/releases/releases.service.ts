@@ -84,7 +84,8 @@ export class ReleasesService {
    * Register or update a desktop session heartbeat
    */
   async heartbeat(dto: DesktopHeartbeatDto, userId: string | null, ip: string) {
-    // Check if this version is the latest
+    // Analytics is handled by the dedicated sessions module now.
+    // This endpoint just returns version check details for the desktop app.
     const latestWindows = await this.prisma.appRelease.findFirst({
       where: { platform: "WINDOWS", isLatest: true },
       select: { version: true },
@@ -96,46 +97,6 @@ export class ReleasesService {
     const isLatest =
       dto.appVersion === latestWindows?.version ||
       dto.appVersion === latestMacos?.version;
-
-    const sessionData = {
-      appVersion: dto.appVersion,
-      os: dto.os,
-      arch: dto.arch || null,
-      isLatest,
-      lastSeen: new Date(),
-    };
-
-    if (userId) {
-      await this.prisma.desktopSession.upsert({
-        where: { userId_ipAddress: { userId, ipAddress: ip } },
-        update: sessionData,
-        create: {
-          userId,
-          ipAddress: ip,
-          firstSeen: new Date(),
-          ...sessionData,
-        },
-      });
-    } else {
-      // Anonymous heartbeat (user not logged in yet)
-      const existing = await this.prisma.desktopSession.findFirst({
-        where: { ipAddress: ip, userId: null },
-      });
-      if (existing) {
-        await this.prisma.desktopSession.update({
-          where: { id: existing.id },
-          data: sessionData,
-        });
-      } else {
-        await this.prisma.desktopSession.create({
-          data: {
-            ipAddress: ip,
-            firstSeen: new Date(),
-            ...sessionData,
-          },
-        });
-      }
-    }
 
     return {
       isLatest,
@@ -149,7 +110,7 @@ export class ReleasesService {
   async getUserDesktopStatus(userId: string) {
     const sessions = await this.prisma.desktopSession.findMany({
       where: { userId },
-      orderBy: { lastSeen: "desc" },
+      orderBy: { lastHeartbeat: "desc" },
       take: 5,
     });
 
@@ -163,13 +124,13 @@ export class ReleasesService {
         appVersion: s.appVersion,
         os: s.os,
         arch: s.arch,
-        isLatest: s.isLatest,
-        lastSeen: s.lastSeen,
-        firstSeen: s.firstSeen,
+        isLatest: s.appVersion === latestRelease?.version,
+        lastSeen: s.lastHeartbeat,
+        firstSeen: s.startedAt,
       })),
       latestVersion: latestRelease?.version ?? null,
       hasDesktop: sessions.length > 0,
-      isUpToDate: sessions.some((s) => s.isLatest),
+      isUpToDate: sessions.some((s) => s.appVersion === latestRelease?.version),
     };
   }
 
@@ -179,13 +140,16 @@ export class ReleasesService {
   async checkDesktopByIp(ip: string) {
     const session = await this.prisma.desktopSession.findFirst({
       where: { ipAddress: ip },
-      orderBy: { lastSeen: "desc" },
+      orderBy: { lastHeartbeat: "desc" },
+    });
+    const latestRelease = await this.prisma.appRelease.findFirst({
+      where: { platform: "WINDOWS", isLatest: true, isActive: true },
     });
     return {
       hasDesktop: !!session,
       version: session?.appVersion || null,
-      isLatest: session?.isLatest || false,
-      lastSeen: session?.lastSeen || null,
+      isLatest: session?.appVersion === latestRelease?.version,
+      lastSeen: session?.lastHeartbeat || null,
     };
   }
 
@@ -352,10 +316,10 @@ export class ReleasesService {
   async getDesktopAnalytics() {
     const totalSessions = await this.prisma.desktopSession.count();
     const activeLast24h = await this.prisma.desktopSession.count({
-      where: { lastSeen: { gte: new Date(Date.now() - 86400000) } },
+      where: { lastHeartbeat: { gte: new Date(Date.now() - 86400000) } },
     });
     const activeLast7d = await this.prisma.desktopSession.count({
-      where: { lastSeen: { gte: new Date(Date.now() - 604800000) } },
+      where: { lastHeartbeat: { gte: new Date(Date.now() - 604800000) } },
     });
 
     // Version distribution
@@ -372,9 +336,12 @@ export class ReleasesService {
       orderBy: { _count: { id: "desc" } },
     });
 
-    const upToDate = await this.prisma.desktopSession.count({
-      where: { isLatest: true },
+    const latestRelease = await this.prisma.appRelease.findFirst({
+      where: { platform: "WINDOWS", isLatest: true, isActive: true },
     });
+    const upToDate = latestRelease ? await this.prisma.desktopSession.count({
+      where: { appVersion: latestRelease.version },
+    }) : 0;
 
     return {
       total: totalSessions,
