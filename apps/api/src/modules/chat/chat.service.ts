@@ -16,6 +16,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { ContactMaskingService } from "./contact-masking.service";
+import { ModerationEmbeddingService } from "./moderation-embedding.service";
 
 /** After this many global violations the user's account is blocked. */
 const MAX_WARNINGS = 3;
@@ -115,6 +116,7 @@ export class ChatService {
     private audit: AuditService,
     private notifications: NotificationsService,
     private masking: ContactMaskingService,
+    private embeddingSvc: ModerationEmbeddingService,
   ) {}
 
   // ─── Create or get existing conversation ───
@@ -269,25 +271,35 @@ export class ChatService {
     };
 
     if (!isAdminOrSystem) {
-      // ── Layer 1: Regex scan ──
-      const regexResult = this.masking.mask(content);
+      // ── Layer 0: Semantic similarity lookup against confirmed false positives ──
+      // Runs a pgvector cosine search. If the new message is nearly identical
+      // to a message an admin already unblocked, we skip scanning entirely (bypass).
+      // If it is merely similar, we get 1-2 hints to inject into the Gemini prompt.
+      const { bypass, hints } = await this.embeddingSvc.lookup(content);
 
-      // ── Layer 2: Gemini AI deep scan (async, catches obfuscated attempts) ──
-      scanResult = await this.masking.deepScan(content, regexResult);
+      if (bypass) {
+        this.logger.debug(`Message passed via FP similarity bypass`);
+        // Fall through — scanResult stays clean (no violation)
+      } else {
+        // ── Layer 1: Regex scan ──
+        const regexResult = this.masking.mask(content);
 
-      // ── Layer 3: Image attachment scan ──
-      if (attachmentUrl && attachmentType === "image") {
-        const imageResult = await this.masking.analyzeImage(attachmentUrl);
-        if (imageResult.hasContactInfo && imageResult.confidence >= 0.7) {
-          // Treat image violation same as text violation
-          scanResult.hasViolation = true;
-          scanResult.violationType = "IMAGE_CONTACT_INFO";
-          scanResult.originalMatches.push(`[Image: ${imageResult.description}]`);
-          scanResult.aiDetected = true;
-          scanResult.confidence = imageResult.confidence;
+        // ── Layer 2: Gemini AI deep scan with pgvector few-shot hints ──
+        scanResult = await this.masking.deepScan(content, regexResult, hints);
+
+        // ── Layer 3: Image attachment scan ──
+        if (attachmentUrl && attachmentType === "image") {
+          const imageResult = await this.masking.analyzeImage(attachmentUrl);
+          if (imageResult.hasContactInfo && imageResult.confidence >= 0.7) {
+            scanResult.hasViolation = true;
+            scanResult.violationType = "IMAGE_CONTACT_INFO";
+            scanResult.originalMatches.push(`[Image: ${imageResult.description}]`);
+            scanResult.aiDetected = true;
+            scanResult.confidence = imageResult.confidence;
+          }
         }
-      }
-    }
+      } // end else (not bypass)
+    } // end if (!isAdminOrSystem)
 
     // ─────── VIOLATION DETECTED: BLOCK the message ───────
     if (scanResult.hasViolation) {
@@ -891,7 +903,12 @@ export class ChatService {
       resourceId: messageId,
     });
 
-    // The message is now visible. It will appear on next reload.
+    // Store embedding for this confirmed false positive so future similar
+    // messages benefit from the admin's correction (pgvector feedback loop).
+    this.embeddingSvc.storeEmbedding(messageId, message.content).catch((e) =>
+      this.logger.warn(`Non-critical: embedding storage failed: ${e}`),
+    );
+
     return { success: true, message: unblockedMessage };
   }
 

@@ -3,6 +3,7 @@ import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
 import { ContactMaskingService } from './contact-masking.service';
+import { ModerationEmbeddingService } from './moderation-embedding.service';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -18,7 +19,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     }),
   ],
   controllers: [ChatController],
-  providers: [ChatService, ChatGateway, ContactMaskingService],
+  providers: [ChatService, ChatGateway, ContactMaskingService, ModerationEmbeddingService],
   exports: [ChatService, ChatGateway],
 })
 export class ChatModule {}

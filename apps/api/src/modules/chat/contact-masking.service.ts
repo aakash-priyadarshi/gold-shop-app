@@ -135,9 +135,16 @@ export class ContactMaskingService {
    * Async AI-powered deep scan using Gemini Flash.
    * Catches obfuscated contacts, coded language, screenshots descriptions, etc.
    * Called after regex pass — if regex already caught it, AI is optional.
-   * Returns updated MaskingResult with AI findings.
+   *
+   * @param hints  0-2 semantically similar false-positive examples from pgvector.
+   *               These are injected as few-shot context into the Gemini prompt so
+   *               the AI learns from past admin corrections without growing unboundedly.
    */
-  async deepScan(content: string, regexResult: MaskingResult): Promise<MaskingResult> {
+  async deepScan(
+    content: string,
+    regexResult: MaskingResult,
+    hints: Array<{ content: string; similarity: number }> = [],
+  ): Promise<MaskingResult> {
     // If regex already caught it with high confidence, skip AI
     if (regexResult.hasViolation && regexResult.originalMatches.length >= 2) {
       return regexResult;
@@ -148,7 +155,7 @@ export class ContactMaskingService {
     }
 
     try {
-      const aiResult = await this.analyzeWithGemini(content);
+      const aiResult = await this.analyzeWithGemini(content, hints);
 
       if (aiResult.isViolation && !regexResult.hasViolation) {
         // AI caught something regex missed
@@ -180,15 +187,31 @@ export class ContactMaskingService {
 
   /**
    * Call Gemini Flash to analyze message for hidden contact attempts.
+   * Accepts optional few-shot hints from pgvector semantic similarity lookup.
    */
-  private async analyzeWithGemini(content: string): Promise<{
+  private async analyzeWithGemini(
+    content: string,
+    hints: Array<{ content: string; similarity: number }> = [],
+  ): Promise<{
     isViolation: boolean;
     violationType: string | null;
     confidence: number;
     detectedFragments: string[];
     reasoning: string;
   }> {
-    const prompt = `You are a chat moderation AI for a jewellery marketplace. Your job is to detect if a message contains any attempt to share personal contact information or move communication off-platform.
+    // Build few-shot caution block only when pgvector found similar FPs
+    const hintSection = hints.length > 0
+      ? `\n\nIMPORTANT — Contextual examples from admin review:\n` +
+        hints
+          .map(
+            (h, i) =>
+              `Example ${i + 1} (similarity ${(h.similarity * 100).toFixed(0)}%): "${h.content.substring(0, 200)}"\n` +
+              `→ This was CONFIRMED as NOT a violation by an admin. Apply extra caution before flagging semantically similar messages.`,
+          )
+          .join('\n\n')
+      : '';
+
+    const prompt = `You are a chat moderation AI for a jewellery marketplace. Your job is to detect if a message contains any attempt to share personal contact information or move communication off-platform.${hintSection}
  
 Detect ALL of these:
 1. Phone numbers (any format, any country, obfuscated like "nine-eight-seven...")
