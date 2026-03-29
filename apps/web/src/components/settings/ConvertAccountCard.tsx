@@ -29,7 +29,12 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
-import { COUNTRIES, CountryCode, CurrencyCode } from "@/store/preferences";
+import {
+  COUNTRIES,
+  CountryCode,
+  CurrencyCode,
+  usePreferencesStore,
+} from "@/store/preferences";
 import { useT } from "@/providers/translation-provider";
 import { Loader2, Store, StoreIcon } from "lucide-react";
 import { useState } from "react";
@@ -49,9 +54,11 @@ export function ConvertAccountCard() {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const currentCountry = usePreferencesStore((state) => state.country);
+
   const [formData, setFormData] = useState({
     shopName: "",
-    country: user?.preferredCountry || "NP",
+    country: (user as any)?.preferredCountry || currentCountry || "NP",
     city: "",
     address: "",
     contactPhone: user?.phone || "",

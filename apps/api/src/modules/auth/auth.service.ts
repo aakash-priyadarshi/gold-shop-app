@@ -330,6 +330,13 @@ export class AuthService {
       newValue: { role: "SHOPKEEPER", shopId: result.shop.id },
     });
 
+    // Send welcome email
+    this.mailService
+      .sendShopkeeperWelcome(result.user.email, result.user.firstName)
+      .catch((err) =>
+        this.logger.error(`Failed to send seller welcome email: ${err.message}`),
+      );
+
     // Generate fresh tokens
     return this.generateTokens(result.user, result.shop);
   }
@@ -370,11 +377,19 @@ export class AuthService {
     this.logger.log(`Email verified for user: ${user.email}`);
 
     // Send welcome email
-    this.mailService
-      .sendWelcome(user.email, user.firstName)
-      .catch((err) =>
-        this.logger.error(`Failed to send welcome email: ${err.message}`),
-      );
+    if (user.role === "SHOPKEEPER") {
+      this.mailService
+        .sendShopkeeperWelcome(user.email, user.firstName)
+        .catch((err) =>
+          this.logger.error(`Failed to send seller welcome email: ${err.message}`),
+        );
+    } else {
+      this.mailService
+        .sendWelcome(user.email, user.firstName)
+        .catch((err) =>
+          this.logger.error(`Failed to send customer welcome email: ${err.message}`),
+        );
+    }
 
     // Generate tokens and log the user in
     // Get the active shop for the user (first shop or by activeShopId)
@@ -713,11 +728,19 @@ export class AuthService {
     );
 
     // Send welcome email
-    this.mailService
-      .sendWelcome(newUser.email, newUser.firstName)
-      .catch((err) =>
-        this.logger.error(`Failed to send welcome email: ${err.message}`),
-      );
+      if (newUser.role === "SHOPKEEPER") {
+        this.mailService
+          .sendShopkeeperWelcome(newUser.email, newUser.firstName)
+          .catch((err) =>
+            this.logger.error(`Failed to send seller welcome email: ${err.message}`),
+          );
+      } else {
+        this.mailService
+          .sendWelcome(newUser.email, newUser.firstName)
+          .catch((err) =>
+            this.logger.error(`Failed to send welcome email: ${err.message}`),
+          );
+      }
 
     const tokens = await this.generateTokens(
       newUser,
