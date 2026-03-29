@@ -549,162 +549,133 @@ export default function AdminVerificationsPage() {
                   </div>
                 </div>
 
-                {/* Text-based KYC fields */}
-                <div>
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
-                    Identification Numbers
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { label: "Tax ID / PAN Number", value: kycData.panNumber },
-                      { label: "VAT / GST Number", value: kycData.vatNumber },
-                      { label: "Registration / BIS License", value: kycData.bisLicenseNumber },
-                    ].map((field) => (
-                      <div
-                        key={field.label}
-                        className="p-3 rounded-lg border bg-white dark:bg-muted/30"
-                      >
-                        <Label className="text-muted-foreground text-xs">
-                          {field.label}
-                        </Label>
-                        <p
-                          className={`font-mono text-sm mt-1 ${field.value ? "text-foreground" : "text-muted-foreground italic"}`}
+                {/* Explicit KYC layout */}
+                <div className="space-y-6">
+                  {/* Business Identifiers */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
+                      Business Identifiers
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: "Tax ID / PAN Number", value: kycData.panNumber },
+                        { label: "VAT / GST Number", value: kycData.vatNumber },
+                        { label: "Registration / BIS License", value: kycData.bisLicenseNumber },
+                      ].map((field) => (
+                        <div
+                          key={field.label}
+                          className="p-3 rounded-lg border bg-white dark:bg-muted/30"
                         >
-                          {field.value || "Not provided"}
+                          <Label className="text-muted-foreground text-xs">
+                            {field.label}
+                          </Label>
+                          <p
+                            className={`font-mono text-sm mt-1 ${field.value ? "text-foreground" : "text-muted-foreground italic"}`}
+                          >
+                            {field.value || "Not provided"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Multi-Country Identity Proofs */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
+                      Personal Identity Proofs
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-lg border bg-white dark:bg-muted/30">
+                        <Label className="text-muted-foreground text-xs">ID Type</Label>
+                        <p className={`font-mono text-sm mt-1 capitalize ${kycData.verificationDocuments?.governmentIdType ? "text-foreground" : "text-muted-foreground italic"}`}>
+                          {kycData.verificationDocuments?.governmentIdType ? String(kycData.verificationDocuments.governmentIdType).replace('_', ' ') : "Not provided"}
                         </p>
                       </div>
-                    ))}
+                      <div className="p-3 rounded-lg border bg-white dark:bg-muted/30">
+                        <Label className="text-muted-foreground text-xs">ID Number</Label>
+                        <p className={`font-mono text-sm mt-1 ${kycData.verificationDocuments?.governmentIdNumber ? "text-foreground" : "text-muted-foreground italic"}`}>
+                          {kycData.verificationDocuments?.governmentIdNumber ? String(kycData.verificationDocuments.governmentIdNumber) : "Not provided"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Uploaded Evidence Documents */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
+                      Required Evidence Documents
+                    </h4>
+                    <div className="grid grid-cols-1 gap-3">
+                      {[
+                        { key: "governmentId", label: "Government ID (Front/Back)" },
+                        { key: "businessLicensePhoto", label: "Business Registration Document" },
+                        { key: "addressProof", label: "Utility Bill / Address Proof" }
+                      ].map(({ key, label }) => {
+                        const value = kycData.verificationDocuments?.[key];
+                        const isUrl = typeof value === "string" && value.startsWith("http");
+                        
+                        return (
+                          <div
+                            key={key}
+                            className="flex items-center justify-between p-3 rounded-lg border bg-white dark:bg-muted/30"
+                          >
+                            <div>
+                              <p className={`text-sm font-semibold ${isUrl ? "text-slate-800 dark:text-slate-200" : "text-slate-500"}`}>
+                                {label}
+                              </p>
+                              {!isUrl && <p className="text-xs text-muted-foreground italic mt-0.5">Not uploaded</p>}
+                            </div>
+                            {isUrl && (
+                              <a
+                                href={value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:hover:text-blue-200 underline"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                View / Download File
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {/* Generic fallback for any other uploads not explicitly defined above */}
+                      {kycData.verificationDocuments && Object.entries(kycData.verificationDocuments as Record<string, any>)
+                        .filter(([key, value]) => 
+                          typeof value === "string" && 
+                          value.startsWith("http") && 
+                          !["governmentId", "businessLicensePhoto", "addressProof"].includes(key)
+                        )
+                        .map(([key, value]) => {
+                          const displayKey = key
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (s: string) => s.toUpperCase());
+                          return (
+                            <div
+                              key={key}
+                              className="flex items-center justify-between p-3 rounded-lg border bg-white dark:bg-muted/30"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                  {displayKey}
+                                </p>
+                              </div>
+                              <a
+                                href={value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:hover:text-blue-200 underline"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                View / Download File
+                              </a>
+                            </div>
+                          );
+                        })}
+                    </div>
                   </div>
                 </div>
-
-                {/* Extended Document Properties & Uploads */}
-                {kycData.verificationDocuments &&
-                  Object.keys(kycData.verificationDocuments).length > 0 && (
-                    <div className="space-y-4">
-                      {/* Document Details (Text Fields) */}
-                      {(kycData.verificationDocuments.governmentIdType || kycData.verificationDocuments.governmentIdNumber) && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
-                            Multi-Country Identity Proofs
-                          </h4>
-                          <div className="grid grid-cols-2 gap-3">
-                            {kycData.verificationDocuments.governmentIdType && (
-                              <div className="p-3 rounded-lg border bg-white dark:bg-muted/30">
-                                <Label className="text-muted-foreground text-xs">ID Type</Label>
-                                <p className="font-mono text-sm mt-1 text-foreground capitalize">
-                                  {String(kycData.verificationDocuments.governmentIdType).replace('_', ' ')}
-                                </p>
-                              </div>
-                            )}
-                            {kycData.verificationDocuments.governmentIdNumber && (
-                              <div className="p-3 rounded-lg border bg-white dark:bg-muted/30">
-                                <Label className="text-muted-foreground text-xs">ID Number</Label>
-                                <p className="font-mono text-sm mt-1 text-foreground">
-                                  {String(kycData.verificationDocuments.governmentIdNumber)}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Explicitly Mapped Uploads */}
-                      {Object.keys(kycData.verificationDocuments).some(key => {
-                        const val = kycData.verificationDocuments[key];
-                        return typeof val === "string" && val.startsWith("http");
-                      }) && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
-                            Uploaded Evidence Documents
-                          </h4>
-                          <div className="grid grid-cols-1 gap-3">
-                            {/* Standard Fields explicitly aligned out with shopkeeper form */}
-                            {[
-                              { key: "governmentId", label: "Government ID (Front/Back)" },
-                              { key: "businessLicensePhoto", label: "Business Registration Document" },
-                              { key: "addressProof", label: "Utility Bill / Address Proof" }
-                            ].map(({ key, label }) => {
-                              const value = kycData.verificationDocuments[key];
-                              if (typeof value !== "string" || !value.startsWith("http")) return null;
-                              
-                              return (
-                                <div
-                                  key={key}
-                                  className="flex items-center justify-between p-3 rounded-lg border bg-white dark:bg-muted/30"
-                                >
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                                      {label}
-                                    </p>
-                                  </div>
-                                  <a
-                                    href={value}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:hover:text-blue-200 underline"
-                                  >
-                                    <ExternalLink className="h-4 w-4" />
-                                    View / Download File
-                                  </a>
-                                </div>
-                              );
-                            })}
-                            
-                            {/* Generic fallback for any other uploads not explicitly defined above */}
-                            {Object.entries(kycData.verificationDocuments as Record<string, any>)
-                              .filter(([key, value]) => 
-                                typeof value === "string" && 
-                                value.startsWith("http") && 
-                                !["governmentId", "businessLicensePhoto", "addressProof"].includes(key)
-                              )
-                              .map(([key, value]) => {
-                                const displayKey = key
-                                  .replace(/([A-Z])/g, " $1")
-                                  .replace(/^./, (s: string) => s.toUpperCase());
-                                return (
-                                  <div
-                                    key={key}
-                                    className="flex items-center justify-between p-3 rounded-lg border bg-white dark:bg-muted/30"
-                                  >
-                                    <div>
-                                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                                        {displayKey}
-                                      </p>
-                                    </div>
-                                    <a
-                                      href={value}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:hover:text-blue-200 underline"
-                                    >
-                                      <ExternalLink className="h-4 w-4" />
-                                      View / Download File
-                                    </a>
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                {(!kycData.verificationDocuments ||
-                  Object.keys(kycData.verificationDocuments).length === 0) &&
-                  !kycData.panNumber &&
-                  !kycData.vatNumber &&
-                  !kycData.bisLicenseNumber && (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <FileCheck className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                      <p className="font-medium">
-                        No KYC documents submitted yet
-                      </p>
-                      <p className="text-sm mt-1">
-                        The shop owner hasn&apos;t uploaded any verification
-                        documents.
-                      </p>
-                    </div>
-                  )}
 
                 {/* Reject reason input */}
                 <div className="space-y-2">
