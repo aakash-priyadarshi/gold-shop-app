@@ -739,6 +739,8 @@ export const intelligenceApi = {
 // ─── Chat API ───
 export const chatApi = {
   // Conversations
+  createAdminToUserConversation: (data: { targetUserId: string }) =>
+    api.post("/chat/admin/start-user-chat", data),
   createConversation: (data: {
     shopId: string;
     orderId?: string;

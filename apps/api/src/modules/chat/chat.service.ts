@@ -143,6 +143,43 @@ export class ChatService {
     return conversation;
   }
 
+  // ─── Direct Admin/Support to User Conversation ───
+  async createAdminToUserConversation(adminId: string, targetUserId: string) {
+    // 1. Ensure a Support Shop exists for this admin
+    let supportShop = await this.prisma.shop.findFirst({
+      where: { userId: adminId, shopName: "Orivraa Support" },
+    });
+
+    if (!supportShop) {
+      supportShop = await this.prisma.shop.create({
+        data: {
+          userId: adminId,
+          shopName: "Orivraa Support",
+          city: "Global",
+          country: "NP",
+          address: "Platform Support",
+          contactPhone: "0000000000",
+          isVerified: true,
+        },
+      });
+    }
+
+    // 2. Find or create the conversation where Buyer = TargetUser and Shop = SupportShop
+    let conversation = await this.prisma.conversation.findFirst({
+      where: { buyerId: targetUserId, shopId: supportShop.id },
+      include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+
+    if (!conversation) {
+      conversation = await this.prisma.conversation.create({
+        data: { buyerId: targetUserId, shopId: supportShop.id },
+        include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
+      });
+    }
+
+    return conversation;
+  }
+
   // ─── Helper: find shop by owner userId ───
   async findShopByOwner(userId: string) {
     return this.prisma.shop.findFirst({

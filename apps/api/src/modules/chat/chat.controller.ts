@@ -147,6 +147,16 @@ export class ChatController {
 
   // ─── Admin / Support ───
 
+  @Post("admin/start-user-chat")
+  @Roles("ADMIN", "SUPPORT")
+  @ApiOperation({ summary: "Admin creates a support conversation with any user" })
+  async startUserChat(
+    @CurrentUser("id") adminId: string,
+    @Body() dto: { targetUserId: string },
+  ) {
+    return this.chatService.createAdminToUserConversation(adminId, dto.targetUserId);
+  }
+
   @Get("admin/violations")
   @Roles("ADMIN", "SUPPORT")
   @ApiOperation({

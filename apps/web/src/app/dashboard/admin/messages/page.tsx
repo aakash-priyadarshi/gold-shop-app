@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
-import { chatApi } from "@/lib/api";
-import { Lock, MessageSquare, Send, Shield, Store, Users } from "lucide-react";
+import { adminApi, chatApi } from "@/lib/api";
+import { Lock, MessageSquare, Send, Shield, Store, Users, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 interface Conversation {
@@ -50,6 +50,11 @@ export default function AdminMessagesPage() {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // User search feature
+  const [userSearchText, setUserSearchText] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+
   useEffect(() => {
     loadConversations();
   }, []);
@@ -61,6 +66,42 @@ export default function AdminMessagesPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (userSearchText.trim().length > 2) {
+      setIsSearchingUsers(true);
+      const delay = setTimeout(async () => {
+        try {
+          const res = await adminApi.getCustomers({ 
+            query: userSearchText, 
+            type: 'registered', 
+            limit: 5 
+          });
+          setSearchResults(res.data.customers || []);
+        } catch (e) {
+          console.error("Failed to search users", e);
+        } finally {
+          setIsSearchingUsers(false);
+        }
+      }, 500);
+      return () => clearTimeout(delay);
+    } else {
+      setSearchResults([]);
+      setIsSearchingUsers(false);
+    }
+  }, [userSearchText]);
+
+  async function startNewChat(userId: string) {
+    try {
+      setUserSearchText("");
+      setSearchResults([]);
+      const res = await chatApi.createAdminToUserConversation({ targetUserId: userId });
+      await loadConversations();
+      setSelectedConversation(res.data.id);
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Failed to create conversation");
+    }
+  }
 
   async function loadConversations() {
     try {
@@ -125,19 +166,73 @@ export default function AdminMessagesPage() {
 
           <div className="flex flex-1 gap-4 min-h-0">
             {/* Conversation list */}
-            <div className="w-80 flex-shrink-0 border rounded-lg overflow-y-auto">
+            <div className="w-80 flex-shrink-0 border rounded-lg overflow-y-auto relative flex flex-col bg-background">
+              <div className="p-3 border-b border-muted bg-white dark:bg-muted/10 sticky top-0 z-10 w-full space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search users (name, email) to chat..." 
+                    className="pl-8 !h-9 text-sm"
+                    value={userSearchText}
+                    onChange={(e) => setUserSearchText(e.target.value)}
+                  />
+                  {isSearchingUsers && (
+                    <div className="absolute right-2.5 top-2.5 h-4 w-4 rounded-full border-t-2 border-primary animate-spin" />
+                  )}
+                </div>
+                
+                {/* Search Results Dropdown */}
+                {userSearchText.length > 2 && (
+                  <div className="absolute left-3 right-3 top-12 bg-background border rounded-lg shadow-lg max-h-64 overflow-y-auto z-[60]">
+                    {searchResults.length > 0 ? (
+                      searchResults.map((usr) => (
+                        <button
+                          key={usr.id}
+                          className="w-full p-2 text-left hover:bg-muted text-sm flex items-center gap-2 border-b last:border-0"
+                          onClick={() => startNewChat(usr.id)}
+                        >
+                          <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="truncate flex-1">
+                            <span className="font-medium block truncate dark:text-foreground">{usr.name}</span>
+                            <span className="text-xs text-muted-foreground block truncate">{usr.email}</span>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      !isSearchingUsers && (
+                        <div className="p-3 text-sm text-center text-muted-foreground">
+                          No users found
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+
               {loading ? (
-                <div className="p-4 text-muted-foreground">Loading...</div>
+                <div className="p-4 text-muted-foreground flex-1">Loading...</div>
               ) : conversations.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground">
+                <div className="p-4 text-center text-muted-foreground flex-1">
                   <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No conversations found</p>
                 </div>
               ) : (
-                conversations.map((conv) => (
+                conversations
+                  // Filter existing conversations locally
+                  .filter((conv) => {
+                     const searchLower = userSearchText.toLowerCase();
+                     if (!searchLower) return true;
+                     return conv.buyer.firstName.toLowerCase().includes(searchLower) ||
+                            conv.buyer.lastName.toLowerCase().includes(searchLower) ||
+                            conv.shop.shopName.toLowerCase().includes(searchLower);
+                  })
+                  .map((conv) => (
                   <button
                     key={conv.id}
-                    onClick={() => setSelectedConversation(conv.id)}
+                    onClick={() => {
+                        setSelectedConversation(conv.id);
+                        setUserSearchText(""); // Clear search to hide dropdown when selecting an existing chat
+                    }}
                     className={`w-full p-3 text-left border-b hover:bg-muted/50 transition ${
                       selectedConversation === conv.id ? "bg-muted" : ""
                     }`}
