@@ -157,6 +157,17 @@ export class ChatController {
     return this.chatService.createAdminToUserConversation(adminId, dto.targetUserId);
   }
 
+  @Post("admin/generate-draft")
+  @Roles("ADMIN", "SUPPORT")
+  @ApiOperation({ summary: "AI generate message draft" })
+  async generateAdminDraft(
+    @CurrentUser("id") adminId: string,
+    @Body() dto: { prompt: string; context?: string },
+  ) {
+    const text = await this.chatService.generateAiMessageDraft(adminId, dto.prompt, dto.context);
+    return { text };
+  }
+
   @Get("admin/violations")
   @Roles("ADMIN", "SUPPORT")
   @ApiOperation({

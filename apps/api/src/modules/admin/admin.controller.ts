@@ -18,6 +18,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import axios from "axios";
 import * as bcrypt from "bcryptjs";
+import { RedisService } from "../../common/redis";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
@@ -40,6 +41,7 @@ export class AdminController {
     private mailService: MailService,
     private sellerEngagement: SellerEngagementService,
     private configService: ConfigService,
+    private redisService: RedisService,
   ) {}
 
   // ═══════════════════════════════════════
@@ -679,6 +681,13 @@ export class AdminController {
     const limitNum = parseInt(limit || "25");
     const skip = (pageNum - 1) * limitNum;
 
+    // Fast Redis cache for suggestions (when querying small text)
+    const cacheKey = `admin:customers:search:${query || ""}:${type || "all"}:${pageNum}:${limitNum}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
     // Registered customers (CUSTOMER role users)
     let registeredCustomers: any[] = [];
     let registeredTotal = 0;
@@ -746,7 +755,7 @@ export class AdminController {
       ]);
     }
 
-    const customers = [
+    const allCustomers = [
       ...registeredCustomers.map((c) => ({
         id: c.id,
         type: "REGISTERED" as const,
@@ -788,8 +797,8 @@ export class AdminController {
     ];
 
     const totalAll = registeredTotal + walkInTotal;
-    return {
-      customers,
+    const result = {
+      customers: allCustomers,
       total: totalAll,
       registeredTotal,
       walkInTotal,
@@ -797,6 +806,11 @@ export class AdminController {
       limit: limitNum,
       totalPages: Math.ceil(totalAll / limitNum),
     };
+
+    // Cache the search result for 15 minutes to allow blazing fast profile suggestions as admins type
+    await this.redisService.set(cacheKey, JSON.stringify(result), 900);
+
+    return result;
   }
 
   @Get("customers/:id")

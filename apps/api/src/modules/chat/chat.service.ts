@@ -180,6 +180,35 @@ export class ChatService {
     return conversation;
   }
 
+  // ─── Direct Admin/Support AI Message Draft ───
+  async generateAiMessageDraft(adminId: string, prompt: string, conversationContext?: string) {
+    const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY is not configured.");
+
+    const systemPrompt = "You are a professional customer support admin for OriVraa, a premium jewelry marketplace. Write politely, keep sentences clear, and be directly helpful. Output ONLY the message text without quotes or explanations.";
+    let userPrompt = `Draft a message to the user based on this instruction: "${prompt}"`;
+    if (conversationContext) {
+       userPrompt += `\n\nContext:\n${conversationContext}`;
+    }
+
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          { role: "user", parts: [{ text: systemPrompt + "\n\n" + userPrompt }] }
+        ],
+        generationConfig: { temperature: 0.5, maxOutputTokens: 300 }
+      })
+    });
+
+    if (!response.ok) throw new Error("AI generation failed");
+    
+    const data = await response.json() as any;
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Failed to generate text";
+  }
+
   // ─── Helper: find shop by owner userId ───
   async findShopByOwner(userId: string) {
     return this.prisma.shop.findFirst({

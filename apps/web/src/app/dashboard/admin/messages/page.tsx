@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { adminApi, chatApi } from "@/lib/api";
-import { Lock, MessageSquare, Send, Shield, Store, Users, Search } from "lucide-react";
+import { Lock, MessageSquare, Send, Shield, Store, Users, Search, Wand2, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 interface Conversation {
@@ -54,6 +54,11 @@ export default function AdminMessagesPage() {
   const [userSearchText, setUserSearchText] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+
+  // AI Generation feature
+  const [aiPromptOpen, setAiPromptOpen] = useState(false);
+  const [aiPromptText, setAiPromptText] = useState("");
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
   useEffect(() => {
     loadConversations();
@@ -135,6 +140,26 @@ export default function AdminMessagesPage() {
       alert(e.response?.data?.message || "Failed to send message");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleGenerateAi() {
+    if (!aiPromptText.trim()) return;
+    setIsGeneratingAi(true);
+    try {
+      // Pass the last 5 messages for context
+      const recentContext = messages.slice(-5).map(m => `${m.senderRole}: ${m.content}`).join('\n');
+      const res = await chatApi.generateAdminDraft({ 
+         prompt: aiPromptText, 
+         context: recentContext 
+      });
+      setNewMessage(res.data.text || res.data); // depending on backend format
+      setAiPromptOpen(false);
+      setAiPromptText("");
+    } catch (e: any) {
+      alert("Failed to generate AI message: " + (e.response?.data?.message || e.message));
+    } finally {
+      setIsGeneratingAi(false);
     }
   }
 
@@ -368,9 +393,54 @@ export default function AdminMessagesPage() {
                     <div ref={messagesEndRef} />
                   </div>
 
+                  {/* AI Generation prompt box */}
+                  {aiPromptOpen && (
+                    <div className="p-3 border-t bg-muted/30 flex items-center gap-2">
+                      <div className="flex-1 relative">
+                        <Wand2 className="absolute left-2.5 top-2.5 h-4 w-4 text-primary" />
+                        <Input
+                          autoFocus
+                          placeholder="Tell Gemini what to write... e.g., 'Acknowledge their documents and say we will review by tomorrow'"
+                          className="pl-8 !h-9 text-sm focus-visible:ring-primary"
+                          value={aiPromptText}
+                          onChange={(e) => setAiPromptText(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleGenerateAi()}
+                          disabled={isGeneratingAi}
+                        />
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={handleGenerateAi}
+                        disabled={isGeneratingAi || !aiPromptText.trim()}
+                        className="h-9 whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 text-white"
+                      >
+                        {isGeneratingAi ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                        {isGeneratingAi ? "Generating..." : "Generate AI"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => { setAiPromptOpen(false); setAiPromptText(""); }}
+                        className="h-9"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
                   {/* Admin can respond in any conversation */}
-                  <div className="p-3 border-t flex gap-2">
+                  <div className="p-3 border-t flex gap-2 items-center bg-background">
+                    <Button 
+                      variant={(aiPromptOpen || newMessage.length > 0) ? "outline" : "default"}
+                      size="icon"
+                      className={`shrink-0 ${!aiPromptOpen && newMessage.length === 0 ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 border-indigo-200' : ''}`}
+                      onClick={() => setAiPromptOpen(!aiPromptOpen)}
+                      title="AI Suggestion"
+                      type="button"
+                    >
+                      <Wand2 className="h-4 w-4" />
+                    </Button>
                     <Input
+                      className="flex-1"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyDown={(e) =>
@@ -382,6 +452,7 @@ export default function AdminMessagesPage() {
                     <Button
                       onClick={handleSend}
                       disabled={sending || !newMessage.trim()}
+                      className="shrink-0"
                     >
                       <Send className="h-4 w-4" />
                     </Button>

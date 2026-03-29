@@ -741,6 +741,8 @@ export const chatApi = {
   // Conversations
   createAdminToUserConversation: (data: { targetUserId: string }) =>
     api.post("/chat/admin/start-user-chat", data),
+  generateAdminDraft: (data: { prompt: string; context?: string }) =>
+    api.post("/chat/admin/generate-draft", data),
   createConversation: (data: {
     shopId: string;
     orderId?: string;
