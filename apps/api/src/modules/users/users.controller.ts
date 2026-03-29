@@ -200,55 +200,221 @@ export class UsersController {
     summary: "Get full user details including shop info (Admin/Support only)",
   })
   async getUserDetails(@Param("id") id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-        phoneVerifiedAt: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        status: true,
-        preferredLanguage: true,
-        preferredCurrency: true,
-        createdAt: true,
-        updatedAt: true,
-        lastLoginAt: true,
-        shops: {
-          select: {
-            id: true,
-            shopName: true,
-            city: true,
-            address: true,
-            country: true,
-            contactPhone: true,
-            contactEmail: true,
-            isVerified: true,
-            isActive: true,
-            createdAt: true,
-            updatedAt: true,
-            supportedMaterials: true,
-            supportedJewelleryTypes: true,
-            supportedMethods: true,
-            codMaxValueNpr: true,
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+    const [user, sessionStats, riskData] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          phoneVerifiedAt: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          status: true,
+          preferredLanguage: true,
+          preferredCurrency: true,
+          preferredCountry: true,
+          preferredCity: true,
+          createdAt: true,
+          updatedAt: true,
+          lastLoginAt: true,
+          shops: {
+            select: {
+              id: true,
+              shopName: true,
+              city: true,
+              address: true,
+              country: true,
+              contactPhone: true,
+              contactEmail: true,
+              isVerified: true,
+              isActive: true,
+              createdAt: true,
+              updatedAt: true,
+              supportedMaterials: true,
+              supportedJewelleryTypes: true,
+              supportedMethods: true,
+              codMaxValueNpr: true,
+            },
           },
-          take: 1,
         },
-      },
-    });
+      }),
+      // Session stats
+      this.prisma.webSession.aggregate({
+        where: { userId: id },
+        _count: { id: true },
+        _sum: { durationSec: true, pageViews: true },
+        _avg: { durationSec: true },
+        _max: { lastActive: true },
+      }),
+      // Risk indicators
+      Promise.all([
+        this.prisma.message.count({ where: { senderId: id, hasViolation: true } }),
+        this.prisma.securityEvent.count({
+          where: { userId: id, createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
+        }),
+      ]),
+    ]);
 
     if (!user) {
       throw new NotFoundException("User not found");
     }
 
-    // Transform for backward compatibility
+    const [chatViolations, recentSecurityEvents] = riskData;
+
+    // Compute risk score
+    let riskScore = 0;
+    if (chatViolations >= 3) riskScore += 40;
+    else if (chatViolations >= 1) riskScore += 20;
+    if (recentSecurityEvents >= 5) riskScore += 40;
+    else if (recentSecurityEvents >= 2) riskScore += 20;
+    if (user.status === "SUSPENDED") riskScore += 20;
+    const riskLevel = riskScore >= 60 ? "HIGH" : riskScore >= 30 ? "MEDIUM" : "LOW";
+
+    const isOnlineNow = sessionStats._max.lastActive
+      ? sessionStats._max.lastActive >= fiveMinutesAgo
+      : false;
+
     const result = user as any;
     return {
       ...result,
       shop: result.shops?.[0] || null,
+      sessionSummary: {
+        totalSessions: sessionStats._count.id,
+        totalTimeSec: sessionStats._sum.durationSec ?? 0,
+        totalPageViews: sessionStats._sum.pageViews ?? 0,
+        avgSessionSec: Math.round(sessionStats._avg.durationSec ?? 0),
+        lastSeen: sessionStats._max.lastActive,
+        isOnlineNow,
+      },
+      riskScore: { score: riskScore, level: riskLevel, chatViolations, recentSecurityEvents },
     };
+  }
+
+  @Get(":id/sessions")
+  @Roles(UserRole.ADMIN, UserRole.SUPPORT)
+  @ApiOperation({ summary: "Get web sessions for a user (Admin only)" })
+  async getUserSessions(
+    @Param("id") id: string,
+    @Query("page") page?: string,
+  ) {
+    const skip = ((parseInt(page ?? "1", 10) - 1)) * 15;
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+    const [sessions, total] = await Promise.all([
+      this.prisma.webSession.findMany({
+        where: { userId: id },
+        orderBy: { startedAt: "desc" },
+        skip,
+        take: 15,
+        select: {
+          id: true,
+          startedAt: true,
+          endedAt: true,
+          durationSec: true,
+          pageViews: true,
+          lastActive: true,
+          ipAddress: true,
+          country: true,
+          userAgent: true,
+          platform: true,
+          referrer: true,
+          closedBy: true,
+        },
+      }),
+      this.prisma.webSession.count({ where: { userId: id } }),
+    ]);
+
+    return {
+      sessions: sessions.map((s) => ({
+        ...s,
+        isActive: !s.endedAt && s.lastActive >= fiveMinutesAgo,
+      })),
+      total,
+      page: parseInt(page ?? "1", 10),
+      totalPages: Math.ceil(total / 15),
+    };
+  }
+
+  @Get(":id/auth-sessions")
+  @Roles(UserRole.ADMIN, UserRole.SUPPORT)
+  @ApiOperation({ summary: "Get active auth (JWT) sessions for a user (Admin only)" })
+  async getUserAuthSessions(@Param("id") id: string) {
+    const sessions = await this.prisma.session.findMany({
+      where: { userId: id, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        ipAddress: true,
+        userAgent: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+    });
+    return { sessions };
+  }
+
+  @Delete(":id/auth-sessions/:sessionId")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Revoke a specific auth session (Admin only)" })
+  async revokeAuthSession(
+    @Param("id") userId: string,
+    @Param("sessionId") sessionId: string,
+  ) {
+    const session = await this.prisma.session.findFirst({
+      where: { id: sessionId, userId },
+    });
+    if (!session) throw new NotFoundException("Session not found");
+    await this.prisma.session.delete({ where: { id: sessionId } });
+    return { success: true };
+  }
+
+  @Get(":id/audit-log")
+  @Roles(UserRole.ADMIN, UserRole.SUPPORT)
+  @ApiOperation({ summary: "Get audit log for a user (Admin only)" })
+  async getUserAuditLog(
+    @Param("id") id: string,
+    @Query("page") page?: string,
+  ) {
+    const skip = (parseInt(page ?? "1", 10) - 1) * 20;
+    const [logs, total] = await Promise.all([
+      this.prisma.auditLog.findMany({
+        where: { userId: id },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: 20,
+        select: {
+          id: true,
+          action: true,
+          actorType: true,
+          resourceType: true,
+          resourceId: true,
+          createdAt: true,
+          ipAddress: true,
+          metadata: true,
+        },
+      }),
+      this.prisma.auditLog.count({ where: { userId: id } }),
+    ]);
+    return { logs, total, page: parseInt(page ?? "1", 10), totalPages: Math.ceil(total / 20) };
+  }
+
+  @Get("stats/online-now")
+  @Roles(UserRole.ADMIN, UserRole.SUPPORT)
+  @ApiOperation({ summary: "Count of users active in the last 5 minutes" })
+  async getOnlineNow() {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const count = await this.prisma.webSession.count({
+      where: {
+        userId: { not: null },
+        lastActive: { gte: fiveMinutesAgo },
+        endedAt: null,
+      },
+    });
+    return { onlineNow: count };
   }
 
   @Patch(":id/admin-update")

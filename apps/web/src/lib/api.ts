@@ -315,6 +315,15 @@ export const adminApi = {
   }) => api.post("/admin/users", data),
 
   getUserDetails: (userId: string) => api.get(`/users/${userId}/details`),
+  getUserSessions: (userId: string, page = 1) =>
+    api.get(`/users/${userId}/sessions`, { params: { page } }),
+  getUserAuthSessions: (userId: string) =>
+    api.get(`/users/${userId}/auth-sessions`),
+  revokeAuthSession: (userId: string, sessionId: string) =>
+    api.delete(`/users/${userId}/auth-sessions/${sessionId}`),
+  getUserAuditLog: (userId: string, page = 1) =>
+    api.get(`/users/${userId}/audit-log`, { params: { page } }),
+  getOnlineNow: () => api.get("/users/stats/online-now"),
 
   updateUser: (
     userId: string,
