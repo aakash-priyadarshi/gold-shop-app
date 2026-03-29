@@ -413,13 +413,19 @@ export default function ShopSettingsPage() {
             </div>
             <div className="flex items-center gap-2">
               {shopData.isVerified ? (
-                <Badge variant="default" className="bg-green-500">
-                  <T>Verified</T>
-                </Badge>
+                <a href="/dashboard/shop/kyc" title="View KYC Details">
+                  <Badge variant="default" className="bg-green-500 cursor-pointer hover:bg-green-600 transition flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    <T>Verified</T>
+                  </Badge>
+                </a>
               ) : (
-                <Badge variant="secondary">
-                  <T>Pending Verification</T>
-                </Badge>
+                <a href="/dashboard/shop/kyc" title="Complete KYC Verification">
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-pointer transition flex items-center gap-1">
+                    <Shield className="h-3 w-3 mb-[1px]" />
+                    <T>Verification Pending / Missing</T>
+                  </Badge>
+                </a>
               )}
               <Button onClick={saveSettings} disabled={isSaving}>
                 {isSaving ? (
