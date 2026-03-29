@@ -12,27 +12,36 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { shopsApi } from "@/lib/api";
-import { AlertTriangle, CheckCircle, Clock, Save, Shield } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AlertTriangle, CheckCircle, Clock, Save, Shield, UploadCloud, X } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+
+const CLOUDFLARE_UPLOAD_URL = process.env.NEXT_PUBLIC_CDN_UPLOAD_URL || "https://images.orivraa.com/upload";
 
 export default function ShopKycPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isReminding, setIsReminding] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeUploadField, setActiveUploadField] = useState<string | null>(null);
+
   const [kycData, setKycData] = useState<{
     panNumber: string;
     vatNumber: string;
     bisLicenseNumber: string;
     isVerified: boolean;
+    verificationDocuments: Record<string, string>;
     verificationRequests?: any[];
   }>({
     panNumber: "",
     vatNumber: "",
     bisLicenseNumber: "",
     isVerified: false,
+    verificationDocuments: {},
     verificationRequests: [],
   });
 
@@ -48,6 +57,7 @@ export default function ShopKycPage() {
         vatNumber: response.data.vatNumber || "",
         bisLicenseNumber: response.data.bisLicenseNumber || "",
         isVerified: response.data.isVerified || false,
+        verificationDocuments: response.data.verificationDocuments || {},
         verificationRequests: response.data.verificationRequests || [],
       });
     } catch (error) {
@@ -69,6 +79,7 @@ export default function ShopKycPage() {
         panNumber: kycData.panNumber,
         vatNumber: kycData.vatNumber,
         bisLicenseNumber: kycData.bisLicenseNumber,
+        verificationDocuments: kycData.verificationDocuments,
       });
       toast({
         title: "Verification Details Saved",
@@ -106,6 +117,58 @@ export default function ShopKycPage() {
     } finally {
       setIsReminding(false);
     }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeUploadField) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const res = await fetch(CLOUDFLARE_UPLOAD_URL, {
+        method: "POST",
+        headers: { "X-Upload-Type": "kyc" },
+        body: formData,
+      });
+      
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "Upload failed");
+
+      setKycData(prev => ({
+        ...prev,
+        verificationDocuments: {
+          ...prev.verificationDocuments,
+          [activeUploadField]: data.url
+        }
+      }));
+
+      toast({
+        title: "File Uploaded",
+        description: "Document successfully attached to your profile.",
+      });
+    } catch (error) {
+      console.error("Upload failed", error);
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: "Could not upload the document. Please try again.",
+      });
+    } finally {
+      setIsUploading(false);
+      setActiveUploadField(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeDocument = (key: string) => {
+    setKycData(prev => {
+      const newDocs = { ...prev.verificationDocuments };
+      delete newDocs[key];
+      return { ...prev, verificationDocuments: newDocs };
+    });
   };
 
   const latestRequest = kycData.verificationRequests?.[0];
@@ -225,7 +288,7 @@ export default function ShopKycPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="panNumber">
-                    <T>PAN Number (Tax ID)</T>
+                    <T>Tax ID / PAN Number</T>
                   </Label>
                   <Input
                     id="panNumber"
@@ -234,12 +297,12 @@ export default function ShopKycPage() {
                     onChange={(e) =>
                       setKycData({ ...kycData, panNumber: e.target.value })
                     }
-                    placeholder="Enter PAN"
+                    placeholder="Enter Tax ID / PAN"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="vatNumber">
-                    <T>VAT Number (Optional)</T>
+                    <T>VAT / GST Number (Optional)</T>
                   </Label>
                   <Input
                     id="vatNumber"
@@ -248,7 +311,7 @@ export default function ShopKycPage() {
                     onChange={(e) =>
                       setKycData({ ...kycData, vatNumber: e.target.value })
                     }
-                    placeholder="Enter VAT Number"
+                    placeholder="Enter VAT / GST Number"
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
@@ -264,6 +327,205 @@ export default function ShopKycPage() {
                     }
                     placeholder="Enter Registration Authority Number"
                   />
+                </div>
+              </div>
+
+              {/* Photo Upload Section */}
+              <div className="mt-8">
+                <h3 className="text-lg font-medium mb-4"><T>Supporting Documents</T></h3>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/*,.pdf" 
+                  onChange={handleFileUpload} 
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Government ID Panel */}
+                  <div className="border rounded-md p-4 flex flex-col space-y-4">
+                    <div>
+                      <Label className="font-semibold block mb-2"><T>Government ID (Front/Back)</T></Label>
+                      
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground"><T>ID Type</T></Label>
+                          <Select
+                            disabled={latestRequest?.status === "PENDING" || kycData.isVerified}
+                            value={kycData.verificationDocuments.governmentIdType || ""}
+                            onValueChange={(val) => 
+                              setKycData(prev => ({
+                                ...prev,
+                                verificationDocuments: { ...prev.verificationDocuments, governmentIdType: val }
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select ID Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="passport">Passport</SelectItem>
+                              <SelectItem value="national_id">National ID Card</SelectItem>
+                              <SelectItem value="drivers_license">Driver's License</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground"><T>ID Number</T></Label>
+                          <Input 
+                            className="h-8 text-xs" 
+                            placeholder="Enter ID Number" 
+                            value={kycData.verificationDocuments.governmentIdNumber || ""}
+                            disabled={latestRequest?.status === "PENDING" || kycData.isVerified}
+                            onChange={(e) => 
+                              setKycData(prev => ({
+                                ...prev,
+                                verificationDocuments: { ...prev.verificationDocuments, governmentIdNumber: e.target.value }
+                              }))
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      {kycData.verificationDocuments["governmentId"] ? (
+                        <div className="relative group rounded bg-muted overflow-hidden">
+                          <a target="_blank" href={kycData.verificationDocuments["governmentId"]} className="block text-center p-3 hover:underline text-sm text-blue-600 break-all overflow-hidden h-16 line-clamp-2">
+                              {kycData.verificationDocuments["governmentId"]}
+                          </a>
+                          {(!kycData.isVerified && latestRequest?.status !== "PENDING") && (
+                            <div className="absolute top-1 right-1">
+                              <Button 
+                                variant="destructive" 
+                                size="icon" 
+                                className="h-6 w-6 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition" 
+                                onClick={(e) => { e.preventDefault(); removeDocument("governmentId"); }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic mb-4">No file uploaded.</p>
+                      )}
+                    </div>
+                    
+                    {(!kycData.isVerified && latestRequest?.status !== "PENDING") && !kycData.verificationDocuments["governmentId"] && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full mt-auto" 
+                        disabled={isUploading}
+                        onClick={() => {
+                          setActiveUploadField("governmentId");
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        {(isUploading && activeUploadField === "governmentId") ? (
+                          <Clock className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <UploadCloud className="h-4 w-4 mr-2" />
+                        )}
+                        <T>Upload ID Photo</T>
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Business Registration */}
+                  <div className="border rounded-md p-4 flex flex-col justify-between">
+                    <div>
+                      <Label className="font-semibold block mb-2"><T>Business Registration Document</T></Label>
+                      {kycData.verificationDocuments["businessLicensePhoto"] ? (
+                        <div className="relative group rounded bg-muted overflow-hidden mt-4">
+                          <a target="_blank" href={kycData.verificationDocuments["businessLicensePhoto"]} className="block text-center p-3 hover:underline text-sm text-blue-600 break-all overflow-hidden h-16 line-clamp-2">
+                              {kycData.verificationDocuments["businessLicensePhoto"]}
+                          </a>
+                          {(!kycData.isVerified && latestRequest?.status !== "PENDING") && (
+                            <div className="absolute top-1 right-1">
+                              <Button 
+                                variant="destructive" 
+                                size="icon" 
+                                className="h-6 w-6 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition" 
+                                onClick={(e) => { e.preventDefault(); removeDocument("businessLicensePhoto"); }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic mt-4 mb-4">No file uploaded.</p>
+                      )}
+                    </div>
+                    
+                    {(!kycData.isVerified && latestRequest?.status !== "PENDING") && !kycData.verificationDocuments["businessLicensePhoto"] && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full mt-4" 
+                        disabled={isUploading}
+                        onClick={() => {
+                          setActiveUploadField("businessLicensePhoto");
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        {(isUploading && activeUploadField === "businessLicensePhoto") ? (
+                          <Clock className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <UploadCloud className="h-4 w-4 mr-2" />
+                        )}
+                        <T>Upload Business License</T>
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Address Proof */}
+                  <div className="border rounded-md p-4 flex flex-col justify-between">
+                    <div>
+                      <Label className="font-semibold block mb-2"><T>Utility Bill / Address Proof</T></Label>
+                      {kycData.verificationDocuments["addressProof"] ? (
+                        <div className="relative group rounded bg-muted overflow-hidden mt-4">
+                          <a target="_blank" href={kycData.verificationDocuments["addressProof"]} className="block text-center p-3 hover:underline text-sm text-blue-600 break-all overflow-hidden h-16 line-clamp-2">
+                              {kycData.verificationDocuments["addressProof"]}
+                          </a>
+                          {(!kycData.isVerified && latestRequest?.status !== "PENDING") && (
+                            <div className="absolute top-1 right-1">
+                              <Button 
+                                variant="destructive" 
+                                size="icon" 
+                                className="h-6 w-6 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition" 
+                                onClick={(e) => { e.preventDefault(); removeDocument("addressProof"); }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic mt-4 mb-4">No file uploaded.</p>
+                      )}
+                    </div>
+                    
+                    {(!kycData.isVerified && latestRequest?.status !== "PENDING") && !kycData.verificationDocuments["addressProof"] && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full mt-4" 
+                        disabled={isUploading}
+                        onClick={() => {
+                          setActiveUploadField("addressProof");
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        {(isUploading && activeUploadField === "addressProof") ? (
+                          <Clock className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <UploadCloud className="h-4 w-4 mr-2" />
+                        )}
+                        <T>Upload Address Proof</T>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
