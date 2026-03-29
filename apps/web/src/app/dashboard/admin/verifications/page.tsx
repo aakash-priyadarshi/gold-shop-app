@@ -556,9 +556,9 @@ export default function AdminVerificationsPage() {
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { label: "PAN Number", value: kycData.panNumber },
-                      { label: "VAT/GST Number", value: kycData.vatNumber },
-                      { label: "BIS License", value: kycData.bisLicenseNumber },
+                      { label: "Tax ID / PAN Number", value: kycData.panNumber },
+                      { label: "VAT / GST Number", value: kycData.vatNumber },
+                      { label: "Registration / BIS License", value: kycData.bisLicenseNumber },
                     ].map((field) => (
                       <div
                         key={field.label}
@@ -577,53 +577,78 @@ export default function AdminVerificationsPage() {
                   </div>
                 </div>
 
-                {/* Document uploads */}
+                {/* Extended Document Properties & Uploads */}
                 {kycData.verificationDocuments &&
                   Object.keys(kycData.verificationDocuments).length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
-                        Submitted Documents
-                      </h4>
-                      <div className="grid grid-cols-1 gap-3">
-                        {Object.entries(
-                          kycData.verificationDocuments as Record<string, any>,
-                        ).map(([key, value]) => {
-                          const isUrl =
-                            typeof value === "string" &&
-                            value.startsWith("http");
-                          const displayKey = key
-                            .replace(/([A-Z])/g, " $1")
-                            .replace(/^./, (s: string) => s.toUpperCase());
-                          return (
-                            <div
-                              key={key}
-                              className="flex items-center justify-between p-3 rounded-lg border bg-white dark:bg-muted/30"
-                            >
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {displayKey}
-                                </p>
-                                {!isUrl && (
-                                  <p className="text-xs font-mono text-muted-foreground mt-0.5">
-                                    {String(value)}
-                                  </p>
-                                )}
-                              </div>
-                              {isUrl && (
-                                <a
-                                  href={value}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:hover:text-blue-200 underline"
-                                >
-                                  <ExternalLink className="h-3.5 w-3.5" />
-                                  View Document
-                                </a>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
+                    <div className="space-y-4">
+                      {/* Document Details (Text Fields) */}
+                      {Object.keys(kycData.verificationDocuments).some(key => {
+                        const val = kycData.verificationDocuments[key];
+                        return typeof val === "string" && !val.startsWith("http");
+                      }) && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
+                            Multi-Country Identity Proofs
+                          </h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            {Object.entries(kycData.verificationDocuments as Record<string, any>)
+                              .filter(([_, value]) => typeof value === "string" && !value.startsWith("http"))
+                              .map(([key, value]) => {
+                                const displayKey = key
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (s: string) => s.toUpperCase());
+                                return (
+                                  <div key={key} className="p-3 rounded-lg border bg-white dark:bg-muted/30">
+                                    <Label className="text-muted-foreground text-xs">{displayKey}</Label>
+                                    <p className="font-mono text-sm mt-1 text-foreground">{String(value)}</p>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Document Links (Image/PDF Uploads) */}
+                      {Object.keys(kycData.verificationDocuments).some(key => {
+                        const val = kycData.verificationDocuments[key];
+                        return typeof val === "string" && val.startsWith("http");
+                      }) && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
+                            Uploaded Evidence Documents
+                          </h4>
+                          <div className="grid grid-cols-1 gap-3">
+                            {Object.entries(kycData.verificationDocuments as Record<string, any>)
+                              .filter(([_, value]) => typeof value === "string" && value.startsWith("http"))
+                              .map(([key, value]) => {
+                                const displayKey = key
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (s: string) => s.toUpperCase());
+                                return (
+                                  <div
+                                    key={key}
+                                    className="flex items-center justify-between p-3 rounded-lg border bg-white dark:bg-muted/30"
+                                  >
+                                    <div>
+                                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                        {displayKey}
+                                      </p>
+                                    </div>
+                                    <a
+                                      href={value}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:hover:text-blue-200 underline"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                      View / Download File
+                                    </a>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
