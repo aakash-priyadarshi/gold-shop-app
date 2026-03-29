@@ -410,6 +410,15 @@ export class ShopsController {
     return this.shopsService.updateShopKyc(userId, body);
   }
 
+  @Post("my-shop/kyc/remind-admin")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Remind admin to review shop verification" })
+  async remindAdminKyc(@CurrentUser("id") userId: string) {
+    return this.shopsService.remindAdminKyc(userId);
+  }
+
   // ── Shop Profile Endpoints ──────────────────────────
 
   @Patch("my-shop/profile")

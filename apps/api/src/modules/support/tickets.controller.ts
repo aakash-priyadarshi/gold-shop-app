@@ -229,4 +229,39 @@ export class TicketsController {
   async getTicketStats() {
     return this.ticketsService.getTicketStats();
   }
+
+  // ─── Staff: Send direct message to user (Create Ticket on behalf) ───
+  @Post("admin/user/:userId/message")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPPORT", "ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Send a direct message to a user (Admin/Support)" })
+  async sendMessageToUser(
+    @Param("userId") targetUserId: string,
+    @CurrentUser("id") staffId: string,
+    @Body() dto: { subject: string; message: string },
+  ) {
+    // Admin creates ticket
+    const ticket = await this.ticketsService.createTicket(
+      {
+        type: TicketType.OTHER,
+        subject: dto.subject,
+        description: dto.message,
+      },
+      targetUserId, // the ticket belongs to the user
+      "USER"
+    );
+
+    // Auto claim it by the sender
+    await this.ticketsService.claimTicket(ticket.id, staffId);
+
+    // Provide the admin's initial message
+    return this.ticketsService.addMessage(
+      ticket.id,
+      staffId,
+      "ADMIN",
+      "Support Team",
+      { content: dto.message }
+    );
+  }
 }

@@ -245,19 +245,33 @@ export default function ShopDashboard() {
           <AdminMessageBanner />
 
           {user?.shop && !user.shop.isVerified && (
-            <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-              <div>
-                <h3 className="font-medium text-yellow-800 dark:text-yellow-200">
-                  <T>Shop Verification Pending</T>
-                </h3>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                  <T>
-                    Your shop is currently under review. Some features may be
-                    limited until verification is complete.
-                  </T>
-                </p>
+            <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 rounded-lg p-4 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-yellow-800 dark:text-yellow-200">
+                    <T>
+                      {!user.shop.verificationRequests?.length
+                        ? "Start Shop Verification"
+                        : "Shop Verification Pending"}
+                    </T>
+                  </h3>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                    <T>
+                      {!user.shop.verificationRequests?.length
+                        ? "Please complete your KYC verification process to unlock all shop features on the platform."
+                        : "Your shop is currently under review. Some features may be limited until verification is complete."}
+                    </T>
+                  </p>
+                </div>
               </div>
+              {!user.shop.verificationRequests?.length && (
+                <Button size="sm" asChild className="shrink-0 bg-yellow-600 hover:bg-yellow-700 text-white">
+                  <Link href="/dashboard/shop/kyc">
+                    <T>Start Verification</T>
+                  </Link>
+                </Button>
+              )}
             </div>
           )}
 

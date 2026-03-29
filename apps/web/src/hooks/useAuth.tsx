@@ -47,6 +47,12 @@ export interface User {
     makingChargePercent?: number;
     isOnHold?: boolean;
     holdReason?: string;
+    verificationRequests?: Array<{
+      id: string;
+      status: string;
+      createdAt: string;
+      details?: any;
+    }>;
   };
 }
 

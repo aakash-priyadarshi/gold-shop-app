@@ -53,6 +53,11 @@ export class UsersService {
           select: {
             id: true,
             shopName: true,
+            isVerified: true,
+            verificationRequests: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
           },
           take: 1,
         },
@@ -139,12 +144,25 @@ export class UsersService {
     });
   }
 
-  async findAll(role?: UserRole, page = 1, pageSize = 20) {
+  async findAll(role?: UserRole, search?: string, page = 1, pageSize = 20) {
     const skip = (page - 1) * pageSize;
+    
+    const where: any = {};
+    if (role) {
+      where.role = role;
+    }
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { shops: { some: { shopName: { contains: search, mode: "insensitive" } } } }
+      ];
+    }
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
-        where: role ? { role } : undefined,
+        where,
         skip,
         take: pageSize,
         select: {
@@ -166,9 +184,7 @@ export class UsersService {
         },
         orderBy: { createdAt: "desc" },
       }),
-      this.prisma.user.count({
-        where: role ? { role } : undefined,
-      }),
+      this.prisma.user.count({ where }),
     ]);
 
     // Transform to maintain backward compatibility
