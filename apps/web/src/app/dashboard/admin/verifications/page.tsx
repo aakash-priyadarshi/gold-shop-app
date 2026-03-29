@@ -582,33 +582,33 @@ export default function AdminVerificationsPage() {
                   Object.keys(kycData.verificationDocuments).length > 0 && (
                     <div className="space-y-4">
                       {/* Document Details (Text Fields) */}
-                      {Object.keys(kycData.verificationDocuments).some(key => {
-                        const val = kycData.verificationDocuments[key];
-                        return typeof val === "string" && !val.startsWith("http");
-                      }) && (
+                      {(kycData.verificationDocuments.governmentIdType || kycData.verificationDocuments.governmentIdNumber) && (
                         <div>
                           <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
                             Multi-Country Identity Proofs
                           </h4>
                           <div className="grid grid-cols-2 gap-3">
-                            {Object.entries(kycData.verificationDocuments as Record<string, any>)
-                              .filter(([_, value]) => typeof value === "string" && !value.startsWith("http"))
-                              .map(([key, value]) => {
-                                const displayKey = key
-                                  .replace(/([A-Z])/g, " $1")
-                                  .replace(/^./, (s: string) => s.toUpperCase());
-                                return (
-                                  <div key={key} className="p-3 rounded-lg border bg-white dark:bg-muted/30">
-                                    <Label className="text-muted-foreground text-xs">{displayKey}</Label>
-                                    <p className="font-mono text-sm mt-1 text-foreground">{String(value)}</p>
-                                  </div>
-                                );
-                              })}
+                            {kycData.verificationDocuments.governmentIdType && (
+                              <div className="p-3 rounded-lg border bg-white dark:bg-muted/30">
+                                <Label className="text-muted-foreground text-xs">ID Type</Label>
+                                <p className="font-mono text-sm mt-1 text-foreground capitalize">
+                                  {String(kycData.verificationDocuments.governmentIdType).replace('_', ' ')}
+                                </p>
+                              </div>
+                            )}
+                            {kycData.verificationDocuments.governmentIdNumber && (
+                              <div className="p-3 rounded-lg border bg-white dark:bg-muted/30">
+                                <Label className="text-muted-foreground text-xs">ID Number</Label>
+                                <p className="font-mono text-sm mt-1 text-foreground">
+                                  {String(kycData.verificationDocuments.governmentIdNumber)}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
 
-                      {/* Document Links (Image/PDF Uploads) */}
+                      {/* Explicitly Mapped Uploads */}
                       {Object.keys(kycData.verificationDocuments).some(key => {
                         const val = kycData.verificationDocuments[key];
                         return typeof val === "string" && val.startsWith("http");
@@ -618,8 +618,45 @@ export default function AdminVerificationsPage() {
                             Uploaded Evidence Documents
                           </h4>
                           <div className="grid grid-cols-1 gap-3">
+                            {/* Standard Fields explicitly aligned out with shopkeeper form */}
+                            {[
+                              { key: "governmentId", label: "Government ID (Front/Back)" },
+                              { key: "businessLicensePhoto", label: "Business Registration Document" },
+                              { key: "addressProof", label: "Utility Bill / Address Proof" }
+                            ].map(({ key, label }) => {
+                              const value = kycData.verificationDocuments[key];
+                              if (typeof value !== "string" || !value.startsWith("http")) return null;
+                              
+                              return (
+                                <div
+                                  key={key}
+                                  className="flex items-center justify-between p-3 rounded-lg border bg-white dark:bg-muted/30"
+                                >
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                      {label}
+                                    </p>
+                                  </div>
+                                  <a
+                                    href={value}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:hover:text-blue-200 underline"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                    View / Download File
+                                  </a>
+                                </div>
+                              );
+                            })}
+                            
+                            {/* Generic fallback for any other uploads not explicitly defined above */}
                             {Object.entries(kycData.verificationDocuments as Record<string, any>)
-                              .filter(([_, value]) => typeof value === "string" && value.startsWith("http"))
+                              .filter(([key, value]) => 
+                                typeof value === "string" && 
+                                value.startsWith("http") && 
+                                !["governmentId", "businessLicensePhoto", "addressProof"].includes(key)
+                              )
                               .map(([key, value]) => {
                                 const displayKey = key
                                   .replace(/([A-Z])/g, " $1")
