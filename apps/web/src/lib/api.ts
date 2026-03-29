@@ -111,6 +111,7 @@ export const shopsApi = {
     bisLicenseNumber?: string;
     verificationDocuments?: Record<string, any>;
   }) => api.patch("/shops/my-shop/kyc", data),
+  remindAdminKyc: () => api.post("/shops/my-shop/kyc/remind-admin"),
   getCapabilities: () => api.get("/shops/my-shop/capabilities"),
   updateCapabilities: (data: any) =>
     api.put("/shops/my-shop/capabilities", data),
