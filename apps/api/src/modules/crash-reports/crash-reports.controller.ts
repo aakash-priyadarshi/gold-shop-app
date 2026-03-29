@@ -52,12 +52,14 @@ export class CrashReportsController {
     @Query("limit") limit?: string,
     @Query("status") status?: string,
     @Query("platform") platform?: string,
+    @Query("userTriggered") userTriggered?: string,
   ) {
     return this.crashReportsService.getAll({
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 50,
       status,
       platform,
+      userTriggered: userTriggered === "true" ? true : userTriggered === "false" ? false : undefined,
     });
   }
 

@@ -322,4 +322,54 @@ export class AuthController {
       }
     }
   }
+
+  // ─── PIN Fast Login ───────────────────────────────────────────
+
+  @Post("pin/setup")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @ApiOperation({ summary: "Set or update 6-digit PIN for fast re-login after session timeout" })
+  @ApiResponse({ status: 200, description: "PIN set successfully" })
+  @ApiResponse({ status: 400, description: "PIN must be exactly 6 digits" })
+  async setupPin(
+    @CurrentUser() user: any,
+    @Body() body: { pin: string },
+  ) {
+    return this.authService.setupPin(user.id, body.pin);
+  }
+
+  @Post("pin/login")
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  @ApiOperation({ summary: "Re-authenticate with PIN after session timeout (no full login required)" })
+  @ApiResponse({ status: 200, description: "Authenticated successfully" })
+  @ApiResponse({ status: 401, description: "Invalid or locked PIN" })
+  async pinLogin(
+    @Body() body: { userId: string; pin: string },
+    @Request() req: any,
+  ) {
+    const ipAddress = req.ip || req.connection?.remoteAddress;
+    const userAgent = req.headers["user-agent"];
+    return this.authService.loginWithPin(body.userId, body.pin, ipAddress, userAgent);
+  }
+
+  @Get("pin/status")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Check if current user has PIN set" })
+  async getPinStatus(@CurrentUser() user: any) {
+    return this.authService.getPinStatus(user.id);
+  }
+
+  @Post("pin/remove")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Remove PIN from account" })
+  async removePin(@CurrentUser() user: any) {
+    return this.authService.removePin(user.id);
+  }
 }
+

@@ -1,5 +1,6 @@
 import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
-
+import { AppTracking } from "@/components/AppTracking";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Providers } from "@/components/providers";
 import InitialLoadScreen from "@/components/ui/InitialLoadScreen";
 import { Toaster } from "@/components/ui/toaster";
@@ -243,11 +244,13 @@ export default function RootLayout({
         </noscript>
         <Providers>
           <InitialLoadScreen>
-            <GeoMismatchBanner />
-            {children}
-            <Toaster />
-            <SpeedInsights />
-
+            <ErrorBoundary>
+              <GeoMismatchBanner />
+              {children}
+              <Toaster />
+              <SpeedInsights />
+              <AppTracking />
+            </ErrorBoundary>
           </InitialLoadScreen>
         </Providers>
       </body>

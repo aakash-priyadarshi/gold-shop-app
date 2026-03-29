@@ -3,6 +3,8 @@
 import { ShopkeeperGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { PlanMigrationBanner } from "@/components/dashboard/PlanMigrationBanner";
+import { ShopkeeperSessionStats } from "@/components/dashboard/ShopkeeperSessionStats";
+import { AdminMessageBanner } from "@/components/ui/AdminMessageBanner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -218,6 +220,10 @@ export default function ShopDashboard() {
                   `Welcome back, ${user?.firstName}! Here's your shop overview.`,
                 )}
               </p>
+              {/* Session stats — shown only to shopkeepers, loads silently */}
+              <div className="mt-2">
+                <ShopkeeperSessionStats />
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" asChild>
@@ -234,6 +240,9 @@ export default function ShopDashboard() {
               </Button>
             </div>
           </div>
+
+          {/* Admin contact prompt — encourages shopkeepers to message admin@orivraa.com */}
+          <AdminMessageBanner />
 
           {user?.shop && !user.shop.isVerified && (
             <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">

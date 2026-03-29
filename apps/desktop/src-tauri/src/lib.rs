@@ -1,4 +1,4 @@
-﻿// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // Orivraa Desktop — Library Entry Point
 // ═══════════════════════════════════════════════════════════
 
@@ -48,13 +48,51 @@ pub fn run() {
                 }
             }
         })
-        .setup(|_app| {
+        .setup(|app| {
             env_logger::Builder::from_env(
                 env_logger::Env::default().default_filter_or("info"),
             )
             .init();
 
             log::info!("Orivraa Desktop started");
+
+            // Register a desktop session (fire-and-forget, non-blocking)
+            let db_handle = app.state::<Arc<Database>>().inner().clone();
+            tokio::spawn(async move {
+                let version = env!("CARGO_PKG_VERSION").to_string();
+                let os = match std::env::consts::OS {
+                    "windows" => "Windows",
+                    "macos" => "macOS",
+                    "linux" => "Linux",
+                    other => other,
+                }.to_string();
+                let arch = std::env::consts::ARCH.to_string();
+                let token = db_handle.get_auth("access_token").unwrap_or(None);
+
+                let client = reqwest::Client::new();
+                let mut req = client
+                    .post("https://api.orivraa.com/sessions/desktop/start")
+                    .json(&serde_json::json!({
+                        "appVersion": version,
+                        "os": os,
+                        "arch": arch,
+                    }))
+                    .timeout(std::time::Duration::from_secs(8));
+
+                if let Some(ref t) = token {
+                    req = req.header("Authorization", format!("Bearer {}", t));
+                }
+
+                if let Ok(resp) = req.send().await {
+                    if let Ok(body) = resp.json::<serde_json::Value>().await {
+                        if let Some(st) = body.get("sessionToken").and_then(|v| v.as_str()) {
+                            let _ = db_handle.set_auth("desktop_session_token", st, None);
+                            log::info!("Desktop session registered: {}", st);
+                        }
+                    }
+                }
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -91,6 +129,9 @@ pub fn run() {
             commands::install_update,
             commands::get_app_version,
             commands::send_heartbeat,
+            // Desktop Session Analytics
+            commands::start_desktop_session,
+            commands::end_desktop_session,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running Orivraa Desktop");

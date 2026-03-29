@@ -500,7 +500,14 @@ export class AuthService {
       lastName: string;
       picture?: string;
       requestedRole?: string;
-      mode?: string; // 'login' or 'register'
+      mode?: string;
+      // Google People API enriched fields
+      googleBirthday?: string;
+      googleGender?: string;
+      googlePhoneRaw?: string;
+      googleAddressRaw?: Record<string, unknown>;
+      googleLocale?: string;
+      googlePicture?: string;
     },
     ipAddress?: string,
     userAgent?: string,
@@ -526,7 +533,7 @@ export class AuthService {
           where: { id: user.id },
           data: {
             googleId: googleUser.googleId,
-            emailVerified: true, // Google verified the email
+            emailVerified: true,
             emailVerifiedAt: user.emailVerifiedAt || new Date(),
             status:
               user.status === UserStatus.PENDING_VERIFICATION
@@ -534,6 +541,17 @@ export class AuthService {
                 : user.status,
           },
         });
+      }
+      // Always update enriched Google data on login
+      const enriched: Record<string, unknown> = {};
+      if (googleUser.googleBirthday) enriched.googleBirthday = googleUser.googleBirthday;
+      if (googleUser.googleGender) enriched.googleGender = googleUser.googleGender;
+      if (googleUser.googlePhoneRaw) enriched.googlePhoneRaw = googleUser.googlePhoneRaw;
+      if (googleUser.googleAddressRaw) enriched.googleAddressRaw = googleUser.googleAddressRaw;
+      if (googleUser.googleLocale) enriched.googleLocale = googleUser.googleLocale;
+      if (googleUser.googlePicture) enriched.googlePicture = googleUser.googlePicture;
+      if (Object.keys(enriched).length) {
+        await this.prisma.user.update({ where: { id: user.id }, data: enriched });
       }
 
       // Block only deactivated — suspended users are allowed to log in
@@ -599,15 +617,21 @@ export class AuthService {
         lastName: googleUser.lastName,
         passwordHash: "", // No password for OAuth users
         role: requestedRole,
-        // SHOPKEEPER accounts via OAuth start as PENDING_VERIFICATION until shop is created
         status:
           requestedRole === UserRole.SHOPKEEPER
             ? UserStatus.PENDING_VERIFICATION
             : UserStatus.ACTIVE,
-        emailVerified: true, // Google verified the email
+        emailVerified: true,
         emailVerifiedAt: new Date(),
         preferredLanguage: "en",
         preferredCurrency: CurrencyCode.NPR,
+        // Store enriched Google People API data on signup
+        ...(googleUser.googleBirthday && { googleBirthday: googleUser.googleBirthday }),
+        ...(googleUser.googleGender && { googleGender: googleUser.googleGender }),
+        ...(googleUser.googlePhoneRaw && { googlePhoneRaw: googleUser.googlePhoneRaw }),
+        ...(googleUser.googleAddressRaw && { googleAddressRaw: googleUser.googleAddressRaw }),
+        ...(googleUser.googleLocale && { googleLocale: googleUser.googleLocale }),
+        ...(googleUser.googlePicture && { googlePicture: googleUser.googlePicture }),
       },
     });
 
@@ -903,5 +927,108 @@ export class AuthService {
       resourceType: "USER",
       resourceId: userId,
     });
+  }
+
+  // ─── PIN Fast Login ───────────────────────────────────────────
+
+  /** Setup or update the 6-digit PIN for fast re-login after timeout */
+  async setupPin(userId: string, pin: string): Promise<{ message: string }> {
+    if (!/^\d{6}$/.test(pin)) {
+      throw new BadRequestException("PIN must be exactly 6 digits");
+    }
+    const pinHash = await bcrypt.hash(pin, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pinHash, pinSetAt: new Date(), pinFailedCount: 0, pinLockedUntil: null },
+    });
+    this.logger.log(`PIN set for user ${userId}`);
+    return { message: "PIN set successfully" };
+  }
+
+  /** Verify PIN and issue new tokens — called from lock screen after 30-min inactivity */
+  async loginWithPin(
+    userId: string,
+    pin: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { shops: true },
+    });
+
+    if (!user || !user.pinHash) {
+      throw new UnauthorizedException("PIN not set for this account");
+    }
+
+    // Check lockout
+    if (user.pinLockedUntil && user.pinLockedUntil > new Date()) {
+      const remainingMs = user.pinLockedUntil.getTime() - Date.now();
+      const remainingMin = Math.ceil(remainingMs / 60000);
+      throw new UnauthorizedException(
+        `PIN locked due to too many failed attempts. Try again in ${remainingMin} minute(s).`,
+      );
+    }
+
+    const isValid = await bcrypt.compare(pin, user.pinHash);
+
+    if (!isValid) {
+      const failedCount = (user.pinFailedCount || 0) + 1;
+      const updateData: Record<string, unknown> = { pinFailedCount: failedCount };
+
+      if (failedCount >= 5) {
+        // Lock for 15 minutes
+        updateData.pinLockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+        updateData.pinFailedCount = 0;
+      }
+
+      await this.prisma.user.update({ where: { id: userId }, data: updateData });
+      throw new UnauthorizedException(
+        failedCount >= 5
+          ? "Too many failed attempts. PIN locked for 15 minutes."
+          : `Invalid PIN. ${5 - failedCount} attempt(s) remaining.`,
+      );
+    }
+
+    // PIN correct — reset counter and issue tokens
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pinFailedCount: 0, pinLockedUntil: null, lastLoginAt: new Date() },
+    });
+
+    await this.auditService.log({
+      userId,
+      actorType: "USER",
+      action: "LOGIN",
+      resourceType: "USER",
+      resourceId: userId,
+      metadata: { method: "pin" },
+      ipAddress,
+      userAgent,
+    });
+
+    return this.generateTokens(user, user.shops?.[0] || null, ipAddress, userAgent);
+  }
+
+  /** Remove PIN from account */
+  async removePin(userId: string): Promise<{ message: string }> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pinHash: null, pinSetAt: null, pinFailedCount: 0, pinLockedUntil: null },
+    });
+    return { message: "PIN removed successfully" };
+  }
+
+  /** Get PIN status for current user */
+  async getPinStatus(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { pinHash: true, pinSetAt: true, pinLockedUntil: true },
+    });
+    return {
+      hasPin: !!user?.pinHash,
+      pinSetAt: user?.pinSetAt || null,
+      pinLockedUntil: user?.pinLockedUntil || null,
+    };
   }
 }

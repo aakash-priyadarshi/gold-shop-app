@@ -645,11 +645,111 @@ pub async fn send_heartbeat(
             "arch": arch,
         }));
 
-    if let Some(t) = token {
+    if let Some(t) = &token {
         req = req.header("Authorization", format!("Bearer {}", t));
+    }
+
+    // Also send desktop session heartbeat if we have an active session token
+    if let Some(ref t) = token {
+        if let Some(session_token) = db.get_auth("desktop_session_token").unwrap_or(None) {
+            let _ = send_desktop_session_heartbeat(&session_token, t).await;
+        }
     }
 
     let resp = req.send().await.map_err(|e| format!("Heartbeat failed: {}", e))?;
     let body = resp.text().await.unwrap_or_default();
     Ok(body)
 }
+
+async fn send_desktop_session_heartbeat(session_token: &str, auth_token: &str) {
+    let client = reqwest::Client::new();
+    let _ = client
+        .post("https://api.orivraa.com/sessions/desktop/heartbeat")
+        .header("Authorization", format!("Bearer {}", auth_token))
+        .json(&serde_json::json!({ "sessionToken": session_token }))
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await;
+}
+
+// ─── Desktop Session Analytics ───────────────────────────────────────────────
+
+/// Called when the desktop app launches. Registers a session with the API server.
+/// The returned session token is stored locally for heartbeats and end-session.
+#[tauri::command]
+pub async fn start_desktop_session(
+    db: State<'_, Arc<Database>>,
+) -> Result<String, String> {
+    let version = env!("CARGO_PKG_VERSION").to_string();
+    let os = match std::env::consts::OS {
+        "windows" => "Windows",
+        "macos" => "macOS",
+        "linux" => "Linux",
+        other => other,
+    }.to_string();
+    let arch = std::env::consts::ARCH.to_string();
+
+    let token = db.get_auth("access_token").unwrap_or(None);
+
+    let client = reqwest::Client::new();
+    let mut req = client
+        .post("https://api.orivraa.com/sessions/desktop/start")
+        .json(&serde_json::json!({
+            "appVersion": version,
+            "os": os,
+            "arch": arch,
+        }))
+        .timeout(std::time::Duration::from_secs(10));
+
+    if let Some(ref t) = token {
+        req = req.header("Authorization", format!("Bearer {}", t));
+    }
+
+    match req.send().await {
+        Ok(resp) if resp.status().is_success() => {
+            if let Ok(body) = resp.json::<serde_json::Value>().await {
+                if let Some(session_token) = body.get("sessionToken").and_then(|v| v.as_str()) {
+                    let _ = db.set_auth("desktop_session_token", session_token, None);
+                    log::info!("Desktop session started: {}", session_token);
+                    return Ok(session_token.to_string());
+                }
+            }
+            Err("Invalid response from session start".into())
+        }
+        Ok(resp) => Err(format!("Session start failed: {}", resp.status())),
+        Err(e) => Err(format!("Session start error: {}", e)),
+    }
+}
+
+/// Called when the app quits (from Tauri's on_window_event or the JS beforeunload).
+#[tauri::command]
+pub async fn end_desktop_session(
+    db: State<'_, Arc<Database>>,
+    closed_by: Option<String>,
+) -> Result<(), String> {
+    let session_token = match db.get_auth("desktop_session_token").unwrap_or(None) {
+        Some(t) => t,
+        None => return Ok(()), // No session in progress
+    };
+
+    let auth_token = db.get_auth("access_token").unwrap_or(None);
+
+    let client = reqwest::Client::new();
+    let mut req = client
+        .post("https://api.orivraa.com/sessions/desktop/end")
+        .json(&serde_json::json!({
+            "sessionToken": session_token,
+            "closedBy": closed_by.unwrap_or_else(|| "user_quit".to_string()),
+        }))
+        .timeout(std::time::Duration::from_secs(5));
+
+    if let Some(ref t) = auth_token {
+        req = req.header("Authorization", format!("Bearer {}", t));
+    }
+
+    let _ = req.send().await;
+    let _ = db.set_auth("desktop_session_token", "", None);
+    log::info!("Desktop session ended: {}", session_token);
+    Ok(())
+}
+
