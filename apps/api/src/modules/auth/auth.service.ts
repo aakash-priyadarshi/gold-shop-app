@@ -268,6 +268,72 @@ export class AuthService {
     };
   }
 
+  // ═══════════════════════════════════════════════════════════
+  //  CONVERT TO SHOPKEEPER
+  // ═══════════════════════════════════════════════════════════
+  async convertToShopkeeper(userId: string, shopDto: any) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { shops: true },
+    });
+
+    if (!user) throw new NotFoundException("User not found");
+    // Ensure only unverified users or CUSTOMERS can convert, just to be safe.
+    if (user.role === "SHOPKEEPER") {
+      throw new BadRequestException("Account is already a shopkeeper");
+    }
+    if (user.shops && user.shops.length > 0) {
+      throw new BadRequestException("User already has a shop");
+    }
+
+    const preferredCurrency = (shopDto.currency as CurrencyCode) || user.preferredCurrency;
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          role: "SHOPKEEPER",
+          preferredCurrency,
+        },
+      });
+
+      const shop = await tx.shop.create({
+        data: {
+          userId,
+          shopName: shopDto.shopName,
+          country: shopDto.country,
+          city: shopDto.city,
+          address: shopDto.address,
+          contactPhone: shopDto.contactPhone,
+          contactEmail: shopDto.contactEmail,
+          isVerified: false,
+          isActive: true,
+        },
+      });
+
+      return { user: updatedUser, shop };
+    });
+
+    // Auto-activate FREE subscription plan for the new shop
+    await this.sellerSubscriptionsService.autoActivateFreePlan(
+      result.shop.id,
+      shopDto.country || "NP",
+    );
+
+    // Audit log
+    await this.auditService.log({
+      userId,
+      actorType: "USER",
+      action: "CONVERT_ACCOUNT_TO_SHOPKEEPER",
+      resourceType: "USER",
+      resourceId: userId,
+      newValue: { role: "SHOPKEEPER", shopId: result.shop.id },
+    });
+
+    // Generate fresh tokens
+    return this.generateTokens(result.user, result.shop);
+  }
+
   /**
    * Verify email with OTP after registration
    */

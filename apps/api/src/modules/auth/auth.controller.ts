@@ -27,7 +27,7 @@ import { CurrentUser } from "./decorators/current-user.decorator";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
-import { RegisterDto } from "./dto/register.dto";
+import { CreateShopDto, RegisterDto } from "./dto/register.dto";
 import { ResendVerificationDto } from "./dto/resend-verification.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { VerifyEmailDto } from "./dto/verify-email.dto";
@@ -146,6 +146,19 @@ export class AuthController {
   @ApiResponse({ status: 400, description: "Invalid or expired OTP" })
   async verifyEmail(@Body() dto: VerifyEmailDto): Promise<AuthResponse> {
     return this.authService.verifyEmail(dto.userId, dto.code);
+  }
+
+  @Post("convert-to-shopkeeper")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Convert CUSTOMER account to SHOPKEEPER account" })
+  @ApiResponse({ status: 200, description: "Successfully converted to shopkeeper returns new token" })
+  async convertToShopkeeper(
+    @CurrentUser() user: any,
+    @Body() dto: CreateShopDto,
+  ): Promise<AuthResponse> {
+    return this.authService.convertToShopkeeper(user.id, dto);
   }
 
   @Post("resend-verification")
