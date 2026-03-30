@@ -323,6 +323,15 @@ export class MailService {
     });
   }
 
+  async sendShopkeeperWelcome(to: string, name: string): Promise<SendResult> {
+    return this.send({
+      to,
+      subject: 'Welcome to Orivraa Seller Center!',
+      template: 'welcome-shopkeeper',
+      context: { name },
+    });
+  }
+
   async sendPasswordReset(to: string, name: string, resetLink: string): Promise<SendResult> {
     return this.send({
       to,

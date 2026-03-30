@@ -333,7 +333,7 @@ export class AuthService {
     // Send welcome email
     this.mailService
       .sendShopkeeperWelcome(result.user.email, result.user.firstName)
-      .catch((err) =>
+      .catch((err: any) =>
         this.logger.error(`Failed to send seller welcome email: ${err.message}`),
       );
 
@@ -380,7 +380,7 @@ export class AuthService {
     if (user.role === "SHOPKEEPER") {
       this.mailService
         .sendShopkeeperWelcome(user.email, user.firstName)
-        .catch((err) =>
+        .catch((err: any) =>
           this.logger.error(`Failed to send seller welcome email: ${err.message}`),
         );
     } else {
@@ -731,7 +731,7 @@ export class AuthService {
       if (newUser.role === "SHOPKEEPER") {
         this.mailService
           .sendShopkeeperWelcome(newUser.email, newUser.firstName)
-          .catch((err) =>
+          .catch((err: any) =>
             this.logger.error(`Failed to send seller welcome email: ${err.message}`),
           );
       } else {
