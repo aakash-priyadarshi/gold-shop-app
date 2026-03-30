@@ -191,6 +191,15 @@ interface CustomerNote {
   author: { firstName: string; lastName: string };
 }
 
+const NOTE_CATEGORIES = [
+  { value: "GENERAL", label: "General" },
+  { value: "FOLLOW_UP", label: "Follow-up" },
+  { value: "PAYMENT", label: "Payment" },
+  { value: "PREFERENCE", label: "Preference" },
+  { value: "COMPLAINT", label: "Complaint" },
+  { value: "VIP", label: "VIP" },
+];
+
 /* â”€â”€â”€ ENGAGEMENT â”€â”€â”€ */
 
 function getEngagementTags(customer: CRMCustomer) {
