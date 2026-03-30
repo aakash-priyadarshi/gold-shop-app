@@ -127,7 +127,7 @@ function getValueTier(totalSpent: number, orderCount: number): { label: string; 
   return { label: "Occasional", color: "bg-gray-100 text-gray-700" };
 }
 
-/* â”€â”€â”€ TYPES â”€â”€â”€ */
+/* --- TYPES --- */
 
 interface CRMCustomer {
   id: string;
@@ -199,7 +199,7 @@ const NOTE_CATEGORIES = [
   { value: "VIP", label: "VIP" },
 ];
 
-/* â”€â”€â”€ ENGAGEMENT â”€â”€â”€ */
+/* --- ENGAGEMENT --- */
 
 function getEngagementTags(customer: CRMCustomer) {
   const tags: { label: string; color: string }[] = [];
@@ -249,7 +249,7 @@ export function AdminCustomersCRM() {
   // -- Export --
   const [exporting, setExporting] = useState(false);
 
-  // â”€â”€ Fetch â”€â”€
+  // -- Fetch --
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
@@ -293,7 +293,7 @@ export function AdminCustomersCRM() {
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
   useEffect(() => { setPage(1); }, [searchQuery, typeFilter, sortBy, onlineOnly]);
 
-  // â”€â”€ Open profile sheet â”€â”€
+  // -- Open profile sheet --
   const openProfile = async (customerId: string, customerType: "REGISTERED" | "WALK_IN") => {
     setSelectedCustomerId(customerId);
     setSheetOpen(true);
@@ -325,7 +325,7 @@ export function AdminCustomersCRM() {
     }
   };
 
-  // â”€â”€ Notes â”€â”€
+  // -- Notes --
   const handleAddNote = async () => {
     if (!newNote.trim() || !selectedCustomerId) return;
     setAddingNote(true);
@@ -341,7 +341,7 @@ export function AdminCustomersCRM() {
     } finally { setAddingNote(false); }
   };
 
-  // â”€â”€ Message â”€â”€
+  // -- Message --
   const handleSendMessage = async () => {
     if (!profile || !msgContent.trim() || profile.type !== "REGISTERED") return;
     setSendingMsg(true);
@@ -369,7 +369,7 @@ export function AdminCustomersCRM() {
     } finally { setGeneratingAI(false); }
   };
 
-  // â”€â”€ Export CSV â”€â”€
+  // -- Export CSV --
   const handleExportCSV = async () => {
     setExporting(true);
     try {
@@ -403,14 +403,14 @@ export function AdminCustomersCRM() {
     } finally { setExporting(false); }
   };
 
-  // â”€â”€ Derived â”€â”€
+  // -- Derived --
   const preferredCurrency = profile?.preferredCurrency || profile?.currency || "NPR";
   const totalSpentNpr = profile?.purchaseStats?.[0]?.totalSpent || 0;
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // -------------------------------------------------------------
   return (
     <div className="space-y-6">
-      {/* â”€â”€ STATS ROW â”€â”€ */}
+      {/* -- STATS ROW -- */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { label: "Total Customers", value: stats.total, icon: Users, color: "" },
@@ -435,7 +435,7 @@ export function AdminCustomersCRM() {
         ))}
       </div>
 
-      {/* â”€â”€ FILTERS â”€â”€ */}
+      {/* -- FILTERS -- */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -482,7 +482,7 @@ export function AdminCustomersCRM() {
         </CardContent>
       </Card>
 
-      {/* â”€â”€ CUSTOMERS TABLE â”€â”€ */}
+      {/* -- CUSTOMERS TABLE -- */}
       <Card>
         <CardContent className="p-0">
           {loading ? (
@@ -503,7 +503,7 @@ export function AdminCustomersCRM() {
                     <TableHead>Contact &amp; Currency</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Location</TableHead>
-                    <TableHead className="text-center">Orders Â· RFQs Â· Quotes</TableHead>
+                    <TableHead className="text-center">Orders | RFQs | Quotes</TableHead>
                     <TableHead>Total Spent</TableHead>
                     <TableHead>Tags</TableHead>
                     <TableHead>Last Active</TableHead>
@@ -530,7 +530,7 @@ export function AdminCustomersCRM() {
                             </div>
                             <div>
                               <div className="flex items-center gap-1.5">
-                                <span className="font-medium text-sm">{customer.name || "â€”"}</span>
+                                <span className="font-medium text-sm">{customer.name || "--"}</span>
                                 {customer.isOnlineNow && (
                                   <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse shrink-0" title="Online now" />
                                 )}
@@ -583,7 +583,7 @@ export function AdminCustomersCRM() {
                               <MapPin className="h-3 w-3" />
                               {[customer.city, customer.country].filter(Boolean).join(", ")}
                             </div>
-                          ) : "â€”"}
+                          ) : "--"}
                         </TableCell>
 
                         {/* Activity */}
@@ -592,11 +592,11 @@ export function AdminCustomersCRM() {
                             <span className="flex items-center gap-0.5 text-muted-foreground">
                               <ShoppingBag className="h-3 w-3" />{customer.orderCount}
                             </span>
-                            <span className="text-muted-foreground/40">Â·</span>
+                            <span className="text-muted-foreground/40">|</span>
                             <span className="flex items-center gap-0.5 text-muted-foreground">
                               <MessageSquare className="h-3 w-3" />{customer.rfqCount}
                             </span>
-                            <span className="text-muted-foreground/40">Â·</span>
+                            <span className="text-muted-foreground/40">|</span>
                             <span className="flex items-center gap-0.5 text-muted-foreground">
                               <Zap className="h-3 w-3" />{customer.quoteCount}
                             </span>
@@ -618,7 +618,7 @@ export function AdminCustomersCRM() {
                                     {t.label}
                                   </span>
                                 ))
-                              : <span className="text-muted-foreground text-xs">â€”</span>}
+                              : <span className="text-muted-foreground text-xs">--</span>}
                           </div>
                         </TableCell>
 
@@ -665,7 +665,7 @@ export function AdminCustomersCRM() {
         </CardContent>
       </Card>
 
-      {/* â”€â”€ CUSTOMER PROFILE SHEET â”€â”€ */}
+      {/* -- CUSTOMER PROFILE SHEET -- */}
       <Sheet open={sheetOpen} onOpenChange={(o) => !o && setSheetOpen(false)}>
         <SheetContent side="right" className="w-full sm:w-[720px] sm:max-w-[720px] overflow-y-auto p-0">
           {loadingProfile ? (
@@ -674,7 +674,7 @@ export function AdminCustomersCRM() {
             </div>
           ) : !profile ? null : (
             <>
-              {/* â”€â”€ Sheet Header â”€â”€ */}
+              {/* -- Sheet Header -- */}
               <div className="sticky top-0 z-10 bg-background border-b">
                 <div className="flex items-start gap-4 p-6 pb-0">
                   <div className="h-14 w-14 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
@@ -735,10 +735,10 @@ export function AdminCustomersCRM() {
                 </div>
               </div>
 
-              {/* â”€â”€ Tab Content â”€â”€ */}
+              {/* -- Tab Content -- */}
               <div className="p-6 space-y-5">
 
-                {/* â”€â”€ OVERVIEW â”€â”€ */}
+                {/* -- OVERVIEW -- */}
                 {activeTab === "overview" && (
                   <div className="space-y-5">
                     {/* Lightweight session strip for registered customers */}
@@ -830,7 +830,7 @@ export function AdminCustomersCRM() {
                   </div>
                 )}
 
-                {/* â”€â”€ TRANSACTIONS â”€â”€ */}
+                {/* -- TRANSACTIONS -- */}
                 {activeTab === "transactions" && (
                   <div className="space-y-5">
                     <div className="grid grid-cols-3 gap-3">
@@ -941,7 +941,7 @@ export function AdminCustomersCRM() {
                   </div>
                 )}
 
-                {/* â”€â”€ ACTIVITY (registered only) â”€â”€ */}
+                {/* -- ACTIVITY (registered only) -- */}
                 {activeTab === "activity" && (
                   <div className="space-y-5">
                     {profile.sessionSummary && (
@@ -1011,7 +1011,7 @@ export function AdminCustomersCRM() {
                                   {s.isActive && <span className="inline-block h-2 w-2 rounded-full bg-green-500 mr-1.5 animate-pulse" />}
                                   {formatRelative(s.startedAt)}
                                 </TableCell>
-                                <TableCell className="text-xs">{s.durationSec ? formatDuration(s.durationSec) : "â€”"}</TableCell>
+                                <TableCell className="text-xs">{s.durationSec ? formatDuration(s.durationSec) : "--"}</TableCell>
                                 <TableCell className="text-xs">{s.pageViews}</TableCell>
                                 <TableCell className="text-xs">
                                   <div className="flex items-center gap-1">
@@ -1019,7 +1019,7 @@ export function AdminCustomersCRM() {
                                     {s.platform}
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-xs">{s.country || "â€”"}</TableCell>
+                                <TableCell className="text-xs">{s.country || "--"}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -1029,7 +1029,7 @@ export function AdminCustomersCRM() {
                   </div>
                 )}
 
-                {/* â”€â”€ NOTES â”€â”€ */}
+                {/* -- NOTES -- */}
                 {activeTab === "notes" && (
                   <div className="space-y-4">
                     <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
@@ -1076,7 +1076,7 @@ export function AdminCustomersCRM() {
                   </div>
                 )}
 
-                {/* â”€â”€ MESSAGE (registered only) â”€â”€ */}
+                {/* -- MESSAGE (registered only) -- */}
                 {activeTab === "message" && (
                   <div className="space-y-4">
                     <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
