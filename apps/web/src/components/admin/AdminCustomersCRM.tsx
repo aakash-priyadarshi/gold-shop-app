@@ -58,21 +58,21 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-/* â”€â”€â”€ CURRENCY â”€â”€â”€ */
+/* --- CURRENCY --- */
 
 const CURRENCY_RATES_TO_NPR: Record<string, number> = {
   NPR: 1, USD: 133, INR: 1.6, EUR: 145, GBP: 168,
   AUD: 85, CAD: 98, SGD: 98, AED: 36, CNY: 18, JPY: 0.9,
 };
 
-const CURRENCY_FLAGS: Record<string, string> = {
-  NPR: "ðŸ‡³ðŸ‡µ", USD: "ðŸ‡ºðŸ‡¸", INR: "ðŸ‡®ðŸ‡³", EUR: "ðŸ‡ªðŸ‡º",
-  GBP: "ðŸ‡¬ðŸ‡§", AUD: "ðŸ‡¦ðŸ‡º", CAD: "ðŸ‡¨ðŸ‡¦", SGD: "ðŸ‡¸ðŸ‡¬",
-  AED: "ðŸ‡¦ðŸ‡ª", CNY: "ðŸ‡¨ðŸ‡³", JPY: "ðŸ‡¯ðŸ‡µ",
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  NPR: "Rs", USD: "$", INR: "Rs", EUR: "EUR",
+  GBP: "GBP", AUD: "AUD", CAD: "CAD", SGD: "SGD",
+  AED: "AED", CNY: "CNY", JPY: "JPY",
 };
 
 function formatNPR(amount: number) {
-  if (!amount) return "â€”";
+  if (!amount) return "--";
   return `NPR ${amount.toLocaleString()}`;
 }
 
@@ -80,17 +80,17 @@ function formatInCurrency(amountNpr: number, currency: string): string | null {
   if (!amountNpr || currency === "NPR") return null;
   const rate = CURRENCY_RATES_TO_NPR[currency] ?? 1;
   const converted = Math.round(amountNpr / rate);
-  return `â‰ˆ ${currency} ${converted.toLocaleString()}`;
+  return `~ ${currency} ${converted.toLocaleString()}`;
 }
 
 function formatCurrencyLabel(currency: string) {
-  return `${CURRENCY_FLAGS[currency] ?? "ðŸ’±"} ${currency}`;
+  return `${CURRENCY_SYMBOLS[currency] ?? "CUR"} ${currency}`;
 }
 
-/* â”€â”€â”€ HELPERS â”€â”€â”€ */
+/* --- HELPERS --- */
 
 function formatDate(d: string) {
-  if (!d) return "â€”";
+  if (!d) return "--";
   return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
