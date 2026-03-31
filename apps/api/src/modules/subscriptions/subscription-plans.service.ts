@@ -13,6 +13,53 @@ import { CreatePlanDto, UpdatePlanDto } from "./dto";
 export class SubscriptionPlansService {
   private readonly logger = new Logger(SubscriptionPlansService.name);
 
+  private readonly supportedRegions = ["NP", "IN", "AE", "UK", "US", "EU"] as const;
+
+  private readonly currencyMap: Record<string, string> = {
+    NP: "NPR",
+    IN: "INR",
+    AE: "AED",
+    UK: "GBP",
+    US: "USD",
+    EU: "EUR",
+  };
+
+  private readonly countryNames: Record<string, string> = {
+    NP: "Nepal",
+    IN: "India",
+    AE: "UAE",
+    UK: "United Kingdom",
+    US: "United States",
+    EU: "Europe",
+  };
+
+  private readonly proPricing: Record<string, { monthly: number; annual: number; extraCredit: number }> = {
+    NP: { monthly: 1999, annual: 19990, extraCredit: 50 },
+    IN: { monthly: 999, annual: 9990, extraCredit: 25 },
+    AE: { monthly: 99, annual: 990, extraCredit: 5 },
+    UK: { monthly: 29, annual: 290, extraCredit: 1.5 },
+    US: { monthly: 35, annual: 350, extraCredit: 2 },
+    EU: { monthly: 29, annual: 290, extraCredit: 1.5 },
+  };
+
+  private readonly proPlusPricing: Record<string, { monthly: number; annual: number; extraCredit: number }> = {
+    NP: { monthly: 4999, annual: 49990, extraCredit: 30 },
+    IN: { monthly: 2499, annual: 24990, extraCredit: 15 },
+    AE: { monthly: 249, annual: 2490, extraCredit: 3 },
+    UK: { monthly: 79, annual: 790, extraCredit: 1 },
+    US: { monthly: 99, annual: 990, extraCredit: 1.2 },
+    EU: { monthly: 79, annual: 790, extraCredit: 1 },
+  };
+
+  private readonly enterprisePricing: Record<string, { monthly: number; annual: number; extraCredit: number }> = {
+    NP: { monthly: 14999, annual: 149990, extraCredit: 20 },
+    IN: { monthly: 7999, annual: 79990, extraCredit: 10 },
+    AE: { monthly: 799, annual: 7990, extraCredit: 2 },
+    UK: { monthly: 249, annual: 2490, extraCredit: 0.8 },
+    US: { monthly: 299, annual: 2990, extraCredit: 1 },
+    EU: { monthly: 249, annual: 2490, extraCredit: 0.8 },
+  };
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
@@ -177,9 +224,18 @@ export class SubscriptionPlansService {
    */
   async getAvailablePlans(country?: string) {
     if (!country) return [];
-    const where: any = { isActive: true, country };
+    const normalizedCountry = country.toUpperCase();
 
-    return this.prisma.subscriptionPlan.findMany({
+    if (this.supportedRegions.includes(normalizedCountry as any)) {
+      const totalPlans = await this.prisma.subscriptionPlan.count();
+      if (totalPlans === 0) {
+        this.logger.warn("No subscription plans found in DB. Bootstrapping default plans.");
+        await this.bootstrapDefaultPlans();
+      }
+    }
+
+    const where: any = { isActive: true, country: normalizedCountry };
+    const plans = await this.prisma.subscriptionPlan.findMany({
       where,
       orderBy: { sortOrder: "asc" },
       select: {
@@ -208,6 +264,225 @@ export class SubscriptionPlansService {
         buttonColor: true,
       },
     });
+
+    if (plans.length > 0) return plans;
+
+    if (normalizedCountry !== "US") {
+      return this.prisma.subscriptionPlan.findMany({
+        where: { isActive: true, country: "US" },
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          name: true,
+          displayName: true,
+          description: true,
+          country: true,
+          currency: true,
+          monthlyPrice: true,
+          annualPrice: true,
+          maxProducts: true,
+          maxInvoicesPerMonth: true,
+          maxCatalogues: true,
+          catalogueLimit: true,
+          maxOrdersPerMonth: true,
+          commissionPercent: true,
+          includesAi: true,
+          monthlyAiCredits: true,
+          rolloverCap: true,
+          extraCreditPrice: true,
+          overageBehavior: true,
+          features: true,
+          sortOrder: true,
+          badgeText: true,
+          buttonColor: true,
+        },
+      });
+    }
+
+    return [];
+  }
+
+  private async bootstrapDefaultPlans() {
+    for (const region of this.supportedRegions) {
+      await this.prisma.subscriptionPlan.upsert({
+        where: { name_country: { name: "FREE", country: region as any } },
+        update: {},
+        create: {
+          name: "FREE",
+          displayName: `Free (${this.countryNames[region]})`,
+          description:
+            "Get started for free. List products on the marketplace with basic features.",
+          country: region as any,
+          currency: this.currencyMap[region] as any,
+          monthlyPrice: 0,
+          annualPrice: 0,
+          catalogueLimit: 20,
+          commissionPercent: 5.0,
+          includesAi: false,
+          monthlyAiCredits: 0,
+          rolloverCap: 0,
+          extraCreditPrice: 0,
+          overageBehavior: "BLOCK" as any,
+          features: {
+            basicAnalytics: true,
+            marketplace: true,
+            prioritySupport: false,
+            customBranding: false,
+            bulkUpload: false,
+            crm: false,
+            invoicing: false,
+            inventoryManagement: false,
+          } as any,
+          isActive: true,
+          sortOrder: 0,
+          badgeText: null,
+          buttonColor: null,
+        },
+      });
+
+      const pro = this.proPricing[region];
+      await this.prisma.subscriptionPlan.upsert({
+        where: { name_country: { name: "PRO", country: region as any } },
+        update: {},
+        create: {
+          name: "PRO",
+          displayName: `Pro (${this.countryNames[region]})`,
+          description:
+            "Full CRM for your jewellery business - inventory, invoicing, customer management, and analytics. AI credits available for purchase.",
+          country: region as any,
+          currency: this.currencyMap[region] as any,
+          monthlyPrice: pro.monthly,
+          annualPrice: pro.annual,
+          catalogueLimit: 200,
+          commissionPercent: 3.0,
+          includesAi: false,
+          monthlyAiCredits: 0,
+          rolloverCap: 0,
+          extraCreditPrice: pro.extraCredit,
+          overageBehavior: "BLOCK" as any,
+          features: {
+            basicAnalytics: true,
+            advancedAnalytics: true,
+            marketplace: true,
+            crm: true,
+            invoicing: true,
+            inventoryManagement: true,
+            customerManagement: true,
+            prioritySupport: true,
+            customBranding: true,
+            bulkUpload: true,
+            priorityListing: true,
+            purchasableAiCredits: true,
+          } as any,
+          isActive: true,
+          sortOrder: 1,
+          badgeText: null,
+          buttonColor: null,
+        },
+      });
+
+      const proPlus = this.proPlusPricing[region];
+      await this.prisma.subscriptionPlan.upsert({
+        where: { name_country: { name: "PRO_PLUS", country: region as any } },
+        update: {},
+        create: {
+          name: "PRO_PLUS",
+          displayName: `Pro+ (${this.countryNames[region]})`,
+          description:
+            "Everything in Pro, plus AI-powered design generation, smart recommendations, and 100 AI credits per month. Additional credits purchasable.",
+          country: region as any,
+          currency: this.currencyMap[region] as any,
+          monthlyPrice: proPlus.monthly,
+          annualPrice: proPlus.annual,
+          catalogueLimit: 1000,
+          commissionPercent: 2.0,
+          includesAi: true,
+          monthlyAiCredits: 100,
+          rolloverCap: 200,
+          extraCreditPrice: proPlus.extraCredit,
+          overageBehavior: "BLOCK" as any,
+          features: {
+            basicAnalytics: true,
+            advancedAnalytics: true,
+            marketplace: true,
+            crm: true,
+            invoicing: true,
+            inventoryManagement: true,
+            customerManagement: true,
+            prioritySupport: true,
+            customBranding: true,
+            bulkUpload: true,
+            priorityListing: true,
+            purchasableAiCredits: true,
+            aiDesignGeneration: true,
+            aiSmartRecommendations: true,
+            aiPriceOptimization: true,
+            scheduledReports: true,
+            demandForecasting: true,
+          } as any,
+          isActive: true,
+          sortOrder: 2,
+          badgeText: "Most Popular",
+          buttonColor: "#f59e0b",
+        },
+      });
+
+      const enterprise = this.enterprisePricing[region];
+      await this.prisma.subscriptionPlan.upsert({
+        where: { name_country: { name: "ENTERPRISE", country: region as any } },
+        update: {},
+        create: {
+          name: "ENTERPRISE",
+          displayName: `Enterprise (${this.countryNames[region]})`,
+          description:
+            "Custom plan for large businesses. Unlimited catalogue, lowest commission, dedicated account manager, API access, white-label, and custom integrations.",
+          country: region as any,
+          currency: this.currencyMap[region] as any,
+          monthlyPrice: enterprise.monthly,
+          annualPrice: enterprise.annual,
+          catalogueLimit: null,
+          commissionPercent: 1.0,
+          includesAi: true,
+          monthlyAiCredits: 500,
+          rolloverCap: 500,
+          extraCreditPrice: enterprise.extraCredit,
+          overageBehavior: "AUTO_CHARGE" as any,
+          features: {
+            basicAnalytics: true,
+            advancedAnalytics: true,
+            marketplace: true,
+            crm: true,
+            invoicing: true,
+            inventoryManagement: true,
+            customerManagement: true,
+            prioritySupport: true,
+            dedicatedSupport: true,
+            dedicatedAccountManager: true,
+            customBranding: true,
+            bulkUpload: true,
+            priorityListing: true,
+            purchasableAiCredits: true,
+            aiDesignGeneration: true,
+            aiSmartRecommendations: true,
+            aiPriceOptimization: true,
+            scheduledReports: true,
+            demandForecasting: true,
+            apiAccess: true,
+            whiteLabel: true,
+            multiBranch: true,
+            staffAccounts: true,
+            webhookSubscriptions: true,
+            customDomain: true,
+            auditLogExport: true,
+            customIntegrations: true,
+          } as any,
+          isActive: true,
+          sortOrder: 3,
+          badgeText: null,
+          buttonColor: "#7c3aed",
+        },
+      });
+    }
   }
 
   // ═══════════════════════════════════════════
