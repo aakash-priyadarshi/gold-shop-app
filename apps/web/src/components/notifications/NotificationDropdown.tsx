@@ -48,6 +48,37 @@ interface Notification {
   referenceId?: string;
 }
 
+const humanizeToken = (value?: string) => {
+  if (!value) return "Notification";
+  return value
+    .replace(/^notification\./i, "")
+    .replace(/\.(title|body)$/i, "")
+    .replace(/[_\.]+/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const inferTypeCategory = (type: string) => {
+  if (type.startsWith("ORDER_")) return "ORDER";
+  if (type.startsWith("RFQ_") || type.startsWith("OFFER_")) return "QUOTE";
+  if (type.startsWith("PAYMENT_") || type.startsWith("REFUND_")) return "PAYMENT";
+  if (type.startsWith("PLAN_")) return "SUBSCRIPTION";
+  if (type.startsWith("CHAT_") || type.includes("MESSAGE") || type.includes("CONVERSATION")) return "MESSAGING";
+  if (type.includes("SUSPEND") || type.includes("VIOLATION") || type.includes("HOLD")) return "SECURITY";
+  return "SYSTEM";
+};
+
+const fallbackCategoryStyle: Record<string, { icon: any; color: string }> = {
+  ORDER: { icon: ShoppingBag, color: "text-blue-500" },
+  QUOTE: { icon: MessageSquare, color: "text-purple-500" },
+  PAYMENT: { icon: DollarSign, color: "text-green-500" },
+  SUBSCRIPTION: { icon: ArrowRightLeft, color: "text-amber-500" },
+  MESSAGING: { icon: MessageSquare, color: "text-indigo-500" },
+  SECURITY: { icon: ShieldAlert, color: "text-red-600" },
+  SYSTEM: { icon: Bell, color: "text-gray-500" },
+};
+
 // Notification type configurations
 const notificationConfig: Record<
   string,
@@ -349,6 +380,28 @@ const notificationConfig: Record<
   },
 };
 
+function buildFallbackTitle(notification: Notification, params: Record<string, any>) {
+  if (params?.title) return String(params.title);
+  if (params?.orderNumber) return `Order #${params.orderNumber}`;
+  if (params?.rfqNumber) return `RFQ #${params.rfqNumber}`;
+  if (params?.quoteNumber) return `Quote #${params.quoteNumber}`;
+  if (notification.titleKey) return humanizeToken(notification.titleKey);
+  return humanizeToken(notification.type);
+}
+
+function buildFallbackBody(notification: Notification, params: Record<string, any>) {
+  if (params?.message) return String(params.message);
+  if (params?.reason) return String(params.reason);
+  if (params?.status) return `Status: ${String(params.status).replace(/_/g, " ")}`;
+  if (params?.shopName && params?.customerName) {
+    return `${params.customerName} - ${params.shopName}`;
+  }
+  if (params?.shopName) return `Shop: ${params.shopName}`;
+  if (params?.newPlan) return `Updated to ${params.newPlan}`;
+  if (notification.bodyKey) return humanizeToken(notification.bodyKey);
+  return "You have a new notification.";
+}
+
 export function NotificationDropdown() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -402,13 +455,24 @@ export function NotificationDropdown() {
   };
 
   const getNotificationContent = (notification: Notification) => {
-    const config =
-      notificationConfig[notification.type] || notificationConfig.SYSTEM_ALERT;
+    const config = notificationConfig[notification.type];
     // Merge titleParams and bodyParams for flexibility
     const allParams = {
       ...notification.titleParams,
       ...notification.bodyParams,
     };
+
+    if (!config) {
+      const category = inferTypeCategory(notification.type);
+      const style = fallbackCategoryStyle[category] || fallbackCategoryStyle.SYSTEM;
+      return {
+        icon: style.icon,
+        color: style.color,
+        title: buildFallbackTitle(notification, allParams),
+        body: buildFallbackBody(notification, allParams),
+      };
+    }
+
     return {
       icon: config.icon,
       color: config.color,

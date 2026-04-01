@@ -23,13 +23,58 @@ import { useEffect, useState } from "react";
 
 interface Notification {
   id: string;
-  type: "ORDER" | "RFQ" | "OFFER" | "SYSTEM" | "PROMOTION" | "ALERT";
-  title: string;
-  message: string;
+  type: string;
+  title?: string;
+  message?: string;
+  titleKey?: string;
+  titleParams?: Record<string, any>;
+  bodyKey?: string;
+  bodyParams?: Record<string, any>;
   isRead: boolean;
   createdAt: string;
   data?: any;
 }
+
+const humanizeToken = (value?: string) => {
+  if (!value) return "Notification";
+  return value
+    .replace(/^notification\./i, "")
+    .replace(/\.(title|body)$/i, "")
+    .replace(/[_\.]+/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const inferCategory = (type: string) => {
+  if (type.startsWith("ORDER_")) return "ORDER";
+  if (type.startsWith("RFQ_") || type.startsWith("OFFER_")) return "RFQ";
+  if (type.startsWith("PAYMENT_") || type.startsWith("REFUND_")) return "PAYMENT";
+  if (type.startsWith("PLAN_")) return "SYSTEM";
+  if (type.includes("ALERT") || type.includes("VIOLATION") || type.includes("SUSPEND")) return "ALERT";
+  if (type.includes("PROMO") || type.includes("MARKETING")) return "PROMOTION";
+  return "SYSTEM";
+};
+
+const resolveNotificationText = (n: Notification) => {
+  const merged = { ...(n.titleParams || {}), ...(n.bodyParams || {}) };
+  const title =
+    n.title ||
+    (merged.title as string | undefined) ||
+    (merged.orderNumber ? `Order #${merged.orderNumber}` : undefined) ||
+    humanizeToken(n.titleKey) ||
+    humanizeToken(n.type);
+
+  const message =
+    n.message ||
+    (merged.message as string | undefined) ||
+    (merged.reason as string | undefined) ||
+    (merged.status ? `Status: ${String(merged.status).replace(/_/g, " ")}` : undefined) ||
+    humanizeToken(n.bodyKey) ||
+    "You have a new notification.";
+
+  return { title, message };
+};
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -155,7 +200,8 @@ export default function NotificationsPage() {
   const filteredNotifications = notifications.filter((n) => {
     if (activeTab === "all") return true;
     if (activeTab === "unread") return !n.isRead;
-    return n.type === activeTab.toUpperCase();
+    const category = inferCategory(n.type);
+    return category === activeTab.toUpperCase();
   });
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
@@ -253,7 +299,9 @@ export default function NotificationsPage() {
             ) : (
               <div className="space-y-2">
                 {filteredNotifications.map((notification) => {
-                  const Icon = getNotificationIcon(notification.type);
+                  const categoryType = inferCategory(notification.type);
+                  const Icon = getNotificationIcon(categoryType);
+                  const { title, message } = resolveNotificationText(notification);
                   return (
                     <Card
                       key={notification.id}
@@ -262,7 +310,7 @@ export default function NotificationsPage() {
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
                           <div
-                            className={`p-2 rounded-lg ${getNotificationColor(notification.type)}`}
+                            className={`p-2 rounded-lg ${getNotificationColor(categoryType)}`}
                           >
                             <Icon className="h-5 w-5" />
                           </div>
@@ -272,10 +320,10 @@ export default function NotificationsPage() {
                                 <h4
                                   className={`text-sm font-medium ${!notification.isRead ? "text-gray-900" : "text-gray-700"}`}
                                 >
-                                  {notification.title}
+                                  {title}
                                 </h4>
                                 <p className="text-sm text-gray-500 mt-0.5">
-                                  {notification.message}
+                                  {message}
                                 </p>
                               </div>
                               <span className="text-xs text-gray-400 whitespace-nowrap">
