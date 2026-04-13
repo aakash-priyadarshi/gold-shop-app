@@ -241,24 +241,6 @@ export default function AdminUsersPage() {
     } finally { setIsLoading(false); }
   };
 
-  const filterUsers = () => {
-    let filtered = [...users];
-    if (roleFilter !== "all") filtered = filtered.filter((u) => u.role === roleFilter);
-    if (statusFilter === "active") filtered = filtered.filter((u) => u.status === "ACTIVE");
-    else if (statusFilter === "suspended") filtered = filtered.filter((u) => u.status === "SUSPENDED");
-    else if (statusFilter === "pending") filtered = filtered.filter((u) => u.status === "PENDING_VERIFICATION");
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter((u) =>
-        u.email.toLowerCase().includes(q) ||
-        u.firstName?.toLowerCase().includes(q) ||
-        u.lastName?.toLowerCase().includes(q) ||
-        u.phone?.includes(q),
-      );
-    }
-    setFilteredUsers(filtered);
-  };
-
   const handleViewUser = async (user: UserData) => {
     setSelectedUser(null);
     setSheetOpen(true);
