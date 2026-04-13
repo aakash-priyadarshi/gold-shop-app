@@ -18,6 +18,7 @@ import {
   ArrowRightLeft,
   Ban,
   Bell,
+  BrainCircuit,
   Check,
   CheckCheck,
   CheckCircle2,
@@ -25,10 +26,13 @@ import {
   Hammer,
   Lock,
   MessageSquare,
+  Moon,
   Package,
   RotateCcw,
   ShieldAlert,
   ShoppingBag,
+  Sparkles,
+  TrendingUp,
   Truck,
   UserX,
 } from "lucide-react";
@@ -61,11 +65,13 @@ const humanizeToken = (value?: string) => {
 
 const inferTypeCategory = (type: string) => {
   if (type.startsWith("ORDER_")) return "ORDER";
-  if (type.startsWith("RFQ_") || type.startsWith("OFFER_")) return "QUOTE";
+  if (type.startsWith("RFQ_") || type.startsWith("OFFER_") || type === "COUNTER_ACCEPTED" || type === "COUNTER_DECLINED") return "QUOTE";
   if (type.startsWith("PAYMENT_") || type.startsWith("REFUND_")) return "PAYMENT";
   if (type.startsWith("PLAN_")) return "SUBSCRIPTION";
   if (type.startsWith("CHAT_") || type.includes("MESSAGE") || type.includes("CONVERSATION")) return "MESSAGING";
-  if (type.includes("SUSPEND") || type.includes("VIOLATION") || type.includes("HOLD")) return "SECURITY";
+  if (type.includes("SUSPEND") || type.includes("VIOLATION") || type.includes("HOLD") || type.includes("ANOMALY")) return "SECURITY";
+  if (type === "SELLER_TIER_CHANGE" || type === "WEEKLY_DIGEST" || type === "SHOP_DORMANT_WARNING") return "SELLER";
+  if (type === "AI_MILESTONE_REACHED" || type === "QUOTE_ANOMALY_DETECTED") return "AI";
   return "SYSTEM";
 };
 
@@ -76,6 +82,8 @@ const fallbackCategoryStyle: Record<string, { icon: any; color: string }> = {
   SUBSCRIPTION: { icon: ArrowRightLeft, color: "text-amber-500" },
   MESSAGING: { icon: MessageSquare, color: "text-indigo-500" },
   SECURITY: { icon: ShieldAlert, color: "text-red-600" },
+  SELLER: { icon: TrendingUp, color: "text-amber-500" },
+  AI: { icon: BrainCircuit, color: "text-violet-500" },
   SYSTEM: { icon: Bell, color: "text-gray-500" },
 };
 
@@ -363,6 +371,88 @@ const notificationConfig: Record<
       params?.oldPlan
         ? `Your "${params.oldPlan}" plan has ended. You've been moved to "${params.newPlan || "Free Plan"}".`
         : "Your plan has been downgraded.",
+  },
+  // Seller performance notifications
+  SELLER_TIER_CHANGE: {
+    icon: TrendingUp,
+    color: "text-amber-500",
+    formatTitle: (params) =>
+      params?.tier ? `Seller Tier: ${params.tier}` : "Seller Tier Updated",
+    formatBody: (params) =>
+      params?.tier && params?.cap != null
+        ? `You are now a ${params.tier} seller. Commission cap: ${params.cap}%.`
+        : "Your seller tier has been updated.",
+  },
+  WEEKLY_DIGEST: {
+    icon: TrendingUp,
+    color: "text-blue-500",
+    formatTitle: (params) =>
+      params?.shopName ? `Weekly Report: ${params.shopName}` : "Weekly Shop Report",
+    formatBody: (params) => {
+      if (params?.weeklyOrders != null)
+        return `${params.weeklyOrders} orders this week · Avg rating: ${params.avgRating ?? "—"}`;
+      return "Your weekly shop performance digest is ready.";
+    },
+  },
+  SHOP_DORMANT_WARNING: {
+    icon: Moon,
+    color: "text-orange-400",
+    formatTitle: (params) =>
+      params?.shopName ? `Inactive Shop: ${params.shopName}` : "Shop Inactive",
+    formatBody: () =>
+      "No orders or quotes in the last 14 days. Keep your shop active!",
+  },
+  // AI / Admin notifications
+  AI_MILESTONE_REACHED: {
+    icon: Sparkles,
+    color: "text-violet-500",
+    formatTitle: (params) =>
+      params?.milestone ? `Milestone: ${params.milestone}` : "AI Milestone Reached",
+    formatBody: (params) =>
+      params?.description
+        ? String(params.description)
+        : "A marketplace AI milestone has been reached.",
+  },
+  QUOTE_ANOMALY_DETECTED: {
+    icon: BrainCircuit,
+    color: "text-red-500",
+    formatTitle: (params) =>
+      params?.count ? `${params.count} Quote Anomalies Detected` : "Quote Anomaly Alert",
+    formatBody: (params) =>
+      params?.count
+        ? `${params.count} unusual quote pattern${params.count > 1 ? "s" : ""} detected. Review in the admin panel.`
+        : "Unusual quote patterns detected. Review in the admin panel.",
+  },
+  // RFQ expiry
+  RFQ_EXPIRED: {
+    icon: AlertCircle,
+    color: "text-orange-500",
+    formatTitle: () => "Quote Request Expired",
+    formatBody: (params) =>
+      params?.rfqNumber
+        ? `RFQ #${params.rfqNumber} has expired without a confirmed offer.`
+        : "Your quote request has expired without a confirmed offer.",
+  },
+  // Counter-offer outcomes
+  COUNTER_ACCEPTED: {
+    icon: CheckCircle2,
+    color: "text-green-600",
+    formatTitle: (params) =>
+      params?.orderNumber ? `Counter Offer Accepted — #${params.orderNumber}` : "Counter Offer Accepted",
+    formatBody: (params) =>
+      params?.orderNumber
+        ? `Order #${params.orderNumber} has been confirmed.`
+        : "Your counter offer was accepted.",
+  },
+  COUNTER_DECLINED: {
+    icon: AlertCircle,
+    color: "text-red-500",
+    formatTitle: (params) =>
+      params?.orderNumber ? `Counter Offer Declined — #${params.orderNumber}` : "Counter Offer Declined",
+    formatBody: (params) =>
+      params?.reason
+        ? String(params.reason)
+        : "The customer declined your counter offer.",
   },
   // System notifications (fallback)
   SYSTEM_ALERT: {

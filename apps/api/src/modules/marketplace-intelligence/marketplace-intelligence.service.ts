@@ -245,7 +245,7 @@ export class MarketplaceIntelligenceService {
       for (const admin of admins) {
         await this.notificationsService.create({
           userId: admin.id,
-          type: "SYSTEM_ALERT",
+          type: "AI_MILESTONE_REACHED",
           titleKey: "notification.ai_milestone.title",
           titleParams: {
             milestone: milestone.milestoneName,
@@ -662,7 +662,7 @@ export class MarketplaceIntelligenceService {
       for (const admin of admins) {
         await this.notificationsService.create({
           userId: admin.id,
-          type: "SYSTEM_ALERT",
+          type: "QUOTE_ANOMALY_DETECTED",
           titleKey: "notification.quote_anomaly.title",
           titleParams: { count },
           bodyKey: "notification.quote_anomaly.body",

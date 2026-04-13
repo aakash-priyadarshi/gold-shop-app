@@ -415,7 +415,7 @@ export class PaymentsService {
     // Notify customer
     await this.notificationsService.create({
       userId: order.customerId,
-      type: 'SYSTEM_ALERT',
+      type: 'REFUND_REQUESTED',
       titleKey: 'notification.refund.initiated.title',
       titleParams: { amount: dto.amount },
       bodyKey: 'notification.refund.initiated.body',

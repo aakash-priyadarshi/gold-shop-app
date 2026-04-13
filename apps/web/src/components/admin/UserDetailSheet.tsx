@@ -174,6 +174,27 @@ function formatDateTime(d: string) {
   });
 }
 
+function deduplicateSessions(sessions: any[]): any[] {
+  if (sessions.length <= 1) return sessions;
+  
+  // Group sessions by IP + platform + date, keep only the latest one per group
+  const grouped: Record<string, any> = {};
+  
+  for (const session of sessions) {
+    const date = new Date(session.startedAt).toLocaleDateString();
+    const key = `${session.ipAddress || "unknown"}-${session.platform || "web"}-${date}`;
+    
+    if (!grouped[key] || new Date(session.startedAt) > new Date(grouped[key].startedAt)) {
+      grouped[key] = session;
+    }
+  }
+  
+  // Return deduplicated sessions sorted by most recent
+  return Object.values(grouped).sort((a, b) => 
+    new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+  ).slice(0, 10);  // Show max 10 unique sessions
+}
+
 function RiskBadge({ level }: { level: "LOW" | "MEDIUM" | "HIGH" }) {
   if (level === "HIGH") return (
     <Badge className="bg-red-100 text-red-700 gap-1">
@@ -539,6 +560,7 @@ export function UserDetailSheet({
                   {[
                     { value: "profile", icon: UserIcon, label: "Profile" },
                     { value: "activity", icon: Activity, label: "Activity" },
+                    { value: "pageAnalytics", icon: Globe, label: "Page Analytics" },
                     { value: "shops", icon: Store, label: "Shops" },
                     { value: "audit", icon: Shield, label: "Audit Log" },
                     { value: "message", icon: MessageSquare, label: "Message" },
@@ -796,6 +818,85 @@ export function UserDetailSheet({
                             </Button>
                           </div>
                         ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── PAGE ANALYTICS TAB ── */}
+              {activeTab === "pageAnalytics" && (
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      Session Page Analytics {sessions.length > 0 && `(${deduplicateSessions(sessions).length} unique, ${sessions.length - deduplicateSessions(sessions).length} combined)`}
+                    </h4>
+                    {sessions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        No sessions available for analysis.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {deduplicateSessions(sessions).map((session: any, idx: number) => {
+                          const pageCount = session.pageViews || 0;
+                          const avgTimePerPage = session.durationSec && pageCount > 0
+                            ? Math.round(session.durationSec / pageCount)
+                            : 0;
+                          return (
+                            <div key={session.id} className="border rounded-lg p-4 bg-muted/20">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <p className="font-medium text-sm">Session {sessions.length - idx}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {formatDateTime(session.startedAt)}
+                                  </p>
+                                </div>
+                                {session.isActive && (
+                                  <span className="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                                )}
+                              </div>
+                              <div className="grid grid-cols-3 gap-3 text-xs">
+                                <div>
+                                  <p className="text-muted-foreground">Pages Visited</p>
+                                  <p className="font-semibold text-sm">{pageCount}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Avg Time/Page</p>
+                                  <p className="font-semibold text-sm">{formatDuration(avgTimePerPage)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Total Duration</p>
+                                  <p className="font-semibold text-sm">{formatDuration(session.durationSec || 0)}</p>
+                                </div>
+                              </div>
+                              <div className="mt-3 pt-3 border-t text-xs space-y-1">
+                                <p className="text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Smartphone className="h-3 w-3" />
+                                    {session.platform === "mobile" ? "Mobile" : "Desktop"}
+                                  </span>
+                                </p>
+                                {session.country && (
+                                  <p className="text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="h-3 w-3" />
+                                      {session.country}
+                                    </span>
+                                  </p>
+                                )}
+                                {session.ipAddress && (
+                                  <p className="text-muted-foreground truncate">
+                                    <span className="flex items-center gap-1">
+                                      <Wifi className="h-3 w-3" />
+                                      {session.ipAddress}
+                                    </span>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

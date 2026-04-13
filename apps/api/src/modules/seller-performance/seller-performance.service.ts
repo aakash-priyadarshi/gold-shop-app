@@ -420,7 +420,7 @@ export class SellerPerformanceService {
       if (shop?.userId) {
         await this.notificationsService.create({
           userId: shop.userId,
-          type: "SYSTEM_ALERT",
+          type: "SELLER_TIER_CHANGE",
           titleKey: "notification.tier_change.title",
           titleParams: { tier: newTier },
           bodyKey: "notification.tier_change.body",
@@ -665,7 +665,7 @@ export class SellerPerformanceService {
 
         await this.notificationsService.create({
           userId: shop.userId,
-          type: "SYSTEM_ALERT",
+          type: "WEEKLY_DIGEST",
           titleKey: "notification.weekly_digest.title",
           bodyKey: "notification.weekly_digest.body",
           bodyParams: {
@@ -715,7 +715,7 @@ export class SellerPerformanceService {
       try {
         await this.notificationsService.create({
           userId: shop.userId,
-          type: "SYSTEM_ALERT",
+          type: "SHOP_DORMANT_WARNING",
           titleKey: "notification.dormant_shop.title",
           bodyKey: "notification.dormant_shop.body",
           bodyParams: { shopName: shop.shopName },

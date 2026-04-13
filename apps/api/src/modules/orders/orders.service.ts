@@ -734,7 +734,7 @@ export class OrdersService {
     // Notify shop
     await this.notificationsService.create({
       userId: order.shop.userId,
-      type: "SYSTEM_ALERT",
+      type: "ORDER_CANCELLED",
       titleKey: "notification.order.cancelled.title",
       titleParams: { orderNumber: order.orderNumber },
       bodyKey: "notification.order.cancelled.body",
@@ -970,7 +970,7 @@ export class OrdersService {
     // Notify customer
     await this.notificationsService.create({
       userId: order.customerId,
-      type: "SYSTEM_ALERT",
+      type: "ORDER_CANCELLED",
       titleKey: "notification.order.admin_cancelled.title",
       titleParams: { orderNumber: order.orderNumber },
       bodyKey: "notification.order.admin_cancelled.body",
@@ -986,7 +986,7 @@ export class OrdersService {
     // Notify shop
     await this.notificationsService.create({
       userId: order.shop.userId,
-      type: "SYSTEM_ALERT",
+      type: "ORDER_CANCELLED",
       titleKey: "notification.order.admin_cancelled.title",
       titleParams: { orderNumber: order.orderNumber },
       bodyKey: "notification.order.admin_cancelled.shop_body",
@@ -1034,7 +1034,7 @@ export class OrdersService {
     // Notify customer of timeline change
     await this.notificationsService.create({
       userId: order.customerId,
-      type: "SYSTEM_ALERT",
+      type: "ORDER_STATUS_UPDATE",
       titleKey: "notification.order.timeline_updated.title",
       titleParams: { orderNumber: order.orderNumber },
       bodyKey: "notification.order.timeline_updated.body",
@@ -1090,7 +1090,7 @@ export class OrdersService {
     // Notify customer
     await this.notificationsService.create({
       userId: order.customerId,
-      type: "SYSTEM_ALERT",
+      type: "PAYMENT_RECEIVED",
       titleKey: "notification.payment.verified.title",
       titleParams: { orderNumber: order.orderNumber },
       bodyKey: "notification.payment.verified.body",
@@ -1105,7 +1105,7 @@ export class OrdersService {
     // Notify shop
     await this.notificationsService.create({
       userId: order.shop.userId,
-      type: "SYSTEM_ALERT",
+      type: "PAYMENT_RECEIVED",
       titleKey: "notification.payment.verified.shop_title",
       titleParams: { orderNumber: order.orderNumber },
       bodyKey: "notification.payment.verified.shop_body",
@@ -1194,7 +1194,7 @@ export class OrdersService {
     // Notify customer of counter-offer
     await this.notificationsService.create({
       userId: order.customerId,
-      type: "SYSTEM_ALERT",
+      type: "OFFER_COUNTERED",
       titleKey: "notification.order.counter_offer.title",
       titleParams: { shopName: order.shop.shopName },
       bodyKey: "notification.order.counter_offer.body",
@@ -1323,7 +1323,7 @@ export class OrdersService {
       // Notify shopkeeper
       await this.notificationsService.create({
         userId: order.shop.userId,
-        type: "SYSTEM_ALERT",
+        type: "COUNTER_ACCEPTED",
         titleKey: "notification.order.counter_offer_accepted.title",
         titleParams: { orderNumber: order.orderNumber },
         bodyKey: "notification.order.counter_offer_accepted.body",
@@ -1349,7 +1349,7 @@ export class OrdersService {
       // Notify shopkeeper
       await this.notificationsService.create({
         userId: order.shop.userId,
-        type: "SYSTEM_ALERT",
+        type: "COUNTER_DECLINED",
         titleKey: "notification.order.counter_offer_rejected.title",
         titleParams: { orderNumber: order.orderNumber },
         bodyKey: "notification.order.counter_offer_rejected.body",
@@ -1393,7 +1393,7 @@ export class OrdersService {
     try {
       await this.notificationsService.create({
         userId: order.customerId,
-        type: "SYSTEM_ALERT",
+        type: "ORDER_STATUS_UPDATE",
         titleKey: "notification.order.status_updated.title",
         titleParams: { orderNumber: order.orderNumber },
         bodyKey: "notification.order.status_updated.body",
@@ -1523,7 +1523,7 @@ export class OrdersService {
     try {
       await this.notificationsService.create({
         userId: order.customerId,
-        type: "SYSTEM_ALERT",
+        type: "ORDER_STATUS_UPDATE",
         titleKey: "notification.order.status_updated.title",
         titleParams: { orderNumber: order.orderNumber },
         bodyKey: "notification.order.status_updated.body",
@@ -1698,7 +1698,7 @@ export class OrdersService {
     // Notify customer
     await this.notificationsService.create({
       userId: order.customerId,
-      type: "SYSTEM_ALERT",
+      type: "PAYMENT_RECEIVED",
       titleKey: "notification.payment.success.title",
       titleParams: { orderNumber: order.orderNumber },
       bodyKey: "notification.payment.success.body",
@@ -1711,7 +1711,7 @@ export class OrdersService {
     // Notify shop
     await this.notificationsService.create({
       userId: order.shop.userId,
-      type: "SYSTEM_ALERT",
+      type: "PAYMENT_RECEIVED",
       titleKey: "notification.order.paid.title",
       titleParams: { orderNumber: order.orderNumber },
       bodyKey: "notification.order.paid.body",

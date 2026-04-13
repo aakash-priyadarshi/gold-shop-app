@@ -1,11 +1,11 @@
 import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-  UnauthorizedException,
+    BadRequestException,
+    ConflictException,
+    ForbiddenException,
+    Injectable,
+    Logger,
+    NotFoundException,
+    UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { CurrencyCode, UserRole, UserStatus } from "@prisma/client";

@@ -667,7 +667,7 @@ Requirements:
       for (const admin of admins) {
         await this.notificationsService.create({
           userId: admin.id,
-          type: "SYSTEM",
+          type: "AI_MILESTONE_REACHED",
           titleKey: "notifications.ai_service_alert.title",
           titleParams: {},
           bodyKey: "notifications.ai_service_alert.body",

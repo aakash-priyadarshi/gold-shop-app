@@ -421,7 +421,7 @@ export class OffersService {
     // Notify shop owner
     await this.notificationsService.create({
       userId: originalOffer.shop.userId,
-      type: "CUSTOMER_COUNTER_OFFER",
+      type: "OFFER_COUNTERED",
       titleKey: "notification.customerCounterOffer.title",
       bodyKey: "notification.customerCounterOffer.body",
       bodyParams: {

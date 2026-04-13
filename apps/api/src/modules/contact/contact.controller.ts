@@ -1,9 +1,9 @@
 import { Body, Controller, HttpCode, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
-import { SkipSecurity } from "../security/security.guard";
 import { IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
 import { MailService } from "../mail/mail.service";
+import { SkipSecurity } from "../security/security.guard";
 
 class ContactFormDto {
   @IsString()

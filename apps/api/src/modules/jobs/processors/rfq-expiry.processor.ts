@@ -48,7 +48,7 @@ export class RfqExpiryProcessor {
     if (rfq.customerId) {
       await this.notificationsService.create({
         userId: rfq.customerId,
-        type: 'SYSTEM_ALERT',
+        type: 'RFQ_EXPIRED',
         titleKey: 'notification.rfqExpired.title',
         bodyKey: 'notification.rfqExpired.body',
         referenceType: 'RFQ',
