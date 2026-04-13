@@ -85,10 +85,16 @@ interface Design {
 
 interface PaginatedResponse {
   designs: Design[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  };
 }
 
 const JEWELRY_TYPES = [
@@ -106,8 +112,8 @@ const JEWELRY_TYPES = [
 const SORT_OPTIONS = [
   { value: "popular", label: "Most Popular", icon: TrendingUp },
   { value: "liked", label: "Most Liked", icon: Heart },
-  { value: "recent", label: "Most Recent", icon: Clock },
-  { value: "ordered", label: "Most Ordered", icon: ShoppingBag },
+  { value: "newest", label: "Most Recent", icon: Clock },
+  { value: "most_made", label: "Most Ordered", icon: ShoppingBag },
 ];
 
 const BUILD_METHOD_LABELS: Record<string, string> = {
@@ -176,9 +182,15 @@ export default function DesignGalleryPage() {
       }
 
       const response = await api.get<PaginatedResponse>(`/designs?${params}`);
-      setDesigns(response.data.designs || []);
-      setTotal(response.data.total);
-      setTotalPages(response.data.totalPages);
+      const payload = response.data;
+      const pagination = payload.pagination || {};
+      const designsList = Array.isArray(payload.designs) ? payload.designs : [];
+      const totalCount = payload.total ?? pagination.total ?? designsList.length;
+      const pages = payload.totalPages ?? pagination.totalPages ?? Math.max(1, Math.ceil(totalCount / 12));
+
+      setDesigns(designsList);
+      setTotal(totalCount);
+      setTotalPages(pages);
     } catch (error) {
       console.error("Failed to load designs:", error);
       setDesigns([]);

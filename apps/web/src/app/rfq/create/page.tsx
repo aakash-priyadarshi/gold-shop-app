@@ -1529,9 +1529,30 @@ export default function CreateRfqPage() {
         );
         if (res.ok) {
           const data = await res.json();
-          // Only show if we have designs with 80%+ similarity
-          if (data.designs && data.designs.length > 0) {
-            setSimilarDesigns(data.designs);
+          const similar = Array.isArray(data.designs) ? data.designs : [];
+
+          // Primary: 80%+ similarity results from dedicated endpoint
+          if (similar.length > 0) {
+            setSimilarDesigns(similar);
+            return;
+          }
+        }
+
+        // Fallback: show popular designs for the same jewellery type
+        const fallbackParams = new URLSearchParams();
+        fallbackParams.append("page", "1");
+        fallbackParams.append("limit", "6");
+        fallbackParams.append("sort", "popular");
+        if (formData.jewelleryType) {
+          fallbackParams.append("jewelryType", formData.jewelleryType);
+        }
+
+        const fallbackRes = await fetch(`${API_URL}/designs?${fallbackParams.toString()}`);
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json();
+          const fallbackDesigns = Array.isArray(fallbackData.designs) ? fallbackData.designs : [];
+          if (fallbackDesigns.length > 0) {
+            setSimilarDesigns(fallbackDesigns);
           }
         }
       } catch (err) {
