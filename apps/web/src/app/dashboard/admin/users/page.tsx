@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import api, { adminApi } from "@/lib/api";
+import api, { adminApi, sellerSubscriptionsApi } from "@/lib/api";
 import {
   AlertCircle, Calendar, CheckCircle, Clock, Eye, Loader2,
   Mail, Pencil, Phone, Plus, Search, Shield, ShieldAlert, ShieldCheck,
@@ -57,6 +57,12 @@ interface UserData {
   riskScore?: { score: number; level: "LOW" | "MEDIUM" | "HIGH"; chatViolations: number; recentSecurityEvents: number };
 }
 
+interface UserSubscriptionSummary {
+  status: string;
+  planName: string;
+  currentPeriodEnd?: string;
+}
+
 function formatRelative(dateStr: string | null): string {
   if (!dateStr) return "Never";
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -85,6 +91,7 @@ export default function AdminUsersPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [onlineCount, setOnlineCount] = useState<number | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [subscriptionByEmail, setSubscriptionByEmail] = useState<Record<string, UserSubscriptionSummary>>({});
 
   // Create user
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -138,7 +145,26 @@ export default function AdminUsersPage() {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   useEffect(() => { loadUsers(); loadOnlineCount(); }, []);
-  useEffect(() => { filterUsers(); }, [users, searchQuery, roleFilter, statusFilter]);
+
+  const filterUsers = useCallback(() => {
+    let filtered = [...users];
+    if (roleFilter !== "all") filtered = filtered.filter((u) => u.role === roleFilter);
+    if (statusFilter === "active") filtered = filtered.filter((u) => u.status === "ACTIVE");
+    else if (statusFilter === "suspended") filtered = filtered.filter((u) => u.status === "SUSPENDED");
+    else if (statusFilter === "pending") filtered = filtered.filter((u) => u.status === "PENDING_VERIFICATION");
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((u) =>
+        u.email.toLowerCase().includes(q) ||
+        u.firstName?.toLowerCase().includes(q) ||
+        u.lastName?.toLowerCase().includes(q) ||
+        u.phone?.includes(q),
+      );
+    }
+    setFilteredUsers(filtered);
+  }, [users, searchQuery, roleFilter, statusFilter]);
+
+  useEffect(() => { filterUsers(); }, [filterUsers]);
 
   const loadOnlineCount = async () => {
     try {
@@ -150,7 +176,63 @@ export default function AdminUsersPage() {
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get("/users");
+      const [usersResponse, subscriptionsResponse] = await Promise.all([
+        api.get("/users"),
+        sellerSubscriptionsApi.listAll({ page: 1, limit: 400 }).catch(() => ({ data: [] })),
+      ]);
+
+      const subscriptionRows = Array.isArray(subscriptionsResponse.data?.data)
+        ? subscriptionsResponse.data.data
+        : Array.isArray(subscriptionsResponse.data)
+          ? subscriptionsResponse.data
+          : [];
+
+      const statusPriority: Record<string, number> = {
+        ACTIVE: 5,
+        TRIALING: 4,
+        PAST_DUE: 3,
+        CANCELED: 2,
+        INACTIVE: 1,
+      };
+
+      const nextSubscriptionByEmail: Record<string, UserSubscriptionSummary> = {};
+      for (const subscription of subscriptionRows) {
+        const ownerEmail = (
+          subscription?.shop?.user?.email ||
+          subscription?.shop?.owner?.email ||
+          ""
+        ).toLowerCase();
+        if (!ownerEmail) continue;
+
+        const candidate: UserSubscriptionSummary = {
+          status: subscription?.status || "UNKNOWN",
+          planName: subscription?.plan?.displayName || subscription?.plan?.name || "Plan",
+          currentPeriodEnd: subscription?.currentPeriodEnd,
+        };
+
+        const existing = nextSubscriptionByEmail[ownerEmail];
+        if (!existing) {
+          nextSubscriptionByEmail[ownerEmail] = candidate;
+          continue;
+        }
+
+        const currentPriority = statusPriority[candidate.status] || 0;
+        const existingPriority = statusPriority[existing.status] || 0;
+        if (currentPriority > existingPriority) {
+          nextSubscriptionByEmail[ownerEmail] = candidate;
+          continue;
+        }
+
+        const candidateEnd = candidate.currentPeriodEnd ? new Date(candidate.currentPeriodEnd).getTime() : 0;
+        const existingEnd = existing.currentPeriodEnd ? new Date(existing.currentPeriodEnd).getTime() : 0;
+        if (currentPriority === existingPriority && candidateEnd > existingEnd) {
+          nextSubscriptionByEmail[ownerEmail] = candidate;
+        }
+      }
+
+      setSubscriptionByEmail(nextSubscriptionByEmail);
+
+      const response = usersResponse;
       let usersArr = response.data?.data || response.data?.users || response.data || [];
       if (!Array.isArray(usersArr)) usersArr = [];
       setUsers(usersArr);
@@ -607,6 +689,7 @@ export default function AdminUsersPage() {
                           <TableHead>User</TableHead>
                           <TableHead>Role</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Subscription</TableHead>
                           <TableHead>Risk</TableHead>
                           <TableHead>Last Seen</TableHead>
                           <TableHead>Joined</TableHead>
@@ -615,6 +698,7 @@ export default function AdminUsersPage() {
                       </TableHeader>
                       <TableBody>
                         {filteredUsers.map((user) => (
+                          
                           <TableRow key={user.id} className={selectedUserIds.has(user.id) ? "bg-muted/40" : ""}>
                             <TableCell>
                               <Checkbox checked={selectedUserIds.has(user.id)} onCheckedChange={() => toggleSelect(user.id)} />
@@ -636,6 +720,37 @@ export default function AdminUsersPage() {
                               {user.status === "ACTIVE" ? <Badge className="bg-green-100 text-green-700 text-xs">Active</Badge>
                                 : user.status === "SUSPENDED" ? <Badge variant="destructive" className="text-xs">Suspended</Badge>
                                 : <Badge variant="secondary" className="text-xs">{user.status}</Badge>}
+                            </TableCell>
+                            <TableCell>
+                              {user.role !== "SHOPKEEPER" ? (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              ) : (() => {
+                                const sub = subscriptionByEmail[user.email.toLowerCase()];
+                                if (!sub) return <span className="text-xs text-muted-foreground">No subscription</span>;
+
+                                const statusClass =
+                                  sub.status === "ACTIVE"
+                                    ? "bg-green-100 text-green-700"
+                                    : sub.status === "TRIALING"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : sub.status === "PAST_DUE"
+                                        ? "bg-amber-100 text-amber-700"
+                                        : "bg-gray-100 text-gray-700";
+
+                                return (
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium leading-none">{sub.planName}</p>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <Badge className={`text-[10px] px-1.5 py-0 ${statusClass}`}>{sub.status}</Badge>
+                                      {sub.currentPeriodEnd && (
+                                        <span className="text-[10px] text-muted-foreground">
+                                          Ends {formatDate(sub.currentPeriodEnd)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell>
                               <RiskBadge level={user.riskScore?.level} />

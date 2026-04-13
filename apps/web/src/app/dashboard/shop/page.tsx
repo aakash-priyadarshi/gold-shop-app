@@ -18,7 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { inventoryApi, ordersApi, rfqApi, shopsApi } from "@/lib/api";
+import { inventoryApi, ordersApi, rfqApi, sellerSubscriptionsApi, shopsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
   AlertCircle,
@@ -66,6 +66,17 @@ interface LowStockItem {
   minStock: number;
 }
 
+interface CurrentSubscription {
+  id: string;
+  status: string;
+  currentPeriodEnd: string;
+  plan: {
+    displayName: string;
+    currency: string;
+    monthlyPrice: number;
+  };
+}
+
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   processing: "bg-blue-100 text-blue-800",
@@ -85,6 +96,7 @@ export default function ShopDashboard() {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [rfqRequests, setRfqRequests] = useState<RFQRequest[]>([]);
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
+  const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const t = useT();
 
@@ -98,8 +110,9 @@ export default function ShopDashboard() {
       ordersApi.getShopOrders(shopId, { page: 1, pageSize: 3 }),
       rfqApi.getShopRequests({ page: 1, pageSize: 3 }),
       inventoryApi.getShopInventory(shopId, { lowStock: true, limit: 3 }),
+      sellerSubscriptionsApi.getMySubscription().catch(() => ({ data: null })),
     ])
-      .then(([dashboardRes, ordersRes, rfqRes, lowStockRes]) => {
+      .then(([dashboardRes, ordersRes, rfqRes, lowStockRes, subscriptionRes]) => {
         const dash = dashboardRes.data?.stats || dashboardRes.data || {};
         setStats([
           {
@@ -193,6 +206,8 @@ export default function ShopDashboard() {
               }))
             : [],
         );
+
+        setCurrentSubscription(subscriptionRes.data || null);
       })
       .catch((err) => {
         console.error("Dashboard load error:", err);
@@ -200,11 +215,12 @@ export default function ShopDashboard() {
         setRecentOrders([]);
         setRfqRequests([]);
         setLowStockItems([]);
+        setCurrentSubscription(null);
       })
       .finally(() => {
         setIsLoading(false);
       });
-  }, [user, shopCurrency]);
+  }, [user, shopCurrency, t]);
 
   return (
     <ShopkeeperGuard>
@@ -277,6 +293,60 @@ export default function ShopDashboard() {
 
           {/* Plan Migration Banner */}
           <PlanMigrationBanner />
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    <T>Subscription Status</T>
+                  </p>
+                  {currentSubscription ? (
+                    <div className="mt-1 space-y-1">
+                      <p className="font-semibold">
+                        {currentSubscription.plan?.displayName || t("Active plan")}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {currentSubscription.plan?.currency || shopCurrency}{" "}
+                        {currentSubscription.plan?.monthlyPrice ?? 0}/mo · <T>Renews/ends</T>{" "}
+                        {new Date(currentSubscription.currentPeriodEnd).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      <T>No active subscription found.</T>
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {currentSubscription ? (
+                    <Badge
+                      className={
+                        currentSubscription.status === "ACTIVE"
+                          ? "bg-green-100 text-green-700"
+                          : currentSubscription.status === "TRIALING"
+                            ? "bg-blue-100 text-blue-700"
+                            : currentSubscription.status === "PAST_DUE"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-gray-100 text-gray-700"
+                      }
+                    >
+                      {currentSubscription.status}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">
+                      <T>Not Subscribed</T>
+                    </Badge>
+                  )}
+                  <Button variant="outline" asChild>
+                    <Link href="/dashboard/shop/billing">
+                      <T>Manage Billing</T>
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat) => (

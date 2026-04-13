@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -129,6 +130,8 @@ interface ShopSubscriptionSummary {
   };
 }
 
+type AssignmentDuration = "1M" | "3M" | "6M" | "12M" | "CUSTOM";
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -219,6 +222,8 @@ export function UserDetailSheet({
   const [selectedPlanByShop, setSelectedPlanByShop] = useState<Record<string, string>>({});
   const [plansByCountry, setPlansByCountry] = useState<Record<string, SubscriptionPlanOption[]>>({});
   const [shopSubscriptions, setShopSubscriptions] = useState<Record<string, ShopSubscriptionSummary | null>>({});
+  const [assignmentDurationByShop, setAssignmentDurationByShop] = useState<Record<string, AssignmentDuration>>({});
+  const [customEndDateByShop, setCustomEndDateByShop] = useState<Record<string, string>>({});
 
   const userShops = user
     ? (user.shops || (user.shop ? [user.shop] : [])).filter(Boolean)
@@ -235,8 +240,32 @@ export function UserDetailSheet({
       setSelectedPlanByShop({});
       setPlansByCountry({});
       setShopSubscriptions({});
+      setAssignmentDurationByShop({});
+      setCustomEndDateByShop({});
     }
-  }, [open, user?.id]);
+  }, [open, user]);
+
+  const resolvePeriodEnd = (duration: AssignmentDuration, customDate?: string): string | null => {
+    if (duration === "CUSTOM") {
+      if (!customDate) return null;
+      const custom = new Date(customDate);
+      if (Number.isNaN(custom.getTime())) return null;
+      custom.setHours(23, 59, 59, 999);
+      return custom.toISOString();
+    }
+
+    const monthsByDuration: Record<Exclude<AssignmentDuration, "CUSTOM">, number> = {
+      "1M": 1,
+      "3M": 3,
+      "6M": 6,
+      "12M": 12,
+    };
+
+    const months = monthsByDuration[duration as Exclude<AssignmentDuration, "CUSTOM">] || 1;
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + months);
+    return endDate.toISOString();
+  };
 
   const loadShopPlanData = async () => {
     if (!user || user.role !== "SHOPKEEPER" || userShops.length === 0) return;
@@ -301,6 +330,13 @@ export function UserDetailSheet({
         }
         return nextSelection;
       });
+      setAssignmentDurationByShop((previous) => {
+        const nextDuration = { ...previous };
+        for (const shop of userShops) {
+          if (!nextDuration[shop.id]) nextDuration[shop.id] = "1M";
+        }
+        return nextDuration;
+      });
     } catch {
       toast({
         variant: "destructive",
@@ -356,12 +392,27 @@ export function UserDetailSheet({
       return;
     }
 
+    const assignmentDuration = assignmentDurationByShop[shop.id] || "1M";
+    const customEndDate = customEndDateByShop[shop.id];
+    const periodEnd = resolvePeriodEnd(assignmentDuration, customEndDate);
+    if (!periodEnd) {
+      toast({
+        variant: "destructive",
+        title: "Set assignment duration",
+        description: assignmentDuration === "CUSTOM"
+          ? "Choose a valid custom end date before assigning this plan."
+          : "Could not calculate plan duration.",
+      });
+      return;
+    }
+
     setAssigningShopId(shop.id);
     try {
       await sellerSubscriptionsApi.adminOverride({
         shopId: shop.id,
         planId,
-        reason: `Assigned by admin from user management for ${user.firstName} ${user.lastName}`,
+        periodEnd,
+        reason: `Assigned by admin from user management (${assignmentDuration}) for ${user.firstName} ${user.lastName}`,
       });
       toast({ title: "Plan assigned", description: `${shop.shopName} subscription updated.` });
       await loadShopPlanData();
@@ -872,10 +923,54 @@ export function UserDetailSheet({
                                     </SelectContent>
                                   </Select>
                                 </div>
+                                <div className="w-[180px]">
+                                  <Label className="text-muted-foreground text-xs mb-1 block">Duration</Label>
+                                  <Select
+                                    value={assignmentDurationByShop[shop.id] || "1M"}
+                                    onValueChange={(value) =>
+                                      setAssignmentDurationByShop((previous) => ({
+                                        ...previous,
+                                        [shop.id]: value as AssignmentDuration,
+                                      }))
+                                    }
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select duration" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="1M">1 month</SelectItem>
+                                      <SelectItem value="3M">3 months</SelectItem>
+                                      <SelectItem value="6M">6 months</SelectItem>
+                                      <SelectItem value="12M">12 months</SelectItem>
+                                      <SelectItem value="CUSTOM">Custom date</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                {assignmentDurationByShop[shop.id] === "CUSTOM" && (
+                                  <div className="w-[180px]">
+                                    <Label className="text-muted-foreground text-xs mb-1 block">Ends on</Label>
+                                    <Input
+                                      type="date"
+                                      min={new Date().toISOString().split("T")[0]}
+                                      value={customEndDateByShop[shop.id] || ""}
+                                      onChange={(event) =>
+                                        setCustomEndDateByShop((previous) => ({
+                                          ...previous,
+                                          [shop.id]: event.target.value,
+                                        }))
+                                      }
+                                    />
+                                  </div>
+                                )}
                                 <Button
                                   size="sm"
                                   onClick={() => handleAssignPlan(shop)}
-                                  disabled={assigningShopId === shop.id || !(plansByCountry[shop.country] || []).length || !selectedPlanByShop[shop.id]}
+                                  disabled={
+                                    assigningShopId === shop.id ||
+                                    !(plansByCountry[shop.country] || []).length ||
+                                    !selectedPlanByShop[shop.id] ||
+                                    (assignmentDurationByShop[shop.id] === "CUSTOM" && !customEndDateByShop[shop.id])
+                                  }
                                   className="gap-1"
                                 >
                                   {assigningShopId === shop.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
