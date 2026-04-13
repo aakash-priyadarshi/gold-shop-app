@@ -837,6 +837,30 @@ export class SellerSubscriptionsService {
     adminId: string;
   }) {
     const plan = await this.plansService.getPlanById(opts.planId);
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: opts.shopId },
+      select: {
+        id: true,
+        country: true,
+        user: { select: { role: true } },
+      },
+    });
+
+    if (!shop) {
+      throw new NotFoundException("Shop not found");
+    }
+
+    if (shop.user.role !== "SHOPKEEPER") {
+      throw new BadRequestException(
+        "Subscriptions can only be assigned to shopkeeper accounts",
+      );
+    }
+
+    if (shop.country !== plan.country) {
+      throw new BadRequestException(
+        "Selected plan does not match the shop country",
+      );
+    }
 
     // Cancel any existing active subscription
     const existing = await this.prisma.sellerSubscription.findFirst({

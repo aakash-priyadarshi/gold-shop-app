@@ -12,6 +12,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -22,8 +29,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { adminApi } from "@/lib/api";
-import api from "@/lib/api";
+import api, {
+  adminApi,
+  sellerSubscriptionsApi,
+  subscriptionPlansApi,
+} from "@/lib/api";
 import {
   Activity,
   AlertTriangle,
@@ -93,6 +103,30 @@ interface UserDetail {
   shops?: any[];
   sessionSummary?: SessionSummary;
   riskScore?: RiskScore;
+}
+
+interface SubscriptionPlanOption {
+  id: string;
+  name: string;
+  displayName: string;
+  country: string;
+  currency: string;
+  monthlyPrice: number;
+  annualPrice?: number;
+}
+
+interface ShopSubscriptionSummary {
+  id: string;
+  shopId: string;
+  status: string;
+  currentPeriodEnd: string;
+  plan: {
+    id: string;
+    name: string;
+    displayName: string;
+    currency: string;
+    monthlyPrice: number;
+  };
 }
 
 interface Props {
@@ -180,6 +214,15 @@ export function UserDetailSheet({
   const [generatingAI, setGeneratingAI] = useState(false);
   const [aiIntent, setAiIntent] = useState("");
   const [activeTab, setActiveTab] = useState("profile");
+  const [loadingShopPlans, setLoadingShopPlans] = useState(false);
+  const [assigningShopId, setAssigningShopId] = useState<string | null>(null);
+  const [selectedPlanByShop, setSelectedPlanByShop] = useState<Record<string, string>>({});
+  const [plansByCountry, setPlansByCountry] = useState<Record<string, SubscriptionPlanOption[]>>({});
+  const [shopSubscriptions, setShopSubscriptions] = useState<Record<string, ShopSubscriptionSummary | null>>({});
+
+  const userShops = user
+    ? (user.shops || (user.shop ? [user.shop] : [])).filter(Boolean)
+    : [];
 
   useEffect(() => {
     if (open && user) {
@@ -189,8 +232,85 @@ export function UserDetailSheet({
       setAuditLogs([]);
       setMsgContent("");
       setAiIntent("");
+      setSelectedPlanByShop({});
+      setPlansByCountry({});
+      setShopSubscriptions({});
     }
   }, [open, user?.id]);
+
+  const loadShopPlanData = async () => {
+    if (!user || user.role !== "SHOPKEEPER" || userShops.length === 0) return;
+
+    setLoadingShopPlans(true);
+    try {
+      const uniqueCountries = Array.from(
+        new Set(userShops.map((shop: any) => shop.country).filter(Boolean)),
+      );
+
+      const [subscriptionResponse, ...planResponses] = await Promise.all([
+        sellerSubscriptionsApi.listAll({ page: 1, limit: 200 }),
+        ...uniqueCountries.map((country) =>
+          subscriptionPlansApi.list({ country, isActive: "true" }),
+        ),
+      ]);
+
+      const subscriptionRows = Array.isArray(subscriptionResponse.data?.data)
+        ? subscriptionResponse.data.data
+        : Array.isArray(subscriptionResponse.data)
+          ? subscriptionResponse.data
+          : [];
+
+      const nextShopSubscriptions: Record<string, ShopSubscriptionSummary | null> = {};
+      for (const shop of userShops) {
+        const currentSubscription =
+          subscriptionRows.find(
+            (subscription: any) =>
+              subscription.shop?.id === shop.id &&
+              ["ACTIVE", "TRIALING", "PAST_DUE"].includes(subscription.status),
+          ) ||
+          subscriptionRows.find(
+            (subscription: any) => subscription.shop?.id === shop.id,
+          );
+
+        nextShopSubscriptions[shop.id] = currentSubscription || null;
+      }
+
+      const nextPlansByCountry: Record<string, SubscriptionPlanOption[]> = {};
+      uniqueCountries.forEach((country, index) => {
+        const response = planResponses[index];
+        const plans = Array.isArray(response.data?.data)
+          ? response.data.data
+          : Array.isArray(response.data)
+            ? response.data
+            : [];
+        nextPlansByCountry[country] = plans;
+      });
+
+      setShopSubscriptions(nextShopSubscriptions);
+      setPlansByCountry(nextPlansByCountry);
+      setSelectedPlanByShop((previous) => {
+        const nextSelection = { ...previous };
+        for (const shop of userShops) {
+          const existingSelection = nextSelection[shop.id];
+          const currentPlanId = nextShopSubscriptions[shop.id]?.plan?.id;
+          const firstAvailablePlanId = nextPlansByCountry[shop.country]?.[0]?.id;
+          if (!existingSelection) {
+            const resolvedPlanId = currentPlanId || firstAvailablePlanId;
+            if (resolvedPlanId) nextSelection[shop.id] = resolvedPlanId;
+          }
+        }
+        return nextSelection;
+      });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Failed to load subscriptions",
+        description: "Could not load shopkeeper subscription options.",
+      });
+    } finally {
+      setLoadingShopPlans(false);
+    }
+  };
 
   const loadSessions = async () => {
     if (!user || loadingSessions) return;
@@ -220,6 +340,40 @@ export function UserDetailSheet({
     setActiveTab(tab);
     if (tab === "activity" && sessions.length === 0) loadSessions();
     if (tab === "audit" && auditLogs.length === 0) loadAuditLog();
+    if (tab === "shops" && user?.role === "SHOPKEEPER") loadShopPlanData();
+  };
+
+  const handleAssignPlan = async (shop: any) => {
+    if (!user || user.role !== "SHOPKEEPER") return;
+
+    const planId = selectedPlanByShop[shop.id];
+    if (!planId) {
+      toast({
+        variant: "destructive",
+        title: "Select a plan",
+        description: "Choose a subscription plan before assigning it.",
+      });
+      return;
+    }
+
+    setAssigningShopId(shop.id);
+    try {
+      await sellerSubscriptionsApi.adminOverride({
+        shopId: shop.id,
+        planId,
+        reason: `Assigned by admin from user management for ${user.firstName} ${user.lastName}`,
+      });
+      toast({ title: "Plan assigned", description: `${shop.shopName} subscription updated.` });
+      await loadShopPlanData();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to assign plan",
+        description: error?.response?.data?.message || "Could not update the shop subscription.",
+      });
+    } finally {
+      setAssigningShopId(null);
+    }
   };
 
   const handleRevokeSession = async (sessionId: string) => {
@@ -600,21 +754,26 @@ export function UserDetailSheet({
               {/* ── SHOPS TAB ── */}
               {activeTab === "shops" && (
                 <div className="space-y-4">
+                  {user.role !== "SHOPKEEPER" && (
+                    <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground bg-muted/20">
+                      Subscription management is only available for shopkeeper user accounts.
+                    </div>
+                  )}
                   <div className="flex justify-end">
                     <Button size="sm" onClick={onAddShop}
                       className="bg-green-600 hover:bg-green-700 gap-1">
                       <Plus className="h-4 w-4" /> Add Shop
                     </Button>
                   </div>
-                  {(user.shops || (user.shop ? [user.shop] : [])).filter(Boolean).length === 0 ? (
+                  {userShops.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                       <Store className="h-12 w-12 mx-auto mb-3 opacity-30" />
                       <p>No shops yet.</p>
                       <p className="text-sm">Click &quot;Add Shop&quot; to create one.</p>
                     </div>
                   ) : (
-                    (user.shops || [user.shop]).filter(Boolean).map((shop: any, i: number) => (
-                      <div key={shop.id} className={`border rounded-lg p-4 ${i > 0 ? "mt-4" : ""}`}>
+                    userShops.map((shop: any, index: number) => (
+                      <div key={shop.id} className={`border rounded-lg p-4 ${index > 0 ? "mt-4" : ""}`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center">
@@ -655,6 +814,78 @@ export function UserDetailSheet({
                             <p>{formatRelative(shop.createdAt)}</p>
                           </div>
                         </div>
+                        {user.role === "SHOPKEEPER" && (
+                          <div className="mt-4 border-t pt-4 space-y-3">
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Current Subscription</p>
+                                {shopSubscriptions[shop.id] ? (
+                                  <div className="text-sm">
+                                    <p className="font-medium">
+                                      {shopSubscriptions[shop.id]?.plan.displayName}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {shopSubscriptions[shop.id]?.plan.currency} {shopSubscriptions[shop.id]?.plan.monthlyPrice}/mo
+                                      {shopSubscriptions[shop.id]?.currentPeriodEnd
+                                        ? ` · Ends ${formatDateTime(shopSubscriptions[shop.id]!.currentPeriodEnd)}`
+                                        : ""}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm">No active subscription</p>
+                                )}
+                              </div>
+                              {shopSubscriptions[shop.id]?.status && (
+                                <Badge variant="outline" className="text-xs">
+                                  {shopSubscriptions[shop.id]?.status}
+                                </Badge>
+                              )}
+                            </div>
+
+                            {loadingShopPlans ? (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Loading subscription options...
+                              </div>
+                            ) : (
+                              <div className="flex items-end gap-2 flex-wrap">
+                                <div className="min-w-[240px] flex-1">
+                                  <Label className="text-muted-foreground text-xs mb-1 block">Assign plan</Label>
+                                  <Select
+                                    value={selectedPlanByShop[shop.id] || ""}
+                                    onValueChange={(value) =>
+                                      setSelectedPlanByShop((previous) => ({
+                                        ...previous,
+                                        [shop.id]: value,
+                                      }))
+                                    }
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a plan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(plansByCountry[shop.country] || []).map((plan) => (
+                                        <SelectItem key={plan.id} value={plan.id}>
+                                          {plan.displayName} · {plan.currency} {plan.monthlyPrice}/mo
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleAssignPlan(shop)}
+                                  disabled={assigningShopId === shop.id || !(plansByCountry[shop.country] || []).length || !selectedPlanByShop[shop.id]}
+                                  className="gap-1"
+                                >
+                                  {assigningShopId === shop.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                                  Assign Plan
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {shop.supportedMaterials?.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-1">
                             {shop.supportedMaterials.map((m: string) => (
