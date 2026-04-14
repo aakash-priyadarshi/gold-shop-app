@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 import api from '@/lib/api';
 
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;      // 60 seconds
@@ -12,19 +13,45 @@ let sessionTokenGlobal: string | null = null;
 
 export function useSessionTracker() {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const isEndedRef = useRef(false);
+
+  // Tracks the page the user is currently on and when they arrived
+  const currentPageRef = useRef<{ path: string; title: string; startedAt: number } | null>(null);
 
   // ── Helpers ─────────────────────────────────────────────────────────
 
   const getToken = () =>
     sessionTokenGlobal || sessionStorage.getItem(SESSION_TOKEN_KEY) || null;
 
+  /** Flush the current page view to the backend (call before navigation/end) */
+  const flushCurrentPage = useCallback(() => {
+    const token = getToken();
+    const page = currentPageRef.current;
+    if (!token || !page) return;
+
+    const durationSec = Math.round((Date.now() - page.startedAt) / 1000);
+    // Fire-and-forget — we don't await
+    api.post('/sessions/web/page-view', {
+      sessionToken: token,
+      path: page.path,
+      title: page.title,
+      durationSec,
+    }).catch(() => { /* non-critical */ });
+
+    currentPageRef.current = null;
+  }, []);
+
   const sendEnd = useCallback((closedBy: string) => {
     const token = getToken();
     if (!token || isEndedRef.current) return;
     isEndedRef.current = true;
+
+    // Flush the current page before ending the session
+    flushCurrentPage();
+
     const payload = JSON.stringify({ sessionToken: token, closedBy });
     // sendBeacon is fire-and-forget, perfect for page unload
     const beaconSent = navigator.sendBeacon(
@@ -40,7 +67,7 @@ export function useSessionTracker() {
         xhr.send(payload);
       } catch { /* ignore */ }
     }
-  }, []);
+  }, [flushCurrentPage]);
 
   const resetInactivity = useCallback(() => {
     if (inactivityRef.current) clearTimeout(inactivityRef.current);
@@ -68,6 +95,13 @@ export function useSessionTracker() {
         referrer: document.referrer || undefined,
       })
       .catch(() => { /* non-critical */ });
+
+    // Record the first page immediately
+    currentPageRef.current = {
+      path: window.location.pathname,
+      title: document.title,
+      startedAt: Date.now(),
+    };
 
     // Start heartbeat
     heartbeatRef.current = setInterval(() => {
@@ -107,6 +141,25 @@ export function useSessionTracker() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Route change detection ─────────────────────────────────────────
+  // Every time pathname changes: flush the OLD page, then start tracking the new one
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+
+    // Flush the previous page visit (if any)
+    flushCurrentPage();
+
+    // Start tracking the new page
+    currentPageRef.current = {
+      path: pathname,
+      title: document.title,
+      startedAt: Date.now(),
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   // Re-attach user info when session changes (login happening mid-tab)
   useEffect(() => {

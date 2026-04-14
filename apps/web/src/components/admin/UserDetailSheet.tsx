@@ -839,7 +839,8 @@ export function UserDetailSheet({
                     ) : (
                       <div className="space-y-3">
                         {deduplicateSessions(sessions).map((session: any, idx: number) => {
-                          const pageCount = session.pageViews || 0;
+                          const pageViews: any[] = session.pageViewDetails ?? [];
+                          const pageCount = pageViews.length > 0 ? pageViews.length : (session.pageViews || 0);
                           const avgTimePerPage = session.durationSec && pageCount > 0
                             ? Math.round(session.durationSec / pageCount)
                             : 0;
@@ -894,6 +895,47 @@ export function UserDetailSheet({
                                   </p>
                                 )}
                               </div>
+
+                              {/* ── Per-page breakdown ── */}
+                              {pageViews.length > 0 && (
+                                <div className="mt-3 pt-3 border-t">
+                                  <p className="text-xs font-medium text-muted-foreground mb-2">Pages visited</p>
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full text-xs">
+                                      <thead>
+                                        <tr className="border-b">
+                                          <th className="text-left pb-1 text-muted-foreground font-medium">Path</th>
+                                          <th className="text-left pb-1 text-muted-foreground font-medium pl-2">Title</th>
+                                          <th className="text-right pb-1 text-muted-foreground font-medium pl-2">Time</th>
+                                          <th className="text-right pb-1 text-muted-foreground font-medium pl-2">Visited</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {pageViews.map((pv: any) => {
+                                          const d = pv.durationSec ?? 0;
+                                          const timeStr = d >= 60
+                                            ? `${Math.floor(d / 60)}m ${d % 60}s`
+                                            : d > 0 ? `${d}s` : "—";
+                                          return (
+                                            <tr key={pv.id} className="border-b last:border-0 hover:bg-muted/40">
+                                              <td className="py-1 font-mono text-[10px] max-w-[120px] truncate" title={pv.path}>
+                                                {pv.path}
+                                              </td>
+                                              <td className="py-1 pl-2 max-w-[100px] truncate text-muted-foreground" title={pv.title}>
+                                                {pv.title || "—"}
+                                              </td>
+                                              <td className="py-1 pl-2 text-right tabular-nums">{timeStr}</td>
+                                              <td className="py-1 pl-2 text-right text-muted-foreground whitespace-nowrap">
+                                                {formatDateTime(pv.visitedAt)}
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
