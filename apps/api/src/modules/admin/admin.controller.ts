@@ -678,6 +678,7 @@ export class AdminController {
     @Query("limit") limit?: string,
   ) {
     const pageNum = parseInt(page || "1");
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const limitNum = parseInt(limit || "25");
     const skip = (pageNum - 1) * limitNum;
 
@@ -716,6 +717,11 @@ export class AdminController {
             lastLoginAt: true,
             _count: { select: { customerOrders: true, rfqRequests: true } },
             purchaseStats: { orderBy: { totalSpent: "desc" }, take: 1 },
+            webSessions: {
+              select: { lastActive: true },
+              orderBy: { lastActive: "desc" },
+              take: 1,
+            },
           },
           orderBy: { createdAt: "desc" },
           skip: type === "registered" ? skip : skip,
@@ -756,22 +762,29 @@ export class AdminController {
     }
 
     const allCustomers = [
-      ...registeredCustomers.map((c) => ({
-        id: c.id,
-        type: "REGISTERED" as const,
-        name: `${c.firstName} ${c.lastName}`.trim(),
-        email: c.email,
-        phone: c.phone,
-        country: c.preferredCountry,
-        city: c.preferredCity,
-        shop: null,
-        orderCount: c._count.customerOrders,
-        rfqCount: c._count.rfqRequests,
-        quoteCount: 0,
-        totalSpent: c.purchaseStats[0]?.totalSpent || 0,
-        lastActive: c.lastLoginAt || c.createdAt,
-        createdAt: c.createdAt,
-      })),
+      ...registeredCustomers.map((c) => {
+        const latestSession = (c.webSessions as any[])?.[0] ?? null;
+        const isOnlineNow = latestSession
+          ? (latestSession.lastActive as Date) >= fiveMinutesAgo
+          : false;
+        return {
+          id: c.id,
+          type: "REGISTERED" as const,
+          name: `${c.firstName} ${c.lastName}`.trim(),
+          email: c.email,
+          phone: c.phone,
+          country: c.preferredCountry,
+          city: c.preferredCity,
+          shop: null,
+          orderCount: c._count.customerOrders,
+          rfqCount: c._count.rfqRequests,
+          quoteCount: 0,
+          totalSpent: c.purchaseStats[0]?.totalSpent || 0,
+          isOnlineNow,
+          lastActive: (latestSession?.lastActive ?? c.lastLoginAt ?? c.createdAt) as any,
+          createdAt: c.createdAt,
+        };
+      }),
       ...walkInCustomers.map((w) => ({
         id: w.id,
         type: "WALK_IN" as const,

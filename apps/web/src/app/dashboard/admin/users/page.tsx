@@ -152,6 +152,7 @@ export default function AdminUsersPage() {
     if (statusFilter === "active") filtered = filtered.filter((u) => u.status === "ACTIVE");
     else if (statusFilter === "suspended") filtered = filtered.filter((u) => u.status === "SUSPENDED");
     else if (statusFilter === "pending") filtered = filtered.filter((u) => u.status === "PENDING_VERIFICATION");
+    else if (statusFilter === "online") filtered = filtered.filter((u) => u.sessionSummary?.isOnlineNow === true);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter((u) =>
@@ -177,7 +178,7 @@ export default function AdminUsersPage() {
     setIsLoading(true);
     try {
       const [usersResponse, subscriptionsResponse] = await Promise.all([
-        api.get("/users"),
+        api.get("/users", { params: { pageSize: 1000 } }),
         sellerSubscriptionsApi.listAll({ page: 1, limit: 400 }).catch(() => ({ data: [] })),
       ]);
 
@@ -635,6 +636,12 @@ export default function AdminUsersPage() {
                       <SelectTrigger className="w-[140px]"><SelectValue placeholder="All Status" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="online">
+                          <span className="flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                            Online Now
+                          </span>
+                        </SelectItem>
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="suspended">Suspended</SelectItem>
                         <SelectItem value="pending">Pending</SelectItem>

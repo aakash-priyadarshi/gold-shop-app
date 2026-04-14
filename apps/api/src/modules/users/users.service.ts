@@ -146,7 +146,8 @@ export class UsersService {
 
   async findAll(role?: UserRole, search?: string, page = 1, pageSize = 20) {
     const skip = (page - 1) * pageSize;
-    
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
     const where: any = {};
     if (role) {
       where.role = role;
@@ -170,9 +171,11 @@ export class UsersService {
           email: true,
           firstName: true,
           lastName: true,
+          phone: true,
           role: true,
           status: true,
           createdAt: true,
+          lastLoginAt: true,
           shops: {
             select: {
               id: true,
@@ -181,17 +184,32 @@ export class UsersService {
             },
             take: 1,
           },
+          webSessions: {
+            select: { lastActive: true },
+            orderBy: { lastActive: "desc" },
+            take: 1,
+          },
         },
         orderBy: { createdAt: "desc" },
       }),
       this.prisma.user.count({ where }),
     ]);
 
-    // Transform to maintain backward compatibility
-    const transformedUsers = users.map((user) => ({
-      ...user,
-      shop: user.shops?.[0] || null,
-    }));
+    const transformedUsers = users.map((user) => {
+      const latestSession = (user.webSessions as any[])?.[0] ?? null;
+      const isOnlineNow = latestSession
+        ? (latestSession.lastActive as Date) >= fiveMinutesAgo
+        : false;
+      const { webSessions: _ws, ...rest } = user as any;
+      return {
+        ...rest,
+        shop: rest.shops?.[0] || null,
+        sessionSummary: {
+          isOnlineNow,
+          lastSeen: latestSession?.lastActive ?? null,
+        },
+      };
+    });
 
     return {
       data: transformedUsers,
