@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Param,
+  ParseBoolPipe,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -22,7 +23,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Get notifications for current user' })
   async findAll(
     @CurrentUser('id') userId: string,
-    @Query('unreadOnly') unreadOnly?: boolean,
+    @Query('unreadOnly', new ParseBoolPipe({ optional: true })) unreadOnly = false,
   ) {
     return this.notificationsService.findAllForUser(userId, unreadOnly);
   }

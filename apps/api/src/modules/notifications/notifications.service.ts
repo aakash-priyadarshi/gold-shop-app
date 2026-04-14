@@ -49,13 +49,17 @@ export class NotificationsService {
   }
 
   async findAllForUser(userId: string, unreadOnly = false) {
+    // Hard guard: a missing userId would cause Prisma to ignore the filter
+    // and return every notification in the database (Prisma treats undefined as no-filter).
+    if (!userId) return [];
+
     return this.prisma.notification.findMany({
       where: {
         userId,
-        ...(unreadOnly && { isRead: false }),
+        ...(unreadOnly === true && { isRead: false }),
       },
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: 100,
     });
   }
 

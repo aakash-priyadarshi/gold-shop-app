@@ -514,12 +514,17 @@ export function NotificationDropdown() {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
-      // Poll for new notifications every 30 seconds
-      const interval = setInterval(fetchNotifications, 30000);
-      return () => clearInterval(interval);
+    if (!user) {
+      // Clear stale state immediately on logout so the next logged-in
+      // user never briefly sees the previous user's notifications.
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
     }
+    fetchNotifications();
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleMarkAsRead = async (id: string) => {
