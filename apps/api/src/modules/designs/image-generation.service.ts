@@ -148,6 +148,9 @@ const JEWELRY_TYPE_DESCRIPTIONS: Record<string, string> = {
   OTHER: "jewelry piece",
 };
 
+// Increment this version any time the prompt template changes to bust the image cache
+const PROMPT_VERSION = 2;
+
 // Surface finish descriptions
 const SURFACE_FINISH_DESCRIPTIONS: Record<string, string> = {
   HIGH_POLISH: "high polish mirror finish",
@@ -202,6 +205,8 @@ export class ImageGenerationService {
       regenerationFeedback:
         specs.additionalSpecs?.regenerationFeedback?.trim().toLowerCase() ||
         null,
+      // Bump PROMPT_VERSION above to invalidate all existing cached images
+      promptVersion: PROMPT_VERSION,
     };
 
     return createHash("sha256")
