@@ -5120,7 +5120,7 @@ export default function CreateRfqPage() {
                           </div>
                         )}
 
-                        {/* Preview Image Display */
+                        {/* Preview Image Display */}
                         {designPreviewUrl ? (
                           <div className="relative w-full max-w-sm mx-auto">
                             <img
