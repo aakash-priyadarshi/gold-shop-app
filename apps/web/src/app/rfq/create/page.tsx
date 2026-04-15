@@ -2844,14 +2844,9 @@ export default function CreateRfqPage() {
         }
       }
 
-      // Store RFQ ID and move to Step 4 (seller matching)
-      console.log("[RFQ Submit] Moving to Step 4 with RFQ ID:", data.id);
-      setSubmittedRfqId(data.id);
-      setStep(4);
-
-      // Fetch matching sellers
-      console.log("[RFQ Submit] Fetching matching sellers...");
-      fetchMatchingSellers();
+      // Redirect to dedicated success page
+      console.log("[RFQ Submit] Redirecting to success page for RFQ:", data.id);
+      router.push(`/rfq/success/${data.id}`);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
