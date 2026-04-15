@@ -431,9 +431,11 @@ export default function CustomerSettingsPage() {
   const isCurrentProfilePhone = profile.phone === phoneCheckState.originalPhone;
   const canVerifyPhone =
     !!profile.phone &&
-    isCurrentProfilePhone &&
     !needsCountryCode(profile.phone) &&
-    phoneCheckState.exists !== true;
+    !phoneCheckState.checking &&
+    phoneCheckState.exists !== true &&
+    // Allow verification for: (a) already-saved phone, or (b) new phone confirmed available
+    (isCurrentProfilePhone || phoneCheckState.exists === false);
 
   return (
     <CustomerGuard>
@@ -588,9 +590,9 @@ export default function CustomerSettingsPage() {
                         <Shield className="h-4 w-4 mr-2" />
                         <T>Verify Phone</T>
                       </Button>
-                      {!isCurrentProfilePhone && (
+                      {!isCurrentProfilePhone && phoneCheckState.exists === null && !phoneCheckState.checking && (
                         <p className="text-xs text-muted-foreground mt-2">
-                          <T>Save your profile first, then verify your updated phone number.</T>
+                          <T>Enter your phone number above to check availability, then click Verify Phone.</T>
                         </p>
                       )}
                     </div>

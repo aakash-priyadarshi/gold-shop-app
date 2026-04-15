@@ -326,6 +326,7 @@ export class ImageGenerationService {
 
     // Gemstone specifications - enhanced with quality grades
     if (specs.hasGemstones && specs.primaryStone) {
+      // hasGemstones=true AND a specific stone type is selected
       const stoneDesc =
         GEMSTONE_DESCRIPTIONS[specs.primaryStone] ||
         specs.primaryStone.toLowerCase();
@@ -411,8 +412,11 @@ export class ImageGenerationService {
           specs.settingStyle.toLowerCase();
         specLines.push(`- Setting: ${settingDesc}`);
       }
+    } else if (specs.hasGemstones && !specs.primaryStone) {
+      // hasGemstones=true but no specific stone type chosen yet — acknowledge gemstones without details
+      specLines.push(`- Design: Features gemstones (type to be determined)`);
     } else {
-      // Explicitly state no gemstones when hasGemstones is false
+      // hasGemstones is false — explicitly a plain metal design
       specLines.push(
         `- Design: Plain metal only, NO gemstones, NO stones, NO diamonds`,
       );
@@ -597,9 +601,38 @@ Forbidden:
       // The response contains base64-encoded image data in predictions[].bytesBase64Encoded
       const imageData = result.predictions[0];
 
-      // For now, return the base64 data - the controller will handle uploading to R2
+      // Validate the prediction response — log full structure for diagnosis
+      this.logger.debug(
+        `Imagen prediction keys: ${Object.keys(imageData || {}).join(", ")}`,
+      );
+
+      // Check for content safety filter block
+      if (imageData?.raiFilteredReason) {
+        this.logger.error(
+          `Imagen content safety filter triggered: ${imageData.raiFilteredReason}`,
+        );
+        throw new Error(
+          `Image generation blocked by content safety filter: ${imageData.raiFilteredReason}`,
+        );
+      }
+
+      // Validate that base64 image data is present and non-trivial
+      const b64 = imageData?.bytesBase64Encoded;
+      if (!b64 || b64.length < 1000) {
+        this.logger.error(
+          `Imagen returned empty or suspiciously small base64 data (length: ${b64?.length ?? 0}). Full prediction: ${JSON.stringify(imageData).substring(0, 500)}`,
+        );
+        throw new Error(
+          "Image generation returned invalid or empty image data. Please try again.",
+        );
+      }
+
+      // Determine mime type from prediction if available
+      const mimeType = imageData?.mimeType || "image/png";
+      const ext = mimeType.includes("jpeg") || mimeType.includes("jpg") ? "jpeg" : "png";
+
       return {
-        imageUrl: `data:image/png;base64,${imageData.bytesBase64Encoded}`,
+        imageUrl: `data:image/${ext};base64,${b64}`,
         prompt,
         cached: false,
       };

@@ -5109,7 +5109,7 @@ export default function CreateRfqPage() {
                                 </Link>
                               ) : (
                                 <Link
-                                  href="/dashboard/customer"
+                                  href="/dashboard/customer/settings"
                                   className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 mt-2"
                                 >
                                   <T>Verify phone in profile</T>
@@ -5120,7 +5120,7 @@ export default function CreateRfqPage() {
                           </div>
                         )}
 
-                        {/* Preview Image Display */}
+                        {/* Preview Image Display */
                         {designPreviewUrl ? (
                           <div className="relative w-full max-w-sm mx-auto">
                             <img
@@ -5324,8 +5324,11 @@ export default function CreateRfqPage() {
 
                       {/* Budget feasibility checker — rules-first warning */}
                       {(() => {
+                        // Prefer priceEstimate (API result) since it matches what the user sees in the
+                        // "estimated price" display above. Fall back to liveEstimate when API hasn't
+                        // loaded yet to keep the checker responsive.
                         const estimatedTotal =
-                          liveEstimate?.total || priceEstimate?.total || 0;
+                          priceEstimate?.total || liveEstimate?.total || 0;
                         const maxBudget = parseFloat(formData.budgetMax || "0");
                         const minBudget = parseFloat(formData.budgetMin || "0");
 
@@ -5652,7 +5655,7 @@ export default function CreateRfqPage() {
                               </Link>
                             ) : !isPhoneVerified ? (
                               <Link
-                                href="/dashboard/customer"
+                                href="/dashboard/customer/settings"
                                 className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 mt-2"
                               >
                                 <T>Verify phone in profile</T>
