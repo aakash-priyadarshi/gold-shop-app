@@ -272,7 +272,7 @@ export default function JewelleryStoreManagementSoftwarePage() {
                 Manage your entire jewellery business from one platform —
                 inventory tracking by weight and purity, billing with making
                 charges, customer management, analytics, and an online
-                marketplace. Trusted by 2,000+ jewellers across 6 countries.
+                marketplace. Active buyers across 6 countries, growing daily.
                 Starts free.
               </T>
             </p>
@@ -297,9 +297,9 @@ export default function JewelleryStoreManagementSoftwarePage() {
         <section className="bg-gray-900 py-6">
           <div className="container mx-auto px-4 max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
-              { n: "2,000+", l: "Jewellers Trust Us" },
+              { n: "Free", l: "To Join" },
               { n: "6", l: "Countries Served" },
-              { n: "50,000+", l: "Products Managed" },
+              { n: "<5 min", l: "Setup Time" },
               { n: "₹0", l: "Starting Price" },
             ].map((s) => (
               <div key={s.l}>
@@ -590,8 +590,8 @@ export default function JewelleryStoreManagementSoftwarePage() {
             </h2>
             <p className="text-lg text-amber-100 mb-8">
               <T>
-                Join 2,000+ jewellers already managing their stores with
-                Orivraa. Free forever plan — no credit card required.
+                Jewellers across 6 countries use Orivraa to manage their stores
+                every day. Free forever plan — no credit card required.
               </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

@@ -115,6 +115,21 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
                 </Button>
               </Link>
             </div>
+
+            {/* Seller nudge */}
+            <p className={`text-sm mt-4 ${videoSrc ? "text-gray-300" : "text-gray-500"}`}>
+              <T>Are you a jeweller?</T>{" "}
+              <Link
+                href="/for-sellers"
+                className={`font-medium underline underline-offset-2 hover:no-underline ${
+                  videoSrc
+                    ? "text-amber-300 hover:text-amber-200"
+                    : "text-amber-600 hover:text-amber-700"
+                }`}
+              >
+                <T>Get your free shop profile →</T>
+              </Link>
+            </p>
           </div>
 
           {/* Stats Card */}

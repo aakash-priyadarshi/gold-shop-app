@@ -163,7 +163,7 @@ export default function JewellerBillingSoftwarePage() {
                 scanning. Designed specifically for gold, silver, and diamond
                 jewellery shops.
               </T>{" "}
-              <T>Trusted by 2,000+ jewellers. Starts free.</T>
+              <T>Used by jewellers across 6 countries. Starts free.</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

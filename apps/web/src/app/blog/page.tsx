@@ -143,8 +143,9 @@ export default function BlogPage() {
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-amber-100">
               <T>
-                Join 2,000+ jewellers using Orivraa to manage inventory, sell
-                online, and reach international buyers — free to start.
+                Jewellers across Nepal, India, Dubai, UK and USA use Orivraa to
+                manage inventory, sell online, and reach international buyers —
+                free to start.
               </T>
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">

@@ -215,12 +215,12 @@ export function HomeSections() {
 
           {/* Seller CTA */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 lg:gap-4">
-            <Link href="/pricing">
+            <Link href="/for-sellers">
               <Button
                 size="lg"
                 className="h-12 px-8 rounded-xl text-base gold-gradient text-white"
               >
-                <T>View Pricing Plans</T>
+                <T>Get Your Free Shop Profile</T>
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -230,7 +230,7 @@ export function HomeSections() {
                 variant="outline"
                 className="h-12 px-8 rounded-xl text-base"
               >
-                <T>Read Seller Guide</T>
+                <T>See How It Works</T>
               </Button>
             </Link>
           </div>

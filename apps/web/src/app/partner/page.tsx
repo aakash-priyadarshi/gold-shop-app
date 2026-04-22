@@ -140,10 +140,10 @@ const FAQS = [
 ];
 
 const STATS = [
-  { label: "Active Sellers", value: "2,000+" },
-  { label: "Countries Served", value: "6+" },
-  { label: "Products Listed", value: "50,000+" },
-  { label: "Monthly Buyers", value: "100K+" },
+  { label: "Countries with active buyers", value: "6+" },
+  { label: "Supported markets", value: "IN · NP · AE · UK · EU · US" },
+  { label: "Cost to join", value: "Free" },
+  { label: "Commission on first sale", value: "Low" },
 ];
 
 /* ────────────────────────────────────────────────────────────── */
@@ -179,10 +179,10 @@ export default function PartnerPage() {
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
-                href="/auth/register"
+                href="/for-sellers"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-semibold transition-colors shadow-lg shadow-amber-500/25"
               >
-                <T>Apply to Partner</T>
+                <T>Get Your Free Shop Profile</T>
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link

@@ -37,6 +37,7 @@ import {
     Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 /* ────────────────────────────────────────────────────────────── */
@@ -561,6 +562,7 @@ export default function PricingPage() {
   const [showComparison, setShowComparison] = useState(false);
   const [plans, setPlans] = useState<PlanFromAPI[]>([]);
   const [loading, setLoading] = useState(true);
+  const { status } = useSession();
 
   const country = usePreferencesStore((s) => s.country);
   const setCountry = usePreferencesStore((s) => s.setCountry);
@@ -742,7 +744,9 @@ export default function PricingPage() {
               const isEnterprise = plan.name === "ENTERPRISE";
               const ctaLink = isEnterprise
                 ? "/contact?interest=Enterprise+%2F+Multi-branch"
-                : "/dashboard/shop/billing";
+                : status === "authenticated"
+                  ? "/dashboard/shop/billing"
+                  : "/auth/register";
 
               // Use DB values if set, else fall back to TIER_META
               const badge = plan.badgeText ?? meta.badge;

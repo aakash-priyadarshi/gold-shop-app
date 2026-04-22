@@ -193,9 +193,9 @@ export default function JewelleryEcommerceSoftwarePage() {
         <section className="bg-gray-900 py-6">
           <div className="container mx-auto px-4 max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
-              { n: "2,000+", l: "Jewellers Selling" },
+              { n: "Free", l: "To List" },
               { n: "6", l: "Countries Reach" },
-              { n: "50,000+", l: "Products Listed" },
+              { n: "Live", l: "Buyer Demand" },
               { n: "₹0", l: "To Start Selling" },
             ].map((s) => (
               <div key={s.l}>
@@ -473,8 +473,8 @@ export default function JewelleryEcommerceSoftwarePage() {
             </h2>
             <p className="text-lg text-amber-100 mb-8">
               <T>
-                Join 2,000+ jewellers already selling on Orivraa. Free to list —
-                reach buyers worldwide.
+                Jewellers across Nepal, India, Dubai, UK and US are already on
+                Orivraa. Free to list — reach buyers worldwide.
               </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

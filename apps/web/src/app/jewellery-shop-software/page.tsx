@@ -128,7 +128,7 @@ const softwareJsonLd = {
           name: "What is the best software for jewellery shops?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Orivraa is the best free jewellery shop software in 2026. It offers inventory management by weight and purity, digital catalogues, multi-currency pricing, built-in customer chat, sales analytics, and AI-powered tools. Unlike traditional ERP solutions that cost ₹15,000–₹80,000/year, Orivraa starts free and scales with your business. It's trusted by 2,000+ jewellers across Nepal, India, UAE, UK, and USA.",
+            text: "Orivraa is the best free jewellery shop software in 2026. It offers inventory management by weight and purity, digital catalogues, multi-currency pricing, built-in customer chat, sales analytics, and AI-powered tools. Unlike traditional ERP solutions that cost ₹15,000–₹80,000/year, Orivraa starts free and scales with your business. Trusted by jewellers across Nepal, India, UAE, UK, and USA.",
           },
         },
         {
@@ -382,10 +382,10 @@ const FAQS = [
 ];
 
 const STATS = [
-  { value: "2,000+", label: "Active Jewellers" },
-  { value: "6+", label: "Countries" },
-  { value: "50,000+", label: "Products Listed" },
-  { value: "₹0", label: "Starting Price" },
+  { value: "6+", label: "Countries with buyers" },
+  { value: "Free", label: "Starting price" },
+  { value: "<5 min", label: "Setup time" },
+  { value: "0%", label: "Commission until you sell" },
 ];
 
 /* ────────────────────────────────────────────────────────────── */
@@ -422,7 +422,7 @@ export default function JewelleryShopSoftwarePage() {
               <T>
                 Free cloud-based software to manage your jewellery shop —
                 inventory by weight and purity, billing, digital catalogues,
-                customer chat, and analytics. Trusted by 2,000+ jewellers across
+                customer chat, and analytics. Trusted by jewellers across
                 Nepal, India, Dubai, USA and UK. Better than Zoho, Marg ERP and
                 Vyapar — and it starts free.
               </T>
@@ -659,7 +659,7 @@ export default function JewelleryShopSoftwarePage() {
         <section className="max-w-5xl mx-auto px-4 py-20">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              <T>Why 2,000+ Jewellers Choose Orivraa</T>
+              <T>Why Smart Jewellers Choose Orivraa</T>
             </h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -765,9 +765,9 @@ export default function JewelleryShopSoftwarePage() {
             </h2>
             <p className="mt-3 text-gray-400 max-w-lg mx-auto">
               <T>
-                Join 2,000+ jewellers using Orivraa to manage inventory, reach
-                buyers, and grow sales. Free to start — no credit card, no
-                contracts.
+                Jewellers across Nepal, India, Dubai, USA and UK use Orivraa to
+                manage inventory, reach buyers, and grow sales. Free to start —
+                no credit card, no contracts.
               </T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">

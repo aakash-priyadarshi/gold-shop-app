@@ -144,6 +144,22 @@ export function DynamicFooter() {
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
+                  href="/for-sellers"
+                  className="hover:text-gold-400 transition-colors"
+                >
+                  <T>Start Selling Free</T>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/jewellery-shop-software"
+                  className="hover:text-gold-400 transition-colors"
+                >
+                  <T>Shop Software</T>
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/partner"
                   className="hover:text-gold-400 transition-colors"
                 >

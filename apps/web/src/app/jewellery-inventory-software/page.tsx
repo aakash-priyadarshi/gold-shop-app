@@ -170,8 +170,8 @@ export default function JewelleryInventorySoftwarePage() {
                 Stop using spreadsheets to track gold. Orivraa's inventory
                 management tracks your gold, silver, diamond, and gemstone
                 inventory by weight, purity, and category with automatic stock
-                alerts, bulk upload, and real-time valuation. Trusted by 2,000+
-                jewellers.
+                alerts, bulk upload, and real-time valuation. Used by jewellers
+                across Nepal, India, Dubai, UK and USA.
               </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -195,7 +195,7 @@ export default function JewelleryInventorySoftwarePage() {
         <section className="bg-gray-900 py-6">
           <div className="container mx-auto px-4 max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
-              { n: "50,000+", l: "Products Tracked" },
+              { n: "Real-time", l: "Stock Valuation" },
               { n: "99.9%", l: "Inventory Accuracy" },
               { n: "6", l: "Weight Units Supported" },
               { n: "5", l: "Purity Grades Tracked" },
