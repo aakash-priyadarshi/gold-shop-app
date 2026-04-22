@@ -486,7 +486,8 @@ export class DesignsController {
     @Param("id") id: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.designsService.deleteDesign(id, req.user!.id);
+    const isAdmin = req.user?.role === "ADMIN";
+    return this.designsService.deleteDesign(id, req.user!.id, isAdmin);
   }
 
   /**

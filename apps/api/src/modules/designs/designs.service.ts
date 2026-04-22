@@ -650,9 +650,9 @@ export class DesignsService {
   }
 
   /**
-   * Delete a design (only creator can delete)
+   * Delete a design (creator or admin can delete)
    */
-  async deleteDesign(designId: string, userId: string) {
+  async deleteDesign(designId: string, userId: string, isAdmin = false) {
     const design = await this.prisma.design.findUnique({
       where: { id: designId },
     });
@@ -661,7 +661,7 @@ export class DesignsService {
       throw new NotFoundException("Design not found");
     }
 
-    if (design.creatorId !== userId) {
+    if (!isAdmin && design.creatorId !== userId) {
       throw new ForbiddenException("You can only delete your own designs");
     }
 
