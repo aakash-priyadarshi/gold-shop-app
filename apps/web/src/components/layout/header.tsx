@@ -83,6 +83,7 @@ import {
     UserIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 
 // Role-specific quick action icons configuration
@@ -337,6 +338,13 @@ export function Header() {
   // "For Sellers" dropdown items
   const sellerNavItems = [
     {
+      name: "Start Selling Free",
+      href: "/for-sellers",
+      icon: BuildingStorefrontIcon,
+      desc: "See how Orivraa works for jewellers",
+      featured: true,
+    },
+    {
       name: "Jewellery Shop Software",
       href: "/jewellery-shop-software",
       icon: Squares2X2Icon,
@@ -503,10 +511,14 @@ export function Header() {
                     <Link
                       key={item.name}
                       href={item.href}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-target"
+                      className={`flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-colors touch-target ${
+                        item.featured
+                          ? "bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-800/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/60 mb-1"
+                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      }`}
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      <item.icon className="h-5 w-5 text-gold-500" />
+                      <item.icon className={`h-5 w-5 ${item.featured ? "text-amber-500" : "text-gold-500"}`} />
                       <T>{item.name}</T>
                     </Link>
                   ))}
@@ -698,9 +710,9 @@ export function Header() {
             onMouseEnter={() => setSellerDropdownOpen(true)}
             onMouseLeave={() => setSellerDropdownOpen(false)}
           >
-            <button
+            <Link
+              href="/for-sellers"
               className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors inline-flex items-center gap-1"
-              onClick={() => setSellerDropdownOpen(!sellerDropdownOpen)}
             >
               <T>For Sellers</T>
               <svg
@@ -716,7 +728,7 @@ export function Header() {
                   d="m19.5 8.25-7.5 7.5-7.5-7.5"
                 />
               </svg>
-            </button>
+            </Link>
             {sellerDropdownOpen && (
               <>
                 {/* Invisible bridge to prevent gap hover loss */}
@@ -726,12 +738,16 @@ export function Header() {
                     <Link
                       key={item.name}
                       href={item.href}
-                      className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      className={`flex items-start gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                        item.featured
+                          ? "bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-800/40 hover:bg-amber-100 dark:hover:bg-amber-950/60 mb-1.5"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                      }`}
                       onClick={() => setSellerDropdownOpen(false)}
                     >
-                      <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0" />
+                      <item.icon className={`h-5 w-5 mt-0.5 shrink-0 ${item.featured ? "text-amber-500" : "text-gold-500"}`} />
                       <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        <div className={`text-sm font-medium ${item.featured ? "text-amber-700 dark:text-amber-400" : "text-gray-900 dark:text-white"}`}>
                           <T>{item.name}</T>
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -1562,9 +1578,11 @@ export function Header() {
                           >
                             <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
                               {item.product.image ? (
-                                <img
+                                <Image
                                   src={item.product.image}
                                   alt={item.product.name}
+                                  width={56}
+                                  height={56}
                                   className="w-full h-full object-cover"
                                 />
                               ) : (

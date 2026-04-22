@@ -179,7 +179,7 @@ export default function PartnerPage() {
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
-                href="/for-sellers"
+                href="/auth/register"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-semibold transition-colors shadow-lg shadow-amber-500/25"
               >
                 <T>Get Your Free Shop Profile</T>
