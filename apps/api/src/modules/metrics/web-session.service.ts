@@ -33,7 +33,43 @@ export class WebSessionService {
     return { sessionToken: session.sessionToken };
   }
 
-  /** Heartbeat — update lastActive and increment pageViews */
+  /** Record a per-page visit: path, optional title, time spent */
+  async recordPageView(data: {
+    sessionToken: string;
+    path: string;
+    title?: string;
+    durationSec?: number;
+  }) {
+    const session = await this.prisma.webSession.findUnique({
+      where: { sessionToken: data.sessionToken },
+      select: { id: true, endedAt: true },
+    });
+    if (!session) return;
+
+    // Sanitise path — strip query strings and hash, keep only the pathname
+    const safePath = data.path.split('?')[0].split('#')[0].substring(0, 300);
+
+    await this.prisma.$transaction([
+      this.prisma.sessionPageView.create({
+        data: {
+          sessionId: session.id,
+          path: safePath,
+          title: data.title ? data.title.substring(0, 200) : null,
+          durationSec: data.durationSec ?? null,
+        },
+      }),
+      // Keep the aggregate pageViews counter in sync
+      this.prisma.webSession.update({
+        where: { id: session.id },
+        data: {
+          pageViews: { increment: 1 },
+          lastActive: new Date(),
+        },
+      }),
+    ]);
+  }
+
+  /** Heartbeat — update lastActive and duration, NO longer increments pageViews (recordPageView does that) */
   async heartbeat(_data: { sessionToken: string; userId?: string; role?: string }) {
     const session = await this.prisma.webSession.findUnique({
       where: { sessionToken: _data.sessionToken }

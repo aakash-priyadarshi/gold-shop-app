@@ -61,6 +61,22 @@ export class WebSessionController {
     });
   }
 
+  @Post('page-view')
+  @UseGuards(OptionalJwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: { ttl: 5000, limit: 5 } }) // max 5 page-views per 5s per IP
+  @ApiOperation({ summary: 'Record a page visit with path, title and time spent' })
+  async recordPageView(
+    @Body() body: { sessionToken: string; path: string; title?: string; durationSec?: number },
+  ) {
+    await this.webSessionService.recordPageView({
+      sessionToken: body.sessionToken,
+      path: body.path,
+      title: body.title,
+      durationSec: body.durationSec,
+    });
+  }
+
   @Post('end')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'End a web session' })

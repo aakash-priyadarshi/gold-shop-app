@@ -323,6 +323,16 @@ export class UsersController {
           platform: true,
           referrer: true,
           closedBy: true,
+          pageViewDetails: {
+            orderBy: { visitedAt: "asc" },
+            select: {
+              id: true,
+              path: true,
+              title: true,
+              durationSec: true,
+              visitedAt: true,
+            },
+          },
         },
       }),
       this.prisma.webSession.count({ where: { userId: id } }),

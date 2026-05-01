@@ -3321,12 +3321,28 @@ model WebSession {
   referrer     String?                         // utm / referrer URL
   closedBy     String?                         // "user_logout" | "timeout" | "beacon" | "pin_lock"
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user         User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  pageViewDetails SessionPageView[]
 
   @@index([userId])
   @@index([startedAt])
   @@index([role, startedAt])
   @@index([userId, startedAt])
+}
+
+/// Per-page visit record — one row per page the user navigated to within a session
+model SessionPageView {
+  id          String      @id @default(cuid())
+  sessionId   String
+  path        String                          // e.g. "/dashboard/shop"
+  title       String?                         // document.title at visit time
+  durationSec Int?                            // seconds spent on this page before navigating away
+  visitedAt   DateTime    @default(now())
+
+  session     WebSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([path])
 }
 
 // -----------------------------------------------------------------------------
