@@ -49,8 +49,9 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // Increase body parser limit for image uploads (10MB for base64 encoded images)
     bodyParser: true,
+    // Required for Stripe webhook signature verification (RawBodyRequest<Request>)
+    rawBody: true,
   });
-  const logger = new Logger("Bootstrap");
 
   // Trust Railway / Cloudflare reverse proxy — ensures correct req.hostname, req.ip
   app.set("trust proxy", true);

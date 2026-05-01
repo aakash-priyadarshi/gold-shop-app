@@ -1,13 +1,19 @@
 import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  RawBodyRequest,
-  Req,
-  UseGuards,
+    BadRequestException,
+    Body,
+    Controller,
+    ForbiddenException,
+    Get,
+    HttpCode,
+    HttpStatus,
+    InternalServerErrorException,
+    Logger,
+    Param,
+    Post,
+    Query,
+    RawBodyRequest,
+    Req,
+    UseGuards,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -19,10 +25,10 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import {
-  AdminOverrideDto,
-  CancelSubscriptionDto,
-  MigrationResponseDto,
-  SubscribeDto,
+    AdminOverrideDto,
+    CancelSubscriptionDto,
+    MigrationResponseDto,
+    SubscribeDto,
 } from "./dto";
 import { PlanLimitsService } from "./plan-limits.service";
 import { SellerSubscriptionsService } from "./seller-subscriptions.service";
@@ -30,6 +36,8 @@ import { SellerSubscriptionsService } from "./seller-subscriptions.service";
 @ApiTags("seller-subscriptions")
 @Controller("seller-subscriptions")
 export class SellerSubscriptionsController {
+  private readonly logger = new Logger(SellerSubscriptionsController.name);
+
   constructor(
     private readonly subscriptionService: SellerSubscriptionsService,
     private readonly planLimitsService: PlanLimitsService,
@@ -54,7 +62,7 @@ export class SellerSubscriptionsController {
 
     // Ensure seller can only subscribe their own shop
     if (resolvedShopId !== shopId) {
-      throw new Error("You can only subscribe your own shop");
+      throw new ForbiddenException("You can only subscribe your own shop");
     }
 
     const result = await this.subscriptionService.subscribeToPlan({
@@ -316,43 +324,76 @@ export class SellerSubscriptionsController {
   // ─── Stripe Webhook ───────────────────────────────
 
   @Post("webhooks/stripe")
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Stripe webhook handler for subscriptions" })
   async stripeWebhook(@Req() req: RawBodyRequest<Request>) {
-    const sig = req.headers["stripe-signature"] as string;
+    const sig = req.headers["stripe-signature"] as string | undefined;
     // Use dedicated subscription webhook secret, fallback to shared secret
     const endpointSecret =
       this.configService.get<string>("STRIPE_SUBSCRIPTION_WEBHOOK_SECRET") ||
       this.configService.get<string>("STRIPE_WEBHOOK_SECRET");
 
-    if (!sig || !endpointSecret) {
-      return {
-        received: true,
-        processed: false,
-        reason: "Missing signature or secret",
-      };
+    // 1. Missing signature header from caller → bad request (Stripe will retry).
+    if (!sig) {
+      this.logger.warn("Stripe webhook called without stripe-signature header");
+      throw new BadRequestException("Missing stripe-signature header");
     }
 
-    try {
-      const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
-      if (!stripeKey) {
-        return {
-          received: true,
-          processed: false,
-          reason: "Stripe not configured",
-        };
-      }
+    // 2. Server misconfiguration → return 500 so Stripe retries while we fix it.
+    if (!endpointSecret) {
+      this.logger.error(
+        "STRIPE_WEBHOOK_SECRET / STRIPE_SUBSCRIPTION_WEBHOOK_SECRET is not configured",
+      );
+      throw new InternalServerErrorException(
+        "Webhook endpoint secret not configured",
+      );
+    }
 
-      const stripe = require("stripe")(stripeKey);
-      const event = stripe.webhooks.constructEvent(
+    if (!this.subscriptionService.isStripeConfigured()) {
+      this.logger.error("Stripe is not configured but webhook was received");
+      throw new InternalServerErrorException("Stripe is not configured");
+    }
+
+    if (!req.rawBody) {
+      // Should never happen if main.ts enables rawBody:true
+      this.logger.error(
+        "Raw body is missing — ensure NestFactory.create({ rawBody: true })",
+      );
+      throw new InternalServerErrorException("Raw body unavailable");
+    }
+
+    // 3. Verify signature. Invalid signatures → 400 (do NOT 200, otherwise
+    // Stripe stops retrying and an attacker would learn we silently accept).
+    let event;
+    try {
+      event = this.subscriptionService.constructWebhookEvent(
         req.rawBody,
         sig,
         endpointSecret,
       );
-
-      await this.subscriptionService.handleStripeWebhook(event);
-      return { received: true, processed: true };
-    } catch (err) {
-      return { received: true, processed: false, error: err.message };
+    } catch (err: any) {
+      this.logger.warn(
+        `Stripe webhook signature verification failed: ${err?.message}`,
+      );
+      throw new BadRequestException(
+        `Webhook signature verification failed: ${err?.message}`,
+      );
     }
+
+    // 4. Process. If handler throws, propagate as 500 so Stripe retries
+    // (idempotency must be enforced inside handleStripeWebhook).
+    try {
+      await this.subscriptionService.handleStripeWebhook(event);
+    } catch (err: any) {
+      this.logger.error(
+        `Stripe webhook handler failed for event ${event?.id} (${event?.type}): ${err?.message}`,
+        err?.stack,
+      );
+      throw new InternalServerErrorException(
+        "Webhook handler failed — Stripe will retry",
+      );
+    }
+
+    return { received: true, processed: true, eventId: event.id };
   }
 }

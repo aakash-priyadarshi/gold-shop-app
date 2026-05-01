@@ -1,10 +1,12 @@
 import { ExecutionContext, ForbiddenException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
 import { Test, TestingModule } from "@nestjs/testing";
+import { RedisService } from "../../common/redis";
 import { FeatureGateGuard } from "./feature-gate.guard";
 import {
-  FeatureNotEnabledException,
-  PlanLimitsService,
+    FeatureNotEnabledException,
+    PlanLimitsService,
 } from "./plan-limits.service";
 
 // ─── Helper: build a fake ExecutionContext ────────────────
@@ -22,15 +24,22 @@ describe("FeatureGateGuard", () => {
   let guard: FeatureGateGuard;
   let reflector: Reflector;
   let planLimits: { checkFeature: jest.Mock };
+  let redis: { get: jest.Mock; set: jest.Mock };
 
   beforeEach(async () => {
     planLimits = { checkFeature: jest.fn() };
+    redis = { get: jest.fn().mockResolvedValue(null), set: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FeatureGateGuard,
         Reflector,
         { provide: PlanLimitsService, useValue: planLimits },
+        { provide: RedisService, useValue: redis },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn().mockReturnValue("3") },
+        },
       ],
     }).compile();
 

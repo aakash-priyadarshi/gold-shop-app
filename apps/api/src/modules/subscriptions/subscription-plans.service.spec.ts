@@ -12,6 +12,7 @@ const mockPrisma = {
     findMany: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    count: jest.fn(),
   },
   sellerSubscription: {
     findFirst: jest.fn(),
@@ -210,7 +211,7 @@ describe("SubscriptionPlansService", () => {
         plan,
       });
 
-      const result = await service.getActiveShopPlan("shop1");
+      await service.getActiveShopPlan("shop1");
 
       // Simulate admin toggling apiAccess off
       plan.features.apiAccess = false;

@@ -5,11 +5,11 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,25 +17,25 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import {
-  aiCreditsApi,
-  sellerSubscriptionsApi,
-  subscriptionPlansApi,
+    aiCreditsApi,
+    sellerSubscriptionsApi,
+    subscriptionPlansApi,
 } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
-  ArrowRight,
-  BarChart3,
-  CheckCircle,
-  CreditCard,
-  Crown,
-  Package,
-  Receipt,
-  Sparkles,
-  Store,
-  Zap,
+    ArrowRight,
+    BarChart3,
+    CheckCircle,
+    CreditCard,
+    Crown,
+    Package,
+    Receipt,
+    Sparkles,
+    Store,
+    Zap,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
 // ─── Types ───────────────────────────────────────
 
@@ -135,7 +135,7 @@ function SellerBillingPageInner() {
       });
       window.history.replaceState({}, "", "/dashboard/shop/billing");
     }
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   return (
     <ShopGuard>
@@ -199,7 +199,7 @@ function CurrentPlanTab() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [subRes, histRes, usageRes, featRes] = await Promise.all([
@@ -217,11 +217,11 @@ function CurrentPlanTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleCancel = async () => {
     if (!sub) return;
@@ -420,36 +420,55 @@ function CurrentPlanTab() {
               </div>
             )}
 
-            <div className="mt-6 flex gap-3">
-              {sub.status === "ACTIVE" && sub.plan.monthlyPrice > 0 && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        const res =
-                          await sellerSubscriptionsApi.getBillingPortal();
-                        if (res.data?.url) {
-                          window.location.href = res.data.url;
-                        }
-                      } catch {
-                        toast({
-                          title: t("Error"),
-                          description: t("Could not open billing portal"),
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    <T>Manage Billing</T>
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleCancel}>
-                    <T>Cancel Subscription</T>
-                  </Button>
-                </>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              {sub.status === "PAST_DUE" && (
+                <div className="w-full rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                  <T>
+                    Your last payment failed. Update your payment method in the
+                    billing portal to keep your subscription active.
+                  </T>
+                </div>
               )}
+              {(sub.status === "ACTIVE" || sub.status === "PAST_DUE") &&
+                sub.plan.monthlyPrice > 0 && (
+                  <>
+                    <Button
+                      variant={sub.status === "PAST_DUE" ? "default" : "outline"}
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const res =
+                            await sellerSubscriptionsApi.getBillingPortal();
+                          if (res.data?.url) {
+                            window.location.href = res.data.url;
+                          }
+                        } catch {
+                          toast({
+                            title: t("Error"),
+                            description: t("Could not open billing portal"),
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      <T>
+                        {sub.status === "PAST_DUE"
+                          ? "Update Payment Method"
+                          : "Manage Billing"}
+                      </T>
+                    </Button>
+                    {sub.status === "ACTIVE" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCancel}
+                      >
+                        <T>Cancel Subscription</T>
+                      </Button>
+                    )}
+                  </>
+                )}
             </div>
           </CardContent>
         </Card>
@@ -584,7 +603,7 @@ function AiCreditsTab() {
     overageBehavior: string;
   } | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [balRes, ledRes, arRes, subRes] = await Promise.all([
         aiCreditsApi.getBalance(),
@@ -618,11 +637,11 @@ function AiCreditsTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleBuyCredits = async () => {
     if (!canPurchase) {
