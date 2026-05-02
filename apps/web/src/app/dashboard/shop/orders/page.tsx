@@ -190,6 +190,10 @@ export default function ShopOrdersPage() {
           </div>
 
           <Card data-tour="orders-table">
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : orders.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
