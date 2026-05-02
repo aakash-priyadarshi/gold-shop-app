@@ -1927,7 +1927,7 @@ export function Header() {
           )}
         </div>
 
-        {/* Mobile Auth Icons */
+        {/* Mobile Auth Icons */}
         <div className="flex lg:hidden items-center gap-1">
           {mounted && !authLoading && isAuthenticated && user && (
             <>
