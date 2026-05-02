@@ -205,18 +205,41 @@ const FALLBACK: Pick<Intent, "reply" | "cta"> = {
 
 /* ───────────────────────────── Component ───────────────────────────────── */
 
+const WELCOME_MSG: Message = {
+  id: "welcome",
+  from: "bot",
+  text: "Hi 👋 I'm the Orivraa assistant. Ask me about pricing, features, GST, offline POS, hallmarking — or just say 'talk to a human' and I'll connect you to our founder.",
+};
+
+const STORAGE_MSGS = "orivraa_chat_messages";
+const STORAGE_OPEN = "orivraa_chat_open";
+
+function readSession<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw !== null ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export function SupportBot() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<boolean>(() => readSession(STORAGE_OPEN, false));
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      from: "bot",
-      text:
-        "Hi 👋 I'm the Orivraa assistant. Ask me about pricing, features, GST, offline POS, hallmarking — or just say 'talk to a human' and I'll connect you to our founder.",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>(() =>
+    readSession<Message[]>(STORAGE_MSGS, [WELCOME_MSG]),
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Persist conversation and open state across navigations / open-close
+  useEffect(() => {
+    try { sessionStorage.setItem(STORAGE_MSGS, JSON.stringify(messages)); } catch { /* quota */ }
+  }, [messages]);
+
+  useEffect(() => {
+    try { sessionStorage.setItem(STORAGE_OPEN, JSON.stringify(open)); } catch { /* quota */ }
+  }, [open]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
