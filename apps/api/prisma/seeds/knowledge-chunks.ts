@@ -9,10 +9,8 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import * as dotenv from "dotenv";
-import { join } from "path";
 
-dotenv.config({ path: join(__dirname, "../../.env") });
+// Env vars are loaded by passing --env-file .env to node, or set them in shell.
 
 const prisma = new PrismaClient();
 
