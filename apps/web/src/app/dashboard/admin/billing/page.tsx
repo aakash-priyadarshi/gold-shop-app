@@ -290,6 +290,24 @@ const ALL_FEATURE_KEYS: {
     enforced: false,
   },
   {
+    key: "taxReports",
+    label: "Tax filing reports (view — GSTR, VAT, MTD)",
+    category: "Analytics & Reports",
+    enforced: false,
+  },
+  {
+    key: "taxReportsDownload",
+    label: "Tax report downloads (CSV, XML, Tally)",
+    category: "Analytics & Reports",
+    enforced: true,
+  },
+  {
+    key: "taxCaShare",
+    label: "CA/accountant share link (7-day link)",
+    category: "Analytics & Reports",
+    enforced: true,
+  },
+  {
     key: "prioritySupport",
     label: "Priority support",
     category: "Support & Integration",

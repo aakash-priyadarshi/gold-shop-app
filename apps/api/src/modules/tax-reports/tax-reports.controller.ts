@@ -16,6 +16,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
+import { PlanLimitsService } from "../subscriptions/plan-limits.service";
 import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import { TaxReportsService } from "./tax-reports.service";
 
@@ -23,7 +24,10 @@ import { TaxReportsService } from "./tax-reports.service";
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.SHOPKEEPER, UserRole.ADMIN)
 export class TaxReportsController {
-  constructor(private readonly svc: TaxReportsService) {}
+  constructor(
+    private readonly svc: TaxReportsService,
+    private readonly planLimits: PlanLimitsService,
+  ) {}
 
   private requireShop(shopId?: string) {
     if (!shopId) throw new Error("No shop associated with this user");
@@ -42,8 +46,6 @@ export class TaxReportsController {
 
   // ── INDIA ────────────────────────────────────────────────────────
   @Get("india/gstr1")
-  @UseGuards(FeatureGateGuard)
-  @RequireFeature("taxReports")
   async indiaGstr1(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -53,6 +55,9 @@ export class TaxReportsController {
     @Res({ passthrough: true }) res: Response,
   ) {
     this.requireShop(shopId);
+    if (format === "csv") {
+      await this.planLimits.checkFeature(shopId, "taxReportsDownload");
+    }
     const data = await this.svc.getIndiaGstr1(shopId, period);
     await this.svc.logExport({
       shopId,
@@ -73,8 +78,6 @@ export class TaxReportsController {
   }
 
   @Get("india/gstr3b")
-  @UseGuards(FeatureGateGuard)
-  @RequireFeature("taxReports")
   async indiaGstr3b(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -88,8 +91,6 @@ export class TaxReportsController {
   }
 
   @Get("india/hsn")
-  @UseGuards(FeatureGateGuard)
-  @RequireFeature("taxReports")
   async indiaHsn(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -99,6 +100,9 @@ export class TaxReportsController {
     @Res({ passthrough: true }) res: Response,
   ) {
     this.requireShop(shopId);
+    if (format === "csv") {
+      await this.planLimits.checkFeature(shopId, "taxReportsDownload");
+    }
     const rows = await this.svc.getIndiaHsnSummary(shopId, period);
     await this.svc.logExport({ shopId, exportType: "HSN", country: "IN", period, format: format.toUpperCase(), requestedBy: userId, ip, rowCount: rows.length });
     if (format === "csv") {
@@ -111,7 +115,7 @@ export class TaxReportsController {
 
   @Get("india/tally.xml")
   @UseGuards(FeatureGateGuard)
-  @RequireFeature("taxReports")
+  @RequireFeature("taxReportsDownload")
   async indiaTally(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -129,8 +133,6 @@ export class TaxReportsController {
 
   // ── NEPAL ────────────────────────────────────────────────────────
   @Get("nepal/vat")
-  @UseGuards(FeatureGateGuard)
-  @RequireFeature("taxReports")
   async nepalVat(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -145,8 +147,6 @@ export class TaxReportsController {
 
   // ── UAE ──────────────────────────────────────────────────────────
   @Get("uae/vat201")
-  @UseGuards(FeatureGateGuard)
-  @RequireFeature("taxReports")
   async uaeVat201(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -161,8 +161,6 @@ export class TaxReportsController {
 
   // ── UK ───────────────────────────────────────────────────────────
   @Get("uk/mtd")
-  @UseGuards(FeatureGateGuard)
-  @RequireFeature("taxReports")
   async ukMtd(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -177,8 +175,6 @@ export class TaxReportsController {
 
   // ── EU OSS ───────────────────────────────────────────────────────
   @Get("eu/oss")
-  @UseGuards(FeatureGateGuard)
-  @RequireFeature("taxReports")
   async euOss(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -188,6 +184,9 @@ export class TaxReportsController {
     @Res({ passthrough: true }) res: Response,
   ) {
     this.requireShop(shopId);
+    if (format === "csv") {
+      await this.planLimits.checkFeature(shopId, "taxReportsDownload");
+    }
     const data = await this.svc.getEuOss(shopId, period);
     await this.svc.logExport({ shopId, exportType: "EU_OSS", country: "EU", period, format: format.toUpperCase(), requestedBy: userId, ip, rowCount: data.rows.length });
     if (format === "csv") {
@@ -200,8 +199,6 @@ export class TaxReportsController {
 
   // ── US ───────────────────────────────────────────────────────────
   @Get("us/state")
-  @UseGuards(FeatureGateGuard)
-  @RequireFeature("taxReports")
   async usState(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -211,6 +208,9 @@ export class TaxReportsController {
     @Res({ passthrough: true }) res: Response,
   ) {
     this.requireShop(shopId);
+    if (format === "csv") {
+      await this.planLimits.checkFeature(shopId, "taxReportsDownload");
+    }
     const data = await this.svc.getUsStateSummary(shopId, period);
     await this.svc.logExport({ shopId, exportType: "US_STATE", country: "US", period, format: format.toUpperCase(), requestedBy: userId, ip, rowCount: data.rows.length });
     if (format === "csv") {

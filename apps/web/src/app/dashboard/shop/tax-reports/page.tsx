@@ -13,7 +13,6 @@ import { useFeatures } from "@/hooks/useFeatures";
 import { taxReportsApi } from "@/lib/api";
 import {
     AlertCircle,
-    ArrowRight,
     Calendar,
     CheckCircle2,
     Copy,
@@ -54,69 +53,21 @@ function downloadBlob(data: any, filename: string, type = "text/csv") {
 
 export default function TaxReportsPage() {
   const { user } = useAuth();
-  const { hasFeature, loading: featuresLoading, planName } = useFeatures();
+  const { hasFeature, loading: featuresLoading } = useFeatures();
   const homeCountry = user?.shop?.country || "NP";
   const defaultTab = COUNTRY_TABS.find((c) => c.code === homeCountry)?.code || "NP";
 
   const [period, setPeriod] = useState<string>(currentMonth());
   const [activeCountry, setActiveCountry] = useState<string>(defaultTab);
 
+  const canDownload = hasFeature("taxReportsDownload");
+  const canShare = hasFeature("taxCaShare");
+
   if (featuresLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!hasFeature("taxReports")) {
-    return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center gap-6">
-          <div className="p-5 bg-amber-100 dark:bg-amber-950/30 rounded-full">
-            <Lock className="h-12 w-12 text-amber-600" />
-          </div>
-          <div className="max-w-md">
-            <h2 className="text-2xl font-bold mb-2">
-              <T>Tax Reports — Pro Feature</T>
-            </h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              <T>
-                Generate GSTR-1, GSTR-3B, HSN, Nepal VAT, UAE VAT-201, HMRC MTD,
-                EU OSS, US state reports and Tally XML exports. Upgrade to Pro to
-                unlock all country tax filings.
-              </T>
-            </p>
-            <div className="flex flex-col gap-2 text-sm text-left bg-muted/50 rounded-xl p-4 mb-6">
-              {[
-                "GSTR-1 & GSTR-3B for India",
-                "Nepal VAT register & report",
-                "UAE VAT-201 form",
-                "HMRC Making Tax Digital (9-box)",
-                "EU One-Stop-Shop (OSS)",
-                "US per-state sales tax summary",
-                "Tally XML export",
-              ].map((item) => (
-                <div key={item} className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-            <a href="/pricing">
-              <button className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl font-semibold text-sm transition-all shadow-lg shadow-amber-500/20">
-                <Sparkles className="h-4 w-4" />
-                <T>Upgrade to Pro</T>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </a>
-            <p className="text-xs text-gray-400 mt-3">
-              {planName && <T>Your current plan: </T>}
-              {planName && <span className="font-medium">{planName}</span>}
-            </p>
-          </div>
         </div>
       </DashboardLayout>
     );
@@ -184,22 +135,22 @@ export default function TaxReportsPage() {
           </TabsList>
 
           <TabsContent value="IN" className="mt-6">
-            <IndiaPanel period={period} />
+            <IndiaPanel period={period} canDownload={canDownload} canShare={canShare} />
           </TabsContent>
           <TabsContent value="NP" className="mt-6">
-            <NepalPanel period={period} />
+            <NepalPanel period={period} canShare={canShare} />
           </TabsContent>
           <TabsContent value="AE" className="mt-6">
-            <UaePanel period={period} />
+            <UaePanel period={period} canShare={canShare} />
           </TabsContent>
           <TabsContent value="GB" className="mt-6">
-            <UkPanel period={period} />
+            <UkPanel period={period} canShare={canShare} />
           </TabsContent>
           <TabsContent value="EU" className="mt-6">
-            <EuPanel period={period} />
+            <EuPanel period={period} canDownload={canDownload} canShare={canShare} />
           </TabsContent>
           <TabsContent value="US" className="mt-6">
-            <UsPanel period={period} />
+            <UsPanel period={period} canDownload={canDownload} canShare={canShare} />
           </TabsContent>
         </Tabs>
       </div>
@@ -236,10 +187,21 @@ function SummaryGrid({ data }: { data: Record<string, any> | null }) {
   );
 }
 
-function ShareWithCAButton({ country, period }: { country: string; period: string }) {
+function ShareWithCAButton({ country, period, canShare }: { country: string; period: string; canShare: boolean }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [link, setLink] = useState<string | null>(null);
+
+  if (!canShare) {
+    return (
+      <Button variant="outline" size="sm" disabled className="opacity-70 cursor-not-allowed">
+        <Lock className="h-3 w-3 mr-1" />
+        <T>Share with CA</T>
+        <span className="ml-1.5 text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full">Pro+</span>
+      </Button>
+    );
+  }
+
   const handle = async () => {
     setLoading(true);
     try {
@@ -275,8 +237,28 @@ function ShareWithCAButton({ country, period }: { country: string; period: strin
   );
 }
 
+// ─── Locked download state for free plan users ────────────────────
+function LockedDownloadSection() {
+  return (
+    <div className="rounded-lg border-2 border-dashed border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 p-4 flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <Lock className="h-5 w-5 text-amber-500 shrink-0" />
+        <div>
+          <p className="text-sm font-medium"><T>Downloads require Pro plan</T></p>
+          <p className="text-xs text-muted-foreground"><T>Upgrade to export GSTR-1 CSV, HSN CSV, and Tally XML files</T></p>
+        </div>
+      </div>
+      <a href="/pricing" className="shrink-0">
+        <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-50">
+          <Sparkles className="h-3 w-3 mr-1" /> <T>Upgrade</T>
+        </Button>
+      </a>
+    </div>
+  );
+}
+
 // ─── INDIA ────────────────────────────────────────────────────────
-function IndiaPanel({ period }: { period: string }) {
+function IndiaPanel({ period, canDownload, canShare }: { period: string; canDownload: boolean; canShare: boolean }) {
   const { toast } = useToast();
   const [gstr3b, setGstr3b] = useState<any>(null);
   const [hsn, setHsn] = useState<any[]>([]);
@@ -313,7 +295,7 @@ function IndiaPanel({ period }: { period: string }) {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span><T>GSTR-3B Summary</T></span>
-            <ShareWithCAButton country="IN" period={period} />
+            <ShareWithCAButton country="IN" period={period} canShare={canShare} />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -325,16 +307,22 @@ function IndiaPanel({ period }: { period: string }) {
         <CardHeader>
           <CardTitle><T>Downloads</T></CardTitle>
         </CardHeader>
-        <CardContent className="grid md:grid-cols-3 gap-3">
-          <Button onClick={() => downloadCsv("gstr1")} variant="outline">
-            <Download className="h-4 w-4 mr-2" /> GSTR-1 (CSV)
-          </Button>
-          <Button onClick={() => downloadCsv("hsn")} variant="outline">
-            <Download className="h-4 w-4 mr-2" /> HSN Summary (CSV)
-          </Button>
-          <Button onClick={downloadTally} variant="outline">
-            <Download className="h-4 w-4 mr-2" /> Tally XML
-          </Button>
+        <CardContent>
+          {canDownload ? (
+            <div className="grid md:grid-cols-3 gap-3">
+              <Button onClick={() => downloadCsv("gstr1")} variant="outline">
+                <Download className="h-4 w-4 mr-2" /> GSTR-1 (CSV)
+              </Button>
+              <Button onClick={() => downloadCsv("hsn")} variant="outline">
+                <Download className="h-4 w-4 mr-2" /> HSN Summary (CSV)
+              </Button>
+              <Button onClick={downloadTally} variant="outline">
+                <Download className="h-4 w-4 mr-2" /> Tally XML
+              </Button>
+            </div>
+          ) : (
+            <LockedDownloadSection />
+          )}
         </CardContent>
       </Card>
 
@@ -386,7 +374,7 @@ function IndiaPanel({ period }: { period: string }) {
 }
 
 // ─── NEPAL ────────────────────────────────────────────────────────
-function NepalPanel({ period }: { period: string }) {
+function NepalPanel({ period, canShare }: { period: string; canShare: boolean }) {
   const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -402,7 +390,7 @@ function NepalPanel({ period }: { period: string }) {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span><T>Nepal VAT & Luxury Tax Return</T></span>
-          <ShareWithCAButton country="NP" period={period} />
+          <ShareWithCAButton country="NP" period={period} canShare={canShare} />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -416,7 +404,7 @@ function NepalPanel({ period }: { period: string }) {
 }
 
 // ─── UAE ──────────────────────────────────────────────────────────
-function UaePanel({ period }: { period: string }) {
+function UaePanel({ period, canShare }: { period: string; canShare: boolean }) {
   const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -433,7 +421,7 @@ function UaePanel({ period }: { period: string }) {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span><T>UAE VAT 201 (FTA)</T></span>
-            <ShareWithCAButton country="AE" period={period} />
+            <ShareWithCAButton country="AE" period={period} canShare={canShare} />
           </CardTitle>
         </CardHeader>
         <CardContent>{loading ? <SkeletonGrid /> : <SummaryGrid data={data} />}</CardContent>
@@ -444,7 +432,7 @@ function UaePanel({ period }: { period: string }) {
 }
 
 // ─── UK ───────────────────────────────────────────────────────────
-function UkPanel({ period }: { period: string }) {
+function UkPanel({ period, canShare }: { period: string; canShare: boolean }) {
   const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -461,7 +449,7 @@ function UkPanel({ period }: { period: string }) {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span><T>UK MTD VAT Return (9-Box)</T></span>
-            <ShareWithCAButton country="GB" period={period} />
+            <ShareWithCAButton country="GB" period={period} canShare={canShare} />
           </CardTitle>
         </CardHeader>
         <CardContent>{loading ? <SkeletonGrid /> : <SummaryGrid data={data} />}</CardContent>
@@ -472,7 +460,7 @@ function UkPanel({ period }: { period: string }) {
 }
 
 // ─── EU ───────────────────────────────────────────────────────────
-function EuPanel({ period }: { period: string }) {
+function EuPanel({ period, canDownload, canShare }: { period: string; canDownload: boolean; canShare: boolean }) {
   const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -494,10 +482,17 @@ function EuPanel({ period }: { period: string }) {
           <CardTitle className="flex items-center justify-between">
             <span><T>EU OSS by Destination Country</T></span>
             <div className="flex gap-2">
-              <Button onClick={downloadCsv} variant="outline" size="sm">
-                <Download className="h-3 w-3 mr-1" /> CSV
-              </Button>
-              <ShareWithCAButton country="EU" period={period} />
+              {canDownload ? (
+                <Button onClick={downloadCsv} variant="outline" size="sm">
+                  <Download className="h-3 w-3 mr-1" /> CSV
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" disabled className="opacity-70 cursor-not-allowed">
+                  <Lock className="h-3 w-3 mr-1" /> CSV
+                  <span className="ml-1.5 text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full">Pro</span>
+                </Button>
+              )}
+              <ShareWithCAButton country="EU" period={period} canShare={canShare} />
             </div>
           </CardTitle>
         </CardHeader>
@@ -513,7 +508,7 @@ function EuPanel({ period }: { period: string }) {
 }
 
 // ─── US ───────────────────────────────────────────────────────────
-function UsPanel({ period }: { period: string }) {
+function UsPanel({ period, canDownload, canShare }: { period: string; canDownload: boolean; canShare: boolean }) {
   const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -535,10 +530,17 @@ function UsPanel({ period }: { period: string }) {
           <CardTitle className="flex items-center justify-between">
             <span><T>US Sales Tax by State</T></span>
             <div className="flex gap-2">
-              <Button onClick={downloadCsv} variant="outline" size="sm">
-                <Download className="h-3 w-3 mr-1" /> CSV
-              </Button>
-              <ShareWithCAButton country="US" period={period} />
+              {canDownload ? (
+                <Button onClick={downloadCsv} variant="outline" size="sm">
+                  <Download className="h-3 w-3 mr-1" /> CSV
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" disabled className="opacity-70 cursor-not-allowed">
+                  <Lock className="h-3 w-3 mr-1" /> CSV
+                  <span className="ml-1.5 text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full">Pro</span>
+                </Button>
+              )}
+              <ShareWithCAButton country="US" period={period} canShare={canShare} />
             </div>
           </CardTitle>
         </CardHeader>

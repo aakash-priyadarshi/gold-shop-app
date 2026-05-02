@@ -306,6 +306,7 @@ export class PlanLimitsService {
     customDomain: "Custom domain",
     customIntegrations: "Custom integrations",
     taxReports: "Multi-country tax reports (GSTR, VAT, MTD)",
+    taxReportsDownload: "Tax report downloads (CSV, XML, Tally)",
     taxCaShare: "CA/accountant share link",
   };
 
@@ -364,6 +365,7 @@ export class PlanLimitsService {
       scheduledReports: "Analytics & Reports",
       auditLogExport: "Analytics & Reports",
       taxReports: "Analytics & Reports",
+      taxReportsDownload: "Analytics & Reports",
       taxCaShare: "Analytics & Reports",
       prioritySupport: "Support & Integration",
       dedicatedSupport: "Support & Integration",
