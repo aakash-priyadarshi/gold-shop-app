@@ -1,24 +1,24 @@
 /**
  * Seller Product Demo — Playwright recording
  *
- * Produces a full video walkthrough of the seller dashboard.
- * Run:
+ * Prerequisites (one-time):
  *   cd e2e
- *   DEMO_EMAIL=seller@example.com DEMO_PASSWORD=yourpass npx playwright test seller-demo --project=chromium --headed
+ *   npx ts-node auth-setup.ts     ← logs in via Google manually, saves session
  *
- * Video saved to: e2e/test-results/seller-demo-chromium/
+ * Run the demo:
+ *   npm run demo
+ *   # or:
+ *   BASE_URL=https://www.orivraa.com npx playwright test seller-demo --project=chromium --headed --workers=1
  *
- * To record against production:
- *   BASE_URL=https://www.orivraa.com DEMO_EMAIL=... DEMO_PASSWORD=... npx playwright test seller-demo --project=chromium --headed
+ * Videos saved to: e2e/test-results/seller-demo-chromium/
  */
 
-import { expect, test, type Page } from "@playwright/test";
+import { test, type Page } from "@playwright/test";
+import * as path from "path";
 
-// ─── credentials from env ────────────────────────────────────────────────────
-const EMAIL = process.env.DEMO_EMAIL ?? "";
-const PASSWORD = process.env.DEMO_PASSWORD ?? "";
+const AUTH_FILE = path.join(__dirname, "..", ".auth", "seller.json");
 
-// ─── helper ──────────────────────────────────────────────────────────────────
+// ─── helpers ─────────────────────────────────────────────────────────────────
 async function pause(ms = 1800) {
   await new Promise((r) => setTimeout(r, ms));
 }
@@ -32,22 +32,22 @@ async function scrollDown(page: Page, times = 3, delayMs = 600) {
   await pause(400);
 }
 
-// ─── force video on for every test in this file ──────────────────────────────
-test.use({ video: "on", viewport: { width: 1440, height: 900 } });
+// ─── load saved Google session, force video on ───────────────────────────────
+test.use({
+  video: "on",
+  viewport: { width: 1440, height: 900 },
+  storageState: AUTH_FILE,
+});
 
-// ─── sign-in once, reuse auth for all scenes ─────────────────────────────────
 test.describe("Orivraa Seller Demo", () => {
   test.beforeEach(async ({ page }) => {
-    if (!EMAIL || !PASSWORD) {
-      test.skip(true, "Set DEMO_EMAIL and DEMO_PASSWORD env vars to run demo.");
+    // Verify session is still valid
+    await page.goto("/dashboard/shop");
+    const url = page.url();
+    if (!url.includes("dashboard")) {
+      test.skip(true, "Session expired — re-run auth-setup.ts to refresh .auth/seller.json");
     }
-    await page.goto("/login");
-    await page.getByLabel(/email/i).fill(EMAIL);
-    await page.getByLabel(/password/i).fill(PASSWORD);
-    await page.getByRole("button", { name: /log\s?in|sign\s?in/i }).click();
-    // Wait for redirect into dashboard
-    await page.waitForURL(/dashboard/, { timeout: 15_000 });
-    await pause(1000);
+    await pause(800);
   });
 
   // ── 1. Dashboard overview ─────────────────────────────────────────────────

@@ -8,9 +8,12 @@
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
     "report": "playwright show-report",
+    "demo:setup": "ts-node auth-setup.ts",
     "demo": "playwright test seller-demo --project=chromium --headed --workers=1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.48.0"
+    "@playwright/test": "^1.48.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
   }
 }
