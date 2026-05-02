@@ -1,5 +1,5 @@
 -- Migration: add_session_page_views
--- Purely ADDITIVE — adds SessionPageView table as a child of WebSession.
+-- Purely ADDITIVE - adds SessionPageView table as a child of WebSession.
 -- No existing tables or columns are dropped or modified.
 
 CREATE TABLE IF NOT EXISTS "SessionPageView" (
