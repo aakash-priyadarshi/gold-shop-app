@@ -70,38 +70,38 @@ export function AISalesteamPromo({
         <div className="max-w-3xl mx-auto text-center text-white">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-sm font-medium mb-6">
             <Sparkles className="h-4 w-4" />
-            <T>New — AI sales team available 24/7</T>
+            <T>Founder-led support — reply within hours</T>
           </div>
           <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-            <T>Have questions? Talk to our AI shopkeeper.</T>
+            <T>Have questions? Talk to our team.</T>
           </h2>
           <p className="text-lg text-white/90 mb-8 leading-relaxed">
             <T>
-              Pricing, demos, onboarding, integrations — get instant answers in
-              Hindi, Nepali, or English. Or call our voice bot for a guided
-              walkthrough.
+              Pricing, demos, onboarding, integrations — send us a message and
+              the founder will personally get back to you. Or use the chat
+              widget in the corner for an instant answer.
             </T>
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/ai-sales-team">
+            <Link href="/contact">
               <Button
                 size="lg"
                 className="w-full sm:w-auto bg-white text-amber-600 hover:bg-gray-100 h-12 px-8 rounded-xl text-base font-semibold"
               >
                 <Sparkles className="mr-2 h-5 w-5" />
-                <T>Chat with AI sales</T>
+                <T>Contact us</T>
               </Button>
             </Link>
-            <Link href="/ai-sales-team?mode=voice">
+            <a href="https://wa.me/916203965557" target="_blank" rel="noopener noreferrer">
               <Button
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto bg-transparent text-white border-white/60 hover:bg-white/10 h-12 px-8 rounded-xl text-base"
               >
                 <Phone className="mr-2 h-5 w-5" />
-                <T>Call in Hindi / Nepali</T>
+                <T>WhatsApp the founder</T>
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </div>

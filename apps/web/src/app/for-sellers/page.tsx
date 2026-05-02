@@ -3,19 +3,18 @@ import { Header } from "@/components/layout/header";
 import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
 import { TrustSignals } from "@/components/marketing/TrustSignals";
 import {
-  ArrowRight,
-  BadgeCheck,
-  BarChart3,
-  CheckCircle2,
-  Clock,
-  Globe,
-  MessageSquare,
-  Package,
-  ShieldCheck,
-  Store,
-  TrendingUp,
-  Users,
-  Zap,
+    ArrowRight,
+    BadgeCheck,
+    BarChart3,
+    CheckCircle2,
+    Clock,
+    Globe,
+    MessageSquare,
+    Package,
+    ShieldCheck,
+    Store,
+    TrendingUp,
+    Zap
 } from "lucide-react";
 import { Metadata } from "next";
 import Link from "next/link";

@@ -2,11 +2,11 @@
 
 import { T } from "@/components/ui/T";
 import {
-  CheckCircle2,
-  Globe2,
-  Lock,
-  ShieldCheck,
-  Sparkles,
+    CheckCircle2,
+    Globe2,
+    Lock,
+    ShieldCheck,
+    Sparkles,
 } from "lucide-react";
 
 interface TrustSignalsProps {

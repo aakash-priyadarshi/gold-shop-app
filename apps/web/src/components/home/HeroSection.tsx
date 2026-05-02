@@ -8,17 +8,17 @@ import { MarketRegion, useMarket } from "@/hooks/useMarket";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { useT } from "@/providers/translation-provider";
 import {
-  ArrowRight,
-  BarChart3,
-  Gem,
-  HeartHandshake,
-  Package,
-  PlayCircle,
-  ShieldCheck,
-  Sparkles,
-  Star,
-  Store,
-  Zap,
+    ArrowRight,
+    BarChart3,
+    Gem,
+    HeartHandshake,
+    Package,
+    PlayCircle,
+    ShieldCheck,
+    Sparkles,
+    Star,
+    Store,
+    Zap,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -316,7 +316,7 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/ai-sales-team">
+              <Link href="/contact">
                 <Button
                   size="lg"
                   variant="outline"
@@ -327,7 +327,7 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
                   }`}
                 >
                   <PlayCircle className="mr-2 h-5 w-5" />
-                  <T>Watch 2-min demo</T>
+                  <T>Talk to our team</T>
                 </Button>
               </Link>
             </div>

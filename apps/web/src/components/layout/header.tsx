@@ -392,6 +392,12 @@ export function Header() {
   // More menu items
   const moreNavItems = [
     {
+      name: "Contact",
+      href: "/contact",
+      icon: ChatBubbleLeftRightIcon,
+      desc: "Talk to the founder — reply within hours",
+    },
+    {
       name: "Blog",
       href: "/blog",
       icon: BookOpenIcon,

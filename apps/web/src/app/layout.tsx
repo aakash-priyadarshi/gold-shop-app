@@ -2,6 +2,7 @@ import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
 import { AppTracking } from "@/components/AppTracking";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Providers } from "@/components/providers";
+import { SupportBot } from "@/components/support/SupportBot";
 import InitialLoadScreen from "@/components/ui/InitialLoadScreen";
 import { Toaster } from "@/components/ui/toaster";
 import { BRAND } from "@/config/brand";
@@ -247,6 +248,7 @@ export default function RootLayout({
             <ErrorBoundary>
               <GeoMismatchBanner />
               {children}
+              <SupportBot />
               <Toaster />
               <SpeedInsights />
               <AppTracking />
