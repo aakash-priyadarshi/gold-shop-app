@@ -160,7 +160,8 @@ export default function ShopOrdersPage() {
                 <T>Manage and track customer orders</T>
               </p>
             </div>
-            <Select data-tour="orders-filters" value={statusFilter} onValueChange={setStatusFilter}>
+            <div data-tour="orders-filters">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder={t("Filter by status")} />
               </SelectTrigger>
@@ -185,6 +186,7 @@ export default function ShopOrdersPage() {
                 </SelectItem>
               </SelectContent>
             </Select>
+            </div>
           </div>
 
           <Card data-tour="orders-table">
