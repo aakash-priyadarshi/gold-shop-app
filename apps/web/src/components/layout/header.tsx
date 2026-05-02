@@ -332,15 +332,20 @@ export function Header() {
   };
 
   // Primary nav links (flat) — only shown when customer flow is enabled.
-  // When disabled, the site is in seller-only mode and these consumer
-  // browsing entry points are hidden from the header.
+  // When customer flow is enabled: consumer browsing links.
+  // When disabled (seller-only mode): promote the highest-intent seller pages
+  // as flat top-nav links instead of burying everything in the dropdown.
   const navigation = customerFlowEnabled
     ? [
         { name: "Shops", href: "/shops", icon: BuildingStorefrontIcon },
         { name: "Designs", href: "/designs", icon: HeartIcon },
         { name: "Custom Order", href: "/rfq/create", icon: SparklesIcon },
       ]
-    : [];
+    : [
+        { name: "Shop Software", href: "/jewellery-shop-software", icon: Squares2X2Icon },
+        { name: "Pricing", href: "/pricing", icon: CreditCardIcon },
+        { name: "Download", href: "/download", icon: ComputerDesktopIcon },
+      ];
 
   // "For Sellers" dropdown items
   const sellerNavItems = [
@@ -496,15 +501,26 @@ export function Header() {
             <div className="flex flex-col h-[calc(100%-65px)]">
               {/* Mobile Navigation */}
               <div className="flex-1 p-4 space-y-1 overflow-y-auto">
-                {/* Browse */}
+                {/* Primary nav — label differs by mode */}
+                {!customerFlowEnabled && navigation.length > 0 && (
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-3 pb-1">
+                    <T>Platform</T>
+                  </p>
+                )}
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-target"
+                    className={`flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-colors touch-target ${
+                      item.href === "/rfq/create"
+                        ? "text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 font-semibold"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <item.icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                    <item.icon className={`h-5 w-5 ${
+                      item.href === "/rfq/create" ? "text-amber-500" : "text-gray-400 dark:text-gray-500"
+                    }`} />
                     <T>{item.name}</T>
                   </Link>
                 ))}
@@ -695,7 +711,7 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <Button className="w-full h-12 rounded-xl text-base gold-gradient text-white">
-                        <T>Sign up</T>
+                        {customerFlowEnabled ? <T>Sign up</T> : <T>Get Started</T>}
                       </Button>
                     </Link>
                   </>
@@ -720,7 +736,11 @@ export function Header() {
             <Link
               key={item.name}
               href={item.href}
-              className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className={
+                item.href === "/rfq/create"
+                  ? "px-4 py-2 text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition-colors"
+                  : "px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              }
             >
               <T>{item.name}</T>
             </Link>
@@ -848,6 +868,9 @@ export function Header() {
         <div className="hidden lg:flex items-center gap-2">
           {mounted && (
             <>
+              {/* Language, Currency & Country — only relevant in customer flow */}
+              {customerFlowEnabled && (
+                <>
               {/* Language Selector */}
               <Select
                 value={language}
@@ -919,6 +942,8 @@ export function Header() {
                   ))}
                 </SelectContent>
               </Select>
+                </>
+              )}
 
               {/* Theme Toggle */}
               <AnimatedThemeToggle size={36} className="rounded-lg" />
@@ -1895,14 +1920,14 @@ export function Header() {
               </Link>
               <Link href="/auth/register">
                 <Button className="h-9 rounded-lg gold-gradient text-white">
-                  <T>Sign up</T>
+                  {customerFlowEnabled ? <T>Sign up</T> : <T>Get Started</T>}
                 </Button>
               </Link>
             </>
           )}
         </div>
 
-        {/* Mobile Auth Icons */}
+        {/* Mobile Auth Icons */
         <div className="flex lg:hidden items-center gap-1">
           {mounted && !authLoading && isAuthenticated && user && (
             <>
