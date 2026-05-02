@@ -82,6 +82,8 @@ export const usersApi = {
   updateProfile: (data: any) => api.patch("/users/me", data),
   updatePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.patch("/users/me/password", data),
+  createPassword: (data: { newPassword: string }) =>
+    api.post("/users/me/create-password", data),
 };
 
 // Shops API

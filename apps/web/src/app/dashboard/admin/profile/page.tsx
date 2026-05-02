@@ -28,6 +28,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { otpApi, usersApi } from "@/lib/api";
 import {
   CheckCircle,
+  Chrome,
   Key,
   Loader2,
   Lock,
@@ -39,7 +40,7 @@ import {
 import { useEffect, useState } from "react";
 
 export default function AdminProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, googleLogin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
     firstName: "",
@@ -56,6 +57,8 @@ export default function AdminProfilePage() {
     confirmPassword: "",
   });
   const [changingPassword, setChangingPassword] = useState(false);
+  const [hasPassword, setHasPassword] = useState(true);
+  const [hasGoogleAuth, setHasGoogleAuth] = useState(false);
 
   // OTP verification state
   const [otpDialogOpen, setOtpDialogOpen] = useState(false);
@@ -82,6 +85,11 @@ export default function AdminProfilePage() {
         email: user.email || "",
         phone: user.phone || "",
       });
+      // Load hasPassword and hasGoogleAuth from API
+      usersApi.getProfile().then((res) => {
+        setHasPassword(res.data.hasPassword ?? true);
+        setHasGoogleAuth(res.data.hasGoogleAuth ?? false);
+      }).catch(() => {});
     }
   }, [user]);
 
@@ -131,13 +139,20 @@ export default function AdminProfilePage() {
 
     setChangingPassword(true);
     try {
-      await usersApi.updatePassword({
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword,
-      });
+      if (hasPassword) {
+        await usersApi.updatePassword({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        });
+      } else {
+        await usersApi.createPassword({ newPassword: passwordData.newPassword });
+        setHasPassword(true);
+      }
       toast({
-        title: "Password Changed",
-        description: "Your password has been updated successfully.",
+        title: hasPassword ? "Password Changed" : "Password Created",
+        description: hasPassword
+          ? "Your password has been updated successfully."
+          : "You can now sign in with your email and password.",
       });
       setPasswordDialogOpen(false);
       setPasswordData({
@@ -148,9 +163,9 @@ export default function AdminProfilePage() {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Change Failed",
+        title: hasPassword ? "Change Failed" : "Creation Failed",
         description:
-          error.response?.data?.message || "Could not change password.",
+          error.response?.data?.message || "Could not update password.",
       });
     } finally {
       setChangingPassword(false);
@@ -379,9 +394,9 @@ export default function AdminProfilePage() {
                 <div className="flex items-center gap-3">
                   <Lock className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">Password</p>
+                    <p className="font-medium">{hasPassword ? "Password" : "Create Password"}</p>
                     <p className="text-sm text-muted-foreground">
-                      Change your account password
+                      {hasPassword ? "Change your account password" : "Set a password to also sign in with email"}
                     </p>
                   </div>
                 </div>
@@ -390,31 +405,35 @@ export default function AdminProfilePage() {
                   onOpenChange={setPasswordDialogOpen}
                 >
                   <DialogTrigger asChild>
-                    <Button variant="outline">Change Password</Button>
+                    <Button variant="outline">{hasPassword ? "Change Password" : "Create Password"}</Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Change Password</DialogTitle>
+                      <DialogTitle>{hasPassword ? "Change Password" : "Create Password"}</DialogTitle>
                       <DialogDescription>
-                        Enter your current password and a new password.
+                        {hasPassword
+                          ? "Enter your current password and a new password."
+                          : "Set a password to sign in with your email and password."}
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
+                      {hasPassword && (
+                        <div className="space-y-2">
+                          <Label>Current Password</Label>
+                          <Input
+                            type="password"
+                            value={passwordData.currentPassword}
+                            onChange={(e) =>
+                              setPasswordData((prev) => ({
+                                ...prev,
+                                currentPassword: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                      )}
                       <div className="space-y-2">
-                        <Label>Current Password</Label>
-                        <Input
-                          type="password"
-                          value={passwordData.currentPassword}
-                          onChange={(e) =>
-                            setPasswordData((prev) => ({
-                              ...prev,
-                              currentPassword: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>New Password</Label>
+                        <Label>{hasPassword ? "New Password" : "Password"}</Label>
                         <Input
                           type="password"
                           value={passwordData.newPassword}
@@ -427,7 +446,7 @@ export default function AdminProfilePage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Confirm New Password</Label>
+                        <Label>Confirm Password</Label>
                         <Input
                           type="password"
                           value={passwordData.confirmPassword}
@@ -449,16 +468,39 @@ export default function AdminProfilePage() {
                       </Button>
                       <Button
                         onClick={handleChangePassword}
-                        disabled={changingPassword}
+                        disabled={changingPassword || (hasPassword && !passwordData.currentPassword) || !passwordData.newPassword}
                       >
                         {changingPassword && (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         )}
-                        Change Password
+                        {hasPassword ? "Change Password" : "Create Password"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+              </div>
+
+              {/* Google Account */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Chrome className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Google Account</p>
+                    <p className="text-sm text-muted-foreground">
+                      {hasGoogleAuth ? "Google account is connected" : "Connect your Google account for easier sign in"}
+                    </p>
+                  </div>
+                </div>
+                {hasGoogleAuth ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    Connected
+                  </div>
+                ) : (
+                  <Button variant="outline" onClick={() => googleLogin("ADMIN", "login")}>
+                    Connect Google
+                  </Button>
+                )}
               </div>
 
               <div className="flex items-center justify-between p-4 border rounded-lg">

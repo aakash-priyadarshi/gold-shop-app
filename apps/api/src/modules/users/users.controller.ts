@@ -29,6 +29,10 @@ class UpdatePasswordDto {
   newPassword: string;
 }
 
+class CreatePasswordDto {
+  newPassword: string;
+}
+
 @ApiTags("users")
 @Controller("users")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -74,6 +78,15 @@ export class UsersController {
       dto.currentPassword,
       dto.newPassword,
     );
+  }
+
+  @Post("me/create-password")
+  @ApiOperation({ summary: "Create password for Google-only account (no current password required)" })
+  async createPassword(
+    @CurrentUser("id") userId: string,
+    @Body() dto: CreatePasswordDto,
+  ) {
+    return this.usersService.createPassword(userId, dto.newPassword);
   }
 
   // ================================

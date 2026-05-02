@@ -714,6 +714,8 @@ export class ShopsService {
             lastName: true,
             phone: true,
             preferredCurrency: true,
+            passwordHash: true,
+            googleId: true,
           },
         },
       },
@@ -723,9 +725,15 @@ export class ShopsService {
       throw new NotFoundException("Shop not found for this user");
     }
 
+    const { passwordHash, googleId, ...shopUser } = shop.user as any;
+
     return {
-      shop,
-      user: shop.user,
+      shop: { ...shop, user: shopUser },
+      user: {
+        ...shopUser,
+        hasPassword: !!passwordHash && passwordHash !== "",
+        hasGoogleAuth: !!googleId,
+      },
     };
   }
 

@@ -28,7 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
+import api, { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import { getCitiesForCountry, getStatesForCountry } from "@gold-shop/shared";
 import {
@@ -36,6 +36,7 @@ import {
   Award,
   Building2,
   CheckCircle,
+  Chrome,
   CreditCard,
   Crown,
   Globe,
@@ -184,7 +185,7 @@ const TIER_META: Record<
 };
 
 export default function ShopSettingsPage() {
-  const { user } = useAuth();
+  const { user, googleLogin } = useAuth();
   const t = useT();
   const { placeholders: countryPlaceholders, symbol: currencySymbol } =
     useShopCurrency();
@@ -195,6 +196,14 @@ export default function ShopSettingsPage() {
     null,
   );
   const [tierLoading, setTierLoading] = useState(false);
+  const [hasPassword, setHasPassword] = useState(true);
+  const [hasGoogleAuth, setHasGoogleAuth] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwords, setPasswords] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
 
   // Phone availability check state
   const [phoneCheckState, setPhoneCheckState] = useState<{
@@ -289,6 +298,10 @@ export default function ShopSettingsPage() {
         user: userData,
       });
 
+      // Load security info
+      setHasPassword(userData?.hasPassword ?? true);
+      setHasGoogleAuth(userData?.hasGoogleAuth ?? false);
+
       // Store original phone for comparison
       setPhoneCheckState((prev) => ({
         ...prev,
@@ -361,6 +374,50 @@ export default function ShopSettingsPage() {
         ...shopData,
         bankAccountDetails: { ...shopData.bankAccountDetails, ...updates },
       });
+    }
+  };
+
+  const changePassword = async () => {
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Passwords do not match",
+        description: "Please ensure both passwords are the same",
+      });
+      return;
+    }
+    if (passwords.newPassword.length < 8) {
+      toast({
+        variant: "destructive",
+        title: "Password too short",
+        description: "Password must be at least 8 characters",
+      });
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      if (hasPassword) {
+        await api.post("/auth/change-password", {
+          currentPassword: passwords.currentPassword,
+          newPassword: passwords.newPassword,
+        });
+        toast({ title: "Password Changed", description: "Your password has been updated successfully" });
+      } else {
+        await api.post("/users/me/create-password", {
+          newPassword: passwords.newPassword,
+        });
+        toast({ title: "Password Created", description: "You can now sign in with your email and password" });
+        setHasPassword(true);
+      }
+      setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: hasPassword ? "Password Change Failed" : "Password Creation Failed",
+        description: error.response?.data?.message || "Could not update password",
+      });
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -473,6 +530,9 @@ export default function ShopSettingsPage() {
               </TabsTrigger>
               <TabsTrigger value="payments">
                 <T>Payment Methods</T>
+              </TabsTrigger>
+              <TabsTrigger value="security">
+                <T>Security</T>
               </TabsTrigger>
             </TabsList>
 
@@ -1124,6 +1184,103 @@ export default function ShopSettingsPage() {
                         </T>
                       </p>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Security Tab */}
+            <TabsContent value="security" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    <T>Security</T>
+                  </CardTitle>
+                  <CardDescription>
+                    <T>{hasPassword ? "Change your password" : "Create a password to also sign in with email"}</T>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {hasPassword && (
+                    <div className="space-y-2">
+                      <Label htmlFor="security-currentPassword">
+                        <T>Current Password</T>
+                      </Label>
+                      <Input
+                        id="security-currentPassword"
+                        type="password"
+                        value={passwords.currentPassword}
+                        onChange={(e) =>
+                          setPasswords({ ...passwords, currentPassword: e.target.value })
+                        }
+                      />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="security-newPassword">
+                        <T>{hasPassword ? "New Password" : "Password"}</T>
+                      </Label>
+                      <Input
+                        id="security-newPassword"
+                        type="password"
+                        value={passwords.newPassword}
+                        onChange={(e) =>
+                          setPasswords({ ...passwords, newPassword: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="security-confirmPassword">
+                        <T>Confirm Password</T>
+                      </Label>
+                      <Input
+                        id="security-confirmPassword"
+                        type="password"
+                        value={passwords.confirmPassword}
+                        onChange={(e) =>
+                          setPasswords({ ...passwords, confirmPassword: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={changePassword}
+                    disabled={
+                      isChangingPassword ||
+                      (hasPassword && !passwords.currentPassword) ||
+                      !passwords.newPassword
+                    }
+                  >
+                    {isChangingPassword ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <T>{hasPassword ? "Changing..." : "Creating..."}</T>
+                      </>
+                    ) : (
+                      t(hasPassword ? "Change Password" : "Create Password")
+                    )}
+                  </Button>
+
+                  <div className="pt-2 border-t">
+                    <p className="text-sm font-medium mb-2"><T>Google Account</T></p>
+                    {hasGoogleAuth ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <T>Google account connected</T>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => googleLogin("SHOPKEEPER", "login")}
+                      >
+                        <Chrome className="h-4 w-4 mr-2" />
+                        <T>Connect Google</T>
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

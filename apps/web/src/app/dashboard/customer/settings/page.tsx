@@ -31,6 +31,7 @@ import { T } from "@/components/ui/T";
 import { PhoneVerificationDialog } from "@/components/verification/PhoneVerificationDialog";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { Chrome } from "lucide-react";
 import api, { authApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -97,7 +98,7 @@ const countries = [
 
 export default function CustomerSettingsPage() {
   const t = useT();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, googleLogin } = useAuth();
   const setCurrency = usePreferencesStore((state) => state.setCurrency);
   const setCountry = usePreferencesStore((state) => state.setCountry);
   const currentCurrency = usePreferencesStore((state) => state.currency);
@@ -107,6 +108,8 @@ export default function CustomerSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [hasPassword, setHasPassword] = useState(true);
+  const [hasGoogleAuth, setHasGoogleAuth] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>({
     id: "",
@@ -233,6 +236,8 @@ export default function CustomerSettingsPage() {
       setPhoneCheckState((prev) => ({ ...prev, originalPhone: phoneValue }));
       // Load delivery addresses
       setAddresses(response.data.deliveryAddresses || []);
+      setHasPassword(response.data.hasPassword ?? true);
+      setHasGoogleAuth(response.data.hasGoogleAuth ?? false);
     } catch (error) {
       console.error("Failed to load profile:", error);
     } finally {
@@ -389,15 +394,25 @@ export default function CustomerSettingsPage() {
 
     setIsChangingPassword(true);
     try {
-      await api.post("/auth/change-password", {
-        currentPassword: passwords.currentPassword,
-        newPassword: passwords.newPassword,
-      });
-
-      toast({
-        title: "Password Changed",
-        description: "Your password has been updated successfully",
-      });
+      if (hasPassword) {
+        await api.post("/auth/change-password", {
+          currentPassword: passwords.currentPassword,
+          newPassword: passwords.newPassword,
+        });
+        toast({
+          title: "Password Changed",
+          description: "Your password has been updated successfully",
+        });
+      } else {
+        await api.post("/users/me/create-password", {
+          newPassword: passwords.newPassword,
+        });
+        toast({
+          title: "Password Created",
+          description: "You can now sign in with your email and password",
+        });
+        setHasPassword(true);
+      }
 
       setPasswords({
         currentPassword: "",
@@ -407,9 +422,9 @@ export default function CustomerSettingsPage() {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Password Change Failed",
+        title: hasPassword ? "Password Change Failed" : "Password Creation Failed",
         description:
-          error.response?.data?.message || "Could not change password",
+          error.response?.data?.message || "Could not update password",
       });
     } finally {
       setIsChangingPassword(false);
@@ -1172,30 +1187,32 @@ export default function CustomerSettingsPage() {
                 <T>Security</T>
               </CardTitle>
               <CardDescription>
-                <T>Change your password</T>
+                <T>{hasPassword ? "Change your password" : "Create a password to also sign in with email"}</T>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="security-currentPassword">
-                  <T>Current Password</T>
-                </Label>
-                <Input
-                  id="security-currentPassword"
-                  type="password"
-                  value={passwords.currentPassword}
-                  onChange={(e) =>
-                    setPasswords({
-                      ...passwords,
-                      currentPassword: e.target.value,
-                    })
-                  }
-                />
-              </div>
+              {hasPassword && (
+                <div className="space-y-2">
+                  <Label htmlFor="security-currentPassword">
+                    <T>Current Password</T>
+                  </Label>
+                  <Input
+                    id="security-currentPassword"
+                    type="password"
+                    value={passwords.currentPassword}
+                    onChange={(e) =>
+                      setPasswords({
+                        ...passwords,
+                        currentPassword: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="security-newPassword">
-                    <T>New Password</T>
+                    <T>{hasPassword ? "New Password" : "Password"}</T>
                   </Label>
                   <Input
                     id="security-newPassword"
@@ -1211,7 +1228,7 @@ export default function CustomerSettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="security-confirmPassword">
-                    <T>Confirm New Password</T>
+                    <T>Confirm Password</T>
                   </Label>
                   <Input
                     id="security-confirmPassword"
@@ -1231,19 +1248,38 @@ export default function CustomerSettingsPage() {
                 onClick={changePassword}
                 disabled={
                   isChangingPassword ||
-                  !passwords.currentPassword ||
+                  (hasPassword && !passwords.currentPassword) ||
                   !passwords.newPassword
                 }
               >
                 {isChangingPassword ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    <T>Changing...</T>
+                    <T>{hasPassword ? "Changing..." : "Creating..."}</T>
                   </>
                 ) : (
-                  t("Change Password")
+                  t(hasPassword ? "Change Password" : "Create Password")
                 )}
               </Button>
+
+              <div className="pt-2 border-t">
+                <p className="text-sm font-medium mb-2"><T>Google Account</T></p>
+                {hasGoogleAuth ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <T>Google account connected</T>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => googleLogin("CUSTOMER", "login")}
+                  >
+                    <Chrome className="h-4 w-4 mr-2" />
+                    <T>Connect Google</T>
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
 

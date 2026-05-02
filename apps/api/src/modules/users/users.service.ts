@@ -49,6 +49,8 @@ export class UsersService {
         preferredState: true,
         preferredCity: true,
         createdAt: true,
+        passwordHash: true,
+        googleId: true,
         shops: {
           select: {
             id: true,
@@ -71,10 +73,14 @@ export class UsersService {
       throw new NotFoundException("User not found");
     }
 
+    const { passwordHash, googleId, ...rest } = user as any;
+
     // Transform to maintain backward compatibility
     return {
-      ...user,
-      shop: (user as any).shops?.[0] || null,
+      ...rest,
+      shop: rest.shops?.[0] || null,
+      hasPassword: !!passwordHash && passwordHash !== "",
+      hasGoogleAuth: !!googleId,
     };
   }
 
@@ -379,7 +385,7 @@ export class UsersService {
   }
 
   /**
-   * Update user password
+   * Update user password (requires current password unless account has no password yet)
    */
   async updatePassword(
     userId: string,
@@ -394,10 +400,14 @@ export class UsersService {
       throw new NotFoundException("User not found");
     }
 
-    // Verify current password
-    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!isValid) {
-      throw new BadRequestException("Current password is incorrect");
+    const hasPassword = !!user.passwordHash && user.passwordHash !== "";
+
+    if (hasPassword) {
+      // Verify current password
+      const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isValid) {
+        throw new BadRequestException("Current password is incorrect");
+      }
     }
 
     // Hash new password
@@ -409,6 +419,34 @@ export class UsersService {
     });
 
     return { message: "Password updated successfully" };
+  }
+
+  /**
+   * Create a password for a Google-only account (no current password required)
+   */
+  async createPassword(userId: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    if (user.passwordHash && user.passwordHash !== "") {
+      throw new BadRequestException(
+        "Account already has a password. Use change password instead.",
+      );
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newPasswordHash },
+    });
+
+    return { message: "Password created successfully" };
   }
 
   // ================================
