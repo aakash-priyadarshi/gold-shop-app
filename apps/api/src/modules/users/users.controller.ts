@@ -1,19 +1,20 @@
 import {
-  Body,
-  ConflictException,
-  Controller,
-  Delete,
-  ForbiddenException,
-  Get,
-  NotFoundException,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
+    Body,
+    ConflictException,
+    Controller,
+    Delete,
+    ForbiddenException,
+    Get,
+    NotFoundException,
+    Param,
+    Patch,
+    Post,
+    Query,
+    UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
+import { IsNotEmpty, IsString } from "class-validator";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
@@ -25,11 +26,18 @@ import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { UsersService } from "./users.service";
 
 class UpdatePasswordDto {
+  @IsString()
+  @IsNotEmpty()
   currentPassword: string;
+
+  @IsString()
+  @IsNotEmpty()
   newPassword: string;
 }
 
 class CreatePasswordDto {
+  @IsString()
+  @IsNotEmpty()
   newPassword: string;
 }
 
