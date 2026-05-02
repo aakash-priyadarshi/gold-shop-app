@@ -142,6 +142,14 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
     label: "Audit log export",
     category: "Analytics & Reports",
   },
+  taxReports: {
+    label: "Multi-country tax filing (GSTR, VAT, MTD, OSS, US)",
+    category: "Analytics & Reports",
+  },
+  taxCaShare: {
+    label: "CA/accountant secure share link",
+    category: "Analytics & Reports",
+  },
 
   // Support & Integration
   prioritySupport: {

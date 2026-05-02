@@ -305,6 +305,8 @@ export class PlanLimitsService {
     whiteLabel: "White-label option",
     customDomain: "Custom domain",
     customIntegrations: "Custom integrations",
+    taxReports: "Multi-country tax reports (GSTR, VAT, MTD)",
+    taxCaShare: "CA/accountant share link",
   };
 
   /**
@@ -361,6 +363,8 @@ export class PlanLimitsService {
       advancedAnalytics: "Analytics & Reports",
       scheduledReports: "Analytics & Reports",
       auditLogExport: "Analytics & Reports",
+      taxReports: "Analytics & Reports",
+      taxCaShare: "Analytics & Reports",
       prioritySupport: "Support & Integration",
       dedicatedSupport: "Support & Integration",
       dedicatedAccountManager: "Support & Integration",

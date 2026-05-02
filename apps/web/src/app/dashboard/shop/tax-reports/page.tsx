@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label";
 import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatures } from "@/hooks/useFeatures";
 import { taxReportsApi } from "@/lib/api";
 import {
     AlertCircle,
+    ArrowRight,
     Calendar,
     CheckCircle2,
     Copy,
@@ -21,6 +23,7 @@ import {
     Lock,
     Share2,
     ShieldCheck,
+    Sparkles,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -51,11 +54,73 @@ function downloadBlob(data: any, filename: string, type = "text/csv") {
 
 export default function TaxReportsPage() {
   const { user } = useAuth();
+  const { hasFeature, loading: featuresLoading, planName } = useFeatures();
   const homeCountry = user?.shop?.country || "NP";
   const defaultTab = COUNTRY_TABS.find((c) => c.code === homeCountry)?.code || "NP";
 
   const [period, setPeriod] = useState<string>(currentMonth());
   const [activeCountry, setActiveCountry] = useState<string>(defaultTab);
+
+  if (featuresLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!hasFeature("taxReports")) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center gap-6">
+          <div className="p-5 bg-amber-100 dark:bg-amber-950/30 rounded-full">
+            <Lock className="h-12 w-12 text-amber-600" />
+          </div>
+          <div className="max-w-md">
+            <h2 className="text-2xl font-bold mb-2">
+              <T>Tax Reports — Pro Feature</T>
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              <T>
+                Generate GSTR-1, GSTR-3B, HSN, Nepal VAT, UAE VAT-201, HMRC MTD,
+                EU OSS, US state reports and Tally XML exports. Upgrade to Pro to
+                unlock all country tax filings.
+              </T>
+            </p>
+            <div className="flex flex-col gap-2 text-sm text-left bg-muted/50 rounded-xl p-4 mb-6">
+              {[
+                "GSTR-1 & GSTR-3B for India",
+                "Nepal VAT register & report",
+                "UAE VAT-201 form",
+                "HMRC Making Tax Digital (9-box)",
+                "EU One-Stop-Shop (OSS)",
+                "US per-state sales tax summary",
+                "Tally XML export",
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+            <a href="/pricing">
+              <button className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl font-semibold text-sm transition-all shadow-lg shadow-amber-500/20">
+                <Sparkles className="h-4 w-4" />
+                <T>Upgrade to Pro</T>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </a>
+            <p className="text-xs text-gray-400 mt-3">
+              {planName && <T>Your current plan: </T>}
+              {planName && <span className="font-medium">{planName}</span>}
+            </p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

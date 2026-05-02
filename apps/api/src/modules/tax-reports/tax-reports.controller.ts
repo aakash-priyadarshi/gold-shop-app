@@ -15,6 +15,8 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
+import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import { TaxReportsService } from "./tax-reports.service";
 
 @Controller("tax-reports")
@@ -40,6 +42,8 @@ export class TaxReportsController {
 
   // ── INDIA ────────────────────────────────────────────────────────
   @Get("india/gstr1")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("taxReports")
   async indiaGstr1(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -69,6 +73,8 @@ export class TaxReportsController {
   }
 
   @Get("india/gstr3b")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("taxReports")
   async indiaGstr3b(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -82,6 +88,8 @@ export class TaxReportsController {
   }
 
   @Get("india/hsn")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("taxReports")
   async indiaHsn(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -102,6 +110,8 @@ export class TaxReportsController {
   }
 
   @Get("india/tally.xml")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("taxReports")
   async indiaTally(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -119,6 +129,8 @@ export class TaxReportsController {
 
   // ── NEPAL ────────────────────────────────────────────────────────
   @Get("nepal/vat")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("taxReports")
   async nepalVat(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -133,6 +145,8 @@ export class TaxReportsController {
 
   // ── UAE ──────────────────────────────────────────────────────────
   @Get("uae/vat201")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("taxReports")
   async uaeVat201(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -147,6 +161,8 @@ export class TaxReportsController {
 
   // ── UK ───────────────────────────────────────────────────────────
   @Get("uk/mtd")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("taxReports")
   async ukMtd(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -161,6 +177,8 @@ export class TaxReportsController {
 
   // ── EU OSS ───────────────────────────────────────────────────────
   @Get("eu/oss")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("taxReports")
   async euOss(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -182,6 +200,8 @@ export class TaxReportsController {
 
   // ── US ───────────────────────────────────────────────────────────
   @Get("us/state")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("taxReports")
   async usState(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -203,6 +223,8 @@ export class TaxReportsController {
 
   // ── CA share link ────────────────────────────────────────────────
   @Post("share-link")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("taxCaShare")
   async createShareLink(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
