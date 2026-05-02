@@ -160,7 +160,7 @@ export default function ShopOrdersPage() {
                 <T>Manage and track customer orders</T>
               </p>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select data-tour="orders-filters" value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder={t("Filter by status")} />
               </SelectTrigger>
@@ -187,11 +187,7 @@ export default function ShopOrdersPage() {
             </Select>
           </div>
 
-          <Card>
-            <CardContent className="p-0">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Card data-tour="orders-table">
                 </div>
               ) : orders.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">

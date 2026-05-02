@@ -14,6 +14,7 @@
 
 export interface Env {
   IMAGES_BUCKET: R2Bucket;
+  DEMOS_BUCKET: R2Bucket;
   ALLOWED_ORIGINS: string;
   UPLOAD_SECRET?: string; // Optional secret for additional security
 }
@@ -176,6 +177,18 @@ export default {
       if (path.startsWith("/images/")) {
         const key = path.replace("/images/", "");
         return handleServe(key, env, corsHeaders, request);
+      }
+
+      // Serve demo videos from DEMOS_BUCKET
+      if (path.startsWith("/demo/") && request.method === "GET") {
+        const lang = path.replace("/demo/", "").split("/")[0];
+        if (lang !== "en" && lang !== "hi") {
+          return new Response(JSON.stringify({ error: "Invalid language. Use en or hi" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return handleDemoServe(`demo_voiced_${lang}.mp4`, env, corsHeaders, request);
       }
 
       // Serve videos from /vid/ path (hero videos, etc.)
@@ -511,5 +524,62 @@ async function handleServe(
     return new Response(object.body, { status: 206, headers });
   }
 
+  return new Response(object.body, { headers });
+}
+
+async function handleDemoServe(
+  key: string,
+  env: Env,
+  corsHeaders: HeadersInit,
+  request: Request,
+): Promise<Response> {
+  const rangeHeader = request.headers.get("Range");
+  let r2Options: R2GetOptions | undefined;
+
+  if (rangeHeader) {
+    const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+    if (match) {
+      const start = parseInt(match[1], 10);
+      const end = match[2] ? parseInt(match[2], 10) : undefined;
+      r2Options = {
+        range: end !== undefined ? { offset: start, length: end - start + 1 } : { offset: start },
+      };
+    }
+  }
+
+  const object = await env.DEMOS_BUCKET.get(key, r2Options);
+
+  if (!object) {
+    return new Response(JSON.stringify({ error: "Demo video not found" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const headers = new Headers();
+  headers.set("Content-Type", "video/mp4");
+  headers.set("ETag", object.httpEtag);
+  headers.set("Cache-Control", "public, max-age=31536000");
+  headers.set("Accept-Ranges", "bytes");
+
+  Object.entries(corsHeaders).forEach(([k, v]) => {
+    headers.set(k, v as string);
+  });
+
+  if (rangeHeader && r2Options?.range) {
+    const range = r2Options.range as { offset: number; length?: number };
+    const start = range.offset;
+    const totalSize = object.size;
+    const end = range.length !== undefined
+      ? Math.min(start + range.length - 1, totalSize - 1)
+      : totalSize - 1;
+
+    headers.set("Content-Range", `bytes ${start}-${end}/${totalSize}`);
+    headers.set("Content-Length", String(end - start + 1));
+
+    return new Response(object.body, { status: 206, headers });
+  }
+
+  headers.set("Content-Length", String(object.size));
   return new Response(object.body, { headers });
 }

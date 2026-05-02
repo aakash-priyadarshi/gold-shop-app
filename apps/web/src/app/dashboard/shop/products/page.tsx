@@ -564,14 +564,14 @@ export default function ShopProductsPage() {
                 <T>Manage your jewellery inventory and listings</T>
               </p>
             </div>
-            <Button onClick={openAddDialog}>
+            <Button data-tour="inventory-add" onClick={openAddDialog}>
               <Plus className="h-4 w-4 mr-2" />
               <T>Add Product</T>
             </Button>
           </div>
 
           {/* Filters */}
-          <Card>
+          <Card data-tour="inventory-search">
             <CardContent className="pt-6">
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1">
@@ -612,7 +612,7 @@ export default function ShopProductsPage() {
           </Card>
 
           {/* Products Table */}
-          <Card>
+          <Card data-tour="inventory-table">
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">

@@ -1,6 +1,7 @@
 "use client";
 
 import { HeroVideo } from "@/components/HeroVideo";
+import { DemoModal } from "@/components/home/DemoModal";
 import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
@@ -316,20 +317,14 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/contact">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className={`w-full sm:w-auto h-12 px-8 rounded-xl text-base ${
-                    videoSrc
-                      ? "bg-transparent text-white border-white/50 hover:bg-white/10"
-                      : ""
-                  }`}
-                >
-                  <PlayCircle className="mr-2 h-5 w-5" />
-                  <T>Talk to our team</T>
-                </Button>
-              </Link>
+              <DemoModal
+                label="Watch Demo"
+                buttonClassName={
+                  videoSrc
+                    ? "bg-transparent text-white border-white/50 hover:bg-white/10"
+                    : ""
+                }
+              />
             </div>
 
             <TrustSignals

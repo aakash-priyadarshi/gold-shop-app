@@ -483,7 +483,7 @@ function PosPageInner() {
                 </Card>
 
                 {/* Manual Add */}
-                <Card>
+                <Card data-tour="pos-search">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">
                       <T>Quick Add by SKU</T>
@@ -500,7 +500,7 @@ function PosPageInner() {
               </div>
 
               {/* Right: Basket */}
-              <div className="lg:col-span-2">
+              <div data-tour="pos-cart" className="lg:col-span-2">
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -513,7 +513,7 @@ function PosPageInner() {
                         )}
                       </CardTitle>
                       {session.items?.length > 0 && (
-                        <Button onClick={() => setCheckoutOpen(true)}>
+                          <Button data-tour="pos-checkout" onClick={() => setCheckoutOpen(true)}>
                           <T>Checkout</T>
                         </Button>
                       )}

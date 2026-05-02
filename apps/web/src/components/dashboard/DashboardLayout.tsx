@@ -98,6 +98,15 @@ const ChatPopupWidget = dynamic(
   { ssr: false },
 );
 
+// Lazy-load tutorial button (driver.js CSS is ~20KB)
+const TutorialButton = dynamic(
+  () =>
+    import("@/components/tutorial/TutorialButton").then(
+      (mod) => mod.TutorialButton,
+    ),
+  { ssr: false },
+);
+
 function LanguageSelector() {
   const language = usePreferencesStore((s) => s.language);
   const setLanguage = usePreferencesStore((s) => s.setLanguage);
@@ -1121,6 +1130,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Floating Chat Popup */}
       <ChatPopupWidget />
+
+      {/* Floating tutorial button */}
+      <TutorialButton />
 
       {/* Suspended account lock overlay */}
       <SuspendedOverlay />

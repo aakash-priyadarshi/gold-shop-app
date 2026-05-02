@@ -3,10 +3,14 @@ main = "src/index.ts"
 compatibility_date = "2024-01-01"
 account_id = "c3219a748734c4ae628206c10c8b2c05"
 
-# R2 bucket binding
+# R2 bucket bindings
 [[r2_buckets]]
 binding = "IMAGES_BUCKET"
 bucket_name = "orivraa-images"
+
+[[r2_buckets]]
+binding = "DEMOS_BUCKET"
+bucket_name = "orivraa-demos"
 
 # Environment variables (set these in Cloudflare dashboard)
 [vars]
@@ -16,5 +20,6 @@ ALLOWED_ORIGINS = "https://orivraa.com,https://www.orivraa.com,http://localhost:
 [env.production]
 name = "orivraa-images"
 r2_buckets = [
-  { binding = "IMAGES_BUCKET", bucket_name = "orivraa-images" }
+  { binding = "IMAGES_BUCKET", bucket_name = "orivraa-images" },
+  { binding = "DEMOS_BUCKET", bucket_name = "orivraa-demos" }
 ]

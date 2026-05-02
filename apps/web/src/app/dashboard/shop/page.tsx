@@ -348,7 +348,7 @@ export default function ShopDashboard() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div data-tour="dash-stats" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat) => (
               <Card key={stat.title}>
                 <CardContent className="pt-6">
@@ -396,7 +396,7 @@ export default function ShopDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card data-tour="dash-orders">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
@@ -530,7 +530,7 @@ export default function ShopDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-tour="dash-quick-actions">
             <CardHeader>
               <CardTitle>
                 <T>Quick Actions</T>
