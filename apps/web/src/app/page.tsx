@@ -1,6 +1,8 @@
 import { HeroSection } from "@/components/home/HeroSection";
 import { HomeSections } from "@/components/home/HomeSections";
 import { Header } from "@/components/layout/header";
+import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
+import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { T } from "@/components/ui/T";
 import { resolveHeroVideo } from "@/lib/geo";
 import { Lock, ShieldCheck, Store, User } from "lucide-react";
@@ -53,6 +55,15 @@ export default function HomePage() {
         <main className="flex-1">
           {/* Dynamic Hero Section with geo-based video */}
           <HeroSection videoSrc={videoSrc} />
+
+          {/* Trust signals strip + AI sales team promo (seller surfaces) */}
+          <section className="py-10 lg:py-14 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-900">
+            <div className="container mx-auto px-4">
+              <TrustSignals variant="grid" />
+            </div>
+          </section>
+
+          <AISalesteamPromo />
 
           <HomeSections />
 

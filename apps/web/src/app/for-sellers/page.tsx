@@ -1,5 +1,7 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
+import { TrustSignals } from "@/components/marketing/TrustSignals";
 import {
   ArrowRight,
   BadgeCheck,
@@ -184,7 +186,13 @@ export default function ForSellersPage() {
                 How it works
               </Link>
             </div>
+            <TrustSignals variant="compact" className="mt-10" />
           </div>
+        </section>
+
+        {/* ── AI sales card ─────────────────────────── */}
+        <section className="max-w-5xl mx-auto px-4 -mt-4 mb-4">
+          <AISalesteamPromo variant="card" />
         </section>
 
         {/* ── How It Works ─────────────────────────────── */}

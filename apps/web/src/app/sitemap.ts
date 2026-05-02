@@ -132,6 +132,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.5,
     },
 
+    // Comparison pages (high-intent SEO)
+    {
+      url: `${BASE_URL}/compare/orivraa-vs-tally`,
+      lastModified: new Date("2026-05-01"),
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+    {
+      url: `${BASE_URL}/compare/orivraa-vs-marg-erp`,
+      lastModified: new Date("2026-05-01"),
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+
     // Legal pages
     {
       url: `${BASE_URL}/privacy`,

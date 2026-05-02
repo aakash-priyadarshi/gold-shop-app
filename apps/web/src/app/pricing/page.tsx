@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
@@ -710,6 +711,7 @@ export default function PricingPage() {
             </span>{" "}
             <T>in</T> {currencySymbol(cur)} ({cur})
           </p>
+          <TrustSignals variant="compact" className="mt-6" />
         </div>
       </section>
 

@@ -138,18 +138,19 @@ export default function DownloadPage() {
             >
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold-500/10 text-gold-600 dark:text-gold-400 text-sm font-medium mb-6">
                 <ComputerDesktopIcon className="w-4 h-4" />
-                <T>Desktop App</T>
+                <T>Desktop POS for jewellery shops</T>
               </div>
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-                <T>Download</T>{" "}
+                <T>Desktop POS &amp; offline mode</T>{" "}
                 <span className="bg-gradient-to-r from-gold-500 to-gold-700 dark:from-gold-400 dark:to-gold-600 bg-clip-text text-transparent">
-                  Orivraa Desktop
+                  <T>for your shop counter</T>
                 </span>
               </h1>
               <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-2">
                 <T>
-                  The full-featured desktop experience with offline support,
-                  faster performance, and seamless Google sign-in.
+                  Bill at the counter even when the internet is down. Live
+                  gold rates, hallmark/HUID-ready invoices, barcode scanning,
+                  and automatic sync to the cloud when you&apos;re back online.
                 </T>
               </p>
               <p className="text-sm text-muted-foreground/60">

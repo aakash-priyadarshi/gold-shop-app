@@ -1422,6 +1422,195 @@ export const BLOG_POSTS: BlogPost[] = [
 <p>Need help pricing your jewellery correctly? <a href="/jewellery-shop-billing-software">Orivraa's billing software</a> handles all these calculations automatically. <a href="/auth/register">Start free</a>.</p>
 `,
   },
+  /* ── Post: GST on Gold Jewellery in India ────────────────────────── */
+  {
+    slug: "how-to-calculate-gst-on-gold-jewellery-india",
+    title: "How to Calculate GST on Gold Jewellery in India (2026 Guide)",
+    description:
+      "Step-by-step guide to GST on gold jewellery in India: 3% on gold value, 5% on making charges, HSN codes, invoice format, and how to bill correctly without losing margin.",
+    date: "2026-04-10",
+    updated: "2026-04-25",
+    author: "Orivraa Team",
+    authorRole: "Tax & Compliance",
+    readTime: "8 min read",
+    category: "Tax & Compliance",
+    tags: [
+      "GST on gold",
+      "jewellery GST India",
+      "making charges GST",
+      "HSN code 7113",
+      "jewellery billing",
+    ],
+    content: `
+<p>Confused about how GST applies to your gold jewellery sales? You&rsquo;re not alone. The 3% + 5% split between gold value and making charges trips up jewellers every day — and getting it wrong means under-billing customers or over-paying tax.</p>
+
+<p>This guide breaks down exactly how to calculate GST on gold jewellery in India in 2026, with worked examples and a downloadable invoice template.</p>
+
+<h2>The two GST rates you need to know</h2>
+
+<ul>
+<li><strong>3% GST on the value of gold</strong> (HSN 7113) — applies to the metal portion of the bill</li>
+<li><strong>5% GST on making charges</strong> — applies to labour and craftsmanship</li>
+</ul>
+
+<p>If you bundle these into a single line item, you risk being assessed at the higher rate by tax authorities. <strong>Always show gold value and making charges as separate lines on your invoice.</strong></p>
+
+<h2>Worked example: 22K gold ring</h2>
+
+<p>Let&rsquo;s say a customer buys a 22K gold ring weighing 8 grams.</p>
+
+<table>
+<tr><th>Item</th><th>Amount (&#8377;)</th></tr>
+<tr><td>Gold rate (22K) per gram</td><td>5,800</td></tr>
+<tr><td>Gold value (8 &times; 5,800)</td><td>46,400</td></tr>
+<tr><td>Making charges (&#8377;500/gram &times; 8)</td><td>4,000</td></tr>
+<tr><td>GST on gold (3% of 46,400)</td><td>1,392</td></tr>
+<tr><td>GST on making (5% of 4,000)</td><td>200</td></tr>
+<tr><td><strong>Total</strong></td><td><strong>52,992</strong></td></tr>
+</table>
+
+<p>If you instead applied 3% to the combined &#8377;50,400, you&rsquo;d charge &#8377;1,512 — saving the customer &#8377;80, but exposing yourself to a tax-audit reassessment at 5% on making charges retroactively.</p>
+
+<h2>Old gold exchange — how GST works</h2>
+
+<p>When a customer brings old gold in exchange:</p>
+
+<ul>
+<li>You only charge GST on the <em>net value</em> (new jewellery value minus old gold value)</li>
+<li>Making charges GST (5%) still applies on the full making charge</li>
+<li>You must record the old gold purchase separately for input credit purposes</li>
+</ul>
+
+<h2>Hallmark, HUID and invoice requirements</h2>
+
+<p>From April 2023 onwards, every piece of jewellery 14K and above must carry a <strong>6-digit HUID (Hallmark Unique ID)</strong>. Your invoice must list:</p>
+
+<ul>
+<li>HUID number(s)</li>
+<li>Net weight and gross weight</li>
+<li>Purity (22K / 18K / 14K)</li>
+<li>HSN code 7113</li>
+<li>Gold value, making charges, and GST as separate lines</li>
+<li>Buyer&rsquo;s GSTIN if it&rsquo;s a B2B sale above &#8377;50,000</li>
+</ul>
+
+<h2>Common mistakes to avoid</h2>
+
+<ol>
+<li><strong>Charging 3% on the whole bill</strong> — under-collects on making charges</li>
+<li><strong>Charging 5% on the whole bill</strong> — over-charges customer on metal value</li>
+<li><strong>Forgetting HUID</strong> — invoice can be rejected on audit</li>
+<li><strong>Manual rate updates</strong> — yesterday&rsquo;s rate on today&rsquo;s sale costs you margin</li>
+</ol>
+
+<h2>Automate it</h2>
+
+<p>Calculating GST manually for every sale is error-prone and slow. <a href="/jewellery-shop-billing-software">Orivraa&rsquo;s GST-ready billing</a> applies the correct rate to gold value and making charges automatically, prints HUID-compliant invoices, and pulls live gold rates so every bill is current. <a href="/auth/register">Start free</a> &mdash; no credit card required.</p>
+`,
+  },
+  /* ── Post: Hallmarking compliance checklist ──────────────────────── */
+  {
+    slug: "hallmarking-compliance-checklist-jewellers-india",
+    title: "Hallmarking Compliance Checklist for Indian Jewellers (2026)",
+    description:
+      "Complete BIS hallmarking compliance checklist for Indian jewellery shops. HUID requirements, registration steps, penalties, exempted categories, and how to stay audit-ready in 2026.",
+    date: "2026-04-18",
+    updated: "2026-04-28",
+    author: "Orivraa Team",
+    authorRole: "Tax & Compliance",
+    readTime: "10 min read",
+    category: "Tax & Compliance",
+    tags: [
+      "BIS hallmarking",
+      "HUID",
+      "jewellery compliance",
+      "hallmarking rules India",
+      "BIS registration",
+    ],
+    content: `
+<p>BIS hallmarking has moved from &ldquo;recommended&rdquo; to <strong>mandatory</strong> for almost every jeweller in India. Selling unhallmarked gold jewellery (14K and above) can attract a fine of up to &#8377;1 lakh or one year imprisonment. Yet many shops are still operating with partial compliance.</p>
+
+<p>Use this checklist to make sure your shop is fully compliant in 2026.</p>
+
+<h2>1. BIS registration</h2>
+
+<ul>
+<li>Apply for BIS registration on the <a href="https://www.manakonline.in" rel="nofollow">manakonline.in</a> portal</li>
+<li>Submit shop trade licence, GST certificate, PAN, and ID proof</li>
+<li>Pay the applicable registration fee (currently &#8377;7,500 for 1 year, with discounts for 5/10-year plans)</li>
+<li>Renew before expiry &mdash; lapsed registration means you cannot legally sell hallmarked jewellery</li>
+</ul>
+
+<h2>2. HUID compliance</h2>
+
+<p>Every piece of gold jewellery you sell at 14K, 18K, 20K, 22K, 23K, or 24K purity <strong>must carry a 6-digit alphanumeric HUID</strong>. The HUID is printed on every BIS-tested piece by an Assaying &amp; Hallmarking Centre (AHC).</p>
+
+<ul>
+<li>Send all unhallmarked stock to a registered AHC</li>
+<li>Pay the per-piece hallmarking fee (currently &#8377;45 + GST per article)</li>
+<li>Receive the article back with laser-etched HUID and BIS mark</li>
+<li>Record the HUID against the SKU in your inventory system</li>
+</ul>
+
+<h2>3. Invoice requirements</h2>
+
+<p>Your invoice must clearly show:</p>
+
+<ul>
+<li>BIS hallmark logo</li>
+<li>HUID number for each piece</li>
+<li>Purity in karat (e.g., 22K916, 18K750)</li>
+<li>Net weight in grams</li>
+<li>HSN code 7113</li>
+<li>GST split (3% gold, 5% making) &mdash; see our <a href="/blog/how-to-calculate-gst-on-gold-jewellery-india">GST guide</a></li>
+</ul>
+
+<h2>4. Display requirements at the shop</h2>
+
+<ul>
+<li>BIS registration certificate displayed visibly at the counter</li>
+<li>List of hallmarked categories sold</li>
+<li>Daily gold rate board (recommended for trust)</li>
+<li>Customer-facing notice: &ldquo;All gold jewellery 14K and above is BIS-hallmarked with HUID&rdquo;</li>
+</ul>
+
+<h2>5. Exempted categories</h2>
+
+<p>Hallmarking is <em>not</em> required for:</p>
+
+<ul>
+<li>Gold thread (zari), watches, fountain pens</li>
+<li>Medical, dental, and scientific gold articles</li>
+<li>Articles for export</li>
+<li>Articles below &#8377;2 lakh per piece intended only for export display</li>
+<li>Unfinished work-in-progress jewellery (must be hallmarked before sale)</li>
+</ul>
+
+<h2>6. Common compliance mistakes</h2>
+
+<ol>
+<li><strong>Hallmarked stock without HUID record in inventory</strong> &mdash; you can&rsquo;t prove provenance on audit</li>
+<li><strong>Old (pre-HUID) hallmarked stock still on display</strong> &mdash; must be re-hallmarked</li>
+<li><strong>Selling under-karat (e.g., 20K labelled as 22K)</strong> &mdash; severe penalties, possible criminal case</li>
+<li><strong>Lapsed BIS registration</strong> &mdash; inadvertent selling becomes illegal overnight</li>
+<li><strong>Not documenting karigar work returns</strong> &mdash; karigar receives 22K, returns 20K, and you sell it as 22K</li>
+</ol>
+
+<h2>7. Penalties for non-compliance</h2>
+
+<ul>
+<li>Sale of unhallmarked jewellery: fine up to &#8377;1,00,000 or 1-year imprisonment, or both</li>
+<li>Misrepresentation of purity: fine of up to 5x the value of the article</li>
+<li>Counterfeit BIS mark: criminal prosecution under Section 17 of the BIS Act</li>
+</ul>
+
+<h2>Stay compliant without manual tracking</h2>
+
+<p>Tracking HUID against every SKU on paper is error-prone. <a href="/jewellery-inventory-software">Orivraa&rsquo;s inventory module</a> ties HUID to each piece, surfaces hallmarking expiry alerts, and prints fully BIS-compliant invoices with one click.</p>
+
+<p><a href="/auth/register">Try Orivraa free</a> &mdash; or <a href="/compare/orivraa-vs-marg-erp">see how it compares to Marg ERP</a>.</p>
+`,
+  },
 ];
 
 /* ────────────────────────────────────────────────────────────── */
