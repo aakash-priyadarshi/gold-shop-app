@@ -219,8 +219,8 @@ export default function DownloadPage() {
                         <span className="ml-1 text-gold-600 dark:text-gold-400 font-medium">
                           {formatDownloadCount(primaryRelease.downloadCount)} downloads
                         </span>
-                      )}</CardDescription>
-                      {formatDate(primaryRelease.publishedAt)}
+                      )}
+                      {" · "}{formatDate(primaryRelease.publishedAt)}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex flex-col items-center gap-4 pb-6">
