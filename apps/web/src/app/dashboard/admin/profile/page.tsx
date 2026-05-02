@@ -6,20 +6,20 @@ import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,15 +27,15 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { otpApi, usersApi } from "@/lib/api";
 import {
-  CheckCircle,
-  Chrome,
-  Key,
-  Loader2,
-  Lock,
-  Mail,
-  Phone,
-  Shield,
-  User,
+    CheckCircle,
+    Chrome,
+    Key,
+    Loader2,
+    Lock,
+    Mail,
+    Phone,
+    Shield,
+    User,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -497,7 +497,7 @@ export default function AdminProfilePage() {
                     Connected
                   </div>
                 ) : (
-                  <Button variant="outline" onClick={() => googleLogin("ADMIN", "login")}>
+                  <Button variant="outline" onClick={() => googleLogin("CUSTOMER", "login")}>
                     Connect Google
                   </Button>
                 )}
