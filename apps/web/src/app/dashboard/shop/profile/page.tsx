@@ -43,6 +43,7 @@ import { format } from "date-fns";
 import {
   AlertTriangle,
   CheckCircle,
+  Chrome,
   Clock,
   Copy,
   Globe,
@@ -102,7 +103,7 @@ const languages = [
 ];
 
 export default function ShopkeeperProfilePage() {
-  const { user: authUser, refreshUser } = useAuth();
+  const { user: authUser, refreshUser, googleLogin } = useAuth();
   const t = useT();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -116,6 +117,8 @@ export default function ShopkeeperProfilePage() {
     newPassword: "",
     confirmPassword: "",
   });
+  const [hasPassword, setHasPassword] = useState(true);
+  const [hasGoogleAuth, setHasGoogleAuth] = useState(false);
 
   // 2FA State
   const [twoFactorStatus, setTwoFactorStatus] = useState<{
@@ -159,6 +162,8 @@ export default function ShopkeeperProfilePage() {
       const response = await api.get("/users/me");
       setProfile(response.data);
       setOriginalPhone(response.data.phone || "");
+      setHasPassword(response.data.hasPassword ?? true);
+      setHasGoogleAuth(response.data.hasGoogleAuth ?? false);
     } catch (error) {
       console.error("Failed to load profile:", error);
       toast({
@@ -357,14 +362,25 @@ export default function ShopkeeperProfilePage() {
 
     setIsChangingPassword(true);
     try {
-      await api.post("/auth/change-password", {
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
-      });
-      toast({
-        title: "Password Changed",
-        description: "Your password has been updated successfully",
-      });
+      if (hasPassword) {
+        await api.post("/auth/change-password", {
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        });
+        toast({
+          title: "Password Changed",
+          description: "Your password has been updated successfully",
+        });
+      } else {
+        await api.post("/users/me/create-password", {
+          newPassword: passwordForm.newPassword,
+        });
+        toast({
+          title: "Password Created",
+          description: "You can now sign in with your email and password",
+        });
+        setHasPassword(true);
+      }
       setPasswordDialogOpen(false);
       setPasswordForm({
         currentPassword: "",
@@ -372,12 +388,12 @@ export default function ShopkeeperProfilePage() {
         confirmPassword: "",
       });
     } catch (error: any) {
-      console.error("Failed to change password:", error);
+      console.error("Failed to update password:", error);
       toast({
         variant: "destructive",
-        title: "Password Change Failed",
+        title: hasPassword ? "Password Change Failed" : "Password Creation Failed",
         description:
-          error.response?.data?.message || "Could not change password",
+          error.response?.data?.message || "Could not update password",
       });
     } finally {
       setIsChangingPassword(false);
@@ -726,7 +742,7 @@ export default function ShopkeeperProfilePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Change Password */}
+                  {/* Change / Create Password */}
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-amber-100 dark:bg-amber-800 rounded-full">
@@ -734,10 +750,10 @@ export default function ShopkeeperProfilePage() {
                       </div>
                       <div>
                         <h3 className="font-medium">
-                          <T>Password</T>
+                          <T>{hasPassword ? "Password" : "Create Password"}</T>
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          <T>Change your account password</T>
+                          <T>{hasPassword ? "Change your account password" : "Set a password to also sign in with email"}</T>
                         </p>
                       </div>
                     </div>
@@ -747,40 +763,44 @@ export default function ShopkeeperProfilePage() {
                     >
                       <DialogTrigger asChild>
                         <Button variant="outline">
-                          <T>Change Password</T>
+                          <T>{hasPassword ? "Change Password" : "Create Password"}</T>
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>
-                            <T>Change Password</T>
+                            <T>{hasPassword ? "Change Password" : "Create Password"}</T>
                           </DialogTitle>
                           <DialogDescription>
                             <T>
-                              Enter your current password and choose a new one.
+                              {hasPassword
+                                ? "Enter your current password and choose a new one."
+                                : "Set a password to sign in with your email and password."}
                             </T>
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="currentPassword">
-                              <T>Current Password</T>
-                            </Label>
-                            <Input
-                              id="currentPassword"
-                              type="password"
-                              value={passwordForm.currentPassword}
-                              onChange={(e) =>
-                                setPasswordForm({
-                                  ...passwordForm,
-                                  currentPassword: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
+                          {hasPassword && (
+                            <div className="space-y-2">
+                              <Label htmlFor="currentPassword">
+                                <T>Current Password</T>
+                              </Label>
+                              <Input
+                                id="currentPassword"
+                                type="password"
+                                value={passwordForm.currentPassword}
+                                onChange={(e) =>
+                                  setPasswordForm({
+                                    ...passwordForm,
+                                    currentPassword: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
                           <div className="space-y-2">
                             <Label htmlFor="newPassword">
-                              <T>New Password</T>
+                              <T>{hasPassword ? "New Password" : "Password"}</T>
                             </Label>
                             <Input
                               id="newPassword"
@@ -796,7 +816,7 @@ export default function ShopkeeperProfilePage() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="confirmPassword">
-                              <T>Confirm New Password</T>
+                              <T>Confirm Password</T>
                             </Label>
                             <Input
                               id="confirmPassword"
@@ -820,16 +840,47 @@ export default function ShopkeeperProfilePage() {
                           </Button>
                           <Button
                             onClick={handleChangePassword}
-                            disabled={isChangingPassword}
+                            disabled={
+                              isChangingPassword ||
+                              (hasPassword && !passwordForm.currentPassword) ||
+                              !passwordForm.newPassword
+                            }
                           >
                             {isChangingPassword ? (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : null}
-                            <T>Change Password</T>
+                            <T>{hasPassword ? "Change Password" : "Create Password"}</T>
                           </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
+                  </div>
+
+                  {/* Google Account */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-blue-100 dark:bg-blue-800 rounded-full">
+                        <Chrome className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">
+                          <T>Google Account</T>
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          <T>{hasGoogleAuth ? "Google account is connected" : "Connect Google for easier sign in"}</T>
+                        </p>
+                      </div>
+                    </div>
+                    {hasGoogleAuth ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <T>Connected</T>
+                      </div>
+                    ) : (
+                      <Button variant="outline" onClick={() => googleLogin("SHOPKEEPER", "login")}>
+                        <T>Connect Google</T>
+                      </Button>
+                    )}
                   </div>
 
                   {/* Two-Factor Authentication */}
