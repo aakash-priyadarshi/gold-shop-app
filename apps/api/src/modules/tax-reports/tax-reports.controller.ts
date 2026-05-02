@@ -252,6 +252,144 @@ export class TaxReportsController {
     return { token, expiresAt };
   }
 
+  // ── Admin: view any shop's tax data ──────────────────────────────
+  @Get("admin/shop-summary")
+  @Roles(UserRole.ADMIN)
+  async adminShopSummary(
+    @Query("shopId") shopId: string,
+    @Query("country") country: string,
+    @Query("period") period: string,
+  ) {
+    if (!shopId) throw new Error("shopId is required");
+    return this.svc.getSummary(shopId, country, period);
+  }
+
+  @Get("admin/india/gstr3b")
+  @Roles(UserRole.ADMIN)
+  async adminIndiaGstr3b(
+    @Query("shopId") shopId: string,
+    @Query("period") period: string,
+  ) {
+    if (!shopId) throw new Error("shopId is required");
+    return this.svc.getIndiaGstr3b(shopId, period);
+  }
+
+  @Get("admin/india/hsn")
+  @Roles(UserRole.ADMIN)
+  async adminIndiaHsn(
+    @Query("shopId") shopId: string,
+    @Query("period") period: string,
+    @Query("format") format: "json" | "csv" = "json",
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (!shopId) throw new Error("shopId is required");
+    const rows = await this.svc.getIndiaHsnSummary(shopId, period);
+    if (format === "csv") {
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="HSN-${period}.csv"`);
+      return this.svc.toCsv(rows);
+    }
+    return rows;
+  }
+
+  @Get("admin/india/gstr1")
+  @Roles(UserRole.ADMIN)
+  async adminIndiaGstr1(
+    @Query("shopId") shopId: string,
+    @Query("period") period: string,
+    @Query("format") format: "json" | "csv" = "json",
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (!shopId) throw new Error("shopId is required");
+    const data = await this.svc.getIndiaGstr1(shopId, period);
+    if (format === "csv") {
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="GSTR1-${period}.csv"`);
+      return this.svc.toCsv(data.rows);
+    }
+    return data;
+  }
+
+  @Get("admin/india/tally.xml")
+  @Roles(UserRole.ADMIN)
+  async adminIndiaTally(
+    @Query("shopId") shopId: string,
+    @Query("period") period: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (!shopId) throw new Error("shopId is required");
+    const xml = await this.svc.getTallyXml(shopId, period);
+    res.setHeader("Content-Type", "application/xml");
+    res.setHeader("Content-Disposition", `attachment; filename="Tally-${period}.xml"`);
+    return xml;
+  }
+
+  @Get("admin/nepal/vat")
+  @Roles(UserRole.ADMIN)
+  async adminNepalVat(
+    @Query("shopId") shopId: string,
+    @Query("period") period: string,
+  ) {
+    if (!shopId) throw new Error("shopId is required");
+    return this.svc.getNepalVat(shopId, period);
+  }
+
+  @Get("admin/uae/vat201")
+  @Roles(UserRole.ADMIN)
+  async adminUaeVat201(
+    @Query("shopId") shopId: string,
+    @Query("period") period: string,
+  ) {
+    if (!shopId) throw new Error("shopId is required");
+    return this.svc.getUaeVat201(shopId, period);
+  }
+
+  @Get("admin/uk/mtd")
+  @Roles(UserRole.ADMIN)
+  async adminUkMtd(
+    @Query("shopId") shopId: string,
+    @Query("period") period: string,
+  ) {
+    if (!shopId) throw new Error("shopId is required");
+    return this.svc.getUkMtdNineBox(shopId, period);
+  }
+
+  @Get("admin/eu/oss")
+  @Roles(UserRole.ADMIN)
+  async adminEuOss(
+    @Query("shopId") shopId: string,
+    @Query("period") period: string,
+    @Query("format") format: "json" | "csv" = "json",
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (!shopId) throw new Error("shopId is required");
+    const data = await this.svc.getEuOss(shopId, period);
+    if (format === "csv") {
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="EU-OSS-${period}.csv"`);
+      return this.svc.toCsv(data.rows);
+    }
+    return data;
+  }
+
+  @Get("admin/us/state")
+  @Roles(UserRole.ADMIN)
+  async adminUsState(
+    @Query("shopId") shopId: string,
+    @Query("period") period: string,
+    @Query("format") format: "json" | "csv" = "json",
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (!shopId) throw new Error("shopId is required");
+    const data = await this.svc.getUsStateSummary(shopId, period);
+    if (format === "csv") {
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="US-State-${period}.csv"`);
+      return this.svc.toCsv(data.rows);
+    }
+    return data;
+  }
+
   // ── Admin: tax filing usage stats ────────────────────────────────
   @Get("admin/stats")
   @Roles(UserRole.ADMIN)

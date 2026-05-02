@@ -717,6 +717,46 @@ export const taxReportsApi = {
     api.post("/tax-reports/share-link", data),
 };
 
+// Admin Tax Reports API (admin-only, accepts shopId as query param)
+export const adminTaxApi = {
+  stats: () => api.get("/tax-reports/admin/stats"),
+  shopSummary: (shopId: string, country: string, period: string) =>
+    api.get("/tax-reports/admin/shop-summary", { params: { shopId, country, period } }),
+  indiaGstr3b: (shopId: string, period: string) =>
+    api.get("/tax-reports/admin/india/gstr3b", { params: { shopId, period } }),
+  indiaHsn: (shopId: string, period: string, format: "json" | "csv" = "json") =>
+    api.get("/tax-reports/admin/india/hsn", {
+      params: { shopId, period, format },
+      responseType: format === "csv" ? "blob" : "json",
+    }),
+  indiaGstr1: (shopId: string, period: string, format: "json" | "csv" = "json") =>
+    api.get("/tax-reports/admin/india/gstr1", {
+      params: { shopId, period, format },
+      responseType: format === "csv" ? "blob" : "json",
+    }),
+  indiaTallyXml: (shopId: string, period: string) =>
+    api.get("/tax-reports/admin/india/tally.xml", {
+      params: { shopId, period },
+      responseType: "blob",
+    }),
+  nepalVat: (shopId: string, period: string) =>
+    api.get("/tax-reports/admin/nepal/vat", { params: { shopId, period } }),
+  uaeVat201: (shopId: string, period: string) =>
+    api.get("/tax-reports/admin/uae/vat201", { params: { shopId, period } }),
+  ukMtd: (shopId: string, period: string) =>
+    api.get("/tax-reports/admin/uk/mtd", { params: { shopId, period } }),
+  euOss: (shopId: string, period: string, format: "json" | "csv" = "json") =>
+    api.get("/tax-reports/admin/eu/oss", {
+      params: { shopId, period, format },
+      responseType: format === "csv" ? "blob" : "json",
+    }),
+  usState: (shopId: string, period: string, format: "json" | "csv" = "json") =>
+    api.get("/tax-reports/admin/us/state", {
+      params: { shopId, period, format },
+      responseType: format === "csv" ? "blob" : "json",
+    }),
+};
+
 // Marketplace Intelligence API
 export const intelligenceApi = {
   // AI RFQ Builder
