@@ -392,12 +392,6 @@ export function Header() {
   // More menu items
   const moreNavItems = [
     {
-      name: "Contact",
-      href: "/contact",
-      icon: ChatBubbleLeftRightIcon,
-      desc: "Talk to the founder — reply within hours",
-    },
-    {
       name: "Blog",
       href: "/blog",
       icon: BookOpenIcon,
@@ -535,6 +529,21 @@ export function Header() {
                       <T>{item.name}</T>
                     </Link>
                   ))}
+                </div>
+
+                {/* Contact — standalone */}
+                <div className="pt-3 mt-2 border-t border-gray-100 dark:border-gray-800">
+                  <Link
+                    href="/contact"
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-800/40 hover:bg-amber-100 dark:hover:bg-amber-950/60 transition-colors touch-target"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <ChatBubbleLeftRightIcon className="h-5 w-5 text-amber-500" />
+                    <div>
+                      <div><T>Contact Us</T></div>
+                      <div className="text-xs font-normal text-amber-600/80 dark:text-amber-400/70"><T>Talk to the founder — reply within hours</T></div>
+                    </div>
+                  </Link>
                 </div>
 
                 {/* More */}
@@ -773,6 +782,14 @@ export function Header() {
               </>
             )}
           </div>
+
+          {/* Contact link */}
+          <Link
+            href="/contact"
+            className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <T>Contact</T>
+          </Link>
 
           {/* About link */}
           <div

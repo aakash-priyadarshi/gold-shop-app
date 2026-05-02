@@ -1,6 +1,6 @@
-import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
 import { AppTracking } from "@/components/AppTracking";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
 import { Providers } from "@/components/providers";
 import { SupportBot } from "@/components/support/SupportBot";
 import InitialLoadScreen from "@/components/ui/InitialLoadScreen";
