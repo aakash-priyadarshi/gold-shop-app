@@ -15,8 +15,12 @@ export interface AiChatResponse {
 export class AiChatbotService {
   private readonly logger = new Logger(AiChatbotService.name);
   private readonly GEMINI_API_URL =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+  private readonly GEMINI_EMBED_URL =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent";
+  private readonly QDRANT_COLLECTION = "agent_knowledge_v2";
   private readonly apiKey: string;
+  private readonly qdrantUrl: string;
 
   constructor(
     private configService: ConfigService,
@@ -26,6 +30,7 @@ export class AiChatbotService {
     private supportService: SupportService
   ) {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
+    this.qdrantUrl = this.configService.get<string>("QDRANT_URL") || "";
   }
 
   async chat(
@@ -44,7 +49,10 @@ export class AiChatbotService {
       // Log the incoming message
       await this.supportService.logAiChat(null, "user", message, undefined, undefined, ipAddress);
 
-      const systemPrompt = this.buildSystemPrompt();
+      // Optionally enrich context with Qdrant RAG (gracefully skipped if not configured)
+      const knowledgeContext = await this.searchKnowledge(message);
+
+      const systemPrompt = this.buildSystemPrompt(knowledgeContext || undefined);
       const contents = this.buildContents(
         systemPrompt,
         conversationHistory,
@@ -175,19 +183,127 @@ export class AiChatbotService {
      }
   }
 
-  private buildSystemPrompt(): string {
-    return `You are Gemini Support Core, an advanced AI support agent for OriVraa, an Indian jewellery marketplace.
-Your role is to answer questions AND take actions on behalf of the user using the tools provided to you.
+  /**
+   * Searches the Qdrant `agent_knowledge_v2` collection for the most relevant
+   * knowledge chunks about the user's query. Uses Gemini embedding-001 (3072-dim,
+   * matches the collection's vector size). Gracefully returns "" if Qdrant or
+   * the API key is not configured.
+   */
+  private async searchKnowledge(query: string): Promise<string> {
+    if (!this.qdrantUrl || !this.apiKey) return "";
+    try {
+      // 1. Embed the query
+      const embedRes = await fetch(
+        `${this.GEMINI_EMBED_URL}?key=${this.apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: { parts: [{ text: query }] },
+            taskType: "RETRIEVAL_QUERY",
+          }),
+        }
+      );
+      if (!embedRes.ok) return "";
+      const embedData = await embedRes.json() as any;
+      const vector: number[] | undefined = embedData?.embedding?.values;
+      if (!Array.isArray(vector) || vector.length === 0) return "";
 
-AVAILABLE TOOLS & INSTRUCTIONS:
-1. sendPasswordReset: Call this if the user says they forgot their password and provides an email. If they ask to reset password but don't give an email, nicely ask for their email address first.
-2. autoEscalateTicket: Call this to create a ticket urgently if the user is locked out, suspended, or has a complex issue (like missing refund, fraud, technical bug). You must ask for their name and email first if you don't have it in the chat history.
+      // 2. Search Qdrant
+      const searchRes = await fetch(
+        `${this.qdrantUrl}/collections/${this.QDRANT_COLLECTION}/points/search`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vector, limit: 3, with_payload: true }),
+        }
+      );
+      if (!searchRes.ok) return "";
+      const searchData = await searchRes.json() as any;
+      const results: any[] = searchData?.result ?? [];
+      if (results.length === 0) return "";
 
-GENERAL RULES:
-- Be concise and polite.
-- Always ask for required information (like email) before attempting a tool call.
-- For basic info (policies, tracking), respond normally without tools.
-- Never output markdown JSON like the old model did, just output normal readable text unless making a function call.`;
+      return results
+        .map((r) => r.payload?.text || r.payload?.content || "")
+        .filter(Boolean)
+        .join("\n\n---\n\n");
+    } catch (err) {
+      this.logger.warn("Qdrant search skipped:", (err as Error).message);
+      return "";
+    }
+  }
+
+  private buildSystemPrompt(knowledgeContext?: string): string {
+    const base = `You are the Orivraa AI assistant — a friendly, knowledgeable sales and support agent for Orivraa, an all-in-one jewellery shop management platform.
+
+ABOUT ORIVRAA:
+Orivraa is a purpose-built CRM, POS and ERP for jewellery shops. It handles billing, inventory, GST/VAT tax compliance, customer management, WhatsApp catalogues, and AI-powered sales agents. Used by jewellers across India, Nepal, UAE, UK and Europe.
+
+PRICING & PLANS:
+- Free 30-day trial — full features, no credit card
+- Plans: FREE (trial), PRO (single shop), PRO_PLUS (multi-country tax + CA share links), ENTERPRISE (multi-branch)
+- Exact prices shown in local currency at /pricing
+- Cancel anytime, no lock-in, data export always free
+
+KEY FEATURES:
+1. Live gold & silver rates — auto-updated from market
+2. GST/VAT billing — 3 % on gold value + 5 % on making charges (India, HSN 7113); VAT for UAE/GCC; MTD for UK; OSS for EU; US state filings
+3. Tax filing exports — GSTR1, GSTR3B, HSN summary, Tally XML, UAE VAT201, UK MTD, EU OSS
+4. Hallmark & HUID invoices — BIS-compliant, purity (24K/22K/18K/14K), gross/net/stone weight
+5. Offline desktop POS — fully offline at counter, auto-syncs on reconnect
+6. Multi-store management — branch transfers, consolidated reports, per-branch pricing and staff permissions
+7. Customer CRM — purchase history, WhatsApp catalogue, custom RFQ orders
+8. Barcode scanning — fast POS checkout
+9. AI sales agents (beta) — 24/7 voice agents in 42 languages, follow-up automation
+10. CA / accountant share links — securely share tax documents (PRO_PLUS+)
+11. Old-gold exchange — correct GST treatment on exchange transactions
+
+GST DETAILS (INDIA):
+- 3 % GST on gold value + 5 % GST on making charges
+- HSN code: 7113 (articles of jewellery and parts thereof)
+- Orivraa auto-splits and prints compliant invoices; old-gold deduction handled
+
+HALLMARKING (INDIA):
+- HUID (Hallmark Unique ID) printed on every invoice
+- Purity tiers: 24K, 22K, 18K, 14K, 9K
+- BIS compliance checklist: /blog/hallmarking-compliance-checklist-jewellers-india
+
+ONBOARDING:
+- 3 steps: sign up → import (CSV/Excel/Tally/Marg) → go live
+- Most shops are live the same day; free onboarding call included
+- /contact?interest=Onboarding to book a call
+
+COMPARISONS:
+- vs Tally: Orivraa has live gold rates, HUID billing, mobile POS, free plan — Tally has none of these
+- vs Marg ERP: same gaps — Marg wasn't built for jewellery; no AI, no cloud, no mobile POS
+- Side-by-side: /compare/orivraa-vs-tally and /compare/orivraa-vs-marg-erp
+
+SECURITY:
+- TLS 1.3 in transit, AES-256 encrypted backups at rest
+- Data stored in your region (India / UAE / EU)
+- Full data export anytime at no cost
+
+CONTACT (FOUNDER — AAKASH):
+- Email: aakashm301@gmail.com
+- WhatsApp / Call: +91 62039 65557
+- Replies personally within a few hours
+
+RESPONSE RULES:
+- Be concise and warm; aim for 2–4 sentences per reply
+- For pre-sales questions, guide the user toward the free trial at /auth/register
+- For password/account issues, use the sendPasswordReset tool
+- For locked accounts, suspensions, or complex billing issues, use the autoEscalateTicket tool
+- Never fabricate prices or percentages not stated here
+- If unsure, offer to connect the user with Aakash directly
+
+AVAILABLE TOOLS:
+1. sendPasswordReset — call when user forgot password AND has given their email; otherwise ask for email first
+2. autoEscalateTicket — call for locked accounts, suspensions, missing refunds, technical bugs; ask for name and email first if not provided`;
+
+    if (knowledgeContext) {
+      return `${base}\n\nADDITIONAL CONTEXT FROM KNOWLEDGE BASE:\n${knowledgeContext}`;
+    }
+    return base;
   }
 
   private buildContents(
@@ -204,7 +320,7 @@ GENERAL RULES:
         role: "model",
         parts: [
           {
-            text: "Hello! I'm Gemini Support Core. How can I assist you today?",
+            text: "Hi! I'm the Orivraa AI assistant. Ask me anything about pricing, GST, hallmarking, offline POS, or how Orivraa compares to Tally — I'm here to help.",
           },
         ],
       },
