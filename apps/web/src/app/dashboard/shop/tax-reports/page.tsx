@@ -5,32 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { taxReportsApi } from "@/lib/api";
 import {
-  AlertCircle,
-  Calendar,
-  CheckCircle2,
-  Copy,
-  Download,
-  ExternalLink,
-  FileText,
-  Loader2,
-  Lock,
-  Share2,
-  ShieldCheck,
+    AlertCircle,
+    Calendar,
+    CheckCircle2,
+    Copy,
+    Download,
+    ExternalLink,
+    FileText,
+    Loader2,
+    Lock,
+    Share2,
+    ShieldCheck,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
 
 const COUNTRY_TABS = [
   { code: "IN", name: "India", flag: "🇮🇳" },
@@ -179,6 +172,7 @@ function SummaryGrid({ data }: { data: Record<string, any> | null }) {
 }
 
 function ShareWithCAButton({ country, period }: { country: string; period: string }) {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const handle = async () => {
@@ -188,9 +182,9 @@ function ShareWithCAButton({ country, period }: { country: string; period: strin
       const url = `${window.location.origin}/share/tax/${res.data.token}`;
       setLink(url);
       navigator.clipboard.writeText(url);
-      toast.success("Share link copied to clipboard (7 day expiry)");
+      toast({ title: "Share link copied to clipboard (7 day expiry)" });
     } catch {
-      toast.error("Failed to create share link");
+      toast({ variant: "destructive", title: "Failed to create share link" });
     } finally {
       setLoading(false);
     }
@@ -205,7 +199,7 @@ function ShareWithCAButton({ country, period }: { country: string; period: strin
         <button
           onClick={() => {
             navigator.clipboard.writeText(link);
-            toast.success("Copied");
+            toast({ title: "Copied" });
           }}
           className="text-xs text-blue-600 hover:underline flex items-center gap-1"
         >
@@ -218,6 +212,7 @@ function ShareWithCAButton({ country, period }: { country: string; period: strin
 
 // ─── INDIA ────────────────────────────────────────────────────────
 function IndiaPanel({ period }: { period: string }) {
+  const { toast } = useToast();
   const [gstr3b, setGstr3b] = useState<any>(null);
   const [hsn, setHsn] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -232,7 +227,7 @@ function IndiaPanel({ period }: { period: string }) {
         setGstr3b(a);
         setHsn(b as any[]);
       })
-      .catch(() => toast.error("Failed to load India report"))
+      .catch(() => toast({ variant: "destructive", title: "Failed to load India report" }))
       .finally(() => setLoading(false));
   }, [period]);
 
@@ -327,13 +322,14 @@ function IndiaPanel({ period }: { period: string }) {
 
 // ─── NEPAL ────────────────────────────────────────────────────────
 function NepalPanel({ period }: { period: string }) {
+  const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     setLoading(true);
     taxReportsApi.nepalVat(period)
       .then((r) => setData(r.data))
-      .catch(() => toast.error("Failed to load Nepal VAT"))
+      .catch(() => toast({ variant: "destructive", title: "Failed to load Nepal VAT" }))
       .finally(() => setLoading(false));
   }, [period]);
   return (
@@ -356,13 +352,14 @@ function NepalPanel({ period }: { period: string }) {
 
 // ─── UAE ──────────────────────────────────────────────────────────
 function UaePanel({ period }: { period: string }) {
+  const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     setLoading(true);
     taxReportsApi.uaeVat201(period)
       .then((r) => setData(r.data))
-      .catch(() => toast.error("Failed to load UAE VAT 201"))
+      .catch(() => toast({ variant: "destructive", title: "Failed to load UAE VAT 201" }))
       .finally(() => setLoading(false));
   }, [period]);
   return (
@@ -383,13 +380,14 @@ function UaePanel({ period }: { period: string }) {
 
 // ─── UK ───────────────────────────────────────────────────────────
 function UkPanel({ period }: { period: string }) {
+  const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     setLoading(true);
     taxReportsApi.ukMtd(period)
       .then((r) => setData(r.data))
-      .catch(() => toast.error("Failed to load UK MTD"))
+      .catch(() => toast({ variant: "destructive", title: "Failed to load UK MTD" }))
       .finally(() => setLoading(false));
   }, [period]);
   return (
@@ -410,13 +408,14 @@ function UkPanel({ period }: { period: string }) {
 
 // ─── EU ───────────────────────────────────────────────────────────
 function EuPanel({ period }: { period: string }) {
+  const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     setLoading(true);
     taxReportsApi.euOss(period)
       .then((r) => setData(r.data))
-      .catch(() => toast.error("Failed to load EU OSS"))
+      .catch(() => toast({ variant: "destructive", title: "Failed to load EU OSS" }))
       .finally(() => setLoading(false));
   }, [period]);
   const downloadCsv = async () => {
@@ -450,13 +449,14 @@ function EuPanel({ period }: { period: string }) {
 
 // ─── US ───────────────────────────────────────────────────────────
 function UsPanel({ period }: { period: string }) {
+  const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     setLoading(true);
     taxReportsApi.usState(period)
       .then((r) => setData(r.data))
-      .catch(() => toast.error("Failed to load US state report"))
+      .catch(() => toast({ variant: "destructive", title: "Failed to load US state report" }))
       .finally(() => setLoading(false));
   }, [period]);
   const downloadCsv = async () => {
