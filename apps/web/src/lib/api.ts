@@ -915,6 +915,10 @@ export const ticketsApi = {
     message: string;
     history?: Array<{ role: "user" | "assistant"; content: string }>;
   }) => api.post("/tickets/ai-chat", data),
+  // Admin — bot session history
+  getBotSessions: (page = 1, limit = 20) =>
+    api.get("/tickets/ai-chat/sessions", { params: { page, limit } }),
+  getBotStats: () => api.get("/tickets/ai-chat/stats"),
   // Public contacts
   getPublicContacts: () => api.get("/tickets/contacts"),
 };
