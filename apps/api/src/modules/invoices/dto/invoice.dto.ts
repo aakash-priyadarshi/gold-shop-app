@@ -1,7 +1,9 @@
 import { Type } from "class-transformer";
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -85,6 +87,38 @@ export class CreateInvoiceDto {
   @IsOptional()
   @IsString()
   terms?: string;
+
+  // ── Tax filing fields ──────────────────────────────────────────
+  @IsOptional()
+  @IsBoolean()
+  isTaxExempt?: boolean;
+
+  @IsOptional()
+  @IsString()
+  taxExemptReason?: string;
+
+  @IsOptional()
+  @IsIn(["B2C", "B2B"])
+  customerType?: "B2C" | "B2B";
+
+  @IsOptional()
+  @IsString()
+  customerTaxId?: string;
+
+  @IsOptional()
+  @IsString()
+  invoiceCountry?: string;
+
+  @IsOptional()
+  @IsString()
+  placeOfSupply?: string;
+
+  @IsOptional()
+  @IsString()
+  hsnCode?: string;
+
+  @IsOptional()
+  taxBreakdown?: Record<string, number>;
 }
 
 export class UpdatePaymentDto {

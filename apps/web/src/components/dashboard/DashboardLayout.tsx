@@ -356,6 +356,12 @@ const navItems: NavItem[] = [
     roles: ["SHOPKEEPER"],
   },
   {
+    label: "Tax Reports",
+    href: "/dashboard/shop/tax-reports",
+    icon: FileText,
+    roles: ["SHOPKEEPER"],
+  },
+  {
     label: "Customers",
     href: "/dashboard/shop/customers",
     icon: Users,

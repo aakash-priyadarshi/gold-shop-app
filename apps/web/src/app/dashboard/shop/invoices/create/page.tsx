@@ -20,6 +20,11 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { invoicesApi, shopQuotesApi } from "@/lib/api";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
+  detectTaxIdKind,
+  TAX_EXEMPT_REASONS,
+  validateTaxId,
+} from "@/lib/tax/validators";
+import {
   ArrowLeft,
   Check,
   ChevronDown,
@@ -333,6 +338,21 @@ export default function CreateInvoicePage() {
   const [invoiceCountry, setInvoiceCountry] = useState(shopCountry);
   const countryTax =
     CATEGORY_TAX_RATES[invoiceCountry] || CATEGORY_TAX_RATES["IN"];
+
+  // ── Tax filing fields (Sprint 1 universal) ──
+  const [customerType, setCustomerType] = useState<"B2C" | "B2B">("B2C");
+  const [customerTaxId, setCustomerTaxId] = useState("");
+  const [isTaxExempt, setIsTaxExempt] = useState(false);
+  const [taxExemptReason, setTaxExemptReason] = useState("EXPORT");
+  const [useCustomTaxRate, setUseCustomTaxRate] = useState(false);
+  const [customTaxRatePercent, setCustomTaxRatePercent] = useState("");
+  const [placeOfSupply, setPlaceOfSupply] = useState("");
+
+  const taxIdValidation = useMemo(() => {
+    if (!customerTaxId) return null;
+    return validateTaxId(customerTaxId, invoiceCountry);
+  }, [customerTaxId, invoiceCountry]);
+  const taxIdKind = detectTaxIdKind(invoiceCountry);
 
   // ── Customer ──
   const [customerName, setCustomerName] = useState("");
@@ -706,6 +726,14 @@ export default function CreateInvoicePage() {
       });
       return;
     }
+    if (customerType === "B2B" && customerTaxId && taxIdValidation && !taxIdValidation.valid) {
+      toast({
+        variant: "destructive",
+        title: "Invalid tax ID",
+        description: taxIdValidation.message || "Check the customer tax ID format",
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -766,15 +794,26 @@ export default function CreateInvoicePage() {
         customerEmail: customerEmail || undefined,
         customerAddress: fullAddress || undefined,
         lineItems: apiLineItems,
-        taxRate: countryTax.defaultRate,
-        taxLabel: countryTax.taxName || undefined,
+        taxRate: isTaxExempt
+          ? 0
+          : useCustomTaxRate
+            ? (parseFloat(customTaxRatePercent) || 0) / 100
+            : countryTax.defaultRate,
+        taxLabel: isTaxExempt ? "Tax Exempt" : countryTax.taxName || undefined,
         taxBreakdown: {
-          metalTax: taxBreakdown.metalTax,
-          gemstoneTax: taxBreakdown.gemstoneTax,
-          makingTax: taxBreakdown.makingTax,
-          totalTax: taxBreakdown.totalTax,
+          metalTax: isTaxExempt ? 0 : taxBreakdown.metalTax,
+          gemstoneTax: isTaxExempt ? 0 : taxBreakdown.gemstoneTax,
+          makingTax: isTaxExempt ? 0 : taxBreakdown.makingTax,
+          totalTax: isTaxExempt ? 0 : taxBreakdown.totalTax,
           country: invoiceCountry,
         },
+        // Tax filing
+        isTaxExempt,
+        taxExemptReason: isTaxExempt ? taxExemptReason : undefined,
+        customerType,
+        customerTaxId: customerTaxId || undefined,
+        invoiceCountry,
+        placeOfSupply: placeOfSupply || undefined,
         makingCharge: makingChargeAmount || undefined,
         discountAmount: discountAmount || undefined,
         dueDate: dueDate || undefined,
@@ -948,6 +987,149 @@ export default function CreateInvoicePage() {
                         {(countryTax.rates.FINISH * 100).toFixed(1)}%
                       </span>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Tax filing controls ───────────────────────────── */}
+              <div className="mt-4 pt-4 border-t space-y-4">
+                {/* B2B/B2C selector */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Customer Type</Label>
+                    <div className="flex gap-2 mt-1">
+                      {(["B2C", "B2B"] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setCustomerType(t)}
+                          className={`flex-1 px-3 py-2 text-sm rounded-md border transition ${
+                            customerType === t
+                              ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 font-semibold"
+                              : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                          }`}
+                        >
+                          {t === "B2C" ? "Consumer (B2C)" : "Business (B2B)"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Label>
+                      Customer Tax ID
+                      <span className="text-xs text-gray-500 ml-1">
+                        ({taxIdKind.replace("_", " ")})
+                      </span>
+                    </Label>
+                    <Input
+                      value={customerTaxId}
+                      onChange={(e) => setCustomerTaxId(e.target.value.toUpperCase())}
+                      placeholder={
+                        taxIdKind === "GSTIN"
+                          ? "22AAAAA0000A1Z5"
+                          : taxIdKind === "TRN_AE"
+                            ? "100123456700003"
+                            : taxIdKind === "VAT_GB"
+                              ? "GB123456789"
+                              : taxIdKind === "PAN_NP"
+                                ? "123456789"
+                                : "Tax ID"
+                      }
+                      className={
+                        taxIdValidation && !taxIdValidation.valid
+                          ? "border-red-400 focus-visible:ring-red-400"
+                          : taxIdValidation?.valid
+                            ? "border-green-400"
+                            : ""
+                      }
+                    />
+                    {taxIdValidation && (
+                      <p
+                        className={`text-xs mt-1 ${
+                          taxIdValidation.valid
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {taxIdValidation.valid
+                          ? `✓ Valid${taxIdValidation.stateCode ? ` · State ${taxIdValidation.stateCode}` : ""}`
+                          : taxIdValidation.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* India: Place of Supply for IGST detection */}
+                {invoiceCountry === "IN" && customerType === "B2B" && (
+                  <div>
+                    <Label>Place of Supply (state for IGST detection)</Label>
+                    <Input
+                      value={placeOfSupply}
+                      onChange={(e) => setPlaceOfSupply(e.target.value)}
+                      placeholder="e.g. Maharashtra, Karnataka"
+                    />
+                  </div>
+                )}
+
+                {/* Custom tax-rate override */}
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="custom-tax-rate"
+                    checked={useCustomTaxRate}
+                    onChange={(e) => setUseCustomTaxRate(e.target.checked)}
+                    className="mt-1"
+                    disabled={isTaxExempt}
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="custom-tax-rate" className="text-sm font-medium cursor-pointer">
+                      Override default tax rate
+                    </label>
+                    {useCustomTaxRate && !isTaxExempt && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={customTaxRatePercent}
+                          onChange={(e) => setCustomTaxRatePercent(e.target.value)}
+                          placeholder="0.00"
+                          className="w-24"
+                        />
+                        <span className="text-sm text-gray-500">%</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tax-exempt toggle */}
+                <div className="flex items-start gap-3 p-3 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200">
+                  <input
+                    type="checkbox"
+                    id="tax-exempt"
+                    checked={isTaxExempt}
+                    onChange={(e) => setIsTaxExempt(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="tax-exempt" className="text-sm font-medium cursor-pointer">
+                      Mark as tax-exempt
+                    </label>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                      Force tax to zero. Use for exports, composite dealers, investment gold, or below-threshold sales.
+                    </p>
+                    {isTaxExempt && (
+                      <select
+                        value={taxExemptReason}
+                        onChange={(e) => setTaxExemptReason(e.target.value)}
+                        className="mt-2 w-full md:w-72 h-9 px-2 text-sm border rounded-md bg-background"
+                      >
+                        {TAX_EXEMPT_REASONS.map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
               </div>

@@ -50,6 +50,7 @@ import { ShopQuotesModule } from "./modules/shop-quotes/shop-quotes.module";
 import { ShopsModule } from "./modules/shops/shops.module";
 import { SubscriptionPlansModule } from "./modules/subscriptions/subscription-plans.module";
 import { SupportModule } from "./modules/support/support.module";
+import { TaxReportsModule } from "./modules/tax-reports/tax-reports.module";
 import { TestingModule } from "./modules/testing/testing.module";
 import { TranslationModule } from "./modules/translation/translation.module";
 import { UsersModule } from "./modules/users/users.module";
@@ -124,6 +125,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     PagesModule,
     BlogModule,
     InvoicesModule,
+    TaxReportsModule,
     PaymentsModule,
     NotificationsModule,
     MaterialsModule,

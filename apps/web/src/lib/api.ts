@@ -670,6 +670,53 @@ export const invoicesApi = {
   updateSettings: (data: any) => api.patch("/invoices/settings", data),
 };
 
+// Tax filing reports API (GSTR, VAT, MTD, OSS, US state, share)
+export const taxReportsApi = {
+  summary: (country: string, period: string) =>
+    api.get("/tax-reports/summary", { params: { country, period } }),
+  // India
+  indiaGstr1: (period: string, format: "json" | "csv" = "json") =>
+    api.get("/tax-reports/india/gstr1", {
+      params: { period, format },
+      responseType: format === "csv" ? "blob" : "json",
+    }),
+  indiaGstr3b: (period: string) =>
+    api.get("/tax-reports/india/gstr3b", { params: { period } }),
+  indiaHsn: (period: string, format: "json" | "csv" = "json") =>
+    api.get("/tax-reports/india/hsn", {
+      params: { period, format },
+      responseType: format === "csv" ? "blob" : "json",
+    }),
+  indiaTallyXml: (period: string) =>
+    api.get("/tax-reports/india/tally.xml", {
+      params: { period },
+      responseType: "blob",
+    }),
+  // Nepal
+  nepalVat: (period: string) =>
+    api.get("/tax-reports/nepal/vat", { params: { period } }),
+  // UAE
+  uaeVat201: (period: string) =>
+    api.get("/tax-reports/uae/vat201", { params: { period } }),
+  // UK
+  ukMtd: (period: string) => api.get("/tax-reports/uk/mtd", { params: { period } }),
+  // EU
+  euOss: (period: string, format: "json" | "csv" = "json") =>
+    api.get("/tax-reports/eu/oss", {
+      params: { period, format },
+      responseType: format === "csv" ? "blob" : "json",
+    }),
+  // US
+  usState: (period: string, format: "json" | "csv" = "json") =>
+    api.get("/tax-reports/us/state", {
+      params: { period, format },
+      responseType: format === "csv" ? "blob" : "json",
+    }),
+  // CA share
+  createShareLink: (data: { country: string; period: string; ttlDays?: number }) =>
+    api.post("/tax-reports/share-link", data),
+};
+
 // Marketplace Intelligence API
 export const intelligenceApi = {
   // AI RFQ Builder

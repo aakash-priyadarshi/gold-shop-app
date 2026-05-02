@@ -1975,6 +1975,16 @@ model Invoice {
   notes           String?
   terms           String?
 
+  // ── Tax filing fields (Sprint 1) ────────────────────────────────
+  isTaxExempt      Boolean  @default(false)
+  taxExemptReason  String?  // EXPORT, COMPOSITE, REVERSE_CHARGE, THRESHOLD, INVESTMENT_GOLD, OTHER
+  customerType     String   @default("B2C") // B2C | B2B
+  customerTaxId    String?  // GSTIN / TRN / VAT / PAN
+  invoiceCountry   String?  // ISO-2: NP, IN, AE, GB, DE, US, ...
+  placeOfSupply    String?  // For India inter-state IGST detection (state code/name)
+  hsnCode          String?  // HS / HSN classification (jewellery default 7113)
+  taxBreakdown     Json?    // { igst, cgst, sgst, vat, makingTax, metalTax, ... }
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -1984,6 +1994,27 @@ model Invoice {
   @@index([orderId])
   @@index([status])
   @@index([invoiceNumber])
+  @@index([shopId, issuedAt])
+  @@index([invoiceCountry])
+}
+
+// Tax export / share audit log (GDPR + CA collaboration)
+model TaxExportLog {
+  id            String   @id @default(uuid())
+  shopId        String
+  exportType    String   // GSTR1, GSTR3B, HSN, NEPAL_VAT, UAE_VAT201, UK_MTD, EU_OSS, US_STATE, TALLY_XML, CA_SHARE
+  country       String
+  period        String   // e.g. "2026-02" or "2026-Q1"
+  format        String   // CSV, JSON, XML, PDF, LINK
+  requestedBy   String?  // userId
+  ipHash        String?  // hashed IP, no PII
+  shareToken    String?  @unique
+  shareExpiresAt DateTime?
+  rowCount      Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([shopId, createdAt])
+  @@index([shareToken])
 }
 
 model InvoiceSettings {

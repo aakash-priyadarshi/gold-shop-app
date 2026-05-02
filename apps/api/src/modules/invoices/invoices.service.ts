@@ -47,8 +47,11 @@ export class InvoicesService {
     // Calculate totals from line items
     const lineItems = dto.lineItems || [];
     const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
-    const taxRate = dto.taxRate || 0;
-    const taxAmount = subtotal * taxRate;
+
+    // Tax-exempt sales force tax to zero regardless of submitted rate
+    const isTaxExempt = !!dto.isTaxExempt;
+    const taxRate = isTaxExempt ? 0 : dto.taxRate || 0;
+    const taxAmount = isTaxExempt ? 0 : subtotal * taxRate;
     const discountAmount = dto.discountAmount || 0;
     const totalAmount = subtotal + taxAmount - discountAmount;
 
@@ -66,7 +69,7 @@ export class InvoicesService {
         subtotal,
         taxAmount,
         taxRate,
-        taxLabel: dto.taxLabel || null,
+        taxLabel: isTaxExempt ? "Tax Exempt" : dto.taxLabel || null,
         discountAmount,
         totalAmount,
         paidAmount: 0,
@@ -77,6 +80,15 @@ export class InvoicesService {
         terms: dto.terms || null,
         status: "ISSUED",
         issuedAt: new Date(),
+        // Tax filing
+        isTaxExempt,
+        taxExemptReason: dto.taxExemptReason || null,
+        customerType: dto.customerType || "B2C",
+        customerTaxId: dto.customerTaxId || null,
+        invoiceCountry: dto.invoiceCountry || null,
+        placeOfSupply: dto.placeOfSupply || null,
+        hsnCode: dto.hsnCode || "7113", // default for jewellery
+        taxBreakdown: (dto.taxBreakdown as any) || null,
       },
     });
 
