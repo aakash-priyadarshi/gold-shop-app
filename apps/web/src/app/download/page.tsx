@@ -38,6 +38,7 @@ interface Release {
   minDisk: string | null;
   architecture: string | null;
   publishedAt: string;
+  downloadCount: number;
 }
 
 function detectPlatform(): "WINDOWS" | "MACOS" | "LINUX" {
@@ -52,6 +53,22 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+/** Round down to nearest order-of-magnitude milestone, show as "10+", "100+" etc. */
+function formatDownloadCount(n: number): string | null {
+  if (n < 10) return null;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(n)));
+  const rounded = Math.floor(n / magnitude) * magnitude;
+  return `${rounded.toLocaleString()}+`;
+}
+
+async function trackDownloadClick(id: string) {
+  try {
+    await api.post(`/releases/track-download/${id}`);
+  } catch {
+    // non-critical — never block the download
+  }
 }
 
 function formatDate(dateStr: string): string {
@@ -198,6 +215,11 @@ export default function DownloadPage() {
                     </CardTitle>
                     <CardDescription>
                       Version {primaryRelease.version} &middot;{" "}
+                      {primaryRelease.downloadCount > 0 && formatDownloadCount(primaryRelease.downloadCount) && (
+                        <span className="ml-1 text-gold-600 dark:text-gold-400 font-medium">
+                          {formatDownloadCount(primaryRelease.downloadCount)} downloads
+                        </span>
+                      )}</CardDescription>
                       {formatDate(primaryRelease.publishedAt)}
                     </CardDescription>
                   </CardHeader>
@@ -206,15 +228,16 @@ export default function DownloadPage() {
                       <Button
                         size="lg"
                         className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white px-8 gap-2"
-                        asChild
+                        onClick={async () => {
+                          await trackDownloadClick(primaryRelease.id);
+                          window.location.href = primaryRelease.downloadUrl!;
+                        }}
                       >
-                        <a href={primaryRelease.downloadUrl} download>
                           <ArrowDownTrayIcon className="w-5 h-5" />
                           <T>Download</T> v{primaryRelease.version}
                           {primaryRelease.fileSize
                             ? ` (${formatBytes(primaryRelease.fileSize)})`
                             : ""}
-                        </a>
                       </Button>
                     ) : (
                       <Button size="lg" disabled className="gap-2">

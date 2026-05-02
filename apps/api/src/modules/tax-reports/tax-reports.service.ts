@@ -470,4 +470,53 @@ export class TaxReportsService {
     });
     return shop?.state || null;
   }
+
+  // ── Admin: tax filing usage stats ────────────────────────────────
+  async getAdminTaxStats() {
+    const now = new Date();
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const startOf7d = new Date(Date.now() - 7 * 86400000);
+
+    const [total, thisMonth, last7d, byType, byCountry, topShops, caShares] =
+      await Promise.all([
+        this.prisma.taxExportLog.count(),
+        this.prisma.taxExportLog.count({ where: { createdAt: { gte: startOfMonth } } }),
+        this.prisma.taxExportLog.count({ where: { createdAt: { gte: startOf7d } } }),
+        this.prisma.taxExportLog.groupBy({
+          by: ["exportType"],
+          _count: { id: true },
+          orderBy: { _count: { id: "desc" } },
+        }),
+        this.prisma.taxExportLog.groupBy({
+          by: ["country"],
+          _count: { id: true },
+          orderBy: { _count: { id: "desc" } },
+        }),
+        this.prisma.taxExportLog.groupBy({
+          by: ["shopId"],
+          _count: { id: true },
+          orderBy: { _count: { id: "desc" } },
+          take: 10,
+        }),
+        this.prisma.taxExportLog.count({ where: { exportType: "CA_SHARE" } }),
+      ]);
+
+    const uniqueShops = (
+      await this.prisma.taxExportLog.findMany({
+        select: { shopId: true },
+        distinct: ["shopId"],
+      })
+    ).length;
+
+    return {
+      total,
+      thisMonth,
+      last7d,
+      uniqueShops,
+      caShares,
+      byType: byType.map((g) => ({ type: g.exportType, count: g._count.id })),
+      byCountry: byCountry.map((g) => ({ country: g.country, count: g._count.id })),
+      topShops: topShops.map((g) => ({ shopId: g.shopId, exports: g._count.id })),
+    };
+  }
 }

@@ -1,14 +1,13 @@
 import {
-  Body,
-  Controller,
-  Get,
-  Headers,
-  Ip,
-  Param,
-  Post,
-  Query,
-  Res,
-  UseGuards,
+    Body,
+    Controller,
+    Get,
+    Ip,
+    Param,
+    Post,
+    Query,
+    Res,
+    UseGuards
 } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { Response } from "express";
@@ -229,6 +228,13 @@ export class TaxReportsController {
       shareExpiresAt: expiresAt,
     });
     return { token, expiresAt };
+  }
+
+  // ── Admin: tax filing usage stats ────────────────────────────────
+  @Get("admin/stats")
+  @Roles(UserRole.ADMIN)
+  async adminTaxStats() {
+    return this.svc.getAdminTaxStats();
   }
 }
 

@@ -376,6 +376,59 @@ export class ReleasesService {
     return r.githubChangelog || r.changelog || "No changelog available.";
   }
 
+  /**
+   * Increment download counter for a release (public, no auth)
+   */
+  async trackDownload(id: string) {
+    const release = await this.prisma.appRelease.findUnique({ where: { id } });
+    if (!release) throw new NotFoundException("Release not found");
+    await this.prisma.appRelease.update({
+      where: { id },
+      data: { downloadCount: { increment: 1 } },
+    });
+    return { tracked: true };
+  }
+
+  /**
+   * Total download counts per platform for admin dashboard
+   */
+  async getDownloadStats() {
+    const releases = await this.prisma.appRelease.findMany({
+      select: {
+        platform: true,
+        version: true,
+        isLatest: true,
+        downloadCount: true,
+        publishedAt: true,
+      },
+      orderBy: [{ platform: "asc" }, { publishedAt: "desc" }],
+    });
+
+    // Aggregate by platform
+    const byPlatform: Record<string, { total: number; latest: number; version: string }> = {};
+    for (const r of releases) {
+      if (!byPlatform[r.platform]) {
+        byPlatform[r.platform] = { total: 0, latest: 0, version: "" };
+      }
+      byPlatform[r.platform].total += r.downloadCount;
+      if (r.isLatest) {
+        byPlatform[r.platform].latest = r.downloadCount;
+        byPlatform[r.platform].version = r.version;
+      }
+    }
+
+    const totalAll = releases.reduce((s, r) => s + r.downloadCount, 0);
+
+    return {
+      totalAll,
+      byPlatform,
+      releases: releases.map((r) => ({
+        ...r,
+        downloadCount: r.downloadCount,
+      })),
+    };
+  }
+
   private serializeRelease(r: any) {
     return {
       ...r,

@@ -3136,9 +3136,10 @@ model AppRelease {
   version     String   // semver e.g. "0.2.0"
   platform    String   // WINDOWS | MACOS | WEB
   channel     String   @default("stable") // stable | beta
-  downloadUrl String?  // direct download link (Windows/macOS installers)
-  fileSize    BigInt?  // bytes
-  fileName    String?  // e.g. "Orivraa_0.2.0_x64-setup.exe"
+  downloadUrl    String?  // direct download link (Windows/macOS installers)
+  fileSize       BigInt?  // bytes
+  fileName       String?  // e.g. "Orivraa_0.2.0_x64-setup.exe"
+  downloadCount  Int      @default(0) // incremented on each tracked click
 
   // Changelog — admin can override GitHub-sourced notes
   changelog       String? @db.Text // markdown

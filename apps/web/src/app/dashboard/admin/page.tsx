@@ -30,6 +30,8 @@ import {
   CheckCircle,
   Clock,
   DollarSign,
+  Download,
+  FileText,
   Globe,
   ShoppingCart,
   Store,
@@ -74,6 +76,21 @@ interface Activity {
   time: string;
 }
 
+interface TaxStats {
+  total: number;
+  thisMonth: number;
+  last7d: number;
+  uniqueShops: number;
+  caShares: number;
+  byType: { type: string; count: number }[];
+  byCountry: { country: string; count: number }[];
+}
+
+interface DownloadStats {
+  totalAll: number;
+  byPlatform: Record<string, { total: number; latest: number; version: string }>;
+}
+
 // Country info mapping
 const COUNTRY_INFO: Record<string, { name: string; currency: string }> = {
   NP: { name: "Nepal", currency: "NPR" },
@@ -90,6 +107,8 @@ export default function AdminDashboard() {
     Verification[]
   >([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
+  const [taxStats, setTaxStats] = useState<TaxStats | null>(null);
+  const [downloadStats, setDownloadStats] = useState<DownloadStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<
     "today" | "week" | "month" | "year"
@@ -224,6 +243,18 @@ export default function AdminDashboard() {
             time: new Date(r.createdAt).toLocaleString(),
           })),
         );
+
+        // Fetch tax filing stats
+        try {
+          const taxRes = await api.get("/tax-reports/admin/stats");
+          setTaxStats(taxRes.data);
+        } catch { /* non-critical */ }
+
+        // Fetch download stats
+        try {
+          const dlRes = await api.get("/releases/admin/download-stats");
+          setDownloadStats(dlRes.data);
+        } catch { /* non-critical */ }
       } catch (err) {
         console.error("Dashboard load error:", err);
       } finally {
@@ -524,6 +555,98 @@ export default function AdminDashboard() {
                 <Button variant="link" className="w-full mt-4 text-sm">
                   View all activity →
                 </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tax Filing Stats */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+            <Card className="premium-card">
+              <CardHeader className="p-4 lg:p-6">
+                <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                  <FileText className="h-4 w-4 lg:h-5 lg:w-5 text-emerald-500" />
+                  Tax Filing Usage
+                </CardTitle>
+                <CardDescription className="text-xs lg:text-sm">
+                  GSTR, VAT, MTD, OSS — all export events
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 lg:p-6 lg:pt-0">
+                {taxStats ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
+                        <p className="text-xl font-bold text-emerald-600">{taxStats.thisMonth}</p>
+                        <p className="text-xs text-muted-foreground">This month</p>
+                      </div>
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                        <p className="text-xl font-bold text-blue-600">{taxStats.uniqueShops}</p>
+                        <p className="text-xs text-muted-foreground">Active shops</p>
+                      </div>
+                      <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                        <p className="text-xl font-bold text-purple-600">{taxStats.caShares}</p>
+                        <p className="text-xs text-muted-foreground">CA shares</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Top export types</p>
+                      <div className="space-y-1">
+                        {taxStats.byType.slice(0, 5).map((t) => (
+                          <div key={t.type} className="flex items-center justify-between text-sm">
+                            <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{t.type}</span>
+                            <span className="font-medium">{t.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-right">{taxStats.total} total exports all time</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-sm">No tax export data yet</div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Desktop Download Stats */}
+            <Card className="premium-card">
+              <CardHeader className="p-4 lg:p-6">
+                <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                  <Download className="h-4 w-4 lg:h-5 lg:w-5 text-sky-500" />
+                  Desktop Downloads
+                </CardTitle>
+                <CardDescription className="text-xs lg:text-sm">
+                  Tracked clicks on the /download page
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 lg:p-6 lg:pt-0">
+                {downloadStats ? (
+                  <div className="space-y-4">
+                    <div className="text-center p-4 bg-sky-50 dark:bg-sky-900/20 rounded-xl">
+                      <p className="text-3xl font-bold text-sky-600">{downloadStats.totalAll.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Total downloads tracked</p>
+                    </div>
+                    <div className="space-y-2">
+                      {Object.entries(downloadStats.byPlatform).map(([platform, data]) => (
+                        <div key={platform} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+                          <div>
+                            <span className="text-sm font-medium">
+                              {platform === "WINDOWS" ? "🪟" : platform === "MACOS" ? "🍎" : "🐧"} {platform}
+                            </span>
+                            {data.version && <span className="ml-2 text-xs text-muted-foreground">v{data.version}</span>}
+                          </div>
+                          <div className="text-right">
+                            <span className="font-bold text-sm">{data.total.toLocaleString()}</span>
+                            {data.latest !== data.total && (
+                              <p className="text-xs text-muted-foreground">{data.latest} for latest</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-sm">No download data yet</div>
+                )}
               </CardContent>
             </Card>
           </div>

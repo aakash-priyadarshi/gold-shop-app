@@ -209,6 +209,29 @@ export class ReleasesController {
     return this.releasesService.getDesktopAnalytics();
   }
 
+  /**
+   * GET /api/releases/admin/download-stats
+   * Download click counts per release/platform (admin)
+   */
+  @Get("admin/download-stats")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Download click stats (admin)" })
+  async getDownloadStats() {
+    return this.releasesService.getDownloadStats();
+  }
+
+  /**
+   * POST /api/releases/track-download/:id
+   * Public — called by download page on button click. Increments download count.
+   */
+  @Post("track-download/:id")
+  @ApiOperation({ summary: "Track a download click (public)" })
+  async trackDownload(@Param("id") id: string) {
+    return this.releasesService.trackDownload(id);
+  }
+
   // ─── Helpers ───────────────────────────
 
   private extractIp(req: Request): string {
