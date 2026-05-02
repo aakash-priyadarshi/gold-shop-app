@@ -3439,3 +3439,15 @@ model SurveyAnswer {
   @@unique([responseId, questionId])
 }
 
+/// Support bot RAG — knowledge chunks embedded with gemini-embedding-001 (3072-dim)
+model KnowledgeChunk {
+  id        String                    @id @default(uuid())
+  topic     String                    // e.g. "pricing", "gst", "hallmark"
+  content   String                    // Raw text of the chunk
+  embedding Unsupported("vector(3072)")?
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+
+  @@index([topic])
+}
+

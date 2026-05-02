@@ -1,5 +1,6 @@
 import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
 import { TicketsService } from "./tickets.service";
 import { SupportService } from "./support.service";
@@ -18,19 +19,17 @@ export class AiChatbotService {
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
   private readonly GEMINI_EMBED_URL =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent";
-  private readonly QDRANT_COLLECTION = "agent_knowledge_v2";
   private readonly apiKey: string;
-  private readonly qdrantUrl: string;
 
   constructor(
     private configService: ConfigService,
+    private prisma: PrismaService,
     private authService: AuthService,
     @Inject(forwardRef(() => TicketsService))
     private ticketsService: TicketsService,
     private supportService: SupportService
   ) {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
-    this.qdrantUrl = this.configService.get<string>("QDRANT_URL") || "";
   }
 
   async chat(
@@ -184,13 +183,13 @@ export class AiChatbotService {
   }
 
   /**
-   * Searches the Qdrant `agent_knowledge_v2` collection for the most relevant
-   * knowledge chunks about the user's query. Uses Gemini embedding-001 (3072-dim,
-   * matches the collection's vector size). Gracefully returns "" if Qdrant or
-   * the API key is not configured.
+   * Embeds the query with Gemini embedding-001, then searches the
+   * KnowledgeChunk table (pgvector) for the top-3 nearest chunks by
+   * cosine similarity. Returns "" gracefully if the table is empty or
+   * the API key is missing.
    */
   private async searchKnowledge(query: string): Promise<string> {
-    if (!this.qdrantUrl || !this.apiKey) return "";
+    if (!this.apiKey) return "";
     try {
       // 1. Embed the query
       const embedRes = await fetch(
@@ -209,26 +208,20 @@ export class AiChatbotService {
       const vector: number[] | undefined = embedData?.embedding?.values;
       if (!Array.isArray(vector) || vector.length === 0) return "";
 
-      // 2. Search Qdrant
-      const searchRes = await fetch(
-        `${this.qdrantUrl}/collections/${this.QDRANT_COLLECTION}/points/search`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ vector, limit: 3, with_payload: true }),
-        }
+      // 2. Cosine similarity search via pgvector
+      // Cast the JS array to a Postgres vector literal
+      const vectorLiteral = `[${vector.join(",")}]`;
+      const rows = await this.prisma.$queryRawUnsafe<{ content: string }[]>(
+        `SELECT content FROM "KnowledgeChunk"
+         ORDER BY embedding <=> $1::vector
+         LIMIT 3`,
+        vectorLiteral,
       );
-      if (!searchRes.ok) return "";
-      const searchData = await searchRes.json() as any;
-      const results: any[] = searchData?.result ?? [];
-      if (results.length === 0) return "";
+      if (!rows.length) return "";
 
-      return results
-        .map((r) => r.payload?.text || r.payload?.content || "")
-        .filter(Boolean)
-        .join("\n\n---\n\n");
+      return rows.map((r) => r.content).join("\n\n---\n\n");
     } catch (err) {
-      this.logger.warn("Qdrant search skipped:", (err as Error).message);
+      this.logger.warn("pgvector search skipped:", (err as Error).message);
       return "";
     }
   }
