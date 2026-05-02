@@ -7,7 +7,8 @@
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "demo": "playwright test seller-demo --project=chromium --headed --workers=1"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0"
