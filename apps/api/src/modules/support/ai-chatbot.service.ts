@@ -2,8 +2,8 @@ import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
-import { TicketsService } from "./tickets.service";
 import { SupportService } from "./support.service";
+import { TicketsService } from "./tickets.service";
 
 export interface AiChatResponse {
   reply: string;

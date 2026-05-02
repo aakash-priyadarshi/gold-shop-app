@@ -1,10 +1,10 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import {
-  CreateReleaseDto,
-  DesktopHeartbeatDto,
-  PublishReleaseDto,
-  UpdateReleaseDto,
+    CreateReleaseDto,
+    DesktopHeartbeatDto,
+    PublishReleaseDto,
+    UpdateReleaseDto,
 } from "./dto/release.dto";
 
 @Injectable()

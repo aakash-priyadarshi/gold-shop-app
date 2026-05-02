@@ -16,8 +16,6 @@ CREATE TABLE "KnowledgeChunk" (
 -- Index for topic filtering
 CREATE INDEX "KnowledgeChunk_topic_idx" ON "KnowledgeChunk"("topic");
 
--- IVFFlat index for fast cosine similarity search (build after seeding)
--- Lists = sqrt(expected row count). For ~100 chunks: 10 lists is fine.
-CREATE INDEX "KnowledgeChunk_embedding_idx"
-    ON "KnowledgeChunk" USING ivfflat ("embedding" vector_cosine_ops)
-    WITH (lists = 10);
+-- NOTE: IVFFlat/HNSW vector indexes require <= 2000 dims; gemini-embedding-001
+-- produces 3072-dim vectors so we skip the ANN index. Sequential scan is
+-- instant for the small knowledge table (~17-100 rows).

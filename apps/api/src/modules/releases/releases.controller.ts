@@ -1,16 +1,16 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Headers,
-  Logger,
-  Param,
-  Patch,
-  Post,
-  Query,
-  Req,
-  UseGuards,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Headers,
+    Logger,
+    Param,
+    Patch,
+    Post,
+    Query,
+    Req,
+    UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
@@ -20,10 +20,10 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import {
-  CreateReleaseDto,
-  DesktopHeartbeatDto,
-  PublishReleaseDto,
-  UpdateReleaseDto,
+    CreateReleaseDto,
+    DesktopHeartbeatDto,
+    PublishReleaseDto,
+    UpdateReleaseDto,
 } from "./dto/release.dto";
 import { ReleasesService } from "./releases.service";
 

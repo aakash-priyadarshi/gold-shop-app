@@ -12,8 +12,8 @@
  *   WhatsApp: +91 62039 65557
  */
 
-import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
 import { Mail, MessageCircle, Phone, Send, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 

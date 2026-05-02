@@ -1,13 +1,13 @@
 import { Type } from "class-transformer";
 import {
-  IsArray,
-  IsBoolean,
-  IsDateString,
-  IsIn,
-  IsNumber,
-  IsOptional,
-  IsString,
-  ValidateNested,
+    IsArray,
+    IsBoolean,
+    IsDateString,
+    IsIn,
+    IsNumber,
+    IsOptional,
+    IsString,
+    ValidateNested,
 } from "class-validator";
 
 export class InvoiceLineItemDto {

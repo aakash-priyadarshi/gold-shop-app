@@ -5,11 +5,11 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,24 +20,24 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { invoicesApi, shopQuotesApi } from "@/lib/api";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
-  detectTaxIdKind,
-  TAX_EXEMPT_REASONS,
-  validateTaxId,
+    detectTaxIdKind,
+    TAX_EXEMPT_REASONS,
+    validateTaxId,
 } from "@/lib/tax/validators";
 import {
-  ArrowLeft,
-  Check,
-  ChevronDown,
-  FileDown,
-  Globe,
-  Loader2,
-  Phone,
-  Plus,
-  RefreshCw,
-  Scale,
-  Trash2,
-  User,
-  X,
+    ArrowLeft,
+    Check,
+    ChevronDown,
+    FileDown,
+    Globe,
+    Loader2,
+    Phone,
+    Plus,
+    RefreshCw,
+    Scale,
+    Trash2,
+    User,
+    X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
