@@ -149,7 +149,7 @@ const KB: Intent[] = [
     id: "hello",
     keywords: ["hi", "hello", "hey", "namaste", "salaam", "good morning", "good evening"],
     reply:
-      "Hi! I'm the Orivraa assistant. I can answer questions about pricing, features, GST, hallmarking, offline POS, AI agents and onboarding. What would you like to know?",
+      "Hello! Go ahead and ask me anything — pricing, GST, offline POS, hallmarking, comparing with Tally, or anything else about Orivraa. Or type 'talk to a human' to reach our founder directly.",
   },
   {
     id: "thanks",
@@ -168,13 +168,24 @@ const QUICK_ASKS = [
 
 /* ───────────────────────────── Matching engine ─────────────────────────── */
 
+/**
+ * Use word-boundary regex for short keywords (≤4 chars) so "hi" doesn't
+ * match inside "this", "which", "shipping" etc. Longer phrases match anywhere.
+ */
+function matchWord(text: string, keyword: string): boolean {
+  if (keyword.length <= 4) {
+    return new RegExp(`(?<![a-z])${keyword}(?![a-z])`, "i").test(text);
+  }
+  return text.includes(keyword);
+}
+
 function matchIntent(text: string): Intent | undefined {
   const q = text.toLowerCase();
   let best: { intent: Intent; score: number } | undefined;
   for (const intent of KB) {
     let score = 0;
     for (const kw of intent.keywords) {
-      if (q.includes(kw)) score += kw.length; // longer keyword = stronger signal
+      if (matchWord(q, kw)) score += kw.length; // longer keyword = stronger signal
     }
     if (score > 0 && (!best || score > best.score)) {
       best = { intent, score };
