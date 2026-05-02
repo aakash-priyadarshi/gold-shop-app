@@ -32,23 +32,52 @@ export class AiChatbotService {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
   }
 
+  /**
+   * Detects lead intent signals from a user message.
+   * Used to tag BotSession.leadIntents for analytics / investor reporting.
+   */
+  private detectLeadIntents(message: string): string[] {
+    const msg = message.toLowerCase();
+    const intents: string[] = [];
+    if (/price|cost|how much|kitna|₹|rs\.|rupee|subscription|plan/.test(msg)) intents.push('pricing');
+    if (/trial|free|demo|test|try/.test(msg)) intents.push('trial');
+    if (/tally|marg|vs\s|compare|better than|difference/.test(msg)) intents.push('comparison');
+    if (/setup|install|start|getting started|onboard/.test(msg)) intents.push('onboarding');
+    if (/not working|broken|issue|problem|bug|error|crash/.test(msg)) intents.push('complaint');
+    if (/offline|pos|without internet|no internet/.test(msg)) intents.push('offline_pos');
+    if (/gst|tax|hallmark|bis|huid/.test(msg)) intents.push('compliance');
+    return intents;
+  }
+
   async chat(
     message: string,
     conversationHistory: Array<{
       role: "user" | "assistant";
       content: string;
     }> = [],
-    ipAddress?: string
+    ipAddress?: string,
+    sessionId?: string,
+    userAgent?: string,
   ): Promise<AiChatResponse> {
     if (!this.apiKey) {
       return this.fallbackResponse(message);
     }
 
     try {
-      // Log the incoming message
-      await this.supportService.logAiChat(null, "user", message, undefined, undefined, ipAddress);
+      // Upsert the session record (creates on first message, increments count after)
+      if (sessionId) {
+        const intents = this.detectLeadIntents(message);
+        await this.supportService.upsertBotSession(sessionId, {
+          ipAddress,
+          userAgent,
+          newIntents: intents,
+        });
+      }
 
-      // Optionally enrich context with Qdrant RAG (gracefully skipped if not configured)
+      // Log the incoming user message
+      await this.supportService.logAiChat(sessionId ?? null, "user", message, undefined, undefined, ipAddress);
+
+      // Enrich context with pgvector RAG (gracefully skipped if not configured)
       const knowledgeContext = await this.searchKnowledge(message);
 
       const systemPrompt = this.buildSystemPrompt(knowledgeContext || undefined);
@@ -117,14 +146,14 @@ export class AiChatbotService {
 
       // Check if Gemini invoked a function
       if (firstPart && firstPart.functionCall) {
-         return this.handleFunctionCall(firstPart.functionCall, ipAddress);
+         return this.handleFunctionCall(firstPart.functionCall, ipAddress, sessionId);
       }
 
       const text = firstPart?.text || "";
 
       // Fallback manual parsing if Gemini responded as JSON string instead of function structure
       const parsed = this.parseAiResponse(text);
-      await this.supportService.logAiChat(null, "assistant", parsed.reply, undefined, parsed.confidence, ipAddress);
+      await this.supportService.logAiChat(sessionId ?? null, "assistant", parsed.reply, undefined, parsed.confidence, ipAddress);
       return parsed;
     } catch (error) {
       this.logger.error("AI chatbot error:", error);
@@ -132,14 +161,18 @@ export class AiChatbotService {
     }
   }
 
-  private async handleFunctionCall(functionCall: any, ipAddress?: string): Promise<AiChatResponse> {
+  private async handleFunctionCall(
+    functionCall: any,
+    ipAddress?: string,
+    sessionId?: string,
+  ): Promise<AiChatResponse> {
      try {
        const { name, args } = functionCall;
        
        if (name === "sendPasswordReset") {
           await this.authService.forgotPassword(args.email, ipAddress || "");
           const reply = `I have successfully sent a password reset link to ${args.email}. Please check your inbox and spam folder.`;
-          await this.supportService.logAiChat(null, "assistant", reply, "sendPasswordReset", 1.0, ipAddress);
+          await this.supportService.logAiChat(sessionId ?? null, "assistant", reply, "sendPasswordReset", 1.0, ipAddress);
           return {
              reply,
              shouldEscalate: false,
@@ -158,7 +191,11 @@ export class AiChatbotService {
           } as any);
 
           const reply = `I have escalated this issue and a high-priority ticket (#${ticket.ticketNumber}) has been created for your account. Our human support team has been notified and will email you at ${args.guestEmail} shortly.`;
-          await this.supportService.logAiChat(null, "assistant", reply, "autoEscalateTicket", 1.0, ipAddress);
+          await this.supportService.logAiChat(sessionId ?? null, "assistant", reply, "autoEscalateTicket", 1.0, ipAddress);
+          // Tag session as escalated with guest contact details
+          if (sessionId) {
+            await this.supportService.markSessionEscalated(sessionId, args.guestName, args.guestEmail);
+          }
           return {
              reply,
              shouldEscalate: false, 

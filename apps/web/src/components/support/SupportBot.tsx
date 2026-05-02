@@ -55,6 +55,7 @@ const WELCOME_MSG: Message = {
 
 const STORAGE_MSGS = "orivraa_chat_messages";
 const STORAGE_OPEN = "orivraa_chat_open";
+const STORAGE_SESSION_ID = "orivraa_chat_session_id";
 
 function readSession<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -64,6 +65,17 @@ function readSession<T>(key: string, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+/** Returns a stable UUID for this browser-tab session, creating one if absent. */
+function getOrCreateSessionId(): string {
+  if (typeof window === "undefined") return "";
+  let id = sessionStorage.getItem(STORAGE_SESSION_ID);
+  if (!id) {
+    id = crypto.randomUUID();
+    sessionStorage.setItem(STORAGE_SESSION_ID, id);
+  }
+  return id;
 }
 
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -110,7 +122,7 @@ export function SupportBot() {
     try {
       const res = await api.post<{ reply: string; shouldEscalate: boolean; confidence: number }>(
         "tickets/ai-chat",
-        { message: text, history },
+        { message: text, history, sessionId: getOrCreateSessionId() },
       );
 
       const botMsg: Message = {

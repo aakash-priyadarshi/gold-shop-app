@@ -53,10 +53,41 @@ export class TicketsController {
     @Body()
     body: {
       message: string;
+      sessionId?: string;
       history?: Array<{ role: "user" | "assistant"; content: string }>;
     },
   ) {
-    return this.aiChatbot.chat(body.message, body.history || [], req.ip);
+    const userAgent = req.headers?.["user-agent"] as string | undefined;
+    return this.aiChatbot.chat(
+      body.message,
+      body.history || [],
+      req.ip,
+      body.sessionId,
+      userAgent,
+    );
+  }
+
+  // ─── Admin: Bot conversation sessions list ───
+  @Get("ai-chat/sessions")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin — paginated list of bot chat sessions" })
+  async getBotSessions(
+    @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query("limit", new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.supportService.getBotSessions(page, limit);
+  }
+
+  // ─── Admin: Bot conversation stats (for investor dashboard) ───
+  @Get("ai-chat/stats")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin — aggregate bot stats (sessions, intents, daily trend)" })
+  async getBotStats() {
+    return this.supportService.getBotStats();
   }
 
   // ─── Public: Create ticket (guest — no auth required) ───
