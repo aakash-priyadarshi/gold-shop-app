@@ -105,39 +105,68 @@ const CHUNKS: { topic: string; content: string }[] = [
   },
 ];
 
-async function embed(text: string): Promise<number[]> {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function embedWithRetry(text: string, retries = 4): Promise<number[]> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY not set");
 
-  const res = await fetch(`${EMBED_URL}?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      content: { parts: [{ text }] },
-      taskType: "RETRIEVAL_DOCUMENT",
-    }),
-  });
-  if (!res.ok) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const res = await fetch(`${EMBED_URL}?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content: { parts: [{ text }] },
+        taskType: "RETRIEVAL_DOCUMENT",
+      }),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as any;
+      return data.embedding.values as number[];
+    }
     const body = await res.text();
+    // Retry on 429, 500/503, or 400 "expired"/"quota" (rate limit disguised as expiry)
+    const isRetryable =
+      attempt < retries &&
+      (res.status === 429 ||
+        res.status >= 500 ||
+        (res.status === 400 && body.includes("expired")));
+    if (isRetryable) {
+      const wait = 15000 * (attempt + 1);
+      process.stdout.write(`[rate-limited, retry in ${wait / 1000}s] `);
+      await sleep(wait);
+      continue;
+    }
     throw new Error(`Embed API error ${res.status}: ${body}`);
   }
-  const data = (await res.json()) as any;
-  return data.embedding.values as number[];
+  throw new Error("Embed failed after retries");
 }
 
 async function main() {
   console.log(`Seeding ${CHUNKS.length} knowledge chunks…`);
 
-  // Clear existing chunks to avoid duplicates on re-run
-  await prisma.$executeRaw`TRUNCATE TABLE "KnowledgeChunk"`;
-  console.log("Cleared existing chunks.");
+  // Fetch already-seeded topics so we can skip them on resume
+  const existing = await prisma.$queryRaw<{ topic: string }[]>`
+    SELECT topic FROM "KnowledgeChunk"
+  `;
+  const done = new Set(existing.map((r) => r.topic));
+  if (done.size > 0) {
+    console.log(`Resuming — skipping ${done.size} already-seeded topics.`);
+  } else {
+    await prisma.$executeRaw`TRUNCATE TABLE "KnowledgeChunk"`;
+    console.log("Cleared existing chunks.");
+  }
 
+  let count = 0;
   for (const chunk of CHUNKS) {
+    if (done.has(chunk.topic)) {
+      console.log(`  Skipping [${chunk.topic}] (already done)`);
+      continue;
+    }
     process.stdout.write(`  Embedding [${chunk.topic}]… `);
-    const vector = await embed(chunk.content);
+    const vector = await embedWithRetry(chunk.content);
     const vectorLiteral = `[${vector.join(",")}]`;
 
-    // Use raw SQL because Prisma doesn't support vector literal insert natively
     await prisma.$executeRawUnsafe(
       `INSERT INTO "KnowledgeChunk" (id, topic, content, embedding, "createdAt", "updatedAt")
        VALUES (gen_random_uuid(), $1, $2, $3::vector, NOW(), NOW())`,
@@ -146,9 +175,12 @@ async function main() {
       vectorLiteral,
     );
     console.log("done");
+    count++;
+    // gemini-embedding-001 free tier = 5 RPM → need ≥12s between calls
+    await sleep(13000);
   }
 
-  console.log(`\nSeeded ${CHUNKS.length} chunks successfully.`);
+  console.log(`\nSeeded ${count} new chunks (${CHUNKS.length} total).`);
 }
 
 main()
