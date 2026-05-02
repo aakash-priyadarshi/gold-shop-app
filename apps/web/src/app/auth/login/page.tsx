@@ -4,38 +4,39 @@ import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
 import { Turnstile } from "@/components/auth/Turnstile";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import OrivraaLoader, {
-  useMinLoadingTime,
+    useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import { T } from "@/components/ui/T";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { getDashboardRoute, useAuth } from "@/hooks/useAuth";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
 import {
-  ArrowPathIcon,
-  ArrowRightIcon,
-  CheckCircleIcon,
-  EnvelopeIcon,
-  ExclamationCircleIcon,
-  EyeIcon,
-  EyeSlashIcon,
-  LockClosedIcon,
+    ArrowPathIcon,
+    ArrowRightIcon,
+    CheckCircleIcon,
+    EnvelopeIcon,
+    ExclamationCircleIcon,
+    EyeIcon,
+    EyeSlashIcon,
+    LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -71,6 +72,8 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [hasVisited, setHasVisited] = useState(false);
   const [rememberMe, setRememberMe] = useState(true); // Default to checked for convenience
+  const { features: platformFeatures } = usePlatformFeatures();
+  const customerFlowEnabled = platformFeatures.customerFlowEnabled;
 
   // Email verification state (when user tries to login with unverified email)
   const [showVerification, setShowVerification] = useState(false);
@@ -492,7 +495,11 @@ function LoginForm() {
             <T>Welcome back</T>
           </CardTitle>
           <CardDescription className="text-base">
-            <T>Sign in to continue your jewellery journey</T>
+            {customerFlowEnabled ? (
+              <T>Sign in to continue your jewellery journey</T>
+            ) : (
+              <T>Sign in to your seller dashboard</T>
+            )}
           </CardDescription>
         </CardHeader>
 

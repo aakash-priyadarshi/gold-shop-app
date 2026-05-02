@@ -41,6 +41,8 @@ export class PlatformConfigService {
     ELITE_MIN_POSITIVE_FEEDBACK: "elite_min_positive_feedback",
     ELITE_MIN_ON_TIME_DISPATCH: "elite_min_on_time_dispatch",
     PRICE_FLAGGING_THRESHOLD: "price_flagging_threshold", // % above avg to flag
+    // Feature flags (stored as 0 = disabled, 1 = enabled)
+    CUSTOMER_FLOW_ENABLED: "customer_flow_enabled",
   } as const;
 
   // Default values (fallback if not in DB)
@@ -72,6 +74,8 @@ export class PlatformConfigService {
     [PlatformConfigService.KEYS.ELITE_MIN_POSITIVE_FEEDBACK]: 90,
     [PlatformConfigService.KEYS.ELITE_MIN_ON_TIME_DISPATCH]: 95,
     [PlatformConfigService.KEYS.PRICE_FLAGGING_THRESHOLD]: 50,
+    // Customer registration & login flow disabled by default during seller-first phase
+    [PlatformConfigService.KEYS.CUSTOMER_FLOW_ENABLED]: 0,
   };
 
   constructor(
@@ -204,5 +208,12 @@ export class PlatformConfigService {
   async getMakingChargeCap(tier: string): Promise<number> {
     const tierKey = `making_charge_cap_${tier.toLowerCase()}`;
     return this.getValue(tierKey);
+  }
+
+  async isCustomerFlowEnabled(): Promise<boolean> {
+    const value = await this.getValue(
+      PlatformConfigService.KEYS.CUSTOMER_FLOW_ENABLED,
+    );
+    return value === 1;
   }
 }

@@ -42,6 +42,7 @@ import {
 import { BRAND } from "@/config/brand";
 import { useCart } from "@/contexts/CartContext";
 import { getDashboardRoute, useAuth, type UserRole } from "@/hooks/useAuth";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { chatApi, notificationsApi, ordersApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -82,8 +83,8 @@ import {
     TruckIcon,
     UserIcon,
 } from "@heroicons/react/24/outline";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 // Role-specific quick action icons configuration
@@ -156,6 +157,8 @@ const getRoleQuickActions = (role: UserRole | undefined) => {
 export function Header() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const { items, itemCount, subtotal, removeFromCart } = useCart();
+  const { features: platformFeatures } = usePlatformFeatures();
+  const customerFlowEnabled = platformFeatures.customerFlowEnabled;
   const t = useT();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -328,12 +331,16 @@ export function Header() {
     }
   };
 
-  // Primary nav links (flat)
-  const navigation = [
-    { name: "Shops", href: "/shops", icon: BuildingStorefrontIcon },
-    { name: "Designs", href: "/designs", icon: HeartIcon },
-    { name: "Custom Order", href: "/rfq/create", icon: SparklesIcon },
-  ];
+  // Primary nav links (flat) — only shown when customer flow is enabled.
+  // When disabled, the site is in seller-only mode and these consumer
+  // browsing entry points are hidden from the header.
+  const navigation = customerFlowEnabled
+    ? [
+        { name: "Shops", href: "/shops", icon: BuildingStorefrontIcon },
+        { name: "Designs", href: "/designs", icon: HeartIcon },
+        { name: "Custom Order", href: "/rfq/create", icon: SparklesIcon },
+      ]
+    : [];
 
   // "For Sellers" dropdown items
   const sellerNavItems = [
@@ -1516,7 +1523,8 @@ export function Header() {
                 </PopoverContent>
               </Popover>
 
-              {/* Cart Popover */}
+              {/* Cart Popover — only when customer flow is on */}
+              {customerFlowEnabled && (
               <Popover open={cartPopoverOpen} onOpenChange={setCartPopoverOpen}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1642,6 +1650,7 @@ export function Header() {
                   )}
                 </PopoverContent>
               </Popover>
+              )}
 
               {/* Notifications Popover */}
               <Popover
@@ -1839,7 +1848,8 @@ export function Header() {
             </TooltipProvider>
           ) : (
             <>
-              {/* Cart for non-authenticated users */}
+              {/* Cart for non-authenticated users — only when customer flow is on */}
+              {customerFlowEnabled && (
               <Link href="/cart">
                 <Button
                   variant="ghost"
@@ -1854,6 +1864,7 @@ export function Header() {
                   )}
                 </Button>
               </Link>
+              )}
               <Link href="/auth/login">
                 <Button variant="ghost" className="h-9 rounded-lg">
                   <T>Log in</T>

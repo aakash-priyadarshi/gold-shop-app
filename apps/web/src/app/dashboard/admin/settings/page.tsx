@@ -8,58 +8,61 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { invalidatePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { adminApi, platformConfigApi } from "@/lib/api";
 import {
-  AlertTriangle,
-  Award,
-  Bell,
-  Bot,
-  CheckCircle2,
-  Database,
-  DollarSign,
-  FileText,
-  Globe,
-  KeyRound,
-  Loader2,
-  Mail,
-  Percent,
-  Play,
-  RefreshCw,
-  Save,
-  Send,
-  Settings,
-  Shield,
-  Trash2,
-  TrendingUp,
-  XCircle,
+    AlertTriangle,
+    Award,
+    Bell,
+    Bot,
+    CheckCircle2,
+    Database,
+    DollarSign,
+    FileText,
+    Globe,
+    KeyRound,
+    Loader2,
+    Mail,
+    Percent,
+    Play,
+    RefreshCw,
+    Save,
+    Send,
+    Settings,
+    Shield,
+    ToggleRight,
+    Trash2,
+    TrendingUp,
+    XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -101,6 +104,13 @@ export default function AdminSettingsPage() {
     currentPassword: "",
   });
   const [updatingAdminEmail, setUpdatingAdminEmail] = useState(false);
+
+  // Customer flow flag confirmation dialog
+  const [customerFlowDialogOpen, setCustomerFlowDialogOpen] = useState(false);
+  const [pendingCustomerFlowValue, setPendingCustomerFlowValue] = useState<
+    boolean | null
+  >(null);
+  const [savingCustomerFlow, setSavingCustomerFlow] = useState(false);
 
   // AI Description Service state
   const [aiServiceStatus, setAiServiceStatus] = useState<{
@@ -167,6 +177,8 @@ export default function AdminSettingsPage() {
     setSavingConfig(true);
     try {
       await platformConfigApi.update(platformConfig);
+      // Bust the public-features cache so /auth/register picks up changes
+      invalidatePlatformFeatures();
       toast({
         title: "Configuration Saved",
         description: "Platform configuration has been updated successfully.",
@@ -540,6 +552,83 @@ export default function AdminSettingsPage() {
             <div className="flex-1 min-w-0">
               {activeTab === "general" && (
                 <div className="grid gap-6">
+                  {/* Feature Flags */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <ToggleRight className="h-5 w-5" />
+                        Feature Flags
+                      </CardTitle>
+                      <CardDescription>
+                        Turn customer-facing flows on or off without a deploy.
+                        Use this to focus the site on sellers during the
+                        seller-CRM phase.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-start justify-between gap-4 p-4 border rounded-lg">
+                        <div className="flex-1 space-y-1">
+                          <Label
+                            htmlFor="customer-flow-toggle"
+                            className="text-base font-medium"
+                          >
+                            Customer registration & login flow
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            When OFF: the customer tab on the registration
+                            page is hidden, the marketplace pitches are
+                            de-emphasised, and only seller signup is shown.
+                            Existing customer accounts can still log in via
+                            direct URL. Turn ON to re-open the consumer
+                            marketplace.
+                          </p>
+                          <p className="text-xs text-muted-foreground pt-1">
+                            Status:{" "}
+                            <span
+                              className={
+                                platformConfig.customer_flow_enabled === 1
+                                  ? "text-green-600 font-medium"
+                                  : "text-amber-600 font-medium"
+                              }
+                            >
+                              {platformConfig.customer_flow_enabled === 1
+                                ? "Enabled (B2C + B2B)"
+                                : "Disabled (Seller-first mode)"}
+                            </span>
+                          </p>
+                        </div>
+                        <Switch
+                          id="customer-flow-toggle"
+                          checked={
+                            platformConfig.customer_flow_enabled === 1
+                          }
+                          disabled={loadingConfig || savingCustomerFlow}
+                          onCheckedChange={(checked) => {
+                            setPendingCustomerFlowValue(checked);
+                            setCustomerFlowDialogOpen(true);
+                          }}
+                        />
+                      </div>
+                      {configDirty && (
+                        <div className="flex justify-end pt-2">
+                          <Button
+                            onClick={handleSavePlatformConfig}
+                            disabled={savingConfig}
+                            size="sm"
+                            className="gap-2"
+                          >
+                            {savingConfig ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4" />
+                            )}
+                            {savingConfig ? "Saving..." : "Save Feature Flags"}
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
                   {/* Platform Fee */}
                   <Card>
                     <CardHeader>
@@ -2200,6 +2289,137 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Customer Flow Toggle Confirmation Dialog */}
+        <Dialog
+          open={customerFlowDialogOpen}
+          onOpenChange={(open) => {
+            if (!savingCustomerFlow) {
+              setCustomerFlowDialogOpen(open);
+              if (!open) setPendingCustomerFlowValue(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {pendingCustomerFlowValue ? (
+                  <>
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    Enable customer flow?
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                    Disable customer flow?
+                  </>
+                )}
+              </DialogTitle>
+              <DialogDescription className="pt-2 text-base">
+                {pendingCustomerFlowValue ? (
+                  <>
+                    This will{" "}
+                    <strong>re-open the consumer marketplace</strong>:
+                    <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
+                      <li>Customer registration tab becomes visible</li>
+                      <li>
+                        Cart, browse, and customer dashboard links return to
+                        the header
+                      </li>
+                      <li>Marketplace pages (/shop, /shops) become public</li>
+                      <li>
+                        Homepage may revert to consumer-facing messaging
+                      </li>
+                    </ul>
+                  </>
+                ) : (
+                  <>
+                    This will <strong>switch the site to seller-only mode</strong>:
+                    <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
+                      <li>Customer signup tab is hidden on the register page</li>
+                      <li>
+                        Cart icon and customer nav links are removed from the
+                        header
+                      </li>
+                      <li>
+                        Browse / shop / cart / checkout pages will redirect
+                        away
+                      </li>
+                      <li>
+                        Existing customer accounts can still log in via
+                        direct URL
+                      </li>
+                    </ul>
+                  </>
+                )}
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Changes take effect immediately for new visitors. Cached
+                  pages may take up to 5 minutes to refresh.
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCustomerFlowDialogOpen(false);
+                  setPendingCustomerFlowValue(null);
+                }}
+                disabled={savingCustomerFlow}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={pendingCustomerFlowValue ? "default" : "destructive"}
+                onClick={async () => {
+                  if (pendingCustomerFlowValue === null) return;
+                  setSavingCustomerFlow(true);
+                  const newValue = pendingCustomerFlowValue ? 1 : 0;
+                  try {
+                    await platformConfigApi.update({
+                      ...platformConfig,
+                      customer_flow_enabled: newValue,
+                    });
+                    setPlatformConfig((prev) => ({
+                      ...prev,
+                      customer_flow_enabled: newValue,
+                    }));
+                    invalidatePlatformFeatures();
+                    toast({
+                      title: pendingCustomerFlowValue
+                        ? "Customer flow enabled"
+                        : "Customer flow disabled",
+                      description: pendingCustomerFlowValue
+                        ? "Consumer marketplace is now visible to visitors."
+                        : "Site is now in seller-only mode.",
+                    });
+                    setCustomerFlowDialogOpen(false);
+                    setPendingCustomerFlowValue(null);
+                  } catch (error: any) {
+                    toast({
+                      variant: "destructive",
+                      title: "Failed to update",
+                      description:
+                        error?.response?.data?.message ||
+                        "Could not save the feature flag.",
+                    });
+                  } finally {
+                    setSavingCustomerFlow(false);
+                  }
+                }}
+                disabled={savingCustomerFlow}
+                className="gap-2"
+              >
+                {savingCustomerFlow && (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                )}
+                {pendingCustomerFlowValue
+                  ? "Yes, enable customer flow"
+                  : "Yes, disable customer flow"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DashboardLayout>
     </AdminGuard>
   );

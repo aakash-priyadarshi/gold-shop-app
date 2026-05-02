@@ -4,65 +4,66 @@ import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
 import { Turnstile } from "@/components/auth/Turnstile";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import OrivraaLoader, {
-  useMinLoadingTime,
+    useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import {
-  FlagImage,
-  needsCountryCode,
-  PhoneInput,
-  type FlagCode,
+    FlagImage,
+    needsCountryCode,
+    PhoneInput,
+    type FlagCode,
 } from "@/components/ui/phone-input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { BRAND } from "@/config/brand";
 import { useToast } from "@/hooks/use-toast";
 import {
-  getDashboardRoute,
-  RegisterResponse,
-  useAuth,
-  UserRole,
+    getDashboardRoute,
+    RegisterResponse,
+    useAuth,
+    UserRole,
 } from "@/hooks/useAuth";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { authApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
 import { usePreferencesStore } from "@/store/preferences";
 import {
-  ArrowPathIcon,
-  ArrowRightIcon,
-  BuildingStorefrontIcon,
-  CheckCircleIcon,
-  EnvelopeIcon,
-  ExclamationCircleIcon,
-  EyeIcon,
-  EyeSlashIcon,
-  InformationCircleIcon,
-  LockClosedIcon,
-  MapPinIcon,
-  PhoneIcon,
-  UserIcon,
+    ArrowPathIcon,
+    ArrowRightIcon,
+    BuildingStorefrontIcon,
+    CheckCircleIcon,
+    EnvelopeIcon,
+    ExclamationCircleIcon,
+    EyeIcon,
+    EyeSlashIcon,
+    InformationCircleIcon,
+    LockClosedIcon,
+    MapPinIcon,
+    PhoneIcon,
+    UserIcon,
 } from "@heroicons/react/24/outline";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -210,10 +211,20 @@ function RegisterForm() {
   const detectedCountry = usePreferencesStore((state) => state.country);
   const placeholders =
     countryPlaceholders[detectedCountry] || countryPlaceholders["US"];
+  // Platform-wide feature flags (admin-controlled)
+  const { features: platformFeatures } = usePlatformFeatures();
+  const customerFlowEnabled = platformFeatures.customerFlowEnabled;
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"customer" | "shopkeeper">(
-    "customer",
+    "shopkeeper",
   );
+
+  // Force seller tab whenever customer flow is disabled by admin
+  useEffect(() => {
+    if (!customerFlowEnabled && activeTab === "customer") {
+      setActiveTab("shopkeeper");
+    }
+  }, [customerFlowEnabled, activeTab]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [hasVisited, setHasVisited] = useState(false);
@@ -708,10 +719,18 @@ function RegisterForm() {
       <Card className="w-full max-w-lg border-0 shadow-2xl shadow-gold-500/10 bg-white/95 dark:bg-[#161B22]/95 backdrop-blur-sm login-form-item">
         <CardHeader className="space-y-1 text-center pb-2">
           <CardTitle className="text-2xl font-bold">
-            <T>Create an account</T>
+            {customerFlowEnabled ? (
+              <T>Create an account</T>
+            ) : (
+              <T>Register your jewellery shop</T>
+            )}
           </CardTitle>
           <CardDescription className="text-base">
-            <T>Join as a customer or register your jewellery shop</T>
+            {customerFlowEnabled ? (
+              <T>Join as a customer or register your jewellery shop</T>
+            ) : (
+              <T>Join Orivraa as a seller and grow your business</T>
+            )}
           </CardDescription>
         </CardHeader>
 
@@ -720,22 +739,25 @@ function RegisterForm() {
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as "customer" | "shopkeeper")}
           >
-            <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl p-1 bg-gray-100 dark:bg-gray-800">
-              <TabsTrigger
-                value="customer"
-                className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-white dark:data-[state=active]:bg-[#0B0C10]"
-              >
-                <UserIcon className="h-4 w-4" />
-                <T>Customer</T>
-              </TabsTrigger>
-              <TabsTrigger
-                value="shopkeeper"
-                className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-white dark:data-[state=active]:bg-[#0B0C10]"
-              >
-                <BuildingStorefrontIcon className="h-4 w-4" />
-                <T>Seller</T>
-              </TabsTrigger>
-            </TabsList>
+            {/* Tab switcher — only visible when customer flow is enabled by admin */}
+            {customerFlowEnabled && (
+              <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl p-1 bg-gray-100 dark:bg-gray-800">
+                <TabsTrigger
+                  value="customer"
+                  className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-white dark:data-[state=active]:bg-[#0B0C10]"
+                >
+                  <UserIcon className="h-4 w-4" />
+                  <T>Customer</T>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="shopkeeper"
+                  className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-white dark:data-[state=active]:bg-[#0B0C10]"
+                >
+                  <BuildingStorefrontIcon className="h-4 w-4" />
+                  <T>Seller</T>
+                </TabsTrigger>
+              </TabsList>
+            )}
 
             {error && (
               <div className="flex items-center gap-3 p-4 mb-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-xl text-red-700 dark:text-red-300 text-sm animate-slideUp">

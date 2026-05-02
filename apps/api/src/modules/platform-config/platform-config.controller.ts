@@ -27,20 +27,28 @@ export class PlatformConfigController {
     summary: "Get public platform config (commission %, making charge caps)",
   })
   async getPublic() {
-    const [platformCommission, defaultMakingCharge, makingChargeCapStandard] =
-      await Promise.all([
-        this.configService.getPlatformCommissionRate(),
-        this.configService.getDefaultMakingChargePercent(),
-        this.configService.getValue(
-          PlatformConfigService.KEYS.MAKING_CHARGE_CAP_STANDARD,
-        ),
-      ]);
+    const [
+      platformCommission,
+      defaultMakingCharge,
+      makingChargeCapStandard,
+      customerFlowEnabled,
+    ] = await Promise.all([
+      this.configService.getPlatformCommissionRate(),
+      this.configService.getDefaultMakingChargePercent(),
+      this.configService.getValue(
+        PlatformConfigService.KEYS.MAKING_CHARGE_CAP_STANDARD,
+      ),
+      this.configService.isCustomerFlowEnabled(),
+    ]);
 
     return {
       data: {
         platformCommissionRate: platformCommission,
         defaultMakingChargePercent: defaultMakingCharge,
         makingChargeCapStandard,
+        features: {
+          customerFlowEnabled,
+        },
       },
     };
   }

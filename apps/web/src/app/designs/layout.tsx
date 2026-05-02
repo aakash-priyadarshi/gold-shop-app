@@ -1,3 +1,4 @@
+import { CustomerFlowGuard } from "@/components/auth/CustomerFlowGuard";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -27,5 +28,5 @@ export default function DesignsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <CustomerFlowGuard>{children}</CustomerFlowGuard>;
 }
