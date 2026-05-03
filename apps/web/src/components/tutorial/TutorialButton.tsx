@@ -31,6 +31,12 @@ export function TutorialButton({ className }: TutorialButtonProps) {
     setBubbleVisible(hovered);
   }, [hovered]);
 
+  // Pre-register these at render time so they're cached before the tour starts
+  const nextLabel = t("Next →");
+  const backLabel = t("← Back");
+  const doneLabel = t("Done");
+  const bubbleText = t("Ask me if you need help");
+
   const startTour = useCallback(() => {
     if (!hasSteps || running) return;
 
@@ -46,9 +52,9 @@ export function TutorialButton({ className }: TutorialButtonProps) {
       stageRadius: 8,
       popoverClass: "orivraa-tour-popover",
       progressText: "{{current}} / {{total}}",
-      nextBtnText: t("Next →"),
-      prevBtnText: t("← Back"),
-      doneBtnText: t("Done"),
+      nextBtnText: nextLabel,
+      prevBtnText: backLabel,
+      doneBtnText: doneLabel,
       onDestroyStarted: () => {
         driverObj.destroy();
         setRunning(false);
@@ -57,11 +63,9 @@ export function TutorialButton({ className }: TutorialButtonProps) {
     });
 
     driverObj.drive();
-  }, [steps, hasSteps, running, t]);
+  }, [steps, hasSteps, running, nextLabel, backLabel, doneLabel]);
 
   if (!hasSteps) return null;
-
-  const bubbleText = t("Ask me if you need help");
 
   return (
     <div

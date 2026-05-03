@@ -100,7 +100,7 @@ const currencies = [
 export default function ShopkeeperProfilePage() {
   const { user: authUser, refreshUser, googleLogin } = useAuth();
   const t = useT();
-  const { language: storeLanguage, setLanguage: setStoreLanguage, tourLanguage, tourLangSyncWithApp, setTourLanguage, setTourLangSync } = usePreferencesStore();
+  const { language: storeLanguage, setLanguage: setStoreLanguage } = usePreferencesStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -722,47 +722,6 @@ export default function ShopkeeperProfilePage() {
                         </p>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Tour Tip Language */}
-                  <div className="pt-2 border-t space-y-3">
-                    <div>
-                      <Label className="text-sm font-medium">
-                        <T>Tour &amp; Help Tip Language</T>
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        <T>Language used for the guided tour chat bubble and button labels.</T>
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        id="tourLangSync"
-                        type="checkbox"
-                        checked={tourLangSyncWithApp}
-                        onChange={(e) => setTourLangSync(e.target.checked)}
-                        className="h-4 w-4 accent-amber-500"
-                      />
-                      <Label htmlFor="tourLangSync" className="font-normal cursor-pointer">
-                        <T>Sync with overall language</T>
-                      </Label>
-                    </div>
-                    {!tourLangSyncWithApp && (
-                      <Select
-                        value={tourLanguage}
-                        onValueChange={(v) => setTourLanguage(v as any)}
-                      >
-                        <SelectTrigger className="w-56">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(LANGUAGES).map(([code, info]) => (
-                            <SelectItem key={code} value={code}>
-                              {info.nativeName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
                   </div>
 
                   <div className="flex justify-end pt-4">
