@@ -1,4 +1,5 @@
 import { BLOG_POSTS } from "@/data/blog-posts";
+import generatedRoutes from "@/data/generated-routes.json";
 import { MetadataRoute } from "next";
 
 const BASE_URL = "https://www.orivraa.com";
@@ -22,6 +23,10 @@ type ShopSitemapRecord = {
   updatedAt?: string;
 };
 
+const DEFAULT_ROUTE_META: RouteMeta = {
+  changeFrequency: "monthly",
+  priority: 0.6,
+};
 
 const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
   "/": {
@@ -146,15 +151,18 @@ const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
   },
 };
 
-function getStaticPages(): MetadataRoute.Sitemap {
-  return Object.entries(ROUTE_OVERRIDES)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([route, meta]) => ({
-      url: route === "/" ? BASE_URL : `${BASE_URL}${route}`,
-      lastModified: meta.lastModified ?? new Date("2025-01-15"),
-      changeFrequency: meta.changeFrequency,
-      priority: meta.priority,
-    } satisfies SitemapEntry));
+function getStaticPages(siteLaunch: string): MetadataRoute.Sitemap {
+  return (generatedRoutes as string[])
+    .map((route) => {
+      const override = ROUTE_OVERRIDES[route];
+      const meta = override ?? DEFAULT_ROUTE_META;
+      return {
+        url: route === "/" ? BASE_URL : `${BASE_URL}${route}`,
+        lastModified: override?.lastModified ?? new Date(siteLaunch),
+        changeFrequency: meta.changeFrequency,
+        priority: meta.priority,
+      } satisfies SitemapEntry;
+    });
 }
 
 function resolvePublicApiBaseUrl() {
@@ -232,7 +240,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     BLOG_POSTS[0]?.updated ?? BLOG_POSTS[0]?.date ?? SITE_LAUNCH;
 
   // ─── STATIC PAGES ─────────────────────────────────────────────
-  const staticPages = getStaticPages();
+  const staticPages = getStaticPages(SITE_LAUNCH);
 
   const localizedAboutPages: MetadataRoute.Sitemap = ABOUT_LANGUAGES.map(
     (lang) => ({
