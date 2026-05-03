@@ -7,6 +7,7 @@ import {
 import { ConfigService } from "@nestjs/config";
 import * as crypto from "crypto";
 import { PrismaService } from "../../prisma/prisma.service";
+import { upsertDefaultGatewayConfigs } from "./default-gateway-configs";
 
 /**
  * Unified interface for any payment gateway adapter.
@@ -59,6 +60,16 @@ export class PaymentGatewayService {
     private readonly configService: ConfigService,
   ) {}
 
+  private async ensureGatewayConfigsSeeded() {
+    const count = await this.prisma.paymentGatewayConfig.count();
+    if (count > 0) return;
+
+    this.logger.warn(
+      "PaymentGatewayConfig table is empty. Bootstrapping default gateway configs.",
+    );
+    await upsertDefaultGatewayConfigs(this.prisma, "system-bootstrap");
+  }
+
   // ═══════════════════════════════════════════════════
   // ENV KEY VERIFICATION
   // ═══════════════════════════════════════════════════
@@ -95,6 +106,8 @@ export class PaymentGatewayService {
    * Falls back to default gateway, then to "manual".
    */
   async selectGateway(country: string): Promise<string> {
+    await this.ensureGatewayConfigsSeeded();
+
     // 1. Find enabled gateways for this country, sorted by priority
     const configs = await this.prisma.paymentGatewayConfig.findMany({
       where: {
@@ -982,6 +995,8 @@ export class PaymentGatewayService {
   // ═══════════════════════════════════════════════════
 
   async checkAllGatewaysHealth(): Promise<GatewayHealthResult[]> {
+    await this.ensureGatewayConfigsSeeded();
+
     const configs = await this.prisma.paymentGatewayConfig.findMany({
       where: { isEnabled: true },
     });
@@ -1006,6 +1021,8 @@ export class PaymentGatewayService {
   // ═══════════════════════════════════════════════════
 
   async getGatewayConfigs() {
+    await this.ensureGatewayConfigsSeeded();
+
     return this.prisma.paymentGatewayConfig.findMany({
       orderBy: { priority: "desc" },
     });
@@ -1016,6 +1033,8 @@ export class PaymentGatewayService {
    * Used by frontend to show available payment options.
    */
   async getAvailableGateways(country?: string) {
+    await this.ensureGatewayConfigsSeeded();
+
     const where: any = { isEnabled: true };
     if (country) {
       where.supportedCountries = { has: country as any };

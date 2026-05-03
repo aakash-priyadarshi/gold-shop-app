@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
+import { upsertDefaultGatewayConfigs } from "../src/modules/payment-gateway/default-gateway-configs";
 
 const prisma = new PrismaClient();
 
@@ -21,6 +22,9 @@ async function main() {
     },
   });
   console.log("✅ Created admin user:", admin.email);
+
+  const gatewayConfigCount = await upsertDefaultGatewayConfigs(prisma, admin.id);
+  console.log("✅ Seeded payment gateway configs:", gatewayConfigCount);
 
   // Create test customers
   const customerPassword = await bcrypt.hash("customer123", 10);
