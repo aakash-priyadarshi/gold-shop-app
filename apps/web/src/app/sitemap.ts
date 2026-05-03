@@ -1,7 +1,5 @@
 import { BLOG_POSTS } from "@/data/blog-posts";
 import { MetadataRoute } from "next";
-import { existsSync, readdirSync, statSync } from "node:fs";
-import path from "node:path";
 
 const BASE_URL = "https://www.orivraa.com";
 const DEFAULT_PUBLIC_API_BASE = "https://api.orivraa.com/api";
@@ -24,24 +22,6 @@ type ShopSitemapRecord = {
   updatedAt?: string;
 };
 
-const DEFAULT_ROUTE_META: RouteMeta = {
-  changeFrequency: "monthly",
-  priority: 0.6,
-};
-
-const EXCLUDED_ROOT_SEGMENTS = new Set([
-  "admin",
-  "api",
-  "auth",
-  "cart",
-  "checkout",
-  "dashboard",
-  "notifications",
-  "orders",
-  "payment",
-]);
-
-const EXCLUDED_EXACT_ROUTES = new Set(["/blog", "/robots", "/sitemap"]);
 
 const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
   "/": {
@@ -124,97 +104,57 @@ const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
     changeFrequency: "yearly",
     priority: 0.3,
   },
+  "/about": {
+    changeFrequency: "monthly",
+    priority: 0.7,
+  },
+  "/contact": {
+    changeFrequency: "yearly",
+    priority: 0.5,
+  },
+  "/for-sellers": {
+    changeFrequency: "monthly",
+    priority: 0.8,
+  },
+  "/seller-guide": {
+    changeFrequency: "monthly",
+    priority: 0.7,
+  },
+  "/ai-sales-team": {
+    changeFrequency: "monthly",
+    priority: 0.8,
+  },
+  "/partner": {
+    changeFrequency: "monthly",
+    priority: 0.7,
+  },
+  "/download": {
+    changeFrequency: "monthly",
+    priority: 0.7,
+  },
+  "/download/changelog": {
+    changeFrequency: "weekly",
+    priority: 0.6,
+  },
+  "/help": {
+    changeFrequency: "monthly",
+    priority: 0.6,
+  },
+  "/support": {
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
 };
 
-function resolveAppDirectory() {
-  const candidates = [
-    path.join(process.cwd(), "src", "app"),
-    path.join(process.cwd(), "apps", "web", "src", "app"),
-  ];
-
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-
-  throw new Error("Unable to resolve apps/web/src/app for sitemap generation");
-}
-
-function isIgnoredDirectory(name: string) {
-  return name.startsWith("(") || name.startsWith("[") || name.startsWith("_");
-}
-
-function shouldIndexDiscoveredRoute(route: string) {
-  if (EXCLUDED_EXACT_ROUTES.has(route)) {
-    return false;
-  }
-
-  const rootSegment = route.split("/").filter(Boolean)[0];
-  return !rootSegment || !EXCLUDED_ROOT_SEGMENTS.has(rootSegment);
-}
-
-function collectStaticRoutes(
-  directory: string,
-  segments: string[] = [],
-): Array<{ route: string; filePath: string }> {
-  const entries = readdirSync(directory, { withFileTypes: true });
-  const routes: Array<{ route: string; filePath: string }> = [];
-
-  for (const entry of entries) {
-    const resolvedPath = path.join(directory, entry.name);
-
-    if (entry.isDirectory()) {
-      if (isIgnoredDirectory(entry.name)) {
-        continue;
-      }
-
-      if (segments.length === 0 && EXCLUDED_ROOT_SEGMENTS.has(entry.name)) {
-        continue;
-      }
-
-      routes.push(...collectStaticRoutes(resolvedPath, [...segments, entry.name]));
-      continue;
-    }
-
-    if (!entry.isFile() || entry.name !== "page.tsx") {
-      continue;
-    }
-
-    const route = segments.length === 0 ? "/" : `/${segments.join("/")}`;
-    if (shouldIndexDiscoveredRoute(route)) {
-      routes.push({ route, filePath: resolvedPath });
-    }
-  }
-
-  return routes;
-}
-
-function getFileLastModified(filePath: string, fallbackDate: string) {
-  try {
-    return statSync(filePath).mtime;
-  } catch {
-    return new Date(fallbackDate);
-  }
-}
-
-function getStaticPages(siteLaunch: string): MetadataRoute.Sitemap {
-  const appDirectory = resolveAppDirectory();
-
-  return collectStaticRoutes(appDirectory)
-    .sort((left, right) => left.route.localeCompare(right.route))
-    .map(({ route, filePath }) => {
-      const override = ROUTE_OVERRIDES[route];
-      const meta = override ?? DEFAULT_ROUTE_META;
-
-      return {
-        url: route === "/" ? BASE_URL : `${BASE_URL}${route}`,
-        lastModified:
-          override?.lastModified ?? getFileLastModified(filePath, siteLaunch),
-        changeFrequency: meta.changeFrequency,
-        priority: meta.priority,
-      } satisfies SitemapEntry;
-    });
+function getStaticPages(): MetadataRoute.Sitemap {
+  return Object.entries(ROUTE_OVERRIDES)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([route, meta]) => ({
+      url: route === "/" ? BASE_URL : `${BASE_URL}${route}`,
+      lastModified: meta.lastModified ?? new Date("2025-01-15"),
+      changeFrequency: meta.changeFrequency,
+      priority: meta.priority,
+    } satisfies SitemapEntry));
 }
 
 function resolvePublicApiBaseUrl() {
@@ -292,7 +232,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     BLOG_POSTS[0]?.updated ?? BLOG_POSTS[0]?.date ?? SITE_LAUNCH;
 
   // ─── STATIC PAGES ─────────────────────────────────────────────
-  const staticPages = getStaticPages(SITE_LAUNCH);
+  const staticPages = getStaticPages();
 
   const localizedAboutPages: MetadataRoute.Sitemap = ABOUT_LANGUAGES.map(
     (lang) => ({
