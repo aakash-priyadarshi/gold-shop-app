@@ -430,7 +430,7 @@ AVAILABLE TOOLS:
       const [shop, invoiceSummary, unpaidCount, customerCount] = await Promise.all([
         this.prisma.shop.findUnique({
           where: { id: shopId },
-          select: { name: true, country: true },
+          select: { shopName: true, country: true },
         }),
         this.prisma.invoice.aggregate({
           where: {
@@ -447,7 +447,7 @@ AVAILABLE TOOLS:
             status: { in: ["ISSUED", "OVERDUE"] as any[] },
           },
         }),
-        this.prisma.customer.count({ where: { shopId } }),
+        this.prisma.walkInCustomer.count({ where: { createdByShopId: shopId } }),
       ]);
 
       const currency = shop?.country === "NP" ? "NPR" : shop?.country === "AE" ? "AED" : shop?.country === "GB" ? "GBP" : "₹";
@@ -456,7 +456,7 @@ AVAILABLE TOOLS:
 
       const sellerContext = `
 SELLER CONTEXT (PRIVATE — FOR THIS SELLER ONLY, DO NOT SHARE WITH OTHER USERS):
-Shop name: ${shop?.name ?? "Unknown"}
+Shop name: ${shop?.shopName ?? "Unknown"}
 Country: ${shop?.country ?? "IN"}
 This month's invoices: ${monthlyCount}
 Total sales this month: ${currency} ${monthlySales.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
