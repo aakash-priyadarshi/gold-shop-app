@@ -52,7 +52,7 @@ export function TutorialButton({ className }: TutorialButtonProps) {
       aria-label="Start page tutorial"
       title="How to use this page"
       className={cn(
-        "fixed bottom-6 right-6 z-40 flex items-center justify-center",
+        "fixed bottom-24 right-6 z-40 flex items-center justify-center",
         "w-12 h-12 rounded-full shadow-lg",
         "bg-amber-500 hover:bg-amber-600 active:bg-amber-700",
         "text-white transition-colors",

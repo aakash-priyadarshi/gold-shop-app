@@ -431,12 +431,6 @@ const navItems: NavItem[] = [
     roles: ["SHOPKEEPER"],
   },
   {
-    label: "Shop Profile",
-    href: "/dashboard/shop/shop-profile",
-    icon: Store,
-    roles: ["SHOPKEEPER"],
-  },
-  {
     label: "Shop Settings",
     href: "/dashboard/shop/settings",
     icon: Settings,

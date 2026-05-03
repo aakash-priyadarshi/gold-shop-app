@@ -657,6 +657,9 @@ export default function CreateInvoicePage() {
   }, [subtotal, makingChargeMode, makingChargeValue]);
 
   const taxBreakdown = useMemo(() => {
+    if (isTaxExempt) {
+      return { metalTax: 0, gemstoneTax: 0, makingTax: 0, totalTax: 0 };
+    }
     const rates = countryTax.rates;
     let metalTax = 0;
     let gemstoneTax = 0;
@@ -691,7 +694,7 @@ export default function CreateInvoicePage() {
       makingTax,
       totalTax: metalTax + gemstoneTax + makingTax,
     };
-  }, [lineItems, countryTax, makingChargeAmount]);
+  }, [lineItems, countryTax, makingChargeAmount, isTaxExempt]);
 
   const discountAmount = useMemo(() => {
     const val = parseFloat(discountValue) || 0;
@@ -1657,28 +1660,6 @@ export default function CreateInvoicePage() {
                               </div>
                             </div>
                           ))}
-                        </div>
-
-                        {/* Making cost */}
-                        <div className="grid grid-cols-3 gap-3">
-                          <div>
-                            <Label className="text-xs">
-                              Making Charge ({currencySymbol})
-                            </Label>
-                            <Input
-                              type="number"
-                              value={item.makingCost}
-                              onChange={(e) =>
-                                updateLineItem(
-                                  idx,
-                                  "makingCost",
-                                  e.target.value,
-                                )
-                              }
-                              placeholder="0"
-                              className="h-9 text-xs"
-                            />
-                          </div>
                         </div>
 
                         {/* Cost summary */}
