@@ -3,6 +3,7 @@
 import type { DriveStep } from "driver.js";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
+import { useT } from "@/providers/translation-provider";
 import { useTourContext } from "./useTourContext";
 
 /** Tour steps keyed by pathname prefix */
@@ -856,20 +857,38 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
 export function useTutorial() {
   const pathname = usePathname();
   const subKey = useTourContext((s) => s.subKey);
+  const t = useT();
 
   const steps = useMemo<DriveStep[]>(() => {
+    const translateSteps = (source: DriveStep[]) =>
+      source.map((step) => ({
+        ...step,
+        popover: step.popover
+          ? {
+              ...step.popover,
+              title: step.popover.title ? t(step.popover.title) : step.popover.title,
+              description: step.popover.description
+                ? t(step.popover.description)
+                : step.popover.description,
+            }
+          : step.popover,
+      }));
+
     // Check for sub-key variant first (e.g. "/dashboard/shop/tax-reports#IN")
     if (subKey) {
       const subKeyPath = `${pathname}#${subKey}`;
-      if (TOUR_STEPS[subKeyPath]) return TOUR_STEPS[subKeyPath];
+      if (TOUR_STEPS[subKeyPath]) return translateSteps(TOUR_STEPS[subKeyPath]);
     }
     // Exact match, then prefix match (longest first)
-    if (TOUR_STEPS[pathname]) return TOUR_STEPS[pathname];
+    if (TOUR_STEPS[pathname]) return translateSteps(TOUR_STEPS[pathname]);
     const match = Object.keys(TOUR_STEPS)
       .filter((key) => pathname.startsWith(key) && key !== "/dashboard/shop")
       .sort((a, b) => b.length - a.length)[0];
-    return match ? TOUR_STEPS[match] : (pathname === "/dashboard/shop" ? TOUR_STEPS["/dashboard/shop"] : []);
-  }, [pathname, subKey]);
+    if (match) return translateSteps(TOUR_STEPS[match]);
+    return pathname === "/dashboard/shop"
+      ? translateSteps(TOUR_STEPS["/dashboard/shop"])
+      : [];
+  }, [pathname, subKey, t]);
 
   return { steps, hasSteps: steps.length > 0 };
 }
