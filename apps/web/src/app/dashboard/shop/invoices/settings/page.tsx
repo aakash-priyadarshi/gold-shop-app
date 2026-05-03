@@ -419,7 +419,7 @@ export default function InvoiceSettingsPage() {
           </div>
 
           {/* Shop Branding */}
-          <Card>
+          <Card data-tour="invoice-settings-branding">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-blue-500" />
@@ -607,7 +607,7 @@ export default function InvoiceSettingsPage() {
           </Card>
 
           {/* Layout Options — per-field position + visibility */}
-          <Card>
+          <Card data-tour="invoice-settings-layout">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LayoutTemplate className="h-5 w-5 text-amber-500" />

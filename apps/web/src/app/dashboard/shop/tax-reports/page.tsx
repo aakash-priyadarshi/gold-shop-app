@@ -379,6 +379,11 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
   const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [auditTab, setAuditTab] = useState<"monthly" | "yearly">("monthly");
+  const [auditYear, setAuditYear] = useState(() => new Date().getFullYear());
+  const [auditData, setAuditData] = useState<any>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
+
   useEffect(() => {
     setLoading(true);
     taxReportsApi.nepalVat(period)
@@ -386,21 +391,135 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
       .catch(() => toast({ variant: "destructive", title: "Failed to load Nepal VAT" }))
       .finally(() => setLoading(false));
   }, [period]);
+
+  useEffect(() => {
+    if (auditTab !== "yearly") return;
+    setAuditLoading(true);
+    taxReportsApi.nepalAudit(auditYear)
+      .then((r) => setAuditData(r.data))
+      .catch(() => toast({ variant: "destructive", title: "Failed to load yearly audit" }))
+      .finally(() => setAuditLoading(false));
+  }, [auditTab, auditYear]);
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span><T>Nepal VAT & Luxury Tax Return</T></span>
-          <ShareWithCAButton country="NP" period={period} canShare={canShare} />
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading ? <SkeletonGrid /> : <SummaryGrid data={data} />}
-        <p className="text-xs text-gray-500 mt-4">
-          <T>Gold/silver jewellery: 2% luxury tax on metal + making. Gemstones & services: 13% VAT.</T>
-        </p>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <Tabs value={auditTab} onValueChange={(v) => setAuditTab(v as "monthly" | "yearly")}>
+        <TabsList className="mb-2">
+          <TabsTrigger value="monthly">Monthly Return</TabsTrigger>
+          <TabsTrigger value="yearly">Yearly Audit</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="monthly">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span><T>Nepal VAT & Luxury Tax Return</T></span>
+                <ShareWithCAButton country="NP" period={period} canShare={canShare} />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? <SkeletonGrid /> : <SummaryGrid data={data} />}
+              <p className="text-xs text-gray-500 mt-4">
+                <T>Gold/silver jewellery: 2% luxury tax on metal + making. Gemstones & services: 13% VAT.</T>
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="yearly">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <T>Nepal Yearly Audit</T>
+                  {auditData?.auditRequired && (
+                    <span className="text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-0.5 rounded-full">
+                      IRD Audit Required
+                    </span>
+                  )}
+                </span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" onClick={() => setAuditYear(y => y - 1)}>‹</Button>
+                    <span className="text-sm font-medium w-12 text-center">{auditYear}</span>
+                    <Button variant="outline" size="sm" onClick={() => setAuditYear(y => y + 1)} disabled={auditYear >= new Date().getFullYear()}>›</Button>
+                  </div>
+                  <ShareWithCAButton country="NP" period={String(auditYear)} canShare={canShare} />
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {auditLoading ? (
+                <SkeletonGrid />
+              ) : auditData ? (
+                <div className="space-y-4">
+                  {/* IRD threshold bar */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>IRD audit threshold (NPR 1 crore)</span>
+                      <span>{auditData.thresholdUsedPct}% used</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full transition-all ${auditData.auditRequired ? "bg-red-500" : "bg-amber-500"}`}
+                        style={{ width: `${Math.min(auditData.thresholdUsedPct, 100)}%` }}
+                      />
+                    </div>
+                    {auditData.auditRequired && (
+                      <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        Annual sales exceed NPR 1 crore — IRD audit filing required.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Month-by-month table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-muted-foreground text-xs">
+                          <th className="text-left py-2 pr-3">Month</th>
+                          <th className="text-right py-2 pr-3">Invoices</th>
+                          <th className="text-right py-2 pr-3">Sales (NPR)</th>
+                          <th className="text-right py-2 pr-3">Luxury Tax (2%)</th>
+                          <th className="text-right py-2">VAT (13%)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {auditData.months.map((m: any) => (
+                          <tr key={m.month} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="py-2 pr-3 font-medium">{m.label}</td>
+                            <td className="text-right py-2 pr-3 text-muted-foreground">{m.invoiceCount}</td>
+                            <td className="text-right py-2 pr-3">{m.totalSales.toLocaleString()}</td>
+                            <td className="text-right py-2 pr-3">{m.luxuryTax.toLocaleString()}</td>
+                            <td className="text-right py-2">{m.vatCollected.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="font-semibold text-sm border-t-2">
+                          <td className="py-2 pr-3">Total</td>
+                          <td className="text-right py-2 pr-3">{auditData.totals.annualInvoices}</td>
+                          <td className="text-right py-2 pr-3">{auditData.totals.annualSales.toLocaleString()}</td>
+                          <td className="text-right py-2 pr-3">{auditData.totals.annualLuxuryTax.toLocaleString()}</td>
+                          <td className="text-right py-2">{auditData.totals.annualVat.toLocaleString()}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Compliant with IRD Nepal annual audit requirements. Share with your CA using the share button above.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No audit data available.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 

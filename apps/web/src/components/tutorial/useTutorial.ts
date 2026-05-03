@@ -248,6 +248,64 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
+  "/dashboard/shop/invoices/create": [
+    {
+      element: "[data-tour='invoice-create-country']",
+      popover: {
+        title: "Country & Tax",
+        description: "Select the country for this invoice. Tax rates auto-apply per category: India charges 3% GST on gold value + 18% on making charges; Nepal applies 2% luxury tax on metal and 13% VAT on gemstones. You can also override the rate or mark the invoice tax-exempt for export sales.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='invoice-create-customer']",
+      popover: {
+        title: "Customer Details",
+        description: "Type the customer's phone number to search your existing customer database — it auto-fills name, address, and GST/PAN. For B2B invoices enter the customer's GSTIN or VAT number so the tax ID prints on the bill. Walk-in customers can be added without a phone.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='invoice-create-items']",
+      popover: {
+        title: "Line Items",
+        description: "Add each jewellery item with metal type, weight (grams), metal cost, gemstone details, and making charge separately. Tax is split and calculated per component — for example, gold value gets 3% GST while making charges get 18% in India. Expand any row to enter gemstone carat weight, cut, and clarity.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='invoice-create-totals']",
+      popover: {
+        title: "Invoice Totals & Tax Breakdown",
+        description: "See the live subtotal, making charge, tax breakdown (metal tax vs making tax vs gemstone tax), discount, and grand total. The tax is split exactly as required for GSTR-1 filing — you don't need to calculate anything manually. Click 'Create Invoice' to generate a print-ready GST/VAT bill.",
+        side: "top",
+        align: "end",
+      },
+    },
+  ],
+  "/dashboard/shop/invoices/settings": [
+    {
+      element: "[data-tour='invoice-settings-branding']",
+      popover: {
+        title: "Shop Branding",
+        description: "Set the shop name, logo, and tagline that appear on every printed bill. Upload a PNG or JPG logo (max 5 MB). The name here overrides your registered shop name on the bill header.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='invoice-settings-layout']",
+      popover: {
+        title: "Layout & Visibility",
+        description: "Control which fields (address, GSTIN, licence number, footer, terms) appear on your printed invoice, and whether they print at the top or bottom. Toggle any field off to hide it from the bill. Changes apply to all new invoices immediately.",
+        side: "top",
+        align: "start",
+      },
+    },
+  ],
   "/dashboard/shop/invoices": [
     {
       element: "[data-tour='invoices-create']",
@@ -274,6 +332,12 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
         description: "View all invoices with status (Issued / Paid / Partial / Overdue / Voided). Click any invoice to see full details, mark as paid, or send a payment reminder.",
         side: "top",
         align: "center",
+      },
+    },
+    {
+      popover: {
+        title: "💡 Invoice Settings",
+        description: "Want to change what your printed bill looks like? Go to Invoice Settings (top-right gear icon) to add your shop logo, GSTIN, footer note, and control which fields appear on the bill.",
       },
     },
   ],

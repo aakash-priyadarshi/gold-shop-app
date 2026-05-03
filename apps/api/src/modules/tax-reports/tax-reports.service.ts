@@ -235,6 +235,86 @@ export class TaxReportsService {
     };
   }
 
+  // ── NEPAL: Yearly audit (month-by-month IRD) ───────────────────────
+  async getNepalAuditReport(shopId: string, year: number) {
+    const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const IRD_AUDIT_THRESHOLD = 10_000_000; // NPR 10 million
+
+    const months = [];
+    let annualSales = 0;
+    let annualLuxuryTax = 0;
+    let annualVat = 0;
+    let annualInvoices = 0;
+
+    for (let m = 0; m < 12; m++) {
+      const from = new Date(Date.UTC(year, m, 1));
+      const to = new Date(Date.UTC(year, m + 1, 1));
+      const invoices = await this.prisma.invoice.findMany({
+        where: {
+          shopId,
+          issuedAt: { gte: from, lt: to },
+          status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID", "OVERDUE"] as any[] },
+          invoiceCountry: "NP",
+        },
+        select: { totalAmount: true, taxAmount: true, taxBreakdown: true, lineItems: true, isTaxExempt: true },
+      });
+
+      let totalSales = 0;
+      let luxuryTax = 0;
+      let vatCollected = 0;
+
+      for (const i of invoices) {
+        totalSales += i.totalAmount;
+        const tb = i.taxBreakdown as Record<string, number> | null;
+        if (tb && (tb.luxuryTax != null || tb.metalTax != null || tb.vat != null)) {
+          luxuryTax += (tb.luxuryTax ?? tb.metalTax ?? 0);
+          vatCollected += (tb.vat ?? 0);
+        } else {
+          // Fallback: recompute from line items
+          const lines = (i.lineItems as unknown as InvoiceLineItem[]) || [];
+          let metalBase = 0;
+          let vatBase = 0;
+          for (const l of lines) {
+            if (["METAL", "MAKING"].includes(l.category)) metalBase += l.amount;
+            else if (["GEMSTONE", "FINISH"].includes(l.category)) vatBase += l.amount;
+          }
+          luxuryTax += +(metalBase * 0.02).toFixed(2);
+          vatCollected += +(vatBase * 0.13).toFixed(2);
+        }
+      }
+
+      months.push({
+        month: m + 1,
+        label: MONTHS[m],
+        invoiceCount: invoices.length,
+        totalSales: +totalSales.toFixed(2),
+        luxuryTax: +luxuryTax.toFixed(2),
+        vatCollected: +vatCollected.toFixed(2),
+        totalTax: +(luxuryTax + vatCollected).toFixed(2),
+      });
+
+      annualSales += totalSales;
+      annualLuxuryTax += luxuryTax;
+      annualVat += vatCollected;
+      annualInvoices += invoices.length;
+    }
+
+    return {
+      year,
+      months,
+      totals: {
+        annualSales: +annualSales.toFixed(2),
+        annualLuxuryTax: +annualLuxuryTax.toFixed(2),
+        annualVat: +annualVat.toFixed(2),
+        annualTax: +(annualLuxuryTax + annualVat).toFixed(2),
+        annualInvoices,
+      },
+      auditRequired: annualSales >= IRD_AUDIT_THRESHOLD,
+      auditThreshold: IRD_AUDIT_THRESHOLD,
+      thresholdUsedPct: +((annualSales / IRD_AUDIT_THRESHOLD) * 100).toFixed(1),
+    };
+  }
+
   // ── UAE: VAT 201 buckets ───────────────────────────────────────────
   async getUaeVat201(shopId: string, period: string) {
     const p = this.parsePeriod(period);

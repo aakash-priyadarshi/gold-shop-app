@@ -1,15 +1,15 @@
 import {
-  Body,
-  Controller,
-  DefaultValuePipe,
-  Get,
-  Param,
-  ParseIntPipe,
-  Patch,
-  Post,
-  Query,
-  Req,
-  UseGuards,
+    Body,
+    Controller,
+    DefaultValuePipe,
+    Get,
+    Param,
+    ParseIntPipe,
+    Patch,
+    Post,
+    Query,
+    Req,
+    UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { TicketPriority, TicketStatus, TicketType } from "@prisma/client";
@@ -21,9 +21,9 @@ import { SkipSecurity } from "../security/security.guard";
 import { AiChatbotService } from "./ai-chatbot.service";
 import { SupportService } from "./support.service";
 import {
-  AddTicketMessageDto,
-  CreateTicketDto,
-  TicketsService,
+    AddTicketMessageDto,
+    CreateTicketDto,
+    TicketsService,
 } from "./tickets.service";
 
 // ─── Tickets Controller (under /tickets) ───
@@ -64,6 +64,33 @@ export class TicketsController {
       req.ip,
       body.sessionId,
       userAgent,
+    );
+  }
+
+  // ─── Authenticated: Seller-aware AI Chatbot ───
+  @Post("seller-chat")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Seller-aware AI chatbot — includes shop metrics in context" })
+  async sellerChat(
+    @Req() req: any,
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Body()
+    body: {
+      message: string;
+      sessionId?: string;
+      history?: Array<{ role: "user" | "assistant"; content: string }>;
+    },
+  ) {
+    return this.aiChatbot.sellerChat(
+      shopId,
+      userId,
+      body.message,
+      body.history || [],
+      req.ip,
+      body.sessionId,
     );
   }
 

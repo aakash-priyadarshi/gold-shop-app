@@ -89,15 +89,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Lazy-load ChatPopupWidget + emoji-mart (~80KB saved on initial page load)
-const ChatPopupWidget = dynamic(
-  () =>
-    import("@/components/chat/ChatPopupWidget").then(
-      (mod) => mod.ChatPopupWidget,
-    ),
-  { ssr: false },
-);
-
 // Lazy-load tutorial button (driver.js CSS is ~20KB)
 const TutorialButton = dynamic(
   () =>
@@ -1121,9 +1112,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <main className="lg:hidden px-4 py-4 pb-20 safe-area-bottom">
         {children}
       </main>
-
-      {/* Floating Chat Popup */}
-      <ChatPopupWidget />
 
       {/* Floating tutorial button */}
       <TutorialButton />

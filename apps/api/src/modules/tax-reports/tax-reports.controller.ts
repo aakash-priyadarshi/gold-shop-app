@@ -145,6 +145,16 @@ export class TaxReportsController {
     return data;
   }
 
+  @Get("nepal/audit")
+  async nepalAudit(
+    @CurrentUser("shopId") shopId: string,
+    @Query("year") year?: string,
+  ) {
+    this.requireShop(shopId);
+    const y = year ? parseInt(year, 10) : new Date().getFullYear();
+    return this.svc.getNepalAuditReport(shopId, y);
+  }
+
   // ── UAE ──────────────────────────────────────────────────────────
   @Get("uae/vat201")
   async uaeVat201(

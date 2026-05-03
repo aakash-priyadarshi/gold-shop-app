@@ -697,6 +697,8 @@ export const taxReportsApi = {
   // Nepal
   nepalVat: (period: string) =>
     api.get("/tax-reports/nepal/vat", { params: { period } }),
+  nepalAudit: (year?: number) =>
+    api.get("/tax-reports/nepal/audit", { params: year ? { year } : {} }),
   // UAE
   uaeVat201: (period: string) =>
     api.get("/tax-reports/uae/vat201", { params: { period } }),

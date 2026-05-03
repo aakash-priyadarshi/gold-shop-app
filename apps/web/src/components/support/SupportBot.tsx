@@ -13,6 +13,7 @@
  */
 
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { Mail, MessageCircle, Phone, Send, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -31,12 +32,20 @@ type Message = {
   cta?: { label: string; href: string }[];
 };
 
-const QUICK_ASKS = [
+const QUICK_ASKS_PUBLIC = [
   "What is Orivraa?",
   "How much does it cost?",
   "Does it work offline?",
   "How is GST handled?",
   "Compare with Tally",
+];
+
+const QUICK_ASKS_SELLER = [
+  "What were my sales this month?",
+  "What's my pending invoice amount?",
+  "How do I create an invoice?",
+  "How do I share my tax report with my CA?",
+  "What's my IRD audit status?",
 ];
 
 const ESCALATION_CTA: { label: string; href: string }[] = [
@@ -45,13 +54,21 @@ const ESCALATION_CTA: { label: string; href: string }[] = [
   { label: `Call ${FOUNDER.phoneDisplay}`, href: `tel:${FOUNDER.phone}` },
 ];
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Session persistence helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ───────────────────────── Session persistence helpers ───────────────────────── */
 
-const WELCOME_MSG: Message = {
+const WELCOME_MSG_PUBLIC: Message = {
   id: "welcome",
   from: "bot",
-  text: "Hi ðŸ‘‹ I'm the Orivraa AI assistant. Ask me about pricing, features, GST, offline POS, hallmarking â€” or just say 'talk to a human' and I'll connect you to our founder.",
+  text: "Hi \uD83D\uDC4B I'm the Orivraa AI assistant. Ask me about pricing, features, GST, offline POS, hallmarking \u2014 or just say 'talk to a human' and I'll connect you to our founder.",
 };
+
+function makeSellerWelcome(shopName?: string): Message {
+  return {
+    id: "welcome",
+    from: "bot",
+    text: `Hi ${shopName ? shopName + " \uD83D\uDC4B" : "\uD83D\uDC4B"} I can see your shop\u2019s live data \u2014 ask me about this month\u2019s sales, pending invoices, tax audit status, or how to use any feature.`,
+  };
+}
 
 const STORAGE_MSGS = "orivraa_chat_messages";
 const STORAGE_OPEN = "orivraa_chat_open";
@@ -81,13 +98,30 @@ function getOrCreateSessionId(): string {
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export function SupportBot() {
+  const { user } = useAuth();
+  const isSellerLoggedIn = user?.role === "SHOPKEEPER";
+  const shopName = (user as any)?.shopName as string | undefined;
+
   const [open, setOpen] = useState<boolean>(() => readSession(STORAGE_OPEN, false));
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(() =>
-    readSession<Message[]>(STORAGE_MSGS, [WELCOME_MSG]),
+    readSession<Message[]>(STORAGE_MSGS, [WELCOME_MSG_PUBLIC]),
   );
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const QUICK_ASKS = isSellerLoggedIn ? QUICK_ASKS_SELLER : QUICK_ASKS_PUBLIC;
+
+  // Replace welcome message when seller auth resolves
+  useEffect(() => {
+    if (!isSellerLoggedIn) return;
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].id === "welcome") {
+        return [makeSellerWelcome(shopName)];
+      }
+      return prev;
+    });
+  }, [isSellerLoggedIn, shopName]);
 
   // Persist conversation and open state across navigations / open-close
   useEffect(() => {
@@ -120,8 +154,9 @@ export function SupportBot() {
       }));
 
     try {
+      const endpoint = isSellerLoggedIn ? "tickets/seller-chat" : "tickets/ai-chat";
       const res = await api.post<{ reply: string; shouldEscalate: boolean; confidence: number }>(
-        "tickets/ai-chat",
+        endpoint,
         { message: text, history, sessionId: getOrCreateSessionId() },
       );
 

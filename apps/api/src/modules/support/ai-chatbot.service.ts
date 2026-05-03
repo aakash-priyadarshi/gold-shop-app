@@ -405,4 +405,136 @@ AVAILABLE TOOLS:
       confidence: 0.4,
     };
   }
+
+  /**
+   * Seller-aware chat — same as chat() but enriched with the logged-in
+   * shop's live metrics so the AI can answer "how are my sales this month?"
+   */
+  async sellerChat(
+    shopId: string,
+    userId: string,
+    message: string,
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
+    ipAddress?: string,
+    sessionId?: string,
+  ): Promise<AiChatResponse> {
+    if (!this.apiKey) {
+      return this.fallbackResponse(message);
+    }
+
+    try {
+      // Fetch seller context in parallel
+      const now = new Date();
+      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+      const [shop, invoiceSummary, unpaidCount, customerCount] = await Promise.all([
+        this.prisma.shop.findUnique({
+          where: { id: shopId },
+          select: { name: true, country: true },
+        }),
+        this.prisma.invoice.aggregate({
+          where: {
+            shopId,
+            issuedAt: { gte: monthStart },
+            status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID"] as any[] },
+          },
+          _count: { id: true },
+          _sum: { totalAmount: true },
+        }),
+        this.prisma.invoice.count({
+          where: {
+            shopId,
+            status: { in: ["ISSUED", "OVERDUE"] as any[] },
+          },
+        }),
+        this.prisma.customer.count({ where: { shopId } }),
+      ]);
+
+      const currency = shop?.country === "NP" ? "NPR" : shop?.country === "AE" ? "AED" : shop?.country === "GB" ? "GBP" : "₹";
+      const monthlySales = invoiceSummary._sum.totalAmount ?? 0;
+      const monthlyCount = invoiceSummary._count.id ?? 0;
+
+      const sellerContext = `
+SELLER CONTEXT (PRIVATE — FOR THIS SELLER ONLY, DO NOT SHARE WITH OTHER USERS):
+Shop name: ${shop?.name ?? "Unknown"}
+Country: ${shop?.country ?? "IN"}
+This month's invoices: ${monthlyCount}
+Total sales this month: ${currency} ${monthlySales.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+Pending/unpaid invoices: ${unpaidCount}
+Total customers in database: ${customerCount}
+
+When the seller asks about their sales, invoices, or business data, answer using the figures above.
+Never share these seller-specific numbers in any response that might be seen by other users.`;
+
+      const knowledgeContext = await this.searchKnowledge(message);
+      const systemPrompt = this.buildSystemPrompt(knowledgeContext || undefined) + sellerContext;
+
+      const contents = this.buildContents(systemPrompt, conversationHistory, message);
+
+      const tools = [
+        {
+          functionDeclarations: [
+            {
+              name: "sendPasswordReset",
+              description: "Sends a secure password reset link to the user's email address if they forgot their password.",
+              parameters: {
+                type: "OBJECT",
+                properties: {
+                  email: { type: "STRING", description: "The email address of the user who needs the reset link." },
+                },
+                required: ["email"],
+              },
+            },
+            {
+              name: "autoEscalateTicket",
+              description: "Automatically creates a high-priority support ticket when a user appeals suspension, gets locked out, or has a complex issue that requires human intervention.",
+              parameters: {
+                type: "OBJECT",
+                properties: {
+                  guestName: { type: "STRING", description: "The user's full name. Ask for this if not provided." },
+                  guestEmail: { type: "STRING", description: "The user's email address. Ask for this if not provided." },
+                  issueType: { type: "STRING", description: "Must be exactly one of: LOGIN_ISSUE, ACCOUNT_SUSPENSION, ORDER_ISSUE, REFUND_ISSUE, OTHER" },
+                  summary: { type: "STRING", description: "A detailed summary of the issue to attach to the ticket for human review." },
+                },
+                required: ["guestName", "guestEmail", "issueType", "summary"],
+              },
+            },
+          ],
+        },
+      ];
+
+      const response = await fetch(
+        `${this.GEMINI_API_URL}?key=${this.apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents,
+            tools,
+            generationConfig: { temperature: 0.3, maxOutputTokens: 600, topP: 0.8 },
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        this.logger.warn(`Gemini API error (sellerChat): ${response.status}`);
+        return this.fallbackResponse(message);
+      }
+
+      const data = await response.json();
+      const firstPart = data?.candidates?.[0]?.content?.parts?.[0];
+
+      if (firstPart && firstPart.functionCall) {
+        return this.handleFunctionCall(firstPart.functionCall, ipAddress, sessionId);
+      }
+
+      const text = firstPart?.text || "";
+      const parsed = this.parseAiResponse(text);
+      await this.supportService.logAiChat(sessionId ?? null, "assistant", parsed.reply, undefined, parsed.confidence, ipAddress);
+      return parsed;
+    } catch (error) {
+      this.logger.error("sellerChat error:", error);
+      return this.fallbackResponse(message);
+    }
+  }
 }

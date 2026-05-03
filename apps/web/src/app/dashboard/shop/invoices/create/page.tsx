@@ -929,7 +929,7 @@ export default function CreateInvoicePage() {
           )}
 
           {/* Country & Tax */}
-          <Card>
+          <Card data-tour="invoice-create-country">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Globe className="h-4 w-4 text-blue-500" />
@@ -1140,7 +1140,7 @@ export default function CreateInvoicePage() {
           </Card>
 
           {/* Customer Details */}
-          <Card>
+          <Card data-tour="invoice-create-customer">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <User className="h-4 w-4 text-green-500" />
@@ -1284,7 +1284,7 @@ export default function CreateInvoicePage() {
           </Card>
 
           {/* Line Items */}
-          <Card>
+          <Card data-tour="invoice-create-items">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Line Items</CardTitle>
               <CardDescription>
@@ -1744,7 +1744,7 @@ export default function CreateInvoicePage() {
               <Separator />
 
               {/* Totals */}
-              <div className="flex justify-end">
+              <div className="flex justify-end" data-tour="invoice-create-totals">
                 <div className="w-[420px] space-y-3">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
