@@ -76,6 +76,13 @@ jobs:
         if: steps.config.outputs.ready == 'true'
         run: pnpm install --frozen-lockfile
 
+      - name: Allow production deploy to settle
+        if: steps.config.outputs.ready == 'true' && github.event_name == 'push'
+        shell: bash
+        run: |
+          echo "Push trigger detected, waiting 5 minutes for production deploy to settle"
+          sleep 300
+
       - name: Wait for sitemap to become reachable
         if: steps.config.outputs.ready == 'true'
         shell: bash
