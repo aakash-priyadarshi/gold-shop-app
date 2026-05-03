@@ -121,7 +121,7 @@ jobs:
           sleep 300
 
       - name: Wait for sitemap to become reachable
-        if: steps.config.outputs.ready == 'true'
+        if: steps.config.outputs.ready == 'true' && github.event_name == 'push'
         shell: bash
         run: |
           for attempt in $(seq 1 20); do
