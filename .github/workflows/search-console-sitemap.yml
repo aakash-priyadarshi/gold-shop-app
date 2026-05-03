@@ -31,16 +31,24 @@ jobs:
     steps:
       - name: Prepare Search Console config
         id: config
+        env:
+          SEARCH_CONSOLE_SITEMAP_URL: ${{ vars.SEARCH_CONSOLE_SITEMAP_URL }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID }}
+          GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN }}
+          SEARCH_CONSOLE_PROPERTY: ${{ secrets.SEARCH_CONSOLE_PROPERTY }}
         shell: bash
         run: |
-          SITEMAP_URL="${{ vars.SEARCH_CONSOLE_SITEMAP_URL }}"
+          SITEMAP_URL="$SEARCH_CONSOLE_SITEMAP_URL"
           if [[ -z "$SITEMAP_URL" ]]; then
             SITEMAP_URL="https://www.orivraa.com/sitemap.xml"
           fi
 
           echo "sitemap_url=$SITEMAP_URL" >> "$GITHUB_OUTPUT"
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" == "true" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "$INPUT_DRY_RUN" == "true" ]]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
             echo "submit=false" >> "$GITHUB_OUTPUT"
             echo "auth_mode=dry-run" >> "$GITHUB_OUTPUT"
@@ -48,16 +56,16 @@ jobs:
           fi
 
           HAS_SERVICE_ACCOUNT=false
-          if [[ -n "${{ secrets.GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON }}" ]]; then
+          if [[ -n "$GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON" ]]; then
             HAS_SERVICE_ACCOUNT=true
           fi
 
           HAS_OAUTH=false
-          if [[ -n "${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID }}" && -n "${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET }}" && -n "${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN }}" ]]; then
+          if [[ -n "$GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID" && -n "$GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET" && -n "$GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN" ]]; then
             HAS_OAUTH=true
           fi
 
-          if [[ -z "${{ secrets.SEARCH_CONSOLE_PROPERTY }}" ]]; then
+          if [[ -z "$SEARCH_CONSOLE_PROPERTY" ]]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "submit=false" >> "$GITHUB_OUTPUT"
             echo "auth_mode=missing-property" >> "$GITHUB_OUTPUT"
@@ -117,7 +125,7 @@ jobs:
         shell: bash
         run: |
           for attempt in $(seq 1 20); do
-            if curl --fail --silent --show-error "${{ steps.config.outputs.sitemap_url }}" > /dev/null; then
+            if curl --fail --silent --show-error --location --connect-timeout 10 --max-time 20 "${{ steps.config.outputs.sitemap_url }}" > /dev/null; then
               echo "::notice::Sitemap is reachable"
               exit 0
             fi
