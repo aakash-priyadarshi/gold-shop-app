@@ -27,9 +27,9 @@ export const DEFAULT_GATEWAY_CONFIGS: DefaultGatewayConfig[] = [
     displayName: "Stripe",
     isEnabled: true,
     isDefault: true,
-    supportedCountries: ["US", "UK", "EU", "AE"],
+    supportedCountries: ["US", "UK", "EU", "AE", "IN", "NP"],
     supportedMethods: ["CARD", "BANK_TRANSFER", "PAYPAL"],
-    priority: 10,
+    priority: 8,
     envKeyLabel: "STRIPE_SECRET_KEY",
     envKeysRequired: [
       "STRIPE_SECRET_KEY",
