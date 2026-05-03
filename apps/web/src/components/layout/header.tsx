@@ -85,6 +85,7 @@ import {
 } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 // Role-specific quick action icons configuration
@@ -159,6 +160,8 @@ export function Header() {
   const { items, itemCount, subtotal, removeFromCart } = useCart();
   const { features: platformFeatures } = usePlatformFeatures();
   const customerFlowEnabled = platformFeatures.customerFlowEnabled;
+  const pathname = usePathname();
+  const hideCountrySelector = pathname === "/pricing";
   const t = useT();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -627,33 +630,36 @@ export function Header() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Country */}
-                    <Select
-                      value={country}
-                      onValueChange={(v) => setCountry(v as CountryCode)}
-                    >
-                      <SelectTrigger className="flex-1 h-11 text-sm rounded-xl">
-                        <MapPinIcon className="h-4 w-4 mr-2 text-gray-400" />
-                        <SelectValue>
-                          <span className="flex items-center gap-2">
-                            <FlagImage code={country as FlagCode} size={16} />
-                            {COUNTRIES[country]?.name}
-                          </span>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(COUNTRIES).map(([code, info]) => (
-                          <SelectItem key={code} value={code}>
+                    {!hideCountrySelector && (
+                      <Select
+                        value={country}
+                        onValueChange={(v) => setCountry(v as CountryCode)}
+                      >
+                        <SelectTrigger className="flex-1 h-11 text-sm rounded-xl">
+                          <MapPinIcon className="h-4 w-4 mr-2 text-gray-400" />
+                          <SelectValue>
                             <span className="flex items-center gap-2">
-                              <FlagImage code={code as FlagCode} size={16} />
-                              {info.name}
+                              <FlagImage code={country as FlagCode} size={16} />
+                              {COUNTRIES[country]?.name ?? country}
                             </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <div className="px-2 py-1.5 text-xs text-muted-foreground border-b mb-1">
+                            {t("Tax Jurisdiction")}
+                          </div>
+                          {Object.entries(COUNTRIES).map(([code, info]) => (
+                            <SelectItem key={code} value={code}>
+                              <span className="flex items-center gap-2">
+                                <FlagImage code={code as FlagCode} size={14} />
+                                {info.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
 
-                    {/* Theme Toggle */}
                     <AnimatedThemeToggle
                       size={44}
                       className="shrink-0 border border-input"
@@ -868,81 +874,78 @@ export function Header() {
         <div className="hidden lg:flex items-center gap-2">
           {mounted && (
             <>
-              {/* Language, Currency & Country — only relevant in customer flow */}
-              {customerFlowEnabled && (
-                <>
-                  {/* Language Selector */}
-                  <Select
-                    value={language}
-                    onValueChange={(v) => setLanguage(v as Language)}
-                  >
-                    <SelectTrigger className="w-[100px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
-                      <GlobeAltIcon className="h-3 w-3 mr-1 text-gray-400" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(LANGUAGES).map(([code, info]) => (
-                        <SelectItem key={code} value={code} className="text-xs">
-                          {info.nativeName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {/* Language Selector */}
+              <Select
+                value={language}
+                onValueChange={(v) => setLanguage(v as Language)}
+              >
+                <SelectTrigger className="w-[100px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
+                  <GlobeAltIcon className="h-3 w-3 mr-1 text-gray-400" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(LANGUAGES).map(([code, info]) => (
+                    <SelectItem key={code} value={code} className="text-xs">
+                      {info.nativeName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                  {/* Currency Selector */}
-                  <Select
-                    value={currency}
-                    onValueChange={(v) => setCurrency(v as CurrencyCode)}
-                  >
-                    <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
-                      <CurrencyDollarIcon className="h-3 w-3 mr-1 text-gray-400" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="px-2 py-1.5 text-xs text-muted-foreground border-b mb-1">
-                        {t("Price Display Currency")}
-                      </div>
-                      {Object.entries(CURRENCIES).map(([code, info]) => (
-                        <SelectItem key={code} value={code} className="text-xs">
-                          <span className="mr-1">{info.symbol}</span>
-                          {code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {/* Currency Selector */}
+              <Select
+                value={currency}
+                onValueChange={(v) => setCurrency(v as CurrencyCode)}
+              >
+                <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
+                  <CurrencyDollarIcon className="h-3 w-3 mr-1 text-gray-400" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground border-b mb-1">
+                    {t("Price Display Currency")}
+                  </div>
+                  {Object.entries(CURRENCIES).map(([code, info]) => (
+                    <SelectItem key={code} value={code} className="text-xs">
+                      <span className="mr-1">{info.symbol}</span>
+                      {code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                  {/* Country Selector */}
-                  <Select
-                    value={country}
-                    onValueChange={(v) => setCountry(v as CountryCode)}
-                  >
-                    <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
-                      <MapPinIcon className="h-3 w-3 mr-1 text-gray-400" />
-                      <SelectValue>
+              {/* Country Selector */}
+              {customerFlowEnabled && !hideCountrySelector && (
+                <Select
+                  value={country}
+                  onValueChange={(v) => setCountry(v as CountryCode)}
+                >
+                  <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
+                    <MapPinIcon className="h-3 w-3 mr-1 text-gray-400" />
+                    <SelectValue>
+                      <span className="flex items-center gap-1">
+                        <FlagImage code={country as FlagCode} size={14} />
+                        {country}
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground border-b mb-1">
+                      {t("Tax Jurisdiction")}
+                    </div>
+                    {Object.entries(COUNTRIES).map(([code, info]) => (
+                      <SelectItem key={code} value={code} className="text-xs">
                         <span className="flex items-center gap-1">
-                          <FlagImage code={country as FlagCode} size={14} />
-                          {country}
-                        </span>
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="px-2 py-1.5 text-xs text-muted-foreground border-b mb-1">
-                        {t("Tax Jurisdiction")}
-                      </div>
-                      {Object.entries(COUNTRIES).map(([code, info]) => (
-                        <SelectItem key={code} value={code} className="text-xs">
-                          <span className="flex items-center gap-1">
-                            <FlagImage code={code as FlagCode} size={14} />
-                            {info.name}
-                            <span className="ml-1 text-muted-foreground">
-                              ({info.taxDisplay})
-                            </span>
+                          <FlagImage code={code as FlagCode} size={14} />
+                          {info.name}
+                          <span className="ml-1 text-muted-foreground">
+                            ({info.taxDisplay})
                           </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
 
               {/* Theme Toggle */}

@@ -41,8 +41,10 @@ import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
 import {
+  CURRENCIES,
     LANGUAGES,
     usePreferencesStore,
+  type CurrencyCode,
     type Language,
 } from "@/store/preferences";
 import {
@@ -112,6 +114,31 @@ function LanguageSelector() {
         {Object.entries(LANGUAGES).map(([code, info]) => (
           <SelectItem key={code} value={code} className="text-xs">
             {info.nativeName}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function CurrencySelector() {
+  const currency = usePreferencesStore((s) => s.currency);
+  const setCurrency = usePreferencesStore((s) => s.setCurrency);
+
+  return (
+    <Select
+      value={currency}
+      onValueChange={(v) => setCurrency(v as CurrencyCode)}
+    >
+      <SelectTrigger className="w-[100px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
+        <CreditCard className="h-3.5 w-3.5 mr-1 text-gray-400" />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {Object.entries(CURRENCIES).map(([code, info]) => (
+          <SelectItem key={code} value={code} className="text-xs">
+            <span className="mr-1">{info.symbol}</span>
+            {code}
           </SelectItem>
         ))}
       </SelectContent>
@@ -1035,6 +1062,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex items-center gap-3">
               {/* Language Selector */}
               <LanguageSelector />
+
+              {/* Currency Selector */}
+              <CurrencySelector />
 
               {/* Theme Toggle */}
               <AnimatedThemeToggle size={40} />

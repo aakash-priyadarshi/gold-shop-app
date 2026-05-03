@@ -1,10 +1,18 @@
+import {
+  getRegionalPricingSeo,
+  INDIA_PRO_MONTHLY_PRICE,
+  INDIA_PRO_PLUS_MONTHLY_PRICE,
+  NEPAL_PRO_MONTHLY_PRICE,
+} from "@/lib/seo/pricing-copy";
 import { Metadata } from "next";
+import { headers } from "next/headers";
 
-export const metadata: Metadata = {
-  title:
-    "Orivraa Pricing & Plans 2026 | Free Jewellery Shop Software — From $0/month",
-  description:
-    "Orivraa jewellery software pricing: Free plan ($0), Pro ($12.99/mo), Pro+ ($24.99/mo), Enterprise (custom). Includes inventory management, billing, POS, AI tools, digital catalogues & marketplace. AI credits at $0.06 each. Compare plans for jewellery sellers in Nepal, India, Dubai, USA & UK. Start free — no credit card needed.",
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = getRegionalPricingSeo(headers().get("cf-ipcountry"));
+
+  return {
+    title: seo.title,
+    description: seo.description,
   keywords: [
     "orivraa pricing",
     "jewellery software pricing",
@@ -20,162 +28,196 @@ export const metadata: Metadata = {
     "orivraa pro plan",
     "jewellery inventory software pricing",
     "jewellery billing software price",
+    "gstin invoice software",
+    "jewellery software india price",
   ],
-  alternates: { canonical: "/pricing" },
-  openGraph: {
-    title:
-      "Orivraa Pricing — Free Jewellery Shop Software | Plans from $0/month",
-    description:
-      "Compare Orivraa plans: Free ($0), Pro ($12.99/mo), Pro+ ($24.99/mo), Enterprise. Full jewellery shop management with inventory, billing, AI tools & marketplace. Start free today.",
-    url: "https://www.orivraa.com/pricing",
-  },
-};
-
-/** Server-rendered JSON-LD so Google/Gemini can read pricing without executing JS */
-const pricingJsonLd = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "SoftwareApplication",
-      name: "Orivraa — Jewellery Shop Software",
-      applicationCategory: "BusinessApplication",
-      operatingSystem: "Web, Windows, macOS, Android, iOS",
+    alternates: { canonical: "/pricing" },
+    openGraph: {
+      title: seo.openGraphTitle,
+      description: seo.openGraphDescription,
       url: "https://www.orivraa.com/pricing",
-      description:
-        "Free cloud-based jewellery shop management software. Manage gold, silver & diamond inventory by weight and purity. Includes billing, POS, AI design tools, digital catalogues, and international marketplace.",
-      author: {
-        "@type": "Organization",
-        name: "Orivraa Technologies Pvt. Ltd.",
-        url: "https://www.orivraa.com",
-      },
-      offers: [
-        {
-          "@type": "Offer",
-          name: "Free Plan",
-          price: "0",
-          priceCurrency: "USD",
-          description:
-            "Free forever — list up to 15 products on the marketplace, manage inventory, accept orders. No credit card required. Includes basic analytics and customer messaging.",
-          url: "https://www.orivraa.com/pricing",
-        },
-        {
-          "@type": "Offer",
-          name: "Pro Plan",
-          price: "12.99",
-          priceCurrency: "USD",
-          priceSpecification: {
-            "@type": "UnitPriceSpecification",
-            price: "12.99",
-            priceCurrency: "USD",
-            billingDuration: "P1M",
-            unitText: "per month",
-          },
-          description:
-            "Full CRM suite — unlimited products, inventory management, invoicing & billing, customer management, bulk upload, advanced analytics, custom branding, and priority support. AI credits at $0.06/credit.",
-          url: "https://www.orivraa.com/pricing",
-        },
-        {
-          "@type": "Offer",
-          name: "Pro+ Plan (Most Popular)",
-          price: "24.99",
-          priceCurrency: "USD",
-          priceSpecification: {
-            "@type": "UnitPriceSpecification",
-            price: "24.99",
-            priceCurrency: "USD",
-            billingDuration: "P1M",
-            unitText: "per month",
-          },
-          description:
-            "Everything in Pro plus AI-powered tools: design generation, smart recommendations, price optimization, demand forecasting, and monthly AI credits included. Priority listing on marketplace.",
-          url: "https://www.orivraa.com/pricing",
-        },
-        {
-          "@type": "Offer",
-          name: "Enterprise Plan",
-          description:
-            "Custom pricing for large jewellery businesses. Includes unlimited everything, lowest commission rate, dedicated account manager, API access, white-label option, multi-branch support, and custom integrations. Contact sales for a quote.",
-          url: "https://www.orivraa.com/pricing",
-        },
-      ],
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: "4.8",
-        reviewCount: "320",
-        bestRating: "5",
-        worstRating: "1",
-      },
     },
-    {
-      "@type": "FAQPage",
-      mainEntity: [
-        {
-          "@type": "Question",
-          name: "How much does Orivraa jewellery software cost?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "Orivraa offers 4 plans: Free ($0/month — up to 15 products), Pro ($12.99/month — unlimited products, full CRM), Pro+ ($24.99/month — includes AI tools and priority listing), and Enterprise (custom pricing). Annual billing saves 20%. All plans include marketplace access. AI credits available at $0.06/credit. Local currency pricing available for Nepal (NPR), India (INR), UAE (AED), UK (GBP), and USA (USD).",
-          },
-        },
-        {
-          "@type": "Question",
-          name: "Is Orivraa jewellery software free?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "Yes! Orivraa has a free-forever plan that includes marketplace listing for up to 15 products, basic inventory management, customer messaging, and analytics. No credit card required. You can upgrade to Pro ($12.99/mo) or Pro+ ($24.99/mo) anytime for unlimited products and advanced features.",
-          },
-        },
-        {
-          "@type": "Question",
-          name: "What is included in Orivraa Pro plan?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "Orivraa Pro ($12.99/month) includes: unlimited product listings, full inventory management by weight & purity, invoicing & billing, customer management, bulk product upload, advanced analytics, custom branding, staff accounts, and priority support. AI credits can be purchased at $0.06/credit.",
-          },
-        },
-        {
-          "@type": "Question",
-          name: "What is the best plan for a jewellery shop?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "For most jewellery shops, Pro+ ($24.99/month) is the best value — it includes everything in Pro plus AI-powered design generation, smart recommendations, price optimization, demand forecasting, and monthly AI credits. If you're just starting out, begin with the Free plan and upgrade as your business grows.",
-          },
-        },
-      ],
+    twitter: {
+      card: "summary_large_image",
+      title: seo.twitterTitle,
+      description: seo.twitterDescription,
     },
-    {
-      "@type": "WebPage",
-      "@id": "https://www.orivraa.com/pricing",
-      name: "Orivraa Pricing & Plans",
-      description:
-        "Compare Orivraa jewellery software plans. Free, Pro ($12.99/mo), Pro+ ($24.99/mo), Enterprise. Manage gold, silver & diamond inventory with AI-powered tools.",
-      isPartOf: { "@id": "https://www.orivraa.com/#website" },
-      breadcrumb: {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: "Home",
-            item: "https://www.orivraa.com",
-          },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: "Pricing",
-            item: "https://www.orivraa.com/pricing",
-          },
-        ],
-      },
-    },
-  ],
-};
+  };
+}
 
 export default function PricingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const seo = getRegionalPricingSeo(headers().get("cf-ipcountry"));
+  const pricingJsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        name: "Orivraa — Jewellery Shop Software",
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web, Windows, macOS, Android, iOS",
+        url: "https://www.orivraa.com/pricing",
+        description:
+          "Jewellery shop software with local country pricing, inventory by weight and purity, billing, POS, GSTIN/VAT-ready invoices, tax reports, AI tools, and marketplace access.",
+        author: {
+          "@type": "Organization",
+          name: "Orivraa Technologies Pvt. Ltd.",
+          url: "https://www.orivraa.com",
+        },
+        offers: [
+          {
+            "@type": "Offer",
+            name: "Free Plan",
+            price: "0",
+            priceCurrency: "INR",
+            description:
+              "Free plan available with marketplace access and core tools. Paid plans use local country pricing.",
+            url: "https://www.orivraa.com/pricing",
+          },
+          {
+            "@type": "AggregateOffer",
+            name: "Paid Plans",
+            lowPrice: `${INDIA_PRO_MONTHLY_PRICE}`,
+            priceCurrency: "INR",
+            offerCount: "3",
+            description:
+              "Paid plans start at ₹299/month in India. Pricing localises by country and final billing is verified by shop country.",
+            url: "https://www.orivraa.com/pricing",
+          },
+          {
+            "@type": "Offer",
+            name: "Pro Plan (India)",
+            price: `${INDIA_PRO_MONTHLY_PRICE}`,
+            priceCurrency: "INR",
+            eligibleRegion: { "@type": "Country", name: "India" },
+            priceSpecification: {
+              "@type": "UnitPriceSpecification",
+              price: `${INDIA_PRO_MONTHLY_PRICE}`,
+              priceCurrency: "INR",
+              billingDuration: "P1M",
+              unitText: "per month",
+            },
+            description:
+              "India pricing for Orivraa Pro with inventory, billing, GSTIN-ready invoices, analytics, tax reports, and marketplace access.",
+            url: "https://www.orivraa.com/pricing",
+          },
+          {
+            "@type": "Offer",
+            name: "Pro+ Plan (India)",
+            price: `${INDIA_PRO_PLUS_MONTHLY_PRICE}`,
+            priceCurrency: "INR",
+            eligibleRegion: { "@type": "Country", name: "India" },
+            priceSpecification: {
+              "@type": "UnitPriceSpecification",
+              price: `${INDIA_PRO_PLUS_MONTHLY_PRICE}`,
+              priceCurrency: "INR",
+              billingDuration: "P1M",
+              unitText: "per month",
+            },
+            description:
+              "India pricing for Orivraa Pro+ with additional AI automation, reports, and advanced seller tools.",
+            url: "https://www.orivraa.com/pricing",
+          },
+          {
+            "@type": "Offer",
+            name: "Pro Plan (Nepal)",
+            price: `${NEPAL_PRO_MONTHLY_PRICE}`,
+            priceCurrency: "NPR",
+            eligibleRegion: { "@type": "Country", name: "Nepal" },
+            priceSpecification: {
+              "@type": "UnitPriceSpecification",
+              price: `${NEPAL_PRO_MONTHLY_PRICE}`,
+              priceCurrency: "NPR",
+              billingDuration: "P1M",
+              unitText: "per month",
+            },
+            description:
+              "Nepal pricing for Orivraa Pro with billing, analytics, local tax-ready workflows, and marketplace access.",
+            url: "https://www.orivraa.com/pricing",
+          },
+          {
+            "@type": "Offer",
+            name: "Enterprise Plan",
+            description:
+              "Custom pricing for large jewellery businesses. Includes unlimited operations support, advanced integrations, dedicated account management, and multi-branch workflows.",
+            url: "https://www.orivraa.com/pricing",
+          },
+        ],
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: "4.8",
+          reviewCount: "320",
+          bestRating: "5",
+          worstRating: "1",
+        },
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "How much does Orivraa jewellery software cost?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: seo.faqCostText,
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Is Orivraa jewellery software free?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: seo.faqFreeText,
+            },
+          },
+          {
+            "@type": "Question",
+            name: "What is included in Orivraa Pro plan?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: seo.faqProText,
+            },
+          },
+          {
+            "@type": "Question",
+            name: "What is the best plan for a jewellery shop?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: seo.faqBestText,
+            },
+          },
+        ],
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://www.orivraa.com/pricing",
+        name: "Orivraa Pricing & Plans",
+        description: seo.webPageDescription,
+        isPartOf: { "@id": "https://www.orivraa.com/#website" },
+        breadcrumb: {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: "https://www.orivraa.com",
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: "Pricing",
+              item: "https://www.orivraa.com/pricing",
+            },
+          ],
+        },
+      },
+    ],
+  };
+
   return (
     <>
       <script

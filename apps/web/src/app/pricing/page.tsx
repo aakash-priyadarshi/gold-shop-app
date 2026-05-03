@@ -2,11 +2,13 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
 import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
+import { GSTIN_READY_INVOICE_COPY } from "@/lib/seo/pricing-copy";
 import { subscriptionPlansApi } from "@/lib/api";
 import {
     COUNTRIES,
@@ -144,6 +146,10 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
   },
   taxReports: {
     label: "Multi-country tax filing (GSTR, VAT, MTD, OSS, US)",
+    category: "Analytics & Reports",
+  },
+  taxReportsDownload: {
+    label: "Tax report downloads (CSV, XML, Tally)",
     category: "Analytics & Reports",
   },
   taxCaShare: {
@@ -379,7 +385,7 @@ function currencySymbol(code: CurrencyCode): string {
 function formatPrice(amount: number, currency: CurrencyCode): string {
   const sym = currencySymbol(currency);
   if (amount === 0) return `${sym}0`;
-  // Show decimals when the amount has them (e.g. $12.99, $0.06)
+  // Show decimals only for non-integer values.
   const hasDecimals = amount % 1 !== 0;
   try {
     const locale = CURRENCIES[currency]?.locale ?? "en-US";
@@ -423,6 +429,9 @@ function buildFeatureList(
     "customerManagement",
     "basicAnalytics",
     "advancedAnalytics",
+    "taxReports",
+    "taxReportsDownload",
+    "taxCaShare",
     "customBranding",
     "bulkUpload",
     "priorityListing",
@@ -435,6 +444,11 @@ function buildFeatureList(
     const val = plan.features?.[key];
     items.push({ text: display.label, included: !!val });
   }
+
+  items.push({
+    text: GSTIN_READY_INVOICE_COPY,
+    included: !!plan.features?.invoicing,
+  });
 
   // AI section
   if (plan.includesAi && plan.monthlyAiCredits > 0) {
@@ -574,7 +588,9 @@ export default function PricingPage() {
   const { status } = useSession();
 
   const country = usePreferencesStore((s) => s.country);
-  const setCountry = usePreferencesStore((s) => s.setCountry);
+  const detectedCountry = usePreferencesStore((s) => s.detectedCountry);
+  const pricingCountry =
+    detectedCountry && COUNTRIES[detectedCountry] ? detectedCountry : country;
 
   const fetchPlans = useCallback(async (c: CountryCode) => {
     try {
@@ -583,26 +599,15 @@ export default function PricingPage() {
       const data = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
       setPlans(data);
     } catch {
-      // Fallback: try US if country has no plans
-      if (c !== "US") {
-        try {
-          const res = await subscriptionPlansApi.getAvailable("US");
-          const data = Array.isArray(res.data)
-            ? res.data
-            : (res.data?.data ?? []);
-          setPlans(data);
-        } catch {
-          setPlans([]);
-        }
-      }
+      setPlans([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchPlans(country);
-  }, [country, fetchPlans]);
+    fetchPlans(pricingCountry);
+  }, [fetchPlans, pricingCountry]);
 
   // Derived data
   const sortedPlans = useMemo(
@@ -617,7 +622,7 @@ export default function PricingPage() {
 
   const cur =
     plans[0]?.currency ??
-    (COUNTRIES[country]?.defaultCurrency as CurrencyCode) ??
+    (COUNTRIES[pricingCountry]?.defaultCurrency as CurrencyCode) ??
     "USD";
 
   return (
@@ -654,33 +659,16 @@ export default function PricingPage() {
             </T>
           </p>
 
-          {/* Country selector + Billing toggle */}
+          {/* Local pricing badge + Billing toggle */}
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            {/* Country pills */}
-            <div className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-sm border border-gray-200 dark:border-gray-700">
-              {(Object.keys(COUNTRIES) as CountryCode[]).map((code) => (
-                <button
-                  key={code}
-                  onClick={() => setCountry(code)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                    country === code
-                      ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm"
-                      : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                  }`}
-                  title={COUNTRIES[code].name}
-                >
-                  <T>{(
-                    {
-                      NP: "Nepal",
-                      IN: "India",
-                      AE: "UAE",
-                      UK: "UK",
-                      EU: "EU",
-                      US: "USA",
-                    } as Record<string, string>
-                  )[code] ?? code}</T>
-                </button>
-              ))}
+            <div className="inline-flex items-center gap-2 bg-white dark:bg-gray-800 rounded-full px-4 py-2.5 shadow-sm border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300">
+              <Globe className="h-4 w-4 text-amber-500" />
+              <span>
+                <T>Localized pricing for</T>{" "}
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {COUNTRIES[pricingCountry]?.name ?? pricingCountry}
+                </span>
+              </span>
             </div>
 
             {/* Billing toggle */}
@@ -715,9 +703,13 @@ export default function PricingPage() {
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-500">
             <T>Showing prices for</T>{" "}
             <span className="font-medium text-gray-700 dark:text-gray-300">
-              {COUNTRIES[country]?.name ?? country}
+              {COUNTRIES[pricingCountry]?.name ?? pricingCountry}
             </span>{" "}
-            <T>in</T> {currencySymbol(cur)} ({cur})
+            <T>in</T> {currencySymbol(cur)} ({cur}).{" "}
+            <T>
+              Final billing is locked to your detected market and verified
+              against your shop country during signup.
+            </T>
           </p>
           <TrustSignals variant="compact" className="mt-6" />
         </div>
@@ -733,8 +725,7 @@ export default function PricingPage() {
           <div className="text-center py-20 text-muted-foreground">
             <p>
               <T>
-              No plans available for this region yet. Please check back soon or
-              try another country.
+              No plans available for your region yet. Please check back soon.
               </T>
             </p>
           </div>
@@ -1065,6 +1056,11 @@ export default function PricingPage() {
           </div>
         </div>
       </section>
+
+      <ComparisonClusterLinks
+        title="Compare Orivraa With CRM and Billing Software"
+        description="These comparison pages target the software searches jewellers make after pricing: generic CRM tools on one side, and Indian billing tools on the other."
+      />
 
       {/* ── What's Included ──────────────────────────────── */}
       <section className="py-20 max-w-6xl mx-auto px-4">
