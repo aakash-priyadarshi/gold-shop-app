@@ -1,9 +1,10 @@
 ﻿"use client";
 
 /**
- * SupportBot â€” floating AI help widget
+ * SupportBot - floating AI help widget
  *
- * Sends messages to POST /tickets/ai-chat (Gemini 2.5 Flash + Qdrant RAG).
+ * Sends messages to POST /tickets/ai-chat or /tickets/seller-chat
+ * (Gemini 2.5 Flash + Qdrant RAG).
  * Session persistence via sessionStorage so conversation survives page
  * navigation and open/close within the same browser tab.
  *
@@ -16,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { Mail, MessageCircle, Phone, Send, Sparkles, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const FOUNDER = {
@@ -95,12 +97,13 @@ function getOrCreateSessionId(): string {
   return id;
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ------------------------------ Component ------------------------------ */
 
 export function SupportBot() {
+  const pathname = usePathname();
   const { user } = useAuth();
   const isSellerLoggedIn = user?.role === "SHOPKEEPER";
-  const shopName = (user as any)?.shopName as string | undefined;
+  const shopName = user?.shop?.shopName ?? (user as { shopName?: string } | null)?.shopName;
 
   const [open, setOpen] = useState<boolean>(() => readSession(STORAGE_OPEN, false));
   const [input, setInput] = useState("");
@@ -154,10 +157,10 @@ export function SupportBot() {
       }));
 
     try {
-      const endpoint = isSellerLoggedIn ? "tickets/seller-chat" : "tickets/ai-chat";
+      const endpoint = isSellerLoggedIn ? "/tickets/seller-chat" : "/tickets/ai-chat";
       const res = await api.post<{ reply: string; shouldEscalate: boolean; confidence: number }>(
         endpoint,
-        { message: text, history, sessionId: getOrCreateSessionId() },
+        { message: text, history, sessionId: getOrCreateSessionId(), currentPath: pathname },
       );
 
       const botMsg: Message = {
@@ -218,7 +221,7 @@ export function SupportBot() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold leading-tight">Orivraa AI Assistant</p>
-              <p className="text-[11px] opacity-90 leading-tight">Powered by Gemini Â· Founder on standby</p>
+              <p className="text-[11px] opacity-90 leading-tight">Powered by Gemini | Founder on standby</p>
             </div>
             <button
               type="button"
@@ -318,7 +321,7 @@ export function SupportBot() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask anything about Orivraaâ€¦"
+              placeholder="Ask anything about Orivraa..."
               className="flex-1 text-sm bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-amber-400 text-gray-900 dark:text-gray-100 placeholder:text-gray-500"
               maxLength={500}
               disabled={isTyping}
@@ -343,7 +346,7 @@ export function SupportBot() {
             >
               WhatsApp Aakash
             </a>{" "}
-            Â·{" "}
+            |{" "}
             <a href={`mailto:${FOUNDER.email}`} className="underline hover:text-amber-600">
               {FOUNDER.email}
             </a>

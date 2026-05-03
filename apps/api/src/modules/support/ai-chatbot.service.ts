@@ -12,6 +12,28 @@ export interface AiChatResponse {
   confidence: number;
 }
 
+interface SellerSnapshot {
+  sellerName: string;
+  sellerEmail?: string;
+  preferredLanguage?: string;
+  shopId: string;
+  shopName: string;
+  country: string;
+  currency: string;
+  currentMonthLabel: string;
+  currentPath?: string;
+  monthlyInvoiceCount: number;
+  monthlySales: number;
+  pendingInvoiceCount: number;
+  pendingInvoiceAmount: number;
+  walkInCustomerCount: number;
+  openOrderCount: number;
+  recentOrders: Array<{ orderNumber: string; status: string }>;
+  yearlySales: number;
+  nepalAuditRequired: boolean;
+  nepalAuditThresholdUsedPct: number;
+}
+
 @Injectable()
 export class AiChatbotService {
   private readonly logger = new Logger(AiChatbotService.name);
@@ -406,6 +428,357 @@ AVAILABLE TOOLS:
     };
   }
 
+  private fallbackSellerResponse(snapshot: SellerSnapshot): AiChatResponse {
+    return {
+      reply: `I could not generate a full AI reply right now, but I still have your seller context for ${snapshot.shopName}. You can ask me about monthly sales, pending invoices, open orders, invoice creation, customer CRM, or tax reports for your shop.`,
+      shouldEscalate: false,
+      confidence: 0.55,
+    };
+  }
+
+  private getCurrencyCode(country?: string | null): string {
+    switch (country) {
+      case "NP":
+        return "NPR";
+      case "AE":
+        return "AED";
+      case "GB":
+        return "GBP";
+      case "EU":
+      case "DE":
+      case "FR":
+      case "IT":
+      case "ES":
+      case "NL":
+        return "EUR";
+      case "US":
+        return "USD";
+      default:
+        return "INR";
+    }
+  }
+
+  private formatCurrency(amount: number, currency: string): string {
+    return `${currency} ${amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  }
+
+  private pickSettledValue<T>(
+    result: PromiseSettledResult<T>,
+    label: string,
+  ): T | null {
+    if (result.status === "fulfilled") {
+      return result.value;
+    }
+
+    const reason = result.reason instanceof Error
+      ? result.reason.message
+      : String(result.reason);
+    this.logger.warn(`sellerChat: failed to load ${label}: ${reason}`);
+    return null;
+  }
+
+  private getSellerTaxGuidance(snapshot: SellerSnapshot): string {
+    const taxRoute = "/dashboard/shop/tax-reports";
+
+    switch (snapshot.country) {
+      case "NP":
+        return [
+          `Tax Reports route: ${taxRoute}#NP`,
+          "In the left sidebar, open Tax Reports and use the Nepal tab.",
+          "For monthly filing, open the Monthly Return tab for Nepal VAT and luxury tax.",
+          "For yearly audit, open the Yearly Audit tab to see IRD audit status and the yearly table.",
+          "Use the Share with CA button in the Nepal card header when the seller asks how to share reports with their accountant.",
+        ].join(" ");
+      case "IN":
+        return [
+          `Tax Reports route: ${taxRoute}#IN`,
+          "Use Tax Reports in the left sidebar, then stay on the India tab.",
+          "The India panel supports GSTR-1, GSTR-3B, HSN, Tally XML, and Share with CA.",
+        ].join(" ");
+      case "AE":
+        return [
+          `Tax Reports route: ${taxRoute}#AE`,
+          "Use Tax Reports in the left sidebar, then open the UAE tab for VAT 201 and Share with CA.",
+        ].join(" ");
+      case "GB":
+        return [
+          `Tax Reports route: ${taxRoute}#GB`,
+          "Use Tax Reports in the left sidebar, then open the UK tab for MTD guidance and Share with CA.",
+        ].join(" ");
+      case "EU":
+      case "DE":
+      case "FR":
+      case "IT":
+      case "ES":
+      case "NL":
+        return [
+          `Tax Reports route: ${taxRoute}#EU`,
+          "Use Tax Reports in the left sidebar, then open the EU tab for OSS and Share with CA.",
+        ].join(" ");
+      case "US":
+        return [
+          `Tax Reports route: ${taxRoute}#US`,
+          "Use Tax Reports in the left sidebar, then open the US tab for state summaries and Share with CA.",
+        ].join(" ");
+      default:
+        return `Tax Reports route: ${taxRoute}. Direct the seller to Tax Reports in the left sidebar and use the country tab that matches their shop.`;
+    }
+  }
+
+  private buildSellerContext(snapshot: SellerSnapshot): string {
+    const recentOrders = snapshot.recentOrders.length > 0
+      ? snapshot.recentOrders.map((order) => `${order.orderNumber} (${order.status})`).join(", ")
+      : "No recent orders found.";
+
+    const auditStatus = snapshot.country === "NP"
+      ? snapshot.nepalAuditRequired
+        ? `IRD audit is currently required. Threshold usage is ${snapshot.nepalAuditThresholdUsedPct}% of the NPR 1 crore limit.`
+        : `IRD audit is not currently required. Threshold usage is ${snapshot.nepalAuditThresholdUsedPct}% of the NPR 1 crore limit.`
+      : "Nepal IRD audit is not applicable for this shop country.";
+
+    return `
+SELLER PRIVATE CONTEXT (FOR THIS LOGGED-IN SELLER ONLY):
+Seller name: ${snapshot.sellerName}
+Seller email: ${snapshot.sellerEmail ?? "Unavailable"}
+Preferred language: ${snapshot.preferredLanguage ?? "Unavailable"}
+Shop id: ${snapshot.shopId}
+Shop name: ${snapshot.shopName}
+Shop country: ${snapshot.country}
+Current dashboard route: ${snapshot.currentPath ?? "Unavailable"}
+Reporting period: ${snapshot.currentMonthLabel}
+Invoices this month: ${snapshot.monthlyInvoiceCount}
+Total sales this month: ${this.formatCurrency(snapshot.monthlySales, snapshot.currency)}
+Pending invoice count: ${snapshot.pendingInvoiceCount}
+Pending invoice amount: ${this.formatCurrency(snapshot.pendingInvoiceAmount, snapshot.currency)}
+Open order count: ${snapshot.openOrderCount}
+Walk-in customer count: ${snapshot.walkInCustomerCount}
+Recent orders: ${recentOrders}
+Year-to-date sales: ${this.formatCurrency(snapshot.yearlySales, snapshot.currency)}
+Tax audit status: ${auditStatus}
+
+CRM FEATURE MAP:
+- Dashboard overview: /dashboard/shop
+- Orders: /dashboard/shop/orders
+- Customers CRM: /dashboard/shop/customers
+- Inventory: /dashboard/shop/inventory
+- Invoices: /dashboard/shop/invoices
+- Create invoice: /dashboard/shop/invoices/create
+- Tax Reports: /dashboard/shop/tax-reports
+- POS: /dashboard/shop/pos
+- Support: /dashboard/shop/support
+
+COUNTRY-SPECIFIC TAX GUIDANCE:
+${this.getSellerTaxGuidance(snapshot)}
+
+SELLER RESPONSE RULES:
+- Answer with this seller's data only. Never mention or infer another seller's data.
+- If the seller asks where to click, use the left sidebar label and the route map above.
+- If a requested metric is unavailable, say it is unavailable instead of inventing it.
+- Prefer direct, operational instructions for CRM navigation and tax-report workflows.`;
+  }
+
+  private maybeAnswerSellerQuestion(snapshot: SellerSnapshot, message: string): AiChatResponse | null {
+    const normalized = message.toLowerCase();
+    const invoiceRoute = "/dashboard/shop/invoices";
+    const createInvoiceRoute = "/dashboard/shop/invoices/create";
+    const customersRoute = "/dashboard/shop/customers";
+    const taxRoute = "/dashboard/shop/tax-reports";
+
+    if (/sales.*this month|this month.*sales|revenue.*this month/.test(normalized)) {
+      return {
+        reply: `${snapshot.shopName} has ${snapshot.monthlyInvoiceCount} invoice${snapshot.monthlyInvoiceCount === 1 ? "" : "s"} this month for total sales of ${this.formatCurrency(snapshot.monthlySales, snapshot.currency)}.`,
+        shouldEscalate: false,
+        confidence: 0.96,
+      };
+    }
+
+    if (/pending invoice amount|pending invoices|unpaid invoice|outstanding invoice|invoice due/.test(normalized)) {
+      return {
+        reply: `You currently have ${snapshot.pendingInvoiceCount} pending invoice${snapshot.pendingInvoiceCount === 1 ? "" : "s"} with ${this.formatCurrency(snapshot.pendingInvoiceAmount, snapshot.currency)} still due. Open Invoices in the left sidebar if you want to review them: ${invoiceRoute}.`,
+        shouldEscalate: false,
+        confidence: 0.95,
+      };
+    }
+
+    if (/create an invoice|make an invoice|new invoice|invoice for a customer/.test(normalized)) {
+      return {
+        reply: `To create an invoice, open Invoices from the left sidebar and use the create flow at ${createInvoiceRoute}. If you are already in Invoices, choose the create option and fill in customer, line items, tax details, and totals there.`,
+        shouldEscalate: false,
+        confidence: 0.93,
+      };
+    }
+
+    if (/share.*tax report.*ca|share.*tax report.*accountant|share.*report.*ca|share.*report.*accountant/.test(normalized)) {
+      return {
+        reply: `Open Tax Reports from the left sidebar at ${taxRoute}. ${this.getSellerTaxGuidance(snapshot)}`,
+        shouldEscalate: false,
+        confidence: 0.93,
+      };
+    }
+
+    if (/ird audit status|tax audit status|audit my tax|yearly audit|tax audit/.test(normalized)) {
+      if (snapshot.country !== "NP") {
+        return {
+          reply: `Your shop country is ${snapshot.country}, so Nepal IRD audit status does not apply. For tax work, open Tax Reports in the left sidebar at ${taxRoute} and use the tab for your country.`,
+          shouldEscalate: false,
+          confidence: 0.9,
+        };
+      }
+
+      return {
+        reply: snapshot.nepalAuditRequired
+          ? `Your Nepal yearly sales are ${this.formatCurrency(snapshot.yearlySales, snapshot.currency)}, which is ${snapshot.nepalAuditThresholdUsedPct}% of the NPR 1 crore threshold. IRD audit is currently required. Open Tax Reports in the left sidebar, switch to the Nepal tab, then open Yearly Audit at ${taxRoute}#NP.`
+          : `Your Nepal yearly sales are ${this.formatCurrency(snapshot.yearlySales, snapshot.currency)}, which is ${snapshot.nepalAuditThresholdUsedPct}% of the NPR 1 crore threshold. IRD audit is not currently required. Open Tax Reports in the left sidebar, switch to the Nepal tab, then open Yearly Audit at ${taxRoute}#NP if you want to review it.`,
+        shouldEscalate: false,
+        confidence: 0.95,
+      };
+    }
+
+    if (/current order|open orders|pending orders|order status/.test(normalized)) {
+      const recentOrders = snapshot.recentOrders.length > 0
+        ? snapshot.recentOrders.map((order) => `${order.orderNumber} (${order.status})`).join(", ")
+        : "No recent orders found.";
+      return {
+        reply: `You currently have ${snapshot.openOrderCount} open order${snapshot.openOrderCount === 1 ? "" : "s"}. Recent orders: ${recentOrders} Open Orders from the left sidebar at /dashboard/shop/orders to review the full list.`,
+        shouldEscalate: false,
+        confidence: 0.92,
+      };
+    }
+
+    if (/(crm|customer).*(where|open|find)|where.*crm|where.*customer/.test(normalized)) {
+      return {
+        reply: `Your customer CRM is under Customers in the left sidebar at ${customersRoute}. That is the place to review customer records, notes, and history for your own shop.`,
+        shouldEscalate: false,
+        confidence: 0.9,
+      };
+    }
+
+    return null;
+  }
+
+  private async buildSellerSnapshot(
+    shopId: string,
+    userId: string,
+    currentPath?: string,
+  ): Promise<SellerSnapshot> {
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+
+    const [
+      userResult,
+      shopResult,
+      monthlyInvoicesResult,
+      pendingInvoicesResult,
+      customersResult,
+      openOrdersResult,
+      recentOrdersResult,
+      yearlyInvoicesResult,
+    ] = await Promise.allSettled([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          preferredLanguage: true,
+        },
+      }),
+      this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { shopName: true, country: true },
+      }),
+      this.prisma.invoice.aggregate({
+        where: {
+          shopId,
+          issuedAt: { gte: monthStart },
+          status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID"] },
+        },
+        _count: { id: true },
+        _sum: { totalAmount: true },
+      }),
+      this.prisma.invoice.aggregate({
+        where: {
+          shopId,
+          balanceDue: { gt: 0 },
+          status: { in: ["ISSUED", "PARTIALLY_PAID", "OVERDUE"] },
+        },
+        _count: { id: true },
+        _sum: { balanceDue: true },
+      }),
+      this.prisma.walkInCustomer.count({ where: { createdByShopId: shopId } }),
+      this.prisma.order.count({
+        where: {
+          shopId,
+          status: { notIn: ["DELIVERED", "COMPLETED", "CANCELLED", "REFUNDED", "EXPIRED"] },
+        },
+      }),
+      this.prisma.order.findMany({
+        where: { shopId },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        select: { orderNumber: true, status: true },
+      }),
+      this.prisma.invoice.aggregate({
+        where: {
+          shopId,
+          issuedAt: { gte: yearStart },
+          status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID"] },
+        },
+        _sum: { totalAmount: true },
+      }),
+    ]);
+
+    const user = this.pickSettledValue(userResult, "seller user");
+    const shop = this.pickSettledValue(shopResult, "seller shop");
+    const monthlyInvoices = this.pickSettledValue(monthlyInvoicesResult, "monthly invoices");
+    const pendingInvoices = this.pickSettledValue(pendingInvoicesResult, "pending invoices");
+    const walkInCustomerCount = this.pickSettledValue(customersResult, "walk-in customers") ?? 0;
+    const openOrderCount = this.pickSettledValue(openOrdersResult, "open orders") ?? 0;
+    const recentOrders = this.pickSettledValue(recentOrdersResult, "recent orders") ?? [];
+    const yearlyInvoices = this.pickSettledValue(yearlyInvoicesResult, "yearly invoices");
+
+    const sellerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Seller";
+    const country = shop?.country ?? "IN";
+    const currency = this.getCurrencyCode(country);
+    const monthlySales = monthlyInvoices?._sum.totalAmount ?? 0;
+    const monthlyInvoiceCount = monthlyInvoices?._count.id ?? 0;
+    const pendingInvoiceAmount = pendingInvoices?._sum.balanceDue ?? 0;
+    const pendingInvoiceCount = pendingInvoices?._count.id ?? 0;
+    const yearlySales = yearlyInvoices?._sum.totalAmount ?? 0;
+    const nepalThreshold = 10_000_000;
+    const nepalAuditRequired = country === "NP" && yearlySales >= nepalThreshold;
+    const nepalAuditThresholdUsedPct = country === "NP"
+      ? Math.min(999, Math.round((yearlySales / nepalThreshold) * 100))
+      : 0;
+
+    return {
+      sellerName,
+      sellerEmail: user?.email ?? undefined,
+      preferredLanguage: user?.preferredLanguage ?? undefined,
+      shopId,
+      shopName: shop?.shopName ?? "Unknown shop",
+      country,
+      currency,
+      currentMonthLabel: new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(now),
+      currentPath,
+      monthlyInvoiceCount,
+      monthlySales,
+      pendingInvoiceCount,
+      pendingInvoiceAmount,
+      walkInCustomerCount,
+      openOrderCount,
+      recentOrders,
+      yearlySales,
+      nepalAuditRequired,
+      nepalAuditThresholdUsedPct,
+    };
+  }
+
   /**
    * Seller-aware chat — same as chat() but enriched with the logged-in
    * shop's live metrics so the AI can answer "how are my sales this month?"
@@ -417,11 +790,10 @@ AVAILABLE TOOLS:
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
     ipAddress?: string,
     sessionId?: string,
+    userAgent?: string,
+    currentPath?: string,
   ): Promise<AiChatResponse> {
-    if (!this.apiKey) {
-      this.logger.error("sellerChat: GEMINI_API_KEY is not set — returning fallback");
-      return this.fallbackResponse(message);
-    }
+    let snapshot: SellerSnapshot | null = null;
 
     try {
       // Resolve shopId — may be absent from JWT if user.activeShopId is unset
@@ -438,51 +810,31 @@ AVAILABLE TOOLS:
         }
       }
 
-      // Fetch seller context in parallel
-      const now = new Date();
-      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      if (sessionId) {
+        const intents = this.detectLeadIntents(message);
+        await this.supportService.upsertBotSession(sessionId, {
+          ipAddress,
+          userAgent,
+          newIntents: intents,
+        });
+      }
 
-      const [shop, invoiceSummary, unpaidCount, customerCount] = await Promise.all([
-        this.prisma.shop.findUnique({
-          where: { id: resolvedShopId },
-          select: { shopName: true, country: true },
-        }),
-        this.prisma.invoice.aggregate({
-          where: {
-            shopId: resolvedShopId,
-            issuedAt: { gte: monthStart },
-            status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID"] as any[] },
-          },
-          _count: { id: true },
-          _sum: { totalAmount: true },
-        }),
-        this.prisma.invoice.count({
-          where: {
-            shopId: resolvedShopId,
-            status: { in: ["ISSUED", "OVERDUE"] as any[] },
-          },
-        }),
-        this.prisma.walkInCustomer.count({ where: { createdByShopId: resolvedShopId } }),
-      ]);
+      await this.supportService.logAiChat(sessionId ?? null, "user", message, undefined, undefined, ipAddress);
 
-      const currency = shop?.country === "NP" ? "NPR" : shop?.country === "AE" ? "AED" : shop?.country === "GB" ? "GBP" : "₹";
-      const monthlySales = invoiceSummary._sum.totalAmount ?? 0;
-      const monthlyCount = invoiceSummary._count.id ?? 0;
+      snapshot = await this.buildSellerSnapshot(resolvedShopId, userId, currentPath);
+      const directAnswer = this.maybeAnswerSellerQuestion(snapshot, message);
+      if (directAnswer) {
+        await this.supportService.logAiChat(sessionId ?? null, "assistant", directAnswer.reply, undefined, directAnswer.confidence, ipAddress);
+        return directAnswer;
+      }
 
-      const sellerContext = `
-SELLER CONTEXT (PRIVATE — FOR THIS SELLER ONLY, DO NOT SHARE WITH OTHER USERS):
-Shop name: ${shop?.shopName ?? "Unknown"}
-Country: ${shop?.country ?? "IN"}
-This month's invoices: ${monthlyCount}
-Total sales this month: ${currency} ${monthlySales.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
-Pending/unpaid invoices: ${unpaidCount}
-Total customers in database: ${customerCount}
-
-When the seller asks about their sales, invoices, or business data, answer using the figures above.
-Never share these seller-specific numbers in any response that might be seen by other users.`;
+      if (!this.apiKey) {
+        this.logger.error("sellerChat: GEMINI_API_KEY is not set — returning seller fallback");
+        return this.fallbackSellerResponse(snapshot);
+      }
 
       const knowledgeContext = await this.searchKnowledge(message);
-      const systemPrompt = this.buildSystemPrompt(knowledgeContext || undefined) + sellerContext;
+      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined)}\n\n${this.buildSellerContext(snapshot)}`;
 
       const contents = this.buildContents(systemPrompt, conversationHistory, message);
 
@@ -533,7 +885,7 @@ Never share these seller-specific numbers in any response that might be seen by 
 
       if (!response.ok) {
         this.logger.warn(`Gemini API error (sellerChat): ${response.status}`);
-        return this.fallbackResponse(message);
+        return this.fallbackSellerResponse(snapshot);
       }
 
       const data = await response.json();
@@ -549,7 +901,7 @@ Never share these seller-specific numbers in any response that might be seen by 
       return parsed;
     } catch (error) {
       this.logger.error("sellerChat error:", error);
-      return this.fallbackResponse(message);
+      return snapshot ? this.fallbackSellerResponse(snapshot) : this.fallbackResponse(message);
     }
   }
 }

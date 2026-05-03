@@ -81,6 +81,7 @@ export class TicketsController {
     body: {
       message: string;
       sessionId?: string;
+      currentPath?: string;
       history?: Array<{ role: "user" | "assistant"; content: string }>;
     },
   ) {
@@ -91,6 +92,8 @@ export class TicketsController {
       body.history || [],
       req.ip,
       body.sessionId,
+      req.headers?.["user-agent"] as string | undefined,
+      body.currentPath,
     );
   }
 
