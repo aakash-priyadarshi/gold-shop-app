@@ -18,13 +18,44 @@ Disallow: /admin/
 # NOTE: Do NOT disallow /_next/ — Googlebot needs /_next/static/
 # to render JavaScript and see page content for proper indexing.
 
-# ─── Allow Google AI (Gemini) to read content ────────────────────
-# Cloudflare blocks Google-Extended by default for AI training.
-# Override: explicitly allow it so Gemini can understand & cite Orivraa.
+# ─── Explicitly allow Google search and inspection bots ───────────
+User-agent: Googlebot
+Allow: /
+
+User-agent: Google-InspectionTool
+Allow: /
+
+User-agent: AdsBot-Google
+Allow: /
+
+# ─── Allow AI search and user-requested fetchers ─────────────────
+# Keep search visibility and user-requested fetches open, while
+# continuing to block training crawlers below.
 User-agent: Google-Extended
 Allow: /
 
-# ─── Block known bad/spam bots ───────────────────────────────────
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+# ─── Keep training and low-value crawlers blocked ────────────────
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
 User-agent: MJ12bot
 Disallow: /
 
