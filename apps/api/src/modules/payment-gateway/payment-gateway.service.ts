@@ -1030,14 +1030,17 @@ export class PaymentGatewayService {
 
   /**
    * Returns only gateways that are enabled AND have env keys configured.
-   * Used by frontend to show available payment options.
+   * Includes the default gateway as a fallback option for the requested country.
    */
   async getAvailableGateways(country?: string) {
     await this.ensureGatewayConfigsSeeded();
 
     const where: any = { isEnabled: true };
     if (country) {
-      where.supportedCountries = { has: country as any };
+      where.OR = [
+        { supportedCountries: { has: country as any } },
+        { isDefault: true },
+      ];
     }
 
     const configs = await this.prisma.paymentGatewayConfig.findMany({

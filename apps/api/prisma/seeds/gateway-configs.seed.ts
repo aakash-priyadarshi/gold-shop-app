@@ -4,7 +4,7 @@
  * Run:  npx ts-node prisma/seeds/gateway-configs.seed.ts
  *
  * Creates gateway configs for all supported gateways:
- *   - Stripe  (US, UK, EU, AE, IN, NP) — fallback + card option for India/Nepal
+ *   - Stripe  (UK, EU)              — primary for UK/EU, default fallback elsewhere
  *   - PhonePe (IN)              — primary for India
  *   - eSewa   (NP)              — primary for Nepal
  *   - Khalti  (NP)              — secondary for Nepal

@@ -113,12 +113,6 @@ describe("PaymentGatewayService", () => {
           priority: 10,
           supportedCountries: ["IN"],
         },
-        {
-          gatewayName: "stripe",
-          isEnabled: true,
-          priority: 8,
-          supportedCountries: ["IN"],
-        },
       ]);
 
       const gateway = await service.selectGateway("IN");
@@ -126,7 +120,7 @@ describe("PaymentGatewayService", () => {
       expect(gateway).toBe("phonepe");
     });
 
-    it("falls back to Stripe for Nepal when local gateways are not configured", async () => {
+    it("uses Stripe as the primary configured gateway for the UK", async () => {
       await buildService({
         get: jest.fn((key: string) => {
           if (key === "STRIPE_SECRET_KEY") return "sk_live_test";
@@ -137,26 +131,36 @@ describe("PaymentGatewayService", () => {
       mockPrisma.paymentGatewayConfig.count.mockResolvedValue(1);
       mockPrisma.paymentGatewayConfig.findMany.mockResolvedValue([
         {
-          gatewayName: "esewa",
-          isEnabled: true,
-          priority: 10,
-          supportedCountries: ["NP"],
-        },
-        {
-          gatewayName: "khalti",
-          isEnabled: true,
-          priority: 5,
-          supportedCountries: ["NP"],
-        },
-        {
           gatewayName: "stripe",
           isEnabled: true,
           priority: 8,
-          supportedCountries: ["NP"],
+          supportedCountries: ["UK", "EU"],
         },
       ]);
 
-      const gateway = await service.selectGateway("NP");
+      const gateway = await service.selectGateway("UK");
+
+      expect(gateway).toBe("stripe");
+    });
+
+    it("falls back to Stripe outside UK and EU when no country gateway is configured", async () => {
+      await buildService({
+        get: jest.fn((key: string) => {
+          if (key === "STRIPE_SECRET_KEY") return "sk_live_test";
+          return undefined;
+        }),
+      });
+
+      mockPrisma.paymentGatewayConfig.count.mockResolvedValue(1);
+      mockPrisma.paymentGatewayConfig.findMany.mockResolvedValue([]);
+      mockPrisma.paymentGatewayConfig.findFirst.mockResolvedValue({
+        gatewayName: "stripe",
+        isEnabled: true,
+        isDefault: true,
+        priority: 8,
+      });
+
+      const gateway = await service.selectGateway("US");
 
       expect(gateway).toBe("stripe");
     });
@@ -195,6 +199,32 @@ describe("PaymentGatewayService", () => {
 
       expect(gateways.map((gateway) => gateway.gatewayName)).toEqual([
         "phonepe",
+        "stripe",
+      ]);
+    });
+
+    it("returns Stripe as the fallback option for countries outside the explicit Stripe regions", async () => {
+      await buildService({
+        get: jest.fn((key: string) => {
+          if (key === "STRIPE_SECRET_KEY") return "sk_live_test";
+          return undefined;
+        }),
+      });
+
+      mockPrisma.paymentGatewayConfig.count.mockResolvedValue(1);
+      mockPrisma.paymentGatewayConfig.findMany.mockResolvedValue([
+        {
+          gatewayName: "stripe",
+          displayName: "Stripe",
+          supportedMethods: ["CARD", "BANK_TRANSFER", "PAYPAL"],
+          commissionInfo: "global gateway",
+          isDefault: true,
+        },
+      ]);
+
+      const gateways = await service.getAvailableGateways("US");
+
+      expect(gateways.map((gateway) => gateway.gatewayName)).toEqual([
         "stripe",
       ]);
     });
