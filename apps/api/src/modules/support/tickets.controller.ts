@@ -75,7 +75,7 @@ export class TicketsController {
   @ApiOperation({ summary: "Seller-aware AI chatbot — includes shop metrics in context" })
   async sellerChat(
     @Req() req: any,
-    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("shopId") shopId: string | undefined,
     @CurrentUser("id") userId: string,
     @Body()
     body: {

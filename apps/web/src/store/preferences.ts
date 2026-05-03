@@ -128,6 +128,10 @@ interface PreferencesState {
   isSyncing: boolean;
   lastSyncedAt: number | null;
 
+  // Tour / tutorial language (can differ from overall UI language)
+  tourLanguage: Language;
+  tourLangSyncWithApp: boolean; // When true, tourLanguage always mirrors language
+
   // Geo-detection state (runs every visit, never overrides user choice)
   detectedCountry: CountryCode | null; // What Cloudflare/geo says the user's country is
   geoMismatchDismissed: boolean; // Whether user dismissed the mismatch banner this session
@@ -140,6 +144,8 @@ interface PreferencesState {
   setAuthenticated: (isAuthenticated: boolean) => void;
   dismissGeoMismatch: () => void;
   acceptDetectedCountry: () => void;
+  setTourLanguage: (lang: Language) => void;
+  setTourLangSync: (sync: boolean) => void;
 
   // Internal sync actions (system-triggered - does NOT set choice flag)
   syncCurrencyFromGeo: (currency: CurrencyCode) => void;
@@ -169,14 +175,26 @@ export const usePreferencesStore = create<PreferencesState>()(
       lastSyncedAt: null,
       detectedCountry: null,
       geoMismatchDismissed: false,
+      tourLanguage: "en",
+      tourLangSyncWithApp: true,
 
       // Set language and sync to server if authenticated
       setLanguage: async (language) => {
-        set({ language });
+        const { tourLangSyncWithApp } = get();
+        set({ language, ...(tourLangSyncWithApp ? { tourLanguage: language } : {}) });
         const { isAuthenticated, syncToServer } = get();
         if (isAuthenticated) {
           await syncToServer();
         }
+      },
+
+      setTourLanguage: (lang) => {
+        set({ tourLanguage: lang, tourLangSyncWithApp: false });
+      },
+
+      setTourLangSync: (sync) => {
+        const { language } = get();
+        set({ tourLangSyncWithApp: sync, ...(sync ? { tourLanguage: language } : {}) });
       },
 
       // Set currency (DISPLAY only - does NOT affect tax)
@@ -283,11 +301,14 @@ export const usePreferencesStore = create<PreferencesState>()(
 
           // Only sync language, currency, country - NOT theme
           // Theme is managed by next-themes and should persist locally
+          const newLang: Language = language || "en";
+          const { tourLangSyncWithApp } = get();
           set({
-            language: language || "en",
+            language: newLang,
             currency: currency || "NPR",
             country: country || "NP",
             lastSyncedAt: Date.now(),
+            ...(tourLangSyncWithApp ? { tourLanguage: newLang } : {}),
           });
 
           // Don't override theme - let next-themes handle it
@@ -364,6 +385,8 @@ export const usePreferencesStore = create<PreferencesState>()(
         currency: state.currency,
         country: state.country,
         theme: state.theme,
+        tourLanguage: state.tourLanguage,
+        tourLangSyncWithApp: state.tourLangSyncWithApp,
       }),
       // On rehydrate, always run geo-detection to populate detectedCountry
       onRehydrateStorage: () => () => {

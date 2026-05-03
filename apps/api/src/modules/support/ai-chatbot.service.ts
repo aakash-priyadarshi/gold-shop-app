@@ -398,7 +398,7 @@ AVAILABLE TOOLS:
     };
   }
 
-  private fallbackResponse(message: string): AiChatResponse {
+  private fallbackResponse(_message?: string): AiChatResponse {
     return {
       reply: "I can help with general questions about OriVraa. For specific issues, please create a support ticket and our team will assist you.",
       shouldEscalate: false,
@@ -411,7 +411,7 @@ AVAILABLE TOOLS:
    * shop's live metrics so the AI can answer "how are my sales this month?"
    */
   async sellerChat(
-    shopId: string,
+    shopId: string | undefined,
     userId: string,
     message: string,
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
@@ -419,22 +419,37 @@ AVAILABLE TOOLS:
     sessionId?: string,
   ): Promise<AiChatResponse> {
     if (!this.apiKey) {
+      this.logger.error("sellerChat: GEMINI_API_KEY is not set — returning fallback");
       return this.fallbackResponse(message);
     }
 
     try {
+      // Resolve shopId — may be absent from JWT if user.activeShopId is unset
+      let resolvedShopId = shopId;
+      if (!resolvedShopId) {
+        const userRecord = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { activeShopId: true, shops: { select: { id: true }, take: 1 } },
+        });
+        resolvedShopId = userRecord?.activeShopId ?? userRecord?.shops?.[0]?.id;
+        if (!resolvedShopId) {
+          this.logger.warn(`sellerChat: no shop found for userId=${userId}`);
+          return this.fallbackResponse(message);
+        }
+      }
+
       // Fetch seller context in parallel
       const now = new Date();
       const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
       const [shop, invoiceSummary, unpaidCount, customerCount] = await Promise.all([
         this.prisma.shop.findUnique({
-          where: { id: shopId },
+          where: { id: resolvedShopId },
           select: { shopName: true, country: true },
         }),
         this.prisma.invoice.aggregate({
           where: {
-            shopId,
+            shopId: resolvedShopId,
             issuedAt: { gte: monthStart },
             status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID"] as any[] },
           },
@@ -443,11 +458,11 @@ AVAILABLE TOOLS:
         }),
         this.prisma.invoice.count({
           where: {
-            shopId,
+            shopId: resolvedShopId,
             status: { in: ["ISSUED", "OVERDUE"] as any[] },
           },
         }),
-        this.prisma.walkInCustomer.count({ where: { createdByShopId: shopId } }),
+        this.prisma.walkInCustomer.count({ where: { createdByShopId: resolvedShopId } }),
       ]);
 
       const currency = shop?.country === "NP" ? "NPR" : shop?.country === "AE" ? "AED" : shop?.country === "GB" ? "GBP" : "₹";
