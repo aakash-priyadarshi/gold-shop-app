@@ -9,6 +9,7 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "seo:submit-sitemap": "tsx scripts/submit-sitemap-to-google.ts",
     "db:generate": "cd apps/api && npx prisma generate",
     "db:migrate": "cd apps/api && npx prisma migrate dev",
     "db:seed": "cd apps/api && npx prisma db seed",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@types/multer": "^2.1.0",
+    "googleapis": "^144.0.0",
     "husky": "^9.1.0",
     "lint-staged": "^15.5.0",
     "prettier": "^3.8.0",

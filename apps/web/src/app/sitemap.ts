@@ -1,177 +1,233 @@
 import { BLOG_POSTS } from "@/data/blog-posts";
 import { MetadataRoute } from "next";
+import { existsSync, readdirSync, statSync } from "node:fs";
+import path from "node:path";
 
 const BASE_URL = "https://www.orivraa.com";
 
 const ABOUT_LANGUAGES = ["fr", "de", "hi", "es", "ar", "ne"] as const;
+
+type SitemapEntry = MetadataRoute.Sitemap[number];
+type ChangeFrequency = NonNullable<SitemapEntry["changeFrequency"]>;
+
+type RouteMeta = {
+  changeFrequency: ChangeFrequency;
+  priority: number;
+  lastModified?: Date;
+};
+
+const DEFAULT_ROUTE_META: RouteMeta = {
+  changeFrequency: "monthly",
+  priority: 0.6,
+};
+
+const EXCLUDED_ROOT_SEGMENTS = new Set([
+  "admin",
+  "api",
+  "auth",
+  "cart",
+  "checkout",
+  "dashboard",
+  "notifications",
+  "orders",
+  "payment",
+]);
+
+const EXCLUDED_EXACT_ROUTES = new Set(["/blog", "/robots", "/sitemap"]);
+
+const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
+  "/": {
+    changeFrequency: "daily",
+    priority: 1.0,
+    lastModified: new Date(),
+  },
+  "/shop": {
+    changeFrequency: "daily",
+    priority: 0.85,
+    lastModified: new Date(),
+  },
+  "/shops": {
+    changeFrequency: "daily",
+    priority: 0.9,
+    lastModified: new Date(),
+  },
+  "/designs": {
+    changeFrequency: "daily",
+    priority: 0.85,
+    lastModified: new Date(),
+  },
+  "/pricing": {
+    changeFrequency: "weekly",
+    priority: 0.9,
+  },
+  "/jewellery-shop-software": {
+    changeFrequency: "weekly",
+    priority: 0.9,
+  },
+  "/jewellery-store-management-software": {
+    changeFrequency: "weekly",
+    priority: 0.9,
+  },
+  "/jewellery-pos-software": {
+    changeFrequency: "weekly",
+    priority: 0.9,
+  },
+  "/jewellery-inventory-software": {
+    changeFrequency: "weekly",
+    priority: 0.9,
+  },
+  "/jewellery-ecommerce-software": {
+    changeFrequency: "weekly",
+    priority: 0.9,
+  },
+  "/jewellery-shop-billing-software": {
+    changeFrequency: "weekly",
+    priority: 0.9,
+  },
+  "/compare/orivraa-vs-tally": {
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
+  "/compare/orivraa-vs-marg-erp": {
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
+  "/compare/jewellery-crm-software-india": {
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
+  "/compare/billing-software-india-jewellery-shops": {
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
+  "/privacy": {
+    changeFrequency: "yearly",
+    priority: 0.3,
+  },
+  "/terms": {
+    changeFrequency: "yearly",
+    priority: 0.3,
+  },
+  "/refund": {
+    changeFrequency: "yearly",
+    priority: 0.3,
+  },
+  "/platform-guidelines": {
+    changeFrequency: "yearly",
+    priority: 0.3,
+  },
+};
+
+function resolveAppDirectory() {
+  const candidates = [
+    path.join(process.cwd(), "src", "app"),
+    path.join(process.cwd(), "apps", "web", "src", "app"),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error("Unable to resolve apps/web/src/app for sitemap generation");
+}
+
+function isIgnoredDirectory(name: string) {
+  return name.startsWith("(") || name.startsWith("[") || name.startsWith("_");
+}
+
+function shouldIndexDiscoveredRoute(route: string) {
+  if (EXCLUDED_EXACT_ROUTES.has(route)) {
+    return false;
+  }
+
+  const rootSegment = route.split("/").filter(Boolean)[0];
+  return !rootSegment || !EXCLUDED_ROOT_SEGMENTS.has(rootSegment);
+}
+
+function collectStaticRoutes(
+  directory: string,
+  segments: string[] = [],
+): Array<{ route: string; filePath: string }> {
+  const entries = readdirSync(directory, { withFileTypes: true });
+  const routes: Array<{ route: string; filePath: string }> = [];
+
+  for (const entry of entries) {
+    const resolvedPath = path.join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      if (isIgnoredDirectory(entry.name)) {
+        continue;
+      }
+
+      if (segments.length === 0 && EXCLUDED_ROOT_SEGMENTS.has(entry.name)) {
+        continue;
+      }
+
+      routes.push(...collectStaticRoutes(resolvedPath, [...segments, entry.name]));
+      continue;
+    }
+
+    if (!entry.isFile() || entry.name !== "page.tsx") {
+      continue;
+    }
+
+    const route = segments.length === 0 ? "/" : `/${segments.join("/")}`;
+    if (shouldIndexDiscoveredRoute(route)) {
+      routes.push({ route, filePath: resolvedPath });
+    }
+  }
+
+  return routes;
+}
+
+function getFileLastModified(filePath: string, fallbackDate: string) {
+  try {
+    return statSync(filePath).mtime;
+  } catch {
+    return new Date(fallbackDate);
+  }
+}
+
+function getStaticPages(siteLaunch: string): MetadataRoute.Sitemap {
+  const appDirectory = resolveAppDirectory();
+
+  return collectStaticRoutes(appDirectory)
+    .sort((left, right) => left.route.localeCompare(right.route))
+    .map(({ route, filePath }) => {
+      const override = ROUTE_OVERRIDES[route];
+      const meta = override ?? DEFAULT_ROUTE_META;
+
+      return {
+        url: route === "/" ? BASE_URL : `${BASE_URL}${route}`,
+        lastModified:
+          override?.lastModified ?? getFileLastModified(filePath, siteLaunch),
+        changeFrequency: meta.changeFrequency,
+        priority: meta.priority,
+      } satisfies SitemapEntry;
+    });
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Use a fixed reference date for pages that don't have dynamic content.
   // Update these dates ONLY when you actually modify the page content.
   // Google distrust lastmod values that always show "now" — it looks like spam.
   const SITE_LAUNCH = "2025-01-15"; // approximate site launch date
+  const latestBlogDate =
+    BLOG_POSTS[0]?.updated ?? BLOG_POSTS[0]?.date ?? SITE_LAUNCH;
 
   // ─── STATIC PAGES ─────────────────────────────────────────────
-  const staticPages: MetadataRoute.Sitemap = [
-    // Core pages
-    {
-      url: BASE_URL,
-      lastModified: new Date(), // homepage updates frequently (latest products, blog posts)
-      changeFrequency: "daily",
-      priority: 1.0,
-    },
-    {
-      url: `${BASE_URL}/shops`,
-      lastModified: new Date(), // shop listings change frequently
-      changeFrequency: "daily",
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/designs`,
-      lastModified: new Date(), // designs may update daily
-      changeFrequency: "daily",
-      priority: 0.85,
-    },
-    {
-      url: `${BASE_URL}/pricing`,
-      lastModified: new Date("2025-03-05"),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/shop`,
-      lastModified: new Date(), // product listings change often
-      changeFrequency: "daily",
-      priority: 0.85,
-    },
-    {
-      url: `${BASE_URL}/rfq/create`,
-      lastModified: new Date("2025-02-01"),
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
+  const staticPages = getStaticPages(SITE_LAUNCH);
 
-    // Informational pages
-    {
-      url: `${BASE_URL}/about`,
-      lastModified: new Date("2026-03-09"),
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    // Localized about pages
-    ...ABOUT_LANGUAGES.map((lang) => ({
+  const localizedAboutPages: MetadataRoute.Sitemap = ABOUT_LANGUAGES.map(
+    (lang) => ({
       url: `${BASE_URL}/about/${lang}`,
       lastModified: new Date("2026-03-09"),
-      changeFrequency: "monthly" as const,
-      priority: 0.6,
-    })),
-    {
-      url: `${BASE_URL}/jewellery-shop-software`,
-      lastModified: new Date("2025-03-01"),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/jewellery-store-management-software`,
-      lastModified: new Date("2026-03-01"),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/jewellery-pos-software`,
-      lastModified: new Date("2026-03-01"),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/jewellery-inventory-software`,
-      lastModified: new Date("2026-03-01"),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/jewellery-ecommerce-software`,
-      lastModified: new Date("2026-03-01"),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/jewellery-shop-billing-software`,
-      lastModified: new Date("2026-03-01"),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/help`,
-      lastModified: new Date("2025-02-01"),
       changeFrequency: "monthly",
       priority: 0.6,
-    },
-    {
-      url: `${BASE_URL}/support`,
-      lastModified: new Date("2025-02-01"),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${BASE_URL}/seller-guide`,
-      lastModified: new Date("2025-02-20"),
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/partner`,
-      lastModified: new Date("2025-02-15"),
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
-    {
-      url: `${BASE_URL}/download`,
-      lastModified: new Date("2025-02-01"),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-
-    // Comparison pages (high-intent SEO)
-    {
-      url: `${BASE_URL}/compare/orivraa-vs-tally`,
-      lastModified: new Date("2026-05-01"),
-      changeFrequency: "monthly",
-      priority: 0.85,
-    },
-    {
-      url: `${BASE_URL}/compare/orivraa-vs-marg-erp`,
-      lastModified: new Date("2026-05-01"),
-      changeFrequency: "monthly",
-      priority: 0.85,
-    },
-
-    // Legal pages
-    {
-      url: `${BASE_URL}/privacy`,
-      lastModified: new Date(SITE_LAUNCH),
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: `${BASE_URL}/terms`,
-      lastModified: new Date(SITE_LAUNCH),
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: `${BASE_URL}/refund`,
-      lastModified: new Date(SITE_LAUNCH),
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: `${BASE_URL}/platform-guidelines`,
-      lastModified: new Date(SITE_LAUNCH),
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-  ];
+    }),
+  );
 
   // ─── DYNAMIC: Shop pages ──────────────────────────────────────
   let shopPages: MetadataRoute.Sitemap = [];
@@ -198,7 +254,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const blogIndex: MetadataRoute.Sitemap = [
     {
       url: `${BASE_URL}/blog`,
-      lastModified: new Date("2026-03-01"), // update when you publish new blog posts
+      lastModified: new Date(latestBlogDate),
       changeFrequency: "weekly",
       priority: 0.8,
     },
@@ -211,5 +267,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticPages, ...shopPages, ...blogIndex, ...blogPages];
+  return [
+    ...staticPages,
+    ...localizedAboutPages,
+    ...shopPages,
+    ...blogIndex,
+    ...blogPages,
+  ];
 }
