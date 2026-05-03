@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { usePreferencesStore, type Language } from "@/store/preferences";
+import { useT } from "@/providers/translation-provider";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import { HelpCircle } from "lucide-react";
@@ -12,31 +12,9 @@ interface TutorialButtonProps {
   className?: string;
 }
 
-/* ── per-language chat-bubble text ── */
-const BUBBLE_TEXT: Record<Language, string> = {
-  en: "Ask me if you need help",
-  hi: "मदद चाहिए तो पूछें",
-  ne: "सहायता चाहिए भने सोध्नुहोस्",
-  fr: "Posez-moi vos questions",
-  de: "Fragen Sie mich",
-  ar: "اسألني إذا كنت بحاجة للمساعدة",
-  es: "Pregúntame si necesitas ayuda",
-};
-
-/* ── per-language driver.js button labels ── */
-const DRIVER_LABELS: Record<Language, { next: string; prev: string; done: string }> = {
-  en: { next: "Next →", prev: "← Back", done: "Done" },
-  hi: { next: "अगला →", prev: "← वापस", done: "समाप्त" },
-  ne: { next: "अर्को →", prev: "← फिर्ता", done: "सम्पन्न" },
-  fr: { next: "Suivant →", prev: "← Retour", done: "Terminer" },
-  de: { next: "Weiter →", prev: "← Zurück", done: "Fertig" },
-  ar: { next: "التالي →", prev: "← السابق", done: "تم" },
-  es: { next: "Siguiente →", prev: "← Atrás", done: "Listo" },
-};
-
 export function TutorialButton({ className }: TutorialButtonProps) {
   const { steps, hasSteps } = useTutorial();
-  const language = usePreferencesStore((s) => s.tourLanguage);
+  const t = useT();
   const [running, setRunning] = useState(false);
   const [bubbleVisible, setBubbleVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -45,15 +23,13 @@ export function TutorialButton({ className }: TutorialButtonProps) {
   useEffect(() => {
     if (!hasSteps) return;
     setBubbleVisible(true);
-    const t = setTimeout(() => setBubbleVisible(false), 3000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setBubbleVisible(false), 3000);
+    return () => clearTimeout(timer);
   }, [hasSteps]);
 
   useEffect(() => {
     setBubbleVisible(hovered);
   }, [hovered]);
-
-  const labels = DRIVER_LABELS[language] ?? DRIVER_LABELS.en;
 
   const startTour = useCallback(() => {
     if (!hasSteps || running) return;
@@ -70,9 +46,9 @@ export function TutorialButton({ className }: TutorialButtonProps) {
       stageRadius: 8,
       popoverClass: "orivraa-tour-popover",
       progressText: "{{current}} / {{total}}",
-      nextBtnText: labels.next,
-      prevBtnText: labels.prev,
-      doneBtnText: labels.done,
+      nextBtnText: t("Next →"),
+      prevBtnText: t("← Back"),
+      doneBtnText: t("Done"),
       onDestroyStarted: () => {
         driverObj.destroy();
         setRunning(false);
@@ -81,11 +57,11 @@ export function TutorialButton({ className }: TutorialButtonProps) {
     });
 
     driverObj.drive();
-  }, [steps, hasSteps, running, labels]);
+  }, [steps, hasSteps, running, t]);
 
   if (!hasSteps) return null;
 
-  const bubbleText = BUBBLE_TEXT[language] ?? BUBBLE_TEXT.en;
+  const bubbleText = t("Ask me if you need help");
 
   return (
     <div

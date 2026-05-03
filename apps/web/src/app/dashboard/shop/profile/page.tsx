@@ -39,7 +39,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
-import { usePreferencesStore } from "@/store/preferences";
+import { LANGUAGES, usePreferencesStore, type Language } from "@/store/preferences";
 import { format } from "date-fns";
 import {
     AlertTriangle,
@@ -97,16 +97,10 @@ const currencies = [
   { code: "SGD", name: "Singapore Dollar (S$)", symbol: "S$" },
 ];
 
-const languages = [
-  { code: "en", name: "English" },
-  { code: "ne", name: "नेपाली (Nepali)" },
-  { code: "hi", name: "हिंदी (Hindi)" },
-];
-
 export default function ShopkeeperProfilePage() {
   const { user: authUser, refreshUser, googleLogin } = useAuth();
   const t = useT();
-  const { setLanguage: setStoreLanguage, tourLanguage, tourLangSyncWithApp, setTourLanguage, setTourLangSync } = usePreferencesStore();
+  const { language: storeLanguage, setLanguage: setStoreLanguage, tourLanguage, tourLangSyncWithApp, setTourLanguage, setTourLangSync } = usePreferencesStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -148,6 +142,14 @@ export default function ShopkeeperProfilePage() {
     loadProfile();
     load2FAStatus();
   }, []);
+
+  // Keep profile.preferredLanguage in sync when language is changed from the header
+  useEffect(() => {
+    if (profile) {
+      setProfile((prev) => prev ? { ...prev, preferredLanguage: storeLanguage } : prev);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeLanguage]);
 
   const load2FAStatus = async () => {
     try {
@@ -680,18 +682,19 @@ export default function ShopkeeperProfilePage() {
                         <T>Preferred Language</T>
                       </Label>
                       <Select
-                        value={profile.preferredLanguage || "en"}
-                        onValueChange={(value) =>
-                          updateProfile({ preferredLanguage: value })
-                        }
+                        value={storeLanguage}
+                        onValueChange={(value) => {
+                          setStoreLanguage(value as Language);
+                          updateProfile({ preferredLanguage: value });
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={t("Select language")} />
                         </SelectTrigger>
                         <SelectContent>
-                          {languages.map((lang) => (
-                            <SelectItem key={lang.code} value={lang.code}>
-                              {lang.name}
+                          {Object.entries(LANGUAGES).map(([code, info]) => (
+                            <SelectItem key={code} value={code}>
+                              {info.nativeName}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -752,9 +755,9 @@ export default function ShopkeeperProfilePage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {languages.map((lang) => (
-                            <SelectItem key={lang.code} value={lang.code}>
-                              {lang.name}
+                          {Object.entries(LANGUAGES).map(([code, info]) => (
+                            <SelectItem key={code} value={code}>
+                              {info.nativeName}
                             </SelectItem>
                           ))}
                         </SelectContent>
