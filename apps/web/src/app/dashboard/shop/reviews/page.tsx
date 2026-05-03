@@ -199,7 +199,7 @@ export default function SellerReviewsPage() {
               const review = entry.review;
 
               return (
-                <Card key={entry.platform} className="overflow-hidden">
+                <Card key={entry.platform} className="overflow-hidden" data-tour="reviews-platforms">
                   <div className="flex flex-col sm:flex-row">
                     {/* Left: Platform info */}
                     <div className="flex-1 p-6">

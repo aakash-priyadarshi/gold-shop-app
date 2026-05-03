@@ -178,7 +178,7 @@ export default function InvoicesListPage() {
                   </Button>
                 </Link>
                 <Link href="/dashboard/shop/invoices/create">
-                  <Button className="bg-amber-500 hover:bg-amber-600">
+                  <Button className="bg-amber-500 hover:bg-amber-600" data-tour="invoices-create">
                     <Plus className="h-4 w-4 mr-2" />
                     <T>Create Invoice</T>
                   </Button>
@@ -188,7 +188,7 @@ export default function InvoicesListPage() {
 
             {/* Stats Cards */}
             {stats && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-tour="invoices-stats">
                 <Card>
                   <CardContent className="pt-4">
                     <div className="flex items-center gap-2">
@@ -271,7 +271,7 @@ export default function InvoicesListPage() {
             </div>
 
             {/* Invoice Table */}
-            <Card>
+            <Card data-tour="invoices-table">
               <CardContent className="p-0">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">

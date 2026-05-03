@@ -150,7 +150,7 @@ function SellerBillingPageInner() {
             </p>
           </div>
 
-          <Tabs defaultValue="plan" className="space-y-4">
+          <Tabs defaultValue="plan" className="space-y-4" data-tour="billing-tabs">
             <TabsList>
               <TabsTrigger value="plan">
                 <T>My Plan</T>
@@ -163,7 +163,7 @@ function SellerBillingPageInner() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="plan">
+            <TabsContent value="plan" data-tour="billing-plan">
               <CurrentPlanTab />
             </TabsContent>
             <TabsContent value="credits">

@@ -202,7 +202,7 @@ export default function ShopRfqsPage() {
           </div>
 
           {/* Source filter pills */}
-          <div className="flex gap-2">
+          <div className="flex gap-2" data-tour="rfqs-filters">
             {(["ALL", "ONLINE", "WALK_IN"] as SourceFilter[]).map((f) => (
               <button
                 key={f}
@@ -222,7 +222,7 @@ export default function ShopRfqsPage() {
             ))}
           </div>
 
-          <Card>
+          <Card data-tour="rfqs-table">
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">

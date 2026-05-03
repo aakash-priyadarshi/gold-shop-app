@@ -89,7 +89,7 @@ export default function DesktopAppPage() {
             </Card>
           ) : !status?.hasDesktop ? (
             /* No desktop detected */
-            <Card className="border-gold-500/20">
+            <Card className="border-gold-500/20" data-tour="desktop-app">
               <CardHeader className="text-center">
                 <div className="mx-auto w-16 h-16 rounded-full bg-gold-500/10 flex items-center justify-center mb-4">
                   <ComputerDesktopIcon className="h-8 w-8 text-gold-500" />

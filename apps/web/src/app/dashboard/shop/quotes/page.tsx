@@ -220,7 +220,7 @@ export default function ShopQuotesPage() {
                   Online RFQs
                 </Button>
               </Link>
-              <Link href="/dashboard/shop/quotes/create">
+              <Link href="/dashboard/shop/quotes/create" data-tour="quotes-create">
                 <Button className="bg-amber-500 hover:bg-amber-600">
                   <UserPlus className="h-4 w-4 mr-2" />
                   New Walk-in Quote
@@ -294,7 +294,7 @@ export default function ShopQuotesPage() {
           )}
 
           {/* Quotes Table */}
-          <Card>
+          <Card data-tour="quotes-list">
             <CardHeader>
               <CardTitle>Quotes</CardTitle>
               <CardDescription>

@@ -164,7 +164,7 @@ export default function SellerReferralsPage() {
 
         {/* Send Referral Form */}
         {referralSettings?.isActive && (
-          <Card>
+          <Card data-tour="referrals-invite">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Send className="h-4 w-4" />
@@ -206,7 +206,7 @@ export default function SellerReferralsPage() {
         )}
 
         {/* My Referrals */}
-        <Card>
+        <Card data-tour="referrals-list">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Users className="h-4 w-4" />

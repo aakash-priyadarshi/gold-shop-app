@@ -264,7 +264,7 @@ export default function ShopMessagesPage() {
 
           <div className="flex flex-1 gap-4 min-h-0">
             {/* Conversation list */}
-            <div className="w-80 flex-shrink-0 border rounded-lg overflow-y-auto">
+            <div className="w-80 flex-shrink-0 border rounded-lg overflow-y-auto" data-tour="messages-list">
               {loading ? (
                 <div className="p-4 text-muted-foreground">
                   <T>Loading...</T>
@@ -307,7 +307,7 @@ export default function ShopMessagesPage() {
             </div>
 
             {/* Chat area */}
-            <div className="flex-1 flex flex-col border rounded-lg">
+            <div className="flex-1 flex flex-col border rounded-lg" data-tour="messages-thread">
               {!selectedConversation ? (
                 <div className="flex-1 flex items-center justify-center text-muted-foreground">
                   <T>Select a conversation</T>

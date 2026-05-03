@@ -104,7 +104,7 @@ export default function CataloguesPage() {
           <button
             onClick={() => router.push("/dashboard/shop/catalogues/new")}
             className="inline-flex items-center gap-2 rounded-lg bg-gold-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-gold-700 transition-colors"
-          >
+            data-tour="catalogues-create">
             <Plus className="h-4 w-4" />
             <T>New Catalogue</T>
           </button>
@@ -141,7 +141,7 @@ export default function CataloguesPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="catalogues-grid">
             {catalogues.map((cat) => (
               <div
                 key={cat.id}

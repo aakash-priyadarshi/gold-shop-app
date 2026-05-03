@@ -608,7 +608,7 @@ export function ChatPopupWidget() {
       <button
         onClick={() => (isOpen ? toggleMinimize() : openChatList())}
         className={cn(
-          "fixed bottom-6 right-6 z-50",
+          "fixed bottom-6 right-24 z-50",
           "flex items-center justify-center",
           "w-14 h-14 rounded-2xl",
           "bg-gradient-to-br from-gold-500 to-gold-600",

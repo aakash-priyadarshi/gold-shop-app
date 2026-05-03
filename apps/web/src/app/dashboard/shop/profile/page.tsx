@@ -7,30 +7,30 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { needsCountryCode } from "@/components/ui/phone-input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,22 +41,22 @@ import api from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import { format } from "date-fns";
 import {
-  AlertTriangle,
-  CheckCircle,
-  Chrome,
-  Clock,
-  Copy,
-  Globe,
-  Key,
-  Loader2,
-  Mail,
-  Phone,
-  RefreshCw,
-  Save,
-  Shield,
-  Smartphone,
-  User,
-  XCircle,
+    AlertTriangle,
+    CheckCircle,
+    Chrome,
+    Clock,
+    Copy,
+    Globe,
+    Key,
+    Loader2,
+    Mail,
+    Phone,
+    RefreshCw,
+    Save,
+    Shield,
+    Smartphone,
+    User,
+    XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -462,7 +462,7 @@ export default function ShopkeeperProfilePage() {
           </div>
 
           {/* Profile Overview Card */}
-          <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border-amber-200">
+          <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border-amber-200" data-tour="profile-info">
             <CardContent className="pt-6">
               <div className="flex items-center gap-6">
                 <Avatar className="h-20 w-20 ring-4 ring-amber-100">
@@ -511,7 +511,7 @@ export default function ShopkeeperProfilePage() {
           </Card>
 
           <Tabs defaultValue="personal" className="space-y-4">
-            <TabsList>
+            <TabsList data-tour="profile-tabs">
               <TabsTrigger value="personal">
                 <T>Personal Info</T>
               </TabsTrigger>

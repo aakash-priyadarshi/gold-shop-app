@@ -123,7 +123,7 @@ export default function ShopAnalyticsPage() {
                 Track your shop's performance and growth
               </p>
             </div>
-            <Select value={period} onValueChange={setPeriod}>
+            <Select value={period} onValueChange={setPeriod} data-tour="analytics-period">
               <SelectTrigger className="w-[150px]">
                 <SelectValue />
               </SelectTrigger>
@@ -137,7 +137,7 @@ export default function ShopAnalyticsPage() {
           </div>
 
           {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-tour="analytics-stats">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -225,7 +225,7 @@ export default function ShopAnalyticsPage() {
           </div>
 
           {/* Detailed Analytics */}
-          <Tabs defaultValue="revenue" className="space-y-4">
+          <Tabs defaultValue="revenue" className="space-y-4" data-tour="analytics-tabs">
             <TabsList>
               <TabsTrigger value="revenue">Revenue</TabsTrigger>
               <TabsTrigger value="orders">Orders</TabsTrigger>

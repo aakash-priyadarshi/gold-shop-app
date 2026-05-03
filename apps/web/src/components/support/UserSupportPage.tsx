@@ -180,7 +180,7 @@ export default function UserSupportPage() {
           </div>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
-              <Button>
+              <Button data-tour="support-new">
                 <Plus className="h-4 w-4 mr-2" /> <T>New Ticket</T>
               </Button>
             </DialogTrigger>
@@ -220,7 +220,7 @@ export default function UserSupportPage() {
           />
         ) : (
           /* Ticket list */
-          <Card>
+          <Card data-tour="support-tickets">
             <CardHeader>
               <CardTitle>
                 <T>My Tickets</T>

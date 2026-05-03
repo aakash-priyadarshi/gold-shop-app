@@ -100,6 +100,7 @@ export default function TaxReportsPage() {
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
                 className="w-44"
+                data-tour="tax-period"
               />
             </div>
           </div>
@@ -124,7 +125,7 @@ export default function TaxReportsPage() {
         </Card>
 
         {/* Country tabs */}
-        <Tabs value={activeCountry} onValueChange={setActiveCountry}>
+        <Tabs value={activeCountry} onValueChange={setActiveCountry} data-tour="tax-countries">
           <TabsList className="grid grid-cols-3 md:grid-cols-6 w-full">
             {COUNTRY_TABS.map((c) => (
               <TabsTrigger key={c.code} value={c.code} className="text-xs md:text-sm">

@@ -461,7 +461,7 @@ export default function ShopSettingsPage() {
           )}
 
           <Tabs defaultValue="profile" className="space-y-4">
-            <TabsList className="flex-wrap h-auto">
+            <TabsList className="flex-wrap h-auto" data-tour="settings-tabs">
               <TabsTrigger value="profile">
                 <T>Profile</T>
               </TabsTrigger>
@@ -478,7 +478,7 @@ export default function ShopSettingsPage() {
 
             {/* Profile Tab */}
             <TabsContent value="profile" className="space-y-4">
-              <Card>
+              <Card data-tour="settings-shop-info">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Store className="h-5 w-5" />

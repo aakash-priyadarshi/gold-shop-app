@@ -1132,7 +1132,7 @@ export default function ShopEngagementPage() {
 
           {/* ═══ HEALTH SCORE HERO ═══ */}
           {healthScore && (
-            <Card className="border-2">
+            <Card className="border-2" data-tour="engagement-health">
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-4">
@@ -1222,7 +1222,7 @@ export default function ShopEngagementPage() {
 
           {/* ═══ TIER ROADMAP SECTION ═══ */}
           {tierDashboard && (
-            <Card className="border-2">
+            <Card className="border-2" data-tour="engagement-tier">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />{" "}
@@ -1453,7 +1453,7 @@ export default function ShopEngagementPage() {
 
           {/* ═══ TABS ═══ */}
           <Tabs defaultValue="milestones" className="w-full">
-            <TabsList className="grid grid-cols-6">
+            <TabsList className="grid grid-cols-6" data-tour="engagement-tabs">
               <TabsTrigger value="milestones" className="gap-1">
                 <Trophy className="h-4 w-4" />
                 <span className="hidden sm:inline">
