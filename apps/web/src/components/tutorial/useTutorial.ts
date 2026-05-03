@@ -3,6 +3,7 @@
 import type { DriveStep } from "driver.js";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
+import { useTourContext } from "./useTourContext";
 
 /** Tour steps keyed by pathname prefix */
 const TOUR_STEPS: Record<string, DriveStep[]> = {
@@ -341,6 +342,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
+  // ─── Tax Reports: generic fallback (shown when no country tab active yet) ───
   "/dashboard/shop/tax-reports": [
     {
       element: "[data-tour='tax-period']",
@@ -355,7 +357,90 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-countries']",
       popover: {
         title: "Country Tax Tabs",
-        description: "Reports are organised per country — IN (GST), NP (VAT), AE, GB (VAT), EU, US. Only countries where you have sales show data.",
+        description: "Reports are organised per country — IN (GST), NP (VAT), AE (UAE VAT), GB (MTD), EU (OSS), US (state tax). Switch tabs to see country-specific data and filing details.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      popover: {
+        title: "Download & Share",
+        description: "Export your tax report as CSV or PDF for your accountant. You can also share a secure, time-limited link directly with your CA or tax adviser.",
+      },
+    },
+  ],
+
+  // ─── Tax Reports: India ───────────────────────────────────────────
+  "/dashboard/shop/tax-reports#IN": [
+    {
+      element: "[data-tour='tax-period']",
+      popover: {
+        title: "Select Period",
+        description: "Choose the month for your GST report. All India invoices in that month are included.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='tax-countries']",
+      popover: {
+        title: "India (GST) Tab",
+        description: "You are on the India panel. It shows your GSTR-3B summary, HSN-wise breakdown, and lets you download GSTR-1 CSV or Tally XML for filing with the GSTN portal.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='india-gstr3b']",
+      popover: {
+        title: "GSTR-3B Summary",
+        description: "Your monthly GST summary: total taxable sales, IGST (inter-state), CGST + SGST (intra-state), and net tax liability. Gold jewellery attracts 3% GST on metal value; making charges are taxed at 18%.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='india-hsn']",
+      popover: {
+        title: "HSN-wise Breakdown",
+        description: "Every product sold is mapped to its HSN code. HSN 7113 covers gold jewellery, 7116 covers gems and pearls. This table is required for GSTR-1 if your annual turnover exceeds ₹5 crore.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='india-downloads']",
+      popover: {
+        title: "Downloads: GSTR-1, HSN & Tally",
+        description: "Export GSTR-1 CSV to upload on the GSTN portal, HSN summary CSV for your CA, or Tally XML to import directly into Tally ERP. Available on Pro plan.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      popover: {
+        title: "Share with CA",
+        description: "Click \"Share with CA\" on any card to generate a secure, 7-day read-only link you can send to your Chartered Accountant for GST filing review.",
+      },
+    },
+  ],
+
+  // ─── Tax Reports: Nepal ───────────────────────────────────────────
+  "/dashboard/shop/tax-reports#NP": [
+    {
+      element: "[data-tour='tax-period']",
+      popover: {
+        title: "Select Period",
+        description: "Choose the Nepali fiscal month. Nepal follows BS (Bikram Sambat) calendar — the period shown maps to the corresponding BS month for IRD filing.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='tax-countries']",
+      popover: {
+        title: "Nepal (VAT) Tab",
+        description: "You are on the Nepal panel. Nepal taxes jewellery with 2% luxury tax on metal & making charges and 13% VAT on gemstones & services.",
         side: "bottom",
         align: "start",
       },
@@ -363,8 +448,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='nepal-audit-tabs']",
       popover: {
-        title: "Nepal: Monthly Return vs Yearly Audit",
-        description: "The Nepal (NP) panel has two views. \"Monthly Return\" shows VAT & luxury tax for the selected month. \"Yearly Audit\" shows a full 12-month breakdown required by IRD Nepal.",
+        title: "Monthly Return vs Yearly Audit",
+        description: "\"Monthly Return\" shows VAT & luxury tax for the selected month for your regular IRD submission. \"Yearly Audit\" shows a full 12-month breakdown required if sales exceed the NPR 1 crore threshold.",
         side: "bottom",
         align: "start",
       },
@@ -382,15 +467,163 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='nepal-audit-table']",
       popover: {
         title: "Month-by-Month Breakdown",
-        description: "Every month of the year at a glance: invoice count, total sales in NPR, 2% luxury tax on metals & making charges, and 13% VAT on gemstones & services. Use the year selector (‹ ›) to view previous years.",
+        description: "Every month of the Nepali fiscal year: invoice count, total sales in NPR, 2% luxury tax on metals & making charges, and 13% VAT on gemstones & services. Use the year selector (‹ ›) to view previous years.",
         side: "top",
         align: "center",
       },
     },
     {
       popover: {
-        title: "Download & Share",
-        description: "Export your tax report as CSV or PDF for your accountant. You can also share a secure, time-limited link directly with your CA or tax adviser.",
+        title: "Share with CA / Tax Adviser",
+        description: "Generate a secure 7-day link for your IRD-registered tax adviser to review the yearly audit report without giving them access to your full dashboard.",
+      },
+    },
+  ],
+
+  // ─── Tax Reports: UAE ─────────────────────────────────────────────
+  "/dashboard/shop/tax-reports#AE": [
+    {
+      element: "[data-tour='tax-period']",
+      popover: {
+        title: "Select Period",
+        description: "Choose the filing period. UAE VAT is filed quarterly with the FTA — select the month within the quarter you are reviewing.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='tax-countries']",
+      popover: {
+        title: "UAE (VAT) Tab",
+        description: "You are on the UAE panel. UAE applies a flat 5% VAT on most goods and services. Precious metals sold as financial instruments may be zero-rated.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='uae-vat201']",
+      popover: {
+        title: "VAT 201 Summary (FTA)",
+        description: "Your VAT 201 form data: standard-rated sales, zero-rated supplies, exempt sales, input tax recoverable, and net VAT payable to the FTA (Federal Tax Authority). Use this to complete your EmaraTax submission.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      popover: {
+        title: "FTA Filing & Share",
+        description: "Export or share the VAT 201 summary with your UAE-registered tax agent. Direct EmaraTax API submission is on the roadmap (Phase C).",
+      },
+    },
+  ],
+
+  // ─── Tax Reports: UK ──────────────────────────────────────────────
+  "/dashboard/shop/tax-reports#GB": [
+    {
+      element: "[data-tour='tax-period']",
+      popover: {
+        title: "Select Period",
+        description: "UK MTD VAT is filed quarterly. Select any month within the VAT quarter to preview your 9-box return figures.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='tax-countries']",
+      popover: {
+        title: "UK (MTD) Tab",
+        description: "You are on the UK panel. HMRC's Making Tax Digital (MTD) requires digital VAT records and electronic submission via compatible software. UK standard VAT rate is 20%.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='uk-mtd']",
+      popover: {
+        title: "MTD 9-Box VAT Return",
+        description: "The 9 boxes map directly to the HMRC MTD return: Box 1 (VAT due on sales), Box 4 (VAT reclaimed on purchases), Box 5 (net VAT to pay/reclaim), and Boxes 6-9 (turnover and input totals). Share with your accountant before submitting.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      popover: {
+        title: "HMRC Submission",
+        description: "Direct HMRC MTD API submission requires OAuth authorisation with HMRC. This is planned for Phase C — for now export the data and use bridging software or your accountant.",
+      },
+    },
+  ],
+
+  // ─── Tax Reports: EU ──────────────────────────────────────────────
+  "/dashboard/shop/tax-reports#EU": [
+    {
+      element: "[data-tour='tax-period']",
+      popover: {
+        title: "Select Period",
+        description: "EU OSS (One-Stop Shop) is declared quarterly. Select any month to see that period's cross-border sales breakdown.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='tax-countries']",
+      popover: {
+        title: "EU (OSS) Tab",
+        description: "You are on the EU panel. The OSS scheme lets you declare and pay VAT for all EU countries in a single quarterly return filed in your home member state. Each country has its own VAT rate.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='eu-oss']",
+      popover: {
+        title: "OSS by Destination Country",
+        description: "Each row is an EU member state where you have sales. The table shows invoice count, net sales, applicable local VAT rate, and VAT amount due for that country. Total this up for your quarterly OSS declaration.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      popover: {
+        title: "Export & Filing",
+        description: "Download the OSS CSV to import into your home-state tax portal. Direct OSS portal integration is planned for Phase C.",
+      },
+    },
+  ],
+
+  // ─── Tax Reports: US ──────────────────────────────────────────────
+  "/dashboard/shop/tax-reports#US": [
+    {
+      element: "[data-tour='tax-period']",
+      popover: {
+        title: "Select Period",
+        description: "Choose the month to see US sales tax collected by state for that period.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='tax-countries']",
+      popover: {
+        title: "US (Sales Tax) Tab",
+        description: "You are on the US panel. Sales tax in the USA is state-by-state — rates range from 0% (Oregon, Montana) to over 10% in some counties. Economic nexus rules apply if you exceed a state's revenue or transaction threshold.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='us-state-tax']",
+      popover: {
+        title: "Sales Tax by State",
+        description: "Each row is a US state where you have sales: invoice count, net sales, and total sales tax collected. States where you have economic nexus (typically $100k revenue or 200 transactions) require separate state tax registration and filing.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      popover: {
+        title: "TaxJar / Avalara & Filing",
+        description: "Export the CSV for your accountant or import into TaxJar/Avalara for automated multi-state filing. Real-time rooftop tax rates and auto-filing integration are on the roadmap.",
       },
     },
   ],
@@ -622,15 +855,21 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
 
 export function useTutorial() {
   const pathname = usePathname();
+  const subKey = useTourContext((s) => s.subKey);
 
   const steps = useMemo<DriveStep[]>(() => {
-    // Exact match first, then prefix match (longest first)
+    // Check for sub-key variant first (e.g. "/dashboard/shop/tax-reports#IN")
+    if (subKey) {
+      const subKeyPath = `${pathname}#${subKey}`;
+      if (TOUR_STEPS[subKeyPath]) return TOUR_STEPS[subKeyPath];
+    }
+    // Exact match, then prefix match (longest first)
     if (TOUR_STEPS[pathname]) return TOUR_STEPS[pathname];
     const match = Object.keys(TOUR_STEPS)
       .filter((key) => pathname.startsWith(key) && key !== "/dashboard/shop")
       .sort((a, b) => b.length - a.length)[0];
     return match ? TOUR_STEPS[match] : (pathname === "/dashboard/shop" ? TOUR_STEPS["/dashboard/shop"] : []);
-  }, [pathname]);
+  }, [pathname, subKey]);
 
   return { steps, hasSteps: steps.length > 0 };
 }

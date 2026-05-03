@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTourContext } from "@/components/tutorial/useTourContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
@@ -62,6 +63,13 @@ export default function TaxReportsPage() {
 
   const canDownload = hasFeature("taxReportsDownload");
   const canShare = hasFeature("taxCaShare");
+
+  // Sync active country tab → tour context so TutorialButton shows country-specific steps
+  const setTourSubKey = useTourContext((s) => s.setSubKey);
+  useEffect(() => {
+    setTourSubKey(activeCountry);
+    return () => setTourSubKey(null);
+  }, [activeCountry, setTourSubKey]);
 
   if (featuresLoading) {
     return (
@@ -277,7 +285,7 @@ function IndiaPanel({ period, canDownload, canShare }: { period: string; canDown
       })
       .catch(() => toast({ variant: "destructive", title: "Failed to load India report" }))
       .finally(() => setLoading(false));
-  }, [period]);
+  }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const downloadCsv = async (kind: "gstr1" | "hsn") => {
     const res = kind === "gstr1"
@@ -292,7 +300,7 @@ function IndiaPanel({ period, canDownload, canShare }: { period: string; canDown
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card data-tour="india-gstr3b">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span><T>GSTR-3B Summary</T></span>
@@ -304,7 +312,7 @@ function IndiaPanel({ period, canDownload, canShare }: { period: string; canDown
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-tour="india-downloads">
         <CardHeader>
           <CardTitle><T>Downloads</T></CardTitle>
         </CardHeader>
@@ -328,7 +336,7 @@ function IndiaPanel({ period, canDownload, canShare }: { period: string; canDown
       </Card>
 
       {hsn.length > 0 && (
-        <Card>
+        <Card data-tour="india-hsn">
           <CardHeader>
             <CardTitle><T>HSN-wise Breakdown</T></CardTitle>
           </CardHeader>
@@ -390,7 +398,7 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
       .then((r) => setData(r.data))
       .catch(() => toast({ variant: "destructive", title: "Failed to load Nepal VAT" }))
       .finally(() => setLoading(false));
-  }, [period]);
+  }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadAudit = (year: number) => {
     setAuditLoading(true);
@@ -407,7 +415,7 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
   useEffect(() => {
     if (auditTab !== "yearly") return;
     loadAudit(auditYear);
-  }, [auditTab, auditYear]);
+  }, [auditTab, auditYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-4">
@@ -545,10 +553,10 @@ function UaePanel({ period, canShare }: { period: string; canShare: boolean }) {
       .then((r) => setData(r.data))
       .catch(() => toast({ variant: "destructive", title: "Failed to load UAE VAT 201" }))
       .finally(() => setLoading(false));
-  }, [period]);
+  }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="space-y-4">
-      <Card>
+      <Card data-tour="uae-vat201">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span><T>UAE VAT 201 (FTA)</T></span>
@@ -573,10 +581,10 @@ function UkPanel({ period, canShare }: { period: string; canShare: boolean }) {
       .then((r) => setData(r.data))
       .catch(() => toast({ variant: "destructive", title: "Failed to load UK MTD" }))
       .finally(() => setLoading(false));
-  }, [period]);
+  }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="space-y-4">
-      <Card>
+      <Card data-tour="uk-mtd">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span><T>UK MTD VAT Return (9-Box)</T></span>
@@ -601,14 +609,14 @@ function EuPanel({ period, canDownload, canShare }: { period: string; canDownloa
       .then((r) => setData(r.data))
       .catch(() => toast({ variant: "destructive", title: "Failed to load EU OSS" }))
       .finally(() => setLoading(false));
-  }, [period]);
+  }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
   const downloadCsv = async () => {
     const res = await taxReportsApi.euOss(period, "csv");
     downloadBlob(res.data, `EU-OSS-${period}.csv`);
   };
   return (
     <div className="space-y-4">
-      <Card>
+      <Card data-tour="eu-oss">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span><T>EU OSS by Destination Country</T></span>
@@ -649,14 +657,14 @@ function UsPanel({ period, canDownload, canShare }: { period: string; canDownloa
       .then((r) => setData(r.data))
       .catch(() => toast({ variant: "destructive", title: "Failed to load US state report" }))
       .finally(() => setLoading(false));
-  }, [period]);
+  }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
   const downloadCsv = async () => {
     const res = await taxReportsApi.usState(period, "csv");
     downloadBlob(res.data, `US-State-${period}.csv`);
   };
   return (
     <div className="space-y-4">
-      <Card>
+      <Card data-tour="us-state-tax">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span><T>US Sales Tax by State</T></span>
