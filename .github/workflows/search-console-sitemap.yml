@@ -43,18 +43,47 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" == "true" ]]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
             echo "submit=false" >> "$GITHUB_OUTPUT"
+            echo "auth_mode=dry-run" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if [[ -z "${{ secrets.GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON }}" || -z "${{ secrets.SEARCH_CONSOLE_PROPERTY }}" ]]; then
+          HAS_SERVICE_ACCOUNT=false
+          if [[ -n "${{ secrets.GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON }}" ]]; then
+            HAS_SERVICE_ACCOUNT=true
+          fi
+
+          HAS_OAUTH=false
+          if [[ -n "${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID }}" && -n "${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET }}" && -n "${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN }}" ]]; then
+            HAS_OAUTH=true
+          fi
+
+          if [[ -z "${{ secrets.SEARCH_CONSOLE_PROPERTY }}" ]]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "submit=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping Search Console submission. Add GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON and SEARCH_CONSOLE_PROPERTY to enable automation."
+            echo "auth_mode=missing-property" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping Search Console submission. Add SEARCH_CONSOLE_PROPERTY to enable automation."
             exit 0
           fi
 
-          echo "ready=true" >> "$GITHUB_OUTPUT"
-          echo "submit=true" >> "$GITHUB_OUTPUT"
+          if [[ "$HAS_OAUTH" == "true" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "submit=true" >> "$GITHUB_OUTPUT"
+            echo "auth_mode=oauth-user" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$HAS_SERVICE_ACCOUNT" == "true" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "submit=true" >> "$GITHUB_OUTPUT"
+            echo "auth_mode=service-account" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+          echo "submit=false" >> "$GITHUB_OUTPUT"
+          echo "auth_mode=missing-auth" >> "$GITHUB_OUTPUT"
+          echo "::notice::Skipping Search Console submission. Add either GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON or GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID, GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET, and GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN."
+          exit 0
 
       - uses: actions/checkout@v4
         if: steps.config.outputs.ready == 'true'
@@ -104,6 +133,10 @@ jobs:
         if: steps.config.outputs.ready == 'true'
         env:
           GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID }}
+          GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN }}
+          GOOGLE_SEARCH_CONSOLE_OAUTH_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_ACCOUNT_EMAIL }}
           SEARCH_CONSOLE_PROPERTY: ${{ secrets.SEARCH_CONSOLE_PROPERTY }}
           SEARCH_CONSOLE_SITEMAP_URL: ${{ steps.config.outputs.sitemap_url }}
         shell: bash
@@ -120,5 +153,6 @@ jobs:
           echo "## Search Console Sitemap Sync" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- Sitemap: ${{ steps.config.outputs.sitemap_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Auth mode: ${{ steps.config.outputs.auth_mode }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Submission mode: ${{ steps.config.outputs.submit == 'true' && 'live submit' || 'dry run' }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Trigger: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"

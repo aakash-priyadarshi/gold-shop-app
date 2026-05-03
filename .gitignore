@@ -26,6 +26,7 @@ deployment-notes.txt
 *.p12
 *.pfx
 *.jks
+orivraa-b088011082d7.json
 secrets/
 credentials/
 .secrets/
@@ -51,6 +52,9 @@ credentials/
 # Railway/Vercel deployment secrets
 .railway/
 .vercel/token
+
+# Local demo scripts with machine-specific secrets
+e2e/voiceover.py
 
 # Database credentials
 *.sql.gz

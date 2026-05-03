@@ -9,12 +9,28 @@ type ServiceAccountCredentials = {
   project_id?: string;
 };
 
+type OAuthCredentials = {
+  clientId: string;
+  clientSecret: string;
+  refreshToken: string;
+  accountEmail?: string;
+};
+
+type AuthConfig =
+  | { mode: "service-account"; credentials: ServiceAccountCredentials }
+  | { mode: "oauth-user"; credentials: OAuthCredentials };
+
 function getRequiredEnv(name: string) {
   const value = process.env[name]?.trim();
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
   }
   return value;
+}
+
+function getOptionalEnv(name: string) {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
 }
 
 function isDryRun() {
@@ -41,6 +57,52 @@ function parseServiceAccountCredentials(rawJson: string): ServiceAccountCredenti
   return credentials;
 }
 
+function parseOAuthCredentialsFromEnv(): OAuthCredentials | null {
+  const clientId = getOptionalEnv("GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID");
+  const clientSecret = getOptionalEnv("GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET");
+  const refreshToken = getOptionalEnv("GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN");
+  const accountEmail = getOptionalEnv("GOOGLE_SEARCH_CONSOLE_OAUTH_ACCOUNT_EMAIL");
+  const providedCount = [clientId, clientSecret, refreshToken].filter(Boolean).length;
+
+  if (providedCount === 0) {
+    return null;
+  }
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error(
+      "To use a Google owner account, set GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID, GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET, and GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN.",
+    );
+  }
+
+  return {
+    clientId,
+    clientSecret,
+    refreshToken,
+    accountEmail,
+  };
+}
+
+function resolveAuthConfig(): AuthConfig {
+  const oauthCredentials = parseOAuthCredentialsFromEnv();
+  if (oauthCredentials) {
+    return { mode: "oauth-user", credentials: oauthCredentials };
+  }
+
+  const serviceAccountJson = getOptionalEnv(
+    "GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON",
+  );
+  if (serviceAccountJson) {
+    return {
+      mode: "service-account",
+      credentials: parseServiceAccountCredentials(serviceAccountJson),
+    };
+  }
+
+  throw new Error(
+    "No Search Console credentials configured. Set GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON, or use a Google owner account with GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID, GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET, and GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN.",
+  );
+}
+
 async function fetchSitemapSummary(sitemapUrl: string) {
   const response = await fetch(sitemapUrl, {
     headers: { "user-agent": "orivraa-search-console-sync/1.0" },
@@ -60,7 +122,7 @@ async function fetchSitemapSummary(sitemapUrl: string) {
   };
 }
 
-async function getAccessToken(credentials: ServiceAccountCredentials) {
+async function getServiceAccountAccessToken(credentials: ServiceAccountCredentials) {
   const auth = new google.auth.GoogleAuth({
     credentials,
     scopes: [SEARCH_CONSOLE_SCOPE],
@@ -76,6 +138,35 @@ async function getAccessToken(credentials: ServiceAccountCredentials) {
   }
 
   return accessToken;
+}
+
+async function getOAuthUserAccessToken(credentials: OAuthCredentials) {
+  const oauthClient = new google.auth.OAuth2(
+    credentials.clientId,
+    credentials.clientSecret,
+  );
+
+  oauthClient.setCredentials({ refresh_token: credentials.refreshToken });
+
+  const tokenResponse = await oauthClient.getAccessToken();
+  const accessToken =
+    typeof tokenResponse === "string" ? tokenResponse : tokenResponse?.token;
+
+  if (!accessToken) {
+    throw new Error(
+      "Could not obtain a Google access token from GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN",
+    );
+  }
+
+  return accessToken;
+}
+
+async function getAccessToken(authConfig: AuthConfig) {
+  if (authConfig.mode === "oauth-user") {
+    return getOAuthUserAccessToken(authConfig.credentials);
+  }
+
+  return getServiceAccountAccessToken(authConfig.credentials);
 }
 
 async function submitSitemap(property: string, sitemapUrl: string, accessToken: string) {
@@ -114,16 +205,23 @@ async function main() {
   }
 
   const property = getRequiredEnv("SEARCH_CONSOLE_PROPERTY");
-  const credentials = parseServiceAccountCredentials(
-    getRequiredEnv("GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON"),
-  );
-  const accessToken = await getAccessToken(credentials);
+  const authConfig = resolveAuthConfig();
+  const accessToken = await getAccessToken(authConfig);
 
   await submitSitemap(property, sitemapUrl, accessToken);
 
   console.log(`Submitted ${sitemapUrl} to Search Console property ${property}.`);
+
+  if (authConfig.mode === "oauth-user") {
+    const accountLabel = authConfig.credentials.accountEmail
+      ? ` ${authConfig.credentials.accountEmail}`
+      : "";
+    console.log(`Authenticated with OAuth refresh token for Google owner account${accountLabel}.`);
+    return;
+  }
+
   console.log(
-    `Ensure the service account ${credentials.client_email} has owner or full access in Search Console.`,
+    `Ensure the service account ${authConfig.credentials.client_email} has owner or full access in Search Console.`,
   );
 }
 
