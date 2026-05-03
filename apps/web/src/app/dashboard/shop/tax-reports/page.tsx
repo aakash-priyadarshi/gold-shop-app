@@ -403,7 +403,7 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
 
   return (
     <div className="space-y-4">
-      <Tabs value={auditTab} onValueChange={(v) => setAuditTab(v as "monthly" | "yearly")}>
+      <Tabs value={auditTab} onValueChange={(v) => setAuditTab(v as "monthly" | "yearly")} data-tour="nepal-audit-tabs">
         <TabsList className="mb-2">
           <TabsTrigger value="monthly">Monthly Return</TabsTrigger>
           <TabsTrigger value="yearly">Yearly Audit</TabsTrigger>
@@ -454,7 +454,7 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
               ) : auditData ? (
                 <div className="space-y-4">
                   {/* IRD threshold bar */}
-                  <div className="space-y-1">
+                  <div className="space-y-1" data-tour="nepal-audit-threshold">
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>IRD audit threshold (NPR 1 crore)</span>
                       <span>{auditData.thresholdUsedPct}% used</span>
@@ -474,7 +474,7 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
                   </div>
 
                   {/* Month-by-month table */}
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto" data-tour="nepal-audit-table">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b text-muted-foreground text-xs">

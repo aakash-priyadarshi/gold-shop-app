@@ -361,6 +361,33 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='nepal-audit-tabs']",
+      popover: {
+        title: "Nepal: Monthly Return vs Yearly Audit",
+        description: "The Nepal (NP) panel has two views. \"Monthly Return\" shows VAT & luxury tax for the selected month. \"Yearly Audit\" shows a full 12-month breakdown required by IRD Nepal.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='nepal-audit-threshold']",
+      popover: {
+        title: "IRD Audit Threshold",
+        description: "The progress bar tracks your annual sales against the NPR 1 crore (10,000,000) IRD audit threshold. If sales exceed this limit, a formal audit filing with IRD Nepal is required — the bar turns red as a warning.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='nepal-audit-table']",
+      popover: {
+        title: "Month-by-Month Breakdown",
+        description: "Every month of the year at a glance: invoice count, total sales in NPR, 2% luxury tax on metals & making charges, and 13% VAT on gemstones & services. Use the year selector (‹ ›) to view previous years.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
       popover: {
         title: "Download & Share",
         description: "Export your tax report as CSV or PDF for your accountant. You can also share a secure, time-limited link directly with your CA or tax adviser.",
@@ -579,6 +606,15 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
         description: "Your latest orders — click any row to manage it.",
         side: "top",
         align: "center",
+      },
+    },
+    {
+      element: "[data-tour='support-bot']",
+      popover: {
+        title: "AI Support Assistant",
+        description: "Need help? Click the amber chat button anytime to ask your shop-aware AI assistant. As a seller it knows your live sales, unpaid invoices, and customer count — ask things like \"How many invoices are unpaid?\" or \"What were my sales this month?\"",
+        side: "left",
+        align: "end",
       },
     },
   ],

@@ -197,6 +197,7 @@ export function SupportBot() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open Orivraa support chat"
+          data-tour="support-bot"
           className="fixed bottom-5 right-5 z-[60] h-14 w-14 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center"
         >
           <MessageCircle className="h-6 w-6" />
