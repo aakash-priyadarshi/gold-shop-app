@@ -240,64 +240,68 @@ export class TaxReportsService {
     const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const IRD_AUDIT_THRESHOLD = 10_000_000; // NPR 10 million
 
-    const months = [];
-    let annualSales = 0;
-    let annualLuxuryTax = 0;
-    let annualVat = 0;
-    let annualInvoices = 0;
+    // Single query for entire year — group months in JS to avoid 12 round-trips
+    const yearStart = new Date(Date.UTC(year, 0, 1));
+    const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
 
-    for (let m = 0; m < 12; m++) {
-      const from = new Date(Date.UTC(year, m, 1));
-      const to = new Date(Date.UTC(year, m + 1, 1));
-      const invoices = await this.prisma.invoice.findMany({
-        where: {
-          shopId,
-          issuedAt: { gte: from, lt: to },
-          status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID", "OVERDUE"] as any[] },
-          invoiceCountry: "NP",
-        },
-        select: { totalAmount: true, taxAmount: true, taxBreakdown: true, lineItems: true, isTaxExempt: true },
-      });
+    const invoices = await this.prisma.invoice.findMany({
+      where: {
+        shopId,
+        issuedAt: { gte: yearStart, lt: yearEnd },
+        status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID", "OVERDUE"] },
+        OR: [{ invoiceCountry: "NP" }, { invoiceCountry: null }],
+      },
+      select: { issuedAt: true, totalAmount: true, taxBreakdown: true, lineItems: true, invoiceCountry: true },
+    });
 
-      let totalSales = 0;
-      let luxuryTax = 0;
-      let vatCollected = 0;
+    // Only include NP invoices (treat null country as NP if shop is NP-based,
+    // same logic as getNepalVat which defaults to "NP")
+    const npInvoices = invoices.filter(
+      (i) => !i.invoiceCountry || i.invoiceCountry === "NP",
+    );
 
-      for (const i of invoices) {
-        totalSales += i.totalAmount;
-        const tb = i.taxBreakdown as Record<string, number> | null;
-        if (tb && (tb.luxuryTax != null || tb.metalTax != null || tb.vat != null)) {
-          luxuryTax += (tb.luxuryTax ?? tb.metalTax ?? 0);
-          vatCollected += (tb.vat ?? 0);
-        } else {
-          // Fallback: recompute from line items
-          const lines = (i.lineItems as unknown as InvoiceLineItem[]) || [];
-          let metalBase = 0;
-          let vatBase = 0;
-          for (const l of lines) {
-            if (["METAL", "MAKING"].includes(l.category)) metalBase += l.amount;
-            else if (["GEMSTONE", "FINISH"].includes(l.category)) vatBase += l.amount;
-          }
-          luxuryTax += +(metalBase * 0.02).toFixed(2);
-          vatCollected += +(vatBase * 0.13).toFixed(2);
+    // Initialise per-month buckets
+    const buckets = Array.from({ length: 12 }, () => ({
+      invoiceCount: 0,
+      totalSales: 0,
+      luxuryTax: 0,
+      vatCollected: 0,
+    }));
+
+    for (const i of npInvoices) {
+      const m = i.issuedAt ? new Date(i.issuedAt).getUTCMonth() : 0;
+      const b = buckets[m];
+      b.invoiceCount += 1;
+      b.totalSales += i.totalAmount ?? 0;
+
+      const tb = i.taxBreakdown as Record<string, number> | null;
+      if (tb && (tb.luxuryTax != null || tb.metalTax != null || tb.vat != null)) {
+        b.luxuryTax += Number(tb.luxuryTax ?? tb.metalTax ?? 0);
+        b.vatCollected += Number(tb.vat ?? 0);
+      } else {
+        // Fallback: recompute from line items
+        const lines = Array.isArray(i.lineItems) ? (i.lineItems as unknown as InvoiceLineItem[]) : [];
+        for (const l of lines) {
+          if (["METAL", "MAKING"].includes(l.category)) b.luxuryTax += l.amount * 0.02;
+          else if (["GEMSTONE", "FINISH"].includes(l.category)) b.vatCollected += l.amount * 0.13;
         }
       }
-
-      months.push({
-        month: m + 1,
-        label: MONTHS[m],
-        invoiceCount: invoices.length,
-        totalSales: +totalSales.toFixed(2),
-        luxuryTax: +luxuryTax.toFixed(2),
-        vatCollected: +vatCollected.toFixed(2),
-        totalTax: +(luxuryTax + vatCollected).toFixed(2),
-      });
-
-      annualSales += totalSales;
-      annualLuxuryTax += luxuryTax;
-      annualVat += vatCollected;
-      annualInvoices += invoices.length;
     }
+
+    const months = buckets.map((b, m) => ({
+      month: m + 1,
+      label: MONTHS[m],
+      invoiceCount: b.invoiceCount,
+      totalSales: +b.totalSales.toFixed(2),
+      luxuryTax: +b.luxuryTax.toFixed(2),
+      vatCollected: +b.vatCollected.toFixed(2),
+      totalTax: +(b.luxuryTax + b.vatCollected).toFixed(2),
+    }));
+
+    const annualSales = buckets.reduce((s, b) => s + b.totalSales, 0);
+    const annualLuxuryTax = buckets.reduce((s, b) => s + b.luxuryTax, 0);
+    const annualVat = buckets.reduce((s, b) => s + b.vatCollected, 0);
+    const annualInvoices = buckets.reduce((s, b) => s + b.invoiceCount, 0);
 
     return {
       year,

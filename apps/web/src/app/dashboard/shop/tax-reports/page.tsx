@@ -392,13 +392,21 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
       .finally(() => setLoading(false));
   }, [period]);
 
+  const loadAudit = (year: number) => {
+    setAuditLoading(true);
+    setAuditData(null);
+    taxReportsApi.nepalAudit(year)
+      .then((r) => setAuditData(r.data))
+      .catch((err) => {
+        const msg = err?.response?.data?.message || err?.message || "Unknown error";
+        toast({ variant: "destructive", title: "Failed to load yearly audit", description: msg });
+      })
+      .finally(() => setAuditLoading(false));
+  };
+
   useEffect(() => {
     if (auditTab !== "yearly") return;
-    setAuditLoading(true);
-    taxReportsApi.nepalAudit(auditYear)
-      .then((r) => setAuditData(r.data))
-      .catch(() => toast({ variant: "destructive", title: "Failed to load yearly audit" }))
-      .finally(() => setAuditLoading(false));
+    loadAudit(auditYear);
   }, [auditTab, auditYear]);
 
   return (
@@ -513,7 +521,10 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No audit data available.</p>
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <p className="text-sm text-muted-foreground">Failed to load audit data.</p>
+                  <Button variant="outline" size="sm" onClick={() => loadAudit(auditYear)}>Retry</Button>
+                </div>
               )}
             </CardContent>
           </Card>
