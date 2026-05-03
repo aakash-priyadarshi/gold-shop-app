@@ -4,6 +4,9 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 const BASE_URL = "https://www.orivraa.com";
+const DEFAULT_PUBLIC_API_BASE = "https://api.orivraa.com/api";
+const SHOP_SITEMAP_PAGE_SIZE = 200;
+const SHOP_SITEMAP_MAX_PAGES = 10;
 
 const ABOUT_LANGUAGES = ["fr", "de", "hi", "es", "ar", "ne"] as const;
 
@@ -14,6 +17,11 @@ type RouteMeta = {
   changeFrequency: ChangeFrequency;
   priority: number;
   lastModified?: Date;
+};
+
+type ShopSitemapRecord = {
+  id: string;
+  updatedAt?: string;
 };
 
 const DEFAULT_ROUTE_META: RouteMeta = {
@@ -209,6 +217,72 @@ function getStaticPages(siteLaunch: string): MetadataRoute.Sitemap {
     });
 }
 
+function resolvePublicApiBaseUrl() {
+  const configuredUrl =
+    process.env.NEXT_PUBLIC_API_URL?.trim() ||
+    process.env.API_BASE_URL?.trim() ||
+    DEFAULT_PUBLIC_API_BASE;
+
+  return configuredUrl.endsWith("/api")
+    ? configuredUrl
+    : `${configuredUrl}/api`;
+}
+
+async function getShopPagesForSitemap() {
+  const apiBaseUrl = resolvePublicApiBaseUrl();
+  const shopPages: MetadataRoute.Sitemap = [];
+
+  for (let page = 1; page <= SHOP_SITEMAP_MAX_PAGES; page += 1) {
+    const query = new URLSearchParams({
+      page: `${page}`,
+      pageSize: `${SHOP_SITEMAP_PAGE_SIZE}`,
+    });
+
+    const response = await fetch(`${apiBaseUrl}/shops/public?${query.toString()}`, {
+      next: { revalidate: 3600 },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Public shops endpoint returned ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const data = await response.json();
+    const shops = Array.isArray(data?.shops)
+      ? (data.shops as ShopSitemapRecord[])
+      : Array.isArray(data)
+        ? (data as ShopSitemapRecord[])
+        : [];
+
+    if (shops.length === 0) {
+      break;
+    }
+
+    shopPages.push(
+      ...shops.map((shop) => ({
+        url: `${BASE_URL}/shops/${shop.id}`,
+        lastModified: shop.updatedAt ? new Date(shop.updatedAt) : new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      })),
+    );
+
+    const totalPages =
+      typeof data?.meta?.totalPages === "number"
+        ? data.meta.totalPages
+        : typeof data?.pagination?.totalPages === "number"
+          ? data.pagination.totalPages
+          : undefined;
+
+    if ((totalPages && page >= totalPages) || shops.length < SHOP_SITEMAP_PAGE_SIZE) {
+      break;
+    }
+  }
+
+  return shopPages;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Use a fixed reference date for pages that don't have dynamic content.
   // Update these dates ONLY when you actually modify the page content.
@@ -232,20 +306,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ─── DYNAMIC: Shop pages ──────────────────────────────────────
   let shopPages: MetadataRoute.Sitemap = [];
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-    const response = await fetch(`${apiUrl}/shops?status=ACTIVE&limit=1000`, {
-      next: { revalidate: 3600 },
-    });
-    if (response.ok) {
-      const data = await response.json();
-      const shops = data.shops || data || [];
-      shopPages = shops.map((shop: { id: string; updatedAt?: string }) => ({
-        url: `${BASE_URL}/shops/${shop.id}`,
-        lastModified: shop.updatedAt ? new Date(shop.updatedAt) : new Date(),
-        changeFrequency: "weekly" as const,
-        priority: 0.8,
-      }));
-    }
+    shopPages = await getShopPagesForSitemap();
   } catch (error) {
     console.error("Error fetching shops for sitemap:", error);
   }
