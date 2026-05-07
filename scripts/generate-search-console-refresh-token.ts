@@ -1,10 +1,12 @@
+import { google } from "googleapis";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process from "node:process";
 import { createInterface } from "node:readline/promises";
-import { google } from "googleapis";
 
 const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters";
+const INDEXING_SCOPE = "https://www.googleapis.com/auth/indexing";
+const DEFAULT_SCOPES = [SEARCH_CONSOLE_SCOPE, INDEXING_SCOPE];
 const DEFAULT_REDIRECT_URI = "http://localhost";
 
 type OAuthClientConfig = {
@@ -58,7 +60,8 @@ Usage:
 
 Options:
   --client-file      Path to a Google OAuth client JSON file
-  --scope            OAuth scope to request (default: ${SEARCH_CONSOLE_SCOPE})
+  --scope            OAuth scope(s) to request, comma-separated
+                     (default: ${DEFAULT_SCOPES.join(",")})
   --print-auth-url   Print the authorization URL and exit without prompting
   --help             Show this help message
 
@@ -177,7 +180,10 @@ async function main() {
     return;
   }
 
-  const scope = getArg("--scope") || SEARCH_CONSOLE_SCOPE;
+  const scopeArg = getArg("--scope");
+  const scopes = scopeArg
+    ? scopeArg.split(",").map((s) => s.trim()).filter(Boolean)
+    : DEFAULT_SCOPES;
   const credentials = resolveClientCredentials();
   const oauthClient = new google.auth.OAuth2(
     credentials.clientId,
@@ -189,7 +195,7 @@ async function main() {
     access_type: "offline",
     prompt: "consent",
     include_granted_scopes: true,
-    scope: [scope],
+    scope: scopes,
   });
 
   if (hasFlag("--print-auth-url")) {

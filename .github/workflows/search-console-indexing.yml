@@ -1,0 +1,111 @@
+name: Search Console URL Indexing
+
+# Pushes priority URLs to the Google Indexing API to nudge Googlebot to recrawl
+# pages that are stuck in "Discovered – currently not indexed".
+#
+# Requires the same GOOGLE_SEARCH_CONSOLE_OAUTH_* secrets as the sitemap workflow,
+# but the refresh token must include the indexing scope. Re-run
+# `pnpm seo:get-refresh-token` and update the secret if the indexing scope was
+# not granted previously.
+
+on:
+  push:
+    branches: [master, main]
+  schedule:
+    # Daily at 04:30 UTC (after sitemap sync at 04:17 UTC)
+    - cron: "30 4 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print URLs without sending to the Indexing API"
+        required: false
+        default: false
+        type: boolean
+      from_sitemap:
+        description: "Pull URLs from the live sitemap instead of the priority list"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "10.27.0"
+
+concurrency:
+  group: search-console-indexing
+  cancel-in-progress: false
+
+jobs:
+  submit-urls:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check secrets
+        id: config
+        env:
+          GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID }}
+          GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -z "$GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID" || -z "$GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET" || -z "$GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN" ]]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping URL indexing. OAuth secrets not configured."
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.config.outputs.ready == 'true'
+
+      - name: Setup pnpm
+        if: steps.config.outputs.ready == 'true'
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        if: steps.config.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.config.outputs.ready == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for production deploy to settle
+        if: steps.config.outputs.ready == 'true' && github.event_name == 'push'
+        shell: bash
+        run: |
+          echo "Push trigger detected, waiting 6 minutes for production deploy"
+          sleep 360
+
+      - name: Submit URLs to Google Indexing API
+        if: steps.config.outputs.ready == 'true'
+        env:
+          GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID }}
+          GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN }}
+        shell: bash
+        run: |
+          ARGS=""
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" == "true" ]]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.from_sitemap }}" == "true" ]]; then
+            ARGS="$ARGS --from-sitemap"
+          fi
+          pnpm seo:submit-urls $ARGS
+
+      - name: Workflow summary
+        if: always() && steps.config.outputs.ready == 'true'
+        run: |
+          echo "## Search Console URL Indexing" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Trigger: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Mode: ${{ inputs.dry_run == true && 'dry run' || 'live submit' }}" >> "$GITHUB_STEP_SUMMARY"

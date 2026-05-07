@@ -1,6 +1,16 @@
 import { Metadata } from "next";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const DEFAULT_PUBLIC_API_BASE = "https://api.orivraa.com/api";
+
+function resolveApiBaseUrl() {
+  const configured =
+    process.env.NEXT_PUBLIC_API_URL?.trim() ||
+    process.env.API_BASE_URL?.trim() ||
+    DEFAULT_PUBLIC_API_BASE;
+  return configured.endsWith("/api") ? configured : `${configured}/api`;
+}
+
+const API_URL = resolveApiBaseUrl();
 
 type Props = {
   params: Promise<{ id: string }>;
