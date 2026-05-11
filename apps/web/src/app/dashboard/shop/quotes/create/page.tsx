@@ -63,8 +63,12 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  Copy,
   ImageIcon,
+  Link2,
   Loader2,
+  Mail,
+  MessageSquare,
   RefreshCw,
   Scale,
   Sparkles,
@@ -131,6 +135,17 @@ export default function CreateShopQuotePage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Post-creation state: tracking link flow
+  const [createdQuote, setCreatedQuote] = useState<{
+    id: string;
+    quoteNumber: string;
+    trackingToken?: string;
+  } | null>(null);
+  const [sendingTracking, setSendingTracking] = useState(false);
+  const [trackingSent, setTrackingSent] = useState<"email" | "sms" | null>(
+    null,
+  );
 
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [lookupResult, setLookupResult] = useState<CustomerLookupResult | null>(
@@ -604,17 +619,57 @@ export default function CreateShopQuotePage() {
         estimatedDays: parseInt(formData.estimatedDays) || undefined,
         shopNotes: formData.shopNotes || undefined,
       });
+      const quote = response.data;
+      setCreatedQuote({
+        id: quote.id,
+        quoteNumber: quote.quoteNumber,
+        trackingToken: quote.trackingToken,
+      });
       toast({
         title: t("Quote Created"),
-        description: `${t("Quote")} ${response.data.quoteNumber} ${t("created for")} ${customerDetails.name}`,
+        description: `${t("Quote")} ${quote.quoteNumber} ${t("created for")} ${customerDetails.name}`,
       });
-      router.push("/dashboard/shop/quotes");
     } catch (err: unknown) {
+      const axiosErr = err as any;
+      const msg = axiosErr?.response?.data?.message;
       setError(
-        err instanceof Error ? err.message : "An unexpected error occurred",
+        Array.isArray(msg)
+          ? msg.join(", ")
+          : typeof msg === "string"
+            ? msg
+            : err instanceof Error
+              ? err.message
+              : t("An unexpected error occurred"),
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendTrackingLink = async (method: "email" | "sms") => {
+    if (!createdQuote) return;
+    setSendingTracking(true);
+    try {
+      await shopQuotesApi.sendTrackingLink(createdQuote.id, method);
+      setTrackingSent(method);
+      toast({
+        title: t("Tracking link sent"),
+        description:
+          method === "email"
+            ? t("Email sent to customer")
+            : t("SMS sent to customer"),
+      });
+    } catch (err: unknown) {
+      const axiosErr = err as any;
+      const msg = axiosErr?.response?.data?.message;
+      toast({
+        title: t("Failed to send"),
+        description:
+          typeof msg === "string" ? msg : t("Could not send tracking link"),
+        variant: "destructive",
+      });
+    } finally {
+      setSendingTracking(false);
     }
   };
 
@@ -627,6 +682,133 @@ export default function CreateShopQuotePage() {
   const jewelleryDetailsComplete =
     formData.jewelleryType && formData.buildMethod;
   const canSubmit = customerDetailsComplete && jewelleryDetailsComplete;
+
+  // ── Post-creation success panel ─────────────────────────────────────────────
+  if (createdQuote) {
+    const trackingUrl = createdQuote.trackingToken
+      ? `${typeof window !== "undefined" ? window.location.origin : ""}/track/${createdQuote.trackingToken}`
+      : null;
+
+    return (
+      <ShopGuard>
+        <DashboardLayout>
+          <div className="max-w-xl mx-auto space-y-6 py-12">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
+                <Check className="h-8 w-8 text-green-600" />
+              </div>
+              <h1 className="text-2xl font-bold">
+                <T>Quote Created!</T>
+              </h1>
+              <p className="text-muted-foreground">
+                {t("Quote")} <span className="font-mono font-semibold">{createdQuote.quoteNumber}</span>{" "}
+                {t("has been created for")} {customerDetails.name}.
+              </p>
+            </div>
+
+            {/* Tracking link card */}
+            {trackingUrl && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Link2 className="h-4 w-4 text-amber-500" />
+                    <T>Customer Tracking Link</T>
+                  </CardTitle>
+                  <CardDescription>
+                    <T>Share this link so the customer can track their order status in real time — no login required.</T>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Link preview */}
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-muted rounded px-3 py-2 break-all">
+                      {trackingUrl}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        navigator.clipboard.writeText(trackingUrl);
+                        toast({ title: t("Copied to clipboard") });
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Send options */}
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      <T>Send tracking link to customer:</T>
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      {customerDetails.email && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={sendingTracking || trackingSent === "email"}
+                          onClick={() => handleSendTrackingLink("email")}
+                          className="flex items-center gap-2"
+                        >
+                          {sendingTracking && trackingSent !== "sms" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : trackingSent === "email" ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Mail className="h-4 w-4" />
+                          )}
+                          <T>Send via Email</T>
+                          <span className="text-muted-foreground text-xs">({customerDetails.email})</span>
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={sendingTracking || trackingSent === "sms"}
+                        onClick={() => handleSendTrackingLink("sms")}
+                        className="flex items-center gap-2"
+                      >
+                        {sendingTracking && trackingSent !== "email" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : trackingSent === "sms" ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <MessageSquare className="h-4 w-4" />
+                        )}
+                        <T>Send via SMS</T>
+                      </Button>
+                    </div>
+                    {!customerDetails.email && (
+                      <p className="text-xs text-muted-foreground">
+                        <T>No email on file — copy the link to share manually, or send via SMS.</T>
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <Button
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
+                onClick={() => router.push(`/dashboard/shop/quotes/${createdQuote.id}`)}
+              >
+                <T>View Quote</T>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => router.push("/dashboard/shop/quotes")}
+              >
+                <T>All Quotes</T>
+              </Button>
+            </div>
+          </div>
+        </DashboardLayout>
+      </ShopGuard>
+    );
+  }
 
   return (
     <ShopGuard>

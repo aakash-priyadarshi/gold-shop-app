@@ -489,6 +489,18 @@ export const shopQuotesApi = {
   recordPayment: (id: string, data: { amountNpr: number; notes?: string }) =>
     api.post(`/shop-quotes/${id}/payment`, data),
 
+  // Invoice conversion
+  convertToInvoice: (id: string, data?: { notes?: string }) =>
+    api.post(`/shop-quotes/${id}/invoice`, data ?? {}),
+
+  // Tracking link
+  sendTrackingLink: (id: string, method: "email" | "sms") =>
+    api.post(`/shop-quotes/${id}/send-tracking-link`, { method }),
+
+  // Public: track by token (no auth)
+  trackByToken: (token: string) =>
+    api.get(`/shop-quotes/track/${token}`),
+
   // Statistics and analytics
   getStats: () => api.get("/shop-quotes/stats"),
 

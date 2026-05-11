@@ -565,4 +565,21 @@ export class MailService {
       replyTo: data.email,
     });
   }
+
+  async sendTrackingLink(to: string, data: {
+    customerName: string;
+    quoteNumber: string;
+    shopName: string;
+    jewelleryType: string;
+    estimatedDays?: number;
+    trackingUrl: string;
+  }): Promise<SendResult> {
+    return this.send({
+      to,
+      subject: `Track your order ${data.quoteNumber} at ${data.shopName}`,
+      template: 'tracking-link',
+      context: data,
+      from: `${data.shopName} via Orivraa <${EMAIL_SENDERS.ORDERS}>`,
+    });
+  }
 }

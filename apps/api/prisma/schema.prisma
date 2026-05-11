@@ -640,6 +640,16 @@ model ShopQuote {
   cancelledAt           DateTime?
   cancelReason          String?
 
+  // Invoice
+  invoiceNumber         String?          @unique  // Generated when quote is invoiced
+  invoicedAt            DateTime?                 // When converted to invoice
+
+  // Tracking (guest + registered customer)
+  trackingToken         String?          @unique  // UUID for public guest tracking URL
+  trackingEmailSent     Boolean          @default(false)
+  trackingSmsSent       Boolean          @default(false)
+  registeredCustomerId  String?          // Linked to User account if customer is registered
+
   // Payment (always at shop)
   advancePaidNpr        Float            @default(0)
   balanceDueNpr         Float?

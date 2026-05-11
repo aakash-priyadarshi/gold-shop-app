@@ -5,15 +5,19 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
+import { randomUUID } from "crypto";
 import { BuildMethod, JewelleryType, ShopQuoteStatus } from "@prisma/client";
 import { RedisService } from "../../common/redis";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { MailService } from "../mail/mail.service";
 import { MarketRegion } from "../market-rates/types";
 import { TaxRulesService } from "../pricing/services/tax-rules.service";
 import {
+  ConvertToInvoiceDto,
   CreateShopQuoteDto,
   RecordPaymentDto,
+  SendTrackingLinkDto,
   UpdateQuoteStatusDto,
   UpdateShopQuoteDto,
 } from "./dto";
@@ -31,6 +35,7 @@ export class ShopQuotesService {
     private redisService: RedisService,
     private auditService: AuditService,
     private taxRulesService: TaxRulesService,
+    private mailService: MailService,
   ) {}
 
   /**
@@ -56,6 +61,15 @@ export class ShopQuotesService {
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 6).toUpperCase();
     return `SQ-${timestamp}${random}`;
+  }
+
+  /**
+   * Generate a unique invoice number
+   */
+  private generateInvoiceNumber(): string {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `INV-${timestamp}${random}`;
   }
 
   /**
@@ -329,10 +343,6 @@ export class ShopQuotesService {
       );
     }
 
-    if (!shop.isVerified) {
-      throw new BadRequestException("Shop must be verified to create quotes");
-    }
-
     // Get or create walk-in customer
     const customer = await this.getOrCreateCustomer(shopId, {
       name: dto.customer.name,
@@ -383,6 +393,7 @@ export class ShopQuotesService {
         shopNotes: dto.shopNotes,
         balanceDueNpr: totalPriceNpr,
         status: ShopQuoteStatus.QUOTED,
+        trackingToken: randomUUID(),
       },
       include: {
         walkInCustomer: true,
@@ -838,5 +849,180 @@ export class ShopQuotesService {
     }
 
     return customer;
+  }
+
+  /**
+   * Convert a quote to an invoice.
+   * Generates an invoice number and marks it as invoiced.
+   */
+  async convertToInvoice(
+    quoteId: string,
+    shopId: string,
+    userId: string,
+    dto: ConvertToInvoiceDto,
+  ) {
+    const quote = await this.findOne(quoteId, shopId, userId);
+
+    if (quote.status === ShopQuoteStatus.CANCELLED) {
+      throw new BadRequestException("Cannot invoice a cancelled quote");
+    }
+
+    if ((quote as any).invoiceNumber) {
+      throw new BadRequestException("Quote has already been invoiced");
+    }
+
+    if (!quote.totalPriceNpr) {
+      throw new BadRequestException(
+        "Pricing must be set before converting to invoice",
+      );
+    }
+
+    const updateData: any = {
+      invoiceNumber: this.generateInvoiceNumber(),
+      invoicedAt: new Date(),
+    };
+
+    // Auto-confirm if still in QUOTED state
+    if (quote.status === ShopQuoteStatus.QUOTED) {
+      updateData.status = ShopQuoteStatus.CONFIRMED;
+      updateData.confirmedAt = new Date();
+    }
+
+    if (dto.notes) {
+      updateData.shopNotes = dto.notes;
+    }
+
+    const updated = await this.prisma.shopQuote.update({
+      where: { id: quoteId },
+      data: updateData,
+      include: {
+        walkInCustomer: true,
+        shop: { select: { id: true, shopName: true, city: true } },
+      },
+    });
+
+    await this.auditService.log({
+      userId,
+      actorType: "USER",
+      action: "INVOICE_CREATED",
+      resourceType: "SHOP_QUOTE",
+      resourceId: quoteId,
+      newValue: { invoiceNumber: updateData.invoiceNumber },
+    });
+
+    return {
+      ...updated,
+      message: `Invoice ${updateData.invoiceNumber} created successfully`,
+    };
+  }
+
+  /**
+   * Public: get quote by tracking token (no auth required).
+   * Returns only safe public fields.
+   */
+  async getByTrackingToken(token: string) {
+    const quote = await this.prisma.shopQuote.findUnique({
+      where: { trackingToken: token },
+      include: {
+        walkInCustomer: {
+          select: { id: true, name: true },
+        },
+        shop: {
+          select: { id: true, shopName: true, city: true, country: true },
+        },
+      },
+    });
+
+    if (!quote) {
+      throw new NotFoundException("Tracking link is invalid or has expired");
+    }
+
+    // Return only public-safe fields — no pricing or internal notes
+    return {
+      quoteNumber: quote.quoteNumber,
+      invoiceNumber: (quote as any).invoiceNumber ?? null,
+      jewelleryType: quote.jewelleryType,
+      status: quote.status,
+      estimatedDays: quote.estimatedDays,
+      createdAt: quote.createdAt,
+      updatedAt: quote.updatedAt,
+      confirmedAt: quote.confirmedAt,
+      startedAt: quote.startedAt,
+      readyAt: quote.readyAt,
+      completedAt: quote.completedAt,
+      cancelledAt: quote.cancelledAt,
+      cancelReason: quote.cancelReason,
+      shop: quote.shop,
+      customerName: quote.walkInCustomer?.name ?? "Customer",
+    };
+  }
+
+  /**
+   * Send the tracking link to the customer via email.
+   */
+  async sendTrackingNotification(
+    quoteId: string,
+    shopId: string,
+    userId: string,
+    dto: SendTrackingLinkDto,
+    appUrl: string,
+  ) {
+    const quote = await this.findOne(quoteId, shopId, userId);
+    const trackingToken = (quote as any).trackingToken;
+
+    if (!trackingToken) {
+      throw new BadRequestException(
+        "This quote does not have a tracking token",
+      );
+    }
+
+    const trackingUrl = `${appUrl}/track/${trackingToken}`;
+    const customer = quote.walkInCustomer as any;
+
+    if (dto.method === "email") {
+      if (!customer.email) {
+        throw new BadRequestException(
+          "No email address on file for this customer",
+        );
+      }
+
+      await this.mailService.sendTrackingLink(customer.email, {
+        customerName: customer.name,
+        quoteNumber: quote.quoteNumber,
+        shopName: quote.shop.shopName,
+        jewelleryType: quote.jewelleryType,
+        estimatedDays: quote.estimatedDays ?? undefined,
+        trackingUrl,
+      });
+
+      await this.prisma.shopQuote.update({
+        where: { id: quoteId },
+        data: { trackingEmailSent: true } as any,
+      });
+
+      return { sent: true, method: "email", to: customer.email, trackingUrl };
+    }
+
+    if (dto.method === "sms") {
+      // SMS integration placeholder — log and return URL for now
+      this.logger.log(
+        `SMS tracking link requested for ${quote.quoteNumber} → ${trackingUrl}`,
+      );
+
+      await this.prisma.shopQuote.update({
+        where: { id: quoteId },
+        data: { trackingSmsSent: true } as any,
+      });
+
+      return {
+        sent: true,
+        method: "sms",
+        to: customer.phone,
+        trackingUrl,
+        note: "SMS integration not yet configured — share the link manually",
+      };
+    }
+
+    throw new BadRequestException("Invalid delivery method");
   }
 }

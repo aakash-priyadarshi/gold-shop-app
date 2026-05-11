@@ -41,6 +41,7 @@ import {
   Phone,
   Play,
   Plus,
+  Receipt,
   TrendingUp,
   UserPlus,
   Users,
@@ -52,6 +53,7 @@ import { useEffect, useState } from "react";
 interface ShopQuote {
   id: string;
   quoteNumber: string;
+  invoiceNumber?: string;
   jewelleryType: string;
   buildMethod: string;
   targetTotalWeightG?: number;
@@ -157,6 +159,24 @@ export default function ShopQuotesPage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleConvertToInvoice = async (quoteId: string) => {
+    try {
+      const res = await shopQuotesApi.convertToInvoice(quoteId);
+      toast({
+        title: "Invoice Created",
+        description: `Invoice ${res.data.invoiceNumber} generated successfully.`,
+      });
+      loadData();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to create invoice",
+        description:
+          error.response?.data?.message || "Could not convert to invoice",
+      });
     }
   };
 
@@ -427,6 +447,24 @@ export default function ShopQuotesPage() {
                                         View Details
                                       </DropdownMenuItem>
                                     </Link>
+                                    {/* Convert to Invoice — show if not already invoiced */}
+                                    {!quote.invoiceNumber &&
+                                      !["CANCELLED"].includes(quote.status) && (
+                                        <DropdownMenuItem
+                                          onClick={() =>
+                                            handleConvertToInvoice(quote.id)
+                                          }
+                                        >
+                                          <Receipt className="h-4 w-4 mr-2" />
+                                          Create Invoice
+                                        </DropdownMenuItem>
+                                      )}
+                                    {quote.invoiceNumber && (
+                                      <DropdownMenuItem disabled>
+                                        <Receipt className="h-4 w-4 mr-2 text-green-500" />
+                                        {quote.invoiceNumber}
+                                      </DropdownMenuItem>
+                                    )}
                                     {quote.status === "QUOTED" && (
                                       <DropdownMenuItem
                                         onClick={() =>

@@ -296,3 +296,19 @@ export class SearchCustomersDto {
   @Matches(/^\d{3,15}$/, { message: "Enter at least 3 digits to search" })
   phone: string;
 }
+
+export class SendTrackingLinkDto {
+  @ApiProperty({
+    enum: ["email", "sms"],
+    description: "Delivery method for the tracking link",
+  })
+  @IsEnum(["email", "sms"])
+  method: "email" | "sms";
+}
+
+export class ConvertToInvoiceDto {
+  @ApiPropertyOptional({ description: "Optional notes to add to the invoice" })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
