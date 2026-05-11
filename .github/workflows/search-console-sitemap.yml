@@ -117,25 +117,28 @@ jobs:
         if: steps.config.outputs.ready == 'true' && github.event_name == 'push'
         shell: bash
         run: |
-          echo "Push trigger detected, waiting 5 minutes for production deploy to settle"
-          sleep 300
+          echo "Push trigger detected, waiting 8 minutes for production deploy to settle"
+          sleep 480
 
       - name: Wait for sitemap to become reachable
         if: steps.config.outputs.ready == 'true' && github.event_name == 'push'
+        # Non-fatal: slow Vercel deploys should not block the submission.
+        # The daily scheduled run at 04:17 UTC is the reliable path.
+        continue-on-error: true
         shell: bash
         run: |
-          for attempt in $(seq 1 20); do
+          for attempt in $(seq 1 30); do
             if curl --fail --silent --show-error --location --connect-timeout 10 --max-time 20 "${{ steps.config.outputs.sitemap_url }}" > /dev/null; then
-              echo "::notice::Sitemap is reachable"
+              echo "::notice::Sitemap is reachable after $attempt attempt(s)"
               exit 0
             fi
 
-            echo "Attempt $attempt of 20: sitemap not reachable yet"
+            echo "Attempt $attempt of 30: sitemap not reachable yet, retrying in 30s"
             sleep 30
           done
 
-          echo "::error::Sitemap never became reachable at ${{ steps.config.outputs.sitemap_url }}"
-          exit 1
+          echo "::warning::Sitemap not reachable after 30 attempts — proceeding with submission anyway. The scheduled run will confirm."
+          exit 0
 
       - name: Submit sitemap to Search Console
         if: steps.config.outputs.ready == 'true'
