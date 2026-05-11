@@ -1,7 +1,7 @@
 import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
+    ConflictException,
+    Injectable,
+    NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CreatePageDto, UpdatePageDto } from "./dto/page.dto";
