@@ -1,8 +1,8 @@
 import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
 } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
@@ -206,6 +206,7 @@ export class UsersService {
       const isOnlineNow = latestSession
         ? (latestSession.lastActive as Date) >= fiveMinutesAgo
         : false;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { webSessions: _ws, ...rest } = user as any;
       return {
         ...rest,
@@ -228,7 +229,7 @@ export class UsersService {
     };
   }
 
-  async suspendUser(userId: string, adminId: string) {
+  async suspendUser(userId: string, _adminId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });

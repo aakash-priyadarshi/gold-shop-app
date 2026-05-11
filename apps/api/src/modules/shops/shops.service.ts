@@ -1,10 +1,10 @@
 import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
+    BadRequestException,
+    ConflictException,
+    ForbiddenException,
+    Injectable,
+    Logger,
+    NotFoundException,
 } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { RedisService } from "../../common";

@@ -4,6 +4,10 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
 import {
+  INDIA_PRO_MONTHLY_PRICE,
+  PUBLIC_LOCAL_PRICING_SUMMARY,
+} from "@/lib/seo/pricing-copy";
+import {
   ArrowRight,
   BarChart3,
   ClipboardList,
@@ -33,9 +37,10 @@ const jsonLd = {
       url: "https://www.orivraa.com/jewellery-store-management-software",
       offers: {
         "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-        description: "Free plan available. Pro from $12.99/month.",
+        price: `${INDIA_PRO_MONTHLY_PRICE}`,
+        priceCurrency: "INR",
+        eligibleRegion: { "@type": "Country", name: "India" },
+        description: `India Pro starts at ₹299/month. ${PUBLIC_LOCAL_PRICING_SUMMARY}`,
       },
       aggregateRating: {
         "@type": "AggregateRating",
@@ -60,7 +65,7 @@ const jsonLd = {
           name: "Is Orivraa free for jewellery stores?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes, Orivraa offers a permanently free plan that includes up to 15 products, basic inventory management, customer messaging, and marketplace listing. Pro plans start at $12.99/month for unlimited products and advanced features.",
+            text: "Yes, Orivraa offers a permanently free plan that includes up to 15 products, basic inventory management, customer messaging, and marketplace listing. Paid plans use local country pricing, including India Pro from ₹299/month for unlimited products and advanced features.",
           },
         },
         {
@@ -538,7 +543,7 @@ export default function JewelleryStoreManagementSoftwarePage() {
                 },
                 {
                   q: "How much does Orivraa cost?",
-                  a: "Orivraa starts free with up to 15 product listings. The Pro plan is $12.99/month for unlimited products and advanced features. Pro+ is $24.99/month with AI tools included. Enterprise pricing is custom based on your requirements.",
+                  a: "Orivraa starts free with up to 15 product listings. Paid plans use local country pricing, including India Pro from ₹299/month and India Pro+ from ₹599/month. Enterprise pricing is custom based on your requirements.",
                 },
                 {
                   q: "Can I migrate from another software like Marg ERP or Vyapar?",

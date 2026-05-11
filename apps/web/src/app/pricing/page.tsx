@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
-import { GSTIN_READY_INVOICE_COPY } from "@/lib/seo/pricing-copy";
 import { subscriptionPlansApi } from "@/lib/api";
+import { GSTIN_READY_INVOICE_COPY } from "@/lib/seo/pricing-copy";
 import {
     COUNTRIES,
     CURRENCIES,

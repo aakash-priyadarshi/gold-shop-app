@@ -1,16 +1,16 @@
 import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    Logger,
+    NotFoundException,
 } from "@nestjs/common";
 import {
-  BuildMethod,
-  ConversationStatus,
-  InventoryVisibility,
-  RfqSource,
-  RfqStatus,
+    BuildMethod,
+    ConversationStatus,
+    InventoryVisibility,
+    RfqSource,
+    RfqStatus,
 } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
@@ -243,7 +243,10 @@ export class ChatService {
   ): Promise<SendMessageResult> {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { shop: { select: { userId: true } } },
+      include: {
+        buyer: { select: { id: true, firstName: true, lastName: true } },
+        shop: { select: { id: true, shopName: true, userId: true } },
+      },
     });
 
     if (!conversation) {
@@ -332,6 +335,8 @@ export class ChatService {
       data: { updatedAt: new Date() },
     });
 
+    await this.notifyMessageRecipients(conversation, senderId, senderRole, content);
+
     return {
       message,
       blocked: false,
@@ -340,6 +345,53 @@ export class ChatService {
       buyerUserId: conversation.buyerId,
       shopUserId: (conversation as any).shop?.userId,
     };
+  }
+
+  private async notifyMessageRecipients(
+    conversation: any,
+    senderId: string,
+    senderRole: string,
+    content: string,
+  ) {
+    const recipientIds = new Set<string>();
+    if (conversation.buyerId && conversation.buyerId !== senderId) {
+      recipientIds.add(conversation.buyerId);
+    }
+    if (conversation.shop?.userId && conversation.shop.userId !== senderId) {
+      recipientIds.add(conversation.shop.userId);
+    }
+
+    if (recipientIds.size === 0) return;
+
+    const sender = await this.prisma.user.findUnique({
+      where: { id: senderId },
+      select: { firstName: true, lastName: true, role: true },
+    });
+    const senderName =
+      senderRole === 'ADMIN' || senderRole === 'SUPPORT'
+        ? 'Orivraa Support'
+        : `${sender?.firstName ?? ''} ${sender?.lastName ?? ''}`.trim() || senderRole;
+    const preview = content.length > 120 ? `${content.slice(0, 117)}...` : content;
+
+    await Promise.all(
+      Array.from(recipientIds).map((userId) =>
+        this.notifications.create({
+          userId,
+          type: 'NEW_MESSAGE',
+          titleKey: 'notification.message.new.title',
+          titleParams: { senderName },
+          bodyKey: 'notification.message.new.body',
+          bodyParams: {
+            preview,
+            senderRole,
+            shopName: conversation.shop?.shopName,
+          },
+          referenceType: 'CONVERSATION',
+          referenceId: conversation.id,
+          channels: ['IN_APP'],
+        }),
+      ),
+    );
   }
 
   // ═══════════════════════════════════════════════════════════

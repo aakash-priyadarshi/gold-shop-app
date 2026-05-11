@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { BlogHighlightsSection } from "@/components/marketing/BlogHighlightsSection";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -404,6 +405,17 @@ export default function DownloadPage() {
             </div>
           </div>
         </section>
+
+        <BlogHighlightsSection
+          title="Learn the Billing and Tax Workflow Too"
+          description="Visitors checking the desktop app are often also deciding how to handle billing, GST, and month-end reporting. These guides explain where jewellers save time and money."
+          slugs={[
+            "best-billing-software-for-jewellery-shops-india-2026",
+            "how-tax-reports-save-jewellery-traders-money",
+            "jewellery-gst-billing-guide-india",
+          ]}
+          ctaLabel="Open the blog"
+        />
 
         {/* Older Versions */}
         {platformOlder.length > 0 && (

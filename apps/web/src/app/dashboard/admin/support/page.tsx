@@ -1,28 +1,28 @@
 ﻿'use client';
 
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { AdminGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supportApi, ticketsApi } from '@/lib/api';
 import {
-  ShieldCheck,
-  MessageSquare,
-  AlertTriangle,
-  RotateCcw,
-  RefreshCw,
-  Clock,
-  TrendingUp,
-  Bot,
-  ChevronDown,
-  ChevronRight,
-  ArrowUpRight,
-  Users,
-  Zap,
+    AlertTriangle,
+    ArrowUpRight,
+    Bot,
+    ChevronDown,
+    ChevronRight,
+    Clock,
+    MessageSquare,
+    RefreshCw,
+    RotateCcw,
+    ShieldCheck,
+    TrendingUp,
+    Users,
+    Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { supportApi, ticketsApi } from '@/lib/api';
 
 interface DashboardStats {
   pendingRefunds: number;

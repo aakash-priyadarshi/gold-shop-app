@@ -8,11 +8,11 @@ import { AdminMessageBanner } from "@/components/ui/AdminMessageBanner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { T } from "@/components/ui/T";
@@ -21,15 +21,15 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi, ordersApi, rfqApi, sellerSubscriptionsApi, shopsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
-  AlertCircle,
-  ArrowUpRight,
-  Eye,
-  MessageSquare,
-  Package,
-  Plus,
-  ShoppingCart,
-  Star,
-  TrendingUp,
+    AlertCircle,
+    ArrowUpRight,
+    Eye,
+    MessageSquare,
+    Package,
+    Plus,
+    ShoppingCart,
+    Star,
+    TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";

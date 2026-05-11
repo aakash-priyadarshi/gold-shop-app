@@ -5,11 +5,11 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -18,29 +18,29 @@ import { Switch } from "@/components/ui/switch";
 import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useT } from "@/providers/translation-provider";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { materialsApi, shopsApi } from "@/lib/api";
 import { FINISH_DATA, JEWELLERY_TYPE_DATA } from "@/lib/jewellery-constants";
+import { useT } from "@/providers/translation-provider";
 import {
-  CircleDot,
-  Eye,
-  Gem,
-  Hammer,
-  Info,
-  Loader2,
-  Percent,
-  RefreshCw,
-  Save,
-  Sparkles,
-  TrendingUp,
+    CircleDot,
+    Eye,
+    Gem,
+    Hammer,
+    Info,
+    Loader2,
+    Percent,
+    RefreshCw,
+    Save,
+    Sparkles,
+    TrendingUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 

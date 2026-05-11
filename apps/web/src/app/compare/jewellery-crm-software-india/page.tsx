@@ -6,15 +6,15 @@ import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
 import {
-  ArrowRight,
-  CheckCircle2,
-  Layers,
-  MessageSquare,
-  ShieldCheck,
-  Sparkles,
-  Store,
-  Users,
-  XCircle,
+    ArrowRight,
+    CheckCircle2,
+    Layers,
+    MessageSquare,
+    ShieldCheck,
+    Sparkles,
+    Store,
+    Users,
+    XCircle,
 } from "lucide-react";
 import Link from "next/link";
 

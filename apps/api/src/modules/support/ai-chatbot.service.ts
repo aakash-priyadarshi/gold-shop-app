@@ -164,14 +164,12 @@ export class AiChatbotService {
       }
 
       const data = await response.json();
-      const firstPart = data?.candidates?.[0]?.content?.parts?.[0];
+      const { functionCall, text } = this.extractGeminiResponseParts(data);
 
       // Check if Gemini invoked a function
-      if (firstPart && firstPart.functionCall) {
-         return this.handleFunctionCall(firstPart.functionCall, ipAddress, sessionId);
+      if (functionCall) {
+        return this.handleFunctionCall(functionCall, ipAddress, sessionId);
       }
-
-      const text = firstPart?.text || "";
 
       // Fallback manual parsing if Gemini responded as JSON string instead of function structure
       const parsed = this.parseAiResponse(text);
@@ -420,6 +418,24 @@ AVAILABLE TOOLS:
     };
   }
 
+  private extractGeminiResponseParts(data: any): {
+    functionCall?: any;
+    text: string;
+  } {
+    const parts = data?.candidates?.[0]?.content?.parts;
+    if (!Array.isArray(parts) || parts.length === 0) {
+      return { text: "" };
+    }
+
+    const functionCall = parts.find((part) => part?.functionCall)?.functionCall;
+    const text = parts
+      .map((part) => (typeof part?.text === "string" ? part.text : ""))
+      .join("")
+      .trim();
+
+    return { functionCall, text };
+  }
+
   private fallbackResponse(_message?: string): AiChatResponse {
     return {
       reply: "I can help with general questions about OriVraa. For specific issues, please create a support ticket and our team will assist you.",
@@ -455,6 +471,25 @@ AVAILABLE TOOLS:
         return "USD";
       default:
         return "INR";
+    }
+  }
+
+  private getCountryLabel(country?: string | null): string {
+    switch (country) {
+      case "NP":
+        return "Nepal";
+      case "IN":
+        return "India";
+      case "AE":
+        return "UAE";
+      case "GB":
+        return "United Kingdom";
+      case "EU":
+        return "European Union";
+      case "US":
+        return "United States";
+      default:
+        return country || "your country";
     }
   }
 
@@ -584,6 +619,16 @@ SELLER RESPONSE RULES:
     const customersRoute = "/dashboard/shop/customers";
     const taxRoute = "/dashboard/shop/tax-reports";
 
+    if (/tell me about my account|about my account|account details|account info|my shop details|shop details|who am i|what is my account/.test(normalized)) {
+      const countryLabel = this.getCountryLabel(snapshot.country);
+      const sellerEmail = snapshot.sellerEmail ? ` Your login email is ${snapshot.sellerEmail}.` : "";
+      return {
+        reply: `Certainly, ${snapshot.sellerName}. Your shop is ${snapshot.shopName}, based in ${countryLabel}.${sellerEmail} This month you have ${snapshot.monthlyInvoiceCount} invoice${snapshot.monthlyInvoiceCount === 1 ? "" : "s"}, ${snapshot.openOrderCount} open order${snapshot.openOrderCount === 1 ? "" : "s"}, and ${snapshot.pendingInvoiceCount} pending invoice${snapshot.pendingInvoiceCount === 1 ? "" : "s"}. You can review your shop details from the dashboard and use Tax Reports, Orders, Invoices, and Customers from the left sidebar for more detail.`,
+        shouldEscalate: false,
+        confidence: 0.96,
+      };
+    }
+
     if (/sales.*this month|this month.*sales|revenue.*this month/.test(normalized)) {
       return {
         reply: `${snapshot.shopName} has ${snapshot.monthlyInvoiceCount} invoice${snapshot.monthlyInvoiceCount === 1 ? "" : "s"} this month for total sales of ${this.formatCurrency(snapshot.monthlySales, snapshot.currency)}.`,
@@ -616,10 +661,11 @@ SELLER RESPONSE RULES:
       };
     }
 
-    if (/ird audit status|tax audit status|audit my tax|yearly audit|tax audit/.test(normalized)) {
+    if (/ird audit status|nepal audit|nepal ird|yearly audit/.test(normalized)) {
       if (snapshot.country !== "NP") {
+        const countryLabel = this.getCountryLabel(snapshot.country);
         return {
-          reply: `Your shop country is ${snapshot.country}, so Nepal IRD audit status does not apply. For tax work, open Tax Reports in the left sidebar at ${taxRoute} and use the tab for your country.`,
+          reply: `Your shop country is ${countryLabel}, so Nepal IRD audit status does not apply. For tax work, open Tax Reports in the left sidebar at ${taxRoute} and use the tab for your country.`,
           shouldEscalate: false,
           confidence: 0.9,
         };
@@ -632,6 +678,59 @@ SELLER RESPONSE RULES:
         shouldEscalate: false,
         confidence: 0.95,
       };
+    }
+
+    if (/tax audit|audit my tax|tax filing|tax report help|help me with tax|tax help/.test(normalized)) {
+      switch (snapshot.country) {
+        case "IN":
+          return {
+            reply: `For India, use Tax Reports from the left sidebar at ${taxRoute}#IN. You can generate GSTR-1, GSTR-3B, HSN summary, Tally XML, and use Share with CA there. If you want, I can also guide you on which India report fits your exact filing task.`,
+            shouldEscalate: false,
+            confidence: 0.94,
+          };
+        case "NP":
+          return {
+            reply: `For Nepal, open Tax Reports from the left sidebar at ${taxRoute}#NP. Use the Monthly Return tab for VAT and luxury tax filings, and the Yearly Audit tab if you want to review IRD audit status.`,
+            shouldEscalate: false,
+            confidence: 0.94,
+          };
+        case "AE":
+          return {
+            reply: `For UAE tax work, open Tax Reports from the left sidebar at ${taxRoute}#AE. The UAE tab covers VAT 201 and Share with CA for accountant handoff.`,
+            shouldEscalate: false,
+            confidence: 0.93,
+          };
+        case "GB":
+          return {
+            reply: `For UK tax work, open Tax Reports from the left sidebar at ${taxRoute}#GB. The UK tab covers MTD guidance and Share with CA.`,
+            shouldEscalate: false,
+            confidence: 0.93,
+          };
+        case "EU":
+        case "DE":
+        case "FR":
+        case "IT":
+        case "ES":
+        case "NL":
+          return {
+            reply: `For EU tax work, open Tax Reports from the left sidebar at ${taxRoute}#EU. The EU tab covers OSS workflows and Share with CA.`,
+            shouldEscalate: false,
+            confidence: 0.93,
+          };
+        case "US":
+          return {
+            reply: `For US tax work, open Tax Reports from the left sidebar at ${taxRoute}#US. The US tab covers state summaries and Share with CA.`,
+            shouldEscalate: false,
+            confidence: 0.93,
+          };
+        default:
+          const countryLabel = this.getCountryLabel(snapshot.country);
+          return {
+            reply: `Open Tax Reports from the left sidebar at ${taxRoute} and use the tab for ${countryLabel}. If you tell me the specific filing or audit task, I can point you to the right report.`,
+            shouldEscalate: false,
+            confidence: 0.9,
+          };
+      }
     }
 
     if (/current order|open orders|pending orders|order status/.test(normalized)) {
@@ -889,13 +988,11 @@ SELLER RESPONSE RULES:
       }
 
       const data = await response.json();
-      const firstPart = data?.candidates?.[0]?.content?.parts?.[0];
+      const { functionCall, text } = this.extractGeminiResponseParts(data);
 
-      if (firstPart && firstPart.functionCall) {
-        return this.handleFunctionCall(firstPart.functionCall, ipAddress, sessionId);
+      if (functionCall) {
+        return this.handleFunctionCall(functionCall, ipAddress, sessionId);
       }
-
-      const text = firstPart?.text || "";
       const parsed = this.parseAiResponse(text);
       await this.supportService.logAiChat(sessionId ?? null, "assistant", parsed.reply, undefined, parsed.confidence, ipAddress);
       return parsed;

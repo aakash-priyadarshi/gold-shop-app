@@ -6,56 +6,54 @@ import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { ConvertAccountCard } from "@/components/settings/ConvertAccountCard";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  FlagImage,
-  PhoneInput,
-  needsCountryCode,
-  type FlagCode,
+    FlagImage,
+    PhoneInput,
+    needsCountryCode,
+    type FlagCode,
 } from "@/components/ui/phone-input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import { PhoneVerificationDialog } from "@/components/verification/PhoneVerificationDialog";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Chrome } from "lucide-react";
 import api, { authApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
-  COUNTRIES,
-  CURRENCIES,
-  CountryCode,
-  CurrencyCode,
-  usePreferencesStore,
+    COUNTRIES,
+    CURRENCIES,
+    CountryCode,
+    CurrencyCode,
+    usePreferencesStore,
 } from "@/store/preferences";
 import { getCitiesForCountry, getStatesForCountry } from "@gold-shop/shared";
 import {
-  CheckCircle,
-  Globe,
-  Home,
-  Loader2,
-  MapPin,
-  Phone,
-  Plus,
-  Save,
-  Shield,
-  Loader2 as SpinnerIcon,
-  Trash2,
-  User,
-  XCircle,
+    CheckCircle, Chrome, Globe,
+    Home,
+    Loader2,
+    MapPin,
+    Phone,
+    Plus,
+    Save,
+    Shield,
+    Loader2 as SpinnerIcon,
+    Trash2,
+    User,
+    XCircle
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 

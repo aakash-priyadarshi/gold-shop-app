@@ -38,7 +38,7 @@ const ROWS: {
   { feature: "Mobile + Desktop + Web apps", orivraa: true, tally: "Desktop only" },
   { feature: "Free plan available", orivraa: true, tally: false },
   { feature: "Setup time", orivraa: "Under 10 min", tally: "Days, needs accountant" },
-  { feature: "Starting price", orivraa: "Free → ₹999/mo", tally: "₹18,000+ one-time" },
+  { feature: "Starting price", orivraa: "Free → ₹299/mo in India", tally: "₹18,000+ one-time" },
 ];
 
 function Cell({ value }: { value: string | boolean }) {

@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import {
@@ -307,9 +308,9 @@ export default function SellerGuidePage() {
             </h2>
             <p className="mt-3 text-amber-100 max-w-2xl mx-auto">
               <T>
-                Start free with up to 15 product listings. Upgrade to Pro for
-                unlimited products, AI tools, priority listing, and dedicated
-                support. Enterprise plans available for large operations.
+                Start free, then upgrade when you need higher limits,
+                invoicing, analytics, priority listing, and dedicated support.
+                Enterprise plans are available for large operations.
               </T>
             </p>
             <Link
@@ -321,6 +322,11 @@ export default function SellerGuidePage() {
             </Link>
           </div>
         </section>
+
+        <ComparisonClusterLinks
+          title="Need to compare Orivraa before you commit?"
+          description="These comparison pages explain how Orivraa stacks up against the CRM and billing tools Indian jewellery businesses usually shortlist first."
+        />
 
         {/* ── FAQ ──────────────────────────────────────────── */}
         <section className="max-w-3xl mx-auto px-4 py-20">

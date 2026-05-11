@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { RefundStatus } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 
 /**
  * Aggregates data for the internal support team dashboard.
@@ -10,7 +11,10 @@ import { PrismaService } from "../../prisma/prisma.service";
 export class SupportService {
   private readonly logger = new Logger(SupportService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   // ─── Dashboard overview stats ───
   async getDashboardStats() {
@@ -190,10 +194,34 @@ export class SupportService {
     guestName?: string,
     guestEmail?: string,
   ) {
+    const existing = await this.prisma.botSession.findUnique({
+      where: { id: sessionId },
+      select: { escalated: true, leadIntents: true, messageCount: true },
+    });
+
     await this.prisma.botSession.update({
       where: { id: sessionId },
       data: { escalated: true, guestName, guestEmail },
     });
+
+    if (!existing?.escalated) {
+      await this.notifications.notifyAdmins({
+        type: "SYSTEM_ALERT",
+        titleKey: "notification.admin.ai_escalation.title",
+        titleParams: { title: "AI chat needs human follow-up" },
+        bodyKey: "notification.admin.ai_escalation.body",
+        bodyParams: {
+          message: `${guestName || guestEmail || "A visitor"} asked the AI for human support.`,
+          guestName,
+          guestEmail,
+          leadIntents: existing?.leadIntents ?? [],
+          messageCount: existing?.messageCount ?? 0,
+        },
+        referenceType: "AI_CHAT",
+        referenceId: sessionId,
+        channels: ["IN_APP"],
+      });
+    }
   }
 
   async logAiChat(

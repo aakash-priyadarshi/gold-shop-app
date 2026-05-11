@@ -14,9 +14,23 @@ import Link from "next/link";
 export default function BlogPage() {
   const featured = BLOG_POSTS.find((p) => p.featured);
   const rest = BLOG_POSTS.filter((p) => p.slug !== featured?.slug);
+  const itemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: BLOG_POSTS.slice(0, 12).map((post, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: post.title,
+      url: `https://www.orivraa.com/blog/${post.slug}`,
+    })),
+  };
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
       <Header />
       <main className="min-h-screen bg-gradient-to-b from-amber-50/40 to-white dark:from-stone-950 dark:to-stone-900">
         {/* ── Hero ────────────────────────────────────────────── */}
@@ -37,8 +51,9 @@ export default function BlogPage() {
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-stone-300">
               <T>
-                Expert guides on jewellery shop software, inventory management,
-                GST compliance, and growing your gold and diamond business.
+                Expert guides on jewellery shop software, billing software,
+                tax reports, GST compliance, and growing your gold and diamond
+                business.
               </T>
             </p>
           </div>

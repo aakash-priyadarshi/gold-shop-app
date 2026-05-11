@@ -3,6 +3,8 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
+import { BlogHighlightsSection } from "@/components/marketing/BlogHighlightsSection";
+import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
 import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
@@ -380,6 +382,22 @@ export default function PartnerPage() {
             </div>
           </div>
         </section>
+
+        <ComparisonClusterLinks
+          title="Comparison Pages Partners Can Share"
+          description="Use these pages when a seller asks how Orivraa compares to generic CRM tools or Indian billing software. They answer the shortlist question without adding more clutter to the main navigation."
+        />
+
+        <BlogHighlightsSection
+          title="Resources Partners Can Share With Traders"
+          description="These articles help jewellers understand how Orivraa saves money through better billing, cleaner tax reporting, and more modern shop workflows."
+          slugs={[
+            "best-billing-software-for-jewellery-shops-india-2026",
+            "how-tax-reports-save-jewellery-traders-money",
+            "how-jewellery-shops-can-go-digital",
+          ]}
+          ctaLabel="See the full blog"
+        />
 
         {/* ── FAQ ──────────────────────────────────────────── */}
         <section className="max-w-3xl mx-auto px-4 py-20">

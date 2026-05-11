@@ -2,7 +2,7 @@ import { ConfigService } from "@nestjs/config";
 import { Test, TestingModule } from "@nestjs/testing";
 import { PrismaService } from "../../prisma/prisma.service";
 import {
-  DEFAULT_GATEWAY_CONFIGS,
+    DEFAULT_GATEWAY_CONFIGS,
 } from "./default-gateway-configs";
 import { PaymentGatewayService } from "./payment-gateway.service";
 

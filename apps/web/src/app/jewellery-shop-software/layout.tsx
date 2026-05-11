@@ -1,10 +1,11 @@
+import { PUBLIC_LOCAL_PRICING_SUMMARY } from "@/lib/seo/pricing-copy";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Best Jewellery Shop Software 2026 | Free Gold Shop Management Platform — Orivraa",
+    "Best Jewellery Shop Software in India 2026 | Orivraa from ₹299/month",
   description:
-    "Free jewellery shop software with inventory management, billing, POS, catalogue, customer chat, and analytics. Manage gold, silver & diamond inventory by weight and purity. Trusted by 2000+ jewellers across Nepal, India, Dubai, USA & UK. Better than Zoho, Marg ERP & Vyapar — starts free.",
+    `Orivraa is the best jewellery shop software for India and modern jewellery businesses. ${PUBLIC_LOCAL_PRICING_SUMMARY} Includes inventory by weight and purity, billing, POS, GSTIN-ready invoices, tax reports, catalogues, customer chat, and analytics.`,
   keywords: [
     "jewellery shop software",
     "jewellery software",
@@ -52,17 +53,17 @@ export const metadata: Metadata = {
   alternates: { canonical: "/jewellery-shop-software" },
   openGraph: {
     title:
-      "Best Jewellery Shop Software 2026 | Free Gold Shop Management — Orivraa",
+      "Best Jewellery Shop Software in India 2026 | Orivraa from ₹299/month",
     description:
-      "Free cloud-based jewellery shop software. Manage inventory by weight & purity, create digital catalogues, accept orders internationally. Trusted by 2000+ jewellers. Starts free — no credit card needed.",
+      `Free cloud-based jewellery shop software with India pricing from ₹299/month. Manage inventory by weight and purity, billing, POS, GSTIN-ready invoices, tax reports, and digital catalogues with local pricing by country.`,
     url: "https://www.orivraa.com/jewellery-shop-software",
     type: "article",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Best Jewellery Shop Software 2025 — Starts Free | Orivraa",
+    title: "Best Jewellery Shop Software 2026 | Orivraa from ₹299/month",
     description:
-      "Free jewellery shop management software with inventory, billing, POS, customer chat, and analytics. Trusted by 2000+ jewellers across 6 countries.",
+      "Free jewellery shop software with India pricing from ₹299/month, billing, GSTIN-ready invoices, POS, customer chat, and analytics.",
   },
 };
 

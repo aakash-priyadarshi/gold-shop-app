@@ -22,6 +22,224 @@ export interface BlogPost {
 /* ────────────────────────────────────────────────────────────── */
 
 export const BLOG_POSTS: BlogPost[] = [
+  /* ── Post 0 ────────────────────────────────────────────────── */
+  {
+    slug: "best-billing-software-for-jewellery-shops-india-2026",
+    title:
+      "Best Billing Software for Jewellery Shops in India (2026): Compare Vyapar, Tally, Marg ERP and Orivraa",
+    description:
+      "Compare the best billing software for Indian jewellery shops. See how Orivraa, Vyapar, TallyPrime, Busy and Marg ERP differ on GST billing, making charges, old gold exchange, offline POS, and total operating cost.",
+    date: "2026-05-03",
+    author: "Orivraa Team",
+    authorRole: "Product & Market Research",
+    readTime: "11 min read",
+    category: "Billing Software",
+    tags: [
+      "billing software for jewellery shops",
+      "jewellery billing software India",
+      "GST billing jewellery",
+      "Vyapar alternative",
+      "Tally alternative",
+      "Marg ERP alternative",
+      "offline jewellery POS",
+    ],
+    featured: true,
+    content: `
+<p>For most jewellers, billing software is not just a counter tool anymore. It affects how fast you invoice, how accurately you handle GST, how easily you track old gold exchanges, and how much time you lose at month-end fixing mistakes.</p>
+
+<p>If you are comparing the <strong>best billing software for jewellery shops in India</strong>, the shortlist usually includes Vyapar, TallyPrime, Busy, Marg ERP, and now newer jewellery-first platforms like Orivraa.</p>
+
+<p>This guide explains which tool is best for which type of shop and where the real cost savings come from.</p>
+
+<h2>Why jewellery billing is different from normal retail billing</h2>
+
+<p>A jewellery invoice is rarely a simple quantity × rate calculation. A proper billing workflow often needs to handle:</p>
+
+<ul>
+<li><strong>Weight-based pricing</strong> for gold, silver, and sometimes platinum</li>
+<li><strong>Purity tracking</strong> such as 24K, 22K, 18K, 14K, 925, and 999</li>
+<li><strong>Making charges</strong> as flat amount, per-gram amount, or percentage</li>
+<li><strong>Stone charges</strong> and custom add-ons</li>
+<li><strong>Old gold exchange / buy-back</strong> adjustments</li>
+<li><strong>GST split</strong> across jewellery value and making charges</li>
+<li><strong>Customer history</strong> for repeat sales, alterations, and custom work</li>
+</ul>
+
+<p>That is why generic billing software often looks affordable at first, but becomes expensive once your staff starts using manual workarounds.</p>
+
+<h2>Quick comparison: which billing software fits which shop?</h2>
+
+<table>
+<thead>
+<tr><th>Requirement</th><th>Orivraa</th><th>Vyapar</th><th>TallyPrime</th><th>Busy</th><th>Marg ERP</th></tr>
+</thead>
+<tbody>
+<tr><td>Jewellery-specific billing</td><td>✓</td><td>Partial</td><td>Manual setup</td><td>Manual setup</td><td>✓ Jewellery module</td></tr>
+<tr><td>Making charges and wastage</td><td>✓</td><td>Partial</td><td>Manual</td><td>Manual</td><td>✓</td></tr>
+<tr><td>Old gold exchange workflows</td><td>✓</td><td>Basic</td><td>Partial</td><td>Partial</td><td>✓</td></tr>
+<tr><td>GST-ready invoicing</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Offline counter usage</td><td>✓ Desktop app</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Customer follow-up and repeat sales</td><td>✓</td><td>Basic</td><td>✗</td><td>✗</td><td>Basic</td></tr>
+<tr><td>Digital catalogues / WhatsApp selling</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+<tr><td>Tax-ready reports for traders</td><td>✓</td><td>Basic</td><td>Strong accounting</td><td>Strong GST</td><td>Strong GST</td></tr>
+<tr><td>Pricing model</td><td>Free + Pro from ₹299/month in India</td><td>Free mobile + paid annual plans</td><td>Licence-based</td><td>Annual / licence-based</td><td>Licence + AMC</td></tr>
+</tbody>
+</table>
+
+<h2>Where Orivraa saves money for jewellery traders</h2>
+
+<h3>1. Lower software entry cost</h3>
+
+<p>Orivraa has a free starting point, and <strong>India Pro starts at ₹299/month</strong>. That matters if you are moving away from paper billing or replacing a mix of WhatsApp, Excel, and manual GST calculations.</p>
+
+<h3>2. Fewer manual GST mistakes</h3>
+
+<p>Generic billing apps can handle invoices, but jewellery traders still end up fixing the same issues repeatedly: making-charge treatment, old gold exchange entries, and missing product detail. Those mistakes cost time and often push month-end work back to the CA.</p>
+
+<h3>3. Better staff speed at the counter</h3>
+
+<p>Fast billing is not just convenience. Shorter queues reduce lost sales. Staff who can bill, pull up customer history, and share catalogues from one system need less switching between apps.</p>
+
+<h3>4. Repeat sales from billing data</h3>
+
+<p>Most billing software stops after the invoice. Orivraa uses the same customer and product data for follow-up, RFQs, catalogue sharing, and repeat selling. That means the software can help generate revenue instead of only recording it.</p>
+
+<h3>5. Desktop plus cloud workflow</h3>
+
+<p>If your shop wants <strong>offline counter billing with cloud sync</strong>, Orivraa gives you both. The <a href="/download">desktop app</a> is useful when internet quality is inconsistent but you still want modern reports and remote visibility.</p>
+
+<h2>When Vyapar, TallyPrime, Busy, or Marg ERP are still the better fit</h2>
+
+<ul>
+<li><strong>Choose Vyapar</strong> if your shop is extremely small and you mainly want simple GST billing with minimal setup.</li>
+<li><strong>Choose TallyPrime</strong> if accounting depth is your top priority and your accountant already runs everything in Tally.</li>
+<li><strong>Choose Busy</strong> if you want a GST-heavy business package and can handle manual jewellery workflows.</li>
+<li><strong>Choose Marg ERP</strong> if you need legacy ERP depth, jewellery modules, and your team is comfortable with a more traditional desktop workflow.</li>
+</ul>
+
+<p>For many jewellers, the practical decision is simpler: use a tool that helps both at the counter and after the sale. That is where Orivraa usually wins for growing shops.</p>
+
+<h2>What we recommend</h2>
+
+<p>If you are comparing software this month, start with the questions below:</p>
+
+<ol>
+<li>Do you need <strong>only billing</strong>, or billing plus customer retention?</li>
+<li>Do you need <strong>old gold exchange</strong>, making charges, and jewellery-specific invoicing?</li>
+<li>Do you want <strong>offline desktop billing</strong> with cloud sync?</li>
+<li>Do you want the software to help with <strong>catalogues, repeat sales, and trader reports</strong> too?</li>
+</ol>
+
+<p>If the answer to the last two is yes, <a href="/compare/billing-software-india-jewellery-shops">compare the full billing stack here</a>, then <a href="/auth/register">start free on Orivraa</a>.</p>
+`,
+  },
+
+  /* ── Post 0B ───────────────────────────────────────────────── */
+  {
+    slug: "how-tax-reports-save-jewellery-traders-money",
+    title:
+      "How Tax Reports Save Jewellery Traders Money in 2026: Cut GST Errors, CA Time and Audit Stress",
+    description:
+      "Learn how tax reports and jewellery billing software help traders save money on GST filing, old-gold accounting, making-charge splits, stock mismatches, and month-end audit preparation.",
+    date: "2026-05-03",
+    author: "Orivraa Team",
+    authorRole: "Operations & Compliance",
+    readTime: "9 min read",
+    category: "Tax & Compliance",
+    tags: [
+      "tax reports for jewellers",
+      "jewellery GST reports",
+      "billing software tax reports",
+      "audit prep jewellery shops",
+      "old gold exchange GST",
+      "jewellery compliance",
+    ],
+    content: `
+<p>Many jewellery traders think software is expensive until they calculate the hidden cost of manual reporting. The real leak is not only in software spend &mdash; it is in repeated GST mistakes, rushed month-end reconciliations, and time spent preparing files for the accountant.</p>
+
+<p><strong>Tax reports save money</strong> because they reduce correction work, improve billing accuracy, and make it easier to spot issues before they become compliance or cash-flow problems.</p>
+
+<p><em>This article is practical guidance, not legal or tax advice. Always confirm filing requirements with your CA or tax advisor.</em></p>
+
+<h2>Where jewellery traders usually lose money</h2>
+
+<ul>
+<li><strong>Wrong GST split</strong> between metal value and making charges</li>
+<li><strong>Missed old gold entries</strong> that later create confusion during reconciliation</li>
+<li><strong>Stock mismatches</strong> between sales records and physical inventory</li>
+<li><strong>Manual month-end cleanup</strong> by the owner or accountant</li>
+<li><strong>Slow billing</strong> that leads to incomplete or inconsistent invoice data</li>
+<li><strong>No clear tax-ready summary</strong> when filing deadlines arrive</li>
+</ul>
+
+<p>Each of these issues looks small on its own. Together, they waste time every single month.</p>
+
+<h2>The reports every jewellery trader should review monthly</h2>
+
+<h3>1. Sales summary by tax treatment</h3>
+
+<p>You should be able to quickly review total sales, GST applied, invoice count, and high-value invoices. This makes it easier to spot unusual billing entries before filing.</p>
+
+<h3>2. Making charges report</h3>
+
+<p>For jewellers, this matters more than in most retail businesses. If making charges are not tracked cleanly, you end up with messy invoices and avoidable CA correction time.</p>
+
+<h3>3. Old gold exchange register</h3>
+
+<p>This is one of the most common areas of confusion. A proper report should show the incoming old gold value, the linked sale, and how the transaction affected the final bill.</p>
+
+<h3>4. Purchase and stock valuation summary</h3>
+
+<p>Tax reporting and stock control are tied together in jewellery. If your stock view is weak, month-end explanations become harder and audit prep becomes slower.</p>
+
+<h3>5. Outstanding receivables and cash summary</h3>
+
+<p>Traders often focus only on invoices and forget that the real business question is: what was sold, what was collected, and what is still pending?</p>
+
+<h2>How billing software and tax reports save money together</h2>
+
+<h3>Fewer accountant hours spent fixing raw data</h3>
+
+<p>If invoices are already structured correctly, your CA spends less time cleaning exports and more time reviewing what actually matters. That directly reduces cost or at least reduces the owner&apos;s follow-up burden.</p>
+
+<h3>Faster month-end close</h3>
+
+<p>Owners who still rely on paper or spreadsheets usually spend the last few days of the month searching for missing entries. Tax-ready reports reduce that scramble.</p>
+
+<h3>Better audit preparedness</h3>
+
+<p>When billing, stock movement, and tax summaries live in one system, audit preparation becomes a reporting task instead of a reconstruction exercise.</p>
+
+<h3>Fewer avoidable penalties caused by confusion</h3>
+
+<p>Software cannot remove every compliance risk, but it does reduce the chance of errors caused by manual invoice formatting, forgotten exchange entries, or incomplete records.</p>
+
+<h3>Stronger pricing decisions</h3>
+
+<p>Good reports are not just for tax. They also show which products move faster, how much revenue comes from making charges, and where your real margins are under pressure.</p>
+
+<h2>A practical monthly routine for jewellers</h2>
+
+<ol>
+<li>Review billing totals weekly instead of waiting until month-end.</li>
+<li>Check making-charge summaries and exchange transactions.</li>
+<li>Match tax summaries against your cash and bank collections.</li>
+<li>Reconcile stock value and top-selling categories.</li>
+<li>Share clean reports with your accountant before the deadline week.</li>
+</ol>
+
+<p>This routine is much easier when the same system handles billing and reporting together.</p>
+
+<h2>Why this matters for Orivraa users</h2>
+
+<p>Orivraa now gives jewellers a better way to combine <strong>billing software and tax-ready reporting</strong> without forcing them into multiple disconnected tools. That means traders can bill faster, review cleaner reports, and spend less time chasing data when GST work or audit prep starts.</p>
+
+<p>If you want the GST side explained in more detail, read our <a href="/blog/jewellery-gst-billing-guide-india">complete GST billing guide for jewellery shops in India</a>.</p>
+
+<p>If you want the software shortlist, read our <a href="/blog/best-billing-software-for-jewellery-shops-india-2026">billing software comparison</a> or <a href="/auth/register">start free on Orivraa</a>.</p>
+`,
+  },
+
   /* ── Post 1 ────────────────────────────────────────────────── */
   {
     slug: "best-jewellery-shop-software-2025",
@@ -68,7 +286,7 @@ export const BLOG_POSTS: BlogPost[] = [
 
 <h3>1. Orivraa — Best Free Cloud-Based Jewellery Platform</h3>
 
-<p><strong>Pricing:</strong> Free plan available (₹0/month) · Pro from ₹999/month · Enterprise custom pricing</p>
+<p><strong>Pricing:</strong> Free plan available (₹0/month) · India Pro from ₹299/month · Nepal Pro from NPR 399/month · Enterprise custom pricing</p>
 
 <p>Orivraa is a <strong>cloud-based jewellery shop management platform</strong> that combines inventory management, a built-in marketplace, digital catalogues, customer messaging, and AI-powered tools — all starting free.</p>
 
@@ -389,13 +607,13 @@ export const BLOG_POSTS: BlogPost[] = [
 </thead>
 <tbody>
 <tr><td>Free Plan</td><td>Limited (3 users, basic CRM)</td><td>✓ Full features, 15 products, marketplace</td></tr>
-<tr><td>Starter/Pro</td><td>₹749/month (Standard CRM)</td><td>₹999/month (unlimited products, AI)</td></tr>
+<tr><td>Starter/Pro</td><td>₹749/month (Standard CRM)</td><td>₹299/month in India (unlimited products, AI-ready workflows, local pricing by country)</td></tr>
 <tr><td>Professional</td><td>₹1,299/month</td><td>Custom Enterprise pricing</td></tr>
 <tr><td>Hidden Costs</td><td>Add-ons for inventory, chat, etc.</td><td>No hidden costs — all-inclusive</td></tr>
 </tbody>
 </table>
 
-<p>While Zoho's starting price (₹749/mo) appears lower than Orivraa Pro (₹999/mo), Zoho's base plan doesn't include inventory management, which requires Zoho Inventory (additional ₹1,999/mo). For a jewellery shop needing CRM + inventory + invoicing, Zoho can cost ₹3,000–₹5,000/month when you add all the required modules.</p>
+<p>While Zoho's starting price (₹749/mo) appears lower than Orivraa Pro in some comparisons, Orivraa's India Pro pricing starts at ₹299/month and already includes jewellery-specific workflows. Zoho's base plan also doesn't include inventory management, which requires Zoho Inventory (additional ₹1,999/mo). For a jewellery shop needing CRM + inventory + invoicing, Zoho can cost ₹3,000–₹5,000/month when you add all the required modules.</p>
 
 <h2>Jewellery-Specific Features</h2>
 
@@ -785,7 +1003,7 @@ export const BLOG_POSTS: BlogPost[] = [
 
 <h3>1. Orivraa — Best Free Cloud-Based Platform</h3>
 
-<p><strong>Pricing:</strong> Free plan (15 products) · Pro $12.99/month · Pro+ $24.99/month · Enterprise custom</p>
+<p><strong>Pricing:</strong> Free plan (15 products) · India Pro ₹299/month · India Pro+ ₹599/month · Nepal Pro NPR 399/month · Enterprise custom</p>
 
 <p>Orivraa is the most modern jewellery store management platform available. It combines inventory management, billing, a built-in marketplace, customer messaging, digital catalogues, and AI-powered tools — all accessible from any device.</p>
 

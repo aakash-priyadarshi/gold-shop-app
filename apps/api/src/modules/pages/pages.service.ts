@@ -148,7 +148,7 @@ export class PagesService {
         slug: "pricing",
         title: "Pricing",
         content:
-          "<h1>Our Pricing</h1><p>Transparent pricing for buyers and sellers.</p><h2>For Buyers</h2><p>Browse and purchase jewelry at competitive prices. All prices include real-time metal rates and are displayed in your local currency.</p><h2>For Sellers</h2><h3>Free Plan</h3><ul><li>List up to 20 products</li><li>Basic analytics</li><li>Standard support</li></ul><h3>Professional Plan</h3><ul><li>Unlimited product listings</li><li>Advanced analytics and insights</li><li>Priority support</li><li>Featured placement</li></ul><h2>Commission</h2><p>A small commission is charged on each successful sale. This covers payment processing, platform maintenance, and buyer protection.</p>",
+          "<h1>Our Pricing</h1><p>Transparent pricing for buyers and sellers.</p><h2>For Buyers</h2><p>Browse and purchase jewelry at competitive prices. All prices include real-time metal rates and are displayed in your local currency.</p><h2>For Sellers</h2><h3>Free Plan</h3><ul><li>List up to 15 products</li><li>Basic analytics</li><li>Standard support</li></ul><h3>Pro Plan</h3><ul><li>Local country pricing starting from ₹299/month in India</li><li>Unlimited product listings</li><li>Advanced analytics and insights</li><li>GSTIN-ready billing and tax reports</li><li>Priority support</li><li>Featured placement</li></ul><h2>Commission</h2><p>A small commission is charged on each successful sale. This covers payment processing, platform maintenance, and buyer protection.</p>",
         metaDescription:
           "Orivraa Pricing - Plans and commission structure for sellers",
       },
@@ -170,7 +170,7 @@ export class PagesService {
 
       if (existing) {
         // Update existing
-        const updated = await this.prisma.staticPage.update({
+        await this.prisma.staticPage.update({
           where: { slug: page.slug },
           data: { ...page, isPublished: true },
         });

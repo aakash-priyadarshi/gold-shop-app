@@ -4,6 +4,10 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
 import {
+  INDIA_PRO_MONTHLY_PRICE,
+  PUBLIC_LOCAL_PRICING_SUMMARY,
+} from "@/lib/seo/pricing-copy";
+import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
@@ -30,9 +34,10 @@ const jsonLd = {
       url: "https://www.orivraa.com/jewellery-inventory-software",
       offers: {
         "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-        description: "Free plan available. Pro from $12.99/month.",
+        price: `${INDIA_PRO_MONTHLY_PRICE}`,
+        priceCurrency: "INR",
+        eligibleRegion: { "@type": "Country", name: "India" },
+        description: `India Pro starts at ₹299/month. ${PUBLIC_LOCAL_PRICING_SUMMARY}`,
       },
       aggregateRating: {
         "@type": "AggregateRating",

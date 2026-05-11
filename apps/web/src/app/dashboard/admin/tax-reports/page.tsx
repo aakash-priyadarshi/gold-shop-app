@@ -7,23 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { adminTaxApi, shopsApi } from "@/lib/api";
 import {
-  AlertCircle,
-  Building2,
-  Calendar,
-  Download,
-  FileText,
-  Loader2,
-  ShieldCheck,
+    AlertCircle,
+    Building2,
+    Calendar,
+    Download,
+    FileText,
+    ShieldCheck
 } from "lucide-react";
 import { useEffect, useState } from "react";
 

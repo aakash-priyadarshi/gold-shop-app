@@ -41,15 +41,16 @@ import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
 import {
-  CURRENCIES,
+    CURRENCIES,
     LANGUAGES,
     usePreferencesStore,
-  type CurrencyCode,
+    type CurrencyCode,
     type Language,
 } from "@/store/preferences";
 import {
     Activity,
     Award,
+    Bell,
     BookOpen,
     Brain,
     Bug,
@@ -297,6 +298,12 @@ const navItems: NavItem[] = [
         label: "Testing",
         href: "/dashboard/admin/testing",
         icon: FlaskConical,
+        roles: ["ADMIN"],
+      },
+      {
+        label: "Notification Tests",
+        href: "/dashboard/admin/testing/notifications",
+        icon: Bell,
         roles: ["ADMIN"],
       },
       {

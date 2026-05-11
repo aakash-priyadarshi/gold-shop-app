@@ -2,6 +2,7 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { HomeSections } from "@/components/home/HomeSections";
 import { Header } from "@/components/layout/header";
 import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
+import { BlogHighlightsSection } from "@/components/marketing/BlogHighlightsSection";
 import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { T } from "@/components/ui/T";
 import { resolveHeroVideo } from "@/lib/geo";
@@ -66,6 +67,16 @@ export default function HomePage() {
           <AISalesteamPromo />
 
           <HomeSections />
+
+          <BlogHighlightsSection
+            title="Popular Reads for Jewellery Businesses"
+            description="These guides explain how jewellers can save money with better billing, cleaner GST workflows, and modern business software instead of manual follow-up."
+            slugs={[
+              "best-billing-software-for-jewellery-shops-india-2026",
+              "how-tax-reports-save-jewellery-traders-money",
+              "jewellery-gst-billing-guide-india",
+            ]}
+          />
 
           {/* Prominent Platform Purpose Section for Google OAuth Verification */}
           <section className="bg-gradient-to-b from-white to-amber-50/30 dark:from-gray-950 dark:to-amber-900/10 py-20 border-t border-gray-100 dark:border-gray-800">

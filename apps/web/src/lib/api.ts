@@ -268,6 +268,10 @@ export const notificationsApi = {
   getUnreadCount: () => api.get("/notifications/unread-count"),
   markAsRead: (id: string) => api.patch(`/notifications/${id}/read`),
   markAllAsRead: () => api.patch("/notifications/read-all"),
+  delete: (id: string) => api.delete(`/notifications/${id}`),
+  getTestScenarios: () => api.get("/notifications/test/scenarios"),
+  sendTest: (data: { scenario: string; targetRole?: "ADMIN" | "SHOPKEEPER" }) =>
+    api.patch("/notifications/test/send", data),
 };
 
 // OTP API

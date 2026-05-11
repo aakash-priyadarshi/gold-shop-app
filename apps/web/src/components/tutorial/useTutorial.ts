@@ -1,9 +1,9 @@
 "use client";
 
+import { useT } from "@/providers/translation-provider";
 import type { DriveStep } from "driver.js";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
-import { useT } from "@/providers/translation-provider";
 import { useTourContext } from "./useTourContext";
 
 /** Tour steps keyed by pathname prefix */

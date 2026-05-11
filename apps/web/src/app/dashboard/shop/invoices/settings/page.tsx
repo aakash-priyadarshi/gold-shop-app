@@ -4,11 +4,11 @@ import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,19 +18,19 @@ import { toast } from "@/hooks/use-toast";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { invoicesApi } from "@/lib/api";
 import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowUp,
-  Building2,
-  FileText,
-  ImageIcon,
-  LayoutTemplate,
-  Loader2,
-  Phone,
-  Save,
-  Settings2,
-  Upload,
-  X,
+    ArrowDown,
+    ArrowLeft,
+    ArrowUp,
+    Building2,
+    FileText,
+    ImageIcon,
+    LayoutTemplate,
+    Loader2,
+    Phone,
+    Save,
+    Settings2,
+    Upload,
+    X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";

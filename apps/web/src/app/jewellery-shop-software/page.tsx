@@ -2,7 +2,13 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
 import { T } from "@/components/ui/T";
+import {
+  INDIA_PRO_MONTHLY_PRICE,
+  INDIA_PRO_PLUS_MONTHLY_PRICE,
+  NEPAL_PRO_MONTHLY_PRICE,
+} from "@/lib/seo/pricing-copy";
 import {
   ArrowRight,
   BarChart3,
@@ -53,42 +59,70 @@ const softwareJsonLd = {
         {
           "@type": "Offer",
           price: "0",
-          priceCurrency: "USD",
+          priceCurrency: "INR",
           name: "Free Plan",
           description:
-            "Free jewellery shop software — list up to 15 products, manage inventory, accept orders. No credit card required.",
+            "Free jewellery shop software with marketplace access and core inventory tools. Paid plans use local country pricing.",
           url: "https://www.orivraa.com/pricing",
         },
         {
           "@type": "Offer",
-          price: "12.99",
-          priceCurrency: "USD",
+          price: `${INDIA_PRO_MONTHLY_PRICE}`,
+          priceCurrency: "INR",
           name: "Pro Plan",
+          eligibleRegion: {
+            "@type": "Country",
+            name: "India",
+          },
           priceSpecification: {
             "@type": "UnitPriceSpecification",
-            price: "12.99",
-            priceCurrency: "USD",
+            price: `${INDIA_PRO_MONTHLY_PRICE}`,
+            priceCurrency: "INR",
             billingDuration: "P1M",
             unitText: "per month",
           },
           description:
-            "Full CRM suite — unlimited products, inventory management, invoicing, customer management, bulk upload, advanced analytics, custom branding, and priority support. AI credits at $0.06/credit.",
+            "India pricing for Orivraa Pro with unlimited products, inventory management, invoicing, customer management, bulk upload, advanced analytics, GSTIN-ready invoices, and priority support.",
           url: "https://www.orivraa.com/pricing",
         },
         {
           "@type": "Offer",
-          price: "24.99",
-          priceCurrency: "USD",
+          price: `${INDIA_PRO_PLUS_MONTHLY_PRICE}`,
+          priceCurrency: "INR",
           name: "Pro+ Plan (Most Popular)",
+          eligibleRegion: {
+            "@type": "Country",
+            name: "India",
+          },
           priceSpecification: {
             "@type": "UnitPriceSpecification",
-            price: "24.99",
-            priceCurrency: "USD",
+            price: `${INDIA_PRO_PLUS_MONTHLY_PRICE}`,
+            priceCurrency: "INR",
             billingDuration: "P1M",
             unitText: "per month",
           },
           description:
-            "Everything in Pro plus AI-powered design generation, smart recommendations, price optimization, demand forecasting, and monthly AI credits included.",
+            "India pricing for Orivraa Pro+ with everything in Pro, additional AI automation, smart recommendations, analytics, and advanced seller tools.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: `${NEPAL_PRO_MONTHLY_PRICE}`,
+          priceCurrency: "NPR",
+          name: "Pro Plan (Nepal)",
+          eligibleRegion: {
+            "@type": "Country",
+            name: "Nepal",
+          },
+          priceSpecification: {
+            "@type": "UnitPriceSpecification",
+            price: `${NEPAL_PRO_MONTHLY_PRICE}`,
+            priceCurrency: "NPR",
+            billingDuration: "P1M",
+            unitText: "per month",
+          },
+          description:
+            "Nepal pricing for Orivraa Pro with local billing, analytics, inventory workflows, and marketplace access.",
           url: "https://www.orivraa.com/pricing",
         },
         {
@@ -128,7 +162,7 @@ const softwareJsonLd = {
           name: "What is the best software for jewellery shops?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Orivraa is the best free jewellery shop software in 2026. It offers inventory management by weight and purity, digital catalogues, multi-currency pricing, built-in customer chat, sales analytics, and AI-powered tools. Unlike traditional ERP solutions that cost ₹15,000–₹80,000/year, Orivraa starts free and scales with your business. Trusted by jewellers across Nepal, India, UAE, UK, and USA.",
+            text: "Orivraa is the best jewellery shop software for modern jewellers in 2026. It offers inventory management by weight and purity, digital catalogues, multi-currency pricing, built-in customer chat, sales analytics, and AI-powered tools. Orivraa starts free, and India Pro starts at ₹299/month with local pricing by country. Trusted by jewellers across Nepal, India, UAE, UK, and USA.",
           },
         },
         {
@@ -136,7 +170,7 @@ const softwareJsonLd = {
           name: "Is there free software for gold shops?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Orivraa offers a completely free plan for gold shops that includes inventory management for up to 15 products, weight and purity tracking, digital catalogue creation, customer messaging, and basic analytics. No credit card is required to get started. Upgrade to Pro for unlimited products and advanced features like AI descriptions and priority listing.",
+            text: "Yes. Orivraa offers a completely free plan for gold shops that includes inventory management for up to 15 products, weight and purity tracking, digital catalogue creation, customer messaging, and basic analytics. No credit card is required to get started. Upgrade to Pro for unlimited products and advanced features, with India pricing from ₹299/month and local pricing by country.",
           },
         },
         {
@@ -231,10 +265,10 @@ const CORE_FEATURES = [
 const COMPARISON = [
   {
     feature: "Starting Price",
-    orivraa: "Free (₹0/mo)",
-    zoho: "₹749/mo",
-    marg: "₹15,000/yr",
-    vyapar: "₹4,999/yr",
+    orivraa: "Free + local monthly plans",
+    zoho: "Per-user monthly",
+    marg: "Licence + AMC",
+    vyapar: "Paid annual plans",
   },
   {
     feature: "Built for Jewellery",
@@ -345,7 +379,7 @@ const FAQS = [
   },
   {
     q: "Is Orivraa free for jewellery shops?",
-    a: "Yes! Orivraa's Free plan includes inventory management for up to 15 products, digital catalogues, customer messaging, basic analytics, and marketplace listing. No credit card required. You only pay a small commission on sales made through the marketplace. Upgrade to Pro (starting ₹999/month) for unlimited products, AI tools, and priority listing.",
+    a: "Yes. Orivraa has a free plan for jewellery shops with marketplace access, catalogues, customer messaging, and core business tools. No credit card is required. Paid plans use local country pricing and unlock higher limits, billing workflows, advanced reports, and priority features as your business grows.",
   },
   {
     q: "How does Orivraa compare to Zoho for jewellery businesses?",
@@ -382,10 +416,10 @@ const FAQS = [
 ];
 
 const STATS = [
+  { value: "₹299/mo", label: "India Pro price" },
   { value: "6+", label: "Countries with buyers" },
   { value: "Free", label: "Starting price" },
   { value: "<5 min", label: "Setup time" },
-  { value: "0%", label: "Commission until you sell" },
 ];
 
 /* ────────────────────────────────────────────────────────────── */
@@ -410,7 +444,7 @@ export default function JewelleryShopSoftwarePage() {
           <div className="relative max-w-5xl mx-auto px-4 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-medium mb-6">
               <Zap className="h-4 w-4" />
-              <T>Free Plan Available — No Credit Card Required</T>
+              <T>Free Plan Available · India Pro from ₹299/month</T>
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">
               <T>
@@ -424,7 +458,8 @@ export default function JewelleryShopSoftwarePage() {
                 inventory by weight and purity, billing, digital catalogues,
                 customer chat, and analytics. Trusted by jewellers across
                 Nepal, India, Dubai, USA and UK. Better than Zoho, Marg ERP and
-                Vyapar — and it starts free.
+                Vyapar. It starts free, and India Pro starts at ₹299/month with
+                local pricing by country.
               </T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
@@ -574,6 +609,11 @@ export default function JewelleryShopSoftwarePage() {
             </div>
           </div>
         </section>
+
+        <ComparisonClusterLinks
+          title="Looking at CRM or billing software too?"
+          description="These pages separate two different buying intents: generic CRM tools for customer management, and Indian billing software for GST-ready operations."
+        />
 
         {/* ── Use Cases ──────────────────────────────────── */}
         <section className="max-w-6xl mx-auto px-4 py-20">
@@ -787,8 +827,8 @@ export default function JewelleryShopSoftwarePage() {
             </div>
             <p className="mt-4 text-xs text-gray-500">
               <T>
-                Free plan includes: 15 products · Marketplace listing · Customer
-                chat · Digital catalogues · Analytics
+                Free plan includes marketplace listing, customer chat, digital
+                catalogues, and analytics.
               </T>
             </p>
           </div>

@@ -1,8 +1,8 @@
 import {
-  getRegionalPricingSeo,
-  INDIA_PRO_MONTHLY_PRICE,
-  INDIA_PRO_PLUS_MONTHLY_PRICE,
-  NEPAL_PRO_MONTHLY_PRICE,
+    getRegionalPricingSeo,
+    INDIA_PRO_MONTHLY_PRICE,
+    INDIA_PRO_PLUS_MONTHLY_PRICE,
+    NEPAL_PRO_MONTHLY_PRICE,
 } from "@/lib/seo/pricing-copy";
 import { Metadata } from "next";
 import { headers } from "next/headers";

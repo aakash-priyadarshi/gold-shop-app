@@ -39,7 +39,7 @@ const ROWS: {
   { feature: "Built-in international marketplace", orivraa: true, marg: false },
   { feature: "Multi-currency (NPR, INR, AED, USD, GBP, EUR)", orivraa: true, marg: false },
   { feature: "Multi-store / multi-branch", orivraa: true, marg: true },
-  { feature: "Annual licence cost", orivraa: "Free → ₹999/mo", marg: "₹15,000–₹50,000+" },
+  { feature: "Annual licence cost", orivraa: "Free → ₹299/mo in India", marg: "₹15,000–₹50,000+" },
 ];
 
 function Cell({ value }: { value: string | boolean }) {
@@ -160,7 +160,7 @@ export default function OrivraaVsMargErpPage() {
                 {
                   icon: Zap,
                   title: "Free to start",
-                  desc: "₹0 to begin. Pay only when you outgrow the free plan — and only ₹999/month, not ₹15,000 upfront.",
+                  desc: "₹0 to begin. Pay only when you outgrow the free plan — and only ₹299/month in India, not ₹15,000 upfront.",
                 },
                 {
                   icon: Globe,

@@ -4,6 +4,10 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
 import {
+  INDIA_PRO_MONTHLY_PRICE,
+  PUBLIC_LOCAL_PRICING_SUMMARY,
+} from "@/lib/seo/pricing-copy";
+import {
   ArrowRight,
   BarChart3,
   Calculator,
@@ -30,9 +34,10 @@ const jsonLd = {
       url: "https://www.orivraa.com/jewellery-shop-billing-software",
       offers: {
         "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-        description: "Free plan available. Pro from $12.99/month.",
+        price: `${INDIA_PRO_MONTHLY_PRICE}`,
+        priceCurrency: "INR",
+        eligibleRegion: { "@type": "Country", name: "India" },
+        description: `India Pro starts at ₹299/month. ${PUBLIC_LOCAL_PRICING_SUMMARY}`,
       },
       aggregateRating: {
         "@type": "AggregateRating",
@@ -369,7 +374,7 @@ export default function JewellerBillingSoftwarePage() {
                 },
                 {
                   q: "Is there a free plan for billing?",
-                  a: "Yes. The free plan includes billing for up to 15 products with full tax compliance. The Pro plan ($12.99/month) unlocks unlimited products, advanced reports, and customisation.",
+                  a: "Yes. The free plan includes billing for up to 15 products with full tax compliance. Paid plans use local country pricing, and India Pro starts at ₹299/month for unlimited products, advanced reports, and customisation.",
                 },
               ].map((faq) => (
                 <details

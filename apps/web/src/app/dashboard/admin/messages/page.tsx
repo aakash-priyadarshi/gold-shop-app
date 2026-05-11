@@ -2,14 +2,15 @@
 
 import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { useAuth } from "@/hooks/useAuth";
-import { adminApi, chatApi } from "@/lib/api";
-import { Lock, MessageSquare, Send, Shield, Store, Users, Search, Wand2, Loader2 } from "lucide-react";
+import { adminApi, chatApi, ticketsApi } from "@/lib/api";
+import { Bot, ChevronDown, ChevronRight, Loader2, Lock, Mail, MessageSquare, RefreshCw, Search, Send, Shield, Store, Users, Wand2, Zap } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 interface Conversation {
@@ -40,8 +41,147 @@ interface Message {
   sender?: { firstName: string; lastName: string; role: string };
 }
 
+interface BotLog {
+  id: string;
+  role: string;
+  content: string;
+  actionTaken?: string;
+  confidence?: number;
+  ipAddress?: string;
+  createdAt: string;
+}
+
+interface BotSession {
+  id: string;
+  ipAddress?: string;
+  messageCount: number;
+  escalated: boolean;
+  leadIntents: string[];
+  guestName?: string;
+  guestEmail?: string;
+  startedAt: string;
+  lastMessageAt: string;
+  logs: BotLog[];
+}
+
+interface BotStats {
+  totalSessions: number;
+  escalatedSessions: number;
+  escalationRate: string;
+  avgMessagesPerSession: string;
+  intentBreakdown: { intent: string; count: number }[];
+  dailySessions: { day: string; count: number }[];
+}
+
+const INTENT_COLOURS: Record<string, string> = {
+  pricing: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200",
+  trial: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
+  comparison: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200",
+  onboarding: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200",
+  complaint: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
+  offline_pos: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200",
+  compliance: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-200",
+};
+
+function IntentBadge({ intent }: { intent: string }) {
+  const cls = INTENT_COLOURS[intent] ?? "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-200";
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cls}`}>
+      {intent.replace(/_/g, " ")}
+    </span>
+  );
+}
+
+function BotSessionRow({ session }: { session: BotSession }) {
+  const [open, setOpen] = useState(false);
+  const displayName = session.guestName || session.guestEmail || session.ipAddress || "Anonymous visitor";
+
+  return (
+    <div className="border rounded-lg overflow-hidden bg-background">
+      <button
+        onClick={() => setOpen((value) => !value)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium truncate">{displayName}</span>
+              {session.guestEmail && (
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <Mail className="h-3 w-3" /> {session.guestEmail}
+                </span>
+              )}
+              {session.escalated && <Badge variant="destructive" className="text-xs">escalated</Badge>}
+            </div>
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              {session.leadIntents.length > 0 ? (
+                session.leadIntents.map((intent) => <IntentBadge key={intent} intent={intent} />)
+              ) : (
+                <span className="text-xs text-muted-foreground">No lead intent detected yet</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-xs text-muted-foreground">
+            {new Date(session.startedAt).toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+          </p>
+          <p className="text-xs text-muted-foreground">{session.messageCount} messages</p>
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t bg-muted/20 divide-y max-h-96 overflow-y-auto">
+          {session.logs.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-muted-foreground">No transcript messages logged.</div>
+          ) : (
+            session.logs.map((log) => (
+              <div key={log.id} className="px-4 py-3 flex gap-3 text-sm">
+                <span
+                  className={`uppercase text-[10px] font-bold pt-0.5 w-16 shrink-0 text-right ${
+                    log.role === "assistant" ? "text-blue-500" : "text-slate-400"
+                  }`}
+                >
+                  {log.role}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className={log.role === "assistant" ? "text-blue-900 dark:text-blue-100 font-medium" : "text-foreground"}>
+                    {log.content}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {log.actionTaken && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200">
+                        <Zap className="h-3 w-3" /> {log.actionTaken}
+                      </span>
+                    )}
+                    {typeof log.confidence === "number" && (
+                      <span className="text-[10px] text-muted-foreground">
+                        Confidence {Math.round(log.confidence * 100)}%
+                      </span>
+                    )}
+                    <span className="text-[10px] text-muted-foreground">
+                      {new Date(log.createdAt).toLocaleTimeString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminMessagesPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const [activeView, setActiveView] = useState<"conversations" | "ai">("conversations");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
@@ -62,6 +202,16 @@ export default function AdminMessagesPage() {
   const [aiPromptText, setAiPromptText] = useState("");
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
+  const [botStats, setBotStats] = useState<BotStats | null>(null);
+  const [botSessions, setBotSessions] = useState<BotSession[]>([]);
+  const [botPage, setBotPage] = useState(1);
+  const [botTotal, setBotTotal] = useState(0);
+  const [botLoading, setBotLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("view") === "ai") setActiveView("ai");
+  }, [searchParams]);
+
   useEffect(() => {
     loadConversations();
   }, []);
@@ -69,6 +219,11 @@ export default function AdminMessagesPage() {
   useEffect(() => {
     if (selectedConversation) loadMessages(selectedConversation);
   }, [selectedConversation]);
+
+  useEffect(() => {
+    if (activeView === "ai") loadBotSessions(botPage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView, botPage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -118,6 +273,23 @@ export default function AdminMessagesPage() {
       console.error("Failed to load conversations", e);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadBotSessions(page = botPage) {
+    setBotLoading(true);
+    try {
+      const [statsRes, sessionsRes] = await Promise.all([
+        botStats ? Promise.resolve({ data: botStats }) : ticketsApi.getBotStats(),
+        ticketsApi.getBotSessions(page, 20),
+      ]);
+      setBotStats(statsRes.data);
+      setBotSessions(sessionsRes.data?.sessions ?? []);
+      setBotTotal(sessionsRes.data?.total ?? 0);
+    } catch (e) {
+      console.error("Failed to load AI chat transcripts", e);
+    } finally {
+      setBotLoading(false);
     }
   }
 
@@ -178,19 +350,41 @@ export default function AdminMessagesPage() {
   }
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
+  const botTotalPages = Math.max(1, Math.ceil(botTotal / 20));
 
   return (
     <AdminGuard>
       <DashboardLayout>
         <div className="flex flex-col h-[calc(100vh-8rem)]">
-          <div className="flex items-center gap-2 mb-4">
-            <MessageSquare className="h-6 w-6" />
-            <h1 className="text-2xl font-bold">All Messages</h1>
-            <Badge variant="secondary" className="ml-2">
-              {conversations.length} conversations
-            </Badge>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              {activeView === "ai" ? <Bot className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
+              <h1 className="text-2xl font-bold">All Messages</h1>
+              <Badge variant="secondary" className="ml-2">
+                {activeView === "ai" ? `${botTotal} AI sessions` : `${conversations.length} conversations`}
+              </Badge>
+            </div>
+            <div className="flex rounded-lg border bg-muted/30 p-1">
+              <Button
+                size="sm"
+                variant={activeView === "conversations" ? "default" : "ghost"}
+                className="gap-1"
+                onClick={() => setActiveView("conversations")}
+              >
+                <MessageSquare className="h-4 w-4" /> Conversations
+              </Button>
+              <Button
+                size="sm"
+                variant={activeView === "ai" ? "default" : "ghost"}
+                className="gap-1"
+                onClick={() => setActiveView("ai")}
+              >
+                <Bot className="h-4 w-4" /> AI Assistant Chats
+              </Button>
+            </div>
           </div>
 
+          {activeView === "conversations" ? (
           <div className="flex flex-1 gap-4 min-h-0">
             {/* Conversation list */}
             <div className="w-80 flex-shrink-0 border rounded-lg overflow-y-auto relative flex flex-col bg-background">
@@ -466,6 +660,106 @@ export default function AdminMessagesPage() {
               )}
             </div>
           </div>
+          ) : (
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
+              <div className="grid gap-4 md:grid-cols-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Sessions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{botStats?.totalSessions ?? botTotal}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Escalated</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{botStats?.escalatedSessions ?? 0}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Escalation Rate</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{botStats?.escalationRate ?? "0%"}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Avg Messages</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{botStats?.avgMessagesPerSession ?? "0"}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">AI assistant transcripts</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Review who used the AI assistant, what they asked, detected lead intents, and escalation history.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => loadBotSessions(botPage)} disabled={botLoading}>
+                  {botLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                  Refresh
+                </Button>
+              </div>
+
+              {botStats?.intentBreakdown?.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {botStats.intentBreakdown.slice(0, 10).map((intent) => (
+                    <Badge key={intent.intent} variant="outline" className="gap-1">
+                      {intent.intent.replace(/_/g, " ")}
+                      <span className="text-muted-foreground">{intent.count}</span>
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="space-y-3">
+                {botLoading && botSessions.length === 0 ? (
+                  <div className="border rounded-lg p-8 text-center text-muted-foreground">
+                    <Loader2 className="h-5 w-5 mx-auto mb-2 animate-spin" />
+                    Loading AI chats...
+                  </div>
+                ) : botSessions.length === 0 ? (
+                  <div className="border rounded-lg p-8 text-center text-muted-foreground">
+                    <Bot className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                    No AI assistant chats logged yet
+                  </div>
+                ) : (
+                  botSessions.map((session) => <BotSessionRow key={session.id} session={session} />)
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pb-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={botPage <= 1 || botLoading}
+                  onClick={() => setBotPage((page) => Math.max(1, page - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {botPage} of {botTotalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={botPage >= botTotalPages || botLoading}
+                  onClick={() => setBotPage((page) => Math.min(botTotalPages, page + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </DashboardLayout>
     </AdminGuard>

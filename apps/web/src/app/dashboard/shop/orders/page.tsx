@@ -7,34 +7,34 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { ordersApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
-  CheckCircle,
-  Clock,
-  DollarSign,
-  Eye,
-  Loader2,
-  Package,
-  ShoppingCart,
-  Truck,
+    CheckCircle,
+    Clock,
+    DollarSign,
+    Eye,
+    Loader2,
+    Package,
+    ShoppingCart,
+    Truck,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";

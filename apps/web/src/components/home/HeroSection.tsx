@@ -14,12 +14,11 @@ import {
     Gem,
     HeartHandshake,
     Package,
-    PlayCircle,
     ShieldCheck,
     Sparkles,
     Star,
     Store,
-    Zap,
+    Zap
 } from "lucide-react";
 import Link from "next/link";
 

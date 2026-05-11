@@ -139,6 +139,10 @@ playwright-report/
 e2e/.auth/
 e2e/screenshots/
 e2e/test-results/
+e2e/demo-recordings/
+
+# Cloudflare Wrangler local dev cache
+cloudflare-worker/.wrangler/
 
 # Tauri / Rust build artifacts
 target/
