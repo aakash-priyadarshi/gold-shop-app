@@ -68,6 +68,7 @@ export class TranslationService {
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
   private readonly apiKey: string;
   private readonly CACHE_PREFIX = "i18n:";
+  private readonly memoryCache = new Map<string, string>();
 
   constructor(
     private configService: ConfigService,
@@ -212,7 +213,13 @@ Respond with ONLY the JSON array, no markdown fences.`;
     locale: string,
     text: string,
   ): Promise<string | null> {
-    return this.redisService.get(this.cacheKey(locale, text));
+    const key = this.cacheKey(locale, text);
+    const memoryValue = this.memoryCache.get(key);
+    if (memoryValue) return memoryValue;
+
+    const redisValue = await this.redisService.get(key);
+    if (redisValue) this.memoryCache.set(key, redisValue);
+    return redisValue;
   }
 
   private async setInCache(
@@ -220,8 +227,10 @@ Respond with ONLY the JSON array, no markdown fences.`;
     text: string,
     translation: string,
   ): Promise<void> {
+    const key = this.cacheKey(locale, text);
+    this.memoryCache.set(key, translation);
     // No TTL = permanent cache
-    await this.redisService.set(this.cacheKey(locale, text), translation);
+    await this.redisService.set(key, translation);
   }
 
   /* ────────────────────────────────────────────────────────── */

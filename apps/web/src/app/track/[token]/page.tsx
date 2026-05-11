@@ -141,7 +141,7 @@ export default function TrackOrderPage() {
       <header className="border-b border-amber-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-amber-600 font-bold text-lg">
-            ✨ Orivraa
+            Orivraa
           </Link>
           <Button
             variant="ghost"
@@ -207,7 +207,7 @@ export default function TrackOrderPage() {
                       {formatJewelleryType(data.jewelleryType)}
                     </p>
                     <p className="text-amber-100 text-xs mt-0.5">
-                      {t_str("for")} {data.customerName}
+                      <T>for</T> {data.customerName}
                     </p>
                   </div>
                 </div>
@@ -343,9 +343,4 @@ export default function TrackOrderPage() {
       </main>
     </div>
   );
-}
-
-// Small utility since we're not in a component with useT
-function t_str(s: string) {
-  return s;
 }

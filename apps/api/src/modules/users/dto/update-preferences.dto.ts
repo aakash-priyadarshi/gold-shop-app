@@ -2,13 +2,28 @@ import { ApiPropertyOptional } from "@nestjs/swagger";
 import { CurrencyCode } from "@prisma/client";
 import { IsEnum, IsOptional, IsString } from "class-validator";
 
+const SUPPORTED_UI_LANGUAGES = [
+  "en",
+  "fr",
+  "de",
+  "hi",
+  "es",
+  "ar",
+  "ne",
+  "gu",
+  "mr",
+  "ta",
+  "te",
+  "kn",
+] as const;
+
 export class UpdatePreferencesDto {
   @ApiPropertyOptional({
-    enum: ["en", "fr", "de", "hi", "es", "ar", "ne"],
+    enum: SUPPORTED_UI_LANGUAGES,
     description: "Preferred language for the UI",
   })
   @IsOptional()
-  @IsEnum(["en", "fr", "de", "hi", "es", "ar", "ne"])
+  @IsEnum(SUPPORTED_UI_LANGUAGES)
   preferredLanguage?: string;
 
   @ApiPropertyOptional({

@@ -15,6 +15,11 @@ export const SUPPORTED_LOCALES = [
   "es",
   "ar",
   "ne",
+  "gu",
+  "mr",
+  "ta",
+  "te",
+  "kn",
 ] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
@@ -26,6 +31,11 @@ export const LOCALE_NAMES: Record<SupportedLocale, string> = {
   es: "Spanish",
   ar: "Arabic",
   ne: "Nepali",
+  gu: "Gujarati",
+  mr: "Marathi",
+  ta: "Tamil",
+  te: "Telugu",
+  kn: "Kannada",
 };
 
 export class TranslateBatchDto {

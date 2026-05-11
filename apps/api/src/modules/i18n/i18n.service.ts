@@ -3,12 +3,48 @@ import * as en from './locales/en.json';
 import * as ne from './locales/ne.json';
 import * as hi from './locales/hi.json';
 
-export type SupportedLocale = 'en' | 'ne' | 'hi';
+export type SupportedLocale =
+  | 'en'
+  | 'fr'
+  | 'de'
+  | 'ne'
+  | 'hi'
+  | 'es'
+  | 'ar'
+  | 'gu'
+  | 'mr'
+  | 'ta'
+  | 'te'
+  | 'kn';
 
 const locales: Record<SupportedLocale, any> = {
   en,
+  fr: en,
+  de: en,
   ne,
   hi,
+  es: en,
+  ar: en,
+  gu: en,
+  mr: en,
+  ta: en,
+  te: en,
+  kn: en,
+};
+
+const intlLocaleMap: Record<SupportedLocale, string> = {
+  en: 'en-US',
+  fr: 'fr-FR',
+  de: 'de-DE',
+  ne: 'ne-NP',
+  hi: 'hi-IN',
+  es: 'es-ES',
+  ar: 'ar-AE',
+  gu: 'gu-IN',
+  mr: 'mr-IN',
+  ta: 'ta-IN',
+  te: 'te-IN',
+  kn: 'kn-IN',
 };
 
 @Injectable()
@@ -69,8 +105,17 @@ export class I18nService {
   getLocaleInfo(locale: SupportedLocale) {
     const info: Record<SupportedLocale, { name: string; nativeName: string; direction: string }> = {
       en: { name: 'English', nativeName: 'English', direction: 'ltr' },
+      fr: { name: 'French', nativeName: 'Français', direction: 'ltr' },
+      de: { name: 'German', nativeName: 'Deutsch', direction: 'ltr' },
       ne: { name: 'Nepali', nativeName: 'नेपाली', direction: 'ltr' },
       hi: { name: 'Hindi', nativeName: 'हिन्दी', direction: 'ltr' },
+      es: { name: 'Spanish', nativeName: 'Español', direction: 'ltr' },
+      ar: { name: 'Arabic', nativeName: 'العربية', direction: 'rtl' },
+      gu: { name: 'Gujarati', nativeName: 'ગુજરાતી', direction: 'ltr' },
+      mr: { name: 'Marathi', nativeName: 'मराठी', direction: 'ltr' },
+      ta: { name: 'Tamil', nativeName: 'தமிழ்', direction: 'ltr' },
+      te: { name: 'Telugu', nativeName: 'తెలుగు', direction: 'ltr' },
+      kn: { name: 'Kannada', nativeName: 'ಕನ್ನಡ', direction: 'ltr' },
     };
     return info[locale] || info.en;
   }
@@ -114,12 +159,7 @@ export class I18nService {
 
   // Format number according to locale
   formatNumber(value: number, locale: SupportedLocale = this.defaultLocale): string {
-    const localeMap: Record<SupportedLocale, string> = {
-      en: 'en-US',
-      ne: 'ne-NP',
-      hi: 'hi-IN',
-    };
-    return new Intl.NumberFormat(localeMap[locale]).format(value);
+    return new Intl.NumberFormat(intlLocaleMap[locale]).format(value);
   }
 
   // Format currency
@@ -128,12 +168,7 @@ export class I18nService {
     currency = 'NPR',
     locale: SupportedLocale = this.defaultLocale,
   ): string {
-    const localeMap: Record<SupportedLocale, string> = {
-      en: 'en-US',
-      ne: 'ne-NP',
-      hi: 'hi-IN',
-    };
-    return new Intl.NumberFormat(localeMap[locale], {
+    return new Intl.NumberFormat(intlLocaleMap[locale], {
       style: 'currency',
       currency,
     }).format(value);
@@ -145,11 +180,6 @@ export class I18nService {
     locale: SupportedLocale = this.defaultLocale,
     options?: Intl.DateTimeFormatOptions,
   ): string {
-    const localeMap: Record<SupportedLocale, string> = {
-      en: 'en-US',
-      ne: 'ne-NP',
-      hi: 'hi-IN',
-    };
-    return new Intl.DateTimeFormat(localeMap[locale], options).format(date);
+    return new Intl.DateTimeFormat(intlLocaleMap[locale], options).format(date);
   }
 }

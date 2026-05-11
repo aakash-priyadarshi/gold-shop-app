@@ -23,7 +23,19 @@ export type CountryCode = "NP" | "IN" | "AE" | "UK" | "EU" | "US";
 
 export type ThemeMode = "light" | "dark" | "system";
 
-export type Language = "en" | "fr" | "de" | "hi" | "es" | "ar" | "ne";
+export type Language =
+  | "en"
+  | "hi"
+  | "ne"
+  | "gu"
+  | "mr"
+  | "ta"
+  | "te"
+  | "kn"
+  | "fr"
+  | "de"
+  | "es"
+  | "ar";
 
 // Currency metadata (for DISPLAY only)
 export const CURRENCIES: Record<
@@ -110,12 +122,17 @@ export const LANGUAGES: Record<
   { name: string; nativeName: string; dir?: "rtl" }
 > = {
   en: { name: "English", nativeName: "English" },
+  hi: { name: "Hindi", nativeName: "हिन्दी" },
+  ne: { name: "Nepali", nativeName: "नेपाली" },
+  gu: { name: "Gujarati", nativeName: "ગુજરાતી" },
+  mr: { name: "Marathi", nativeName: "मराठी" },
+  ta: { name: "Tamil", nativeName: "தமிழ்" },
+  te: { name: "Telugu", nativeName: "తెలుగు" },
+  kn: { name: "Kannada", nativeName: "ಕನ್ನಡ" },
   fr: { name: "French", nativeName: "Français" },
   de: { name: "German", nativeName: "Deutsch" },
-  hi: { name: "Hindi", nativeName: "हिन्दी" },
   es: { name: "Spanish", nativeName: "Español" },
   ar: { name: "Arabic", nativeName: "العربية", dir: "rtl" },
-  ne: { name: "Nepali", nativeName: "नेपाली" },
 };
 
 interface PreferencesState {
