@@ -283,6 +283,22 @@ export default function DownloadPage() {
                     <p className="text-sm text-muted-foreground/60">
                       <T>Try switching platforms or check back later.</T>
                     </p>
+                    {/* Platform switcher — always visible so users can switch back */}
+                    <div className="flex items-center gap-2 mt-2">
+                      {(["WINDOWS", "MACOS"] as const).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setSelectedPlatform(p)}
+                          className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                            selectedPlatform === p
+                              ? "bg-gold-500/20 text-gold-600 dark:text-gold-400 font-medium"
+                              : "text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          {platformIcon[p]} {platformLabel[p]}
+                        </button>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               )}
