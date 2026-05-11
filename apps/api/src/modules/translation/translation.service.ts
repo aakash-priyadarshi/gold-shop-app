@@ -14,6 +14,18 @@ interface HtmlSegment {
   value: string;
 }
 
+export interface TranslationBatchResult {
+  translations: string[];
+  translated: boolean[];
+}
+
+export interface HtmlTranslationResult {
+  html: string;
+  contentHash: string;
+  fromCache: boolean;
+  translated: boolean;
+}
+
 /**
  * Split HTML into alternating tag / text segments.
  * Tags, entities, and whitespace-only nodes are preserved as-is.
@@ -84,14 +96,22 @@ export class TranslationService {
   async translateBatch(
     texts: string[],
     locale: SupportedLocale,
-  ): Promise<string[]> {
-    if (locale === "en") return texts;
-    if (texts.length === 0) return [];
+  ): Promise<TranslationBatchResult> {
+    if (locale === "en") {
+      return {
+        translations: texts,
+        translated: texts.map(() => true),
+      };
+    }
+    if (texts.length === 0) {
+      return { translations: [], translated: [] };
+    }
 
     // 1. Check cache for each text
     const results: (string | null)[] = await Promise.all(
       texts.map((text) => this.getFromCache(locale, text)),
     );
+    const translated = results.map((value) => value !== null);
 
     // 2. Collect uncached texts
     const uncachedIndices: number[] = [];
@@ -107,7 +127,10 @@ export class TranslationService {
       this.logger.debug(
         `All ${texts.length} texts cached for locale=${locale}`,
       );
-      return results as string[];
+      return {
+        translations: results as string[],
+        translated,
+      };
     }
 
     this.logger.log(
@@ -128,6 +151,7 @@ export class TranslationService {
           const translation =
             translations[j] !== undefined ? translations[j] : chunk[j];
           results[chunkIndices[j]] = translation;
+          translated[chunkIndices[j]] = true;
           // Cache permanently (no TTL)
           this.setInCache(locale, chunk[j], translation).catch(() => {});
         }
@@ -137,18 +161,26 @@ export class TranslationService {
         for (let j = 0; j < chunk.length; j++) {
           if (results[chunkIndices[j]] === null) {
             results[chunkIndices[j]] = chunk[j];
+            translated[chunkIndices[j]] = false;
           }
         }
       }
     }
 
-    return results as string[];
+    return {
+      translations: results as string[],
+      translated,
+    };
   }
 
   private async callGemini(
     texts: string[],
     locale: SupportedLocale,
   ): Promise<string[]> {
+    if (!this.apiKey) {
+      throw new Error("GEMINI_API_KEY is not configured");
+    }
+
     const langName = LOCALE_NAMES[locale];
     const numbered = texts
       .map((t, i) => `[${i}] ${JSON.stringify(t)}`)
@@ -245,6 +277,15 @@ Respond with ONLY the JSON array, no markdown fences.`;
     return createHash("sha256").update(content).digest("hex").slice(0, 20);
   }
 
+  private isSuspiciousHtmlFallback(source: string, translated: string): boolean {
+    if (source.trim() !== translated.trim()) {
+      return false;
+    }
+
+    const textOnly = source.replace(/<[^>]+>/g, " ");
+    return /[A-Za-z]/.test(textOnly);
+  }
+
   /**
    * Translate a full HTML document/fragment.
    *
@@ -261,9 +302,14 @@ Respond with ONLY the JSON array, no markdown fences.`;
   async translateHtml(
     html: string,
     locale: SupportedLocale,
-  ): Promise<{ html: string; contentHash: string; fromCache: boolean }> {
+  ): Promise<HtmlTranslationResult> {
     if (locale === "en" || !html) {
-      return { html, contentHash: this.hashContent(html || ""), fromCache: true };
+      return {
+        html,
+        contentHash: this.hashContent(html || ""),
+        fromCache: true,
+        translated: true,
+      };
     }
 
     const contentHash = this.hashContent(html);
@@ -272,11 +318,21 @@ Respond with ONLY the JSON array, no markdown fences.`;
     const cached = await this.redisService.get(
       this.htmlCacheKey(locale, contentHash),
     );
-    if (cached) {
+    if (cached && !this.isSuspiciousHtmlFallback(html, cached)) {
       this.logger.debug(
         `HTML translation cache hit: locale=${locale} hash=${contentHash}`,
       );
-      return { html: cached, contentHash, fromCache: true };
+      return {
+        html: cached,
+        contentHash,
+        fromCache: true,
+        translated: true,
+      };
+    }
+    if (cached) {
+      this.logger.warn(
+        `Ignoring poisoned HTML translation cache for locale=${locale} hash=${contentHash}`,
+      );
     }
 
     // 2. Parse into segments
@@ -290,13 +346,14 @@ Respond with ONLY the JSON array, no markdown fences.`;
 
     if (textSegments.length === 0) {
       // No translatable text (e.g. only tags/images)
-      return { html, contentHash, fromCache: false };
+      return { html, contentHash, fromCache: false, translated: true };
     }
 
     // 3. Check per-segment cache; collect uncached
     const segmentResults: (string | null)[] = await Promise.all(
       textSegments.map((s) => this.getFromCache(locale, s.value.trim())),
     );
+    const segmentTranslated = segmentResults.map((value) => value !== null);
 
     const uncachedIdx: number[] = [];
     const uncachedTexts: string[] = [];
@@ -324,6 +381,7 @@ Respond with ONLY the JSON array, no markdown fences.`;
             const translation =
               translations[j] !== undefined ? translations[j] : chunk[j];
             segmentResults[chunkLocalIdx[j]] = translation;
+            segmentTranslated[chunkLocalIdx[j]] = true;
             this.setInCache(locale, chunk[j], translation).catch(() => {});
           }
         } catch (error) {
@@ -333,6 +391,7 @@ Respond with ONLY the JSON array, no markdown fences.`;
           for (let j = 0; j < chunk.length; j++) {
             if (segmentResults[chunkLocalIdx[j]] === null) {
               segmentResults[chunkLocalIdx[j]] = chunk[j];
+              segmentTranslated[chunkLocalIdx[j]] = false;
             }
           }
         }
@@ -351,12 +410,20 @@ Respond with ONLY the JSON array, no markdown fences.`;
     }
 
     const translatedHtml = segments.map((s) => s.value).join("");
+    const translated = segmentTranslated.every(Boolean);
 
     // 6. Cache the full assembled document (keyed by content hash)
-    this.redisService
-      .set(this.htmlCacheKey(locale, contentHash), translatedHtml)
-      .catch(() => {});
+    if (translated) {
+      this.redisService
+        .set(this.htmlCacheKey(locale, contentHash), translatedHtml)
+        .catch(() => {});
+    }
 
-    return { html: translatedHtml, contentHash, fromCache: false };
+    return {
+      html: translatedHtml,
+      contentHash,
+      fromCache: false,
+      translated,
+    };
   }
 }

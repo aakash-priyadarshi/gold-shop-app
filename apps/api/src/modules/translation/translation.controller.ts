@@ -2,7 +2,11 @@ import { Body, Controller, HttpCode, Post } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { SkipSecurity } from "../security/security.guard";
 import { TranslateBatchDto, TranslateHtmlDto } from "./dto/translate.dto";
-import { TranslationService } from "./translation.service";
+import {
+  HtmlTranslationResult,
+  TranslationBatchResult,
+  TranslationService,
+} from "./translation.service";
 
 @Controller("translation")
 @SkipSecurity() // Translation endpoints are public — frontend calls them for i18n
@@ -20,12 +24,8 @@ export class TranslationController {
   @Throttle({ default: { limit: 30, ttl: 60000 } }) // 30 requests/min
   async translateBatch(
     @Body() dto: TranslateBatchDto,
-  ): Promise<{ translations: string[] }> {
-    const translations = await this.translationService.translateBatch(
-      dto.texts,
-      dto.locale,
-    );
-    return { translations };
+  ): Promise<TranslationBatchResult> {
+    return this.translationService.translateBatch(dto.texts, dto.locale);
   }
 
   /**
@@ -43,7 +43,7 @@ export class TranslationController {
   @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests/min
   async translateHtml(
     @Body() dto: TranslateHtmlDto,
-  ): Promise<{ html: string; contentHash: string; fromCache: boolean }> {
+  ): Promise<HtmlTranslationResult> {
     return this.translationService.translateHtml(dto.html, dto.locale);
   }
 }

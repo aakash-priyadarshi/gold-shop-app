@@ -39,12 +39,49 @@ const TranslationContext = createContext<TranslationContextValue>({
 /* ────────────────────────────────────────────────────────────── */
 
 const LS_KEY_PREFIX = "orivraa_i18n_";
+const FAILURE_COOLDOWN_MS = 5 * 60 * 1000;
+
+function failureKey(locale: string, text: string): string {
+  return `${locale}::${text}`;
+}
+
+function isSuspiciousFallback(source: string, translated: string): boolean {
+  const normalizedSource = source.trim();
+  const normalizedTranslated = translated.trim();
+
+  if (!normalizedSource || normalizedSource !== normalizedTranslated) {
+    return false;
+  }
+
+  if (!/[A-Za-z]/.test(normalizedSource)) {
+    return false;
+  }
+
+  return /\s/.test(normalizedSource) || normalizedSource.length > 24;
+}
 
 function loadFromStorage(locale: string): Record<string, string> {
   if (typeof window === "undefined") return {};
   try {
     const raw = localStorage.getItem(`${LS_KEY_PREFIX}${locale}`);
-    return raw ? JSON.parse(raw) : {};
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    const sanitized = Object.fromEntries(
+      Object.entries(parsed).filter(
+        ([source, translated]) =>
+          !isSuspiciousFallback(source, translated),
+      ),
+    );
+
+    if (Object.keys(sanitized).length !== Object.keys(parsed).length) {
+      localStorage.setItem(
+        `${LS_KEY_PREFIX}${locale}`,
+        JSON.stringify(sanitized),
+      );
+    }
+
+    return sanitized;
   } catch {
     return {};
   }
@@ -72,6 +109,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   const pending = useRef<Set<string>>(new Set());
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const inflightRef = useRef(false);
+  const failedRef = useRef<Map<string, number>>(new Map());
 
   // Load localStorage cache when locale changes
   useEffect(() => {
@@ -93,20 +131,38 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     try {
-      const { data } = await api.post<{ translations: string[] }>(
+      const { data } = await api.post<{
+        translations: string[];
+        translated?: boolean[];
+      }>(
         "/translation/batch",
         { texts, locale },
       );
 
       setDict((prev) => {
         const next = { ...prev };
-        texts.forEach((t, i) => {
-          if (data.translations[i]) next[t] = data.translations[i];
+        texts.forEach((text, index) => {
+          const translation = data.translations[index];
+          const confirmed = Array.isArray(data.translated)
+            ? data.translated[index] === true
+            : translation !== text;
+
+          if (translation && confirmed) {
+            next[text] = translation;
+            failedRef.current.delete(failureKey(locale, text));
+            return;
+          }
+
+          failedRef.current.set(failureKey(locale, text), Date.now());
         });
         saveToStorage(locale, next);
         return next;
       });
     } catch (err) {
+      const now = Date.now();
+      texts.forEach((text) => {
+        failedRef.current.set(failureKey(locale, text), now);
+      });
       // eslint-disable-next-line no-console
       console.warn("[i18n] Translation batch failed:", err);
     } finally {
@@ -124,6 +180,10 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     (text: string) => {
       if (locale === "en" || dict[text]) return;
+      const failedAt = failedRef.current.get(failureKey(locale, text));
+      if (failedAt && Date.now() - failedAt < FAILURE_COOLDOWN_MS) {
+        return;
+      }
       pending.current.add(text);
       clearTimeout(timer.current);
       timer.current = setTimeout(flush, 150);

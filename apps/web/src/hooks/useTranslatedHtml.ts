@@ -41,6 +41,15 @@ function saveCached(locale: string, hash: string, html: string) {
   }
 }
 
+function removeCached(locale: string, hash: string) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(cacheKey(locale, hash));
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Translates a block of HTML content server-side.
  *
@@ -60,9 +69,12 @@ export function useTranslatedHtml(html: string | undefined | null) {
     async (source: string, h: string, loc: string) => {
       // Check localStorage first
       const cached = loadCached(loc, h);
-      if (cached) {
+      if (cached && cached !== source) {
         setTranslated(cached);
         return;
+      }
+      if (cached === source) {
+        removeCached(loc, h);
       }
 
       abortRef.current?.abort();
@@ -71,14 +83,18 @@ export function useTranslatedHtml(html: string | undefined | null) {
 
       setLoading(true);
       try {
-        const { data } = await api.post<{ html: string }>(
+        const { data } = await api.post<{ html: string; translated?: boolean }>(
           "/translation/html",
           { html: source, locale: loc, contentHash: h },
           { signal: controller.signal },
         );
         if (!controller.signal.aborted) {
           setTranslated(data.html);
-          saveCached(loc, h, data.html);
+          if (data.translated !== false && data.html !== source) {
+            saveCached(loc, h, data.html);
+          } else {
+            removeCached(loc, h);
+          }
         }
       } catch (err: any) {
         if (err?.name !== "CanceledError" && err?.code !== "ERR_CANCELED") {
