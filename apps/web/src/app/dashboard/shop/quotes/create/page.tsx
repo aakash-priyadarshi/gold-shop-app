@@ -80,6 +80,10 @@ import {
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/providers/translation-provider";
+import {
+  AiDesignStudio,
+  type AiDesignVariation,
+} from "@/components/ai/AiDesignStudio";
 
 const API_URL = getApiUrl();
 
@@ -469,6 +473,76 @@ export default function CreateShopQuotePage() {
     shopCountry,
     currencyCode,
   ]);
+
+  const applyAiVariation = useCallback(
+    (v: AiDesignVariation) => {
+      setFormData((prev) => ({
+        ...prev,
+        jewelleryType: v.jewelryType,
+        buildMethod: v.buildMethod as BuildMethod,
+        metalType: v.metalType,
+        targetTotalWeightG: v.estimatedWeight ? String(v.estimatedWeight) : "",
+        surfaceFinish: v.surfaceFinish || prev.surfaceFinish,
+        description: v.description || prev.description,
+        hasGemstones: v.hasGemstones,
+        gemstonesV2: v.gemstones?.length
+          ? v.gemstones.map((g, i) => ({
+              id: `ai-${Date.now()}-${i}`,
+              stoneType: (g.stoneType as never) || ("DIAMOND" as never),
+              shape: (g.shape as never) || ("ROUND" as never),
+              count: g.count ?? 1,
+              sizeValue: g.sizeValue ?? 0,
+              sizeUnit: (g.sizeUnit as never) || ("CARAT" as never),
+              color: g.color,
+              clarity: g.clarity,
+              cut: g.cut,
+              settingStyle: g.settingStyle,
+            })) as never
+          : prev.gemstonesV2,
+        alloyConfig:
+          v.buildMethod === "METHOD_B" && v.alloyDetails
+            ? {
+                baseMetal: v.alloyDetails.baseMetal || "GOLD",
+                karat: v.alloyDetails.karat,
+                alloyFamily: v.alloyDetails.alloyFamily,
+                recipePresetId: undefined,
+              }
+            : prev.alloyConfig,
+        methodCConfig:
+          v.buildMethod === "METHOD_C" && v.platingDetails
+            ? {
+                baseMetal: v.platingDetails.baseMetal || "BRASS",
+                platingType: v.platingDetails.platingType || "GOLD_PLATED",
+                platingTier: v.platingDetails.platingTier || "STANDARD",
+              }
+            : prev.methodCConfig,
+        methodDConfig:
+          v.buildMethod === "METHOD_D" && v.italianMachineDetails
+            ? {
+                purity: v.italianMachineDetails.purity || "18K",
+                chainStyle: v.italianMachineDetails.chainStyle || "",
+              }
+            : prev.methodDConfig,
+        metalCostOverride: v.estimatedCost?.metal
+          ? String(v.estimatedCost.metal)
+          : prev.metalCostOverride,
+        makingChargeOverride: v.estimatedCost?.making
+          ? String(v.estimatedCost.making)
+          : prev.makingChargeOverride,
+        gemstoneCostOverride: v.estimatedCost?.gemstones
+          ? String(v.estimatedCost.gemstones)
+          : prev.gemstoneCostOverride,
+        finishCostOverride: v.estimatedCost?.finish
+          ? String(v.estimatedCost.finish)
+          : prev.finishCostOverride,
+      }));
+      if (v.imageUrl) {
+        setDesignPreviewUrl(v.imageUrl);
+        if (v.designId) setDesignId(v.designId);
+      }
+    },
+    [],
+  );
 
   const handleGenerateDesign = async () => {
     if (!formData.jewelleryType) {
@@ -1116,6 +1190,11 @@ export default function CreateShopQuotePage() {
           {step === 2 && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start">
               <div className="lg:col-span-2 space-y-6">
+                <AiDesignStudio
+                  currency={currencyCode}
+                  defaultJewelryType={formData.jewelleryType || undefined}
+                  onSelect={applyAiVariation}
+                />
                 <Card>
                   <CardHeader>
                     <CardTitle><T>Jewellery Details</T></CardTitle>

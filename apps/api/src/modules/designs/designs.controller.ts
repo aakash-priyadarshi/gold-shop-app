@@ -31,6 +31,7 @@ import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
 import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
 import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import { DescriptionGeneratorService } from "./description-generator.service";
+import { DesignVariationsService } from "./design-variations.service";
 import { DesignsService } from "./designs.service";
 
 interface AuthenticatedRequest extends ExpressRequest {
@@ -231,6 +232,35 @@ class UpdateVisibilityDto {
   isPublic: boolean;
 }
 
+class GenerateVariationsDto {
+  @IsString()
+  prompt: string;
+
+  @IsOptional()
+  @IsNumber()
+  budgetMin?: number;
+
+  @IsOptional()
+  @IsNumber()
+  budgetMax?: number;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @IsOptional()
+  @IsString()
+  jewelryType?: string;
+
+  @IsOptional()
+  @IsString()
+  occasion?: string;
+
+  @IsOptional()
+  @IsString()
+  marketRegion?: string;
+}
+
 @Controller("designs")
 export class DesignsController {
   private readonly logger = new Logger(DesignsController.name);
@@ -238,6 +268,7 @@ export class DesignsController {
   constructor(
     private readonly designsService: DesignsService,
     private readonly descriptionGenService: DescriptionGeneratorService,
+    private readonly designVariationsService: DesignVariationsService,
   ) {}
 
   /**
@@ -267,6 +298,42 @@ export class DesignsController {
       }
       throw new HttpException(
         error.message || "Failed to generate design",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Generate 5 AI design variations from a natural-language prompt + budget.
+   * Pro+ plan feature — gated by `aiDesignVariations`.
+   */
+  @Post("variations")
+  @UseGuards(JwtAuthGuard, FeatureGateGuard)
+  @RequireFeature("aiDesignVariations")
+  async generateVariations(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: GenerateVariationsDto,
+  ) {
+    try {
+      this.logger.log(
+        `Generating design variations for user ${req.user!.id}: "${dto.prompt.slice(0, 80)}"`,
+      );
+      const result = await this.designVariationsService.generateVariations(
+        req.user!.id,
+        dto,
+      );
+      this.logger.log(
+        `Generated ${result.variations.length} variations (cached=${result.cached})`,
+      );
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Variations generation failed: ${error.message}`,
+        error.stack,
+      );
+      if (error instanceof HttpException) throw error;
+      throw new HttpException(
+        error.message || "Failed to generate design variations",
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

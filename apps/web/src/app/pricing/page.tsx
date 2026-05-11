@@ -117,6 +117,10 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
     label: "AI design generation",
     category: "AI & Intelligence",
   },
+  aiDesignVariations: {
+    label: "AI design variations (5 designs from one prompt)",
+    category: "AI & Intelligence",
+  },
   aiSmartRecommendations: {
     label: "Smart recommendations",
     category: "AI & Intelligence",
@@ -466,6 +470,7 @@ function buildFeatureList(
   // AI features
   const aiKeys = [
     "aiDesignGeneration",
+    "aiDesignVariations",
     "aiSmartRecommendations",
     "aiPriceOptimization",
     "demandForecasting",

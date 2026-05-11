@@ -248,6 +248,12 @@ const ALL_FEATURE_KEYS: {
     enforced: true,
   },
   {
+    key: "aiDesignVariations",
+    label: "AI design variations — 5 designs from one prompt (Pro+)",
+    category: "AI & Intelligence",
+    enforced: true,
+  },
+  {
     key: "aiSmartRecommendations",
     label: "Smart recommendations",
     category: "AI & Intelligence",

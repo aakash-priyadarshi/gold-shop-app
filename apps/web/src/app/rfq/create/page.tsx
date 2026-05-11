@@ -123,6 +123,10 @@ import {
 } from "@/components/pricing/MethodCSelector";
 import { getApiUrl, intelligenceApi, shopsApi } from "@/lib/api";
 import {
+  AiDesignStudio,
+  type AiDesignVariation,
+} from "@/components/ai/AiDesignStudio";
+import {
   calculateEstimate,
   CHAIN_STYLE_OPTIONS,
   type BuildMethod,
@@ -3458,6 +3462,78 @@ export default function CreateRfqPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
+                      {/* AI Design Studio (Pro+) — generate 5 ready-to-order variations */}
+                      <AiDesignStudio
+                        currency={currency}
+                        defaultJewelryType={formData.jewelleryType || undefined}
+                        onSelect={(v: AiDesignVariation) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            jewelleryType: v.jewelryType,
+                            buildMethod: v.buildMethod as BuildMethod,
+                            metalType: v.metalType,
+                            estimatedWeight: v.estimatedWeight
+                              ? String(v.estimatedWeight)
+                              : prev.estimatedWeight,
+                            weightCategory:
+                              v.weightCategory || prev.weightCategory,
+                            surfaceFinish:
+                              v.surfaceFinish || prev.surfaceFinish,
+                            description: v.description || prev.description,
+                            hasGemstones: v.hasGemstones,
+                            budgetMin: v.estimatedCost?.total
+                              ? String(
+                                  Math.round(v.estimatedCost.total * 0.9),
+                                )
+                              : prev.budgetMin,
+                            budgetMax: v.estimatedCost?.total
+                              ? String(
+                                  Math.round(v.estimatedCost.total * 1.1),
+                                )
+                              : prev.budgetMax,
+                            alloyConfig:
+                              v.buildMethod === "METHOD_B" && v.alloyDetails
+                                ? ({
+                                    baseMetal:
+                                      v.alloyDetails.baseMetal || "GOLD",
+                                    karat: v.alloyDetails.karat,
+                                    alloyFamily: v.alloyDetails.alloyFamily,
+                                    recipePresetId: undefined,
+                                  } as AlloyConfig)
+                                : prev.alloyConfig,
+                            methodCConfig:
+                              v.buildMethod === "METHOD_C" && v.platingDetails
+                                ? ({
+                                    baseMetal:
+                                      v.platingDetails.baseMetal || "BRASS",
+                                    platingType:
+                                      v.platingDetails.platingType ||
+                                      "GOLD_PLATED",
+                                    platingTier:
+                                      v.platingDetails.platingTier ||
+                                      "STANDARD",
+                                  } as MethodCConfig)
+                                : prev.methodCConfig,
+                            methodDConfig:
+                              v.buildMethod === "METHOD_D" &&
+                              v.italianMachineDetails
+                                ? {
+                                    purity:
+                                      v.italianMachineDetails.purity || "18K",
+                                    chainStyle:
+                                      v.italianMachineDetails.chainStyle || "",
+                                  }
+                                : prev.methodDConfig,
+                            referenceImages: v.imageUrl
+                              ? [v.imageUrl, ...prev.referenceImages].slice(
+                                  0,
+                                  5,
+                                )
+                              : prev.referenceImages,
+                          }));
+                        }}
+                      />
+
                       {/* AI RFQ Builder Assistant */}
                       <div className="rounded-lg border border-gold-200 dark:border-amber-800/40 bg-gradient-to-r from-gold-50 to-amber-50 dark:from-amber-950/30 dark:to-yellow-950/20 p-4">
                         <button
