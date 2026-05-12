@@ -35,5 +35,6 @@ EXPOSE 3001
 ENV NODE_ENV=production
 ENV PORT=3001
 
-# Absolute path: tsc outputs src/main.ts → dist/src/main.js (rootDir inferred as . due to prisma include)
-CMD ["node", "/app/apps/api/dist/src/main"]
+# Run pending migrations then start the server.
+# prisma migrate deploy is idempotent – safe to run on every container start.
+CMD ["sh", "-c", "npx prisma@5.22.0 migrate deploy && node /app/apps/api/dist/src/main"]
