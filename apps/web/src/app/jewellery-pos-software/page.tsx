@@ -2,11 +2,10 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
 import {
-  INDIA_PRO_MONTHLY_PRICE,
-  PUBLIC_LOCAL_PRICING_SUMMARY,
-} from "@/lib/seo/pricing-copy";
+  RegionalPricingSnapshot,
+} from "@/components/marketing/RegionalPricingSnapshot";
+import { T } from "@/components/ui/T";
 import {
   ArrowRight,
   BarChart3,
@@ -32,13 +31,71 @@ const jsonLd = {
       description:
         "Cloud-based POS software for jewellery shops with weight-based billing, making charges, old gold exchange, barcode scanning, and GST/VAT compliance.",
       url: "https://www.orivraa.com/jewellery-pos-software",
-      offers: {
-        "@type": "Offer",
-        price: `${INDIA_PRO_MONTHLY_PRICE}`,
-        priceCurrency: "INR",
-        eligibleRegion: { "@type": "Country", name: "India" },
-        description: `India Pro starts at ₹299/month. ${PUBLIC_LOCAL_PRICING_SUMMARY}`,
-      },
+      offers: [
+        {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "INR",
+          name: "Free Plan",
+          description:
+            "Free jewellery POS software for all markets. Up to 15 products, weight-based billing, old gold exchange, and marketplace listing. No credit card required.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "299",
+          priceCurrency: "INR",
+          name: "Pro Plan — India",
+          description:
+            "Orivraa Pro for India: ₹299/month. Unlimited products, GST-ready invoicing, making charges, old gold exchange, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "399",
+          priceCurrency: "NPR",
+          name: "Pro Plan — Nepal",
+          description:
+            "Orivraa Pro for Nepal jewellers: NPR 399/month. Unlimited products, invoicing, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "9.99",
+          priceCurrency: "GBP",
+          name: "Pro Plan — UK",
+          description:
+            "Orivraa Pro for UK jewellery shops: £9.99/month. VAT-compliant POS, unlimited products, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "USD",
+          name: "Pro Plan — USA",
+          description:
+            "Orivraa Pro for US jewellery businesses: $12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "EUR",
+          name: "Pro Plan — EU",
+          description:
+            "Orivraa Pro for European jewellers: €12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "39.99",
+          priceCurrency: "AED",
+          name: "Pro Plan — UAE",
+          description:
+            "Orivraa Pro for UAE jewellery shops: AED 39.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+      ],
       aggregateRating: {
         "@type": "AggregateRating",
         ratingValue: "4.8",
@@ -195,6 +252,8 @@ export default function JewelleryPosSoftwarePage() {
             </div>
           </div>
         </section>
+
+        <RegionalPricingSnapshot description="POS pricing here now follows the same live regional plan service as the main pricing page instead of a static market-specific number." />
 
         {/* ── The Problem ─────────────────────────────────── */}
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">

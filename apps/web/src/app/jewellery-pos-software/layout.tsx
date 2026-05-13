@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title:
     "Jewellery POS Software — Point of Sale for Gold & Diamond Shops | Orivraa 2026",
   description:
-    "Best POS software for jewellery shops. Handle billing with making charges, weight-based pricing, old gold exchange, GST/VAT invoicing, and barcode scanning. Cloud-based, works on any device. Starts free.",
+    "Best POS software for jewellery shops. Handle billing with making charges, weight-based pricing, old gold exchange, GST/VAT invoicing, and barcode scanning. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
   keywords: [
     "jewellery POS software",
     "jewellery point of sale",

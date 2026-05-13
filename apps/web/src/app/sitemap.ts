@@ -56,42 +56,52 @@ const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
   "/jewellery-shop-software": {
     changeFrequency: "weekly",
     priority: 0.9,
+    lastModified: new Date("2026-05-13"),
   },
   "/jewellery-store-management-software": {
     changeFrequency: "weekly",
     priority: 0.9,
+    lastModified: new Date("2026-05-13"),
   },
   "/jewellery-pos-software": {
     changeFrequency: "weekly",
     priority: 0.9,
+    lastModified: new Date("2026-05-13"),
   },
   "/jewellery-inventory-software": {
     changeFrequency: "weekly",
     priority: 0.9,
+    lastModified: new Date("2026-05-13"),
   },
   "/jewellery-ecommerce-software": {
     changeFrequency: "weekly",
     priority: 0.9,
+    lastModified: new Date("2026-05-13"),
   },
   "/jewellery-shop-billing-software": {
     changeFrequency: "weekly",
     priority: 0.9,
+    lastModified: new Date("2026-05-13"),
   },
   "/compare/orivraa-vs-tally": {
     changeFrequency: "monthly",
     priority: 0.85,
+    lastModified: new Date("2026-05-13"),
   },
   "/compare/orivraa-vs-marg-erp": {
     changeFrequency: "monthly",
     priority: 0.85,
+    lastModified: new Date("2026-05-13"),
   },
   "/compare/jewellery-crm-software-india": {
     changeFrequency: "monthly",
     priority: 0.85,
+    lastModified: new Date("2026-05-13"),
   },
   "/compare/billing-software-india-jewellery-shops": {
     changeFrequency: "monthly",
     priority: 0.85,
+    lastModified: new Date("2026-05-13"),
   },
   "/privacy": {
     changeFrequency: "yearly",

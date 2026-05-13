@@ -2,11 +2,10 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
 import {
-  INDIA_PRO_MONTHLY_PRICE,
-  PUBLIC_LOCAL_PRICING_SUMMARY,
-} from "@/lib/seo/pricing-copy";
+  RegionalPricingSnapshot,
+} from "@/components/marketing/RegionalPricingSnapshot";
+import { T } from "@/components/ui/T";
 import {
   AlertTriangle,
   ArrowRight,
@@ -32,13 +31,71 @@ const jsonLd = {
       description:
         "Cloud-based jewellery inventory management software. Track gold, silver, diamond, and gemstone inventory by weight, purity, and category with automatic stock alerts.",
       url: "https://www.orivraa.com/jewellery-inventory-software",
-      offers: {
-        "@type": "Offer",
-        price: `${INDIA_PRO_MONTHLY_PRICE}`,
-        priceCurrency: "INR",
-        eligibleRegion: { "@type": "Country", name: "India" },
-        description: `India Pro starts at ₹299/month. ${PUBLIC_LOCAL_PRICING_SUMMARY}`,
-      },
+      offers: [
+        {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "INR",
+          name: "Free Plan",
+          description:
+            "Free jewellery inventory software for all markets. Track up to 15 products by weight and purity. No credit card required.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "299",
+          priceCurrency: "INR",
+          name: "Pro Plan — India",
+          description:
+            "Orivraa Pro for India: ₹299/month. Unlimited inventory, karigar management, batch tracking, GST-ready invoicing, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "399",
+          priceCurrency: "NPR",
+          name: "Pro Plan — Nepal",
+          description:
+            "Orivraa Pro for Nepal jewellers: NPR 399/month. Unlimited inventory and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "9.99",
+          priceCurrency: "GBP",
+          name: "Pro Plan — UK",
+          description:
+            "Orivraa Pro for UK jewellery shops: £9.99/month. Unlimited inventory, VAT-compliant invoicing, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "USD",
+          name: "Pro Plan — USA",
+          description:
+            "Orivraa Pro for US jewellery businesses: $12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "EUR",
+          name: "Pro Plan — EU",
+          description:
+            "Orivraa Pro for European jewellers: €12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "39.99",
+          priceCurrency: "AED",
+          name: "Pro Plan — UAE",
+          description:
+            "Orivraa Pro for UAE jewellery shops: AED 39.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+      ],
       aggregateRating: {
         "@type": "AggregateRating",
         ratingValue: "4.8",
@@ -195,6 +252,8 @@ export default function JewelleryInventorySoftwarePage() {
             </div>
           </div>
         </section>
+
+        <RegionalPricingSnapshot description="Inventory teams can start free and upgrade using the same live regional plan data shown on the main pricing page." />
 
         {/* ── Stats Bar ───────────────────────────────────── */}
         <section className="bg-gray-900 py-6">

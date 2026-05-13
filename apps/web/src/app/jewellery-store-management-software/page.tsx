@@ -2,11 +2,11 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
 import {
-  INDIA_PRO_MONTHLY_PRICE,
-  PUBLIC_LOCAL_PRICING_SUMMARY,
-} from "@/lib/seo/pricing-copy";
+  BUYER_COUNTRY_COUNT,
+  RegionalPricingSnapshot,
+} from "@/components/marketing/RegionalPricingSnapshot";
+import { T } from "@/components/ui/T";
 import {
   ArrowRight,
   BarChart3,
@@ -35,13 +35,71 @@ const jsonLd = {
       description:
         "Complete jewellery store management software with inventory tracking, billing, POS, customer management, analytics, and multi-currency support.",
       url: "https://www.orivraa.com/jewellery-store-management-software",
-      offers: {
-        "@type": "Offer",
-        price: `${INDIA_PRO_MONTHLY_PRICE}`,
-        priceCurrency: "INR",
-        eligibleRegion: { "@type": "Country", name: "India" },
-        description: `India Pro starts at ₹299/month. ${PUBLIC_LOCAL_PRICING_SUMMARY}`,
-      },
+      offers: [
+        {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "INR",
+          name: "Free Plan",
+          description:
+            "Free jewellery store management software for all markets. Up to 15 products, inventory, customer management, and marketplace listing. No credit card required.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "299",
+          priceCurrency: "INR",
+          name: "Pro Plan — India",
+          description:
+            "Orivraa Pro for India: ₹299/month. Unlimited products, GST-ready invoicing, CRM, analytics, karigar management, and AI tools.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "399",
+          priceCurrency: "NPR",
+          name: "Pro Plan — Nepal",
+          description:
+            "Orivraa Pro for Nepal jewellers: NPR 399/month. Unlimited products, invoicing, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "9.99",
+          priceCurrency: "GBP",
+          name: "Pro Plan — UK",
+          description:
+            "Orivraa Pro for UK jewellery shops: £9.99/month. VAT-compliant invoicing, unlimited products, CRM, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "USD",
+          name: "Pro Plan — USA",
+          description:
+            "Orivraa Pro for US jewellery businesses: $12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "EUR",
+          name: "Pro Plan — EU",
+          description:
+            "Orivraa Pro for European jewellers: €12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "39.99",
+          priceCurrency: "AED",
+          name: "Pro Plan — UAE",
+          description:
+            "Orivraa Pro for UAE jewellery shops: AED 39.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+      ],
       aggregateRating: {
         "@type": "AggregateRating",
         ratingValue: "4.8",
@@ -65,7 +123,7 @@ const jsonLd = {
           name: "Is Orivraa free for jewellery stores?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes, Orivraa offers a permanently free plan that includes up to 15 products, basic inventory management, customer messaging, and marketplace listing. Paid plans use local country pricing, including India Pro from ₹299/month for unlimited products and advanced features.",
+            text: "Yes, Orivraa offers a permanently free plan that includes up to 15 products, basic inventory management, customer messaging, and marketplace listing. Paid plans use live local country pricing, and the pricing page shows the current monthly rates for each market.",
           },
         },
         {
@@ -273,13 +331,7 @@ export default function JewelleryStoreManagementSoftwarePage() {
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              <T>
-                Manage your entire jewellery business from one platform —
-                inventory tracking by weight and purity, billing with making
-                charges, customer management, analytics, and an online
-                marketplace. Active buyers across 6 countries, growing daily.
-                Starts free.
-              </T>
+              <T>{`Manage your entire jewellery business from one platform — inventory tracking by weight and purity, billing with making charges, customer management, analytics, and an online marketplace. Active buyers across ${BUYER_COUNTRY_COUNT} countries, growing daily. Starts free.`}</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -298,12 +350,14 @@ export default function JewelleryStoreManagementSoftwarePage() {
           </div>
         </section>
 
+        <RegionalPricingSnapshot description="Store-management pricing on this page now stays synced with the same live regional plans used by the main pricing page." />
+
         {/* ── Stats Bar ───────────────────────────────────── */}
         <section className="bg-gray-900 py-6">
           <div className="container mx-auto px-4 max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
               { n: "Free", l: "To Join" },
-              { n: "6", l: "Countries Served" },
+              { n: `${BUYER_COUNTRY_COUNT}`, l: "Buyer Countries" },
               { n: "<5 min", l: "Setup Time" },
               { n: "₹0", l: "Starting Price" },
             ].map((s) => (
@@ -543,7 +597,7 @@ export default function JewelleryStoreManagementSoftwarePage() {
                 },
                 {
                   q: "How much does Orivraa cost?",
-                  a: "Orivraa starts free with up to 15 product listings. Paid plans use local country pricing, including India Pro from ₹299/month and India Pro+ from ₹599/month. Enterprise pricing is custom based on your requirements.",
+                  a: "Orivraa starts free with up to 15 product listings. Paid plans use live local country pricing, and the pricing page shows the current Pro and Pro+ monthly rates for your market. Enterprise pricing is custom based on your requirements.",
                 },
                 {
                   q: "Can I migrate from another software like Marg ERP or Vyapar?",
@@ -594,10 +648,7 @@ export default function JewelleryStoreManagementSoftwarePage() {
               <T>Ready to Modernise Your Jewellery Store?</T>
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              <T>
-                Jewellers across 6 countries use Orivraa to manage their stores
-                every day. Free forever plan — no credit card required.
-              </T>
+              <T>{`Buyers across ${BUYER_COUNTRY_COUNT} countries discover Orivraa shops every day. Free forever plan — no credit card required.`}</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

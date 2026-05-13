@@ -1,11 +1,11 @@
 "use client";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
 import {
-  INDIA_PRO_MONTHLY_PRICE,
-  PUBLIC_LOCAL_PRICING_SUMMARY,
-} from "@/lib/seo/pricing-copy";
+  BUYER_COUNTRY_COUNT,
+  RegionalPricingSnapshot,
+} from "@/components/marketing/RegionalPricingSnapshot";
+import { T } from "@/components/ui/T";
 import {
   ArrowRight,
   BarChart3,
@@ -31,13 +31,71 @@ const jsonLd = {
       description:
         "Sell jewellery online through Orivraa's built-in marketplace. Digital catalogues, multi-currency pricing, international shipping, customer chat, and order management — no website needed.",
       url: "https://www.orivraa.com/jewellery-ecommerce-software",
-      offers: {
-        "@type": "Offer",
-        price: `${INDIA_PRO_MONTHLY_PRICE}`,
-        priceCurrency: "INR",
-        eligibleRegion: { "@type": "Country", name: "India" },
-        description: `India Pro starts at ₹299/month. ${PUBLIC_LOCAL_PRICING_SUMMARY}`,
-      },
+      offers: [
+        {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "INR",
+          name: "Free Plan",
+          description:
+            "Free jewellery ecommerce software. List up to 15 products on the Orivraa marketplace, create digital catalogues, and connect with international buyers. No credit card required.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "299",
+          priceCurrency: "INR",
+          name: "Pro Plan — India",
+          description:
+            "Orivraa Pro for India: ₹299/month. Unlimited marketplace listings, digital catalogues, order management, analytics, and AI product descriptions.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "399",
+          priceCurrency: "NPR",
+          name: "Pro Plan — Nepal",
+          description:
+            "Orivraa Pro for Nepal jewellers: NPR 399/month. Unlimited listings, catalogues, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "9.99",
+          priceCurrency: "GBP",
+          name: "Pro Plan — UK",
+          description:
+            "Orivraa Pro for UK jewellery shops: £9.99/month. Unlimited marketplace listings, multi-currency pricing, and international buyer access.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "USD",
+          name: "Pro Plan — USA",
+          description:
+            "Orivraa Pro for US jewellery businesses: $12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "EUR",
+          name: "Pro Plan — EU",
+          description:
+            "Orivraa Pro for European jewellers: €12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "39.99",
+          priceCurrency: "AED",
+          name: "Pro Plan — UAE",
+          description:
+            "Orivraa Pro for UAE jewellery shops: AED 39.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+      ],
       aggregateRating: {
         "@type": "AggregateRating",
         ratingValue: "4.8",
@@ -81,7 +139,7 @@ const FEATURES = [
   {
     icon: Store,
     title: "Built-in Marketplace Listing",
-    desc: "Get listed on Orivraa's marketplace reaching buyers across 6 countries. No need to build or maintain a separate website — customers find you here.",
+    desc: `Get listed on Orivraa's marketplace reaching buyers across ${BUYER_COUNTRY_COUNT} countries. No need to build or maintain a separate website — customers find you here.`,
   },
   {
     icon: Image,
@@ -170,12 +228,7 @@ export default function JewelleryEcommerceSoftwarePage() {
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              <T>
-                Orivraa gives your jewellery shop an instant online presence.
-                List your products on our marketplace, create shareable digital
-                catalogues, and reach buyers across Nepal, India, Dubai, USA, UK
-                & Europe. No website development needed. Starts free.
-              </T>
+              <T>{`Orivraa gives your jewellery shop an instant online presence. List your products on our marketplace, create shareable digital catalogues, and reach buyers across ${BUYER_COUNTRY_COUNT} buyer countries, including Nepal, India, UAE, UK, USA, and Europe. No website development needed. Starts free.`}</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -194,12 +247,14 @@ export default function JewelleryEcommerceSoftwarePage() {
           </div>
         </section>
 
+        <RegionalPricingSnapshot description="Start free, then switch to the live market rate shown on the same pricing service used by the main pricing page." />
+
         {/* ── Stats Bar ───────────────────────────────────── */}
         <section className="bg-gray-900 py-6">
           <div className="container mx-auto px-4 max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
               { n: "Free", l: "To List" },
-              { n: "6", l: "Countries Reach" },
+              { n: `${BUYER_COUNTRY_COUNT}`, l: "Buyer Countries" },
               { n: "Live", l: "Buyer Demand" },
               { n: "₹0", l: "To Start Selling" },
             ].map((s) => (

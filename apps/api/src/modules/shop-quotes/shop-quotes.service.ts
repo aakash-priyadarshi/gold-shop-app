@@ -1,12 +1,12 @@
 import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    Logger,
+    NotFoundException,
 } from "@nestjs/common";
-import { randomUUID } from "crypto";
 import { BuildMethod, JewelleryType, ShopQuoteStatus } from "@prisma/client";
+import { randomUUID } from "crypto";
 import { RedisService } from "../../common/redis";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
@@ -14,12 +14,12 @@ import { MailService } from "../mail/mail.service";
 import { MarketRegion } from "../market-rates/types";
 import { TaxRulesService } from "../pricing/services/tax-rules.service";
 import {
-  ConvertToInvoiceDto,
-  CreateShopQuoteDto,
-  RecordPaymentDto,
-  SendTrackingLinkDto,
-  UpdateQuoteStatusDto,
-  UpdateShopQuoteDto,
+    ConvertToInvoiceDto,
+    CreateShopQuoteDto,
+    RecordPaymentDto,
+    SendTrackingLinkDto,
+    UpdateQuoteStatusDto,
+    UpdateShopQuoteDto,
 } from "./dto";
 
 // Redis key prefix for walk-in customer lookup
@@ -79,7 +79,7 @@ export class ShopQuotesService {
   async lookupCustomerByPhone(
     phoneCountryCode: string,
     phone: string,
-    shopId: string,
+    _shopId: string,
   ) {
     const fullPhone = `${phoneCountryCode}${phone}`;
     const cacheKey = `${WALKIN_CUSTOMER_CACHE_PREFIX}${fullPhone}`;

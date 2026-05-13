@@ -1,11 +1,9 @@
-import { PUBLIC_LOCAL_PRICING_SUMMARY } from "@/lib/seo/pricing-copy";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title:
-    "Best Jewellery Shop Software in India 2026 | Orivraa from ₹299/month",
+  title: "Best Jewellery Shop Software 2026 | Orivraa with local pricing",
   description:
-    `Orivraa is the best jewellery shop software for India and modern jewellery businesses. ${PUBLIC_LOCAL_PRICING_SUMMARY} Includes inventory by weight and purity, billing, POS, GSTIN-ready invoices, tax reports, catalogues, customer chat, and analytics.`,
+    "Cloud-based jewellery shop software with inventory by weight and purity, billing, POS, tax-ready invoices, digital catalogues, customer chat, and analytics. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
   keywords: [
     "jewellery shop software",
     "jewellery software",
@@ -52,18 +50,17 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/jewellery-shop-software" },
   openGraph: {
-    title:
-      "Best Jewellery Shop Software in India 2026 | Orivraa from ₹299/month",
+    title: "Best Jewellery Shop Software 2026 | Orivraa with local pricing",
     description:
-      `Free cloud-based jewellery shop software with India pricing from ₹299/month. Manage inventory by weight and purity, billing, POS, GSTIN-ready invoices, tax reports, and digital catalogues with local pricing by country.`,
+      "Free cloud-based jewellery shop software with live local pricing by country. Manage inventory by weight and purity, billing, POS, tax-ready invoices, digital catalogues, customer chat, and analytics.",
     url: "https://www.orivraa.com/jewellery-shop-software",
     type: "article",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Best Jewellery Shop Software 2026 | Orivraa from ₹299/month",
+    title: "Best Jewellery Shop Software 2026 | Orivraa with local pricing",
     description:
-      "Free jewellery shop software with India pricing from ₹299/month, billing, GSTIN-ready invoices, POS, customer chat, and analytics.",
+      "Free jewellery shop software with live local pricing by country, billing, POS, tax-ready invoices, customer chat, and analytics.",
   },
 };
 

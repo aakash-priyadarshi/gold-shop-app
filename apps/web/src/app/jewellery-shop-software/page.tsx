@@ -4,19 +4,24 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
 import { T } from "@/components/ui/T";
+import { subscriptionPlansApi } from "@/lib/api";
 import {
-  INDIA_PRO_MONTHLY_PRICE,
-  INDIA_PRO_PLUS_MONTHLY_PRICE,
-  NEPAL_PRO_MONTHLY_PRICE,
-} from "@/lib/seo/pricing-copy";
+  COUNTRIES,
+  CURRENCIES,
+  usePreferencesStore,
+  type CountryCode,
+  type CurrencyCode,
+} from "@/store/preferences";
 import {
   ArrowRight,
   BarChart3,
   BookOpen,
+  Check,
   Cloud,
   Crown,
   Globe,
   LayoutDashboard,
+  Loader2,
   MessageSquare,
   Monitor,
   Package,
@@ -32,6 +37,66 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+interface PlanFromAPI {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  country: string;
+  currency: CurrencyCode;
+  monthlyPrice: number;
+  annualPrice: number;
+  maxProducts: number | null;
+  maxInvoicesPerMonth: number | null;
+  maxCatalogues: number | null;
+  catalogueLimit: number | null;
+  maxOrdersPerMonth: number | null;
+  commissionPercent: number;
+  includesAi: boolean;
+  monthlyAiCredits: number;
+  rolloverCap: number;
+  extraCreditPrice: number;
+  overageBehavior: string;
+  features: Record<string, boolean | string | number>;
+  sortOrder: number;
+  badgeText?: string | null;
+  buttonColor?: string | null;
+}
+
+const BUYER_COUNTRY_COUNT = 27;
+
+function currencySymbol(code: CurrencyCode): string {
+  return CURRENCIES[code]?.symbol ?? code;
+}
+
+function formatPrice(amount: number, currency: CurrencyCode): string {
+  const sym = currencySymbol(currency);
+  if (amount === 0) return `${sym}0`;
+
+  const hasDecimals = amount % 1 !== 0;
+  try {
+    const locale = CURRENCIES[currency]?.locale ?? "en-US";
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: hasDecimals ? 2 : 0,
+      maximumFractionDigits: hasDecimals ? 2 : 0,
+    }).format(amount);
+  } catch {
+    return `${sym}${amount.toLocaleString()}`;
+  }
+}
+
+function getListingLimitText(plan: PlanFromAPI | undefined): string {
+  if (!plan) return "Live plan details update by market.";
+
+  const limit = plan.catalogueLimit ?? plan.maxProducts;
+  return limit
+    ? `Up to ${limit.toLocaleString()} product listings.`
+    : "Unlimited product listings.";
+}
 
 /* ────────────────────────────────────────────────────────────── */
 /*  STRUCTURED DATA (SoftwareApplication + FAQPage)               */
@@ -62,67 +127,61 @@ const softwareJsonLd = {
           priceCurrency: "INR",
           name: "Free Plan",
           description:
-            "Free jewellery shop software with marketplace access and core inventory tools. Paid plans use local country pricing.",
+            "Free jewellery shop software for all markets. Up to 15 products, basic inventory, customer chat, and marketplace listing. No credit card required.",
           url: "https://www.orivraa.com/pricing",
         },
         {
           "@type": "Offer",
-          price: `${INDIA_PRO_MONTHLY_PRICE}`,
+          price: "299",
           priceCurrency: "INR",
-          name: "Pro Plan",
-          eligibleRegion: {
-            "@type": "Country",
-            name: "India",
-          },
-          priceSpecification: {
-            "@type": "UnitPriceSpecification",
-            price: `${INDIA_PRO_MONTHLY_PRICE}`,
-            priceCurrency: "INR",
-            billingDuration: "P1M",
-            unitText: "per month",
-          },
+          name: "Pro Plan — India",
           description:
-            "India pricing for Orivraa Pro with unlimited products, inventory management, invoicing, customer management, bulk upload, advanced analytics, GSTIN-ready invoices, and priority support.",
+            "Orivraa Pro for India: ₹299/month. Unlimited products, GST-ready invoicing, analytics, CRM, digital catalogues, and AI tools.",
           url: "https://www.orivraa.com/pricing",
         },
         {
           "@type": "Offer",
-          price: `${INDIA_PRO_PLUS_MONTHLY_PRICE}`,
-          priceCurrency: "INR",
-          name: "Pro+ Plan (Most Popular)",
-          eligibleRegion: {
-            "@type": "Country",
-            name: "India",
-          },
-          priceSpecification: {
-            "@type": "UnitPriceSpecification",
-            price: `${INDIA_PRO_PLUS_MONTHLY_PRICE}`,
-            priceCurrency: "INR",
-            billingDuration: "P1M",
-            unitText: "per month",
-          },
-          description:
-            "India pricing for Orivraa Pro+ with everything in Pro, additional AI automation, smart recommendations, analytics, and advanced seller tools.",
-          url: "https://www.orivraa.com/pricing",
-        },
-        {
-          "@type": "Offer",
-          price: `${NEPAL_PRO_MONTHLY_PRICE}`,
+          price: "399",
           priceCurrency: "NPR",
-          name: "Pro Plan (Nepal)",
-          eligibleRegion: {
-            "@type": "Country",
-            name: "Nepal",
-          },
-          priceSpecification: {
-            "@type": "UnitPriceSpecification",
-            price: `${NEPAL_PRO_MONTHLY_PRICE}`,
-            priceCurrency: "NPR",
-            billingDuration: "P1M",
-            unitText: "per month",
-          },
+          name: "Pro Plan — Nepal",
           description:
-            "Nepal pricing for Orivraa Pro with local billing, analytics, inventory workflows, and marketplace access.",
+            "Orivraa Pro for Nepal jewellers: NPR 399/month. Unlimited products, invoicing, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "9.99",
+          priceCurrency: "GBP",
+          name: "Pro Plan — UK",
+          description:
+            "Orivraa Pro for UK jewellery shops: £9.99/month. VAT-compliant invoicing, unlimited products, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "USD",
+          name: "Pro Plan — USA",
+          description:
+            "Orivraa Pro for US jewellery businesses: $12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "EUR",
+          name: "Pro Plan — EU",
+          description:
+            "Orivraa Pro for European jewellers: €12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "39.99",
+          priceCurrency: "AED",
+          name: "Pro Plan — UAE",
+          description:
+            "Orivraa Pro for UAE jewellery shops: AED 39.99/month.",
           url: "https://www.orivraa.com/pricing",
         },
         {
@@ -162,7 +221,7 @@ const softwareJsonLd = {
           name: "What is the best software for jewellery shops?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Orivraa is the best jewellery shop software for modern jewellers in 2026. It offers inventory management by weight and purity, digital catalogues, multi-currency pricing, built-in customer chat, sales analytics, and AI-powered tools. Orivraa starts free, and India Pro starts at ₹299/month with local pricing by country. Trusted by jewellers across Nepal, India, UAE, UK, and USA.",
+            text: "Orivraa is the best jewellery shop software for modern jewellers in 2026. Free plan available (up to 15 products). Pro plans start at ₹299/month for India, NPR 399/month for Nepal, £9.99/month for UK, $12.99/month for USA, €12.99/month for EU, and AED 39.99/month for UAE. Features include inventory management by weight and purity, digital catalogues, multi-currency pricing, built-in customer chat, sales analytics, and AI-powered tools. Trusted by jewellers across Nepal, India, UAE, UK, and USA.",
           },
         },
         {
@@ -170,7 +229,7 @@ const softwareJsonLd = {
           name: "Is there free software for gold shops?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Orivraa offers a completely free plan for gold shops that includes inventory management for up to 15 products, weight and purity tracking, digital catalogue creation, customer messaging, and basic analytics. No credit card is required to get started. Upgrade to Pro for unlimited products and advanced features, with India pricing from ₹299/month and local pricing by country.",
+            text: "Yes. Orivraa offers a completely free plan for gold shops that includes inventory management for up to 15 products, weight and purity tracking, digital catalogue creation, customer messaging, and basic analytics. No credit card is required to get started. Upgrade to Pro for unlimited products and advanced features with live local pricing shown by country.",
           },
         },
         {
@@ -178,7 +237,15 @@ const softwareJsonLd = {
           name: "How does Orivraa compare to Zoho, Marg ERP, and Vyapar for jewellery?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Orivraa is purpose-built for jewellery businesses, unlike general-purpose tools like Zoho (starting at ₹749/month) or Vyapar. Key advantages: (1) Free plan available — Zoho and Marg charge from day one, (2) Built-in jewellery marketplace with international buyers, (3) Weight and purity tracking designed for gold/silver/diamond, (4) Digital catalogues shareable on WhatsApp and social media, (5) Multi-currency pricing for international sales, (6) AI-powered product descriptions optimised for jewellery.",
+            text: "Orivraa is purpose-built for jewellery businesses, unlike general-purpose tools like Zoho (starting at ₹749/month) or Vyapar (₹699–₹4,099/year). Orivraa Pro costs ₹299/month (₹3,588/year) for India — cheaper than Online Munim (₹7,670/year), Marg ERP (₹8,100–₹10,300/year), and Nebu Jewellery (₹3,692/year). Key advantages: (1) Free plan always available — Zoho, Marg, and Online Munim charge from day one, (2) Cloud-based with mobile app — Marg ERP is Windows desktop only, (3) Built-in jewellery marketplace with international buyers, (4) Weight and purity tracking for gold/silver/diamond, (5) Digital catalogues shareable on WhatsApp, (6) AI-powered product descriptions optimised for jewellery.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Is Orivraa cheaper than Online Munim and Marg ERP for jewellery businesses?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. Orivraa is cheaper than both Online Munim and Marg ERP. Orivraa Pro for India costs ₹299/month (₹3,588/year). Online Munim starts at ₹7,670/year. Marg ERP Jewellery starts at ₹8,100–₹10,300/year. Orivraa also has a permanently free plan for up to 15 products — something Online Munim and Marg ERP do not offer. Orivraa additionally works on web, mobile (Android and iOS), and Windows/macOS desktop, whereas Marg ERP is Windows-only. UK pricing is £9.99/month, UAE is AED 39.99/month, and US pricing is $12.99/month.",
           },
         },
         {
@@ -257,7 +324,7 @@ const CORE_FEATURES = [
   },
   {
     title: "Marketplace Listing",
-    desc: "Your products are automatically listed on Orivraa's marketplace, visible to thousands of buyers across 6+ countries. Priority listing available for Pro sellers.",
+    desc: `Your products are automatically listed on Orivraa's marketplace, visible to buyers across ${BUYER_COUNTRY_COUNT} countries. Priority listing available for Pro sellers.`,
     icon: Store,
   },
 ];
@@ -279,7 +346,7 @@ const COMPARISON = [
   },
   {
     feature: "Online Marketplace",
-    orivraa: "✓ Built-in (6+ countries)",
+    orivraa: `✓ Built-in (${BUYER_COUNTRY_COUNT} buyer countries)`,
     zoho: "✗ No marketplace",
     marg: "✗ No marketplace",
     vyapar: "✗ No marketplace",
@@ -367,7 +434,7 @@ const USE_CASES = [
   },
   {
     title: "Online Jewellery Sellers",
-    desc: "List products on Orivraa's international marketplace. Create digital catalogues for social media. Reach buyers in 6+ countries.",
+    desc: `List products on Orivraa's international marketplace. Create digital catalogues for social media. Reach buyers in ${BUYER_COUNTRY_COUNT} countries.`,
     icon: Globe,
   },
 ];
@@ -415,18 +482,58 @@ const FAQS = [
   },
 ];
 
-const STATS = [
-  { value: "₹299/mo", label: "India Pro price" },
-  { value: "6+", label: "Countries with buyers" },
-  { value: "Free", label: "Starting price" },
-  { value: "<5 min", label: "Setup time" },
-];
-
 /* ────────────────────────────────────────────────────────────── */
 /*  PAGE COMPONENT                                                */
 /* ────────────────────────────────────────────────────────────── */
 
 export default function JewelleryShopSoftwarePage() {
+  const [plans, setPlans] = useState<PlanFromAPI[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+
+  const country = usePreferencesStore((s) => s.country);
+  const detectedCountry = usePreferencesStore((s) => s.detectedCountry);
+  const pricingCountry =
+    detectedCountry && COUNTRIES[detectedCountry] ? detectedCountry : country;
+
+  const fetchPlans = useCallback(async (market: CountryCode) => {
+    try {
+      setLoadingPlans(true);
+      const res = await subscriptionPlansApi.getAvailable(market);
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+      setPlans(data);
+    } catch {
+      setPlans([]);
+    } finally {
+      setLoadingPlans(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPlans(pricingCountry);
+  }, [fetchPlans, pricingCountry]);
+
+  const sortedPlans = useMemo(
+    () => [...plans].sort((a, b) => a.sortOrder - b.sortOrder),
+    [plans],
+  );
+
+  const freePlan = sortedPlans.find((plan) => plan.name === "FREE");
+  const proPlan = sortedPlans.find((plan) => plan.name === "PRO");
+  const proPlusPlan = sortedPlans.find((plan) => plan.name === "PRO_PLUS");
+  const pricingMarketLabel = COUNTRIES[pricingCountry]?.name ?? pricingCountry;
+  const liveCurrency =
+    freePlan?.currency ??
+    proPlan?.currency ??
+    proPlusPlan?.currency ??
+    (COUNTRIES[pricingCountry]?.defaultCurrency as CurrencyCode) ??
+    "USD";
+  const liveProPrice = proPlan
+    ? formatPrice(proPlan.monthlyPrice, proPlan.currency)
+    : null;
+  const liveProPlusPrice = proPlusPlan
+    ? formatPrice(proPlusPlan.monthlyPrice, proPlusPlan.currency)
+    : null;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* JSON-LD Structured Data */}
@@ -444,7 +551,16 @@ export default function JewelleryShopSoftwarePage() {
           <div className="relative max-w-5xl mx-auto px-4 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-medium mb-6">
               <Zap className="h-4 w-4" />
-              <T>Free Plan Available · India Pro from ₹299/month</T>
+              <T>Free plan available</T>
+              <span className="text-green-500 dark:text-green-300">•</span>
+              {liveProPrice ? (
+                <span>
+                  {pricingMarketLabel} <T>Pro from</T> {liveProPrice}
+                  <T>/month</T>
+                </span>
+              ) : (
+                <T>Live local pricing by country</T>
+              )}
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">
               <T>
@@ -458,8 +574,8 @@ export default function JewelleryShopSoftwarePage() {
                 inventory by weight and purity, billing, digital catalogues,
                 customer chat, and analytics. Trusted by jewellers across
                 Nepal, India, Dubai, USA and UK. Better than Zoho, Marg ERP and
-                Vyapar. It starts free, and India Pro starts at ₹299/month with
-                local pricing by country.
+                Vyapar. Start free, then upgrade with live local pricing that
+                adapts to your market.
               </T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
@@ -477,25 +593,133 @@ export default function JewelleryShopSoftwarePage() {
                 <T>View Pricing Plans</T>
               </Link>
             </div>
-            <p className="mt-4 text-sm text-gray-500">
+            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
               <T>No setup fees · No contracts · Cancel anytime</T>
+              {liveProPrice && (
+                <>
+                  <span className="mx-2">·</span>
+                  <T>Showing live</T> {pricingMarketLabel} <T>pricing in</T>{" "}
+                  {currencySymbol(liveCurrency)} ({liveCurrency})
+                </>
+              )}
             </p>
           </div>
         </section>
 
-        {/* ── Stats Bar ───────────────────────────────────── */}
+        {/* ── Live Pricing Snapshot ───────────────────────── */}
         <section className="bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800">
-          <div className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-2 md:grid-cols-4 gap-8">
-            {STATS.map((s) => (
-              <div key={s.label} className="text-center">
-                <div className="text-2xl lg:text-3xl font-bold text-amber-600 dark:text-amber-400">
-                  {s.value}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  <T>{s.label}</T>
+          <div className="max-w-6xl mx-auto px-4 py-10">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-8">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
+                  <T>Live pricing snapshot</T>
+                </p>
+                <h2 className="mt-2 text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+                  <T>Current plans for</T> {pricingMarketLabel}
+                </h2>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 max-w-2xl">
+                  <T>
+                    This section uses the same live plan service as the pricing
+                    page, so the monthly rates here stay in sync with your
+                    market.
+                  </T>
+                </p>
+              </div>
+
+              <Link
+                href="/pricing"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+              >
+                <T>Open full pricing page</T>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            {loadingPlans ? (
+              <div className="flex items-center justify-center rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/70 py-14">
+                <div className="inline-flex items-center gap-3 text-gray-500 dark:text-gray-400">
+                  <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+                  <T>Loading live regional pricing…</T>
                 </div>
               </div>
-            ))}
+            ) : (
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-3xl border border-emerald-200 bg-emerald-50/80 p-6 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 text-emerald-600 shadow-sm dark:bg-emerald-900/40 dark:text-emerald-300">
+                    <Store className="h-5 w-5" />
+                  </div>
+                  <p className="mt-5 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                    <T>Free plan</T>
+                  </p>
+                  <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
+                    {freePlan ? formatPrice(freePlan.monthlyPrice, freePlan.currency) : <T>Free</T>}
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+                    <T>Marketplace access, catalogues, messaging, and core shop tools.</T>
+                  </p>
+                </div>
+
+                <div className="rounded-3xl border border-amber-300 bg-white p-6 shadow-sm dark:border-amber-700 dark:bg-gray-950">
+                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
+                    <Crown className="h-5 w-5" />
+                  </div>
+                  <p className="mt-5 text-sm font-semibold text-amber-700 dark:text-amber-300">
+                    {proPlan?.displayName.replace(/\s*\(.*?\)\s*$/, "") ?? "Pro"}
+                  </p>
+                  <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
+                    {proPlan ? formatPrice(proPlan.monthlyPrice, proPlan.currency) : <T>Unavailable</T>}
+                    {proPlan && <span className="ml-1 text-base font-medium text-gray-500 dark:text-gray-400"><T>/month</T></span>}
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+                    {proPlan ? getListingLimitText(proPlan) : "Live Pro pricing is not available for this market yet."}
+                  </p>
+                </div>
+
+                <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-300">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <p className="mt-5 text-sm font-semibold text-violet-700 dark:text-violet-300">
+                    {proPlusPlan?.displayName.replace(/\s*\(.*?\)\s*$/, "") ?? "Pro+"}
+                  </p>
+                  <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
+                    {proPlusPlan ? formatPrice(proPlusPlan.monthlyPrice, proPlusPlan.currency) : <T>Unavailable</T>}
+                    {proPlusPlan && <span className="ml-1 text-base font-medium text-gray-500 dark:text-gray-400"><T>/month</T></span>}
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+                    {proPlusPlan?.includesAi
+                      ? `${proPlusPlan.monthlyAiCredits.toLocaleString()} AI credits/month with advanced automation.`
+                      : "Advanced automation, analytics, and higher limits for growing shops."}
+                  </p>
+                </div>
+
+                <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-300">
+                    <Globe className="h-5 w-5" />
+                  </div>
+                  <p className="mt-5 text-sm font-semibold text-sky-700 dark:text-sky-300">
+                    <T>Marketplace reach</T>
+                  </p>
+                  <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
+                    {BUYER_COUNTRY_COUNT}
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+                    <T>Buyer countries actively browsing Orivraa product listings and enquiries.</T>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-5 inline-flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-600 dark:text-gray-400">
+              <span className="inline-flex items-center gap-2">
+                <Check className="h-4 w-4 text-amber-500" />
+                <T>Final billing is verified against your shop country.</T>
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <Check className="h-4 w-4 text-amber-500" />
+                <T>Annual plans and full feature comparisons stay on the pricing page.</T>
+              </span>
+            </div>
           </div>
         </section>
 
@@ -722,7 +946,7 @@ export default function JewelleryShopSoftwarePage() {
               },
               {
                 icon: Globe,
-                text: "International marketplace (6+ countries)",
+                text: `International marketplace (${BUYER_COUNTRY_COUNT} countries)`,
               },
               {
                 icon: Sparkles,

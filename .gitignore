@@ -68,6 +68,14 @@ db-backup*
 node_modules/
 .pnpm-store/
 
+# Python virtual environments
+.venv/
+venv/
+env/
+pipecat-agent/.deploy-venv/
+**/.venv/
+**/venv/
+
 # Build outputs
 dist/
 build/

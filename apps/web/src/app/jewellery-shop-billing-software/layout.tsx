@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title:
     "Jewellery Shop Billing Software — GST/VAT Invoicing for Gold Shops | Orivraa 2026",
   description:
-    "Best billing software for jewellery shops. GST/VAT-compliant invoicing with making charges, old gold exchange, weight-based pricing, barcode scanning, and multi-currency support. Cloud-based. Starts free.",
+    "Best billing software for jewellery shops. GST/VAT-compliant invoicing with making charges, old gold exchange, weight-based pricing, and barcode scanning. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
   keywords: [
     "jewellery billing software",
     "jewellery shop billing software",

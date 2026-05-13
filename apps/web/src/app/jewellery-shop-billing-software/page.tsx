@@ -2,11 +2,11 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
 import {
-  INDIA_PRO_MONTHLY_PRICE,
-  PUBLIC_LOCAL_PRICING_SUMMARY,
-} from "@/lib/seo/pricing-copy";
+  BUYER_COUNTRY_COUNT,
+  RegionalPricingSnapshot,
+} from "@/components/marketing/RegionalPricingSnapshot";
+import { T } from "@/components/ui/T";
 import {
   ArrowRight,
   BarChart3,
@@ -32,13 +32,71 @@ const jsonLd = {
       description:
         "Professional billing software for jewellery shops with GST/VAT-compliant invoicing, making charges, old gold exchange, weight-based pricing, and barcode scanning.",
       url: "https://www.orivraa.com/jewellery-shop-billing-software",
-      offers: {
-        "@type": "Offer",
-        price: `${INDIA_PRO_MONTHLY_PRICE}`,
-        priceCurrency: "INR",
-        eligibleRegion: { "@type": "Country", name: "India" },
-        description: `India Pro starts at ₹299/month. ${PUBLIC_LOCAL_PRICING_SUMMARY}`,
-      },
+      offers: [
+        {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "INR",
+          name: "Free Plan",
+          description:
+            "Free jewellery billing software for all markets. Up to 15 products, GST/VAT invoicing, and marketplace listing. No credit card required.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "299",
+          priceCurrency: "INR",
+          name: "Pro Plan — India",
+          description:
+            "Orivraa Pro for India: ₹299/month. Unlimited products, GST-ready invoicing, making charges, old gold exchange, analytics, and AI tools.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "399",
+          priceCurrency: "NPR",
+          name: "Pro Plan — Nepal",
+          description:
+            "Orivraa Pro for Nepal jewellers: NPR 399/month. Unlimited products, invoicing, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "9.99",
+          priceCurrency: "GBP",
+          name: "Pro Plan — UK",
+          description:
+            "Orivraa Pro for UK jewellery shops: £9.99/month. VAT-compliant invoicing, unlimited products, and analytics.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "USD",
+          name: "Pro Plan — USA",
+          description:
+            "Orivraa Pro for US jewellery businesses: $12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "12.99",
+          priceCurrency: "EUR",
+          name: "Pro Plan — EU",
+          description:
+            "Orivraa Pro for European jewellers: €12.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "39.99",
+          priceCurrency: "AED",
+          name: "Pro Plan — UAE",
+          description:
+            "Orivraa Pro for UAE jewellery shops: AED 39.99/month.",
+          url: "https://www.orivraa.com/pricing",
+        },
+      ],
       aggregateRating: {
         "@type": "AggregateRating",
         ratingValue: "4.8",
@@ -168,7 +226,7 @@ export default function JewellerBillingSoftwarePage() {
                 scanning. Designed specifically for gold, silver, and diamond
                 jewellery shops.
               </T>{" "}
-              <T>Used by jewellers across 6 countries. Starts free.</T>
+              <T>{`Built for jewellers serving buyers across ${BUYER_COUNTRY_COUNT} countries. Starts free.`}</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -186,6 +244,8 @@ export default function JewellerBillingSoftwarePage() {
             </div>
           </div>
         </section>
+
+        <RegionalPricingSnapshot description="Billing plan rates shown here now stay aligned with the same live regional pricing service used on the main pricing page." />
 
         {/* ── Sample Invoice Breakdown ────────────────────── */}
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
@@ -374,7 +434,7 @@ export default function JewellerBillingSoftwarePage() {
                 },
                 {
                   q: "Is there a free plan for billing?",
-                  a: "Yes. The free plan includes billing for up to 15 products with full tax compliance. Paid plans use local country pricing, and India Pro starts at ₹299/month for unlimited products, advanced reports, and customisation.",
+                  a: "Yes. The free plan includes billing for up to 15 products with full tax compliance. Paid plans use live local country pricing, and this page now follows the same regional pricing service as the main pricing page for current monthly rates.",
                 },
               ].map((faq) => (
                 <details

@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title:
     "Jewellery Ecommerce Software — Sell Gold & Diamond Online | Orivraa 2026",
   description:
-    "Best ecommerce software for jewellery shops. Built-in marketplace, digital catalogues, multi-currency pricing, international shipping, WhatsApp sharing. Sell jewellery online without building a website. Starts free.",
+    "Best ecommerce software for jewellery shops. Built-in marketplace, digital catalogues, multi-currency pricing, international shipping. Sell jewellery online without a website. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
   keywords: [
     "jewellery ecommerce software",
     "sell jewellery online",

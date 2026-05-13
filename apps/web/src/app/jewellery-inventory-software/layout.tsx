@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title:
     "Jewellery Inventory Software — Gold & Diamond Inventory Management | Orivraa 2026",
   description:
-    "Best jewellery inventory management software. Track gold, silver, diamond inventory by weight, purity, and piece. Automatic stock alerts, karigar management, batch tracking. Cloud-based. Starts free.",
+    "Best jewellery inventory management software. Track gold, silver, diamond inventory by weight, purity, and piece. Automatic stock alerts, karigar management, batch tracking. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
   keywords: [
     "jewellery inventory software",
     "jewellery inventory management",
