@@ -3,13 +3,13 @@
 import { api } from "@/lib/api";
 import { usePreferencesStore, type Language } from "@/store/preferences";
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useRef,
+    useState,
+    type ReactNode,
 } from "react";
 
 /* ────────────────────────────────────────────────────────────── */
@@ -38,8 +38,35 @@ const TranslationContext = createContext<TranslationContextValue>({
 /*  localStorage cache helpers                                    */
 /* ────────────────────────────────────────────────────────────── */
 
-const LS_KEY_PREFIX = "orivraa_i18n_";
-const FAILURE_COOLDOWN_MS = 5 * 60 * 1000;
+// Bump this version to invalidate all client localStorage caches.
+// v2: invalidates English-fallback pollution from pre-2026-02-17 deploy.
+const LS_CACHE_VERSION = "v2";
+const LS_KEY_PREFIX = `orivraa_i18n_${LS_CACHE_VERSION}_`;
+const LS_LEGACY_PREFIX = "orivraa_i18n_";
+const FAILURE_COOLDOWN_MS = 30 * 1000; // 30s — recover quickly from transient backend errors
+
+// One-time cleanup of pre-v2 localStorage keys
+let legacyCleared = false;
+function clearLegacyCache() {
+  if (legacyCleared || typeof window === "undefined") return;
+  legacyCleared = true;
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(LS_LEGACY_PREFIX) && !key.startsWith(LS_KEY_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+    if (keysToRemove.length > 0) {
+      // eslint-disable-next-line no-console
+      console.info(`[i18n] Cleared ${keysToRemove.length} legacy cache entries.`);
+    }
+  } catch {
+    // ignore
+  }
+}
 
 function failureKey(locale: string, text: string): string {
   return `${locale}::${text}`;
@@ -62,6 +89,7 @@ function isSuspiciousFallback(source: string, translated: string): boolean {
 
 function loadFromStorage(locale: string): Record<string, string> {
   if (typeof window === "undefined") return {};
+  clearLegacyCache();
   try {
     const raw = localStorage.getItem(`${LS_KEY_PREFIX}${locale}`);
     if (!raw) return {};
@@ -113,11 +141,17 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
 
   // Load localStorage cache when locale changes
   useEffect(() => {
+    failedRef.current.clear();
     if (locale === "en") {
       setDict({});
       return;
     }
-    setDict(loadFromStorage(locale));
+    const loaded = loadFromStorage(locale);
+    setDict(loaded);
+    // eslint-disable-next-line no-console
+    console.info(
+      `[i18n] Locale changed to "${locale}". Loaded ${Object.keys(loaded).length} cached entries.`,
+    );
   }, [locale]);
 
   // Flush pending texts → API → dict + localStorage
