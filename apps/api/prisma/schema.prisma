@@ -165,6 +165,47 @@ model CustomerNote {
   @@index([customerId, shopId])
 }
 
+/// Persistent translation cache (source of truth).
+/// Tier 3 of the read pipeline: Memory → Redis → Translation (DB) → Gemini.
+/// Once Gemini translates a string for a locale, it is upserted here forever
+/// so every other user (and every redeploy / Redis flush) gets it for free.
+model Translation {
+  id          String   @id @default(cuid())
+  /// 2-letter locale code (e.g. "hi", "fr", "ar"). Always lowercase.
+  locale      String   @db.VarChar(8)
+  /// sha256(sourceText).hex sliced to 32 chars — collision-resistant key.
+  sourceHash  String   @db.VarChar(32)
+  /// Original English source text (kept for debugging / re-translation).
+  sourceText  String   @db.Text
+  /// Translated text in the target locale.
+  translation String   @db.Text
+  /// Model that produced the translation (for future re-translations / audits).
+  model       String   @default("gemini-2.0-flash") @db.VarChar(64)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([locale, sourceHash])
+  @@index([locale])
+  @@index([createdAt])
+}
+
+/// Persistent cache of fully-assembled HTML translations.
+/// Same tiering as Translation but keyed by content hash of the entire HTML
+/// document so unchanged pages are served as one DB row hit.
+model HtmlTranslation {
+  id          String   @id @default(cuid())
+  locale      String   @db.VarChar(8)
+  /// sha256(html).hex sliced to 40 chars.
+  contentHash String   @db.VarChar(40)
+  html        String   @db.Text
+  model       String   @default("gemini-2.0-flash") @db.VarChar(64)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([locale, contentHash])
+  @@index([locale])
+}
+
 model RefreshToken {
   id        String    @id @default(uuid())
   userId    String

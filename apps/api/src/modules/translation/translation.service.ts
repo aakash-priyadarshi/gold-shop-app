@@ -1,8 +1,45 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
+import { PrismaService } from "../../prisma/prisma.service";
 import { RedisService } from "../../common/redis";
 import { LOCALE_NAMES, type SupportedLocale } from "./dto/translate.dto";
+
+/* ────────────────────────────────────────────────────────────── */
+/*  Bounded LRU memory cache (L1)                                 */
+/* ────────────────────────────────────────────────────────────── */
+
+/**
+ * Tiny LRU cache backed by Map's insertion-order semantics.
+ * Bounded so a long-running process can't accumulate unbounded memory.
+ */
+class LruCache<V> {
+  private readonly map = new Map<string, V>();
+  constructor(private readonly maxSize: number) {}
+
+  get(key: string): V | undefined {
+    const v = this.map.get(key);
+    if (v === undefined) return undefined;
+    // Touch: re-insert to mark as most recently used
+    this.map.delete(key);
+    this.map.set(key, v);
+    return v;
+  }
+
+  set(key: string, value: V): void {
+    if (this.map.has(key)) this.map.delete(key);
+    else if (this.map.size >= this.maxSize) {
+      // Evict oldest (first inserted)
+      const oldest = this.map.keys().next().value;
+      if (oldest !== undefined) this.map.delete(oldest);
+    }
+    this.map.set(key, value);
+  }
+
+  delete(key: string): void {
+    this.map.delete(key);
+  }
+}
 
 /* ────────────────────────────────────────────────────────────── */
 /*  Simple HTML text-node extractor (no DOM dependency)           */
@@ -78,15 +115,89 @@ export class TranslationService {
   private readonly logger = new Logger(TranslationService.name);
   private readonly GEMINI_API_URL =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+  private readonly MODEL_NAME = "gemini-2.0-flash";
   private readonly apiKey: string;
   private readonly CACHE_PREFIX = "i18n:";
-  private readonly memoryCache = new Map<string, string>();
+  /** L1: in-process LRU. Bounded to prevent memory growth at scale. */
+  private readonly memoryCache = new LruCache<string>(20_000);
 
   constructor(
     private configService: ConfigService,
     private redisService: RedisService,
+    private prisma: PrismaService,
   ) {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
+  }
+
+  /* ────────────────────────────────────────────────────────── */
+  /*  Hashing                                                   */
+  /* ────────────────────────────────────────────────────────── */
+
+  /** 32-char source-text hash used as DB key (collision-resistant). */
+  private sourceHash(text: string): string {
+    return createHash("sha256").update(text).digest("hex").slice(0, 32);
+  }
+
+  /* ────────────────────────────────────────────────────────── */
+  /*  Tier 3 — Postgres lookup / persistence                    */
+  /* ────────────────────────────────────────────────────────── */
+
+  /**
+   * Bulk-load translations from the DB. Returns Map<sourceText, translation>.
+   * Uses a single indexed query on (locale, sourceHash IN [...]).
+   */
+  private async getFromDb(
+    locale: string,
+    texts: string[],
+  ): Promise<Map<string, string>> {
+    if (texts.length === 0) return new Map();
+    const hashToText = new Map<string, string>();
+    for (const text of texts) hashToText.set(this.sourceHash(text), text);
+
+    try {
+      const rows = await this.prisma.translation.findMany({
+        where: { locale, sourceHash: { in: Array.from(hashToText.keys()) } },
+        select: { sourceHash: true, translation: true },
+      });
+      const result = new Map<string, string>();
+      for (const row of rows) {
+        const text = hashToText.get(row.sourceHash);
+        if (text !== undefined) result.set(text, row.translation);
+      }
+      return result;
+    } catch (err) {
+      this.logger.warn(
+        `DB translation lookup failed (continuing): ${(err as Error).message}`,
+      );
+      return new Map();
+    }
+  }
+
+  /**
+   * Persist Gemini translations to the DB. Uses createMany with skipDuplicates
+   * so concurrent writers don't conflict. Fire-and-forget from caller.
+   */
+  private async saveToDb(
+    locale: string,
+    items: Array<{ sourceText: string; translation: string }>,
+  ): Promise<void> {
+    if (items.length === 0) return;
+    try {
+      await this.prisma.translation.createMany({
+        data: items.map((it) => ({
+          locale,
+          sourceHash: this.sourceHash(it.sourceText),
+          sourceText: it.sourceText,
+          translation: it.translation,
+          model: this.MODEL_NAME,
+        })),
+        skipDuplicates: true,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `DB translation save failed (non-fatal): ${(err as Error).message}`,
+      );
+    }
   }
 
   /**
@@ -107,15 +218,15 @@ export class TranslationService {
       return { translations: [], translated: [] };
     }
 
-    // 1. Check cache for each text (auto-invalidates stale English fallbacks)
+    // 1. Check L1 + L2 cache (auto-invalidates stale English fallbacks)
     const results: (string | null)[] = await Promise.all(
       texts.map((text) => this.getValidatedFromCache(locale, text)),
     );
     const translated = results.map((value) => value !== null);
 
-    // 2. Collect uncached texts
-    const uncachedIndices: number[] = [];
-    const uncachedTexts: string[] = [];
+    // 2. Collect uncached texts after L1/L2 miss
+    let uncachedIndices: number[] = [];
+    let uncachedTexts: string[] = [];
     for (let i = 0; i < texts.length; i++) {
       if (results[i] === null) {
         uncachedIndices.push(i);
@@ -123,9 +234,37 @@ export class TranslationService {
       }
     }
 
+    // 2b. Tier 3: bulk DB lookup for anything still missing
+    if (uncachedTexts.length > 0) {
+      const dbHits = await this.getFromDb(locale, uncachedTexts);
+      if (dbHits.size > 0) {
+        const stillMissingIdx: number[] = [];
+        const stillMissingTxt: string[] = [];
+        for (let k = 0; k < uncachedTexts.length; k++) {
+          const text = uncachedTexts[k];
+          const hit = dbHits.get(text);
+          const origIdx = uncachedIndices[k];
+          if (hit && !this.isSuspiciousTranslation(text, hit)) {
+            results[origIdx] = hit;
+            translated[origIdx] = true;
+            // Promote to L2 + L1 for next time
+            this.setInCache(locale, text, hit).catch(() => {});
+          } else {
+            stillMissingIdx.push(origIdx);
+            stillMissingTxt.push(text);
+          }
+        }
+        this.logger.log(
+          `DB hit for ${dbHits.size}/${uncachedTexts.length} texts (locale=${locale}); ${stillMissingTxt.length} still need Gemini`,
+        );
+        uncachedIndices = stillMissingIdx;
+        uncachedTexts = stillMissingTxt;
+      }
+    }
+
     if (uncachedTexts.length === 0) {
       this.logger.debug(
-        `All ${texts.length} texts cached for locale=${locale}`,
+        `All ${texts.length} texts served from cache/DB for locale=${locale}`,
       );
       return {
         translations: results as string[],
@@ -134,7 +273,7 @@ export class TranslationService {
     }
 
     this.logger.log(
-      `Translating ${uncachedTexts.length}/${texts.length} uncached texts to ${locale}`,
+      `Translating ${uncachedTexts.length}/${texts.length} via Gemini \u2192 ${locale}`,
     );
 
     // 3. Translate uncached texts via Gemini (in chunks of 30)
@@ -146,7 +285,9 @@ export class TranslationService {
       try {
         const translations = await this.callGemini(chunk, locale);
 
-        // Cache and fill results
+        // Accumulate validated translations for bulk DB write
+        const toPersist: Array<{ sourceText: string; translation: string }> = [];
+
         for (let j = 0; j < chunk.length; j++) {
           const translation =
             translations[j] !== undefined ? translations[j] : chunk[j];
@@ -156,15 +297,19 @@ export class TranslationService {
           );
           results[chunkIndices[j]] = translation;
           translated[chunkIndices[j]] = isActualTranslation;
-          // Only cache if Gemini actually translated it (not a fallback)
+          // Only cache + persist if Gemini actually translated it
           if (isActualTranslation) {
             this.setInCache(locale, chunk[j], translation).catch(() => {});
+            toPersist.push({ sourceText: chunk[j], translation });
           } else {
             this.logger.warn(
-              `Suspicious fallback for locale=${locale}: "${chunk[j]}" — not caching`,
+              `Suspicious fallback for locale=${locale}: "${chunk[j]}" \u2014 not caching`,
             );
           }
         }
+
+        // Fire-and-forget DB persist (durable Tier 3)
+        this.saveToDb(locale, toPersist).catch(() => {});
       } catch (error) {
         this.logger.error(`Gemini translation failed: ${error.message}`);
         // Fallback: return original English text for failed items
@@ -366,14 +511,13 @@ Respond with ONLY the JSON array, no markdown fences.`;
     }
 
     const contentHash = this.hashContent(html);
+    const htmlRedisKey = this.htmlCacheKey(locale, contentHash);
 
-    // 1. Check full-document cache
-    const cached = await this.redisService.get(
-      this.htmlCacheKey(locale, contentHash),
-    );
+    // 1a. Check Redis full-document cache (Tier 2)
+    const cached = await this.redisService.get(htmlRedisKey);
     if (cached && !this.isSuspiciousHtmlFallback(html, cached)) {
       this.logger.debug(
-        `HTML translation cache hit: locale=${locale} hash=${contentHash}`,
+        `HTML cache hit (Redis): locale=${locale} hash=${contentHash}`,
       );
       return {
         html: cached,
@@ -384,7 +528,33 @@ Respond with ONLY the JSON array, no markdown fences.`;
     }
     if (cached) {
       this.logger.warn(
-        `Ignoring poisoned HTML translation cache for locale=${locale} hash=${contentHash}`,
+        `Ignoring poisoned HTML Redis cache for locale=${locale} hash=${contentHash}`,
+      );
+      this.redisService.del(htmlRedisKey).catch(() => {});
+    }
+
+    // 1b. Check Postgres full-document cache (Tier 3)
+    try {
+      const dbHtml = await this.prisma.htmlTranslation.findUnique({
+        where: { locale_contentHash: { locale, contentHash } },
+        select: { html: true },
+      });
+      if (dbHtml && !this.isSuspiciousHtmlFallback(html, dbHtml.html)) {
+        this.logger.debug(
+          `HTML cache hit (DB): locale=${locale} hash=${contentHash} — promoting to Redis`,
+        );
+        // Promote to Redis for next time
+        this.redisService.set(htmlRedisKey, dbHtml.html).catch(() => {});
+        return {
+          html: dbHtml.html,
+          contentHash,
+          fromCache: true,
+          translated: true,
+        };
+      }
+    } catch (err) {
+      this.logger.warn(
+        `DB HTML lookup failed (continuing): ${(err as Error).message}`,
       );
     }
 
@@ -402,14 +572,14 @@ Respond with ONLY the JSON array, no markdown fences.`;
       return { html, contentHash, fromCache: false, translated: true };
     }
 
-    // 3. Check per-segment cache; collect uncached
+    // 3. Check per-segment L1+L2 cache; collect uncached
     const segmentResults: (string | null)[] = await Promise.all(
       textSegments.map((s) => this.getFromCache(locale, s.value.trim())),
     );
     const segmentTranslated = segmentResults.map((value) => value !== null);
 
-    const uncachedIdx: number[] = [];
-    const uncachedTexts: string[] = [];
+    let uncachedIdx: number[] = [];
+    let uncachedTexts: string[] = [];
     for (let i = 0; i < textSegments.length; i++) {
       if (segmentResults[i] === null) {
         uncachedIdx.push(i);
@@ -417,8 +587,32 @@ Respond with ONLY the JSON array, no markdown fences.`;
       }
     }
 
+    // 3b. Tier 3: bulk DB lookup for missing segments
+    if (uncachedTexts.length > 0) {
+      const dbHits = await this.getFromDb(locale, uncachedTexts);
+      if (dbHits.size > 0) {
+        const stillMissingIdx: number[] = [];
+        const stillMissingTxt: string[] = [];
+        for (let k = 0; k < uncachedTexts.length; k++) {
+          const text = uncachedTexts[k];
+          const hit = dbHits.get(text);
+          const localIdx = uncachedIdx[k];
+          if (hit && !this.isSuspiciousTranslation(text, hit)) {
+            segmentResults[localIdx] = hit;
+            segmentTranslated[localIdx] = true;
+            this.setInCache(locale, text, hit).catch(() => {});
+          } else {
+            stillMissingIdx.push(localIdx);
+            stillMissingTxt.push(text);
+          }
+        }
+        uncachedIdx = stillMissingIdx;
+        uncachedTexts = stillMissingTxt;
+      }
+    }
+
     this.logger.log(
-      `HTML translation: ${textSegments.length} segments, ${uncachedTexts.length} uncached → locale=${locale}`,
+      `HTML translation: ${textSegments.length} segments, ${uncachedTexts.length} need Gemini → locale=${locale}`,
     );
 
     // 4. Translate uncached via Gemini in chunks
@@ -430,13 +624,22 @@ Respond with ONLY the JSON array, no markdown fences.`;
 
         try {
           const translations = await this.callGemini(chunk, locale);
+          const toPersist: Array<{ sourceText: string; translation: string }> = [];
           for (let j = 0; j < chunk.length; j++) {
             const translation =
               translations[j] !== undefined ? translations[j] : chunk[j];
+            const isActualTranslation = !this.isSuspiciousTranslation(
+              chunk[j],
+              translation,
+            );
             segmentResults[chunkLocalIdx[j]] = translation;
-            segmentTranslated[chunkLocalIdx[j]] = true;
-            this.setInCache(locale, chunk[j], translation).catch(() => {});
+            segmentTranslated[chunkLocalIdx[j]] = isActualTranslation;
+            if (isActualTranslation) {
+              this.setInCache(locale, chunk[j], translation).catch(() => {});
+              toPersist.push({ sourceText: chunk[j], translation });
+            }
           }
+          this.saveToDb(locale, toPersist).catch(() => {});
         } catch (error) {
           this.logger.error(
             `Gemini HTML translation failed: ${error.message}`,
@@ -465,11 +668,25 @@ Respond with ONLY the JSON array, no markdown fences.`;
     const translatedHtml = segments.map((s) => s.value).join("");
     const translated = segmentTranslated.every(Boolean);
 
-    // 6. Cache the full assembled document (keyed by content hash)
+    // 6. Cache the full assembled document (Tier 2 + Tier 3)
     if (translated) {
-      this.redisService
-        .set(this.htmlCacheKey(locale, contentHash), translatedHtml)
-        .catch(() => {});
+      this.redisService.set(htmlRedisKey, translatedHtml).catch(() => {});
+      this.prisma.htmlTranslation
+        .upsert({
+          where: { locale_contentHash: { locale, contentHash } },
+          create: {
+            locale,
+            contentHash,
+            html: translatedHtml,
+            model: this.MODEL_NAME,
+          },
+          update: { html: translatedHtml, model: this.MODEL_NAME },
+        })
+        .catch((err) =>
+          this.logger.warn(
+            `DB HTML save failed (non-fatal): ${(err as Error).message}`,
+          ),
+        );
     }
 
     return {
