@@ -3,9 +3,16 @@
  * Server-rendered for SEO — no client-side translation needed.
  */
 
-export type Language = "en" | "fr" | "de" | "hi" | "es" | "ar" | "ne";
+export type AboutContentLanguage = "en" | "fr" | "de" | "hi" | "es" | "ar" | "ne";
+export type Language =
+  | AboutContentLanguage
+  | "gu"
+  | "mr"
+  | "ta"
+  | "te"
+  | "kn";
 
-export const SUPPORTED_ABOUT_LANGS: Language[] = [
+export const SUPPORTED_ABOUT_LANGS: AboutContentLanguage[] = [
   "fr",
   "de",
   "hi",
@@ -22,6 +29,11 @@ export const LANG_META: Record<
   fr: { name: "French", nativeName: "Français", flag: "🇫🇷" },
   de: { name: "German", nativeName: "Deutsch", flag: "🇩🇪" },
   hi: { name: "Hindi", nativeName: "हिन्दी", flag: "🇮🇳" },
+  gu: { name: "Gujarati", nativeName: "ગુજરાતી", flag: "🇮🇳" },
+  mr: { name: "Marathi", nativeName: "मराठी", flag: "🇮🇳" },
+  ta: { name: "Tamil", nativeName: "தமிழ்", flag: "🇮🇳" },
+  te: { name: "Telugu", nativeName: "తెలుగు", flag: "🇮🇳" },
+  kn: { name: "Kannada", nativeName: "ಕನ್ನಡ", flag: "🇮🇳" },
   es: { name: "Spanish", nativeName: "Español", flag: "🇪🇸" },
   ar: { name: "Arabic", nativeName: "العربية", dir: "rtl", flag: "🇦🇪" },
   ne: { name: "Nepali", nativeName: "नेपाली", flag: "🇳🇵" },
@@ -194,7 +206,7 @@ export interface AboutContent {
   sellerBenefits: string[];
 }
 
-export const ABOUT_CONTENT: Record<Language, AboutContent> = {
+export const ABOUT_CONTENT: Record<AboutContentLanguage, AboutContent> = {
   en: {
     metaTitle: "About Orivraa | Trusted Jewellery Marketplace",
     metaDescription:
@@ -228,7 +240,7 @@ export const ABOUT_CONTENT: Record<Language, AboutContent> = {
     allRightsReserved: "All rights reserved.",
     languageGuideTitle: "Available in Your Language",
     languageGuideDesc:
-      "Orivraa is available in 7 languages. Here's how to switch to your preferred language:",
+      "Orivraa is available in 12 languages. Here's how to switch to your preferred language:",
     languageGuideSteps: [
       "Click the language selector (globe icon) in the top navigation bar",
       "Choose your preferred language from the dropdown",
@@ -315,7 +327,7 @@ export const ABOUT_CONTENT: Record<Language, AboutContent> = {
     allRightsReserved: "Tous droits réservés.",
     languageGuideTitle: "Disponible dans votre langue",
     languageGuideDesc:
-      "Orivraa est disponible en 7 langues. Voici comment changer de langue :",
+      "Orivraa est disponible en 12 langues. Voici comment changer de langue :",
     languageGuideSteps: [
       "Cliquez sur le sélecteur de langue (icône globe) dans la barre de navigation",
       "Choisissez votre langue préférée dans le menu déroulant",
@@ -402,7 +414,7 @@ export const ABOUT_CONTENT: Record<Language, AboutContent> = {
     allRightsReserved: "Alle Rechte vorbehalten.",
     languageGuideTitle: "In Ihrer Sprache verfügbar",
     languageGuideDesc:
-      "Orivraa ist in 7 Sprachen verfügbar. So wechseln Sie die Sprache:",
+      "Orivraa ist in 12 Sprachen verfügbar. So wechseln Sie die Sprache:",
     languageGuideSteps: [
       "Klicken Sie auf den Sprachwahlschalter (Globus-Symbol) in der Navigationsleiste",
       "Wählen Sie Ihre bevorzugte Sprache aus dem Dropdown-Menü",
@@ -489,7 +501,7 @@ export const ABOUT_CONTENT: Record<Language, AboutContent> = {
     allRightsReserved: "सर्वाधिकार सुरक्षित।",
     languageGuideTitle: "आपकी भाषा में उपलब्ध",
     languageGuideDesc:
-      "Orivraa 7 भाषाओं में उपलब्ध है। अपनी पसंदीदा भाषा में बदलने का तरीका:",
+      "Orivraa 12 भाषाओं में उपलब्ध है। अपनी पसंदीदा भाषा में बदलने का तरीका:",
     languageGuideSteps: [
       "नेविगेशन बार में भाषा चयनकर्ता (ग्लोब आइकन) पर क्लिक करें",
       "ड्रॉपडाउन से अपनी पसंदीदा भाषा चुनें",
@@ -576,7 +588,7 @@ export const ABOUT_CONTENT: Record<Language, AboutContent> = {
     allRightsReserved: "Todos los derechos reservados.",
     languageGuideTitle: "Disponible en tu idioma",
     languageGuideDesc:
-      "Orivraa está disponible en 7 idiomas. Así es como cambiar de idioma:",
+      "Orivraa está disponible en 12 idiomas. Así es como cambiar de idioma:",
     languageGuideSteps: [
       "Haz clic en el selector de idioma (icono de globo) en la barra de navegación",
       "Elige tu idioma preferido del menú desplegable",
@@ -663,7 +675,7 @@ export const ABOUT_CONTENT: Record<Language, AboutContent> = {
     allRightsReserved: "جميع الحقوق محفوظة.",
     languageGuideTitle: "متاح بلغتك",
     languageGuideDesc:
-      "Orivraa متاح بـ 7 لغات. إليك كيفية تبديل اللغة:",
+      "Orivraa متاح بـ 12 لغة. إليك كيفية تبديل اللغة:",
     languageGuideSteps: [
       "انقر على محدد اللغة (أيقونة الكرة الأرضية) في شريط التنقل",
       "اختر لغتك المفضلة من القائمة المنسدلة",
@@ -749,7 +761,7 @@ export const ABOUT_CONTENT: Record<Language, AboutContent> = {
     allRightsReserved: "सर्वाधिकार सुरक्षित।",
     languageGuideTitle: "तपाईंको भाषामा उपलब्ध",
     languageGuideDesc:
-      "Orivraa ७ भाषाहरूमा उपलब्ध छ। आफ्नो मनपर्ने भाषामा स्विच गर्ने तरिका:",
+      "Orivraa १२ भाषाहरूमा उपलब्ध छ। आफ्नो मनपर्ने भाषामा स्विच गर्ने तरिका:",
     languageGuideSteps: [
       "नेभिगेसन बारमा भाषा चयनकर्ता (ग्लोब आइकन) मा क्लिक गर्नुहोस्",
       "ड्रपडाउनबाट आफ्नो मनपर्ने भाषा छान्नुहोस्",

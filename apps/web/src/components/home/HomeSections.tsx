@@ -296,7 +296,7 @@ export function HomeSections() {
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {post.readTime}
+                      <T>{post.readTime}</T>
                     </span>
                   </div>
                 </div>

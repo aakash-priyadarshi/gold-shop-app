@@ -574,7 +574,7 @@ Respond with ONLY the JSON array, no markdown fences.`;
 
     // 3. Check per-segment L1+L2 cache; collect uncached
     const segmentResults: (string | null)[] = await Promise.all(
-      textSegments.map((s) => this.getFromCache(locale, s.value.trim())),
+      textSegments.map((s) => this.getValidatedFromCache(locale, s.value.trim())),
     );
     const segmentTranslated = segmentResults.map((value) => value !== null);
 

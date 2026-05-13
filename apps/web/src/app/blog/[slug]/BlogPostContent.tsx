@@ -82,7 +82,7 @@ export function BlogPostContent({ post, related }: Props) {
             )}
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
-              {post.readTime}
+              <T>{post.readTime}</T>
             </span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-white sm:text-4xl lg:text-[2.5rem] leading-tight">

@@ -14,7 +14,31 @@ function fnv1a(str: string): string {
   return h.toString(36);
 }
 
-const LS_HTML_PREFIX = "orivraa_html_";
+const LS_HTML_CACHE_VERSION = "v2";
+const LS_HTML_PREFIX = `orivraa_html_${LS_HTML_CACHE_VERSION}_`;
+const LS_HTML_LEGACY_PREFIX = "orivraa_html_";
+let legacyHtmlCacheCleared = false;
+
+function clearLegacyHtmlCache() {
+  if (legacyHtmlCacheCleared || typeof window === "undefined") return;
+  legacyHtmlCacheCleared = true;
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (
+        key &&
+        key.startsWith(LS_HTML_LEGACY_PREFIX) &&
+        !key.startsWith(LS_HTML_PREFIX)
+      ) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // ignore
+  }
+}
 
 function cacheKey(locale: string, hash: string) {
   return `${LS_HTML_PREFIX}${locale}_${hash}`;
@@ -22,6 +46,7 @@ function cacheKey(locale: string, hash: string) {
 
 function loadCached(locale: string, hash: string): string | null {
   if (typeof window === "undefined") return null;
+  clearLegacyHtmlCache();
   try {
     const raw = localStorage.getItem(cacheKey(locale, hash));
     if (!raw) return null;
@@ -34,6 +59,7 @@ function loadCached(locale: string, hash: string): string | null {
 
 function saveCached(locale: string, hash: string, html: string) {
   if (typeof window === "undefined") return;
+  clearLegacyHtmlCache();
   try {
     localStorage.setItem(cacheKey(locale, hash), JSON.stringify({ html }));
   } catch {

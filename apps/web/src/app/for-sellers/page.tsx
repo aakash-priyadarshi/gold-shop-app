@@ -2,6 +2,7 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
 import { TrustSignals } from "@/components/marketing/TrustSignals";
+import { T } from "@/components/ui/T";
 import {
     ArrowRight,
     BadgeCheck,
@@ -123,31 +124,33 @@ export default function ForSellersPage() {
           <div className="relative max-w-4xl mx-auto px-4 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-semibold mb-6">
               <Zap className="h-4 w-4" />
-              Free to join — no credit card needed
+              <T>Free to join — no credit card needed</T>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight mb-6">
-              Buyers in your city are{" "}
+              <T>Buyers in your city are</T>{" "}
               <span className="text-amber-600 dark:text-amber-400">
-                waiting for a jeweller
+                <T>waiting for a jeweller</T>
               </span>{" "}
-              like you.
+              <T>like you.</T>
             </h1>
 
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed mb-10">
-              Orivraa connects verified jewellers with buyers who are already
-              looking for custom pieces, ready-made jewellery, and trusted shops.
-              Get a free digital shop profile. Receive leads. Get paid securely.
+              <T>
+                Orivraa connects verified jewellers with buyers who are already
+                looking for custom pieces, ready-made jewellery, and trusted shops.
+                Get a free digital shop profile. Receive leads. Get paid securely.
+              </T>
             </p>
 
             {/* Demand Proof Bar */}
             <div className="inline-flex flex-wrap justify-center gap-6 bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-2xl px-8 py-5 mb-10 shadow-sm">
               <div className="text-center">
                 <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                  Active
+                  <T>Active</T>
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Buyer requests this week
+                  <T>Buyer requests this week</T>
                 </p>
               </div>
               <div className="hidden sm:block w-px bg-gray-200 dark:bg-gray-700" />
@@ -156,7 +159,7 @@ export default function ForSellersPage() {
                   6+
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Countries with active buyers
+                  <T>Countries with active buyers</T>
                 </p>
               </div>
               <div className="hidden sm:block w-px bg-gray-200 dark:bg-gray-700" />
@@ -165,7 +168,7 @@ export default function ForSellersPage() {
                   ₹0
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Cost to join
+                  <T>Cost to join</T>
                 </p>
               </div>
             </div>
@@ -175,14 +178,14 @@ export default function ForSellersPage() {
                 href="/auth/register"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold text-base transition-colors shadow-lg shadow-amber-500/25"
               >
-                Claim Your Free Shop Profile
+                <T>Claim Your Free Shop Profile</T>
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
                 href="/seller-guide"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl font-semibold text-base border border-gray-200 dark:border-gray-700 hover:border-amber-300 transition-colors"
               >
-                How it works
+                <T>How it works</T>
               </Link>
             </div>
             <TrustSignals variant="compact" className="mt-10" />
@@ -199,10 +202,10 @@ export default function ForSellersPage() {
           <div className="max-w-5xl mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3">
-                Start getting orders in 3 steps
+                <T>Start getting orders in 3 steps</T>
               </h2>
               <p className="text-gray-500 dark:text-gray-400">
-                No complex setup. No upfront fees. Just your shop, online.
+                <T>No complex setup. No upfront fees. Just your shop, online.</T>
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-6 lg:gap-10">
@@ -213,13 +216,13 @@ export default function ForSellersPage() {
                   </div>
                   <div className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-500 mb-2">
                     <Clock className="h-3 w-3" />
-                    {s.time}
+                    <T>{s.time}</T>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {s.title}
+                    <T>{s.title}</T>
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                    {s.desc}
+                    <T>{s.desc}</T>
                   </p>
                 </div>
               ))}
@@ -229,7 +232,7 @@ export default function ForSellersPage() {
                 href="/auth/register"
                 className="inline-flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold text-base transition-colors shadow-lg shadow-amber-500/25"
               >
-                Get Started Free
+                <T>Get Started Free</T>
                 <ArrowRight className="h-5 w-5" />
               </Link>
             </div>
@@ -241,12 +244,14 @@ export default function ForSellersPage() {
           <div className="max-w-6xl mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3">
-                Everything included. For free.
+                <T>Everything included. For free.</T>
               </h2>
               <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
-                Your free shop profile comes with all of this. Advanced tools
-                (analytics, invoicing, POS) unlock when you upgrade — but you
-                don't need them to start getting orders.
+                <T>
+                  Your free shop profile comes with all of this. Advanced tools
+                  (analytics, invoicing, POS) unlock when you upgrade — but you
+                  don&apos;t need them to start getting orders.
+                </T>
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -259,10 +264,10 @@ export default function ForSellersPage() {
                     <f.icon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1.5">
-                    {f.title}
+                    <T>{f.title}</T>
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                    {f.desc}
+                    <T>{f.desc}</T>
                   </p>
                 </div>
               ))}
@@ -274,12 +279,14 @@ export default function ForSellersPage() {
         <section className="py-16 bg-amber-600 dark:bg-amber-700">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h2 className="text-3xl font-bold text-white mb-4">
-              You control your business. We handle the tech.
+              <T>You control your business. We handle the tech.</T>
             </h2>
             <p className="text-amber-100 text-lg mb-10 max-w-2xl mx-auto">
-              We are not a marketplace that replaces your shop — we are a tool
-              that helps your shop reach more customers. Your prices, your
-              relationships, your brand.
+              <T>
+                We are not a marketplace that replaces your shop — we are a tool
+                that helps your shop reach more customers. Your prices, your
+                relationships, your brand.
+              </T>
             </p>
             <div className="flex flex-wrap justify-center gap-6 text-white">
               {[
@@ -292,7 +299,7 @@ export default function ForSellersPage() {
               ].map((item) => (
                 <div key={item} className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-amber-200 flex-shrink-0" />
-                  <span className="text-sm font-medium">{item}</span>
+                  <span className="text-sm font-medium"><T>{item}</T></span>
                 </div>
               ))}
             </div>
@@ -304,7 +311,7 @@ export default function ForSellersPage() {
           <div className="max-w-3xl mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
-                Common questions from jewellers
+                <T>Common questions from jewellers</T>
               </h2>
             </div>
             <div className="space-y-4">
@@ -315,10 +322,10 @@ export default function ForSellersPage() {
                 >
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-start gap-2">
                     <BadgeCheck className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                    {item.q}
+                    <T>{item.q}</T>
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed pl-7">
-                    {item.a}
+                    <T>{item.a}</T>
                   </p>
                 </div>
               ))}
@@ -331,39 +338,41 @@ export default function ForSellersPage() {
           <div className="max-w-3xl mx-auto px-4 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-green-900/40 text-green-400 text-sm font-semibold mb-6">
               <TrendingUp className="h-4 w-4" />
-              Buyers are actively waiting
+              <T>Buyers are actively waiting</T>
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-              Ready to start getting orders?
+              <T>Ready to start getting orders?</T>
             </h2>
             <p className="text-gray-400 mb-8 max-w-xl mx-auto">
-              Join free. No credit card. Your shop profile will be live in under
-              10 minutes.
+              <T>
+                Join free. No credit card. Your shop profile will be live in under
+                10 minutes.
+              </T>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/auth/register"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold text-base transition-colors shadow-lg shadow-amber-500/25"
               >
-                Claim Your Free Shop Profile
+                <T>Claim Your Free Shop Profile</T>
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
                 href="/jewellery-shop-software"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-semibold text-base border border-gray-700 transition-colors"
               >
-                See All Features
+                <T>See All Features</T>
               </Link>
             </div>
             <p className="mt-6 text-xs text-gray-600">
-              Questions?{" "}
+              <T>Questions?</T>{" "}
               <Link
                 href="/contact"
                 className="text-amber-400 hover:underline"
               >
-                Talk to our team
+                <T>Talk to our team</T>
               </Link>{" "}
-              — we&apos;ll help you get set up.
+              <T>— we&apos;ll help you get set up.</T>
             </p>
           </div>
         </section>

@@ -65,7 +65,7 @@ export function BlogHighlightsSection({
             >
               <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-3">
                 <span className="inline-flex items-center gap-1 rounded-full bg-white dark:bg-gray-800 px-2.5 py-1 font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                  {post.category}
+                  <T>{post.category}</T>
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
@@ -77,7 +77,7 @@ export function BlogHighlightsSection({
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {post.readTime}
+                  <T>{post.readTime}</T>
                 </span>
               </div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-snug group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors">

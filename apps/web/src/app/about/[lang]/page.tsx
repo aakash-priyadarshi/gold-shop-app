@@ -9,7 +9,7 @@ import {
   LIVE_PLATFORMS,
   SUPPORTED_ABOUT_LANGS,
   TESTIMONIALS,
-  type Language,
+  type AboutContentLanguage,
 } from "@/data/about-i18n";
 import {
   ArrowRightIcon,
@@ -52,15 +52,16 @@ export default async function LocalizedAboutPage({
   params: Promise<{ lang: string }>;
 }) {
   const { lang: rawLang } = await params;
-  if (!SUPPORTED_ABOUT_LANGS.includes(rawLang as Language)) {
+  if (!SUPPORTED_ABOUT_LANGS.includes(rawLang as AboutContentLanguage)) {
     notFound();
   }
-  const lang = rawLang as Language;
+  const lang = rawLang as AboutContentLanguage;
   const c = ABOUT_CONTENT[lang];
   const meta = LANG_META[lang];
   const isRTL = meta.dir === "rtl";
 
   const allLangs = Object.entries(LANG_META).filter(([l]) => l !== lang);
+  const staticAboutLangs = new Set<string>(["en", ...SUPPORTED_ABOUT_LANGS]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950" dir={isRTL ? "rtl" : "ltr"}>
@@ -389,7 +390,13 @@ export default async function LocalizedAboutPage({
               {allLangs.map(([code, lm]) => (
                 <Link
                   key={code}
-                  href={code === "en" ? "/about" : `/about/${code}`}
+                  href={
+                    code === "en"
+                      ? "/about"
+                      : staticAboutLangs.has(code)
+                        ? `/about/${code}`
+                        : "/about"
+                  }
                   className="px-4 py-2 rounded-full text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-amber-400 hover:shadow transition-all"
                 >
                   {lm.flag} {lm.nativeName}

@@ -74,7 +74,7 @@ export default function BlogPage() {
                   <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-stone-500 dark:text-stone-400">
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-3 py-1 text-xs font-medium text-amber-800 dark:text-amber-300">
                       <Tag className="h-3 w-3" />
-                      {featured.category}
+                      <T>{featured.category}</T>
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5" />
@@ -86,7 +86,7 @@ export default function BlogPage() {
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" />
-                      {featured.readTime}
+                      <T>{featured.readTime}</T>
                     </span>
                   </div>
                   <h3 className="text-2xl font-bold text-stone-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors sm:text-3xl">
@@ -119,11 +119,11 @@ export default function BlogPage() {
                   <div className="flex flex-1 flex-col p-6">
                     <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
                       <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 dark:bg-stone-700 px-2.5 py-0.5 font-medium text-stone-700 dark:text-stone-300">
-                        {post.category}
+                        <T>{post.category}</T>
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {post.readTime}
+                        <T>{post.readTime}</T>
                       </span>
                     </div>
                     <h3 className="text-lg font-bold text-stone-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors leading-snug">

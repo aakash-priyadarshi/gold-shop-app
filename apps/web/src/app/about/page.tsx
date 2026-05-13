@@ -7,11 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
 import {
     COMING_SOON_PLATFORMS,
-    LANG_META,
     LIVE_PLATFORMS,
-    SUPPORTED_ABOUT_LANGS,
     TESTIMONIALS,
 } from "@/data/about-i18n";
+import { LANGUAGES } from "@/store/preferences";
 import {
     ArrowRightIcon,
     BuildingStorefrontIcon,
@@ -339,7 +338,7 @@ export default function AboutPage() {
                       {platform.name}
                     </h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {platform.category}
+                      <T>{platform.category}</T>
                     </p>
                     <span className="text-xs text-amber-600 group-hover:underline mt-2 inline-block">
                       <T>Visit Profile</T> →
@@ -427,17 +426,17 @@ export default function AboutPage() {
                       ))}
                     </div>
                     <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 italic">
-                      &quot;{testimonial.text}&quot;
+                      &quot;<T>{testimonial.text}</T>&quot;
                     </p>
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white text-sm">
                         {testimonial.name}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {testimonial.role}
+                        <T>{testimonial.role}</T>
                       </p>
                       <p className="text-xs text-gray-400">
-                        {testimonial.location}
+                        <T>{testimonial.location}</T>
                       </p>
                     </div>
                   </CardContent>
@@ -453,19 +452,17 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <T>This page is also available in:</T>
+              <T>Orivraa currently supports these app languages:</T>
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
-              {SUPPORTED_ABOUT_LANGS.map((code) => {
-                const lm = LANG_META[code];
+              {Object.entries(LANGUAGES).map(([code, language]) => {
                 return (
-                  <Link
+                  <span
                     key={code}
-                    href={`/about/${code}`}
                     className="px-4 py-2 rounded-full text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-amber-400 hover:shadow transition-all"
                   >
-                    {lm.flag} {lm.nativeName}
-                  </Link>
+                    {language.nativeName} <span className="text-gray-400">({language.name})</span>
+                  </span>
                 );
               })}
             </div>
@@ -519,7 +516,7 @@ export default function AboutPage() {
                       <div className="text-center">
                         <BuildingStorefrontIcon className="h-16 w-16 mx-auto text-amber-500 mb-4" />
                         <h3 className="text-2xl font-bold text-white mb-2">
-                          500+ Sellers
+                          500+ <T>Sellers</T>
                         </h3>
                         <p className="text-gray-400">
                           <T>Already trust Orivraa to grow their business</T>

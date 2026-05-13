@@ -1,9 +1,8 @@
 import {
   ABOUT_CONTENT,
-  LANG_META,
   LIVE_PLATFORMS,
   SUPPORTED_ABOUT_LANGS,
-  type Language,
+  type AboutContentLanguage,
 } from "@/data/about-i18n";
 import { Metadata } from "next";
 
@@ -22,10 +21,10 @@ export async function generateMetadata({
   params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
   const { lang: rawLang } = await params;
-  if (!SUPPORTED_ABOUT_LANGS.includes(rawLang as Language)) {
+  if (!SUPPORTED_ABOUT_LANGS.includes(rawLang as AboutContentLanguage)) {
     return {};
   }
-  const lang = rawLang as Language;
+  const lang = rawLang as AboutContentLanguage;
   const c = ABOUT_CONTENT[lang];
 
   const languages: Record<string, string> = { en: `${BASE_URL}/about` };
@@ -54,7 +53,7 @@ export async function generateMetadata({
   };
 }
 
-function generateJsonLd(lang: Language) {
+function generateJsonLd(lang: AboutContentLanguage) {
   const c = ABOUT_CONTENT[lang];
 
   return [
@@ -76,7 +75,20 @@ function generateJsonLd(lang: Language) {
         "@type": "ContactPoint",
         email: "support@orivraa.com",
         contactType: "customer service",
-        availableLanguage: ["English", "French", "German", "Hindi", "Spanish", "Arabic", "Nepali"],
+        availableLanguage: [
+          "English",
+          "Hindi",
+          "Nepali",
+          "Gujarati",
+          "Marathi",
+          "Tamil",
+          "Telugu",
+          "Kannada",
+          "French",
+          "German",
+          "Spanish",
+          "Arabic",
+        ],
       },
       sameAs: [...SOCIAL_PROFILES, ...LIVE_PLATFORMS.map((p) => p.url)],
     },
@@ -100,7 +112,7 @@ export default async function LocalizedAboutLayout({
   params: Promise<{ lang: string }>;
 }) {
   const { lang: rawLang } = await params;
-  const lang = (SUPPORTED_ABOUT_LANGS.includes(rawLang as Language) ? rawLang : "en") as Language;
+  const lang = (SUPPORTED_ABOUT_LANGS.includes(rawLang as AboutContentLanguage) ? rawLang : "en") as AboutContentLanguage;
   const jsonLd = generateJsonLd(lang);
 
   return (
