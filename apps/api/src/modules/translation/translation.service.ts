@@ -107,9 +107,9 @@ export class TranslationService {
       return { translations: [], translated: [] };
     }
 
-    // 1. Check cache for each text
+    // 1. Check cache for each text (auto-invalidates stale English fallbacks)
     const results: (string | null)[] = await Promise.all(
-      texts.map((text) => this.getFromCache(locale, text)),
+      texts.map((text) => this.getValidatedFromCache(locale, text)),
     );
     const translated = results.map((value) => value !== null);
 
@@ -150,10 +150,20 @@ export class TranslationService {
         for (let j = 0; j < chunk.length; j++) {
           const translation =
             translations[j] !== undefined ? translations[j] : chunk[j];
+          const isActualTranslation = !this.isSuspiciousTranslation(
+            chunk[j],
+            translation,
+          );
           results[chunkIndices[j]] = translation;
-          translated[chunkIndices[j]] = true;
-          // Cache permanently (no TTL)
-          this.setInCache(locale, chunk[j], translation).catch(() => {});
+          translated[chunkIndices[j]] = isActualTranslation;
+          // Only cache if Gemini actually translated it (not a fallback)
+          if (isActualTranslation) {
+            this.setInCache(locale, chunk[j], translation).catch(() => {});
+          } else {
+            this.logger.warn(
+              `Suspicious fallback for locale=${locale}: "${chunk[j]}" — not caching`,
+            );
+          }
         }
       } catch (error) {
         this.logger.error(`Gemini translation failed: ${error.message}`);
@@ -241,6 +251,21 @@ Respond with ONLY the JSON array, no markdown fences.`;
     return `${this.CACHE_PREFIX}${locale}:${hash}`;
   }
 
+  /**
+   * Returns true when a translation looks like an untranslated English fallback.
+   * Specifically: source and translated are identical, the text contains Latin
+   * characters, and the text is either multi-word (has whitespace) or longer
+   * than 24 characters (short single words may legitimately be the same in
+   * both languages, e.g. brand names, "OK", numbers).
+   */
+  private isSuspiciousTranslation(source: string, translation: string): boolean {
+    const s = source.trim();
+    const t = translation.trim();
+    if (!s || s !== t) return false;
+    if (!/[A-Za-z]/.test(s)) return false;
+    return /\s/.test(s) || s.length > 24;
+  }
+
   private async getFromCache(
     locale: string,
     text: string,
@@ -252,6 +277,34 @@ Respond with ONLY the JSON array, no markdown fences.`;
     const redisValue = await this.redisService.get(key);
     if (redisValue) this.memoryCache.set(key, redisValue);
     return redisValue;
+  }
+
+  /**
+   * Like getFromCache but auto-invalidates stale English fallbacks.
+   * If a cached value looks like it was never actually translated
+   * (source === cached for multi-word / long strings), the stale entry
+   * is deleted from both Redis and the in-memory cache so that the next
+   * request will call Gemini again.
+   */
+  private async getValidatedFromCache(
+    locale: string,
+    text: string,
+  ): Promise<string | null> {
+    const cached = await this.getFromCache(locale, text);
+    if (cached === null) return null;
+
+    if (this.isSuspiciousTranslation(text, cached)) {
+      // Stale English fallback in cache — evict it
+      const key = this.cacheKey(locale, text);
+      this.memoryCache.delete(key);
+      this.redisService.del(key).catch(() => {});
+      this.logger.warn(
+        `Evicted stale fallback from cache for locale=${locale}: "${text}"`,
+      );
+      return null;
+    }
+
+    return cached;
   }
 
   private async setInCache(
