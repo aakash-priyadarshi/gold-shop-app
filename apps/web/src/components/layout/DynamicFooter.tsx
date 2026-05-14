@@ -160,6 +160,14 @@ export function DynamicFooter() {
               </li>
               <li>
                 <Link
+                  href="/jewellery-store-management-software"
+                  className="hover:text-gold-400 transition-colors"
+                >
+                  <T>Store Management</T>
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/partner"
                   className="hover:text-gold-400 transition-colors"
                 >
@@ -188,6 +196,14 @@ export function DynamicFooter() {
                   className="hover:text-gold-400 transition-colors"
                 >
                   <T>Support</T>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/help"
+                  className="hover:text-gold-400 transition-colors"
+                >
+                  <T>Help Center</T>
                 </Link>
               </li>
             </ul>

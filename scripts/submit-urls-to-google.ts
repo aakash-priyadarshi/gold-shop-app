@@ -28,27 +28,38 @@ const INDEXING_ENDPOINT =
   "https://indexing.googleapis.com/v3/urlNotifications:publish";
 
 // Priority URLs to push when no other source is given.
-// These are the pages currently stuck in "Discovered – currently not indexed".
+// Keep this list to pages that are genuinely unindexed or recently updated.
+// Pages already stably indexed do not need daily nudging (wastes 200/day quota).
 const PRIORITY_URLS: string[] = [
-  "https://www.orivraa.com/",
-  "https://www.orivraa.com/ai-sales-team",
-  "https://www.orivraa.com/designs",
-  "https://www.orivraa.com/shop",
-  "https://www.orivraa.com/shops",
-  "https://www.orivraa.com/for-sellers",
-  "https://www.orivraa.com/help",
-  "https://www.orivraa.com/support",
-  "https://www.orivraa.com/privacy",
-  "https://www.orivraa.com/terms",
-  "https://www.orivraa.com/refund",
-  "https://www.orivraa.com/download/changelog",
-  "https://www.orivraa.com/rfq/create",
+  // ── Pages with thin/no internal links (most likely to stay stuck) ──
   "https://www.orivraa.com/jewellery-store-management-software",
+  "https://www.orivraa.com/help",
+
+  // ── Jewellery landing pages — updated 2026-05-13 with new pricing content ──
+  "https://www.orivraa.com/jewellery-shop-software",
+  "https://www.orivraa.com/jewellery-ecommerce-software",
+  "https://www.orivraa.com/jewellery-inventory-software",
+  "https://www.orivraa.com/jewellery-pos-software",
+  "https://www.orivraa.com/jewellery-shop-billing-software",
+
+  // ── Compare pages — updated 2026-05-13, linked only from 3 indexed pages ──
   "https://www.orivraa.com/compare/orivraa-vs-tally",
   "https://www.orivraa.com/compare/orivraa-vs-marg-erp",
   "https://www.orivraa.com/compare/jewellery-crm-software-india",
   "https://www.orivraa.com/compare/billing-software-india-jewellery-shops",
-  "https://www.orivraa.com/blog",
+
+  // ── Utility pages not in main nav ──
+  "https://www.orivraa.com/ai-sales-team",
+  "https://www.orivraa.com/designs",
+  "https://www.orivraa.com/shop",
+  "https://www.orivraa.com/for-sellers",
+  "https://www.orivraa.com/support",
+  "https://www.orivraa.com/privacy",
+  "https://www.orivraa.com/terms",
+  "https://www.orivraa.com/download/changelog",
+  "https://www.orivraa.com/rfq/create",
+
+  // ── Blog posts not yet indexed ──
   "https://www.orivraa.com/blog/best-jewellery-shop-software-2025",
   "https://www.orivraa.com/blog/best-jewellery-store-management-software-2026",
   "https://www.orivraa.com/blog/hallmarking-compliance-checklist-jewellers-india",

@@ -119,6 +119,14 @@ export function Footer() {
               </li>
               <li>
                 <Link
+                  href="/jewellery-store-management-software"
+                  className="hover:text-gold-400 transition-colors"
+                >
+                  Store Management
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/partner"
                   className="hover:text-gold-400 transition-colors"
                 >
@@ -147,6 +155,14 @@ export function Footer() {
                   className="hover:text-gold-400 transition-colors"
                 >
                   Support
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/help"
+                  className="hover:text-gold-400 transition-colors"
+                >
+                  Help Center
                 </Link>
               </li>
             </ul>
