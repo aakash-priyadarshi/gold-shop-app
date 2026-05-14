@@ -80,6 +80,12 @@ export const LIVE_PLATFORMS: PlatformProfile[] = [
     logo: "🚀",
     category: "Startup Network",
   },
+  {
+    name: "Trustpilot",
+    url: "https://www.trustpilot.com/review/orivraa.com",
+    logo: "🛡️",
+    category: "Consumer Trust Reviews",
+  },
 ];
 
 export interface ComingSoonPlatform {
@@ -92,7 +98,6 @@ export interface ComingSoonPlatform {
 export const COMING_SOON_PLATFORMS: ComingSoonPlatform[] = [
   { name: "Google Business", logo: "📍", category: "Local Business Listing" },
   { name: "Capterra", logo: "⭐", category: "Business Software Directory" },
-  { name: "Trustpilot", logo: "🛡️", category: "Consumer Trust Reviews" },
   { name: "Product Hunt", logo: "🎯", category: "Product Launch Platform" },
   { name: "AlternativeTo", logo: "🔄", category: "Software Alternatives" },
   { name: "BetaList", logo: "🌱", category: "Startup Discovery" },

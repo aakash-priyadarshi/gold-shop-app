@@ -1,0 +1,16 @@
+# Orivraa Demo Dubber dependencies
+# Install: pip install -r requirements.txt
+#
+# Also requires ffmpeg on PATH for pydub audio assembly:
+#   Windows:  winget install Gyan.FFmpeg
+#   Mac:      brew install ffmpeg
+
+# ElevenLabs TTS (same SDK already used in pipecat-agent)
+elevenlabs>=1.50.0
+
+# Google Translate (free, no API key needed)
+deep-translator>=1.11.4
+
+# Audio assembly & timing sync
+# Requires ffmpeg binary — see above
+pydub>=0.25.1
