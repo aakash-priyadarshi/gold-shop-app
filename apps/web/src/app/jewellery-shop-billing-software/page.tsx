@@ -3,21 +3,21 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import {
-  BUYER_COUNTRY_COUNT,
-  RegionalPricingSnapshot,
+    BUYER_COUNTRY_COUNT,
+    RegionalPricingSnapshot,
 } from "@/components/marketing/RegionalPricingSnapshot";
 import { T } from "@/components/ui/T";
 import {
-  ArrowRight,
-  BarChart3,
-  Calculator,
-  CreditCard,
-  FileText,
-  Printer,
-  Receipt,
-  RefreshCw,
-  Scale,
-  ScanBarcode,
+    ArrowRight,
+    BarChart3,
+    Calculator,
+    CreditCard,
+    FileText,
+    Printer,
+    Receipt,
+    RefreshCw,
+    Scale,
+    ScanBarcode,
 } from "lucide-react";
 import Link from "next/link";
 

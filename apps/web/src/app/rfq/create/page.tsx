@@ -8,130 +8,130 @@ import { SellerTierBadge } from "@/components/pricing/SellerTierBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import {
-  useMarket,
-  WEIGHT_UNIT_SYMBOLS,
-  type WeightUnit,
+    useMarket,
+    WEIGHT_UNIT_SYMBOLS,
+    type WeightUnit,
 } from "@/hooks/useMarket";
 import {
-  fetchTaxRules,
-  lookupTaxRate,
-  type TaxRule,
+    fetchTaxRules,
+    lookupTaxRate,
+    type TaxRule,
 } from "@/hooks/useTaxRules";
 import { getImageUrl } from "@/lib/image-upload";
 import { useT } from "@/providers/translation-provider";
 import {
-  COUNTRIES,
-  CURRENCIES,
-  usePreferencesStore,
-  type CurrencyCode,
+    COUNTRIES,
+    CURRENCIES,
+    usePreferencesStore,
+    type CurrencyCode,
 } from "@/store/preferences";
 import {
-  fromGrams,
-  getCitiesForCountry,
-  getStatesForCountry,
-  toGrams,
+    fromGrams,
+    getCitiesForCountry,
+    getStatesForCountry,
+    toGrams,
 } from "@gold-shop/shared";
 import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  Filter,
-  Gem,
-  Image as ImageIcon,
-  Info,
-  Loader2,
-  MapPin,
-  Phone,
-  RotateCcw,
-  Send,
-  Settings,
-  ShieldCheck,
-  ShoppingBag,
-  Sparkles,
-  Star,
-  TrendingUp,
-  Upload,
-  X,
+    AlertCircle,
+    AlertTriangle,
+    ArrowLeft,
+    ArrowRight,
+    Check,
+    ChevronDown,
+    ChevronUp,
+    Clock,
+    Filter,
+    Gem,
+    Image as ImageIcon,
+    Info,
+    Loader2,
+    MapPin,
+    Phone,
+    RotateCcw,
+    Send,
+    Settings,
+    ShieldCheck,
+    ShoppingBag,
+    Sparkles,
+    Star,
+    TrendingUp,
+    Upload,
+    X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    Fragment,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 
 // Alert Dialog for resume draft prompt
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 // New pricing components
 import {
-  AlloyBuilder,
-  type AlloyConfig,
+    AiDesignStudio,
+    type AiDesignVariation,
+} from "@/components/ai/AiDesignStudio";
+import {
+    AlloyBuilder,
+    type AlloyConfig,
 } from "@/components/pricing/AlloyBuilder";
 import {
-  GemstoneEditorV2,
-  type GemstoneEntry as GemstoneEntryV2,
+    GemstoneEditorV2,
+    type GemstoneEntry as GemstoneEntryV2,
 } from "@/components/pricing/GemstoneEditorV2";
 import { LivePricingPanel } from "@/components/pricing/LivePricingPanel";
 import {
-  MethodCSelector,
-  type MethodCConfig,
+    MethodCSelector,
+    type MethodCConfig,
 } from "@/components/pricing/MethodCSelector";
 import { getApiUrl, intelligenceApi, shopsApi } from "@/lib/api";
 import {
-  AiDesignStudio,
-  type AiDesignVariation,
-} from "@/components/ai/AiDesignStudio";
-import {
-  calculateEstimate,
-  CHAIN_STYLE_OPTIONS,
-  type BuildMethod,
-  type ChainStyleType,
-  type EstimateRequest,
+    calculateEstimate,
+    CHAIN_STYLE_OPTIONS,
+    type BuildMethod,
+    type ChainStyleType,
+    type EstimateRequest,
 } from "@/lib/pricing/calculate-estimate";
 
 const API_URL = getApiUrl();

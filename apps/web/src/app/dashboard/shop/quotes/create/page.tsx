@@ -1,10 +1,14 @@
 "use client";
 
+import {
+    AiDesignStudio,
+    type AiDesignVariation,
+} from "@/components/ai/AiDesignStudio";
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import {
-  GemstoneEditorV2,
-  type GemstoneEntry as GemstoneEntryV2,
+    GemstoneEditorV2,
+    type GemstoneEntry as GemstoneEntryV2,
 } from "@/components/pricing/GemstoneEditorV2";
 import { LivePricingPanel } from "@/components/pricing/LivePricingPanel";
 import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
@@ -12,24 +16,24 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FlagImage } from "@/components/ui/phone-input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { T } from "@/components/ui/T";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -38,52 +42,48 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { getApiUrl, shopQuotesApi } from "@/lib/api";
 import {
-  BUILD_METHODS,
-  JEWELLERY_TYPES,
-  JEWELLERY_TYPE_IMAGES,
-  SURFACE_FINISH_IMAGES,
-  WEIGHT_GUIDANCE,
-  getBuildMethodInfo,
-  getJewelleryTypeLabel,
+    BUILD_METHODS,
+    JEWELLERY_TYPES,
+    JEWELLERY_TYPE_IMAGES,
+    SURFACE_FINISH_IMAGES,
+    WEIGHT_GUIDANCE,
+    getBuildMethodInfo,
+    getJewelleryTypeLabel,
 } from "@/lib/constants/jewellery";
 import { getImageUrl } from "@/lib/image-upload";
 import type { GoldKarat } from "@/lib/pricing/alloy-constants";
 import type {
-  BaseMetalType,
-  PlatingTierC,
-  PlatingTypeC,
+    BaseMetalType,
+    PlatingTierC,
+    PlatingTypeC,
 } from "@/lib/pricing/base-metal-constants";
 import {
-  calculateEstimate,
-  type BuildMethod,
-  type EstimateRequest,
+    calculateEstimate,
+    type BuildMethod,
+    type EstimateRequest,
 } from "@/lib/pricing/calculate-estimate";
+import { useT } from "@/providers/translation-provider";
 import {
-  AlertCircle,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Copy,
-  ImageIcon,
-  Link2,
-  Loader2,
-  Mail,
-  MessageSquare,
-  RefreshCw,
-  Scale,
-  Sparkles,
-  Upload,
-  User,
-  UserCheck,
-  X,
+    AlertCircle,
+    ArrowLeft,
+    ArrowRight,
+    Check,
+    Copy,
+    ImageIcon,
+    Link2,
+    Loader2,
+    Mail,
+    MessageSquare,
+    RefreshCw,
+    Scale,
+    Sparkles,
+    Upload,
+    User,
+    UserCheck,
+    X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useT } from "@/providers/translation-provider";
-import {
-  AiDesignStudio,
-  type AiDesignVariation,
-} from "@/components/ai/AiDesignStudio";
 
 const API_URL = getApiUrl();
 

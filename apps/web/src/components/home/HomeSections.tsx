@@ -6,20 +6,20 @@ import { BRAND } from "@/config/brand";
 import { BLOG_POSTS } from "@/data/blog-posts";
 import { useT } from "@/providers/translation-provider";
 import {
-  ArrowRight,
-  BarChart3,
-  BookOpen,
-  Calendar,
-  Clock,
-  Gem,
-  Globe,
-  LayoutDashboard,
-  MessageSquare,
-  Package,
-  ShieldCheck,
-  Store,
-  Truck,
-  Zap,
+    ArrowRight,
+    BarChart3,
+    BookOpen,
+    Calendar,
+    Clock,
+    Gem,
+    Globe,
+    LayoutDashboard,
+    MessageSquare,
+    Package,
+    ShieldCheck,
+    Store,
+    Truck,
+    Zap,
 } from "lucide-react";
 import Link from "next/link";
 

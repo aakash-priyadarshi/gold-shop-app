@@ -1,0 +1,23 @@
+# Generated video / audio output — these are uploaded to Cloudflare R2, not git
+output/
+*.mp4
+*.mp3
+*.wav
+
+# Verification / debug frame images
+verify_frames*/
+debug_frames*/
+original_frames*/
+frames*/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Temp / intermediate transcript files
+improved_correct.txt
+improved_fixed.txt
+transcript.txt
+verify_report.txt
+_intro_scaled.mp4

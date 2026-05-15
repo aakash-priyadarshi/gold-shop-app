@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as en from './locales/en.json';
-import * as ne from './locales/ne.json';
 import * as hi from './locales/hi.json';
+import * as ne from './locales/ne.json';
 
 export type SupportedLocale =
   | 'en'

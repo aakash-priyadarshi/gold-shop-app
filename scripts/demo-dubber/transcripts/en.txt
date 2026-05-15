@@ -1,0 +1,217 @@
+[00:00] Welcome to Orivraa. This is our main website, and you can also access this demo video right here using the Watch Demo button.
+
+
+
+[00:15] Orivraa is a SaaS-based software built specifically for jewellery shop owners. It is designed to streamline your daily operations and free you from all the repetitive, manual work that consumes your time every day.
+
+
+
+[00:35] We also have a desktop application, which you can download directly from this page. We have launched the Windows version first, with more platforms on the way.
+
+
+
+[00:50] To sign in to the platform, use the Login button at the top of the page. Let me now log out and walk you through the entire sign-in experience from the beginning.
+
+
+
+[01:06] This is the login page. If you are a new user, click on Create One to register your account.
+
+
+
+[01:13] During registration, you will enter your personal details, your shop name, and other basic information. You can also sign up directly using your Google account for a faster setup.
+
+
+
+[01:29] Once your account is created, a brief verification step is required to confirm your shop details, so the platform can associate your account with your business. After that, you are fully set up.
+
+
+
+[01:45] For returning users, simply click Sign In. I will now sign in using Google to continue the demonstration.
+
+
+
+[01:54] After signing in, you land directly on the Dashboard. This is your central hub for managing your entire jewellery business from one place.
+
+
+
+[02:05] From the top navigation bar, you can change the display language. Orivraa supports a wide range of Indian regional languages as well as international languages. You can also change the currency here. The globe icon represents your country, and the system will automatically apply the correct currency for your region.
+
+
+
+[02:31] You can toggle between light and dark mode using the button on the right. I am switching it off now — and back on. Dark mode is restored.
+
+
+
+[02:44] You may notice a verification banner on the dashboard. You can click through from here to complete your business verification. Once done, the banner is removed.
+
+
+
+[02:57] Now let me walk you through the key features. The first is the Messaging feature, which lets you communicate directly with your customers from within the platform — no need to switch to a separate app.
+
+
+
+[03:14] Next is the Products section. Here you can view and manage all your listed jewellery items. You can already see a ring I have added as a sample.
+
+
+
+[03:25] To add a new product, click Add Product and fill in the details: the item name, SKU code, jewellery type, description, build method, the material used, its purity, and the weight in either grams or tola. You can also specify how many units are in stock. If the piece includes gemstones, you can add their details and value. Images can be uploaded from your device, or added using a URL if the image is hosted online.
+
+
+
+[03:59] Every product you add will appear in your Product List. The Inventory section gives you a complete view of everything you carry — what materials you work with, stock levels, and live metal rates. Currently, the live gold rate is being displayed, and we will be adding more metals, including silver, shortly.
+
+
+
+[04:38] The Inventory panel also serves another important purpose. By entering your capabilities here — such as your making charges, the alloys you work with, base metal plating options, gemstone pricing, jewellery types, build methods, and finishing styles — Orivraa can match you with customers looking for exactly what you offer.
+
+
+
+[05:20] Moving on to the Orders page. This is where all incoming orders will appear — whether from customers visiting your shop in person, or through online orders, which we will be enabling very soon. You can track every order from this page.
+
+
+
+[05:48] Next is the RFQ section — Request For Quotation. This is where custom jewellery requests from customers will appear. You can see there are separate tabs for Online requests and Walk-in requests, so you always know the source.
+
+
+
+[06:20] For walk-in customers, you can create a quotation directly by clicking the New Walk-In button.
+
+
+
+[06:38] When you open the walk-in form, you will notice a smart customer recall feature. The first time you serve a customer, you enter their details — name, phone number, and email. The system saves all of this. From their next visit, simply entering their phone number will automatically fill in all their information. No manual re-entry needed, ever.
+
+
+
+[07:25] Now, if you are on the Pro Plus plan, which unlocks all AI features, you get access to the AI Design Studio. This section is built specifically for handling custom jewellery orders.
+
+
+
+[07:48] Let me walk you through an example. Say a customer wants a 22-karat gold ring weighing 2 grams. As soon as you enter these specifications, the estimated price appears instantly on the right — based on today's live gold rate, a 12% making charge, and GST. Everything is calculated in real time.
+
+
+
+[08:30] The making charge is fully editable. You will find the option below, and I will show you that in a moment.
+
+
+
+[08:48] If the piece includes a gemstone, mark it as Yes and select from the popular choices listed, or add custom gemstone details with their individual pricing. All the pricing shown here is pulled directly from your Inventory settings — whatever you configure there is what gets reflected in every quotation automatically.
+
+
+
+[09:30] Now here is where the AI feature truly comes into its own. Instead of filling in all these fields manually, you simply tell the AI the customer's budget and requirements — for example, one lakh rupees for a 22-karat gold ring. The AI will then generate five unique design proposals, each with full specifications and generated imagery. On the Pro Plus plan, all five designs are fully available.
+
+
+
+[10:25] After selecting the design, we move to the pricing review step. Since we chose a lab diamond, an additional eighteen thousand rupees has been added. You can override any cost at this stage — if the customer negotiates and asks to keep the metal cost at twenty-nine thousand, you enter that number directly, and all calculations update instantly.
+
+
+
+[11:05] Once everything is confirmed, click Create Quotation. The customer will automatically receive an SMS notification with the quotation details and the estimated completion date. You can set any number of days for the delivery timeline. Payment at the shop is the default, and we will be adding more payment options in future updates.
+
+
+
+[11:32] In addition to the custom order workflow, there is also a standard invoicing system for regular over-the-counter sales.
+
+
+
+[12:22] To create an invoice, fill in the customer details, select the jewellery item, enter the quantity, notes, metal type, and weight. You can even connect a digital weighing scale, which will automatically capture the exact weight without manual entry.
+
+
+
+[12:50] Once you enter the material cost, GST at 3% is applied automatically. For making charges, you can switch between percentage-based or fixed unit — and the same flexibility applies for discounts as well.
+
+
+
+[13:10] You can also view the bill total in different currencies — US Dollars, Nepali Rupees, Euros, or Indian Rupees — with a single click. If a transaction is tax-exempt, simply mark it as such, select the reason, and the tax is removed immediately from the total.
+
+
+
+[13:35] When everything is finalized, click Create Invoice with a due date, and the invoice is generated and stored.
+
+
+
+[13:51] You can also customize the look of your invoices using Bill Settings. Add your shop name, logo, tagline, address, phone number, email, and footer notes. You can also choose your preferred layout and adjust where the logo appears on the invoice.
+
+
+
+[14:15] Let me demonstrate. I will upload a PNG file as the shop logo. As you can see, the logo now appears on the invoice. I can move it from the top to the bottom — and position it back at the top. Toggling it off hides it entirely. Turning it back on restores it. You can save any layout configuration that matches your shop's branding.
+
+
+
+[15:02] Now let us look at Tax Reports. If you are in India, the GSTR-3B summary is generated automatically as you create invoices. You can also download the GSTR-1 report for manual tax filing, saving you a significant amount of time and effort each month.
+
+
+
+[15:25] For Enterprise plan subscribers, this goes even further — tax reports are not just auto-generated but also auto-filed on your behalf through our integrated system. No manual intervention required.
+
+
+
+[15:42] The Customers section displays profiles for all your saved customers. Clicking on any customer shows their full details and order history.
+
+
+
+[15:52] The Tools section contains several useful utilities: a Gold Exchange Rate calculator for when customers bring old gold for exchange, a Hallmark Tracker, an EMI Calculator to show customers their instalment options, a Weighing Scale connection interface, a Daily Cash Summary, and a Repair Tracker for managing items left for repair.
+
+
+
+[16:20] The Desktop App section lets you download the latest version of our Windows application, which runs directly on your shop computer and works even with limited internet.
+
+
+
+[16:33] The Analytics section gives you a real-time view of your business — total revenue, order volume, engagement, and customer activity — all presented clearly in one dashboard.
+
+
+
+[16:48] In the Billing section, you can see your current subscription plan and manage it. We currently offer three plans in India. The Free Plan gives you access to all core features with some usage limits. The Pro Plan unlocks the full billing, invoicing, and tax reporting suite. The Pro Plus Plan adds all AI capabilities, including the AI Design Studio and five-design generation. You can also purchase additional AI credits separately. Enterprise plan pricing is customized based on your needs and includes automated tax filing.
+
+
+
+[17:46] In Profile Settings, you can manage your personal account preferences. Shop Settings is kept separate because Orivraa supports multiple shops under a single account. If you have one shop in one city and another in a different location, each shop maintains its own independent settings, branding, and data.
+
+
+
+[18:12] If you ever need help, the Help and Support section is always available. You can also click the question mark icon, which appears throughout the platform and provides context-specific guidance for whatever page you are on. For example, in the Tax Reports section, you can select a date range and view your India GSTR-3B summary directly.
+
+
+
+[19:12] Now let me demonstrate the language switching feature in action. I am switching the entire interface to Hindi. As you can see, all the navigation labels, section names, and system-generated text on the left sidebar have changed to Hindi instantly. The platform adapts fully to your preferred language.
+
+
+
+[19:36] You will notice, however, that items you have named yourself — such as a catalogue titled Wedding Collection — remain exactly as you typed them. The system only translates its own interface text, never your custom content.
+
+
+
+[21:50] Before we wrap up, let me show you one more powerful feature — the Catalogue. This is connected to the POS Basket you may have noticed earlier.
+
+
+
+[22:03] The Catalogue feature lets you group your products into curated, shareable collections. For example, you can create a Wedding Collection containing all your bridal jewellery. You can set it to public or password-protected — in most cases, keeping it public makes sharing easier with customers.
+
+
+
+[22:27] To add items to a catalogue, go to Manage, then click Add Item. The system shows all your available products and you simply select which ones to include.
+
+
+
+[22:40] Once the catalogue is ready, you get a unique shareable link and a QR code. You can send either one to your customers. When a customer opens the link, they see your entire collection on a clean, full-screen page — with photos, descriptions, and pricing all visible — and they can browse and tell you which pieces they are interested in.
+
+
+
+[23:07] This is a powerful tool for sharing your collection digitally without needing a separate website or catalogue app. It is especially useful for sending collections to customers before they visit the shop.
+
+
+
+[18:39] Finally, Orivraa includes a built-in AI assistant that is always online and has full context of your business. You can ask it anything — in any language, including Hindi — about your sales, inventory, tax filing, or how to use any feature, and it will respond with accurate, personalized guidance. We will also be adding voice responses very soon, so the AI can speak back to you in your preferred language.
+
+
+
+[23:33] That is everything Orivraa has to offer. Thank you so much for watching this complete walkthrough. We look forward to seeing you on the platform.
+
+
+[19:56] Watch how the AI handles a real Hinglish query. The shopkeeper asks in a natural mix of Hindi and English what the total sales for this month are. The AI responds instantly in Hinglish as well, pulling live data directly from the shop.
+
+[20:25] Now the shopkeeper switches to English and asks how to file taxes. The AI immediately provides a clear step-by-step guide: go to Tax Reports in the sidebar, navigate to the India tab, and download your GSTR1, GSTR3B, or HSN Summary. No support call needed — just ask the AI.
+
+[21:06] The shopkeeper follows the AI instructions and navigates directly to Tax Filing Reports. The page shows ready-to-download reports for India: GSTR1, GSTR3B, HSN Summary, and Tally XML, all fully compliant. This is the AI's core value — it does not just answer questions, it actively guides you through the platform step by step.
+

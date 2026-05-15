@@ -3,25 +3,25 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
 import { shopQuotesApi } from "@/lib/api";
 import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Hammer,
-  Loader2,
-  Package,
-  PackageCheck,
-  RefreshCw,
-  Store,
-  XCircle,
+    AlertCircle,
+    CheckCircle2,
+    Clock,
+    Hammer,
+    Loader2,
+    Package,
+    PackageCheck,
+    RefreshCw,
+    Store,
+    XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";

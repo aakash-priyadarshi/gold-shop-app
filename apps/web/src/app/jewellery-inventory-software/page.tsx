@@ -3,20 +3,20 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import {
-  RegionalPricingSnapshot,
+    RegionalPricingSnapshot,
 } from "@/components/marketing/RegionalPricingSnapshot";
 import { T } from "@/components/ui/T";
 import {
-  AlertTriangle,
-  ArrowRight,
-  BarChart3,
-  Database,
-  Layers,
-  Scale,
-  Search,
-  Tag,
-  Upload,
-  Users,
+    AlertTriangle,
+    ArrowRight,
+    BarChart3,
+    Database,
+    Layers,
+    Scale,
+    Search,
+    Tag,
+    Upload,
+    Users,
 } from "lucide-react";
 import Link from "next/link";
 

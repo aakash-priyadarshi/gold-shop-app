@@ -1,18 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
-  IsArray,
-  IsEmail,
-  IsEnum,
-  IsNotEmpty,
-  IsNumber,
-  IsObject,
-  IsOptional,
-  IsString,
-  Matches,
-  Max,
-  Min,
-  ValidateNested,
+    IsArray,
+    IsEmail,
+    IsEnum,
+    IsNotEmpty,
+    IsNumber,
+    IsObject,
+    IsOptional,
+    IsString,
+    Matches,
+    Max,
+    Min,
+    ValidateNested,
 } from "class-validator";
 
 export class WalkInCustomerDto {

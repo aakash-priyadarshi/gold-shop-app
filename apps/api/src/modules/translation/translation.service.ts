@@ -1,8 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
-import { PrismaService } from "../../prisma/prisma.service";
 import { RedisService } from "../../common/redis";
+import { PrismaService } from "../../prisma/prisma.service";
 import { LOCALE_NAMES, type SupportedLocale } from "./dto/translate.dto";
 
 /* ────────────────────────────────────────────────────────────── */

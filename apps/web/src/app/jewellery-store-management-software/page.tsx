@@ -3,24 +3,24 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import {
-  BUYER_COUNTRY_COUNT,
-  RegionalPricingSnapshot,
+    BUYER_COUNTRY_COUNT,
+    RegionalPricingSnapshot,
 } from "@/components/marketing/RegionalPricingSnapshot";
 import { T } from "@/components/ui/T";
 import {
-  ArrowRight,
-  BarChart3,
-  ClipboardList,
-  Globe,
-  LayoutDashboard,
-  MessageSquare,
-  Package,
-  Receipt,
-  Scale,
-  Sparkles,
-  Store,
-  TrendingUp,
-  Users,
+    ArrowRight,
+    BarChart3,
+    ClipboardList,
+    Globe,
+    LayoutDashboard,
+    MessageSquare,
+    Package,
+    Receipt,
+    Scale,
+    Sparkles,
+    Store,
+    TrendingUp,
+    Users,
 } from "lucide-react";
 import Link from "next/link";
 

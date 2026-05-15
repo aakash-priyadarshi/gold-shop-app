@@ -1,13 +1,13 @@
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { BRAND } from "@/config/brand";
 import {
-  Facebook,
-  Instagram,
-  Mail,
-  MapPin,
-  Phone,
-  Twitter,
-  Youtube,
+    Facebook,
+    Instagram,
+    Mail,
+    MapPin,
+    Phone,
+    Twitter,
+    Youtube,
 } from "lucide-react";
 import Link from "next/link";
 

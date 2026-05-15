@@ -3,26 +3,26 @@ import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  ABOUT_CONTENT,
-  COMING_SOON_PLATFORMS,
-  LANG_META,
-  LIVE_PLATFORMS,
-  SUPPORTED_ABOUT_LANGS,
-  TESTIMONIALS,
-  type AboutContentLanguage,
+    ABOUT_CONTENT,
+    COMING_SOON_PLATFORMS,
+    LANG_META,
+    LIVE_PLATFORMS,
+    SUPPORTED_ABOUT_LANGS,
+    TESTIMONIALS,
+    type AboutContentLanguage,
 } from "@/data/about-i18n";
 import {
-  ArrowRightIcon,
-  BuildingStorefrontIcon,
-  ChartBarIcon,
-  CheckBadgeIcon,
-  GlobeAltIcon,
-  HeartIcon,
-  ShieldCheckIcon,
-  SparklesIcon,
-  StarIcon,
-  TruckIcon,
-  UserGroupIcon,
+    ArrowRightIcon,
+    BuildingStorefrontIcon,
+    ChartBarIcon,
+    CheckBadgeIcon,
+    GlobeAltIcon,
+    HeartIcon,
+    ShieldCheckIcon,
+    SparklesIcon,
+    StarIcon,
+    TruckIcon,
+    UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
 import Link from "next/link";

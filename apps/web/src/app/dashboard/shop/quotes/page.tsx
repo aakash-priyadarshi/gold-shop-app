@@ -5,25 +5,25 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
@@ -31,21 +31,21 @@ import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { shopQuotesApi } from "@/lib/api";
 import {
-  CheckCircle,
-  Clock,
-  Eye,
-  FileText,
-  Loader2,
-  MoreVertical,
-  Package,
-  Phone,
-  Play,
-  Plus,
-  Receipt,
-  TrendingUp,
-  UserPlus,
-  Users,
-  XCircle,
+    CheckCircle,
+    Clock,
+    Eye,
+    FileText,
+    Loader2,
+    MoreVertical,
+    Package,
+    Phone,
+    Play,
+    Plus,
+    Receipt,
+    TrendingUp,
+    UserPlus,
+    Users,
+    XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";

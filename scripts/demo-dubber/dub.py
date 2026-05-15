@@ -44,13 +44,13 @@ Supported transcript formats (from Loom, Google Meet, Otter, etc.):
   - "0:00:05\\nSpeaker\\nText"   ← Google Meet
 """
 
-import os
-import sys
-import re
-import json
-import time
 import argparse
+import json
 import logging
+import os
+import re
+import sys
+import time
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path

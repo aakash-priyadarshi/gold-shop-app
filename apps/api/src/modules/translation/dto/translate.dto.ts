@@ -1,10 +1,10 @@
 import {
-  ArrayMaxSize,
-  IsArray,
-  IsIn,
-  IsOptional,
-  IsString,
-  MaxLength,
+    ArrayMaxSize,
+    IsArray,
+    IsIn,
+    IsOptional,
+    IsString,
+    MaxLength,
 } from "class-validator";
 
 export const SUPPORTED_LOCALES = [

@@ -3,9 +3,9 @@ import { Throttle } from "@nestjs/throttler";
 import { SkipSecurity } from "../security/security.guard";
 import { TranslateBatchDto, TranslateHtmlDto } from "./dto/translate.dto";
 import {
-  HtmlTranslationResult,
-  TranslationBatchResult,
-  TranslationService,
+    HtmlTranslationResult,
+    TranslationBatchResult,
+    TranslationService,
 } from "./translation.service";
 
 @Controller("translation")

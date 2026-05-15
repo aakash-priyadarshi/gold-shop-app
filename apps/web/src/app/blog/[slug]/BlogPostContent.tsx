@@ -4,12 +4,12 @@ import { T } from "@/components/ui/T";
 import type { BlogPost } from "@/data/blog-posts";
 import { useTranslatedHtml } from "@/hooks/useTranslatedHtml";
 import {
-  ArrowLeft,
-  ArrowRight,
-  Calendar,
-  Clock,
-  Tag,
-  User,
+    ArrowLeft,
+    ArrowRight,
+    Calendar,
+    Clock,
+    Tag,
+    User,
 } from "lucide-react";
 import Link from "next/link";
 

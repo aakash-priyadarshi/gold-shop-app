@@ -182,8 +182,9 @@ export default {
       // Serve demo videos from DEMOS_BUCKET
       if (path.startsWith("/demo/") && request.method === "GET") {
         const lang = path.replace("/demo/", "").split("/")[0];
-        if (lang !== "en" && lang !== "hi") {
-          return new Response(JSON.stringify({ error: "Invalid language. Use en or hi" }), {
+        const SUPPORTED_DEMO_LANGS = ["en", "hi", "fr", "de", "es", "ar", "ta", "ne"];
+        if (!SUPPORTED_DEMO_LANGS.includes(lang)) {
+          return new Response(JSON.stringify({ error: `Invalid language. Supported: ${SUPPORTED_DEMO_LANGS.join(", ")}` }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });

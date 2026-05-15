@@ -1,8 +1,8 @@
 import {
-  ABOUT_CONTENT,
-  LIVE_PLATFORMS,
-  SUPPORTED_ABOUT_LANGS,
-  type AboutContentLanguage,
+    ABOUT_CONTENT,
+    LIVE_PLATFORMS,
+    SUPPORTED_ABOUT_LANGS,
+    type AboutContentLanguage,
 } from "@/data/about-i18n";
 import { Metadata } from "next";
 

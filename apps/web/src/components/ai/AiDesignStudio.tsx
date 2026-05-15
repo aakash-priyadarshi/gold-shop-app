@@ -13,11 +13,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,16 +25,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
 import {
-  AlertCircle,
-  Check,
-  Coins,
-  Crown,
-  Gem,
-  ImageOff,
-  Loader2,
-  Scale,
-  Sparkles,
-  Wand2,
+    AlertCircle,
+    Check,
+    Coins,
+    Crown,
+    Gem,
+    ImageOff,
+    Loader2,
+    Scale,
+    Sparkles,
+    Wand2,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
