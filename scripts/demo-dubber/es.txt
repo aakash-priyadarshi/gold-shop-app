@@ -1,0 +1,221 @@
+[00:00] Bienvenido a Orivraa. Este es nuestro sitio web principal, y desde el botón Watch Demo puedes ver esta demo directamente aquí.
+
+
+
+[00:15] Orivraa es un software SaaS creado para propietarios de joyerías. Optimiza las operaciones diarias y elimina todo el trabajo manual repetitivo.
+
+
+
+[00:35] También hay una aplicación de escritorio disponible para descargar en esta misma página. La versión de Windows ya está disponible; las demás plataformas llegarán pronto.
+
+
+
+[00:50] Para iniciar sesión, presiona el botón Login en la parte superior de la página. Voy a cerrar sesión ahora para mostrarte el proceso completo de registro.
+
+
+
+[01:06] Esta es la página de Login. Si eres nuevo, crea tu cuenta desde Create One.
+
+
+
+[01:13] En el registro, completa tus datos personales, el nombre de tu tienda y la información básica. También puedes registrarte directamente con tu cuenta de Google.
+
+
+
+[01:29] Una vez creada la cuenta, deberás verificar los datos de tu tienda para que la plataforma se conecte con tu negocio. Después de eso, estás completamente listo.
+
+
+
+[01:45] Los usuarios existentes simplemente inician sesión. Yo me conectaré con Google.
+
+
+
+[01:54] Después de iniciar sesión, llegas directamente al Dashboard — el centro de control de toda tu joyería.
+
+
+
+[02:05] Desde la barra de navegación puedes cambiar el idioma de la interfaz. Orivraa admite idiomas regionales de India e idiomas internacionales. Aquí también cambias la moneda — el ícono de globo muestra tu país y la moneda correcta se aplica automáticamente.
+
+
+
+[02:31] Con el botón de la derecha puedes cambiar entre modo claro y oscuro. Lo apago ahora — y lo vuelvo a activar. Modo oscuro restaurado.
+
+
+
+[02:44] En el Dashboard puede aparecer un banner de verificación. Completa la verificación de tu negocio desde aquí — una vez hecho, el banner desaparece.
+
+
+
+[02:57] Veamos las funciones clave. La primera es Mensajería — comunícate directamente con tus clientes desde la plataforma, sin necesidad de otra aplicación.
+
+
+
+[03:14] En la sección Products puedes ver y gestionar todos tus artículos de joyería. Ya hay un anillo de muestra añadido.
+
+
+
+[03:25] Para añadir un nuevo producto, haz clic en Add Product: nombre del artículo, SKU, tipo de joya, descripción, método de fabricación, material, pureza y peso en gramos o tolas. Indica la cantidad en stock. Si tiene piedras preciosas, añade los detalles. Sube fotos o proporciona una URL de imagen.
+
+
+
+[03:59] Cada producto aparecerá en la Lista de Productos. En Inventario tienes toda la información — materiales, niveles de stock y precios de metales en tiempo real. Ahora se muestra el precio del oro; la plata se añadirá pronto.
+
+
+
+[04:38] El panel de Inventario cumple otra función importante. Aquí ingresa tus capacidades — cargos de fabricación, aleaciones, opciones de baño, precios de gemas, tipos de joyas, métodos de fabricación y estilos de acabado. Esto ayuda a Orivraa a conectarte con los clientes adecuados.
+
+
+
+[05:20] Vamos a la página de Pedidos. Aquí verás todos los pedidos entrantes — de la tienda y en línea, que se habilitarán pronto. Haz seguimiento de cada pedido desde aquí.
+
+
+
+[05:48] La sección RFQ, es decir, Solicitud de Cotización. Las solicitudes de joyas personalizadas de los clientes llegan aquí. Hay pestañas separadas para solicitudes en línea y presenciales, para que siempre conozcas el origen.
+
+
+
+[06:20] Para clientes presenciales, presiona el botón New Walk-In para crear una cotización.
+
+
+
+[06:38] El formulario de Walk-in tiene una función inteligente de recuperación de clientes. La primera vez, ingresa los datos del cliente — nombre, teléfono, email — y el sistema los guarda. En la próxima visita, solo escribe el número de teléfono y todos los datos se completan automáticamente. Sin re-ingreso manual, nunca jamás.
+
+
+
+[07:25] Con el plan Pro Plus se desbloquean todas las funciones de IA, incluido el AI Design Studio. Está especialmente diseñado para pedidos de joyas personalizadas.
+
+
+
+[07:48] Veamos un ejemplo. El cliente quiere un anillo de oro de 22 quilates de 2 gramos. Al ingresar las especificaciones, el precio estimado aparece al instante a la derecha — con el precio en vivo del oro, 12% de cargo de fabricación y IVA. Todo se calcula en tiempo real.
+
+
+
+[08:30] El cargo de fabricación es completamente editable. Esa opción está abajo, y te la mostraré en un momento.
+
+
+
+[08:48] Si la pieza tiene piedras preciosas, marca Sí y selecciona de las opciones populares, o añade detalles personalizados y precios individuales. Los precios mostrados aquí vienen automáticamente de la configuración del Inventario — lo que configures allí se reflejará en cada cotización.
+
+
+
+[09:30] Ahora veamos la magia de la IA. En lugar de completar los campos manualmente, dile a la IA el presupuesto y los requisitos del cliente — por ejemplo, un anillo de oro de 22 quilates por un lakh de rupias. La IA generará cinco propuestas de diseño únicas con especificaciones completas e imágenes generadas. Con Pro Plus tienes acceso a las cinco.
+
+
+
+[10:25] Al seleccionar un diseño, aparece la revisión de precios. Al elegir un diamante de laboratorio se añadieron dieciocho mil rupias. En esta etapa puedes anular cualquier costo — si el cliente negocia, cambia el costo del metal directamente y todos los cálculos se actualizan al instante.
+
+
+
+[11:05] Una vez confirmado todo, haz clic en Create Quotation. El cliente recibirá un SMS automáticamente con los detalles de la cotización y la fecha de entrega. Establece los días de entrega. El pago en tienda es la opción predeterminada; se añadirán más opciones próximamente.
+
+
+
+[11:32] Además del flujo de pedidos personalizados, también existe un sistema estándar de facturación para ventas regulares en mostrador.
+
+
+
+[12:22] Para una factura, completa los datos del cliente, selecciona el artículo de joyería, ingresa cantidad, notas, tipo de metal y peso. Puedes conectar una balanza digital para capturar el peso exacto automáticamente.
+
+
+
+[12:50] Al ingresar el costo del material, el IVA del 3% se aplica automáticamente. Para los cargos de fabricación elige porcentaje o unidad fija — la misma flexibilidad aplica a los descuentos.
+
+
+
+[13:10] Ve el total de la factura en distintas monedas — Dólar estadounidense, Rupia nepalesa, Euro o Rupia india — con un solo clic. Si es una transacción exenta de impuestos, márcala, elige el motivo y el impuesto desaparece al instante.
+
+
+
+[13:35] Una vez finalizado todo, haz clic en Create Invoice con la fecha de vencimiento — la factura se genera y guarda.
+
+
+
+[13:51] Desde Configuración de Factura personaliza el aspecto de tus facturas. Añade el nombre de la tienda, logo, eslogan, dirección, teléfono, email y notas al pie. Elige el diseño y ajusta la posición del logo.
+
+
+
+[14:15] Te hago una demo. Subo un archivo PNG como logo de la tienda. El logo apareció en la factura. Lo muevo de arriba hacia abajo — y de vuelta arriba. En Off se oculta, en On vuelve. Guarda el diseño según tu marca.
+
+
+
+[15:02] Veamos los Informes Fiscales. Al crear una factura en India se genera automáticamente un resumen GSTR-3B. Descarga el informe GSTR-1 para presentación manual — ahorra mucho tiempo cada mes.
+
+
+
+[15:25] Para los suscriptores del plan Enterprise, los informes fiscales no solo se generan automáticamente — también se presentan automáticamente a través del sistema integrado. Sin trabajo manual.
+
+
+
+[15:42] En la sección Clientes está el perfil de todos tus clientes. Haz clic para ver los detalles y el historial de pedidos.
+
+
+
+[15:52] En la sección Herramientas hay varias utilidades: calculadora de tipo de cambio de oro, rastreador de Hallmark, calculadora de cuotas, interfaz de balanza, resumen de caja diario y rastreador de reparaciones.
+
+
+
+[16:20] Desde la sección Aplicación de Escritorio descarga la aplicación de Windows — funciona en el ordenador de la tienda, incluso con internet limitado.
+
+
+
+[16:33] En la sección Analytics tienes una vista en tiempo real de tu negocio — ingresos, pedidos, participación y actividad de clientes — todo claramente en un único dashboard.
+
+
+
+[16:48] En la sección Facturación consulta y gestiona tu suscripción actual. En India hay tres planes. El Plan Gratuito incluye funciones básicas con uso limitado. El Plan Pro ofrece facturación completa, facturación e informes fiscales. Pro Plus desbloquea todas las funciones de IA. El Plan Enterprise incluye precios personalizados y presentación fiscal automatizada.
+
+
+
+[17:46] En Configuración de Perfil gestiona tus preferencias personales. La Configuración de la Tienda es independiente porque Orivraa permite múltiples tiendas desde una sola cuenta — cada tienda tiene su propia configuración e información independiente.
+
+
+
+[18:12] La Ayuda y el Soporte siempre están disponibles. El ícono de signo de interrogación en la plataforma ofrece orientación contextual. En Informes Fiscales, selecciona un rango de fechas para ver el resumen GSTR-3B de India directamente.
+
+
+
+[19:12] Te muestro el cambio de idioma en vivo. Estoy cambiando la interfaz al español. Observa — las etiquetas de navegación, los nombres de sección y el texto de la barra lateral cambiaron al español al instante.
+
+
+
+[19:36] Los artículos que nombraste tú mismo — como un catálogo llamado Colección de Bodas — permanecen exactamente igual. El sistema solo traduce el texto de su propia interfaz, nunca tu contenido personalizado.
+
+
+
+[21:50] Antes de cerrar, una función más muy potente — Catálogo, que está conectado con la Cesta POS.
+
+
+
+[22:03] Con Catálogo agrupa productos en colecciones seleccionadas. Por ejemplo, joyería nupcial en una Colección de Bodas. Puede ser pública o protegida con contraseña.
+
+
+
+[22:27] Para añadir artículos, ve a Gestionar, haz clic en Añadir Artículo y selecciona los productos.
+
+
+
+[22:40] Una vez listo el catálogo, obtienes un enlace compartible y un código QR. Envíaselo al cliente — verá toda la colección en una página limpia con fotos, descripciones y precios.
+
+
+
+[23:07] Es una herramienta poderosa para compartir colecciones digitalmente — sin sitio web aparte ni aplicación de catálogo. Muy útil para enviar tu colección a los clientes antes de que visiten la tienda.
+
+
+
+[18:39] Por último, Orivraa tiene un asistente de IA integrado que siempre está en línea y conoce toda la información de tu negocio. Pregunta en español o cualquier idioma sobre ventas, inventario, declaraciones fiscales o cualquier función — obtendrás orientación precisa y personalizada. Las respuestas de voz llegarán pronto.
+
+
+
+[23:33] Eso fue el recorrido completo de Orivraa. Muchas gracias por ver. Te esperamos en la plataforma.
+
+
+
+[19:56] Veamos una consulta real a la IA. El comerciante pregunta de forma natural — ¿cuáles son las ventas totales de este mes? La IA responde al instante con los datos en vivo de la tienda.
+
+
+
+[20:25] Ahora el comerciante cambia al inglés para preguntar sobre la declaración de impuestos. La IA da una guía paso a paso al instante: ve a Informes Fiscales en la barra lateral, navega a la pestaña India, y descarga GSTR1, GSTR3B o el Resumen HSN. Sin llamadas de soporte — solo pregúntale a la IA.
+
+
+
+[21:06] El comerciante sigue las instrucciones de la IA y navega directamente a los Informes de Declaración Fiscal. Aparecen los informes listos para descargar en India: GSTR1, GSTR3B, Resumen HSN y XML de Tally — todos conformes. Ese es el valor real de la IA — no solo respuestas, sino también guía paso a paso.

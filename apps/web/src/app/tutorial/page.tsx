@@ -185,14 +185,35 @@ export default function TutorialPage() {
             </video>
           </div>
 
-          <div className="flex items-center gap-3 mt-4 justify-end text-sm text-gray-500">
+          <div className="flex items-center gap-3 mt-4 justify-end text-sm text-gray-500 flex-wrap">
             <span>Available in:</span>
             <span className="bg-amber-500 text-gray-950 font-semibold px-2 py-0.5 rounded">
               English
             </span>
-            <span className="opacity-50 cursor-not-allowed" title="Coming soon">
-              Hindi (जल्द आ रहा है)
-            </span>
+            <Link
+              href="/tutorial/hi"
+              className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors"
+            >
+              हिन्दी
+            </Link>
+            <Link
+              href="/tutorial/ne"
+              className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors"
+            >
+              नेपाली
+            </Link>
+            <Link
+              href="/tutorial/es"
+              className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors"
+            >
+              Español
+            </Link>
+            <Link
+              href="/tutorial/ar"
+              className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors"
+            >
+              العربية
+            </Link>
           </div>
         </div>
       </section>
@@ -313,7 +334,7 @@ export default function TutorialPage() {
           sarraf shops, and modern jewellery retailers looking for a Marg ERP alternative,
           Vyapar alternative, or Jwelly ERP alternative that works on mobile and desktop.
           Free jewellery billing software trial available. Jewellery software India,
-          Nepal, UAE prices shown. Hindi tutorial coming soon.
+          Nepal, UAE prices shown. <Link href="/tutorial/hi">Hindi tutorial</Link> is now live.
         </p>
       </section>
 

@@ -318,7 +318,7 @@ export default function AboutPage() {
             </p>
           </div>
           {/* Live profiles */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto mb-10">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4 max-w-5xl mx-auto mb-10">
             {LIVE_PLATFORMS.map((platform, index) => (
               <motion.a
                 key={platform.name}
@@ -356,7 +356,7 @@ export default function AboutPage() {
                   <T>Coming soon on</T>
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 max-w-5xl mx-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 max-w-5xl mx-auto">
                 {COMING_SOON_PLATFORMS.map((platform, index) => (
                   <motion.div
                     key={platform.name}

@@ -19,12 +19,17 @@ import Link from "next/link";
 
 const FOOTER_LANGUAGES: { code: Language; href: string }[] = [
   { code: "en", href: "/about" },
+  { code: "hi", href: "/about/hi" },
+  { code: "ne", href: "/about/ne" },
+  { code: "gu", href: "/about" },
+  { code: "mr", href: "/about" },
+  { code: "ta", href: "/about" },
+  { code: "te", href: "/about" },
+  { code: "kn", href: "/about" },
   { code: "fr", href: "/about/fr" },
   { code: "de", href: "/about/de" },
-  { code: "hi", href: "/about/hi" },
   { code: "es", href: "/about/es" },
   { code: "ar", href: "/about/ar" },
-  { code: "ne", href: "/about/ne" },
 ];
 
 export function DynamicFooter() {
@@ -248,7 +253,7 @@ export function DynamicFooter() {
           <div className="flex items-center gap-2 mb-3">
             <Globe className="h-4 w-4 text-gold-400" />
             <span className="text-sm font-medium text-gray-300">
-              <T>Available in 7 Languages</T>
+              <T>Available in {FOOTER_LANGUAGES.length} Languages</T>
             </span>
           </div>
           <div className="flex flex-wrap gap-2">

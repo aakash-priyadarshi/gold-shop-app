@@ -1,0 +1,221 @@
+[00:00] Orivraa मा स्वागत छ। यो हाम्रो मुख्य वेबसाइट हो, र Watch Demo बटनबाट यहीं demo video हेर्न सकिन्छ।
+
+
+
+[00:15] Orivraa एउटा SaaS software हो जुन गहना पसल मालिकहरूका लागि बनाइएको छ। यसले daily operations लाई streamline गर्छ र सबै manual दोहोरिने काम हटाउँछ।
+
+
+
+[00:35] Desktop App पनि छ जुन यसै पेजबाट download गर्नुस्। अहिले Windows version उपलब्ध छ, बाँकी platforms चाँडै आउनेछ।
+
+
+
+[00:50] Login गर्न पेजको माथि Login बटन थिच्नुस्। म अहिले log out गरेर पूरा sign-in process देखाउँछु।
+
+
+
+[01:06] यो Login पेज हो। नयाँ user भए Create One बाट account बनाउनुस्।
+
+
+
+[01:13] Registration मा personal details, पसलको नाम र basic जानकारी भर्नुस्। Google account बाट पनि सिधै sign up गर्न मिल्छ।
+
+
+
+[01:29] Account बनेपछि पसलको details verify गर्नु पर्छ ताकि platform तपाईंको business सँग जोडिओस्। त्यसपछि तपाईं पूर्ण तयार हुनुहुन्छ।
+
+
+
+[01:45] पुराना user ले Sign In गर्नुस्। म Google बाट sign in गर्छु।
+
+
+
+[01:54] Sign in गरेपछि सिधै Dashboard मा आइन्छ — यो तपाईंको पूरा गहना व्यापार manage गर्ने केन्द्र हो।
+
+
+
+[02:05] Navigation bar बाट display language बदल्नुस्। Orivraa Indian regional र international भाषाहरू support गर्छ। यहीँबाट currency पनि बदल्नुस् — Globe icon ले देश देखाउँछ र सही currency automatically apply हुन्छ।
+
+
+
+[02:31] दायाँतिरको button बाट Light र Dark mode switch गर्नुस्। म अहिले off गर्छु — र back on। Dark mode फर्कियो।
+
+
+
+[02:44] Dashboard मा verification banner देखिन सक्छ। यहाँबाट business verification complete गर्नुस् — सकिएपछि banner हट्छ।
+
+
+
+[02:57] अब key features हेरौँ। पहिलो छ Messaging — platform भित्रैबाट customers सँग सिधै कुरा गर्नुस्, अलग्गै app चाहिँदैन।
+
+
+
+[03:14] Products section मा सबै listed गहना items हेर्न र manage गर्न सकिन्छ। एउटा sample ring अगाडि नै add छ।
+
+
+
+[03:25] नयाँ product थप्न Add Product click गर्नुस्: item name, SKU, गहना type, description, build method, material, शुद्धता र तौल gram वा तोला मा। Stock quantity बताउनुस्। Gemstone भए details थप्नुस्। Photos upload गर्नुस् वा image URL दिनुस्।
+
+
+
+[03:59] हरेक product Product List मा देखिन्छ। Inventory मा पूरा जानकारी छ — materials, stock levels र live metal rates। अहिले gold rate देखिँदैछ, चाँडै silver पनि जोडिनेछ।
+
+
+
+[04:38] Inventory panel ले एउटा थप महत्त्वपूर्ण काम गर्छ। यहाँ capabilities enter गर्नुस् — making charges, alloys, plating options, gemstone pricing, गहना types, build methods र finishing styles। यसले Orivraa लाई तपाईंलाई सही customers सँग match गर्न मद्दत गर्छ।
+
+
+
+[05:20] Orders page मा आउनुस्। यहाँ सबै incoming orders देखिन्छन् — पसलका र online दुवै, जुन चाँडै enable हुनेछ। प्रत्येक order यहाँबाट track गर्नुस्।
+
+
+
+[05:48] RFQ section अर्थात् Request For Quotation। Customers को custom गहना requests यहाँ आउँछन्। Online र Walk-in requests का अलग tabs छन् ताकि source सधैं थाहा होस्।
+
+
+
+[06:20] Walk-in customers का लागि New Walk-In बटन थिचेर quotation बनाउनुस्।
+
+
+
+[06:38] Walk-in form मा एउटा smart customer recall feature छ। पहिलो पटक customer को details — नाम, phone, email — enter गर्नुस्, system save गरिहाल्छ। अर्को पटक सिर्फ phone number हाल्नुस् — सबै जानकारी automatically fill हुन्छ। Manual re-entry चाहिँदैन, कहिल्यै।
+
+
+
+[07:25] Pro Plus plan मा सबै AI features unlock हुन्छन्, जसमा AI Design Studio पनि छ। यो custom गहना orders का लागि विशेष बनाइएको छ।
+
+
+
+[07:48] Example हेरौँ। Customer लाई 2 gram को 22 karat gold ring चाहिन्छ। Specifications enter गर्नासाथ दायाँतिर estimated price तुरुन्तै आउँछ — live gold rate, 12% making charge र GST सहित। सबै real time मा calculate हुन्छ।
+
+
+
+[08:30] Making charge पूर्णतः editable छ। तल त्यो option मिल्छ, जुन म अलि पछि देखाउँछु।
+
+
+
+[08:48] Piece मा gemstone भए Yes mark गर्नुस् र popular choices बाट select गर्नुस्, वा custom gemstone details र individual pricing थप्नुस्। यहाँ देखाइएको pricing Inventory settings बाट automatically आउँछ — त्यहाँ जे configure गर्नुहुन्छ, हरेक quotation मा त्यही reflect हुन्छ।
+
+
+
+[09:30] अब AI feature को जादू हेरौँ। Fields manually भर्नुको साटो AI लाई customer को budget र requirement बताउनुस् — जस्तै 22 karat gold ring का लागि एक लाख रुपैयाँ। AI पाँचवटा unique design proposals generate गर्छ, full specifications र generated images सहित। Pro Plus मा सबै पाँचवटा उपलब्ध छन्।
+
+
+
+[10:25] Design select गरेपछि pricing review आउँछ। Lab diamond रोजेपछि अठार हजार थपियो। यस stage मा जुनसुकै cost override गर्नुस् — customer negotiate गरे metal cost सिधै बदल्नुस्, सबै calculations instantly update हुन्छन्।
+
+
+
+[11:05] सब confirm भएपछि Create Quotation click गर्नुस्। Customer लाई SMS automatically जान्छ — quotation details र completion date सहित। Delivery days set गर्नुस्। Payment at shop default छ, अगाडि थप options जोडिनेछन्।
+
+
+
+[11:32] Custom order workflow बाहेक, नियमित counter sales का लागि standard invoicing system पनि छ।
+
+
+
+[12:22] Invoice का लागि customer details भर्नुस्, गहना item select गर्नुस्, quantity, notes, metal type र तौल enter गर्नुस्। Digital weighing scale connect गरेर exact तौल automatically capture गर्न सकिन्छ।
+
+
+
+[12:50] Material cost हाल्नासाथ 3% GST automatically apply हुन्छ। Making charges का लागि percentage वा fixed unit रोज्नुस् — discounts मा पनि त्यही flexibility मिल्छ।
+
+
+
+[13:10] Bill total अलग currencies मा हेर्नुस् — US Dollar, Nepali Rupee, Euro, वा Indian Rupee — एक click मा। Tax-exempt transaction भए mark गर्नुस्, reason रोज्नुस्, tax तुरुन्तै हट्छ।
+
+
+
+[13:35] सब finalize भएपछि due date सहित Create Invoice click गर्नुस् — invoice generate र save हुन्छ।
+
+
+
+[13:51] Bill Settings बाट invoice को look customize गर्नुस्। पसलको नाम, logo, tagline, address, phone, email र footer notes थप्नुस्। Layout रोज्नुस् र logo position adjust गर्नुस्।
+
+
+
+[14:15] Demo देखाउँछु। PNG file shop logo को रूपमा upload गर्छु। Logo invoice मा आयो। माथिबाट तलतिर सार्छु — र फेरि माथि। Off मा hide, On मा फर्कन्छ। आफ्नो branding अनुसार layout save गर्नुस्।
+
+
+
+[15:02] Tax Reports हेरौँ। India मा invoice बनाएपछि GSTR-3B summary automatically generate हुन्छ। Manual filing का लागि GSTR-1 report download गर्नुस् — हरेक महिना धेरै समय बच्छ।
+
+
+
+[15:25] Enterprise plan subscribers का लागि tax reports सिर्फ auto-generate हुँदैनन् — integrated system बाट automatically file पनि हुन्छन्। कुनै manual काम छैन।
+
+
+
+[15:42] Customers section मा सबै customers को profile छ। Click गर्नुस् — details र order history हेर्नुस्।
+
+
+
+[15:52] Tools section मा धेरै utilities छन्: Gold Exchange Rate calculator, Hallmark Tracker, EMI Calculator, Weighing Scale interface, Daily Cash Summary र Repair Tracker।
+
+
+
+[16:20] Desktop App section बाट Windows application download गर्नुस् — पसलको computer मा चल्छ, सीमित internet मा पनि।
+
+
+
+[16:33] Analytics section मा business को real-time view — revenue, orders, engagement र customer activity — सब स्पष्ट रूपमा एक dashboard मा।
+
+
+
+[16:48] Billing section मा current subscription हेर्नुस् र manage गर्नुस्। India मा तीन plans छन्। Free Plan मा core features limited usage सहित। Pro Plan मा full billing, invoicing र tax reporting। Pro Plus मा सबै AI features। Enterprise plan मा custom pricing र automated tax filing छ।
+
+
+
+[17:46] Profile Settings मा personal preferences manage गर्नुस्। Shop Settings अलग छ किनभने Orivraa एउटा account बाट multiple shops support गर्छ — हरेक shop को आफ्नै independent settings र data हुन्छ।
+
+
+
+[18:12] Help र Support सधैं उपलब्ध छ। Platform मा question mark icon ले context-specific guidance दिन्छ। Tax Reports मा date range select गरेर India GSTR-3B summary सिधै हेर्न सकिन्छ।
+
+
+
+[19:12] Language switching live देखाउँछु। Interface लाई Nepali मा switch गर्दैछु। हेर्नुस् — navigation labels, section names र sidebar को text तुरुन्तै Nepali मा बदलियो।
+
+
+
+[19:36] तपाईंले आफैंले name दिनुभएका items — जस्तै Wedding Collection catalogue — ठ्याक्कै त्यस्तै रहन्छन्। System सिर्फ आफ्नो interface text translate गर्छ, तपाईंको custom content कहिल्यै होइन।
+
+
+
+[21:50] Wrap up गर्नुअघि एउटा powerful feature — Catalogue, जुन POS Basket सँग connected छ।
+
+
+
+[22:03] Catalogue बाट products लाई curated collections मा group गर्नुस्। जस्तै Wedding Collection मा bridal गहना। Public वा password-protected राख्न मिल्छ।
+
+
+
+[22:27] Items थप्न Manage मा जानुस्, Add Item click गर्नुस् र products select गर्नुस्।
+
+
+
+[22:40] Catalogue ready भएपछि shareable link र QR code मिल्छ। Customer लाई पठाउनुस् — उनीहरूले photos, descriptions र pricing सहित पूरा collection एउटा clean page मा देख्छन्।
+
+
+
+[23:07] यो digital collection sharing को powerful tool हो — अलग्गै website वा catalogue app बिनै। Shop visit गर्नुअघि customers लाई collection पठाउन अत्यन्त useful।
+
+
+
+[18:39] अन्तमा, Orivraa मा एउटा built-in AI assistant छ जो सधैं online छ र तपाईंको business को पूरा जानकारी राख्छ। Nepali, Hindi वा English मा sales, inventory, tax filing वा जुनसुकै feature बारे सोध्नुस् — accurate र personalized guidance मिल्छ। चाँडै voice response पनि आउनेछ।
+
+
+
+[23:33] यो थियो Orivraa को पूरा walkthrough। हेर्नुभएकोमा धन्यवाद। हामी platform मा तपाईंलाई भेट्न उत्सुक छौँ।
+
+
+
+[19:56] AI को real query हेरौँ। Shopkeeper Nepali मा सोध्छ — यो महिनाको कुल sales कति छ। AI तुरुन्तै Nepali मा जवाफ दिन्छ, shop को live data pull गरेर।
+
+
+
+[20:25] अब shopkeeper English मा switch गरेर tax filing बारे सोध्छ। AI तुरुन्तै step-by-step guide दिन्छ: sidebar मा Tax Reports जानुस्, India tab navigate गर्नुस्, र GSTR1, GSTR3B, वा HSN Summary download गर्नुस्। कुनै support call चाहिँदैन — बस AI लाई सोध्नुस्।
+
+
+
+[21:06] Shopkeeper AI instructions follow गरेर सिधै Tax Filing Reports navigate गर्छ। India का लागि ready-to-download reports देखिन्छन्: GSTR1, GSTR3B, HSN Summary र Tally XML — सबै compliant। यही हो AI को असली value — सिर्फ जवाफ होइन, step-by-step guide पनि।

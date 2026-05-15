@@ -50,7 +50,17 @@ export const metadata: Metadata = {
     "jewellery ecommerce software tutorial",
     "jewellery customer management software",
   ],
-  alternates: { canonical: "/tutorial" },
+  alternates: {
+    canonical: "/tutorial",
+    languages: {
+      "en": "/tutorial",
+      "hi": "/tutorial/hi",
+      "ne": "/tutorial/ne",
+      "es": "/tutorial/es",
+      "ar": "/tutorial/ar",
+      "x-default": "/tutorial",
+    },
+  },
   openGraph: {
     title: "Orivraa Tutorial 2026 | Complete Jewellery Shop Software Walkthrough",
     description:
