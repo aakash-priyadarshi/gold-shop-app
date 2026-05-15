@@ -58,6 +58,11 @@ const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
     priority: 0.9,
     lastModified: new Date("2026-05-15"),
   },
+  "/tutorial": {
+    changeFrequency: "monthly",
+    priority: 0.9,
+    lastModified: new Date("2026-05-15"),
+  },
   "/jewellery-shop-software": {
     changeFrequency: "weekly",
     priority: 0.9,

@@ -585,6 +585,12 @@ const navItems: NavItem[] = [
     icon: LifeBuoy,
     roles: ["SHOPKEEPER"],
   },
+  {
+    label: "Tutorial",
+    href: "/dashboard/shop/help",
+    icon: BookOpen,
+    roles: ["SHOPKEEPER"],
+  },
 ];
 
 interface DashboardLayoutProps {

@@ -179,9 +179,24 @@ export default {
         return handleServe(key, env, corsHeaders, request);
       }
 
-      // Serve demo videos from DEMOS_BUCKET
+      // Serve SHORT demo videos (~30s screenshot reel) from DEMOS_BUCKET
+      // Used on the homepage hero card and the /demo SEO page.
       if (path.startsWith("/demo/") && request.method === "GET") {
         const lang = path.replace("/demo/", "").split("/")[0];
+        const SUPPORTED_DEMO_LANGS = ["en", "hi", "fr", "de", "es", "ar", "ta", "ne"];
+        if (!SUPPORTED_DEMO_LANGS.includes(lang)) {
+          return new Response(JSON.stringify({ error: `Invalid language. Supported: ${SUPPORTED_DEMO_LANGS.join(", ")}` }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return handleDemoServe(`demo_short_${lang}.mp4`, env, corsHeaders, request);
+      }
+
+      // Serve FULL TUTORIAL videos (~24min voiced walkthrough) from DEMOS_BUCKET
+      // Used on the /tutorial SEO page and the seller dashboard help page.
+      if (path.startsWith("/tutorial/") && request.method === "GET") {
+        const lang = path.replace("/tutorial/", "").split("/")[0];
         const SUPPORTED_DEMO_LANGS = ["en", "hi", "fr", "de", "es", "ar", "ta", "ne"];
         if (!SUPPORTED_DEMO_LANGS.includes(lang)) {
           return new Response(JSON.stringify({ error: `Invalid language. Supported: ${SUPPORTED_DEMO_LANGS.join(", ")}` }), {

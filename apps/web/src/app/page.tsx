@@ -66,6 +66,62 @@ export default function HomePage() {
 
           <AISalesteamPromo />
 
+          {/* 30-second product demo card — autoplay muted loop. */}
+          <section className="py-12 lg:py-16 bg-gray-950">
+            <div className="container mx-auto px-4">
+              <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-8 items-center">
+                <div>
+                  <span className="inline-block bg-amber-500/10 text-amber-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-amber-500/20 mb-3">
+                    30-second product tour
+                  </span>
+                  <h2 className="text-3xl lg:text-4xl font-bold text-white leading-tight mb-4">
+                    See Orivraa in <span className="text-amber-400">30 seconds</span>
+                  </h2>
+                  <p className="text-gray-400 mb-6">
+                    A blink-and-miss tour of inventory by weight & purity, lightning
+                    POS, GST/VAT invoices, digital catalogues, business analytics,
+                    and AI insights — all in one app.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Link
+                      href="/demo"
+                      className="inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold px-5 py-2.5 rounded-lg transition-colors"
+                    >
+                      Watch quick demo
+                    </Link>
+                    <Link
+                      href="/tutorial"
+                      className="inline-flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white px-5 py-2.5 rounded-lg transition-colors"
+                    >
+                      Watch full 24-min tutorial
+                    </Link>
+                  </div>
+                </div>
+                <div
+                  className="relative w-full rounded-xl overflow-hidden ring-1 ring-white/10 bg-black"
+                  style={{ paddingTop: "56.25%" }}
+                >
+                  {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                  <video
+                    className="absolute inset-0 w-full h-full"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    poster="/og-image.png"
+                    aria-label="Orivraa jewellery shop software 30 second demo"
+                  >
+                    <source
+                      src="https://images.orivraa.com/demo/en"
+                      type="video/mp4"
+                    />
+                  </video>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <HomeSections />
 
           <BlogHighlightsSection
