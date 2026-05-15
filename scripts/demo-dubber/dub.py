@@ -443,6 +443,15 @@ def main() -> None:
         action="store_true",
         help="Only process languages officially supported by ElevenLabs eleven_multilingual_v2",
     )
+    parser.add_argument(
+        "--no-translate",
+        action="store_true",
+        help=(
+            "Skip Google Translate — use the --improved-script text as-is for TTS. "
+            "Use this when the improved script is already in the target language "
+            "(e.g. a pre-written hi.txt passed via --improved-script)."
+        ),
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -542,7 +551,11 @@ def main() -> None:
 
         # Translate
         log.info(f"  Translating {len(segments)} segments…")
-        translated = translate_segments(segments, info["gt_code"])
+        if args.no_translate:
+            log.info("  --no-translate set: skipping translation, using improved-script text as-is.")
+            translated = segments
+        else:
+            translated = translate_segments(segments, info["gt_code"])
 
         # Output directory for this language
         lang_dir = out_dir / lang_code

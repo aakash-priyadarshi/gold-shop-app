@@ -1,0 +1,221 @@
+[00:00] ओरिव्रा में स्वागत है। यह हमारी मुख्य वेबसाइट है, और Watch Demo बटन से यह demo video यहीं देख सकते हैं।
+
+
+
+[00:15] ओरिव्रा एक SaaS सॉफ्टवेयर है जो ज्वेलरी दुकान मालिकों के लिए बनाया गया है। यह daily operations को streamline करता है और सभी दोहराए जाने वाले manual काम से मुक्त करता है।
+
+
+
+[00:35] एक Desktop App भी है जिसे इसी पेज से download करें। पहले Windows version है, बाकी platforms जल्द आएंगे।
+
+
+
+[00:50] Login के लिए पेज के ऊपर Login बटन दबाएं। अब मैं log out करके पूरा sign-in process दिखाऊंगा।
+
+
+
+[01:06] यह Login पेज है। नए user Create One से account बनाएं।
+
+
+
+[01:13] Registration में personal details, दुकान का नाम, और basic जानकारी भरें। Google account से भी सीधे sign up कर सकते हैं।
+
+
+
+[01:29] Account बनने के बाद दुकान की details verify करनी होगी ताकि platform आपके business से जुड़ सके। इसके बाद आप पूरी तरह तैयार हैं।
+
+
+
+[01:45] पुराने users बस Sign In करें। मैं Google से sign in करता हूं।
+
+
+
+[01:54] Sign in के बाद सीधे Dashboard पर आते हैं — यह आपका पूरा jewellery business manage करने का केंद्र है।
+
+
+
+[02:05] Navigation bar से display language बदलें। ओरिव्रा Indian regional और international भाषाएं support करता है। यहीं से currency भी बदलें — Globe icon देश दिखाता है और सही currency automatically apply होती है।
+
+
+
+[02:31] दाईं ओर button से Light और Dark mode switch करें। मैं अभी off करता हूं — और back on। Dark mode बहाल है।
+
+
+
+[02:44] Dashboard पर verification banner दिख सकता है। यहां से business verification complete करें — हो जाने पर banner हट जाता है।
+
+
+
+[02:57] अब key features देखते हैं। पहला है Messaging — platform के अंदर से ही customers से सीधे communicate करें, कोई अलग app नहीं।
+
+
+
+[03:14] Products section में सभी listed jewellery items देखें और manage करें। एक sample ring पहले से add है।
+
+
+
+[03:25] नया product जोड़ने के लिए Add Product click करें: item name, SKU, jewellery type, description, build method, material, purity, और weight ग्राम या तोला में। Stock quantity बताएं। Gemstone है तो details add करें। Photos upload करें या image URL दें।
+
+
+
+[03:59] हर product Product List में दिखेगा। Inventory में पूरी जानकारी है — materials, stock levels, और live metal rates। अभी gold rate दिख रहा है, जल्द silver भी जुड़ेगा।
+
+
+
+[04:38] Inventory panel एक और important काम करता है। यहां capabilities enter करें — making charges, alloys, plating options, gemstone pricing, jewellery types, build methods, और finishing styles। इससे ओरिव्रा आपको सही customers से match करता है।
+
+
+
+[05:20] Orders page पर आते हैं। यहां सभी incoming orders दिखेंगे — दुकान के और online दोनों, जो जल्द enable होंगे। हर order यहां track करें।
+
+
+
+[05:48] RFQ section यानी Request For Quotation। Customers की custom jewellery requests यहां आती हैं। Online और Walk-in requests के अलग tabs हैं ताकि source हमेशा पता हो।
+
+
+
+[06:20] Walk-in customers के लिए New Walk-In button दबाकर quotation बनाएं।
+
+
+
+[06:38] Walk-in form में एक smart customer recall feature है। पहली बार customer की details — नाम, phone, email — enter करें, system save कर लेता है। अगली visit में सिर्फ phone number डालें — सारी जानकारी automatically fill हो जाती है। Manual re-entry की ज़रूरत नहीं, कभी नहीं।
+
+
+
+[07:25] Pro Plus plan पर सभी AI features unlock होते हैं, जिसमें AI Design Studio शामिल है। यह custom jewellery orders के लिए specially बना है।
+
+
+
+[07:48] Example देखते हैं। Customer 2 gram का 22 karat gold ring चाहता है। Specifications enter करते ही right side पर estimated price तुरंत आता है — live gold rate, 12% making charge, और GST के साथ। सब real time में calculate होता है।
+
+
+
+[08:30] Making charge पूरी तरह editable है। नीचे वह option मिलती है, जो मैं थोड़ी देर में दिखाऊंगा।
+
+
+
+[08:48] Piece में gemstone है तो Yes mark करें और popular choices से select करें, या custom gemstone details और individual pricing add करें। यहां दिखाई pricing Inventory settings से automatically आती है — वहां जो configure करें, हर quotation में वही reflect होगा।
+
+
+
+[09:30] अब AI feature का जादू देखते हैं। Fields manually भरने की जगह AI को customer का budget और requirement बताएं — जैसे 22 karat gold ring के लिए एक लाख रुपये। AI पांच unique design proposals generate करेगा, full specifications और generated images के साथ। Pro Plus पर सभी पांच available हैं।
+
+
+
+[10:25] Design select करने पर pricing review आती है। Lab diamond चुना तो अट्ठारह हज़ार extra जुड़ गए। इस stage पर कोई भी cost override करें — customer negotiate करे तो metal cost directly बदलें, सभी calculations instantly update होंगी।
+
+
+
+[11:05] सब confirm होने पर Create Quotation click करें। Customer को SMS automatically जाएगा — quotation details और completion date के साथ। Delivery days set करें। Payment at shop default है, आगे और options जुड़ेंगे।
+
+
+
+[11:32] Custom order workflow के अलावा, regular counter sales के लिए standard invoicing system भी है।
+
+
+
+[12:22] Invoice के लिए customer details भरें, jewellery item select करें, quantity, notes, metal type, और weight enter करें। Digital weighing scale connect करके exact weight automatically capture हो सकती है।
+
+
+
+[12:50] Material cost डालते ही 3% GST automatically apply होता है। Making charges के लिए percentage या fixed unit चुनें — discounts में भी यही flexibility मिलती है।
+
+
+
+[13:10] Bill total अलग currencies में देखें — US Dollar, Nepali Rupee, Euro, या Indian Rupee — एक click में। Tax-exempt transaction हो तो mark करें, reason चुनें, tax तुरंत हट जाता है।
+
+
+
+[13:35] सब finalize होने पर due date के साथ Create Invoice click करें — invoice generate और save हो जाती है।
+
+
+
+[13:51] Bill Settings से invoice का look customize करें। दुकान का नाम, logo, tagline, address, phone, email, और footer notes add करें। Layout choose करें और logo position adjust करें।
+
+
+
+[14:15] Demo दिखाता हूं। PNG file shop logo के रूप में upload करता हूं। Logo invoice पर आ गया। ऊपर से नीचे move करता हूं — और वापस ऊपर। Off पर hide, On पर वापस। अपनी branding के अनुसार layout save करें।
+
+
+
+[15:02] Tax Reports देखते हैं। India में invoice बनाने पर GSTR-3B summary automatically generate होती है। Manual filing के लिए GSTR-1 report download करें — हर महीने काफी time बचता है।
+
+
+
+[15:25] Enterprise plan subscribers के लिए tax reports सिर्फ auto-generate नहीं होतीं — integrated system से automatically file भी हो जाती हैं। कोई manual काम नहीं।
+
+
+
+[15:42] Customers section में सभी customers की profile है। Click करें — details और order history देखें।
+
+
+
+[15:52] Tools section में कई utilities हैं: Gold Exchange Rate calculator, Hallmark Tracker, EMI Calculator, Weighing Scale interface, Daily Cash Summary, और Repair Tracker।
+
+
+
+[16:20] Desktop App section से Windows application download करें — दुकान के computer पर चलती है, limited internet में भी।
+
+
+
+[16:33] Analytics section में business का real-time view — revenue, orders, engagement, और customer activity — सब clearly एक dashboard पर।
+
+
+
+[16:48] Billing section में current subscription देखें और manage करें। India में तीन plans हैं। Free Plan में core features limited usage के साथ। Pro Plan में full billing, invoicing, और tax reporting। Pro Plus में सभी AI features — Design Studio और five-design generation। Extra AI credits अलग से लें। Enterprise plan में custom pricing और automated tax filing शामिल है।
+
+
+
+[17:46] Profile Settings में personal preferences manage करें। Shop Settings अलग इसलिए है क्योंकि ओरिव्रा एक account से multiple shops support करता है — हर shop की अपनी independent settings और data होती है।
+
+
+
+[18:12] Help और Support हमेशा available है। Platform में question mark icon context-specific guidance देता है। Tax Reports में date range select करके India GSTR-3B summary सीधे देख सकते हैं।
+
+
+
+[19:12] Language switching live दिखाते हैं। Interface को Hindi में switch कर रहा हूं। देखें — navigation labels, section names, और sidebar का text तुरंत Hindi में बदल गया।
+
+
+
+[19:36] जो items आपने खुद name दिए हैं — जैसे Wedding Collection catalogue — वे exactly वैसे ही रहते हैं। System सिर्फ अपना interface text translate करता है, आपका custom content कभी नहीं।
+
+
+
+[21:50] Wrap up से पहले एक और powerful feature — Catalogue, जो POS Basket से connected है।
+
+
+
+[22:03] Catalogue से products को curated collections में group करें। जैसे Wedding Collection में bridal jewellery। Public या password-protected रख सकते हैं।
+
+
+
+[22:27] Items जोड़ने के लिए Manage पर जाएं, Add Item click करें और products select करें।
+
+
+
+[22:40] Catalogue ready होने पर shareable link और QR code मिलता है। Customer को भेजें — वे photos, descriptions, और pricing के साथ पूरा collection एक clean page पर देखेंगे।
+
+
+
+[23:07] यह digital collection sharing का powerful tool है — बिना अलग website या catalogue app के। Shop visit से पहले customers को collection भेजने के लिए बेहद useful।
+
+
+
+[18:39] अंत में, ओरिव्रा में एक built-in AI assistant है जो हमेशा online है और आपके business की पूरी जानकारी रखता है। Hindi सहित किसी भी भाषा में sales, inventory, tax filing, या किसी feature के बारे में पूछें — accurate और personalized guidance मिलती है। जल्द voice response भी आएगा।
+
+
+
+[23:33] यह था ओरिव्रा का पूरा walkthrough। देखने के लिए बहुत-बहुत धन्यवाद। हम platform पर आपका इंतज़ार करते हैं।
+
+
+
+[19:56] AI का real Hinglish query देखते हैं। Shopkeeper naturally Hinglish में पूछता है — इस महीने की total sales क्या है। AI तुरंत Hinglish में respond करता है, shop का live data pull करके।
+
+
+
+[20:25] अब shopkeeper English में switch करके tax filing के बारे में पूछता है। AI तुरंत step-by-step guide देता है: sidebar में Tax Reports जाएं, India tab navigate करें, और GSTR1, GSTR3B, या HSN Summary download करें। कोई support call नहीं — बस AI से पूछें।
+
+
+
+[21:06] Shopkeeper AI instructions follow करके सीधे Tax Filing Reports navigate करता है। India के लिए ready-to-download reports दिखते हैं: GSTR1, GSTR3B, HSN Summary, और Tally XML — सब compliant। यही है AI की असली value — सिर्फ जवाब नहीं, step-by-step guide भी।
