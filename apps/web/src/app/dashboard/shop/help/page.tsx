@@ -41,6 +41,8 @@ function timeToSeconds(ts: string): number {
 
 type Lang = "en" | "hi" | "ne" | "gu" | "mr" | "ta" | "te" | "kn" | "fr" | "de" | "es" | "ar";
 
+const COMING_SOON_LANGS: Lang[] = ["fr", "de", "ta", "gu", "mr", "te", "kn"];
+
 const LANG_LABELS: Record<Lang, string> = {
   en: "English",
   hi: "हिंदी",
@@ -467,8 +469,12 @@ export default function HelpPage() {
                   variant={lang === l ? "default" : "outline"}
                   size="sm"
                   onClick={() => setLang(l)}
+                  className={COMING_SOON_LANGS.includes(l) ? "opacity-60" : ""}
                 >
                   {LANG_LABELS[l]}
+                  {COMING_SOON_LANGS.includes(l) && (
+                    <span className="ml-1 text-[9px] font-semibold uppercase tracking-wide">soon</span>
+                  )}
                 </Button>
               ))}
             </div>
@@ -497,19 +503,27 @@ export default function HelpPage() {
                 className="relative w-full rounded-lg overflow-hidden bg-black"
                 style={{ paddingTop: "56.25%" }}
               >
-                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                <video
-                  key={lang}
-                  ref={videoRef}
-                  className="absolute inset-0 w-full h-full"
-                  controls
-                  preload="metadata"
-                  poster="https://www.orivraa.com/og-image.png"
-                  aria-label={ui.videoAriaLabel}
-                >
-                  <source src={videoUrl} type="video/mp4" />
-                  <a href={videoUrl} className="text-amber-500 underline">{ui.videoError}</a>
-                </video>
+                {COMING_SOON_LANGS.includes(lang) ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-950">
+                    <Clock className="w-10 h-10 text-amber-400 opacity-70" />
+                    <p className="text-white font-semibold text-lg">Coming Soon</p>
+                    <p className="text-gray-400 text-sm">{LANG_LABELS[lang]} video is being prepared</p>
+                  </div>
+                ) : (
+                  /* eslint-disable-next-line jsx-a11y/media-has-caption */
+                  <video
+                    key={lang}
+                    ref={videoRef}
+                    className="absolute inset-0 w-full h-full"
+                    controls
+                    preload="metadata"
+                    poster="https://www.orivraa.com/og-image.png"
+                    aria-label={ui.videoAriaLabel}
+                  >
+                    <source src={videoUrl} type="video/mp4" />
+                    <a href={videoUrl} className="text-amber-500 underline">{ui.videoError}</a>
+                  </video>
+                )}
               </div>
 
               <p className="text-xs text-muted-foreground">
@@ -570,15 +584,22 @@ export default function HelpPage() {
                   {ui.supportBtn}
                 </Link>
               </Button>
-              <Button variant="outline" asChild>
-                <a
-                  href={videoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  {ui.openBtn}
-                </a>
+              <Button variant="outline" asChild={!COMING_SOON_LANGS.includes(lang)} disabled={COMING_SOON_LANGS.includes(lang)}>
+                {COMING_SOON_LANGS.includes(lang) ? (
+                  <span>
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    {ui.openBtn}
+                  </span>
+                ) : (
+                  <a
+                    href={videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    {ui.openBtn}
+                  </a>
+                )}
               </Button>
             </CardContent>
           </Card>

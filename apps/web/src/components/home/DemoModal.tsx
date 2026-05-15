@@ -2,12 +2,14 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { PlayCircle, X } from "lucide-react";
+import { Clock, PlayCircle, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const CDN_BASE = "https://images.orivraa.com";
 
 type Lang = "en" | "hi" | "ne" | "gu" | "mr" | "ta" | "te" | "kn" | "fr" | "de" | "es" | "ar";
+
+const COMING_SOON_LANGS: Lang[] = ["fr", "de", "ta", "gu", "mr", "te", "kn"];
 
 const LANG_LABELS: Record<Lang, string> = {
   en: "English",
@@ -91,13 +93,17 @@ export function DemoModal({ className, buttonClassName, label = "Watch Demo" }: 
                     key={l}
                     onClick={() => setLang(l)}
                     className={cn(
-                      "px-3 py-1 text-sm font-medium rounded-md transition-colors",
+                      "relative px-3 py-1 text-sm font-medium rounded-md transition-colors",
                       lang === l
                         ? "bg-amber-500 text-white"
-                        : "text-gray-400 hover:text-white"
+                        : "text-gray-400 hover:text-white",
+                      COMING_SOON_LANGS.includes(l) && "opacity-60"
                     )}
                   >
                     {LANG_LABELS[l]}
+                    {COMING_SOON_LANGS.includes(l) && (
+                      <span className="ml-1 text-[9px] font-semibold uppercase tracking-wide opacity-80">soon</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -112,16 +118,24 @@ export function DemoModal({ className, buttonClassName, label = "Watch Demo" }: 
             </div>
 
             {/* Video player */}
-            <video
-              ref={videoRef}
-              key={videoSrc}
-              src={videoSrc}
-              controls
-              autoPlay
-              playsInline
-              className="w-full aspect-video bg-black"
-              preload="metadata"
-            />
+            {COMING_SOON_LANGS.includes(lang) ? (
+              <div className="w-full aspect-video bg-gray-950 flex flex-col items-center justify-center gap-3">
+                <Clock className="w-10 h-10 text-amber-400 opacity-70" />
+                <p className="text-white font-semibold text-lg">Coming Soon</p>
+                <p className="text-gray-400 text-sm">{LANG_LABELS[lang]} video is being prepared</p>
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                key={videoSrc}
+                src={videoSrc}
+                controls
+                autoPlay
+                playsInline
+                className="w-full aspect-video bg-black"
+                preload="metadata"
+              />
+            )}
           </div>
         </div>
       )}
