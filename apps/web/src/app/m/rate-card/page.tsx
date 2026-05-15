@@ -63,7 +63,7 @@ export default function RateCardPage() {
   }, [load]);
 
   const shareText = rates
-    ? `🪙 *Today's Gold & Silver Rates*\n📅 ${rates.date}\n🏪 ${user?.shop?.name ?? "Our Store"}\n\n` +
+    ? `🪙 *Today's Gold & Silver Rates*\n📅 ${rates.date}\n🏪 ${user?.shop?.shopName ?? "Our Store"}\n\n` +
       `💛 24K — ${formatAmt(rates.gold24k, rates.currency)}/g\n` +
       `🟡 22K — ${formatAmt(rates.gold22k, rates.currency)}/g\n` +
       `🟠 18K — ${formatAmt(rates.gold18k, rates.currency)}/g\n` +
@@ -115,7 +115,7 @@ export default function RateCardPage() {
                 <T>Daily Rate Card</T>
               </p>
               <h1 className="text-xl font-bold mt-0.5">
-                {user?.shop?.name ?? "Gold Shop"}
+                {user?.shop?.shopName ?? "Gold Shop"}
               </h1>
               {loading ? (
                 <p className="text-sm opacity-70 mt-1"><T>Loading rates…</T></p>

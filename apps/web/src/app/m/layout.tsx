@@ -265,7 +265,7 @@ export default function MobileLayout({
               Orivraa POS
             </p>
             <p className="text-sm font-semibold text-gray-900 leading-tight truncate max-w-[180px]">
-              {user?.shop?.name ?? user?.firstName}
+              {user?.shop?.shopName ?? user?.firstName}
             </p>
           </div>
           <button

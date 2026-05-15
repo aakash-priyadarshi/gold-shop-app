@@ -246,7 +246,7 @@ export default function QuotesPage() {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://orivraa.com";
     const trackUrl = `${baseUrl}/track/${quoteResult.id}`;
     const msg = encodeURIComponent(
-      `Hello${customerName ? ` ${customerName}` : ""},\n\nHere is your jewellery quote from *${user?.shop?.name ?? "our store"}*.\n\n` +
+      `Hello${customerName ? ` ${customerName}` : ""},\n\nHere is your jewellery quote from *${user?.shop?.shopName ?? "our store"}*.\n\n` +
         items
           .filter((i) => i.weightGrams > 0)
           .map(
