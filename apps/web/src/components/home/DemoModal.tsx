@@ -7,12 +7,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const CDN_BASE = "https://images.orivraa.com";
 
-type Lang = "en" | "hi" | "ne" | "es" | "ar";
+type Lang = "en" | "hi" | "ne" | "gu" | "mr" | "ta" | "te" | "kn" | "fr" | "de" | "es" | "ar";
 
 const LANG_LABELS: Record<Lang, string> = {
   en: "English",
   hi: "हिंदी",
   ne: "नेपाली",
+  gu: "ગુજરાતી",
+  mr: "मराठी",
+  ta: "தமிழ்",
+  te: "తెలుగు",
+  kn: "ಕನ್ನಡ",
+  fr: "Français",
+  de: "Deutsch",
   es: "Español",
   ar: "العربية",
 };
@@ -79,7 +86,7 @@ export function DemoModal({ className, buttonClassName, label = "Watch Demo" }: 
             <div className="flex items-center justify-between px-4 py-3 bg-gray-900/90">
               {/* Language toggle */}
               <div className="flex gap-1 p-0.5 bg-gray-800 rounded-lg flex-wrap">
-                {(["en", "hi", "ne", "es", "ar"] as Lang[]).map((l) => (
+                {(["en", "hi", "ne", "gu", "mr", "ta", "te", "kn", "fr", "de", "es", "ar"] as Lang[]).map((l) => (
                   <button
                     key={l}
                     onClick={() => setLang(l)}

@@ -1,0 +1,216 @@
+[00:00] Bienvenue sur Orivraa. Voici notre site principal, et vous pouvez accéder à cette démo directement ici via le bouton Regarder la démo.
+
+
+
+[00:15] Orivraa est un logiciel SaaS conçu spécifiquement pour les propriétaires de bijouteries. Il est développé pour simplifier vos opérations quotidiennes et vous libérer de toutes les tâches manuelles répétitives qui vous prennent du temps chaque jour.
+
+
+
+[00:35] Nous avons également une application de bureau que vous pouvez télécharger directement depuis cette page. Nous avons lancé la version Windows en premier, avec d'autres plateformes à venir.
+
+
+
+[00:50] Pour vous connecter à la plateforme, utilisez le bouton Connexion en haut de la page. Je vais maintenant me déconnecter et vous guider à travers toute l'expérience de connexion depuis le début.
+
+
+
+[01:06] Voici la page de connexion. Si vous êtes un nouvel utilisateur, cliquez sur Créer un compte pour vous inscrire.
+
+
+
+[01:13] Lors de l'inscription, vous saisirez vos informations personnelles, le nom de votre boutique et d'autres informations de base. Vous pouvez également vous inscrire directement avec votre compte Google pour une configuration plus rapide.
+
+
+
+[01:29] Une fois votre compte créé, une brève étape de vérification est requise pour confirmer les détails de votre boutique, afin que la plateforme puisse associer votre compte à votre entreprise. Après cela, vous êtes entièrement configuré.
+
+
+
+[01:45] Pour les utilisateurs existants, cliquez simplement sur Se connecter. Je vais maintenant me connecter via Google pour continuer la démonstration.
+
+
+
+[01:54] Après la connexion, vous arrivez directement sur le Tableau de bord. C'est votre hub central pour gérer l'ensemble de votre activité de bijouterie depuis un seul endroit.
+
+
+
+[02:05] Depuis la barre de navigation supérieure, vous pouvez changer la langue d'affichage. Orivraa prend en charge une large gamme de langues régionales indiennes ainsi que des langues internationales. Vous pouvez également changer la devise ici. L'icône du globe représente votre pays et le système appliquera automatiquement la devise correcte pour votre région.
+
+
+
+[02:31] Vous pouvez basculer entre le mode clair et le mode sombre à l'aide du bouton à droite. Je le désactive maintenant — et je le réactive. Le mode sombre est rétabli.
+
+
+
+[02:44] Vous remarquerez peut-être une bannière de vérification sur le tableau de bord. Vous pouvez cliquer ici pour compléter la vérification de votre entreprise. Une fois terminé, la bannière disparaît.
+
+
+
+[02:57] Laissez-moi maintenant vous présenter les fonctionnalités clés. La première est la Messagerie, qui vous permet de communiquer directement avec vos clients depuis la plateforme — sans avoir à utiliser une application séparée.
+
+
+
+[03:14] Ensuite, la section Produits. Ici, vous pouvez voir et gérer tous vos articles de bijouterie répertoriés. Vous pouvez déjà voir une bague que j'ai ajoutée comme exemple.
+
+
+
+[03:25] Pour ajouter un nouveau produit, cliquez sur Ajouter un produit et renseignez les détails : nom de l'article, code SKU, type de bijoux, description, méthode de fabrication, matériau utilisé, sa pureté, et le poids en grammes ou en tola. Vous pouvez également préciser le nombre d'unités en stock. Si la pièce comprend des pierres précieuses, vous pouvez ajouter leurs détails et leur valeur. Les images peuvent être téléchargées depuis votre appareil ou ajoutées via une URL.
+
+
+
+[03:59] Chaque produit que vous ajoutez apparaîtra dans votre Liste de produits. La section Inventaire vous donne une vue complète de tout ce que vous gérez — matériaux, niveaux de stock et cours des métaux en direct. Actuellement, le cours de l'or en direct est affiché, et nous allons bientôt ajouter d'autres métaux dont l'argent.
+
+
+
+[04:38] Le panneau d'inventaire remplit également une autre fonction importante. En saisissant vos capacités ici — frais de fabrication, alliages, options de placage, prix des gemmes, types de bijoux, méthodes de fabrication et styles de finition — Orivraa peut vous mettre en relation avec des clients qui recherchent exactement ce que vous proposez.
+
+
+
+[05:20] Passons à la page Commandes. C'est là qu'apparaîtront toutes les commandes entrantes — que ce soit des clients qui visitent votre boutique en personne ou via des commandes en ligne que nous activerons très prochainement.
+
+
+
+[05:48] Vient ensuite la section Demandes de Devis. C'est là qu'apparaîtront les demandes de bijoux personnalisés de vos clients. Vous pouvez voir qu'il y a des onglets séparés pour les demandes En ligne et les demandes en boutique.
+
+
+
+[06:20] Pour les clients en boutique, vous pouvez créer un devis directement en cliquant sur le bouton Nouveau client en boutique.
+
+
+
+[06:38] Lorsque vous ouvrez le formulaire, vous remarquerez une fonctionnalité intelligente de rappel client. La première fois que vous servez un client, vous saisissez ses coordonnées — nom, numéro de téléphone et email. Le système enregistre tout. Dès la prochaine visite, il suffit d'entrer son numéro de téléphone pour que toutes ses informations se remplissent automatiquement.
+
+
+
+[07:25] Si vous êtes sur le plan Pro Plus, qui débloque toutes les fonctionnalités IA, vous avez accès au Studio de Design IA. Cette section est conçue spécifiquement pour gérer les commandes de bijoux personnalisés.
+
+
+
+[07:48] Prenons un exemple. Imaginons qu'un client souhaite une bague en or 22 carats pesant 2 grammes. Dès que vous saisissez ces spécifications, le prix estimé apparaît instantanément à droite — basé sur le cours de l'or en direct, des frais de fabrication de 12% et la TVA. Tout est calculé en temps réel.
+
+
+
+[08:30] Les frais de fabrication sont entièrement modifiables. Vous trouverez l'option ci-dessous, et je vous le montrerai dans un moment.
+
+
+
+[08:48] Si la pièce comprend une pierre précieuse, cochez Oui et sélectionnez parmi les choix populaires ou ajoutez des détails de gemmes personnalisés avec leur tarification individuelle. Toute la tarification affichée ici provient directement de vos paramètres d'inventaire.
+
+
+
+[09:30] C'est là que la fonctionnalité IA révèle toute sa puissance. Au lieu de remplir tous ces champs manuellement, vous indiquez simplement à l'IA le budget et les exigences du client — par exemple, cent mille roupies pour une bague en or 22 carats. L'IA génère alors cinq propositions de design uniques, chacune avec des spécifications complètes et des images générées. Sur le plan Pro Plus, les cinq designs sont entièrement disponibles.
+
+
+
+[10:25] Après avoir sélectionné le design, nous passons à l'étape de révision des prix. Comme nous avons choisi un diamant de laboratoire, dix-huit mille roupies supplémentaires ont été ajoutées. Vous pouvez modifier n'importe quel coût à cette étape — si le client négocie et demande à maintenir le coût du métal à vingt-neuf mille, vous saisissez ce chiffre directement et tous les calculs se mettent à jour instantanément.
+
+
+
+[11:05] Une fois tout confirmé, cliquez sur Créer le Devis. Le client reçoit automatiquement une notification SMS avec les détails du devis et la date d'achèvement estimée. Le paiement en boutique est le mode par défaut.
+
+
+
+[11:32] En plus du flux de commande personnalisé, il existe également un système de facturation standard pour les ventes courantes au comptoir.
+
+
+
+[12:22] Pour créer une facture, renseignez les informations client, sélectionnez l'article de bijouterie, entrez la quantité, les notes, le type de métal et le poids. Vous pouvez même connecter une balance de pesée numérique qui capturera automatiquement le poids exact.
+
+
+
+[12:50] Une fois le coût du matériau saisi, la TVA à 3% est appliquée automatiquement. Pour les frais de fabrication, vous pouvez choisir entre un pourcentage ou un montant fixe — et la même flexibilité s'applique aux remises.
+
+
+
+[13:10] Vous pouvez également consulter le total de la facture dans différentes devises — Dollars, Roupies Népalaises, Euros ou Roupies Indiennes — en un seul clic. Si une transaction est exonérée de taxe, cochez simplement la case, sélectionnez la raison et la taxe est immédiatement supprimée.
+
+
+
+[13:35] Quand tout est finalisé, cliquez sur Créer la Facture avec une date d'échéance, et la facture est générée et stockée.
+
+
+
+[13:51] Vous pouvez également personnaliser l'apparence de vos factures via les Paramètres de facture. Ajoutez le nom de votre boutique, logo, slogan, adresse, téléphone, email et notes de pied de page. Vous pouvez aussi choisir votre mise en page préférée.
+
+
+
+[14:15] Laissez-moi vous faire une démonstration. Je vais télécharger un fichier PNG comme logo de boutique. Comme vous pouvez le voir, le logo apparaît maintenant sur la facture. Je peux le déplacer du haut vers le bas — et le repositionner en haut. Le désactiver le cache entièrement. Le réactiver le restaure. Vous pouvez enregistrer n'importe quelle configuration de mise en page.
+
+
+
+[15:02] Voyons maintenant les Rapports Fiscaux. En France et dans les pays de l'UE, les résumés de TVA sont générés automatiquement au fur et à mesure que vous créez des factures. Vous pouvez télécharger les rapports pour la déclaration fiscale manuelle, vous faisant gagner un temps considérable chaque mois.
+
+
+
+[15:25] Pour les abonnés au plan Entreprise, cela va encore plus loin — les rapports fiscaux ne sont pas seulement auto-générés mais aussi déposés automatiquement en votre nom via notre système intégré.
+
+
+
+[15:42] La section Clients affiche les profils de tous vos clients enregistrés. Cliquer sur un client montre ses informations complètes et l'historique de ses commandes.
+
+
+
+[15:52] La section Outils contient plusieurs utilitaires pratiques : une calculatrice de taux d'échange d'or, un Suivi Hallmark, une Calculatrice de mensualités pour montrer aux clients leurs options de versements, une interface de connexion Balance, un Résumé de Caisse Quotidien et un Suivi des Réparations.
+
+
+
+[16:20] La section Application de Bureau vous permet de télécharger la dernière version de notre application Windows, qui fonctionne directement sur votre ordinateur et même avec une connexion internet limitée.
+
+
+
+[16:33] La section Analytique vous donne une vue en temps réel de votre activité — chiffre d'affaires total, volume de commandes, engagement et activité client — tout présenté clairement en un seul tableau de bord.
+
+
+
+[16:48] Dans la section Facturation, vous pouvez voir votre plan d'abonnement actuel et le gérer. Nous proposons plusieurs plans. Le Plan Gratuit vous donne accès à toutes les fonctionnalités de base. Le Plan Pro débloque la suite complète de facturation et de rapports fiscaux. Le Plan Pro Plus ajoute toutes les capacités IA. Le tarif Entreprise est personnalisé selon vos besoins.
+
+
+
+[17:46] Dans Paramètres du Profil, vous pouvez gérer vos préférences de compte personnel. Les Paramètres de Boutique sont séparés car Orivraa prend en charge plusieurs boutiques sous un seul compte. Chaque boutique maintient ses propres paramètres, marque et données indépendants.
+
+
+
+[18:12] Si vous avez besoin d'aide, la section Aide et Support est toujours disponible. Vous pouvez également cliquer sur l'icône point d'interrogation qui apparaît sur toute la plateforme et fournit des conseils contextuels pour la page sur laquelle vous vous trouvez.
+
+
+
+[19:12] Laissez-moi maintenant vous montrer le changement de langue en action. Je bascule toute l'interface en Hindi. Comme vous pouvez le voir, toutes les étiquettes de navigation et les noms de section ont changé instantanément. La plateforme s'adapte entièrement à votre langue préférée.
+
+
+
+[19:36] Vous remarquerez cependant que les éléments que vous avez nommés vous-même — comme un catalogue intitulé Collection Mariage — restent exactement tels que vous les avez tapés. Le système traduit uniquement son propre texte d'interface, jamais votre contenu personnalisé.
+
+
+
+[21:50] Avant de conclure, laissez-moi vous montrer encore une fonctionnalité puissante — le Catalogue. Cela est connecté au Panier POS que vous avez peut-être remarqué précédemment.
+
+
+
+[22:03] La fonctionnalité Catalogue vous permet de regrouper vos produits en collections organisées et partageables. Par exemple, vous pouvez créer une Collection Mariage contenant tous vos bijoux de mariée. Vous pouvez la définir comme publique ou protégée par un mot de passe.
+
+
+
+[22:27] Pour ajouter des articles à un catalogue, allez dans Gérer, puis cliquez sur Ajouter un Article. Le système affiche tous vos produits disponibles et vous sélectionnez simplement ceux à inclure.
+
+
+
+[22:40] Une fois le catalogue prêt, vous obtenez un lien partageable unique et un code QR. Vous pouvez envoyer l'un ou l'autre à vos clients. Quand un client ouvre le lien, il voit toute votre collection sur une page claire — avec photos, descriptions et tarifs — et peut parcourir les pièces qui l'intéressent.
+
+
+
+[23:07] C'est un outil puissant pour partager votre collection numériquement sans avoir besoin d'un site web séparé. Il est particulièrement utile pour envoyer des collections à des clients avant leur visite en boutique.
+
+
+
+[18:39] Enfin, Orivraa inclut un assistant IA intégré toujours en ligne avec le contexte complet de votre activité. Vous pouvez lui poser n'importe quelle question — dans n'importe quelle langue — sur vos ventes, inventaire, déclarations fiscales ou comment utiliser n'importe quelle fonctionnalité, et il répondra avec des conseils précis et personnalisés.
+
+
+
+[23:33] C'est tout ce qu'Orivraa a à offrir. Merci infiniment d'avoir regardé cette présentation complète. Nous avons hâte de vous accueillir sur la plateforme.
+
+
+[19:56] Regardez comment l'IA gère une requête réelle. Le propriétaire de la boutique demande dans un langage naturel quelles sont les ventes totales pour ce mois. L'IA répond instantanément en extrayant des données en direct directement depuis la boutique.
+
+[20:25] Le propriétaire passe à l'anglais et demande comment déclarer les taxes. L'IA fournit immédiatement un guide clair étape par étape : aller dans Rapports Fiscaux dans la barre latérale, puis télécharger votre résumé TVA. Pas besoin d'appeler le support — demandez simplement à l'IA.
+
+[21:06] Le propriétaire suit les instructions de l'IA et navigue directement vers les Rapports Fiscaux. La page affiche des rapports prêts à télécharger entièrement conformes. C'est la valeur fondamentale de l'IA — elle ne répond pas seulement aux questions, elle vous guide activement à travers la plateforme étape par étape.

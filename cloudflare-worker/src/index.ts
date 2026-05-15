@@ -183,7 +183,7 @@ export default {
       // Used on the homepage hero card and the /demo SEO page.
       if (path.startsWith("/demo/") && request.method === "GET") {
         const lang = path.replace("/demo/", "").split("/")[0];
-        const SUPPORTED_DEMO_LANGS = ["en", "hi", "fr", "de", "es", "ar", "ta", "ne"];
+        const SUPPORTED_DEMO_LANGS = ["en", "hi", "fr", "de", "es", "ar", "ta", "ne", "gu", "mr", "te", "kn"];
         if (!SUPPORTED_DEMO_LANGS.includes(lang)) {
           return new Response(JSON.stringify({ error: `Invalid language. Supported: ${SUPPORTED_DEMO_LANGS.join(", ")}` }), {
             status: 400,
@@ -197,7 +197,7 @@ export default {
       // Used on the /tutorial SEO page and the seller dashboard help page.
       if (path.startsWith("/tutorial/") && request.method === "GET") {
         const lang = path.replace("/tutorial/", "").split("/")[0];
-        const SUPPORTED_DEMO_LANGS = ["en", "hi", "fr", "de", "es", "ar", "ta", "ne"];
+        const SUPPORTED_DEMO_LANGS = ["en", "hi", "fr", "de", "es", "ar", "ta", "ne", "gu", "mr", "te", "kn"];
         if (!SUPPORTED_DEMO_LANGS.includes(lang)) {
           return new Response(JSON.stringify({ error: `Invalid language. Supported: ${SUPPORTED_DEMO_LANGS.join(", ")}` }), {
             status: 400,

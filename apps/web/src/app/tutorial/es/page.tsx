@@ -182,35 +182,20 @@ export default function TutorialEsPage() {
             </video>
           </div>
 
-          <div className="flex items-center gap-3 mt-4 justify-end text-sm text-gray-500">
+          <div className="flex items-center gap-3 mt-4 justify-end text-sm text-gray-500 flex-wrap">
             <span>Disponible en:</span>
-            <Link
-              href="/tutorial"
-              className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors"
-            >
-              English
-            </Link>
-            <Link
-              href="/tutorial/hi"
-              className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors"
-            >
-              हिन्दी
-            </Link>
-            <Link
-              href="/tutorial/ne"
-              className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors"
-            >
-              नेपाली
-            </Link>
-            <span className="bg-amber-500 text-gray-950 font-semibold px-2 py-0.5 rounded">
-              Español
-            </span>
-            <Link
-              href="/tutorial/ar"
-              className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors"
-            >
-              العربية
-            </Link>
+            <Link href="/tutorial" className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors">English</Link>
+            <Link href="/tutorial/hi" className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors">हिन्दी</Link>
+            <Link href="/tutorial/ne" className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors">नेपाली</Link>
+            <Link href="/tutorial/gu" className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors">ગુજરાતી</Link>
+            <Link href="/tutorial/mr" className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors">मराठी</Link>
+            <Link href="/tutorial/ta" className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors">தமிழ்</Link>
+            <Link href="/tutorial/te" className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors">తెలుగు</Link>
+            <Link href="/tutorial/kn" className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors">ಕನ್ನಡ</Link>
+            <Link href="/tutorial/fr" className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors">Français</Link>
+            <Link href="/tutorial/de" className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors">Deutsch</Link>
+            <span className="bg-amber-500 text-gray-950 font-semibold px-2 py-0.5 rounded">Español</span>
+            <Link href="/tutorial/ar" className="text-gray-400 hover:text-amber-400 px-2 py-0.5 rounded transition-colors">العربية</Link>
           </div>
         </div>
       </section>

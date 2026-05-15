@@ -1,0 +1,216 @@
+[00:00] Willkommen bei Orivraa. Dies ist unsere Hauptwebsite, und Sie können dieses Demo-Video direkt hier über die Schaltfläche Demo ansehen aufrufen.
+
+
+
+[00:15] Orivraa ist eine SaaS-basierte Software, die speziell für Schmuckladenbesitzer entwickelt wurde. Sie ist darauf ausgelegt, Ihren täglichen Betrieb zu optimieren und Sie von all den sich wiederholenden manuellen Aufgaben zu befreien, die täglich Ihre Zeit in Anspruch nehmen.
+
+
+
+[00:35] Wir haben auch eine Desktop-Anwendung, die Sie direkt von dieser Seite herunterladen können. Wir haben zunächst die Windows-Version veröffentlicht, weitere Plattformen folgen.
+
+
+
+[00:50] Um sich bei der Plattform anzumelden, verwenden Sie die Anmeldeschaltfläche oben auf der Seite. Ich melde mich jetzt ab und führe Sie von Anfang an durch den gesamten Anmeldevorgang.
+
+
+
+[01:06] Dies ist die Anmeldeseite. Wenn Sie ein neuer Benutzer sind, klicken Sie auf Konto erstellen, um sich zu registrieren.
+
+
+
+[01:13] Bei der Registrierung geben Sie Ihre persönlichen Daten, Ihren Ladenname und andere grundlegende Informationen ein. Sie können sich auch direkt über Ihr Google-Konto anmelden für eine schnellere Einrichtung.
+
+
+
+[01:29] Sobald Ihr Konto erstellt ist, ist ein kurzer Verifizierungsschritt erforderlich, um Ihre Geschäftsdaten zu bestätigen, damit die Plattform Ihr Konto Ihrem Unternehmen zuordnen kann. Danach sind Sie vollständig eingerichtet.
+
+
+
+[01:45] Für bestehende Benutzer klicken Sie einfach auf Anmelden. Ich melde mich jetzt über Google an, um die Demonstration fortzusetzen.
+
+
+
+[01:54] Nach der Anmeldung landen Sie direkt im Dashboard. Dies ist Ihr zentraler Hub zur Verwaltung Ihres gesamten Schmuckgeschäfts an einem Ort.
+
+
+
+[02:05] Über die obere Navigationsleiste können Sie die Anzeigesprache ändern. Orivraa unterstützt eine breite Palette indischer Regionalsprachen sowie internationale Sprachen. Sie können hier auch die Währung ändern. Das Globus-Symbol repräsentiert Ihr Land und das System wendet automatisch die korrekte Währung für Ihre Region an.
+
+
+
+[02:31] Sie können mit der Schaltfläche rechts zwischen Hell- und Dunkelmodus wechseln. Ich deaktiviere ihn jetzt — und reaktiviere ihn. Der Dunkelmodus ist wiederhergestellt.
+
+
+
+[02:44] Möglicherweise sehen Sie ein Verifizierungsbanner im Dashboard. Sie können von hier aus auf Ihre Unternehmensverifizierung zugreifen. Nach Abschluss wird das Banner entfernt.
+
+
+
+[02:57] Lassen Sie mich nun die wichtigsten Funktionen vorstellen. Die erste ist die Messaging-Funktion, mit der Sie direkt mit Ihren Kunden von der Plattform aus kommunizieren können — ohne zu einer separaten App wechseln zu müssen.
+
+
+
+[03:14] Als nächstes der Bereich Produkte. Hier können Sie alle Ihre aufgelisteten Schmuckstücke anzeigen und verwalten. Sie können bereits einen Ring sehen, den ich als Beispiel hinzugefügt habe.
+
+
+
+[03:25] Um ein neues Produkt hinzuzufügen, klicken Sie auf Produkt hinzufügen und füllen Sie die Details aus: Artikelname, SKU-Code, Schmucktyp, Beschreibung, Herstellungsmethode, verwendetes Material, seine Reinheit und das Gewicht in Gramm oder Tola. Sie können auch angeben, wie viele Einheiten vorrätig sind. Wenn das Stück Edelsteine enthält, können Sie deren Details und Wert hinzufügen. Bilder können von Ihrem Gerät hochgeladen oder über eine URL hinzugefügt werden.
+
+
+
+[03:59] Jedes Produkt, das Sie hinzufügen, erscheint in Ihrer Produktliste. Der Bereich Inventar gibt Ihnen einen vollständigen Überblick über alles — Materialien, Lagerbestände und Live-Metallkurse. Derzeit wird der Live-Goldkurs angezeigt, und wir werden bald weitere Metalle einschließlich Silber hinzufügen.
+
+
+
+[04:38] Das Inventar-Panel dient auch einem anderen wichtigen Zweck. Indem Sie hier Ihre Fähigkeiten eingeben — Herstellungskosten, Legierungen, Plattierungsoptionen, Edelsteinpreise, Schmucktypen, Herstellungsmethoden und Veredelungsstile — kann Orivraa Sie mit Kunden zusammenbringen, die genau das suchen, was Sie anbieten.
+
+
+
+[05:20] Weiter zur Seite Bestellungen. Hier erscheinen alle eingehenden Bestellungen — sowohl von Kunden, die Ihren Laden persönlich besuchen, als auch über Online-Bestellungen, die wir sehr bald aktivieren werden.
+
+
+
+[05:48] Als nächstes der Bereich Angebotsanfragen. Hier erscheinen individuelle Schmuckwünsche Ihrer Kunden. Es gibt separate Registerkarten für Online-Anfragen und Laufkundschaft.
+
+
+
+[06:20] Für Laufkunden können Sie direkt ein Angebot erstellen, indem Sie auf die Schaltfläche Neuer Laufkunde klicken.
+
+
+
+[06:38] Wenn Sie das Formular öffnen, sehen Sie eine intelligente Kundenerinnerungsfunktion. Wenn Sie einen Kunden zum ersten Mal bedienen, geben Sie seine Daten ein — Name, Telefonnummer und E-Mail. Das System speichert alles. Ab dem nächsten Besuch reicht es, die Telefonnummer einzugeben, um alle Informationen automatisch auszufüllen.
+
+
+
+[07:25] Wenn Sie sich im Pro-Plus-Tarif befinden, der alle KI-Funktionen freischaltet, haben Sie Zugang zum KI-Design-Studio. Dieser Bereich wurde speziell für die Bearbeitung individueller Schmuckbestellungen entwickelt.
+
+
+
+[07:48] Schauen wir uns ein Beispiel an. Angenommen, ein Kunde möchte einen 22-karätigen Goldring mit einem Gewicht von 2 Gramm. Sobald Sie diese Spezifikationen eingeben, erscheint der geschätzte Preis sofort rechts — basierend auf dem aktuellen Live-Goldkurs, einer 12-prozentigen Herstellungsgebühr und der Mehrwertsteuer. Alles wird in Echtzeit berechnet.
+
+
+
+[08:30] Die Herstellungsgebühr ist vollständig bearbeitbar. Sie finden die Option unten, und ich zeige Ihnen das gleich.
+
+
+
+[08:48] Wenn das Stück einen Edelstein enthält, markieren Sie Ja und wählen aus den beliebten Optionen oder fügen benutzerdefinierte Edelsteindetails mit individueller Preisgestaltung hinzu. Alle hier angezeigten Preise werden direkt aus Ihren Inventareinstellungen übernommen.
+
+
+
+[09:30] Hier entfaltet die KI-Funktion ihre wahre Stärke. Anstatt alle diese Felder manuell auszufüllen, teilen Sie der KI einfach das Budget und die Anforderungen des Kunden mit — zum Beispiel hunderttausend Rupien für einen 22-karätigen Goldring. Die KI generiert dann fünf einzigartige Designvorschläge, jeweils mit vollständigen Spezifikationen und generierten Bildern. Im Pro-Plus-Tarif sind alle fünf Designs vollständig verfügbar.
+
+
+
+[10:25] Nach der Auswahl des Designs wechseln wir zur Preisüberprüfung. Da wir einen Labordiamanten gewählt haben, wurden zusätzliche achtzehntausend Rupien hinzugefügt. Sie können jeden Kostenposten in dieser Phase überschreiben — wenn der Kunde verhandelt und die Metallkosten bei neunundzwanzigtausend belassen möchte, geben Sie diese Zahl direkt ein und alle Berechnungen werden sofort aktualisiert.
+
+
+
+[11:05] Sobald alles bestätigt ist, klicken Sie auf Angebot erstellen. Der Kunde erhält automatisch eine SMS-Benachrichtigung mit den Angebotsdetails und dem geschätzten Fertigstellungsdatum. Zahlung im Geschäft ist die Standardoption.
+
+
+
+[11:32] Neben dem individuellen Bestellprozess gibt es auch ein Standard-Rechnungssystem für reguläre Verkäufe an der Kasse.
+
+
+
+[12:22] Um eine Rechnung zu erstellen, füllen Sie die Kundendaten aus, wählen Sie das Schmuckstück, geben Sie Menge, Notizen, Metalltyp und Gewicht ein. Sie können sogar eine digitale Waage anschließen, die automatisch das genaue Gewicht erfasst.
+
+
+
+[12:50] Sobald Sie die Materialkosten eingeben, wird die Mehrwertsteuer von 3% automatisch angewendet. Für Herstellungsgebühren können Sie zwischen prozentbasiert oder fester Einheit wählen — und die gleiche Flexibilität gilt für Rabatte.
+
+
+
+[13:10] Sie können den Rechnungsbetrag auch in verschiedenen Währungen anzeigen — US-Dollar, Nepalesische Rupien, Euro oder Indische Rupien — mit einem einzigen Klick. Wenn eine Transaktion steuerfrei ist, markieren Sie sie einfach als solche, wählen Sie den Grund und die Steuer wird sofort entfernt.
+
+
+
+[13:35] Wenn alles abgeschlossen ist, klicken Sie auf Rechnung erstellen mit einem Fälligkeitsdatum, und die Rechnung wird erstellt und gespeichert.
+
+
+
+[13:51] Sie können auch das Aussehen Ihrer Rechnungen mit den Rechnungseinstellungen anpassen. Fügen Sie Ihren Ladennamen, Logo, Slogan, Adresse, Telefonnummer, E-Mail und Fußnotizen hinzu. Sie können auch Ihr bevorzugtes Layout wählen.
+
+
+
+[14:15] Lassen Sie mich demonstrieren. Ich lade eine PNG-Datei als Ladenlogo hoch. Wie Sie sehen können, erscheint das Logo jetzt auf der Rechnung. Ich kann es von oben nach unten verschieben — und wieder nach oben positionieren. Es deaktivieren verbirgt es vollständig. Es wieder aktivieren stellt es wieder her. Sie können jede Layout-Konfiguration speichern.
+
+
+
+[15:02] Schauen wir uns nun die Steuerberichte an. Die Mehrwertsteuer-Zusammenfassungen werden automatisch generiert, während Sie Rechnungen erstellen. Sie können auch die Berichte für die manuelle Steuererklärung herunterladen und sparen so erheblich Zeit und Aufwand jeden Monat.
+
+
+
+[15:25] Für Unternehmensplan-Abonnenten geht dies noch weiter — Steuerberichte werden nicht nur automatisch generiert, sondern auch automatisch in Ihrem Namen über unser integriertes System eingereicht.
+
+
+
+[15:42] Der Bereich Kunden zeigt Profile aller gespeicherten Kunden. Ein Klick auf einen Kunden zeigt seine vollständigen Details und Bestellhistorie.
+
+
+
+[15:52] Der Bereich Tools enthält mehrere nützliche Hilfsprogramme: einen Goldwechselkursrechner für wenn Kunden altes Gold zum Tauschen bringen, einen Hallmark-Tracker, einen Ratenzahlungsrechner, eine Waagenverbindungsschnittstelle, eine Tägliche Kassenzusammenfassung und einen Reparatur-Tracker.
+
+
+
+[16:20] Der Bereich Desktop-App ermöglicht es Ihnen, die neueste Version unserer Windows-Anwendung herunterzuladen, die direkt auf Ihrem Ladencomputer läuft und auch mit begrenztem Internet funktioniert.
+
+
+
+[16:33] Der Bereich Analytik gibt Ihnen eine Echtzeit-Ansicht Ihres Unternehmens — Gesamtumsatz, Bestellvolumen, Engagement und Kundenaktivität — alles übersichtlich in einem Dashboard dargestellt.
+
+
+
+[16:48] Im Bereich Abrechnung können Sie Ihren aktuellen Abonnementplan sehen und verwalten. Wir bieten derzeit mehrere Pläne an. Der Gratis-Plan gibt Ihnen Zugang zu allen Kernfunktionen. Der Pro-Plan schaltet die vollständige Abrechnungs- und Steuerberichtssuite frei. Der Pro-Plus-Plan fügt alle KI-Funktionen hinzu. Der Enterprise-Preis wird basierend auf Ihren Bedürfnissen angepasst.
+
+
+
+[17:46] In den Profileinstellungen können Sie Ihre persönlichen Kontoeinstellungen verwalten. Die Ladeneinstellungen sind separat, da Orivraa mehrere Läden unter einem einzigen Konto unterstützt. Jeder Laden behält seine eigenen unabhängigen Einstellungen, Marke und Daten.
+
+
+
+[18:12] Wenn Sie jemals Hilfe benötigen, ist der Hilfe- und Supportbereich immer verfügbar. Sie können auch auf das Fragezeichensymbol klicken, das auf der gesamten Plattform erscheint und kontextspezifische Anleitungen für die aktuelle Seite bietet.
+
+
+
+[19:12] Lassen Sie mich nun die Sprachumschaltfunktion in Aktion demonstrieren. Ich wechsle die gesamte Benutzeroberfläche auf Hindi. Wie Sie sehen können, haben sich alle Navigationsbezeichnungen und Abschnittsnamen sofort geändert. Die Plattform passt sich vollständig Ihrer bevorzugten Sprache an.
+
+
+
+[19:36] Sie werden jedoch bemerken, dass Elemente, die Sie selbst benannt haben — wie ein Katalog namens Hochzeitskollektion — genau so bleiben, wie Sie sie eingegeben haben. Das System übersetzt nur seinen eigenen Schnittstellentext, niemals Ihre benutzerdefinierten Inhalte.
+
+
+
+[21:50] Bevor wir abschließen, lassen Sie mich noch eine leistungsstarke Funktion zeigen — den Katalog. Dieser ist mit dem POS-Warenkorb verbunden, den Sie vielleicht zuvor bemerkt haben.
+
+
+
+[22:03] Die Katalog-Funktion ermöglicht es Ihnen, Ihre Produkte in kuratierte, teilbare Sammlungen zu gruppieren. Beispielsweise können Sie eine Hochzeitskollektion mit all Ihrem Brautschmuck erstellen. Sie können sie als öffentlich oder passwortgeschützt festlegen.
+
+
+
+[22:27] Um Artikel zu einem Katalog hinzuzufügen, gehen Sie zu Verwalten und klicken Sie dann auf Artikel hinzufügen. Das System zeigt alle verfügbaren Produkte und Sie wählen einfach aus, welche eingeschlossen werden sollen.
+
+
+
+[22:40] Sobald der Katalog fertig ist, erhalten Sie einen einzigartigen teilbaren Link und einen QR-Code. Sie können beides an Ihre Kunden senden. Wenn ein Kunde den Link öffnet, sieht er Ihre gesamte Kollektion auf einer übersichtlichen Seite — mit Fotos, Beschreibungen und Preisen — und kann durchblättern und Ihnen mitteilen, welche Stücke sie interessieren.
+
+
+
+[23:07] Dies ist ein leistungsstarkes Tool zum digitalen Teilen Ihrer Kollektion ohne eine separate Website zu benötigen. Es ist besonders nützlich, um Kollektionen an Kunden zu senden, bevor sie den Laden besuchen.
+
+
+
+[18:39] Schließlich enthält Orivraa einen integrierten KI-Assistenten, der immer online ist und den vollständigen Kontext Ihres Unternehmens kennt. Sie können ihm alles fragen — in jeder Sprache — über Ihre Verkäufe, Inventar, Steuererklärungen oder wie man eine Funktion nutzt, und er antwortet mit präziser, personalisierter Beratung.
+
+
+
+[23:33] Das ist alles, was Orivraa zu bieten hat. Vielen Dank, dass Sie sich diese vollständige Präsentation angesehen haben. Wir freuen uns darauf, Sie auf der Plattform begrüßen zu dürfen.
+
+
+[19:56] Sehen Sie, wie die KI mit einer echten Anfrage umgeht. Der Ladenbesitzer fragt in natürlicher Sprache nach den Gesamtverkäufen dieses Monats. Die KI antwortet sofort und ruft Live-Daten direkt aus dem Laden ab.
+
+[20:25] Jetzt wechselt der Ladenbesitzer zum Englischen und fragt, wie man Steuern einreicht. Die KI liefert sofort eine klare Schritt-für-Schritt-Anleitung: Gehen Sie zu Steuerberichte in der Seitenleiste und laden Sie Ihre Zusammenfassung herunter. Kein Supportanruf nötig — fragen Sie einfach die KI.
+
+[21:06] Der Ladenbesitzer folgt den KI-Anweisungen und navigiert direkt zu den Steuerberichten. Die Seite zeigt downloadfertige, vollständig konforme Berichte. Dies ist der Kernwert der KI — sie beantwortet nicht nur Fragen, sie führt Sie aktiv Schritt für Schritt durch die Plattform.

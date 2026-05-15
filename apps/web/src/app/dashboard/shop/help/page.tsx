@@ -16,10 +16,17 @@ import {
   BookOpen,
   Clock,
   ExternalLink,
+  HelpCircle,
   LifeBuoy,
   MessageSquare,
   PlayCircle,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 
@@ -32,12 +39,19 @@ function timeToSeconds(ts: string): number {
   return parts[0] * 3600 + parts[1] * 60 + parts[2];
 }
 
-type Lang = "en" | "hi" | "ne" | "es" | "ar";
+type Lang = "en" | "hi" | "ne" | "gu" | "mr" | "ta" | "te" | "kn" | "fr" | "de" | "es" | "ar";
 
 const LANG_LABELS: Record<Lang, string> = {
   en: "English",
   hi: "हिंदी",
   ne: "नेपाली",
+  gu: "ગુજરાતી",
+  mr: "मराठी",
+  ta: "தமிழ்",
+  te: "తెలుగు",
+  kn: "ಕನ್ನಡ",
+  fr: "Français",
+  de: "Deutsch",
   es: "Español",
   ar: "العربية",
 };
@@ -118,6 +132,104 @@ const UI: Record<Lang, {
     supportBtn: "فتح تذكرة دعم",
     openBtn: "فتح الفيديو في تبويب جديد",
   },
+  gu: {
+    videoTitle: "સંપૂર્ણ ઉત્પાદ ટ્યુટોરિયલ",
+    videoDesc: "Orivraa ની દરેક સુવિધાનો સંપૂર્ણ પ્રવાસ · ૨૩ મિનિટ",
+    badgeLabel: "ગુજરાતી",
+    videoAriaLabel: "Orivraa ઝવેરી દુકાન સૉફ્ટવેર સંપૂર્ણ ટ્યુટોરિયલ",
+    videoError: "ટ્યુટોરિયલ ડાઉનલોડ કરો",
+    videoTip: "ટિપ: વીડિયો પર રાઇટ-ક્લિક કરો અને 'Picture in Picture' પસંદ કરો.",
+    chapterTitle: "ચૅપ્ટર ઇન્ડેક્સ",
+    chapterDesc: "કોઈ પણ ચૅપ્ટર પર ક્લિક કરો — વીડિયો તે ક્ષણ પર જશે",
+    helpTitle: "વધુ મદદ જોઈએ છે?",
+    helpDesc: "અમારી સપોર્ટ ટીમ ચૅટ અથવા ટિકિટ દ્વારા ઉપલબ્ધ છે.",
+    supportBtn: "સપોર્ટ ટિકિટ ખોલો",
+    openBtn: "નવી ટૅબમાં વીડિયો ખોલો",
+  },
+  mr: {
+    videoTitle: "संपूर्ण उत्पाद ट्यूटोरियल",
+    videoDesc: "Orivraa च्या प्रत्येक वैशिष्ट्याचे संपूर्ण मार्गदर्शन · २३ मिनिटे",
+    badgeLabel: "मराठी",
+    videoAriaLabel: "Orivraa दागिना दुकान सॉफ्टवेअर संपूर्ण ट्यूटोरियल",
+    videoError: "ट्यूटोरियल डाउनलोड करा",
+    videoTip: "टिप: व्हिडिओवर उजवे-क्लिक करा आणि 'Picture in Picture' निवडा.",
+    chapterTitle: "अध्याय अनुक्रमणिका",
+    chapterDesc: "कोणत्याही अध्यायावर क्लिक करा — व्हिडिओ त्या क्षणी जाईल",
+    helpTitle: "अधिक मदत हवी आहे?",
+    helpDesc: "आमची सपोर्ट टीम चॅट किंवा तिकीटद्वारे उपलब्ध आहे.",
+    supportBtn: "सपोर्ट तिकीट उघडा",
+    openBtn: "नवीन टॅबमध्ये व्हिडिओ उघडा",
+  },
+  ta: {
+    videoTitle: "முழுமையான தயாரிப்பு பயிற்சி",
+    videoDesc: "Orivraa இன் அனைத்து அம்சங்களும் · ²³ நிமிடங்கள்",
+    badgeLabel: "தமிழ்",
+    videoAriaLabel: "Orivraa நகை கடை மென்பொருளின் முழுமையான பயிற்சி",
+    videoError: "பயிற்சியை பதிவிறக்கவும்",
+    videoTip: "குறிப்பு: வீடியோவில் வலது கிளிக் செய்து 'Picture in Picture' தேர்வு செய்யுங்கள்.",
+    chapterTitle: "அத்தியாயம் அட்டவணை",
+    chapterDesc: "எந்த அத்தியாயத்தையும் கிளிக் செய்யுங்கள் — வீடியோ அந்த நேரத்திற்கு செல்லும்",
+    helpTitle: "மேலும் உதவி தேவையா?",
+    helpDesc: "எங்கள் ஆதரவு குழு அரட்டை அல்லது சீட்டி மூலம் கிடைக்கிறது.",
+    supportBtn: "ஆதரவு டிக்கெட் திறக்கவும்",
+    openBtn: "புதிய தாவலில் வீடியோவைத் திறக்கவும்",
+  },
+  te: {
+    videoTitle: "సంపూర్ణ ఉత్పత్తి ట్యుటోరియల్",
+    videoDesc: "Orivraa యొక్క అన్ని లక్షణాలు · ²³ నిమిషాలు",
+    badgeLabel: "తెలుగు",
+    videoAriaLabel: "Orivraa జువెలరీ షాప్ సాఫ్ట్‌వేర్ సంపూర్ణ ట్యుటోరియల్",
+    videoError: "ట్యుటోరియల్ డౌన్‌లోడ్ చేయండి",
+    videoTip: "చిట్కా: వీడియోపై రైట్-క్లిక్ చేసి 'Picture in Picture' ఎంచుకోండి.",
+    chapterTitle: "అధ్యాయం సూచిక",
+    chapterDesc: "ఏదైనా అధ్యాయంపై క్లిక్ చేయండి — వీడియో ఆ క్షణంలోకి వెళ్తుంది",
+    helpTitle: "మరింత సహాయం కావాలా?",
+    helpDesc: "మా సపోర్ట్ టీమ్ చాట్ లేదా టిక్కెట్ ద్వారా అందుబాటులో ఉంది.",
+    supportBtn: "సపోర్ట్ టిక్కెట్ తెరవండి",
+    openBtn: "కొత్త ట్యాబ్‌లో వీడియో తెరవండి",
+  },
+  kn: {
+    videoTitle: "ಸಂಪೂರ್ಣ ಉತ್ಪನ್ನ ಟ್ಯುಟೋರಿಯಲ್",
+    videoDesc: "Orivraa ನ ಪ್ರತಿಯೊಂದು ವೈಶಿಷ್ಟ್ಯ · ²³ ನಿಮಿಷಗಳು",
+    badgeLabel: "ಕನ್ನಡ",
+    videoAriaLabel: "Orivraa ಆಭರಣ ಅಂಗಡಿ ಸಾಫ್ಟ್‌ವೇರ್ ಸಂಪೂರ್ಣ ಟ್ಯುಟೋರಿಯಲ್",
+    videoError: "ಟ್ಯುಟೋರಿಯಲ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
+    videoTip: "ಟಿಪ್: ವೀಡಿಯೋದ ಮೇಲೆ ರೈಟ್-ಕ್ಲಿಕ್ ಮಾಡಿ 'Picture in Picture' ಆಯ್ಕೆ ಮಾಡಿ.",
+    chapterTitle: "ಅಧ್ಯಾಯ ಸೂಚಿ",
+    chapterDesc: "ಯಾವುದೇ ಅಧ್ಯಾಯದ ಮೇಲೆ ಕ್ಲಿಕ್ ಮಾಡಿ — ವೀಡಿಯೋ ಆ ಕ್ಷಣಕ್ಕೆ ಹೋಗುತ್ತದೆ",
+    helpTitle: "ಹೆಚ್ಚಿನ ಸಹಾಯ ಬೇಕೇ?",
+    helpDesc: "ನಮ್ಮ ಬೆಂಬಲ ತಂಡ ಚಾಟ್ ಅಥವಾ ಟಿಕೆಟ್ ಮೂಲಕ ಲಭ್ಯವಿದೆ.",
+    supportBtn: "ಬೆಂಬಲ ಟಿಕೆಟ್ ತೆರೆಯಿರಿ",
+    openBtn: "ಹೊಸ ಟ್ಯಾಬ್‌ನಲ್ಲಿ ವೀಡಿಯೋ ತೆರೆಯಿರಿ",
+  },
+  fr: {
+    videoTitle: "Tutoriel complet du produit",
+    videoDesc: "Guide complet de toutes les fonctions Orivraa · 23 minutes",
+    badgeLabel: "Français",
+    videoAriaLabel: "Tutoriel complet du logiciel Orivraa pour bijouteries",
+    videoError: "Télécharger le tutoriel",
+    videoTip: "Astuce : faites un clic droit sur la vidéo et choisissez \"Image dans l'image\" pour regarder en travaillant.",
+    chapterTitle: "Index des chapitres",
+    chapterDesc: "Cliquez sur un chapitre — la vidéo ira directement à ce moment",
+    helpTitle: "Besoin d'aide supplémentaire ?",
+    helpDesc: "Notre équipe de support est disponible par chat ou ticket. Utilisez la bulle de chat en bas à droite.",
+    supportBtn: "Ouvrir un ticket de support",
+    openBtn: "Ouvrir la vidéo dans un nouvel onglet",
+  },
+  de: {
+    videoTitle: "Vollständiges Produkt-Tutorial",
+    videoDesc: "Komplette Anleitung zu allen Orivraa-Funktionen · 23 Minuten",
+    badgeLabel: "Deutsch",
+    videoAriaLabel: "Vollständiges Tutorial der Orivraa-Schmucksoftware",
+    videoError: "Tutorial herunterladen",
+    videoTip: "Tipp: Rechtsklick auf das Video und \"Bild in Bild\" auswählen.",
+    chapterTitle: "Kapitelübersicht",
+    chapterDesc: "Klicken Sie auf ein Kapitel — das Video springt an diese Stelle",
+    helpTitle: "Brauchen Sie mehr Hilfe?",
+    helpDesc: "Unser Support-Team ist per Chat oder Ticket erreichbar. Nutzen Sie die Chat-Schaltfläche unten rechts.",
+    supportBtn: "Support-Ticket öffnen",
+    openBtn: "Video in neuem Tab öffnen",
+  },
 };
 
 const CHAPTERS: Record<Lang, { time: string; label: string }[]> = {
@@ -196,6 +308,111 @@ const CHAPTERS: Record<Lang, { time: string; label: string }[]> = {
     { time: "21:30", label: "التطبيق المحمول ودعم الفروع المتعددة" },
     { time: "23:00", label: "خطط الأسعار والتجربة المجانية" },
   ],
+  gu: [
+    { time: "0:08",  label: "પ્રારંભ અને અવલોકન" },
+    { time: "1:12",  label: "ડૅશબોર્ડ — સોના-ચાંદીના ભાવ" },
+    { time: "3:24",  label: "વજન અને શુદ્ધતા આધારિત ઇન્વેન્ટ્રી" },
+    { time: "5:45",  label: "POS — વેચાણ બનાવો" },
+    { time: "7:30",  label: "GST ઇન્વૉઇસ બનાવો અને છાપો" },
+    { time: "9:00",  label: "ડિજિટલ કૅટૅલૉગ બિલ્ડર" },
+    { time: "11:10", label: "ગ્રાહક વ્યવસ્થાપન" },
+    { time: "13:20", label: "કારીગર ટ્રૅકિંગ" },
+    { time: "15:40", label: "ટૅક્સ એન્જિન — GST / VAT" },
+    { time: "17:50", label: "ઍનૅલિટિક્સ અને રિપોર્ટ" },
+    { time: "19:30", label: "AI અંતર્દૃષ્ટિ" },
+    { time: "21:30", label: "મોબાઇલ ઍપ અને મલ્ટી-શૉપ" },
+    { time: "23:00", label: "પ્રાઇસિંગ પ્લાન અને ફ્રી ટ્રાઇલ" },
+  ],
+  mr: [
+    { time: "0:08",  label: "प्रस्तावना आणि आढावा" },
+    { time: "1:12",  label: "डॅशबोर्ड — सोने-चांदीचे भाव" },
+    { time: "3:24",  label: "वजन आणि शुद्धता आधारित इन्व्हेंटरी" },
+    { time: "5:45",  label: "POS — विक्री तयार करा" },
+    { time: "7:30",  label: "GST इनव्हॉइस तयार करा आणि मुद्रित करा" },
+    { time: "9:00",  label: "डिजिटल कॅटलॉग बिल्डर" },
+    { time: "11:10", label: "ग्राहक व्यवस्थापन" },
+    { time: "13:20", label: "कारागीर ट्रॅकिंग" },
+    { time: "15:40", label: "कर इंजिन — GST / VAT" },
+    { time: "17:50", label: "अहवाल आणि विश्लेषण" },
+    { time: "19:30", label: "AI अंतर्दृष्टी" },
+    { time: "21:30", label: "मोबाइल अॅप आणि मल्टी-शॉप" },
+    { time: "23:00", label: "किंमत योजना आणि मोफत चाचणी" },
+  ],
+  ta: [
+    { time: "0:08",  label: "அறிமுகம் மற்றும் மேலோட்டம்" },
+    { time: "1:12",  label: "டாஷ்போர்டு — தங்கம்-வெள்ளி நேரடி விலைகள்" },
+    { time: "3:24",  label: "எடை மற்றும் தூய்மை அடிப்படையில் சரக்கு" },
+    { time: "5:45",  label: "POS — விற்பனை உருவாக்கவும்" },
+    { time: "7:30",  label: "GST விலைப்பட்டியல் உருவாக்கவும்" },
+    { time: "9:00",  label: "டிஜிட்டல் கேட்டலாக் பில்டர்" },
+    { time: "11:10", label: "வாடிக்கையாளர் மேலாண்மை" },
+    { time: "13:20", label: "கலைஞர் கண்காணிப்பு" },
+    { time: "15:40", label: "வரி இயந்திரம் — GST / VAT" },
+    { time: "17:50", label: "அறிக்கைகள் மற்றும் பகுப்பாய்வு" },
+    { time: "19:30", label: "AI நுண்ணறிவுகள்" },
+    { time: "21:30", label: "மொபைல் செயலி மற்றும் பல-கடை" },
+    { time: "23:00", label: "விலை திட்டங்கள் மற்றும் இலவச சோதனை" },
+  ],
+  te: [
+    { time: "0:08",  label: "పరిచయం మరియు అవలోకనం" },
+    { time: "1:12",  label: "డాష్‌బోర్డ్ — బంగారం-వెండి ధరలు" },
+    { time: "3:24",  label: "బరువు మరియు స్వచ్ఛత ఆధారిత ఇన్వెంటరీ" },
+    { time: "5:45",  label: "POS — అమ్మకం సృష్టించండి" },
+    { time: "7:30",  label: "GST ఇన్వాయిస్ రూపొందించడం" },
+    { time: "9:00",  label: "డిజిటల్ కాటలాగ్ జనరేటర్" },
+    { time: "11:10", label: "కస్టమర్ మేనేజ్‌మెంట్" },
+    { time: "13:20", label: "కళాకారుడి ట్రాకింగ్" },
+    { time: "15:40", label: "పన్ను ఇంజిన్ — GST / VAT" },
+    { time: "17:50", label: "నివేదికలు మరియు విశ్లేషణ" },
+    { time: "19:30", label: "AI అంతర్దృష్టులు" },
+    { time: "21:30", label: "మొబైల్ యాప్ మరియు మల్టీ-షాప్" },
+    { time: "23:00", label: "ధర ప్రణాళికలు మరియు ఉచిత ట్రయల్" },
+  ],
+  kn: [
+    { time: "0:08",  label: "ಪರಿಚಯ ಮತ್ತು ಅವಲೋಕನ" },
+    { time: "1:12",  label: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ — ಚಿನ್ನ-ಬೆಳ್ಳಿ ಬೆಲೆಗಳು" },
+    { time: "3:24",  label: "ತೂಕ ಮತ್ತು ಶುದ್ಧತೆ ಆಧಾರಿತ ದಾಸ್ತಾನು" },
+    { time: "5:45",  label: "POS — ಮಾರಾಟ ರಚಿಸಿ" },
+    { time: "7:30",  label: "GST ಇನ್‌ವಾಯಿಸ್ ರಚಿಸಿ ಮತ್ತು ಮುದ್ರಿಸಿ" },
+    { time: "9:00",  label: "ಡಿಜಿಟಲ್ ಕ್ಯಾಟಲಾಗ್ ಜನರೇಟರ್" },
+    { time: "11:10", label: "ಗ್ರಾಹಕ ನಿರ್ವಹಣೆ" },
+    { time: "13:20", label: "ಕಾರಿಗರ ಟ್ರ್ಯಾಕಿಂಗ್" },
+    { time: "15:40", label: "ತೆರಿಗೆ ಎಂಜಿನ್ — GST / VAT" },
+    { time: "17:50", label: "ವರದಿಗಳು ಮತ್ತು ವಿಶ್ಲೇಷಣೆ" },
+    { time: "19:30", label: "AI ಒಳನೋಟಗಳು" },
+    { time: "21:30", label: "ಮೊಬೈಲ್ ಆಪ್ ಮತ್ತು ಮಲ್ಟಿ-ಶಾಪ್" },
+    { time: "23:00", label: "ಬೆಲೆ ಯೋಜನೆಗಳು ಮತ್ತು ಉಚಿತ ಪ್ರಯೋಗ" },
+  ],
+  fr: [
+    { time: "0:08",  label: "Introduction et aperçu" },
+    { time: "1:12",  label: "Tableau de bord — prix or & argent en direct" },
+    { time: "3:24",  label: "Inventaire par poids et pureté" },
+    { time: "5:45",  label: "Point de vente — créer une vente" },
+    { time: "7:30",  label: "Génération et impression de facture TVA" },
+    { time: "9:00",  label: "Générateur de catalogue numérique" },
+    { time: "11:10", label: "Gestion des clients" },
+    { time: "13:20", label: "Suivi des artisans" },
+    { time: "15:40", label: "Moteur fiscal — GST / TVA" },
+    { time: "17:50", label: "Rapports et analyses" },
+    { time: "19:30", label: "Insights IA" },
+    { time: "21:30", label: "Application mobile et multi-boutiques" },
+    { time: "23:00", label: "Plans tarifaires et essai gratuit" },
+  ],
+  de: [
+    { time: "0:08",  label: "Einführung und Überblick" },
+    { time: "1:12",  label: "Dashboard — Gold- & Silberpreise live" },
+    { time: "3:24",  label: "Inventar nach Gewicht und Reinheit" },
+    { time: "5:45",  label: "POS — Verkauf erstellen" },
+    { time: "7:30",  label: "MwSt.-Rechnung erstellen und drucken" },
+    { time: "9:00",  label: "Digitaler Katalog-Generator" },
+    { time: "11:10", label: "Kundenverwaltung" },
+    { time: "13:20", label: "Handwerkerverfolgung" },
+    { time: "15:40", label: "Steuer-Engine — GST / MwSt." },
+    { time: "17:50", label: "Berichte und Analysen" },
+    { time: "19:30", label: "KI-Einblicke" },
+    { time: "21:30", label: "Mobile App und Multi-Filiale" },
+    { time: "23:00", label: "Preispläne und kostenlose Testversion" },
+  ],
 };
 
 export default function HelpPage() {
@@ -224,7 +441,19 @@ export default function HelpPage() {
           {/* Page header */}
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Tutorial &amp; Help</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold tracking-tight">Tutorial &amp; Help</h1>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-5 w-5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      Watch the full tutorial video, jump to any chapter, or open a support ticket.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <p className="text-muted-foreground">
                 Watch the full walkthrough, jump to a chapter, or raise a support
                 ticket — all from here.
@@ -232,7 +461,7 @@ export default function HelpPage() {
             </div>
             {/* Language toggle */}
             <div className="flex flex-wrap gap-1.5 shrink-0">
-              {(["en", "hi", "ne", "es", "ar"] as Lang[]).map((l) => (
+              {(["en", "hi", "ne", "gu", "mr", "ta", "te", "kn", "fr", "de", "es", "ar"] as Lang[]).map((l) => (
                 <Button
                   key={l}
                   variant={lang === l ? "default" : "outline"}
