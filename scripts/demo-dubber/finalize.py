@@ -113,6 +113,8 @@ def main():
                     help="Path to intro clip (default: solving_chaos_finalmp_.mp4)")
     ap.add_argument("--lang", default="en",
                     help="Language code (default: en)")
+    ap.add_argument("--no-subs", action="store_true",
+                    help="Use the no-subtitle version (orivraa-demo-{lang}.mp4) instead of the subtitled one")
     args = ap.parse_args()
 
     intro_src = Path(args.intro)
@@ -121,10 +123,17 @@ def main():
         sys.exit(1)
 
     lang_dir = OUTPUT_DIR / args.lang
-    demo_src = lang_dir / f"orivraa-demo-{args.lang}-sub.mp4"
+    # Prefer the subtitled version unless --no-subs is set or -sub.mp4 doesn't exist
+    demo_src_sub    = lang_dir / f"orivraa-demo-{args.lang}-sub.mp4"
+    demo_src_nosub  = lang_dir / f"orivraa-demo-{args.lang}.mp4"
+    if args.no_subs or not demo_src_sub.exists():
+        demo_src = demo_src_nosub
+    else:
+        demo_src = demo_src_sub
     if not demo_src.exists():
-        print(f"ERROR: Subtitled demo not found: {demo_src}")
+        print(f"ERROR: Demo video not found: {demo_src}")
         sys.exit(1)
+    print(f"Using demo: {demo_src.name}")
 
     scaled_intro = SCRIPT_DIR / "_intro_scaled.mp4"
     final_out    = lang_dir / f"orivraa-demo-{args.lang}-final.mp4"
