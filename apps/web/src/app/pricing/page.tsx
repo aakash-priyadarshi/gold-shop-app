@@ -188,6 +188,30 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
     label: "Custom integrations",
     category: "Support & Integration",
   },
+
+  // Mobile POS
+  mobilePOS: { label: "Mobile POS — bill on the go", category: "Mobile POS" },
+  mobileRateCard: { label: "Live rate card on mobile", category: "Mobile POS" },
+  mobileOrders: { label: "Today's orders view", category: "Mobile POS" },
+  mobileQuotes: { label: "Quote builder on mobile", category: "Mobile POS" },
+  mobileRepairs: { label: "Repair job tracker", category: "Mobile POS" },
+  mobileCustomers: { label: "Customer CRM on mobile", category: "Mobile POS" },
+  mobileSavings: {
+    label: "Gold savings scheme management",
+    category: "Mobile POS",
+  },
+  mobileWhatsAppShare: {
+    label: "WhatsApp bill & quote sharing",
+    category: "Mobile POS",
+  },
+  mobileTaxReports: {
+    label: "Tax reports & downloads on mobile",
+    category: "Mobile POS",
+  },
+  mobileOfflineMode: {
+    label: "Offline PWA mode",
+    category: "Mobile POS",
+  },
 };
 
 /** Order categories appear in */
@@ -196,6 +220,7 @@ const CATEGORY_ORDER = [
   "CRM & Business Tools",
   "AI & Intelligence",
   "Analytics & Reports",
+  "Mobile POS",
   "Support & Integration",
 ];
 

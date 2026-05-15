@@ -361,6 +361,68 @@ const ALL_FEATURE_KEYS: {
     category: "Support & Integration",
     enforced: false,
   },
+
+  // ─── Mobile POS ───────────────────────────────────────────────
+  {
+    key: "mobilePOS",
+    label: "Mobile POS — bill generation",
+    category: "Mobile POS",
+    enforced: true,
+  },
+  {
+    key: "mobileRateCard",
+    label: "Mobile rate card — live gold prices",
+    category: "Mobile POS",
+    enforced: true,
+  },
+  {
+    key: "mobileOrders",
+    label: "Mobile orders — today's orders view",
+    category: "Mobile POS",
+    enforced: true,
+  },
+  {
+    key: "mobileQuotes",
+    label: "Mobile quote builder (Pro+)",
+    category: "Mobile POS",
+    enforced: true,
+  },
+  {
+    key: "mobileRepairs",
+    label: "Mobile repair tracker (Pro+)",
+    category: "Mobile POS",
+    enforced: true,
+  },
+  {
+    key: "mobileCustomers",
+    label: "Mobile customer CRM (Pro+)",
+    category: "Mobile POS",
+    enforced: true,
+  },
+  {
+    key: "mobileSavings",
+    label: "Mobile savings scheme (Pro+)",
+    category: "Mobile POS",
+    enforced: true,
+  },
+  {
+    key: "mobileWhatsAppShare",
+    label: "WhatsApp bill/quote sharing (Pro+)",
+    category: "Mobile POS",
+    enforced: true,
+  },
+  {
+    key: "mobileTaxReports",
+    label: "Mobile tax reports & downloads (Pro+ only)",
+    category: "Mobile POS",
+    enforced: true,
+  },
+  {
+    key: "mobileOfflineMode",
+    label: "Offline PWA mode (Pro+ only)",
+    category: "Mobile POS",
+    enforced: false,
+  },
 ];
 
 const FEATURE_CATEGORIES = Array.from(
@@ -526,6 +588,7 @@ function PlansTab() {
 
   useEffect(() => {
     fetchPlans();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countryFilter]);
 
   const handleToggle = async (plan: Plan) => {
@@ -2351,6 +2414,7 @@ function GatewaysTab() {
 
   useEffect(() => {
     if (configs.length > 0) fetchHealth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configs.length]);
 
   const handleToggle = async (config: GatewayConfig) => {
