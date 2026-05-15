@@ -253,7 +253,7 @@ export function DynamicFooter() {
           <div className="flex items-center gap-2 mb-3">
             <Globe className="h-4 w-4 text-gold-400" />
             <span className="text-sm font-medium text-gray-300">
-              <T>Available in {FOOTER_LANGUAGES.length} Languages</T>
+              <T>Available in {String(FOOTER_LANGUAGES.length)} Languages</T>
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
