@@ -7,7 +7,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const CDN_BASE = "https://images.orivraa.com";
 
-type Lang = "en" | "hi";
+type Lang = "en" | "hi" | "ne" | "es" | "ar";
+
+const LANG_LABELS: Record<Lang, string> = {
+  en: "English",
+  hi: "हिंदी",
+  ne: "नेपाली",
+  es: "Español",
+  ar: "العربية",
+};
 
 interface DemoModalProps {
   className?: string;
@@ -70,8 +78,8 @@ export function DemoModal({ className, buttonClassName, label = "Watch Demo" }: 
             {/* Header bar */}
             <div className="flex items-center justify-between px-4 py-3 bg-gray-900/90">
               {/* Language toggle */}
-              <div className="flex gap-1 p-0.5 bg-gray-800 rounded-lg">
-                {(["en", "hi"] as Lang[]).map((l) => (
+              <div className="flex gap-1 p-0.5 bg-gray-800 rounded-lg flex-wrap">
+                {(["en", "hi", "ne", "es", "ar"] as Lang[]).map((l) => (
                   <button
                     key={l}
                     onClick={() => setLang(l)}
@@ -82,7 +90,7 @@ export function DemoModal({ className, buttonClassName, label = "Watch Demo" }: 
                         : "text-gray-400 hover:text-white"
                     )}
                   >
-                    {l === "en" ? "English" : "हिंदी"}
+                    {LANG_LABELS[l]}
                   </button>
                 ))}
               </div>

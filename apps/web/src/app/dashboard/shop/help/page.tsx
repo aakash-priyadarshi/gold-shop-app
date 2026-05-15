@@ -32,7 +32,95 @@ function timeToSeconds(ts: string): number {
   return parts[0] * 3600 + parts[1] * 60 + parts[2];
 }
 
-const CHAPTERS: Record<"en" | "hi", { time: string; label: string }[]> = {
+type Lang = "en" | "hi" | "ne" | "es" | "ar";
+
+const LANG_LABELS: Record<Lang, string> = {
+  en: "English",
+  hi: "हिंदी",
+  ne: "नेपाली",
+  es: "Español",
+  ar: "العربية",
+};
+
+const UI: Record<Lang, {
+  videoTitle: string; videoDesc: string; badgeLabel: string;
+  videoAriaLabel: string; videoError: string; videoTip: string;
+  chapterTitle: string; chapterDesc: string;
+  helpTitle: string; helpDesc: string; supportBtn: string; openBtn: string;
+}> = {
+  en: {
+    videoTitle: "Full Product Tutorial",
+    videoDesc: "Complete walkthrough of every Orivraa feature · 23 minutes",
+    badgeLabel: "English",
+    videoAriaLabel: "Orivraa jewellery shop software complete tutorial",
+    videoError: "Download the tutorial",
+    videoTip: 'Tip: right-click the video and choose "Picture in Picture" to watch while you work in another tab.',
+    chapterTitle: "Chapter Index",
+    chapterDesc: "Click any chapter — the video will jump to that moment",
+    helpTitle: "Need more help?",
+    helpDesc: "Our support team is available via chat or ticket. Use the floating chat bubble at the bottom-right of any page, or open a support ticket below.",
+    supportBtn: "Open a support ticket",
+    openBtn: "Open video in new tab",
+  },
+  hi: {
+    videoTitle: "पूरा प्रोडक्ट ट्यूटोरियल",
+    videoDesc: "Orivraa की हर सुविधा का पूरा वॉकथ्रू · 23 मिनट",
+    badgeLabel: "हिंदी",
+    videoAriaLabel: "Orivraa ज्वेलरी शॉप सॉफ्टवेयर का पूरा ट्यूटोरियल",
+    videoError: "यहाँ डाउनलोड करें",
+    videoTip: "टिप: वीडियो पर राइट-क्लिक करें और 'Picture in Picture' चुनें ताकि काम करते हुए भी देख सकें।",
+    chapterTitle: "चैप्टर इंडेक्स",
+    chapterDesc: "किसी भी टॉपिक पर क्लिक करें — वीडियो उस पल पर चला जाएगा",
+    helpTitle: "और मदद चाहिए?",
+    helpDesc: "हमारी सपोर्ट टीम चैट या टिकट के ज़रिए उपलब्ध है। किसी भी पेज के नीचे-दाईं तरफ चैट बब्बल है, या नीचे टिकट खोलें।",
+    supportBtn: "सपोर्ट टिकट खोलें",
+    openBtn: "वीडियो नए टैब में खोलें",
+  },
+  ne: {
+    videoTitle: "पूरा उत्पाद ट्युटोरियल",
+    videoDesc: "Orivraa का हरेक सुविधाको पूर्ण वाकथ्रू · २३ मिनेट",
+    badgeLabel: "नेपाली",
+    videoAriaLabel: "Orivraa गहना पसल सफ्टवेयरको पूरा ट्युटोरियल",
+    videoError: "यहाँ डाउनलोड गर्नुहोस्",
+    videoTip: "टिप: भिडियोमा राइट-क्लिक गरी 'Picture in Picture' छान्नुहोस्।",
+    chapterTitle: "च्याप्टर सूची",
+    chapterDesc: "कुनै पनि विषयमा क्लिक गर्नुहोस् — भिडियो त्यही स्थानमा जान्छ",
+    helpTitle: "थप सहायता चाहिन्छ?",
+    helpDesc: "हाम्रो सपोर्ट टिम चाट वा टिकटमार्फत उपलब्ध छ। जुनसुकै पेजको तल-दाईंतर्फ च्याट बबल छ।",
+    supportBtn: "सपोर्ट टिकट खोल्नुहोस्",
+    openBtn: "भिडियो नयाँ ट्याबमा खोल्नुहोस्",
+  },
+  es: {
+    videoTitle: "Tutorial completo del producto",
+    videoDesc: "Guía completa de todas las funciones de Orivraa · 23 minutos",
+    badgeLabel: "Español",
+    videoAriaLabel: "Tutorial completo del software Orivraa para joyerías",
+    videoError: "Descargar el tutorial",
+    videoTip: 'Sugerencia: haz clic derecho en el video y selecciona "Imagen en imagen" para verlo mientras trabajas.',
+    chapterTitle: "Índice de capítulos",
+    chapterDesc: "Haz clic en cualquier capítulo — el video saltará a ese momento",
+    helpTitle: "¿Necesitas más ayuda?",
+    helpDesc: "Nuestro equipo de soporte está disponible por chat o ticket. Usa el botón flotante en la esquina inferior derecha de cualquier página.",
+    supportBtn: "Abrir ticket de soporte",
+    openBtn: "Abrir video en nueva pestaña",
+  },
+  ar: {
+    videoTitle: "الشرح الكامل للمنتج",
+    videoDesc: "جولة كاملة في كل ميزات أوريفرا · ٢٣ دقيقة",
+    badgeLabel: "العربية",
+    videoAriaLabel: "الشرح الكامل لبرنامج أوريفرا لمحلات المجوهرات",
+    videoError: "تنزيل الشرح",
+    videoTip: 'نصيحة: انقر بزر الماوس الأيمن على الفيديو واختر "صورة في صورة" للمشاهدة أثناء العمل.',
+    chapterTitle: "فهرس المحاور",
+    chapterDesc: "انقر على أي محور — سينتقل الفيديو إلى تلك اللحظة",
+    helpTitle: "هل تحتاج مزيداً من المساعدة؟",
+    helpDesc: "فريق الدعم متاح عبر الدردشة أو التذكرة. استخدم زر الدردشة العائم في أسفل يمين أي صفحة.",
+    supportBtn: "فتح تذكرة دعم",
+    openBtn: "فتح الفيديو في تبويب جديد",
+  },
+};
+
+const CHAPTERS: Record<Lang, { time: string; label: string }[]> = {
   en: [
     { time: "0:08",  label: "Introduction & overview" },
     { time: "1:12",  label: "Dashboard — live gold & silver prices" },
@@ -63,10 +151,56 @@ const CHAPTERS: Record<"en" | "hi", { time: string; label: string }[]> = {
     { time: "21:30", label: "मोबाइल ऐप और मल्टी-ब्रांच सपोर्ट" },
     { time: "23:00", label: "प्राइसिंग प्लान और फ्री ट्रायल" },
   ],
+  ne: [
+    { time: "0:08",  label: "परिचय र अवलोकन" },
+    { time: "1:12",  label: "ड्यासबोर्ड — सुन र चाँदीको भाउ" },
+    { time: "3:24",  label: "सामान व्यवस्थापन — तौल र शुद्धता" },
+    { time: "5:45",  label: "POS — बिक्री गर्नुहोस्" },
+    { time: "7:30",  label: "GST बिजक बनाउनुहोस् र प्रिन्ट गर्नुहोस्" },
+    { time: "9:00",  label: "डिजिटल क्याटलग बिल्डर" },
+    { time: "11:10", label: "ग्राहक व्यवस्थापन र CRM" },
+    { time: "13:20", label: "कारिगर काम र खाता ट्र्याकिङ" },
+    { time: "15:40", label: "ट्याक्स इन्जिन — GST / VAT" },
+    { time: "17:50", label: "व्यापार रिपोर्ट र विश्लेषण" },
+    { time: "19:30", label: "AI व्यापार अन्तर्दृष्टि" },
+    { time: "21:30", label: "मोबाइल एप र बहु-शाखा समर्थन" },
+    { time: "23:00", label: "मूल्य योजना र निःशुल्क परीक्षण" },
+  ],
+  es: [
+    { time: "0:08",  label: "Introducción y vista general" },
+    { time: "1:12",  label: "Panel — precios en vivo de oro y plata" },
+    { time: "3:24",  label: "Inventario por peso y pureza" },
+    { time: "5:45",  label: "Punto de venta — crear una venta" },
+    { time: "7:30",  label: "Generación e impresión de factura GST" },
+    { time: "9:00",  label: "Generador de catálogo digital" },
+    { time: "11:10", label: "Gestión de clientes y CRM" },
+    { time: "13:20", label: "Seguimiento de artesano y cuentas" },
+    { time: "15:40", label: "Motor fiscal — GST / VAT" },
+    { time: "17:50", label: "Reportes y análisis de negocio" },
+    { time: "19:30", label: "Información de IA para el negocio" },
+    { time: "21:30", label: "App móvil y soporte multi-sucursal" },
+    { time: "23:00", label: "Planes de precios y prueba gratuita" },
+  ],
+  ar: [
+    { time: "0:08",  label: "مقدمة ونظرة عامة" },
+    { time: "1:12",  label: "لوحة التحكم — أسعار الذهب والفضة الحية" },
+    { time: "3:24",  label: "المخزون بالوزن والنقاء" },
+    { time: "5:45",  label: "نقطة البيع — إنشاء عملية بيع" },
+    { time: "7:30",  label: "إنشاء فاتورة GST وطباعتها" },
+    { time: "9:00",  label: "منشئ الكتالوج الرقمي" },
+    { time: "11:10", label: "إدارة العملاء" },
+    { time: "13:20", label: "تتبع عمل الصانع" },
+    { time: "15:40", label: "محرك الضرائب — GST / VAT" },
+    { time: "17:50", label: "التقارير والتحليلات" },
+    { time: "19:30", label: "رؤى الذكاء الاصطناعي" },
+    { time: "21:30", label: "التطبيق المحمول ودعم الفروع المتعددة" },
+    { time: "23:00", label: "خطط الأسعار والتجربة المجانية" },
+  ],
 };
 
 export default function HelpPage() {
-  const [lang, setLang] = useState<"en" | "hi">("hi");
+  const [lang, setLang] = useState<Lang>("en");
+  const ui = UI[lang];
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const seekTo = useCallback((time: string) => {
@@ -97,21 +231,17 @@ export default function HelpPage() {
               </p>
             </div>
             {/* Language toggle */}
-            <div className="flex gap-2 shrink-0">
-              <Button
-                variant={lang === "hi" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setLang("hi")}
-              >
-                हिंदी
-              </Button>
-              <Button
-                variant={lang === "en" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setLang("en")}
-              >
-                English
-              </Button>
+            <div className="flex flex-wrap gap-1.5 shrink-0">
+              {(["en", "hi", "ne", "es", "ar"] as Lang[]).map((l) => (
+                <Button
+                  key={l}
+                  variant={lang === l ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setLang(l)}
+                >
+                  {LANG_LABELS[l]}
+                </Button>
+              ))}
             </div>
           </div>
 
@@ -121,16 +251,14 @@ export default function HelpPage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <PlayCircle className="h-5 w-5 text-amber-500" />
-                  {lang === "hi" ? "पूरा प्रोडक्ट ट्यूटोरियल" : "Full Product Tutorial"}
+                  {ui.videoTitle}
                 </CardTitle>
                 <CardDescription className="mt-1">
-                  {lang === "hi"
-                    ? "Orivraa की हर सुविधा का पूरा वॉकथ्रू · 23 मिनट"
-                    : "Complete walkthrough of every Orivraa feature · 23 minutes"}
+                  {ui.videoDesc}
                 </CardDescription>
               </div>
               <Badge variant="secondary">
-                {lang === "hi" ? "हिंदी" : "English"}
+                {ui.badgeLabel}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -148,25 +276,15 @@ export default function HelpPage() {
                   controls
                   preload="metadata"
                   poster="https://www.orivraa.com/og-image.png"
-                  aria-label={
-                    lang === "hi"
-                      ? "Orivraa ज्वेलरी शॉप सॉफ्टवेयर का पूरा ट्यूटोरियल"
-                      : "Orivraa jewellery shop software complete tutorial"
-                  }
+                  aria-label={ui.videoAriaLabel}
                 >
                   <source src={videoUrl} type="video/mp4" />
-                  {lang === "hi" ? (
-                    <>वीडियो चलाने में समस्या है? <a href={videoUrl} className="text-amber-500 underline">यहाँ डाउनलोड करें</a>.</>
-                  ) : (
-                    <>Your browser does not support video. <a href={videoUrl} className="text-amber-500 underline">Download the tutorial</a>.</>
-                  )}
+                  <a href={videoUrl} className="text-amber-500 underline">{ui.videoError}</a>
                 </video>
               </div>
 
               <p className="text-xs text-muted-foreground">
-                {lang === "hi"
-                  ? "टिप: वीडियो पर राइट-क्लिक करें और 'Picture in Picture' चुनें ताकि काम करते हुए भी देख सकें।"
-                  : "Tip: right-click the video and choose \"Picture in Picture\" to watch while you work in another tab."}
+                {ui.videoTip}
               </p>
             </CardContent>
           </Card>
@@ -176,12 +294,10 @@ export default function HelpPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-amber-500" />
-                {lang === "hi" ? "चैप्टर इंडेक्स" : "Chapter Index"}
+                {ui.chapterTitle}
               </CardTitle>
               <CardDescription>
-                {lang === "hi"
-                  ? "किसी भी टॉपिक पर क्लिक करें — वीडियो उस पल पर चला जाएगा"
-                  : "Click any chapter — the video will jump to that moment"}
+                {ui.chapterDesc}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -212,19 +328,17 @@ export default function HelpPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LifeBuoy className="h-5 w-5 text-amber-500" />
-                {lang === "hi" ? "और मदद चाहिए?" : "Need more help?"}
+                {ui.helpTitle}
               </CardTitle>
               <CardDescription>
-                {lang === "hi"
-                  ? "हमारी सपोर्ट टीम चैट या टिकट के ज़रिए उपलब्ध है। किसी भी पेज के नीचे-दाईं तरफ चैट बब्बल है, या नीचे टिकट खोलें।"
-                  : "Our support team is available via chat or ticket. Use the floating chat bubble at the bottom-right of any page, or open a support ticket below."}
+                {ui.helpDesc}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col sm:flex-row gap-3">
               <Button asChild>
                 <Link href="/dashboard/shop/support">
                   <MessageSquare className="mr-2 h-4 w-4" />
-                  {lang === "hi" ? "सपोर्ट टिकट खोलें" : "Open a support ticket"}
+                  {ui.supportBtn}
                 </Link>
               </Button>
               <Button variant="outline" asChild>
@@ -234,7 +348,7 @@ export default function HelpPage() {
                   rel="noopener noreferrer"
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  {lang === "hi" ? "वीडियो नए टैब में खोलें" : "Open video in new tab"}
+                  {ui.openBtn}
                 </a>
               </Button>
             </CardContent>
