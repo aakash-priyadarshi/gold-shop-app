@@ -1,10 +1,28 @@
 "use client";
 
-import { ArrowRight, BookOpen, Clock, ExternalLink, PlayCircle } from "lucide-react";
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  BookOpen,
+  Clock,
+  ExternalLink,
+  LifeBuoy,
+  MessageSquare,
+  PlayCircle,
+} from "lucide-react";
 import Link from "next/link";
 
 const TUTORIAL_VIDEO_URL = "https://images.orivraa.com/tutorial/en";
-const SHORT_DEMO_URL = "https://images.orivraa.com/demo/en";
 
 const CHAPTERS = [
   { time: "0:08", label: "Introduction & overview" },
@@ -24,123 +42,130 @@ const CHAPTERS = [
 
 export default function HelpPage() {
   return (
-    <div className="space-y-8 pb-12">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <BookOpen className="w-6 h-6 text-amber-400" />
-          Tutorial &amp; Help
-        </h1>
-        <p className="text-sm text-gray-400 mt-1">
-          Watch the complete walkthrough of every Orivraa feature. Use the chapter
-          index to jump to a specific topic.
-        </p>
-      </div>
-
-      {/* Quick demo card */}
-      <div className="bg-gray-900 rounded-xl border border-white/5 p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex items-start gap-3">
-          <PlayCircle className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
+    <ShopGuard>
+      <DashboardLayout>
+        <div className="space-y-6">
+          {/* Page header */}
           <div>
-            <div className="text-sm font-semibold text-white">
-              In a hurry? See the 30-second visual demo.
-            </div>
-            <p className="text-xs text-gray-400 mt-1">
-              A blink-and-miss tour of the dashboard, inventory, POS, billing, and
-              analytics.
+            <h1 className="text-2xl font-bold tracking-tight">Tutorial & Help</h1>
+            <p className="text-muted-foreground">
+              Watch the full walkthrough, jump to a chapter, or raise a support
+              ticket — all from here.
             </p>
           </div>
-        </div>
-        <a
-          href={SHORT_DEMO_URL}
-          target="_blank"
-          rel="noopener"
-          className="inline-flex items-center gap-1 text-sm text-amber-400 hover:text-amber-300 font-medium shrink-0"
-        >
-          Watch 30s demo
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      </div>
 
-      {/* Full tutorial player */}
-      <div>
-        <div
-          className="relative w-full rounded-xl overflow-hidden ring-1 ring-white/10 bg-black"
-          style={{ paddingTop: "56.25%" }}
-        >
-          <video
-            className="absolute inset-0 w-full h-full"
-            controls
-            preload="metadata"
-            poster="https://www.orivraa.com/og-image.png"
-            aria-label="Orivraa jewellery shop software complete tutorial"
-          >
-            <source src={TUTORIAL_VIDEO_URL} type="video/mp4" />
-            Your browser does not support HTML5 video. Please{" "}
-            <a href={TUTORIAL_VIDEO_URL} className="text-amber-400 underline">
-              download the tutorial
-            </a>
-            .
-          </video>
-        </div>
-        <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-          <span>Full walkthrough · 24 minutes · English</span>
-          <a
-            href={TUTORIAL_VIDEO_URL}
-            download="orivraa-tutorial-en.mp4"
-            className="text-amber-400 hover:text-amber-300 inline-flex items-center gap-1"
-          >
-            Download <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
-      </div>
+          {/* Tutorial video card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <PlayCircle className="h-5 w-5 text-amber-500" />
+                  Full Product Tutorial
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Complete walkthrough of every Orivraa feature · 24 minutes
+                </CardDescription>
+              </div>
+              <Badge variant="secondary">English</Badge>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Video player */}
+              <div
+                className="relative w-full rounded-lg overflow-hidden bg-black"
+                style={{ paddingTop: "56.25%" }}
+              >
+                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                <video
+                  className="absolute inset-0 w-full h-full"
+                  controls
+                  preload="metadata"
+                  poster="https://www.orivraa.com/og-image.png"
+                  aria-label="Orivraa jewellery shop software complete tutorial"
+                >
+                  <source src={TUTORIAL_VIDEO_URL} type="video/mp4" />
+                  Your browser does not support video. Please{" "}
+                  <a
+                    href={TUTORIAL_VIDEO_URL}
+                    className="text-amber-500 underline"
+                  >
+                    download the tutorial
+                  </a>
+                  .
+                </video>
+              </div>
 
-      {/* Chapter index */}
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-3">Jump to a chapter</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {CHAPTERS.map(({ time, label }) => (
-            <div
-              key={time}
-              className="flex items-center gap-3 bg-gray-900 rounded-lg px-4 py-2.5 border border-white/5 text-sm"
-            >
-              <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="font-mono text-amber-400 w-12 shrink-0">{time}</span>
-              <span className="text-gray-300">{label}</span>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-gray-500 mt-3">
-          Tip: Right-click the video and use &quot;Loop&quot; or &quot;Picture in
-          Picture&quot; to watch while you work.
-        </p>
-      </div>
+              <p className="text-xs text-muted-foreground">
+                Tip: right-click the video and choose &quot;Picture in
+                Picture&quot; to watch while you work in another tab.
+              </p>
+            </CardContent>
+          </Card>
 
-      {/* Need more help */}
-      <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-xl border border-amber-500/20 p-5 sm:p-6">
-        <h2 className="text-lg font-semibold text-white mb-2">
-          Still stuck on something?
-        </h2>
-        <p className="text-sm text-gray-400 mb-4">
-          Our support chat is on every page (bottom-right corner) — ask in plain
-          English or Hindi. For complex issues, raise a support ticket.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Link
-            href="/dashboard/shop/support"
-            className="inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors"
-          >
-            Open support
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-          <Link
-            href="/tutorial"
-            className="inline-flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white px-5 py-2.5 rounded-lg text-sm transition-colors"
-          >
-            Open public tutorial page
-          </Link>
+          {/* Chapter index */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-amber-500" />
+                Chapter Index
+              </CardTitle>
+              <CardDescription>
+                Jump to any topic in the tutorial above
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {CHAPTERS.map(({ time, label }) => (
+                  <div
+                    key={time}
+                    className="flex items-center gap-3 rounded-lg border px-4 py-2.5 text-sm"
+                  >
+                    <Clock className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <span className="font-mono text-amber-600 dark:text-amber-400 w-12 shrink-0 tabular-nums">
+                      {time}
+                    </span>
+                    <span className="text-foreground">{label}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Separator />
+
+          {/* Help & support */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LifeBuoy className="h-5 w-5 text-amber-500" />
+                Need more help?
+              </CardTitle>
+              <CardDescription>
+                Our support team is available via chat or ticket. Use the
+                floating chat bubble at the bottom-right of any page, or open a
+                support ticket below.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row gap-3">
+              <Button asChild>
+                <Link href="/dashboard/shop/support">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Open a support ticket
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <a
+                  href={TUTORIAL_VIDEO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open video in new tab
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
-      </div>
-    </div>
+      </DashboardLayout>
+    </ShopGuard>
   );
 }

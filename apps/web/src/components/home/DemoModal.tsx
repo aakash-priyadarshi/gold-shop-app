@@ -43,7 +43,7 @@ export function DemoModal({ className, buttonClassName, label = "Watch Demo" }: 
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  const videoSrc = `${CDN_BASE}/demo/${lang}`;
+  const videoSrc = `${CDN_BASE}/tutorial/${lang}`;
 
   return (
     <>
