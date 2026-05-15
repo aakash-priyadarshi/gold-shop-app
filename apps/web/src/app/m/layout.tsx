@@ -4,8 +4,10 @@
 // It is linked via <head> in apps/web/src/app/m/head.tsx (or Next.js metadata API in a
 // server-side wrapper if needed). The manifest-pos.json is already in /public/.
 
+import { MobileLayoutLoader } from "@/components/mobile/MobileSkeleton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
+import { useHaptics } from "@/hooks/useHaptics";
 import { materialsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -176,6 +178,7 @@ export default function MobileLayout({
   const router = useRouter();
   const pathname = usePathname();
   const t = useT();
+  const haptic = useHaptics();
   const [rates, setRates] = useState<GoldRate | null>(null);
   const [showMore, setShowMore] = useState(false);
   const [ratesLoading, setRatesLoading] = useState(false);
@@ -237,14 +240,7 @@ export default function MobileLayout({
   }, [fetchRates]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-white">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
-          <p className="text-sm text-gray-500"><T>Loading…</T></p>
-        </div>
-      </div>
-    );
+    return <MobileLayoutLoader />;
   }
 
   if (!isAuthenticated || (user && user.role !== "SHOPKEEPER")) {
@@ -285,47 +281,68 @@ export default function MobileLayout({
         <GoldPriceBar rates={rates} />
       </header>
 
-      {/* Page content */}
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      {/* Page content — keyed on pathname for fade transition between routes */}
+      <main
+        key={pathname}
+        className="flex-1 overflow-y-auto animate-in fade-in duration-200"
+      >
+        {children}
+      </main>
 
       {/* Bottom navigation */}
       <nav
         data-tour="m-bottom-nav"
         className="flex-shrink-0 bg-white border-t border-gray-100 safe-area-bottom"
       >
-        <div className="flex items-center justify-around px-1 py-1">
+        <div className="flex items-center justify-around px-1 pt-1 pb-1">
           {BOTTOM_TABS.map((tab) => {
-            if (tab.href === "/m/more") {
-              const active = showMore || isMoreActive;
+            const isMore = tab.href === "/m/more";
+            const active = isMore
+              ? showMore || isMoreActive
+              : pathname === tab.href || pathname.startsWith(tab.href + "/");
+
+            const inner = (
+              <span
+                className={`relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-2xl min-w-[60px] transition-all duration-200 active:scale-95 ${
+                  active ? "text-amber-600" : "text-gray-400"
+                }`}
+              >
+                {/* Animated active indicator */}
+                {active && (
+                  <span className="absolute -top-1 left-1/2 -translate-x-1/2 h-1 w-8 rounded-full bg-amber-500 animate-in fade-in slide-in-from-top-1 duration-200" />
+                )}
+                <tab.icon
+                  className={`h-5 w-5 transition-transform duration-200 ${
+                    active ? "scale-110" : ""
+                  }`}
+                />
+                <span className="text-[10px] font-medium">
+                  <T>{tab.label}</T>
+                </span>
+              </span>
+            );
+
+            if (isMore) {
               return (
                 <button
                   key="more"
-                  onClick={() => setShowMore((v) => !v)}
-                  className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[56px] ${
-                    active
-                      ? "text-amber-600"
-                      : "text-gray-400 hover:text-gray-600"
-                  }`}
+                  onClick={() => {
+                    haptic("light");
+                    setShowMore((v) => !v);
+                  }}
+                  aria-label="More tools"
                 >
-                  <tab.icon className="h-5 w-5" />
-                  <span className="text-[10px] font-medium"><T>{tab.label}</T></span>
+                  {inner}
                 </button>
               );
             }
-            const isActive =
-              pathname === tab.href || pathname.startsWith(tab.href + "/");
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[56px] ${
-                  isActive
-                    ? "text-amber-600"
-                    : "text-gray-400 hover:text-gray-600"
-                }`}
+                onClick={() => haptic("light")}
               >
-                <tab.icon className="h-5 w-5" />
-                <span className="text-[10px] font-medium"><T>{tab.label}</T></span>
+                {inner}
               </Link>
             );
           })}

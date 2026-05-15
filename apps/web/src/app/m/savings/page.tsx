@@ -1,6 +1,8 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
+import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
+import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,6 +52,7 @@ const STATUS_CONFIG: Record<
 
 function EnrollForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const { user } = useAuth();
+  const haptic = useHaptics();
   const [form, setForm] = useState({
     customerName: "",
     customerPhone: "",
@@ -88,6 +91,7 @@ function EnrollForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
         startDate: form.startDate,
       });
       toast({ title: "Member enrolled in savings scheme!" });
+      haptic("success");
       onSaved();
       onClose();
     } catch (err: any) {
@@ -393,14 +397,26 @@ export default function SavingsPage() {
                 {activeCount} active · NPR {totalPool.toLocaleString()} in pool
               </p>
             </div>
-            <button
-              data-tour="m-savings-enroll"
-              onClick={() => setShowForm(true)}
-              className="h-9 px-4 rounded-xl bg-amber-500 text-white text-sm font-semibold flex items-center gap-1.5"
-            >
-              <Plus className="h-4 w-4" />
-              <T>Enroll</T>
-            </button>
+            <div className="flex items-center gap-1">
+              <MobileHelpButton
+                title="Gold Savings Scheme"
+                description="Run your shop's monthly Gold Savings programme — customers deposit each month and redeem at maturity rate."
+                tips={[
+                  "Tap Enroll to add a new member with their monthly amount and tenure",
+                  "Each member's deposits convert to grams of gold at the day's rate",
+                  "Get reminders for due deposits and maturity dates",
+                  "On maturity, redeem against any jewelry purchase at the locked rate",
+                ]}
+              />
+              <button
+                data-tour="m-savings-enroll"
+                onClick={() => setShowForm(true)}
+                className="h-9 px-4 rounded-xl bg-amber-500 text-white text-sm font-semibold flex items-center gap-1.5"
+              >
+                <Plus className="h-4 w-4" />
+                <T>Enroll</T>
+              </button>
+            </div>
           </div>
           <div className="flex gap-2">
             {(["ACTIVE", "ALL"] as const).map((f) => (

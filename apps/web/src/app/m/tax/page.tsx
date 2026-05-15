@@ -1,6 +1,7 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
+import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { taxReportsApi } from "@/lib/api";
@@ -116,6 +117,23 @@ export default function TaxPage() {
   return (
     <MobileFeatureGate feature="mobileTaxReports" featureName="Mobile Tax Reports">
       <div className="px-4 py-5 space-y-5">
+      {/* Page header */}
+      <div className="flex items-start justify-between -mt-2 mb-1">
+        <div>
+          <h1 className="text-base font-bold text-gray-900"><T>Tax Reports</T></h1>
+          <p className="text-[11px] text-gray-400"><T>GST / VAT — filing-ready exports</T></p>
+        </div>
+        <MobileHelpButton
+          title="Tax Reports (GST/VAT)"
+          description="Generate filing-ready tax reports for any month or quarter — GST for India, VAT for Nepal."
+          tips={[
+            "Pick country and the month/quarter you want to file",
+            "Review totals: sales, taxable amount and tax collected",
+            "Download GSTR-1 / VAT return as JSON or CSV — ready for the portal",
+            "Pro+ plan unlocks bulk export, e-invoice and IRN generation",
+          ]}
+        />
+      </div>
       {/* Filters */}
       <div className="grid grid-cols-2 gap-3">
         {/* Country */}

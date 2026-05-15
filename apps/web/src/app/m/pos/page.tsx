@@ -1,6 +1,8 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
+import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
+import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -274,6 +276,7 @@ function BillSuccess({
 export default function MobilePOSPage() {
   const { user } = useAuth();
   const t = useT();
+  const haptic = useHaptics();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -318,6 +321,7 @@ export default function MobilePOSPage() {
   }, [search, loadInventory]);
 
   const addToCart = (item: InventoryItem) => {
+    haptic("light");
     setCart((prev) => {
       const existing = prev.find((c) => c.item.id === item.id);
       if (existing) {
@@ -374,8 +378,10 @@ export default function MobilePOSPage() {
       setShowCart(false);
       setBillResult({ quoteId, total, customerPhone });
       setCart([]);
+      haptic("success");
       toast({ title: "Bill created", description: `${formatNPR(total)}` });
     } catch (err: any) {
+      haptic("error");
       toast({
         title: "Failed to create bill",
         description: err?.response?.data?.message ?? "Please try again",
@@ -398,8 +404,25 @@ export default function MobilePOSPage() {
   return (
     <MobileFeatureGate feature="mobilePOS" featureName="Mobile POS">
       <div className="flex flex-col h-full">
+        {/* Page header with help */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-1 bg-white">
+          <div>
+            <h1 className="text-base font-bold text-gray-900"><T>Quick Bill</T></h1>
+            <p className="text-[11px] text-gray-400">{cart.length > 0 ? `${cart.length} item${cart.length === 1 ? "" : "s"} in cart` : t("Tap items to add to bill")}</p>
+          </div>
+          <MobileHelpButton
+            title="Quick Bill"
+            description="The fastest way to create a jewelry bill on your phone — search, tap, weigh, share."
+            tips={[
+              "Search a product by name or SKU, then tap to add to cart",
+              "Adjust weight, purity (24K/22K/18K) and making charge per item",
+              "GST/VAT and gold rate are calculated automatically",
+              "Tap the cart bar at the bottom to checkout and share invoice on WhatsApp",
+            ]}
+          />
+        </div>
         {/* Search bar */}
-        <div data-tour="m-pos-search" className="px-4 pt-3 pb-2 bg-white border-b border-gray-100">
+        <div data-tour="m-pos-search" className="px-4 pt-1 pb-2 bg-white border-b border-gray-100">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input

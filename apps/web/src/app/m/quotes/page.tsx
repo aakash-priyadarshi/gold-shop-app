@@ -1,6 +1,7 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
+import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -296,6 +297,23 @@ export default function QuotesPage() {
   return (
     <MobileFeatureGate feature="mobileQuotes" featureName="Quote Builder">
       <div className="px-4 py-5 space-y-4 pb-32">
+      {/* Page header */}
+      <div className="flex items-start justify-between -mt-2 mb-1">
+        <div>
+          <h1 className="text-base font-bold text-gray-900"><T>Quote Builder</T></h1>
+          <p className="text-[11px] text-gray-400"><T>Build and share a custom estimate</T></p>
+        </div>
+        <MobileHelpButton
+          title="Quote Builder"
+          description="Create a multi-item estimate for jewelry, share it on WhatsApp, and convert to a bill when the customer agrees."
+          tips={[
+            "Add the customer's name & phone for direct WhatsApp sharing",
+            "Add as many line items as you need — weight, purity, making %",
+            "All prices use today's live gold rate; lock the rate per quote if needed",
+            "Share PDF or WhatsApp link directly; convert to bill from the Quote screen",
+          ]}
+        />
+      </div>
       {/* Gold rate indicator */}
       {!ratesLoading && goldRate > 0 && (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 rounded-2xl">

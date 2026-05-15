@@ -1,6 +1,7 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
+import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { ordersApi } from "@/lib/api";
@@ -145,13 +146,25 @@ export default function OrdersPage() {
               })}
             </p>
           </div>
-          <button
-            onClick={load}
-            disabled={loading}
-            className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 active:bg-gray-200"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin text-amber-500" : ""}`} />
-          </button>
+          <div className="flex items-center gap-1">
+            <MobileHelpButton
+              title="Today's Orders"
+              description="Every bill you create today appears here in real time."
+              tips={[
+                "Tap any order to see the itemised invoice",
+                "Use the Reprint or Share buttons to send the bill on WhatsApp again",
+                "Filter by Pending / Paid to chase pending payments",
+                "Pull-to-refresh or tap the refresh icon for the latest data",
+              ]}
+            />
+            <button
+              onClick={load}
+              disabled={loading}
+              className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 active:bg-gray-200"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin text-amber-500" : ""}`} />
+            </button>
+          </div>
         </div>
         {/* Status tabs */}
         <div data-tour="m-orders-filter" className="flex gap-3 overflow-x-auto scrollbar-none pb-3">

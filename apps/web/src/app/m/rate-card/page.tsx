@@ -1,6 +1,7 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
+import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { materialsApi } from "@/lib/api";
@@ -123,8 +124,24 @@ export default function RateCardPage() {
                 <p className="text-sm opacity-70 mt-1">{rates?.date}</p>
               )}
             </div>
-            <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center">
-              <ImageIcon className="h-6 w-6 text-white" />
+            <div className="flex items-start gap-2">
+              <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center">
+                <ImageIcon className="h-6 w-6 text-white" />
+              </div>
+              <div className="-mr-2 -mt-1">
+                <div className="text-white">
+                  <MobileHelpButton
+                    title="Daily Rate Card"
+                    description="A branded gold & silver rate card you can share on WhatsApp Status, Instagram Story or print every morning."
+                    tips={[
+                      "Rates auto-refresh from the live market feed",
+                      "Tap Share → WhatsApp to send to your broadcast list",
+                      "Tap Save Image to download a high-resolution PNG",
+                      "Customise your shop name from Dashboard → Branding",
+                    ]}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

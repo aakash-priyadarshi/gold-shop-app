@@ -1,6 +1,8 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
+import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
+import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -188,8 +190,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function JobCard({ job, onStatusUpdate }: { job: RepairJob; onStatusUpdate: () => void }) {
-  const s = STATUS_CONFIG[job.status];
   const [updating, setUpdating] = useState(false);
+  const haptic = useHaptics();
+  const s = STATUS_CONFIG[job.status];
 
   const NEXT: Partial<Record<RepairJob["status"], RepairJob["status"]>> = {
     RECEIVED: "DIAGNOSING",
@@ -201,12 +204,15 @@ function JobCard({ job, onStatusUpdate }: { job: RepairJob; onStatusUpdate: () =
 
   const advance = async () => {
     if (!nextStatus) return;
+    haptic("medium");
     setUpdating(true);
     try {
       await api.patch(`/repairs/${job.id}/status`, { status: nextStatus });
+      haptic("success");
       toast({ title: `Status updated to ${STATUS_CONFIG[nextStatus].label}` });
       onStatusUpdate();
     } catch {
+      haptic("error");
       toast({ title: "Update failed", variant: "destructive" });
     } finally {
       setUpdating(false);
@@ -346,13 +352,25 @@ export default function RepairsPage() {
                 {displayJobs.length} {filter === "active" ? "active" : "total"} jobs
               </p>
             </div>
-            <button
-              onClick={() => setShowForm(true)}
-              className="h-9 px-4 rounded-xl bg-amber-500 text-white text-sm font-semibold flex items-center gap-1.5"
-            >
-              <Plus className="h-4 w-4" />
-              <T>Log Job</T>
-            </button>
+            <div className="flex items-center gap-1">
+              <MobileHelpButton
+                title="Repair Tracker"
+                description="Log every repair job and keep customers updated as it moves through the workshop."
+                tips={[
+                  "Tap Log Job to add a new repair with item, customer & estimate",
+                  "Update status: Received → In Progress → Ready → Delivered",
+                  "Customer gets an automatic WhatsApp update on each status change",
+                  "Switch to All to see completed jobs and historical work",
+                ]}
+              />
+              <button
+                onClick={() => setShowForm(true)}
+                className="h-9 px-4 rounded-xl bg-amber-500 text-white text-sm font-semibold flex items-center gap-1.5"
+              >
+                <Plus className="h-4 w-4" />
+                <T>Log Job</T>
+              </button>
+            </div>
           </div>
           <div className="flex gap-2 mt-3">
             {(["active", "all"] as const).map((f) => (
