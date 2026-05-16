@@ -125,7 +125,7 @@ export default function BroadcastPage() {
   const loadRates = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await materialsApi.getCurrentRates();
+      const res = await materialsApi.getMarketRates();
       const r = res.data;
       setRates({
         rate24k: r.rate24k ?? r.goldRate24k ?? 9500,
