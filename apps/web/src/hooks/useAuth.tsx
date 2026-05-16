@@ -154,6 +154,14 @@ const clearTokens = () => {
 
 // Dashboard routes by role
 export const getDashboardRoute = (role: UserRole): string => {
+  // On the mobile subdomain (m.orivraa.com), shopkeepers go straight to the POS
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname.startsWith("m.") &&
+    role === "SHOPKEEPER"
+  ) {
+    return "/m/pos";
+  }
   switch (role) {
     case "ADMIN":
       return "/dashboard/admin";
