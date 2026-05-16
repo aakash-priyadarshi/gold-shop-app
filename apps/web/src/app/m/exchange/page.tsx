@@ -170,7 +170,7 @@ export default function OldGoldExchangePage() {
               {rateLoading ? (
                 <T>Fetching live rates…</T>
               ) : rates ? (
-                <T>24K: {rates.currency} {rates.rate24k.toLocaleString()}/g</T>
+                `24K: ${rates.currency} ${rates.rate24k.toLocaleString()}/g`
               ) : (
                 <T>Rate unavailable</T>
               )}
@@ -208,7 +208,7 @@ export default function OldGoldExchangePage() {
               <div key={item.id} className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    <T>Item {idx + 1}</T>
+                    Item {idx + 1}
                   </span>
                   {items.length > 1 && (
                     <button
