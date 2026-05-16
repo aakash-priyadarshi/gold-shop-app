@@ -9,6 +9,7 @@ import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { materialsApi } from "@/lib/api";
+import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import {
     BarChart2,
@@ -217,7 +218,11 @@ export default function MobileLayout({
     ratesRef.current = true;
     setRatesLoading(true);
     try {
-      const res = await materialsApi.getMarketRates();
+      // Resolve the shopkeeper's market (shop > geo cookie > default).
+      // Without these params the backend falls back to NPR which is wrong for
+      // anyone outside Nepal.
+      const params = getMobileMarketParams(user?.shop ?? null);
+      const res = await materialsApi.getMarketRates(params);
       const data = res.data;
       // Normalise to a flat rate object
       const gold = data?.metals?.find?.(
@@ -232,7 +237,7 @@ export default function MobileLayout({
         rate22k: Math.round(ratePerGram * (22 / 24)),
         rate18k: Math.round(ratePerGram * (18 / 24)),
         silver: Math.round(silver?.ratePerGram ?? silver?.rate ?? 0),
-        currency: data?.currency ?? "NPR",
+        currency: data?.currency ?? params.currency,
         updatedAt: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -244,7 +249,7 @@ export default function MobileLayout({
       setRatesLoading(false);
       ratesRef.current = false;
     }
-  }, []);
+  }, [user?.shop]);
 
   useEffect(() => {
     fetchRates();

@@ -584,6 +584,13 @@ def main() -> None:
         success = sum(1 for _, b in tts_results if b)
         log.info(f"  TTS complete: {success}/{len(tts_results)} segments OK")
 
+        # Always save individual segment files (needed by repair_audio.py)
+        segs_dir = lang_dir / "segments"
+        segs_dir.mkdir(exist_ok=True)
+        for seg, audio_bytes in tts_results:
+            if audio_bytes:
+                (segs_dir / f"seg_{seg.index:03d}.mp3").write_bytes(audio_bytes)
+
         # Assemble audio
         try:
             audio = assemble_audio(tts_results, total_ms)

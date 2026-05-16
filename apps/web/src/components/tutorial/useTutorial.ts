@@ -852,6 +852,279 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
+
+  /* ── Mobile POS (m.orivraa.com) ── */
+  "/m/pos": [
+    {
+      element: "[data-tour='m-gold-ticker']",
+      popover: {
+        title: "Live Gold Price Ticker",
+        description: "Today's 24K, 22K, 18K and silver rates — updated every 10 minutes from market data.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='m-pos-search']",
+      popover: {
+        title: "Search Products",
+        description: "Type a product name to filter your inventory. Tap any card to add it to the bill.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='m-pos-grid']",
+      popover: {
+        title: "Product Grid",
+        description: "Tap a product to add it to the bill. The badge shows the quantity in cart. Tap again to increase quantity.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='m-pos-bill-btn']",
+      popover: {
+        title: "View Bill",
+        description: "Once you have items in cart, tap here to open the bill summary, select payment method, and checkout.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='m-bottom-nav']",
+      popover: {
+        title: "Mobile Navigation",
+        description: "Switch between Bill, Quotes, Orders, Customers, and More from the bottom bar. Tap '⋯ More' for Rate Card, Tax Reports, Repairs, and Savings.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='support-bot']",
+      popover: {
+        title: "AI Assistant",
+        description: "Ask the Orivraa bot about mobile features — billing, WhatsApp share, gold rates, repairs, savings schemes — anytime.",
+        side: "left",
+        align: "end",
+      },
+    },
+  ],
+  "/m/quotes": [
+    {
+      element: "[data-tour='m-quote-customer']",
+      popover: {
+        title: "Customer Details",
+        description: "Enter the customer's name and phone number. Phone is used to send the quote via WhatsApp.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='m-quote-items']",
+      popover: {
+        title: "Quote Line Items",
+        description: "Add each item with description, purity (24K/22K/18K/14K), weight in grams, and making charges. Price is auto-calculated using live gold rate.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='m-quote-total']",
+      popover: {
+        title: "Quote Total",
+        description: "Subtotal, 3% tax, and grand total are calculated automatically. The gold rate used is shown for transparency.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      popover: {
+        title: "WhatsApp Share",
+        description: "After saving the quote, you can share a formatted quote message directly to the customer's WhatsApp with a single tap.",
+      },
+    },
+  ],
+  "/m/rate-card": [
+    {
+      element: "[data-tour='m-rate-card']",
+      popover: {
+        title: "Today's Rate Card",
+        description: "Live gold and silver rates for your shop — 24K, 22K, 18K, 14K, and silver per gram.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='m-rate-whatsapp']",
+      popover: {
+        title: "Share on WhatsApp",
+        description: "Tap to share today's rate card as a formatted text message to any WhatsApp contact. Great for sending to regular customers every morning.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='m-rate-refresh']",
+      popover: {
+        title: "Refresh Rates",
+        description: "Pull the latest rates from the market. Rates auto-refresh when you open this page.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
+  "/m/tax": [
+    {
+      element: "[data-tour='m-tax-country']",
+      popover: {
+        title: "Country Selector",
+        description: "Switch between Nepal VAT and India GST. The report format changes accordingly.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='m-tax-period']",
+      popover: {
+        title: "Select Month",
+        description: "Choose any month in the past year to generate that period's tax summary.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='m-tax-stats']",
+      popover: {
+        title: "Tax Summary",
+        description: "Total sales, tax collected, taxable amount, and invoice count for the selected period.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='m-tax-download']",
+      popover: {
+        title: "Download Reports",
+        description: "Download GSTR-1 CSV, GSTR-3B JSON (India), Tally XML, or Nepal VAT JSON — ready to submit or share with your CA.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
+  "/m/orders": [
+    {
+      element: "[data-tour='m-orders-filter']",
+      popover: {
+        title: "Filter by Status",
+        description: "Tap All, Pending, Processing, or Ready to filter today's orders. Tap any order card to open full details.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='m-orders-list']",
+      popover: {
+        title: "Today's Orders",
+        description: "All orders placed today. Tap a card to manage the order — update status, print bill, or contact the customer.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
+  "/m/repairs": [
+    {
+      element: "[data-tour='m-repairs-list']",
+      popover: {
+        title: "Repair Jobs",
+        description: "All logged repair and alteration jobs. Filter by Active to see only in-progress work.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='m-repairs-log']",
+      popover: {
+        title: "Log New Job",
+        description: "Tap '+' to log a new repair — enter customer details, item description, issue, estimated cost, and ready date.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      popover: {
+        title: "Advance Status",
+        description: "Tap 'Advance' on a job card to move it through: Received → Diagnosing → In Repair → Ready → Delivered.",
+      },
+    },
+    {
+      popover: {
+        title: "WhatsApp Notify",
+        description: "Tap the WhatsApp button on any job to instantly send the customer a status update message.",
+      },
+    },
+  ],
+  "/m/customers": [
+    {
+      element: "[data-tour='m-customers-search']",
+      popover: {
+        title: "Search Customers",
+        description: "Type a name or phone number to find any customer in your CRM.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='m-customers-list']",
+      popover: {
+        title: "Customer Cards",
+        description: "Each card shows the customer's order count and total spend. Tap to open their full profile.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      popover: {
+        title: "Customer Profile",
+        description: "Profile drawer shows stats (orders, total spent, avg order, last visit), recent order history, and a WhatsApp message button.",
+      },
+    },
+  ],
+  "/m/savings": [
+    {
+      element: "[data-tour='m-savings-header']",
+      popover: {
+        title: "Savings Scheme Overview",
+        description: "See total active members and the total gold savings pool at a glance.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='m-savings-list']",
+      popover: {
+        title: "Member Cards",
+        description: "Each card shows installments paid, progress towards completion, and saved/bonus/payout amounts. Tap 'Record Payment' to log an installment.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='m-savings-enroll']",
+      popover: {
+        title: "Enroll New Member",
+        description: "Tap '+' to enroll a customer in a new gold savings scheme — set type (Daily/Weekly/Monthly), installment amount, and duration.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      popover: {
+        title: "Payout Calculator",
+        description: "The enrollment form auto-calculates the payout amount based on installments, bonus, and current gold rate so you and the customer know the expected final payout.",
+      },
+    },
+  ],
 };
 
 export function useTutorial() {

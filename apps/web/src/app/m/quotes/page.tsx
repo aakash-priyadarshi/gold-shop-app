@@ -6,6 +6,7 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { materialsApi, shopQuotesApi } from "@/lib/api";
+import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import {
     Calculator,
     Check,
@@ -169,7 +170,7 @@ export default function QuotesPage() {
 
   const loadRates = useCallback(async () => {
     try {
-      const res = await materialsApi.getMarketRates();
+      const res = await materialsApi.getMarketRates(getMobileMarketParams());
       const d = res.data;
       const gold = d?.metals?.find?.((m: any) => m.code === "XAU" || m.code === "GOLD");
       setGoldRate(gold?.ratePerGram ?? gold?.rate ?? 7200);

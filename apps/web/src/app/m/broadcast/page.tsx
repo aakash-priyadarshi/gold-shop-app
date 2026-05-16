@@ -15,6 +15,7 @@ import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { materialsApi } from "@/lib/api";
+import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import {
   Check,
   Copy,
@@ -125,7 +126,7 @@ export default function BroadcastPage() {
   const loadRates = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await materialsApi.getMarketRates();
+      const res = await materialsApi.getMarketRates(getMobileMarketParams());
       const r = res.data;
       setRates({
         rate24k: r.rate24k ?? r.goldRate24k ?? 9500,

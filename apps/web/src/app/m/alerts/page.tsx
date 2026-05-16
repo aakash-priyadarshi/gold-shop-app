@@ -14,6 +14,7 @@ import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useHaptics } from "@/hooks/useHaptics";
 import { materialsApi } from "@/lib/api";
+import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import {
   Bell,
   BellOff,
@@ -107,7 +108,7 @@ export default function AlertsPage() {
   const fetchRates = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await materialsApi.getMarketRates();
+      const res = await materialsApi.getMarketRates(getMobileMarketParams());
       const r = res.data;
       setRates({
         rate24k: r.rate24k ?? r.goldRate24k ?? 9500,

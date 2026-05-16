@@ -3,18 +3,18 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import {
-  ArrowRight,
-  BarChart3,
-  BookOpen,
-  Check,
-  Clock,
-  Receipt,
-  Scale,
-  ShieldCheck,
-  Smartphone,
-  Sparkles,
-  Store,
-  Users,
+    ArrowRight,
+    BarChart3,
+    BookOpen,
+    Check,
+    Clock,
+    Receipt,
+    Scale,
+    ShieldCheck,
+    Smartphone,
+    Sparkles,
+    Store,
+    Users,
 } from "lucide-react";
 import Link from "next/link";
 

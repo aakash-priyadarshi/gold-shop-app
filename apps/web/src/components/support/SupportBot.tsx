@@ -18,7 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { Mail, MessageCircle, Phone, Send, Sparkles, X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const FOUNDER = {
   name: "Aakash",
@@ -50,6 +50,14 @@ const QUICK_ASKS_SELLER = [
   "What's my IRD audit status?",
 ];
 
+const QUICK_ASKS_MOBILE = [
+  "How do I create a quick bill?",
+  "How do I share a quote on WhatsApp?",
+  "How do I download a VAT / GST report?",
+  "How do I log a repair job?",
+  "How do I enroll a customer in savings scheme?",
+];
+
 const ESCALATION_CTA: { label: string; href: string }[] = [
   { label: `WhatsApp ${FOUNDER.phoneDisplay}`, href: `https://wa.me/${FOUNDER.phone.replace("+", "")}` },
   { label: "Email Aakash", href: `mailto:${FOUNDER.email}` },
@@ -72,9 +80,18 @@ function makeSellerWelcome(shopName?: string): Message {
   };
 }
 
+function makeMobileWelcome(shopName?: string): Message {
+  return {
+    id: "welcome",
+    from: "bot",
+    text: `Hi ${shopName ? shopName + " \uD83D\uDC4B" : "\uD83D\uDC4B"} I\u2019m your mobile POS assistant. Ask me how to bill a customer, share a quote on WhatsApp, download your tax report, log a repair, or manage savings schemes.`,
+  };
+}
+
 const STORAGE_MSGS = "orivraa_chat_messages";
 const STORAGE_OPEN = "orivraa_chat_open";
 const STORAGE_SESSION_ID = "orivraa_chat_session_id";
+const STORAGE_LAUNCHER_POS = "orivraa_chat_launcher_pos";
 
 function readSession<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -103,6 +120,7 @@ export function SupportBot() {
   const pathname = usePathname();
   const { user } = useAuth();
   const isSellerLoggedIn = user?.role === "SHOPKEEPER";
+  const isMobile = pathname.startsWith("/m/") || pathname === "/m";
   const shopName = user?.shop?.shopName ?? (user as { shopName?: string } | null)?.shopName;
 
   const [open, setOpen] = useState<boolean>(() => readSession(STORAGE_OPEN, false));
@@ -113,18 +131,22 @@ export function SupportBot() {
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const QUICK_ASKS = isSellerLoggedIn ? QUICK_ASKS_SELLER : QUICK_ASKS_PUBLIC;
+  const QUICK_ASKS = isMobile
+    ? QUICK_ASKS_MOBILE
+    : isSellerLoggedIn
+    ? QUICK_ASKS_SELLER
+    : QUICK_ASKS_PUBLIC;
 
-  // Replace welcome message when seller auth resolves
+  // Replace welcome message when seller auth resolves or mobile mode detected
   useEffect(() => {
     if (!isSellerLoggedIn) return;
     setMessages((prev) => {
       if (prev.length === 1 && prev[0].id === "welcome") {
-        return [makeSellerWelcome(shopName)];
+        return [isMobile ? makeMobileWelcome(shopName) : makeSellerWelcome(shopName)];
       }
       return prev;
     });
-  }, [isSellerLoggedIn, shopName]);
+  }, [isSellerLoggedIn, shopName, isMobile]);
 
   // Persist conversation and open state across navigations / open-close
   useEffect(() => {
@@ -192,16 +214,105 @@ export function SupportBot() {
 
   const showQuickAsks = useMemo(() => messages.length <= 1, [messages.length]);
 
+  /* ───────────────────────── Draggable launcher position ───────────────────────── */
+
+  // `pos` is { right, bottom } in pixels from the viewport edge. null = use the
+  // default tailwind classes (bottom-20 right-4 on mobile, bottom-5 right-5 on
+  // desktop). Saved in sessionStorage so it survives navigation in this tab.
+  type LauncherPos = { right: number; bottom: number };
+  const [pos, setPos] = useState<LauncherPos | null>(() =>
+    readSession<LauncherPos | null>(STORAGE_LAUNCHER_POS, null),
+  );
+  const dragInfo = useRef<{
+    startX: number;
+    startY: number;
+    origRight: number;
+    origBottom: number;
+    moved: boolean;
+    pointerId: number;
+  } | null>(null);
+
+  const defaultBottom = isMobile ? 80 : 20; // bottom-20 vs bottom-5 (rem→px)
+  const defaultRight = isMobile ? 16 : 20;
+  const currentRight = pos?.right ?? defaultRight;
+  const currentBottom = pos?.bottom ?? defaultBottom;
+
+  const onLauncherPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (e.button !== 0 && e.pointerType === "mouse") return;
+      (e.currentTarget as Element).setPointerCapture(e.pointerId);
+      dragInfo.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        origRight: currentRight,
+        origBottom: currentBottom,
+        moved: false,
+        pointerId: e.pointerId,
+      };
+    },
+    [currentRight, currentBottom],
+  );
+
+  const onLauncherPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      const d = dragInfo.current;
+      if (!d || d.pointerId !== e.pointerId) return;
+      const dx = e.clientX - d.startX;
+      const dy = e.clientY - d.startY;
+      if (!d.moved && Math.hypot(dx, dy) < 6) return; // ignore tiny jitter
+      d.moved = true;
+      // We track from right/bottom — moving right (dx > 0) reduces `right`.
+      const newRight = d.origRight - dx;
+      const newBottom = d.origBottom - dy;
+      // Constrain to viewport (launcher is 56×56)
+      const maxRight = window.innerWidth - 56;
+      const maxBottom = window.innerHeight - 56;
+      setPos({
+        right: Math.max(8, Math.min(maxRight, newRight)),
+        bottom: Math.max(8, Math.min(maxBottom, newBottom)),
+      });
+    },
+    [],
+  );
+
+  const onLauncherPointerUp = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      const d = dragInfo.current;
+      dragInfo.current = null;
+      if (!d) return;
+      if (!d.moved) {
+        // Treated as a tap → open chat
+        setOpen(true);
+        return;
+      }
+      // Persist final position
+      try {
+        sessionStorage.setItem(STORAGE_LAUNCHER_POS, JSON.stringify(pos));
+      } catch {
+        /* quota */
+      }
+    },
+    [pos],
+  );
+
   return (
     <>
       {/* Launcher */}
       {!open && (
         <button
           type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Open Orivraa support chat"
+          onPointerDown={onLauncherPointerDown}
+          onPointerMove={onLauncherPointerMove}
+          onPointerUp={onLauncherPointerUp}
+          onPointerCancel={onLauncherPointerUp}
+          aria-label="Open Orivraa support chat (drag to reposition)"
           data-tour="support-bot"
-          className="fixed bottom-5 right-5 z-[60] h-14 w-14 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center"
+          style={{
+            right: `${currentRight}px`,
+            bottom: `${currentBottom}px`,
+            touchAction: "none",
+          }}
+          className="fixed z-[60] h-14 w-14 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-grab active:cursor-grabbing"
         >
           <MessageCircle className="h-6 w-6" />
           <span className="absolute -top-1 -right-1 flex h-3 w-3">
@@ -213,15 +324,28 @@ export function SupportBot() {
 
       {/* Panel */}
       {open && (
-        <div className="fixed bottom-5 right-5 z-[60] w-[calc(100vw-2.5rem)] sm:w-[380px] h-[560px] max-h-[calc(100vh-3rem)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div
+          style={{ right: `${currentRight}px`, bottom: `${currentBottom}px` }}
+          className={`fixed z-[60] w-[calc(100vw-2rem)] sm:w-[380px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden ${
+            isMobile
+              ? "h-[min(70vh,560px)] max-h-[calc(100dvh-7rem)]"
+              : "h-[560px] max-h-[calc(100vh-3rem)]"
+          }`}
+        >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-br from-amber-500 to-orange-600 text-white">
             <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center">
               <Sparkles className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight">Orivraa AI Assistant</p>
-              <p className="text-[11px] opacity-90 leading-tight">Powered by Gemini | Founder on standby</p>
+              <p className="text-sm font-semibold leading-tight">
+                {isMobile ? "Orivraa Mobile Assistant" : "Orivraa AI Assistant"}
+              </p>
+              <p className="text-[11px] opacity-90 leading-tight">
+                {isMobile
+                  ? "POS · Quotes · Repairs · Savings"
+                  : "Powered by Gemini | Founder on standby"}
+              </p>
             </div>
             <button
               type="button"

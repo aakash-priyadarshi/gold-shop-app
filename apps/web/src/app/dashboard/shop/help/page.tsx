@@ -2,31 +2,31 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  BookOpen,
-  Clock,
-  ExternalLink,
-  HelpCircle,
-  LifeBuoy,
-  MessageSquare,
-  PlayCircle,
-} from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+    BookOpen,
+    Clock,
+    ExternalLink,
+    HelpCircle,
+    LifeBuoy,
+    MessageSquare,
+    PlayCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 

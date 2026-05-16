@@ -15,6 +15,7 @@ The 5 misplaced segments are overlaid at their correct positions:
 
 import argparse
 import os
+
 from pydub import AudioSegment
 
 VIDEO_MS = 1429171

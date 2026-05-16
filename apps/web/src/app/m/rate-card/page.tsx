@@ -5,6 +5,7 @@ import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { materialsApi } from "@/lib/api";
+import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { ImageIcon, Loader2, MessageCircle, RefreshCw, Share2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -31,7 +32,7 @@ export default function RateCardPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await materialsApi.getMarketRates();
+      const res = await materialsApi.getMarketRates(getMobileMarketParams());
       const d = res.data;
       const gold = d?.metals?.find?.((m: any) => m.code === "XAU" || m.code === "GOLD");
       const silver = d?.metals?.find?.((m: any) => m.code === "XAG" || m.code === "SILVER");
