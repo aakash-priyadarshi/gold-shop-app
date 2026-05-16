@@ -105,6 +105,7 @@ async function bootstrap() {
     process.env.FRONTEND_URL,
     "https://orivraa.com",
     "https://www.orivraa.com",
+    "https://m.orivraa.com",
     "https://gold-shop-app-web.vercel.app",
     "https://team.orivraa.com",
     "https://gold-shop-app-api.vercel.app",
