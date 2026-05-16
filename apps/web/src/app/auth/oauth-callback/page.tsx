@@ -42,6 +42,21 @@ function OAuthCallbackHandler() {
         return;
       }
 
+      const isMobileHost = window.location.hostname.startsWith("m.");
+      const fromMobile = document.cookie
+        .split(";")
+        .some((cookie) => cookie.trim() === "orivraa_mobile=1");
+      const mobileRedirect = searchParams.get("mobileRedirect") === "1";
+
+      if (fromMobile && !isMobileHost) {
+        const params = new URLSearchParams(searchParams.toString());
+        const secure = window.location.protocol === "https:" ? "; Secure" : "";
+        params.set("mobileRedirect", "1");
+        document.cookie = `orivraa_mobile=; domain=.orivraa.com; path=/; SameSite=Lax${secure}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        window.location.href = `https://m.orivraa.com/auth/oauth-callback?${params.toString()}`;
+        return;
+      }
+
       // ── Desktop OAuth: send tokens back to Orivraa Desktop via localhost ──
       // desktop_port comes from: 1) URL param (passed through OAuth state), 2) sessionStorage, 3) localStorage
       const desktopPort =
@@ -162,19 +177,20 @@ function OAuthCallbackHandler() {
         // Use window.location.href instead of router.push to force full page reload
         // This ensures NextAuth session and all auth state is properly refreshed
         //
-        // If the user started on m.orivraa.com, the googleLogin function set a
-        // cross-subdomain cookie before redirecting to Google. Read it back here
-        // (the callback always runs on orivraa.com) and use an absolute redirect.
-        const fromMobile = document.cookie
-          .split(";")
-          .some((c) => c.trim() === "orivraa_mobile=1");
-        if (fromMobile) {
+        // Mobile OAuth lands here twice: first on orivraa.com, then on
+        // m.orivraa.com so tokens are stored in the mobile origin's localStorage.
+        if (fromMobile || mobileRedirect) {
           const secure = window.location.protocol === "https:" ? "; Secure" : "";
           document.cookie = `orivraa_mobile=; domain=.orivraa.com; path=/; SameSite=Lax${secure}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
         }
+        const shouldUseMobileRoute =
+          (fromMobile || mobileRedirect || isMobileHost) &&
+          user.role === "SHOPKEEPER";
         const dashboardRoute =
-          fromMobile && user.role === "SHOPKEEPER"
+          shouldUseMobileRoute && !isMobileHost
             ? "https://m.orivraa.com/m/pos"
+            : shouldUseMobileRoute
+              ? "/m/pos"
             : getDashboardRoute(user.role as UserRole);
         window.location.href = dashboardRoute;
       } catch (error: any) {
