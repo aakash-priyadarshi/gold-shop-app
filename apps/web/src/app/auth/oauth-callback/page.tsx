@@ -161,7 +161,21 @@ function OAuthCallbackHandler() {
         // Redirect to appropriate dashboard
         // Use window.location.href instead of router.push to force full page reload
         // This ensures NextAuth session and all auth state is properly refreshed
-        const dashboardRoute = getDashboardRoute(user.role as UserRole);
+        //
+        // If the user started on m.orivraa.com, the googleLogin function set a
+        // cross-subdomain cookie before redirecting to Google. Read it back here
+        // (the callback always runs on orivraa.com) and use an absolute redirect.
+        const fromMobile = document.cookie
+          .split(";")
+          .some((c) => c.trim() === "orivraa_mobile=1");
+        if (fromMobile) {
+          const secure = window.location.protocol === "https:" ? "; Secure" : "";
+          document.cookie = `orivraa_mobile=; domain=.orivraa.com; path=/; SameSite=Lax${secure}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        }
+        const dashboardRoute =
+          fromMobile && user.role === "SHOPKEEPER"
+            ? "https://m.orivraa.com/m/pos"
+            : getDashboardRoute(user.role as UserRole);
         window.location.href = dashboardRoute;
       } catch (error: any) {
         console.error("OAuth callback error:", error);
