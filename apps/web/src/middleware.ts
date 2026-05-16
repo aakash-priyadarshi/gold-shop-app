@@ -15,6 +15,9 @@ const MOBILE_TOP_SEGMENTS = new Set([
   "savings",
   "tax",
   "more",
+  "exchange",   // Old Gold Exchange Calculator
+  "broadcast",  // WhatsApp Rate Broadcast
+  "summary",    // Daily Sales Summary
 ]);
 
 export function middleware(request: NextRequest) {

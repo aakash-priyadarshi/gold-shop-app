@@ -11,14 +11,17 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { materialsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
+    BarChart2,
     Calculator,
     ChevronRight,
     FileText,
     Image,
     LogOut,
+    MessageCircle,
     Package,
     Receipt,
     RefreshCw,
+    Scale,
     ScanLine,
     ShoppingBag,
     Users,
@@ -99,6 +102,9 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
 
   const items = [
     { href: "/m/rate-card", icon: Image, label: "Rate Card", desc: "Share today's gold rates" },
+    { href: "/m/broadcast", icon: MessageCircle, label: "Rate Broadcast", desc: "1-tap WhatsApp morning message" },
+    { href: "/m/exchange", icon: Scale, label: "Old Gold Exchange", desc: "Calculate buyback value" },
+    { href: "/m/summary", icon: BarChart2, label: "Daily Summary", desc: "Today's sales & revenue" },
     { href: "/m/tax", icon: Receipt, label: "Tax Reports", desc: "Download GST / VAT reports" },
     { href: "/m/repairs", icon: Wrench, label: "Repairs", desc: "Track repair jobs" },
     { href: "/m/savings", icon: FileText, label: "Savings Schemes", desc: "Customer gold savings" },
