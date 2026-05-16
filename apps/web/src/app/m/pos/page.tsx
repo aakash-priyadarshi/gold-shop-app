@@ -70,8 +70,20 @@ function CartDrawer({
   const [method, setMethod] = useState("CASH");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [makingPct, setMakingPct] = useState(0); // making charge %
 
-  const total = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
+  // Presets stored per-device so the shopkeeper doesn't re-type every bill
+  const MAKING_PRESETS = [
+    { label: "None", pct: 0 },
+    { label: "8%", pct: 8 },
+    { label: "12%", pct: 12 },
+    { label: "14%", pct: 14 },
+    { label: "18%", pct: 18 },
+  ];
+
+  const subtotal = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
+  const making = Math.round(subtotal * (makingPct / 100));
+  const total = subtotal + making;
   const tax = Math.round(total * 0.03); // 3% GST / VAT placeholder
 
   return (
@@ -136,12 +148,41 @@ function CartDrawer({
           </div>
         ))}
 
+        {/* Making Charge Presets */}
+        <div className="mt-4 pt-4 border-t">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-gray-500"><T>Making Charge</T></span>
+            <span className="text-xs text-amber-700 font-semibold">{makingPct > 0 ? `${makingPct}%` : <T>None</T>}</span>
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
+            {MAKING_PRESETS.map((p) => (
+              <button
+                key={p.pct}
+                onClick={() => setMakingPct(p.pct)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                  makingPct === p.pct
+                    ? "bg-amber-500 border-amber-500 text-white"
+                    : "border-gray-200 text-gray-600 bg-white"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Totals */}
-        <div className="mt-4 pt-4 border-t space-y-2">
+        <div className="mt-3 pt-3 border-t space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-500"><T>Subtotal</T></span>
-            <span>{formatNPR(total)}</span>
+            <span>{formatNPR(subtotal)}</span>
           </div>
+          {making > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500"><T>Making Charge</T> ({makingPct}%)</span>
+              <span>{formatNPR(making)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm">
             <span className="text-gray-500"><T>Tax (3%)</T></span>
             <span>{formatNPR(tax)}</span>

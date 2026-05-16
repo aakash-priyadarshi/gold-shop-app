@@ -18,6 +18,10 @@ const MOBILE_TOP_SEGMENTS = new Set([
   "exchange",   // Old Gold Exchange Calculator
   "broadcast",  // WhatsApp Rate Broadcast
   "summary",    // Daily Sales Summary
+  "alerts",     // Rate Threshold Alerts
+  "pending",    // Pending Payments Register
+  "occasions",  // Birthday & Anniversary Reminders
+  "purity",     // Gold Purity Calculator
 ]);
 
 export function middleware(request: NextRequest) {

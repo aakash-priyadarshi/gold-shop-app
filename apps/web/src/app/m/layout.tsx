@@ -12,9 +12,12 @@ import { materialsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
     BarChart2,
+    Bell,
+    Cake,
     Calculator,
     ChevronRight,
     FileText,
+    FlaskConical,
     Image,
     LogOut,
     MessageCircle,
@@ -25,6 +28,7 @@ import {
     ScanLine,
     ShoppingBag,
     Users,
+    Wallet,
     Wrench,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -105,9 +109,13 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
     { href: "/m/broadcast", icon: MessageCircle, label: "Rate Broadcast", desc: "1-tap WhatsApp morning message" },
     { href: "/m/exchange", icon: Scale, label: "Old Gold Exchange", desc: "Calculate buyback value" },
     { href: "/m/summary", icon: BarChart2, label: "Daily Summary", desc: "Today's sales & revenue" },
-    { href: "/m/tax", icon: Receipt, label: "Tax Reports", desc: "Download GST / VAT reports" },
+    { href: "/m/tax", icon: Receipt, label: "Tax Reports", desc: "GST · VAT · MTD · OSS — 6 countries" },
     { href: "/m/repairs", icon: Wrench, label: "Repairs", desc: "Track repair jobs" },
     { href: "/m/savings", icon: FileText, label: "Savings Schemes", desc: "Customer gold savings" },
+    { href: "/m/alerts", icon: Bell, label: "Rate Alerts", desc: "Price threshold notifications" },
+    { href: "/m/pending", icon: Wallet, label: "Pending Payments", desc: "Track credit & partial sales" },
+    { href: "/m/occasions", icon: Cake, label: "Occasions", desc: "Birthdays & anniversaries today" },
+    { href: "/m/purity", icon: FlaskConical, label: "Purity Calculator", desc: "Karat & assay gold value" },
   ];
 
   return (
