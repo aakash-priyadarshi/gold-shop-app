@@ -63,6 +63,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(new URL("/m/pos", request.url));
   }
 
+  // Dashboard paths have no mobile equivalent — send shopkeepers to the POS
+  if (pathname.startsWith("/dashboard")) {
+    return NextResponse.redirect(new URL("/m/pos", request.url));
+  }
+
   // Only rewrite paths whose first segment has a mobile equivalent.
   // Everything else (auth, dashboard, pricing, settings, …) is served by the
   // regular desktop page on the same deployment.
