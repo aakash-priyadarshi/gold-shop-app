@@ -82,6 +82,7 @@ import {
     TruckIcon,
     UserIcon,
 } from "@heroicons/react/24/outline";
+import { HelpCircle, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
@@ -901,7 +902,7 @@ export function Header() {
 
         {/* Desktop Auth/User Menu */}
         <div className="hidden lg:flex items-center gap-2">
-          {mounted && (isChatDismissed || isTutorialDismissed) && (
+          {mounted && isChatDismissed && (
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -909,12 +910,9 @@ export function Header() {
                     variant="ghost"
                     size="icon"
                     className="relative h-9 w-9 rounded-lg mr-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                    onClick={() => {
-                      recallChat();
-                      recallTutorial();
-                    }}
+                    onClick={() => recallChat()}
                   >
-                    <InformationCircleIcon className="h-5 w-5" />
+                    <MessageCircle className="h-5 w-5" />
                     <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
@@ -922,7 +920,30 @@ export function Header() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p><T>Restore Help Widgets</T></p>
+                  <p><T>Restore AI Chat</T></p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {mounted && isTutorialDismissed && (
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative h-9 w-9 rounded-lg mr-1 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                    onClick={() => recallTutorial()}
+                  >
+                    <HelpCircle className="h-5 w-5" />
+                    <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p><T>Restore Tutorials</T></p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

@@ -409,33 +409,50 @@ export function SupportBot() {
             </div>
           )}
 
-          <button
-            type="button"
-            onPointerDown={onLauncherPointerDown}
-            onPointerMove={onLauncherPointerMove}
-            onPointerUp={onLauncherPointerUp}
-            onPointerCancel={onLauncherPointerUp}
-            aria-label="Open Orivraa support chat (drag to reposition)"
-            data-tour="support-bot"
-            style={{
-              width: `${launcherSizePx}px`,
-              height: `${launcherSizePx}px`,
-              opacity: isOverDismissZone ? 0.5 : 1,
-            }}
-            className={`rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 transition-all flex items-center justify-center cursor-grab active:cursor-grabbing shrink-0 ${
-              isDragging ? "scale-90" : "hover:scale-105 active:scale-95"
-            }`}
-            onMouseEnter={() => setBubbleVisible(true)}
-            onMouseLeave={() => setBubbleVisible(false)}
-          >
-            <MessageCircle className={isMobile ? "h-5 w-5" : "h-6 w-6"} />
-            {!isDragging && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-              </span>
+          <div className="relative">
+            <button
+              type="button"
+              onPointerDown={onLauncherPointerDown}
+              onPointerMove={onLauncherPointerMove}
+              onPointerUp={onLauncherPointerUp}
+              onPointerCancel={onLauncherPointerUp}
+              aria-label="Open Orivraa support chat (drag to reposition)"
+              data-tour="support-bot"
+              style={{
+                width: `${launcherSizePx}px`,
+                height: `${launcherSizePx}px`,
+                opacity: isOverDismissZone ? 0.5 : 1,
+              }}
+              className={`rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 transition-all flex items-center justify-center cursor-grab active:cursor-grabbing shrink-0 ${
+                isDragging ? "scale-90" : "hover:scale-105 active:scale-95"
+              }`}
+              onMouseEnter={() => setBubbleVisible(true)}
+              onMouseLeave={() => setBubbleVisible(false)}
+            >
+              <MessageCircle className={isMobile ? "h-5 w-5" : "h-6 w-6"} />
+              {!isDragging && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                </span>
+              )}
+            </button>
+            {/* Dismiss button — desktop only (mobile uses drag-to-dismiss) */}
+            {!isMobile && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dismissChat();
+                }}
+                className="absolute -top-0.5 -left-0.5 h-4 w-4 bg-white text-gray-500 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 shadow-sm z-10"
+                title="Hide chat widget"
+                aria-label="Hide chat widget"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
             )}
-          </button>
+          </div>
         </div>
       )}
 
