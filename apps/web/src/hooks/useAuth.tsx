@@ -49,6 +49,7 @@ export interface User {
     holdReason?: string;
     contactPhone?: string;
     contactEmail?: string;
+    currency?: string;
     verificationRequests?: Array<{
       id: string;
       status: string;

@@ -60,7 +60,7 @@ export default function CataloguePage() {
   const haptic = useHaptics();
   const shopId = user?.shop?.id ?? "";
   const shopName = user?.shop?.shopName ?? "Our Store";
-  const shopPhone = user?.shop?.contactPhone ?? user?.shop?.phone ?? "";
+  const shopPhone = user?.shop?.contactPhone ?? "";
   const currency = user?.shop?.currency ?? "NPR";
 
   const [items, setItems] = useState<InventoryItem[]>([]);
