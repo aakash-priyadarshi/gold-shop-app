@@ -27,6 +27,7 @@ import {
     RefreshCw,
     Scale,
     ScanLine,
+    Settings,
     ShoppingBag,
     Users,
     Wallet,
@@ -115,6 +116,7 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
     { href: "/m/pending", icon: Wallet, label: "Pending Payments", desc: "Track credit & partial sales" },
     { href: "/m/occasions", icon: Cake, label: "Occasions", desc: "Birthdays & anniversaries today" },
     { href: "/m/purity", icon: FlaskConical, label: "Purity Calculator", desc: "Karat & assay gold value" },
+    { href: "/m/settings", icon: Settings, label: "Store Settings", desc: "Country, currency, contact, making charge" },
   ];
 
   return (
