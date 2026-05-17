@@ -1,15 +1,13 @@
 "use client";
 
+import Image from "next/image";
+
 import {
     AiDesignStudio,
     type AiDesignVariation,
 } from "@/components/ai/AiDesignStudio";
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import {
-    GemstoneEditorV2,
-    type GemstoneEntry as GemstoneEntryV2,
-} from "@/components/pricing/GemstoneEditorV2";
 import { LivePricingPanel } from "@/components/pricing/LivePricingPanel";
 import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -40,7 +38,7 @@ import { useImageUpload } from "@/hooks/useImageUpload";
 import { useMarket } from "@/hooks/useMarket";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
-import { getApiUrl, shopQuotesApi } from "@/lib/api";
+import { getApiUrl, shopQuotesApi, shopsApi } from "@/lib/api";
 import {
     BUILD_METHODS,
     JEWELLERY_TYPES,
@@ -69,14 +67,17 @@ import {
     ArrowRight,
     Check,
     Copy,
+    Gem,
     ImageIcon,
     Link2,
     Loader2,
     Mail,
     MessageSquare,
+    Plus,
     RefreshCw,
     Scale,
     Sparkles,
+    Trash2,
     Upload,
     User,
     UserCheck,
@@ -131,6 +132,45 @@ interface MarketRates {
   source?: string;
   debug?: { spotSource?: string };
 }
+
+interface GemstoneRateOption {
+  key: string;
+  label: string;
+  stoneType: string;
+  origin: string;
+  sizeCategory: string;
+  qualityTier: string;
+  effectivePriceNpr: number;
+  shopPriceNpr?: number | null;
+  sourceLabel: string;
+}
+
+interface QuoteGemstoneEntry {
+  id: string;
+  rateKey: string;
+  count: number;
+  notes?: string;
+  fallbackStoneType?: string;
+}
+
+const createQuoteGemstoneEntry = (): QuoteGemstoneEntry => ({
+  id: `gem-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  rateKey: "",
+  count: 1,
+});
+
+const formatGemstoneCode = (value?: string | null) =>
+  (value || "Gemstone")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const formatGemstoneOrigin = (origin?: string | null) => {
+  const normalized = origin?.toUpperCase();
+  return normalized === "LAB" || normalized === "LAB_GROWN"
+    ? "Lab-grown"
+    : "Natural";
+};
 
 export default function CreateShopQuotePage() {
   const router = useRouter();
@@ -197,6 +237,10 @@ export default function CreateShopQuotePage() {
   const [marketRatesWarning, setMarketRatesWarning] = useState<string | null>(
     null,
   );
+  const [gemstoneRateOptions, setGemstoneRateOptions] = useState<
+    GemstoneRateOption[]
+  >([]);
+  const [gemstoneRatesLoading, setGemstoneRatesLoading] = useState(false);
 
   useEffect(() => {
     const fetchMarketRates = async () => {
@@ -236,6 +280,68 @@ export default function CreateShopQuotePage() {
     fetchMarketRates();
   }, [currencyCode, shopCountry]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchGemstoneRates = async () => {
+      setGemstoneRatesLoading(true);
+      try {
+        const response = await shopsApi.getGemstonePricing();
+        if (!isMounted) return;
+
+        const options = (response.data?.rates ?? [])
+          .map((rate: any): GemstoneRateOption | null => {
+            const effectivePriceNpr = Number(rate?.effectivePrice ?? 0);
+            if (
+              !rate?.stoneType ||
+              !rate?.origin ||
+              !rate?.sizeCategory ||
+              !rate?.qualityTier ||
+              effectivePriceNpr <= 0
+            ) {
+              return null;
+            }
+
+            const origin = String(rate.origin);
+            const sourceLabel =
+              rate.shopPrice !== null && rate.shopPrice !== undefined
+                ? "Seller inventory price"
+                : "Platform default price";
+
+            return {
+              key: [
+                rate.stoneType,
+                origin,
+                rate.sizeCategory,
+                rate.qualityTier,
+              ].join("|"),
+              label: `${formatGemstoneCode(rate.stoneType)} · ${formatGemstoneOrigin(origin)} · ${rate.sizeCategory} · ${rate.qualityTier}`,
+              stoneType: rate.stoneType,
+              origin,
+              sizeCategory: rate.sizeCategory,
+              qualityTier: rate.qualityTier,
+              effectivePriceNpr,
+              shopPriceNpr: rate.shopPrice,
+              sourceLabel,
+            };
+          })
+          .filter(Boolean) as GemstoneRateOption[];
+
+        setGemstoneRateOptions(options);
+      } catch {
+        if (isMounted) setGemstoneRateOptions([]);
+      } finally {
+        if (isMounted) setGemstoneRatesLoading(false);
+      }
+    };
+
+    fetchGemstoneRates();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.shop?.id]);
+
   // AI Design
   const [designPreviewUrl, setDesignPreviewUrl] = useState<string | null>(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
@@ -273,7 +379,7 @@ export default function CreateShopQuotePage() {
     },
     methodDConfig: { purity: "18K", chainStyle: "" },
     hasGemstones: false,
-    gemstonesV2: [] as GemstoneEntryV2[],
+    gemstonesV2: [] as QuoteGemstoneEntry[],
     surfaceFinish: "",
     description: "",
   });
@@ -372,6 +478,78 @@ export default function CreateShopQuotePage() {
     }));
   };
 
+  const gemstoneRateByKey = useMemo(() => {
+    return new Map(gemstoneRateOptions.map((option) => [option.key, option]));
+  }, [gemstoneRateOptions]);
+
+  const selectedGemstoneLines = useMemo(() => {
+    return formData.gemstonesV2.map((entry) => {
+      const rate = gemstoneRateByKey.get(entry.rateKey) ?? null;
+      const count = Math.max(Number(entry.count) || 1, 1);
+      return {
+        entry,
+        rate,
+        count,
+        totalNpr: rate ? rate.effectivePriceNpr * count : 0,
+      };
+    });
+  }, [formData.gemstonesV2, gemstoneRateByKey]);
+
+  const selectedGemstoneDetails = useMemo(() => {
+    return selectedGemstoneLines
+      .filter((line) => line.rate)
+      .map((line) => {
+        const rate = line.rate as GemstoneRateOption;
+        return {
+          stoneType: rate.stoneType,
+          origin: rate.origin,
+          sizeCategory: rate.sizeCategory,
+          qualityTier: rate.qualityTier,
+          count: line.count,
+          pricePerStoneNpr: rate.effectivePriceNpr,
+          totalPriceNpr: line.totalNpr,
+          source: rate.shopPriceNpr ? "SELLER_INVENTORY" : "PLATFORM_DEFAULT",
+          notes: line.entry.notes?.trim() || undefined,
+        };
+      });
+  }, [selectedGemstoneLines]);
+
+  const calculatedGemstoneCostNpr = useMemo(
+    () => selectedGemstoneLines.reduce((sum, line) => sum + line.totalNpr, 0),
+    [selectedGemstoneLines],
+  );
+
+  const addGemstoneLine = () => {
+    setFormData((prev) => ({
+      ...prev,
+      hasGemstones: true,
+      gemstonesV2: [...prev.gemstonesV2, createQuoteGemstoneEntry()],
+    }));
+  };
+
+  const updateGemstoneLine = (
+    id: string,
+    updates: Partial<QuoteGemstoneEntry>,
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      gemstonesV2: prev.gemstonesV2.map((entry) =>
+        entry.id === id ? { ...entry, ...updates } : entry,
+      ),
+    }));
+  };
+
+  const removeGemstoneLine = (id: string) => {
+    setFormData((prev) => {
+      const gemstonesV2 = prev.gemstonesV2.filter((entry) => entry.id !== id);
+      return {
+        ...prev,
+        hasGemstones: gemstonesV2.length > 0,
+        gemstonesV2,
+      };
+    });
+  };
+
   const buildEstimateRequest = (): EstimateRequest => {
     const weight = parseFloat(formData.targetTotalWeightG) || 0;
     const request: EstimateRequest = {
@@ -419,21 +597,19 @@ export default function CreateShopQuotePage() {
     };
 
     // Add gemstones if any
-    if (formData.hasGemstones && formData.gemstonesV2.length > 0) {
-      request.gemstones = formData.gemstonesV2
-        .filter((g) => g.stoneType)
-        .map((g) => ({
-          presetId: g.presetId,
-          stoneType: g.stoneType,
-          shape: g.shape,
-          sizeValue: g.sizeValue,
-          sizeUnit: g.sizeUnit,
-          color: g.color,
-          clarity: g.clarity,
-          cut: g.cut,
-          settingStyle: g.settingStyle,
-          count: g.count,
-        }));
+    if (formData.hasGemstones && selectedGemstoneDetails.length > 0) {
+      request.gemstones = selectedGemstoneDetails.map((gemstone) => ({
+        stoneType: gemstone.stoneType,
+        origin: gemstone.origin,
+        sizeCategory: gemstone.sizeCategory,
+        qualityTier: gemstone.qualityTier,
+        count: gemstone.count,
+        pricePerStone: gemstone.pricePerStoneNpr,
+        priceSource:
+          gemstone.source === "SELLER_INVENTORY"
+            ? "Seller inventory price"
+            : "Platform default price",
+      }));
     }
 
     // Add surface finish
@@ -468,6 +644,7 @@ export default function CreateShopQuotePage() {
     formData.methodDConfig,
     formData.hasGemstones,
     formData.gemstonesV2,
+    selectedGemstoneDetails,
     formData.surfaceFinish,
     marketRates,
     shopCountry,
@@ -475,73 +652,94 @@ export default function CreateShopQuotePage() {
   ]);
 
   const applyAiVariation = useCallback(
-    (v: AiDesignVariation) => {
+    (variation: AiDesignVariation) => {
       setFormData((prev) => ({
         ...prev,
-        jewelleryType: v.jewelryType,
-        buildMethod: v.buildMethod as BuildMethod,
-        metalType: v.metalType,
-        targetTotalWeightG: v.estimatedWeight ? String(v.estimatedWeight) : "",
-        surfaceFinish: v.surfaceFinish || prev.surfaceFinish,
-        description: v.description || prev.description,
-        hasGemstones: v.hasGemstones,
-        gemstonesV2: v.gemstones?.length
-          ? v.gemstones.map((g, i) => ({
-              id: `ai-${Date.now()}-${i}`,
-              stoneType: (g.stoneType as never) || ("DIAMOND" as never),
-              shape: (g.shape as never) || ("ROUND" as never),
-              count: g.count ?? 1,
-              sizeValue: g.sizeValue ?? 0,
-              sizeUnit: (g.sizeUnit as never) || ("CARAT" as never),
-              color: g.color,
-              clarity: g.clarity,
-              cut: g.cut,
-              settingStyle: g.settingStyle,
-            })) as never
+        jewelleryType: variation.jewelryType,
+        buildMethod: variation.buildMethod as BuildMethod,
+        metalType: variation.metalType,
+        targetTotalWeightG: variation.estimatedWeight
+          ? String(variation.estimatedWeight)
+          : "",
+        surfaceFinish: variation.surfaceFinish || prev.surfaceFinish,
+        description: variation.description || prev.description,
+        hasGemstones: variation.hasGemstones,
+        gemstonesV2: variation.gemstones?.length
+          ? variation.gemstones.map((gemstone, index) => {
+              const normalizedStoneType = String(
+                gemstone.stoneType || "DIAMOND",
+              )
+                .replace("DIAMOND_NATURAL", "DIAMOND")
+                .replace("DIAMOND_LAB", "DIAMOND");
+              const matchingRate = gemstoneRateOptions.find(
+                (option) => option.stoneType === normalizedStoneType,
+              );
+              const notes = [
+                gemstone.shape,
+                gemstone.sizeValue
+                  ? `${gemstone.sizeValue}${gemstone.sizeUnit === "CARAT" ? "ct" : "mm"}`
+                  : "",
+                gemstone.color,
+                gemstone.clarity,
+                gemstone.cut,
+                gemstone.settingStyle,
+              ]
+                .filter(Boolean)
+                .join(", ");
+
+              return {
+                id: `ai-${Date.now()}-${index}`,
+                rateKey: matchingRate?.key || "",
+                count: gemstone.count ?? 1,
+                notes: notes || undefined,
+                fallbackStoneType: normalizedStoneType,
+              };
+            })
           : prev.gemstonesV2,
         alloyConfig:
-          v.buildMethod === "METHOD_B" && v.alloyDetails
+          variation.buildMethod === "METHOD_B" && variation.alloyDetails
             ? {
-                baseMetal: v.alloyDetails.baseMetal || "GOLD",
-                karat: v.alloyDetails.karat,
-                alloyFamily: v.alloyDetails.alloyFamily,
+                baseMetal: variation.alloyDetails.baseMetal || "GOLD",
+                karat: variation.alloyDetails.karat,
+                alloyFamily: variation.alloyDetails.alloyFamily,
                 recipePresetId: undefined,
               }
             : prev.alloyConfig,
         methodCConfig:
-          v.buildMethod === "METHOD_C" && v.platingDetails
+          variation.buildMethod === "METHOD_C" && variation.platingDetails
             ? {
-                baseMetal: v.platingDetails.baseMetal || "BRASS",
-                platingType: v.platingDetails.platingType || "GOLD_PLATED",
-                platingTier: v.platingDetails.platingTier || "STANDARD",
+                baseMetal: variation.platingDetails.baseMetal || "BRASS",
+                platingType:
+                  variation.platingDetails.platingType || "GOLD_PLATED",
+                platingTier: variation.platingDetails.platingTier || "STANDARD",
               }
             : prev.methodCConfig,
         methodDConfig:
-          v.buildMethod === "METHOD_D" && v.italianMachineDetails
+          variation.buildMethod === "METHOD_D" && variation.italianMachineDetails
             ? {
-                purity: v.italianMachineDetails.purity || "18K",
-                chainStyle: v.italianMachineDetails.chainStyle || "",
+                purity: variation.italianMachineDetails.purity || "18K",
+                chainStyle: variation.italianMachineDetails.chainStyle || "",
               }
             : prev.methodDConfig,
-        metalCostOverride: v.estimatedCost?.metal
-          ? String(v.estimatedCost.metal)
+        metalCostOverride: variation.estimatedCost?.metal
+          ? String(variation.estimatedCost.metal)
           : prev.metalCostOverride,
-        makingChargeOverride: v.estimatedCost?.making
-          ? String(v.estimatedCost.making)
+        makingChargeOverride: variation.estimatedCost?.making
+          ? String(variation.estimatedCost.making)
           : prev.makingChargeOverride,
-        gemstoneCostOverride: v.estimatedCost?.gemstones
-          ? String(v.estimatedCost.gemstones)
+        gemstoneCostOverride: variation.estimatedCost?.gemstones
+          ? String(variation.estimatedCost.gemstones)
           : prev.gemstoneCostOverride,
-        finishCostOverride: v.estimatedCost?.finish
-          ? String(v.estimatedCost.finish)
+        finishCostOverride: variation.estimatedCost?.finish
+          ? String(variation.estimatedCost.finish)
           : prev.finishCostOverride,
       }));
-      if (v.imageUrl) {
-        setDesignPreviewUrl(v.imageUrl);
-        if (v.designId) setDesignId(v.designId);
+      if (variation.imageUrl) {
+        setDesignPreviewUrl(variation.imageUrl);
+        if (variation.designId) setDesignId(variation.designId);
       }
     },
-    [],
+    [gemstoneRateOptions],
   );
 
   const handleGenerateDesign = async () => {
@@ -589,8 +787,15 @@ export default function CreateShopQuotePage() {
               formData.surfaceFinish
                 ? `with ${formData.surfaceFinish.replace(/_/g, " ").toLowerCase()} finish`
                 : "",
-              formData.hasGemstones && formData.gemstonesV2.length > 0
-                ? `with ${formData.gemstonesV2.map((g) => `${g.count}x ${g.stoneType.replace(/_/g, " ").toLowerCase()}`).join(", ")}`
+              formData.hasGemstones && selectedGemstoneLines.length > 0
+                ? `with ${selectedGemstoneLines
+                    .map((line) => {
+                      const gemstoneName = line.rate
+                        ? line.rate.stoneType
+                        : line.entry.fallbackStoneType || "gemstone";
+                      return `${line.count}x ${gemstoneName.replace(/_/g, " ").toLowerCase()}`;
+                    })
+                    .join(", ")}`
                 : "",
             ]
               .filter(Boolean)
@@ -632,12 +837,21 @@ export default function CreateShopQuotePage() {
     const gemstone =
       parseFloat(formData.gemstoneCostOverride) ||
       autoEstimate?.gemstoneCost ||
+      calculatedGemstoneCostNpr ||
       0;
     const finish =
       parseFloat(formData.finishCostOverride) || autoEstimate?.finishCost || 0;
     const subtotal = metal + making + gemstone + finish;
     const tax = subtotal * taxRate;
-    return { subtotal, tax, total: subtotal + tax };
+    return {
+      metal,
+      making,
+      gemstone,
+      finish,
+      subtotal,
+      tax,
+      total: subtotal + tax,
+    };
   };
 
   const handleSubmit = async () => {
@@ -658,9 +872,34 @@ export default function CreateShopQuotePage() {
       setError(t("Please select jewellery type and build method"));
       return;
     }
+    const hasManualGemstoneOverride =
+      parseFloat(formData.gemstoneCostOverride) > 0;
+    if (
+      formData.hasGemstones &&
+      formData.gemstonesV2.some((entry) => !entry.rateKey) &&
+      !hasManualGemstoneOverride
+    ) {
+      setError(
+        t("Select a gemstone price for each gemstone or remove empty rows"),
+      );
+      return;
+    }
     setLoading(true);
     setError("");
     try {
+      const pricing = calculateTotal();
+      const composition = {
+        ...formData.composition,
+        metalType: formData.metalType,
+        alloyConfig: formData.alloyConfig,
+        methodCConfig: formData.methodCConfig,
+        methodDConfig: formData.methodDConfig,
+        surfaceFinish: formData.surfaceFinish || undefined,
+        description: formData.description || undefined,
+        hasGemstones: formData.hasGemstones,
+        gemstones: selectedGemstoneDetails,
+      };
+
       const response = await shopQuotesApi.create({
         customer: {
           name: customerDetails.name,
@@ -673,7 +912,7 @@ export default function CreateShopQuotePage() {
         },
         jewelleryType: formData.jewelleryType,
         buildMethod: formData.buildMethod,
-        composition: formData.composition,
+        composition,
         targetTotalWeightG:
           parseFloat(formData.targetTotalWeightG) || undefined,
         targetGoldWeightG: parseFloat(formData.targetGoldWeightG) || undefined,
@@ -686,10 +925,10 @@ export default function CreateShopQuotePage() {
               ),
             ]
           : formData.referenceImages,
-        metalCostNpr: parseFloat(formData.metalCostOverride) || undefined,
-        makingChargeNpr: parseFloat(formData.makingChargeOverride) || undefined,
-        gemstoneCostNpr: parseFloat(formData.gemstoneCostOverride) || undefined,
-        finishCostNpr: parseFloat(formData.finishCostOverride) || undefined,
+        metalCostNpr: pricing.metal || undefined,
+        makingChargeNpr: pricing.making || undefined,
+        gemstoneCostNpr: pricing.gemstone || undefined,
+        finishCostNpr: pricing.finish || undefined,
         estimatedDays: parseInt(formData.estimatedDays) || undefined,
         shopNotes: formData.shopNotes || undefined,
       });
@@ -1222,13 +1461,15 @@ export default function CreateShopQuotePage() {
                                 {JEWELLERY_TYPE_IMAGES[
                                   formData.jewelleryType
                                 ] && (
-                                  <img
+                                  <Image
                                     src={
                                       JEWELLERY_TYPE_IMAGES[
                                         formData.jewelleryType
                                       ]
                                     }
                                     alt=""
+                                    width={20}
+                                    height={20}
                                     className="h-5 w-5 rounded object-cover"
                                   />
                                 )}
@@ -1242,9 +1483,11 @@ export default function CreateShopQuotePage() {
                             <SelectItem key={type.value} value={type.value}>
                               <span className="flex items-center gap-2">
                                 {JEWELLERY_TYPE_IMAGES[type.value] && (
-                                  <img
+                                  <Image
                                     src={JEWELLERY_TYPE_IMAGES[type.value]}
                                     alt=""
+                                    width={20}
+                                    height={20}
                                     className="h-5 w-5 rounded object-cover"
                                   />
                                 )}
@@ -1616,11 +1859,14 @@ export default function CreateShopQuotePage() {
                               }
                               className={`relative p-2 rounded-lg border-2 transition-all text-center ${formData.surfaceFinish === key ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}
                             >
-                              <img
-                                src={info.image}
-                                alt={key.replace(/_/g, " ")}
-                                className="w-full h-12 object-cover rounded mb-1"
-                              />
+                              <div className="relative w-full h-12 rounded mb-1">
+                                <Image
+                                  src={info.image}
+                                  alt={key.replace(/_/g, " ")}
+                                  fill
+                                  className="object-cover rounded"
+                                />
+                              </div>
                               <span className="text-xs font-medium block truncate">
                                 {key.replace(/_/g, " ")}
                               </span>
@@ -1630,52 +1876,197 @@ export default function CreateShopQuotePage() {
                     </div>
 
                     {/* Gemstones */}
-                    <div>
-                      <Label><T>Gemstones</T></Label>
-                      <div className="flex items-center gap-3 mt-2 mb-3">
-                        <Badge
-                          variant={
-                            formData.hasGemstones ? "default" : "outline"
-                          }
-                          className="cursor-pointer"
-                          onClick={() =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              hasGemstones: true,
-                            }))
-                          }
-                        >
-                          <T>Yes</T>
-                        </Badge>
-                        <Badge
-                          variant={
-                            !formData.hasGemstones ? "default" : "outline"
-                          }
-                          className="cursor-pointer"
-                          onClick={() =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              hasGemstones: false,
-                              gemstonesV2: [],
-                            }))
-                          }
-                        >
-                          <T>No</T>
-                        </Badge>
+                    <div className="space-y-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-1">
+                          <Label className="flex items-center gap-2">
+                            <Gem className="h-4 w-4 text-purple-500" />
+                            <T>Gemstones</T>
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            <T>Prices use your inventory gemstone rates, then platform defaults.</T>
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {formData.hasGemstones && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  hasGemstones: false,
+                                  gemstonesV2: [],
+                                }))
+                              }
+                            >
+                              <T>No gemstones</T>
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addGemstoneLine}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            {formData.hasGemstones ? (
+                              <T>Add another</T>
+                            ) : (
+                              <T>Add gemstone</T>
+                            )}
+                          </Button>
+                        </div>
                       </div>
+
                       {formData.hasGemstones && (
-                        <GemstoneEditorV2
-                          gemstones={formData.gemstonesV2}
-                          onChange={(gems) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              gemstonesV2: gems,
-                            }))
-                          }
-                          currencySymbol={currencySymbol}
-                          selectedCurrency={currencyCode}
-                          exchangeRate={marketRates?.fx?.rate || 144}
-                        />
+                        <div className="space-y-3">
+                          {formData.gemstonesV2.map((gemstone, index) => {
+                            const selectedRate = gemstoneRateByKey.get(
+                              gemstone.rateKey,
+                            );
+                            const count = Math.max(Number(gemstone.count) || 1, 1);
+                            const lineTotal = selectedRate
+                              ? selectedRate.effectivePriceNpr * count
+                              : 0;
+
+                            return (
+                              <div
+                                key={gemstone.id}
+                                className="rounded-lg border bg-muted/20 p-3 space-y-3"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 text-sm font-medium">
+                                    <Gem className="h-4 w-4 text-purple-500" />
+                                    {t("Gemstone")} {index + 1}
+                                    {selectedRate && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {t(selectedRate.sourceLabel)}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-500 hover:text-red-600"
+                                    onClick={() => removeGemstoneLine(gemstone.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-[1fr_120px] gap-3">
+                                  <div className="space-y-1">
+                                    <Label><T>Gemstone price</T></Label>
+                                    <Select
+                                      value={gemstone.rateKey}
+                                      onValueChange={(value) =>
+                                        updateGemstoneLine(gemstone.id, {
+                                          rateKey: value,
+                                        })
+                                      }
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue
+                                          placeholder={
+                                            gemstoneRatesLoading
+                                              ? t("Loading gemstone prices...")
+                                              : t("Select gemstone")
+                                          }
+                                        />
+                                      </SelectTrigger>
+                                      <SelectContent className="max-h-80">
+                                        {gemstoneRateOptions.map((option) => (
+                                          <SelectItem
+                                            key={option.key}
+                                            value={option.key}
+                                          >
+                                            <div className="flex flex-col gap-0.5">
+                                              <span>{option.label}</span>
+                                              <span className="text-xs text-muted-foreground">
+                                                {currencySymbol}{" "}
+                                                {Math.round(
+                                                  option.effectivePriceNpr,
+                                                ).toLocaleString()} {t("per stone")}
+                                                {" · "}{t(option.sourceLabel)}
+                                              </span>
+                                            </div>
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <Label><T>Quantity</T></Label>
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      value={gemstone.count}
+                                      onChange={(event) =>
+                                        updateGemstoneLine(gemstone.id, {
+                                          count:
+                                            parseInt(event.target.value, 10) || 1,
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                </div>
+
+                                <Input
+                                  placeholder={t("Optional setting, color, or placement notes")}
+                                  value={gemstone.notes || ""}
+                                  onChange={(event) =>
+                                    updateGemstoneLine(gemstone.id, {
+                                      notes: event.target.value,
+                                    })
+                                  }
+                                />
+
+                                {selectedRate && (
+                                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-purple-50 px-3 py-2 text-sm dark:bg-purple-950/30">
+                                    <span className="text-purple-800 dark:text-purple-200">
+                                      {currencySymbol}{" "}
+                                      {Math.round(
+                                        selectedRate.effectivePriceNpr,
+                                      ).toLocaleString()} × {count}
+                                    </span>
+                                    <span className="font-semibold text-purple-900 dark:text-purple-100">
+                                      {currencySymbol}{" "}
+                                      {Math.round(lineTotal).toLocaleString()}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+
+                          {!gemstoneRatesLoading &&
+                            gemstoneRateOptions.length === 0 && (
+                              <Alert>
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription>
+                                  <T>Gemstone prices are unavailable right now. You can still use the final pricing override.</T>
+                                </AlertDescription>
+                              </Alert>
+                            )}
+
+                          {calculatedGemstoneCostNpr > 0 && (
+                            <div className="flex items-center justify-between rounded-lg bg-purple-50 px-4 py-3 dark:bg-purple-950/30">
+                              <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                                <T>Total gemstone cost</T>
+                              </span>
+                              <span className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                                {currencySymbol}{" "}
+                                {Math.round(
+                                  calculatedGemstoneCostNpr,
+                                ).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -1711,11 +2102,14 @@ export default function CreateShopQuotePage() {
                       {designPreviewUrl ? (
                         <div className="space-y-3">
                           <div className="relative rounded-lg overflow-hidden border">
-                            <img
-                              src={designPreviewUrl}
-                              alt="AI Generated Design"
-                              className="w-full h-48 object-cover"
-                            />
+                            <div className="relative w-full h-48">
+                              <Image
+                                src={designPreviewUrl}
+                                alt="AI Generated Design"
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
                             <button
                               onClick={() => {
                                 setDesignPreviewUrl(null);
@@ -1791,11 +2185,12 @@ export default function CreateShopQuotePage() {
                         {formData.referenceImages.length > 0 && (
                           <div className="grid grid-cols-4 gap-2 mb-4">
                             {formData.referenceImages.map((url, idx) => (
-                              <div key={idx} className="relative group">
-                                <img
+                              <div key={idx} className="relative group h-20">
+                                <Image
                                   src={getImageUrl(url)}
                                   alt={`Reference ${idx + 1}`}
-                                  className="w-full h-20 object-cover rounded"
+                                  fill
+                                  className="object-cover rounded"
                                 />
                                 <button
                                   onClick={() => removeReferenceImage(url)}
@@ -1905,7 +2300,7 @@ export default function CreateShopQuotePage() {
                     {/* Manual Override Section */}
                     <details className="group">
                       <summary className="cursor-pointer text-sm font-medium text-amber-700 hover:text-amber-800">
-                        <T>Override individual costs manually</T>
+                        <T>Fine-tune calculated costs</T>
                       </summary>
                       <div className="grid grid-cols-2 gap-4 mt-3">
                         <div>
@@ -1966,7 +2361,7 @@ export default function CreateShopQuotePage() {
                         </div>
                         <div>
                           <Label>
-                            <T>Gemstone Cost</T> ({currencySymbol})
+                            <T>Gemstone Cost Override</T> ({currencySymbol})
                             {autoEstimate && (
                               <span className="text-xs text-muted-foreground ml-1">
                                 Auto:{" "}
@@ -2097,11 +2492,14 @@ export default function CreateShopQuotePage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <img
-                        src={designPreviewUrl}
-                        alt="AI Design"
-                        className="w-full rounded-lg object-cover"
-                      />
+                      <div className="relative w-full h-48">
+                        <Image
+                          src={designPreviewUrl}
+                          alt="AI Design"
+                          fill
+                          className="object-cover rounded-lg"
+                        />
+                      </div>
                     </CardContent>
                   </Card>
                 )}

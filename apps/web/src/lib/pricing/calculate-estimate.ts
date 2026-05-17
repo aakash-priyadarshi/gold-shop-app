@@ -242,13 +242,18 @@ export interface MethodDDetails {
 export interface GemstoneInput {
   presetId?: string;
   stoneType?: string;
+  origin?: string;
   shape?: string;
+  sizeCategory?: string;
   sizeValue?: string;
   sizeUnit?: "MM" | "CARAT";
+  qualityTier?: string;
   color?: string;
   clarity?: string;
   cut?: string;
   settingStyle?: string;
+  pricePerStone?: number;
+  priceSource?: string;
   count: number;
 }
 
@@ -652,9 +657,27 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
     for (const gem of request.gemstones) {
       let stoneCost = 0;
       let stoneLabel = "";
+      let stoneDetails: string | undefined;
 
+      // Use explicit shop/platform rate first when the quote form selected one.
+      if (gem.pricePerStone && gem.pricePerStone > 0) {
+        const count = Math.max(gem.count || 1, 1);
+        const originLabel = gem.origin
+          ? ` ${gem.origin.replace(/_/g, " ").toLowerCase()}`
+          : "";
+        const sizeLabel = gem.sizeCategory
+          ? ` ${gem.sizeCategory}`
+          : gem.sizeValue
+            ? ` ${gem.sizeValue}${gem.sizeUnit === "CARAT" ? "ct" : "mm"}`
+            : "";
+        const qualityLabel = gem.qualityTier ? ` ${gem.qualityTier}` : "";
+
+        stoneCost = gem.pricePerStone * count;
+        stoneLabel = `${(gem.stoneType || "Gemstone").replace(/_/g, " ")}${originLabel}${sizeLabel}${qualityLabel} × ${count}`;
+        stoneDetails = gem.priceSource;
+      }
       // Use preset if available
-      if (gem.presetId) {
+      else if (gem.presetId) {
         const preset = getGemstonePreset(gem.presetId);
         if (preset) {
           stoneCost = preset.estimatedPriceNpr * gem.count;
@@ -675,6 +698,7 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
           label: stoneLabel,
           category: "GEMSTONE",
           amount: stoneCost,
+          ...(stoneDetails ? { details: stoneDetails } : {}),
         });
       }
 

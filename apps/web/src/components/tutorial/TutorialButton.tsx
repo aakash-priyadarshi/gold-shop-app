@@ -104,10 +104,10 @@ export function TutorialButton({ className }: TutorialButtonProps) {
           select.style.webkitAppearance = "none";
           
           const currentLang = usePreferencesStore.getState().language;
-          Object.entries(LANGUAGES).forEach(([code]) => {
+          Object.entries(LANGUAGES).forEach(([code, info]) => {
             const opt = document.createElement("option");
             opt.value = code;
-            opt.innerText = code;
+            opt.innerText = info.nativeName;
             opt.selected = code === currentLang;
             select.appendChild(opt);
           });

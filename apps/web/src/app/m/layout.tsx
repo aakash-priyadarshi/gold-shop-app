@@ -566,12 +566,12 @@ export default function MobileLayout({
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as Language)}
-                className="appearance-none bg-transparent text-gray-700 dark:text-gray-300 text-xs font-semibold uppercase pr-3 pl-2 py-1 outline-none"
+                className="appearance-none bg-transparent text-gray-700 dark:text-gray-300 text-xs font-semibold pr-3 pl-2 py-1 outline-none"
                 style={{ WebkitAppearance: 'none' }}
               >
-                {Object.entries(LANGUAGES).map(([code]) => (
+                {Object.entries(LANGUAGES).map(([code, info]) => (
                   <option key={code} value={code} className="text-gray-900">
-                    {code}
+                    {info.nativeName}
                   </option>
                 ))}
               </select>

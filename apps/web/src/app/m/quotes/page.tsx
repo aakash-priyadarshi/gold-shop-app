@@ -1,6 +1,7 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
+import { useTranslation } from "@/providers/translation-provider";
 
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
@@ -157,6 +158,7 @@ function numberFromInput(value: string) {
 }
 
 export default function QuotesPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const initialParams = getMobileMarketParams(user?.shop ?? null);
   const [currency, setCurrency] = useState(initialParams.currency);
@@ -635,7 +637,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                 type="tel"
                 value={customerPhone}
                 onChange={(event) => setCustomerPhone(event.target.value)}
-                placeholder="Phone first"
+                placeholder={t("")}
                 className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
               {lookingUpCustomer && (
@@ -649,7 +651,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               type="text"
               value={customerName}
               onChange={(event) => setCustomerName(event.target.value)}
-              placeholder="Customer name"
+              placeholder={t("")}
               className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
@@ -657,7 +659,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             type="email"
             value={customerEmail}
             onChange={(event) => setCustomerEmail(event.target.value)}
-            placeholder="Email (optional)"
+            placeholder={t("")}
             className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
           <div className="relative">
@@ -665,7 +667,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             <textarea
               value={customerAddress}
               onChange={(event) => setCustomerAddress(event.target.value)}
-              placeholder="Address (optional)"
+              placeholder={t("")}
               rows={2}
               className="w-full resize-none rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
@@ -674,13 +676,13 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             <input
               value={customerCity}
               onChange={(event) => setCustomerCity(event.target.value)}
-              placeholder="City"
+              placeholder={t("")}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             <input
               value={customerCountry}
               onChange={(event) => setCustomerCountry(event.target.value)}
-              placeholder="Country"
+              placeholder={t("")}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
@@ -704,7 +706,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               inputMode="numeric"
               value={quantity || ""}
               onChange={(event) => setQuantity(Math.max(1, Number.parseInt(event.target.value) || 1))}
-              placeholder="Qty"
+              placeholder={t("")}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
@@ -714,7 +716,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
             {BUILD_METHODS.map((method) => (
-              <option key={method.value} value={method.value}>{method.label}</option>
+              <option key={method.value} value={method.value}>{t(method.label)}</option>
             ))}
           </select>
           <select
@@ -726,7 +728,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
             {MATERIAL_OPTIONS.map((material) => (
-              <option key={material.value} value={material.value}>{material.label}</option>
+              <option key={material.value} value={material.value}>{t(material.label)}</option>
             ))}
           </select>
           <div className="grid grid-cols-2 gap-2">
@@ -741,7 +743,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                   setTargetTotalWeightG(numberFromInput(event.target.value));
                   setMetalCostMode("auto");
                 }}
-                placeholder="Weight"
+                placeholder={t("")}
                 className="min-w-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
               <select
@@ -752,14 +754,14 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                 }}
                 className="rounded-xl border border-gray-200 px-2 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
-                <option value="GRAM">g</option>
-                <option value="TOLA">tola</option>
+                <option value="GRAM">{t("g")}</option>
+                <option value="TOLA">{t("tola")}</option>
               </select>
             </div>
             <input
               value={sizeOrLength}
               onChange={(event) => setSizeOrLength(event.target.value)}
-              placeholder="Size / length"
+              placeholder={t("")}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
@@ -771,7 +773,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               step="0.01"
               value={targetGoldWeightG || ""}
               onChange={(event) => setTargetGoldWeightG(numberFromInput(event.target.value))}
-              placeholder="Gold weight g (optional)"
+              placeholder={t("")}
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           )}
@@ -797,7 +799,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                 setMetalCostMode("manual");
                 setMetalCostNpr(numberFromInput(event.target.value));
               }}
-              placeholder="Material cost"
+              placeholder={t("")}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             <input
@@ -806,7 +808,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               min="0"
               value={makingChargeNpr || ""}
               onChange={(event) => setMakingChargeNpr(numberFromInput(event.target.value))}
-              placeholder="Making charge"
+              placeholder={t("")}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             <input
@@ -818,7 +820,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                 setGemstoneCostMode("manual");
                 setGemstoneCostNpr(numberFromInput(event.target.value));
               }}
-              placeholder="Gemstone cost"
+              placeholder={t("")}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             <input
@@ -827,7 +829,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               min="0"
               value={finishCostNpr || ""}
               onChange={(event) => setFinishCostNpr(numberFromInput(event.target.value))}
-              placeholder="Finish cost"
+              placeholder={t("")}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
@@ -857,7 +859,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                 }}
                 className="min-w-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
-                <option value="">Gemstone / diamond rate</option>
+                <option value="">{t("Gemstone / diamond rate")}</option>
                 {gemstoneRateOptions.map((option) => (
                   <option key={option.key} value={option.key}>
                     {option.label} - {fmt(option.effectivePriceNpr * nprToDisplayCurrency, currency)}
@@ -873,16 +875,16 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                   setGemstoneCount(Math.max(1, Number.parseInt(event.target.value) || 1));
                   if (selectedGemstoneRateKey) setGemstoneCostMode("auto");
                 }}
-                placeholder="Qty"
+                placeholder={t("")}
                 className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
           )}
-          <input type="number" inputMode="numeric" min="1" value={estimatedDays || ""} onChange={(event) => setEstimatedDays(Math.max(1, Number.parseInt(event.target.value) || 1))} placeholder="Estimated days" className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <textarea value={gemstoneNotes} onChange={(event) => setGemstoneNotes(event.target.value)} rows={2} placeholder="Gemstone details (optional)" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <textarea value={finishNotes} onChange={(event) => setFinishNotes(event.target.value)} rows={2} placeholder="Finish / plating / polish details" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <textarea value={specialInstructions} onChange={(event) => setSpecialInstructions(event.target.value)} rows={3} placeholder="Customer instructions" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <textarea value={shopNotes} onChange={(event) => setShopNotes(event.target.value)} rows={2} placeholder="Internal shop notes" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <input type="number" inputMode="numeric" min="1" value={estimatedDays || ""} onChange={(event) => setEstimatedDays(Math.max(1, Number.parseInt(event.target.value) || 1))} placeholder={t("")} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <textarea value={gemstoneNotes} onChange={(event) => setGemstoneNotes(event.target.value)} rows={2} placeholder={t("")} className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <textarea value={finishNotes} onChange={(event) => setFinishNotes(event.target.value)} rows={2} placeholder={t("")} className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <textarea value={specialInstructions} onChange={(event) => setSpecialInstructions(event.target.value)} rows={3} placeholder={t("")} className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <textarea value={shopNotes} onChange={(event) => setShopNotes(event.target.value)} rows={2} placeholder={t("")} className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
         </section>
 
         {estimateTotal > 0 && (

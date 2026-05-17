@@ -611,7 +611,7 @@ export class ShopsService {
       where: { shopId, type: "SHOP_KYC" },
       orderBy: { createdAt: "desc" },
     });
-    let adminNotePayload = reason ? { adminNote: reason } : { adminNote: null };
+    const adminNotePayload = reason ? { adminNote: reason } : { adminNote: null };
 
     if (existingVr) {
       // Merge with existing details if there
@@ -1448,6 +1448,54 @@ export class ShopsService {
 
     if (!shop) {
       throw new NotFoundException("Shop not found");
+    }
+
+    const formatSizeValue = (value: number) =>
+      Number.isInteger(value) ? String(value) : String(value).replace(/\.?0+$/, "");
+    const normalizeOrigin = (origin?: string | null) => {
+      const normalized = origin?.toUpperCase();
+      return normalized === "LAB" || normalized === "LAB_GROWN"
+        ? "LAB_GROWN"
+        : "NATURAL";
+    };
+
+    const catalogDefaults = await this.prisma.gemstoneCatalog
+      .findMany({
+        where: { currency: "NPR" },
+        orderBy: [
+          { stoneType: "asc" },
+          { sizeMin: "asc" },
+          { qualityTier: "asc" },
+        ],
+      })
+      .catch(() => []);
+
+    if (catalogDefaults.length > 0) {
+      const rates = catalogDefaults.map((catalogPrice) => {
+        const origin = normalizeOrigin(catalogPrice.origin);
+        const sizeSuffix = catalogPrice.sizeUnit === "CARAT" ? "ct" : "mm";
+        const sizeCategory = `${formatSizeValue(catalogPrice.sizeMin)}-${formatSizeValue(catalogPrice.sizeMax)}${sizeSuffix}`;
+        const shopRate = shop.gemstoneRates.find(
+          (rate) =>
+            rate.stoneType === catalogPrice.stoneType &&
+            normalizeOrigin(rate.origin) === origin &&
+            rate.sizeCategory === sizeCategory &&
+            rate.qualityTier === catalogPrice.qualityTier,
+        );
+
+        return {
+          stoneType: catalogPrice.stoneType,
+          origin,
+          sizeCategory,
+          qualityTier: catalogPrice.qualityTier,
+          systemDefault: catalogPrice.pricePerStone,
+          shopPrice: shopRate?.pricePerStone ?? null,
+          effectivePrice: shopRate?.pricePerStone ?? catalogPrice.pricePerStone,
+          lastUpdatedAt: shopRate?.lastUpdatedAt ?? catalogPrice.updatedAt,
+        };
+      });
+
+      return { rates };
     }
 
     // System default gemstone prices (same structure as DEFAULT_GEMSTONE_PRICES_NPR)
