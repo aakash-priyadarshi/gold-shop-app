@@ -274,7 +274,7 @@ export function SupportBot() {
         bottom: Math.max(8, Math.min(maxBottom, newBottom)),
       });
     },
-    [],
+    [launcherSizePx],
   );
 
   const onLauncherPointerUp = useCallback(
