@@ -35,7 +35,11 @@ const MOBILE_TO_BACKEND_FEATURE: Record<string, string | null> = {
 
   // Gated — admin controls these per plan in /dashboard/admin/billing
   mobileQuotes: "invoicing",
-  mobileCustomers: "customerManagement",
+  // The backend CustomerCrmController is gated by @RequireFeature("crm"), so
+  // the mobile customer directory must check the same key — using a different
+  // key (e.g. customerManagement) would unlock the UI but the API would still
+  // return 403.
+  mobileCustomers: "crm",
   mobileTaxReports: "taxReports",
   mobileWhatsAppShare: "crm",
 };

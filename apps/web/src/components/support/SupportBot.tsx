@@ -236,6 +236,8 @@ export function SupportBot() {
   const defaultRight = isMobile ? 16 : 20;
   const currentRight = pos?.right ?? defaultRight;
   const currentBottom = pos?.bottom ?? defaultBottom;
+  // User asked for the mobile launcher to be 1px smaller than the desktop one.
+  const launcherSizePx = isMobile ? 55 : 56;
 
   const onLauncherPointerDown = useCallback(
     (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -264,9 +266,9 @@ export function SupportBot() {
       // We track from right/bottom — moving right (dx > 0) reduces `right`.
       const newRight = d.origRight - dx;
       const newBottom = d.origBottom - dy;
-      // Constrain to viewport (launcher is 56×56)
-      const maxRight = window.innerWidth - 56;
-      const maxBottom = window.innerHeight - 56;
+      // Constrain to viewport (launcher size depends on platform)
+      const maxRight = window.innerWidth - launcherSizePx;
+      const maxBottom = window.innerHeight - launcherSizePx;
       setPos({
         right: Math.max(8, Math.min(maxRight, newRight)),
         bottom: Math.max(8, Math.min(maxBottom, newBottom)),
@@ -310,9 +312,11 @@ export function SupportBot() {
           style={{
             right: `${currentRight}px`,
             bottom: `${currentBottom}px`,
+            width: `${launcherSizePx}px`,
+            height: `${launcherSizePx}px`,
             touchAction: "none",
           }}
-          className="fixed z-[60] h-14 w-14 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-grab active:cursor-grabbing"
+          className="fixed z-[60] rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-grab active:cursor-grabbing"
         >
           <MessageCircle className="h-6 w-6" />
           <span className="absolute -top-1 -right-1 flex h-3 w-3">

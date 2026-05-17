@@ -6,7 +6,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { inventoryApi, shopQuotesApi } from "@/lib/api";
+import { inventoryApi, posApi, shopQuotesApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
     Check,
@@ -63,14 +63,45 @@ function CartDrawer({
   cart: CartItem[];
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
-  onCheckout: (method: string, customerPhone?: string) => void;
+  onCheckout: (
+    method: string,
+    customerName: string,
+    customerPhone?: string,
+    extras?: { taxRate?: number; makingPct?: number },
+  ) => Promise<void> | void;
   onClose: () => void;
 }) {
   const t = useT();
   const [method, setMethod] = useState("CASH");
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
   const [makingPct, setMakingPct] = useState(0); // making charge %
+
+  // Auto-fill customer name when phone matches an existing customer.
+  // Same pattern as the PC quote builder (shopQuotesApi.lookupCustomer).
+  useEffect(() => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 7) return;
+    const handle = setTimeout(async () => {
+      try {
+        setLookingUp(true);
+        const res = await shopQuotesApi.lookupCustomer({
+          phoneCountryCode: "+977",
+          phone: digits,
+        });
+        const found = res.data;
+        if (found?.name && !name) setName(found.name);
+      } catch {
+        // no existing customer — ignore
+      } finally {
+        setLookingUp(false);
+      }
+    }, 450);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phone]);
 
   // Presets stored per-device so the shopkeeper doesn't re-type every bill
   const MAKING_PRESETS = [
@@ -193,18 +224,37 @@ function CartDrawer({
           </div>
         </div>
 
-        {/* Customer phone (optional, for WhatsApp) */}
-        <div className="pt-2">
-          <label className="text-xs font-medium text-gray-500 block mb-1">
-            <T>Customer Phone (optional — for WhatsApp bill)</T>
-          </label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder={t("+977 98XXXXXXXX")}
-            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
-          />
+        {/* Customer name + phone (phone triggers auto-fill) */}
+        <div className="pt-2 space-y-2">
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">
+              <T>Customer Name</T>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("Walk-in customer")}
+              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">
+              <T>Customer Phone (optional — for WhatsApp bill)</T>
+              {lookingUp && (
+                <span className="ml-2 text-amber-500">
+                  <Loader2 className="inline h-3 w-3 animate-spin" />
+                </span>
+              )}
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder={t("+977 98XXXXXXXX")}
+              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
         </div>
 
         {/* Payment method */}
@@ -236,7 +286,12 @@ function CartDrawer({
           disabled={loading || cart.length === 0}
           onClick={async () => {
             setLoading(true);
-            await onCheckout(method, phone || undefined);
+            await onCheckout(
+              method,
+              name.trim() || "Walk-in Customer",
+              phone || undefined,
+              { taxRate: 3, makingPct },
+            );
             setLoading(false);
           }}
           className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-50 shadow-lg shadow-amber-500/25"
@@ -391,33 +446,52 @@ export default function MobilePOSPage() {
   const cartTotal = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
 
-  const handleCheckout = async (method: string, customerPhone?: string) => {
+  const handleCheckout = async (
+    method: string,
+    customerName: string,
+    customerPhone?: string,
+    extras?: { taxRate?: number; makingPct?: number },
+  ) => {
     if (!cart.length) return;
     try {
-      const subtotal = cartTotal;
-      const tax = Math.round(subtotal * 0.03);
-      const total = subtotal + tax;
+      // The desktop billing flow is a 3-step process exposed by posApi:
+      //   1. POST /pos/session             → create a draft session
+      //   2. POST /pos/session/:id/items   → attach inventory line items
+      //   3. POST /pos/session/:id/checkout → finalise + create invoice
+      // The earlier implementation tried to POST to shopQuotesApi.create which
+      // does NOT accept an `items` field, so class-validator rejected the body
+      // with "property item should not exist". Mirroring the PC flow fixes it.
+      const sessionRes = await posApi.createSession({});
+      const sessionId =
+        sessionRes.data?.id ?? sessionRes.data?.sessionId;
+      if (!sessionId) throw new Error("Could not start POS session");
 
-      const res = await shopQuotesApi.create({
-        items: cart.map((c) => ({
+      await posApi.addItems(
+        sessionId,
+        cart.map((c) => ({
           inventoryItemId: c.item.id,
           qty: c.qty,
-          unitPriceNpr: c.unitPrice,
-          lineTotalNpr: c.unitPrice * c.qty,
-          nameEn: c.item.nameEn,
         })),
-        subtotalNpr: subtotal,
-        taxNpr: tax,
-        totalNpr: total,
-        paymentMethod: method,
+      );
+
+      const taxRate = extras?.taxRate ?? 3;
+      const checkoutRes = await posApi.checkout(sessionId, {
+        customerName,
         customerPhone: customerPhone || undefined,
-        status: "COMPLETED",
-        source: "MOBILE_POS",
+        taxRate,
+        notes: `Payment: ${method}${extras?.makingPct ? ` • Making ${extras.makingPct}%` : ""}`,
       });
 
-      const quoteId = res.data?.id ?? res.data?.quoteId;
+      const data = checkoutRes.data ?? {};
+      const billId =
+        data.invoiceId ?? data.orderId ?? data.id ?? data.sessionId;
+      const total =
+        data.totalAmount ??
+        data.total ??
+        cartTotal + Math.round(cartTotal * (taxRate / 100));
+
       setShowCart(false);
-      setBillResult({ quoteId, total, customerPhone });
+      setBillResult({ quoteId: billId, total, customerPhone });
       setCart([]);
       haptic("success");
       toast({ title: "Bill created", description: `${formatNPR(total)}` });

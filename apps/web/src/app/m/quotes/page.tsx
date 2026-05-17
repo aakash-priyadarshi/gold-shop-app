@@ -161,30 +161,59 @@ export default function QuotesPage() {
   const { user } = useAuth();
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [lookingUpCustomer, setLookingUpCustomer] = useState(false);
   const [items, setItems] = useState<QuoteLineItem[]>([makeItem()]);
   const [goldRate, setGoldRate] = useState<number>(0);
-  const [currency, setCurrency] = useState("NPR");
+  // Initial currency comes from the shop's country (geo cookie as fallback);
+  // updated when market rates arrive so the displayed currency always matches
+  // the rates that are actually loaded.
+  const initialParams = getMobileMarketParams(user?.shop ?? null);
+  const [currency, setCurrency] = useState(initialParams.currency);
   const [ratesLoading, setRatesLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [quoteResult, setQuoteResult] = useState<{ id: string; total: number } | null>(null);
 
   const loadRates = useCallback(async () => {
     try {
-      const res = await materialsApi.getMarketRates(getMobileMarketParams());
+      const params = getMobileMarketParams(user?.shop ?? null);
+      const res = await materialsApi.getMarketRates(params);
       const d = res.data;
       const gold = d?.metals?.find?.((m: any) => m.code === "XAU" || m.code === "GOLD");
       setGoldRate(gold?.ratePerGram ?? gold?.rate ?? 7200);
-      setCurrency(d?.currency ?? "NPR");
+      setCurrency(d?.currency ?? params.currency);
     } catch {
       setGoldRate(7200); // fallback
     } finally {
       setRatesLoading(false);
     }
-  }, []);
+  }, [user?.shop]);
 
   useEffect(() => {
     loadRates();
   }, [loadRates]);
+
+  // Auto-fill customer name from phone (debounced) — same pattern as PC RFQ.
+  useEffect(() => {
+    const digits = customerPhone.replace(/\D/g, "");
+    if (digits.length < 7) return;
+    const handle = setTimeout(async () => {
+      try {
+        setLookingUpCustomer(true);
+        const res = await shopQuotesApi.lookupCustomer({
+          phoneCountryCode: "+977",
+          phone: digits,
+        });
+        const found = res.data;
+        if (found?.name && !customerName) setCustomerName(found.name);
+      } catch {
+        // no existing customer — ignore
+      } finally {
+        setLookingUpCustomer(false);
+      }
+    }, 450);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerPhone]);
 
   const recalcItems = (rawItems: QuoteLineItem[]) =>
     rawItems.map((i) => ({
@@ -340,13 +369,18 @@ export default function QuotesPage() {
             className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
         </div>
-        <input
-          type="tel"
-          value={customerPhone}
-          onChange={(e) => setCustomerPhone(e.target.value)}
-          placeholder="Phone (for WhatsApp)"
-          className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
-        />
+        <div className="relative">
+          <input
+            type="tel"
+            value={customerPhone}
+            onChange={(e) => setCustomerPhone(e.target.value)}
+            placeholder="Phone (for WhatsApp) — auto-fills existing customers"
+            className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+          />
+          {lookingUpCustomer && (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-amber-500" />
+          )}
+        </div>
       </div>
 
       {/* Line items */}

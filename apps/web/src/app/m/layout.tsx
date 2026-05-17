@@ -37,7 +37,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Lazy-load heavy floating widgets (driver.js CSS ~20 KB, SupportBot ~10 KB)
+// Lazy-load heavy floating widgets (driver.js CSS ~20 KB)
 const TutorialButton = dynamic(
   () =>
     import("@/components/tutorial/TutorialButton").then(
@@ -45,11 +45,9 @@ const TutorialButton = dynamic(
     ),
   { ssr: false },
 );
-const SupportBot = dynamic(
-  () =>
-    import("@/components/support/SupportBot").then((mod) => mod.SupportBot),
-  { ssr: false },
-);
+// NOTE: <SupportBot /> is provided by app/layout.tsx so we do not import or
+// render it here \u2014 having two instances would render two overlapping chat
+// bubbles that become visible as soon as the user drags one of them.
 
 interface GoldRate {
   rate24k: number;
@@ -374,8 +372,9 @@ export default function MobileLayout({
       {/* Floating tutorial ? button — uses the /m/* tour steps */}
       <TutorialButton />
 
-      {/* Orivraa AI assistant — aware of mobile mode via currentPath */}
-      <SupportBot />
+      {/* NOTE: <SupportBot /> is rendered globally in app/layout.tsx so do not
+          add another instance here — doing so causes two overlapping chat
+          bubbles after the user drags one of them. */}
     </div>
   );
 }
