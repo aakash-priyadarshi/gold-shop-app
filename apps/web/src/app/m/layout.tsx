@@ -491,19 +491,29 @@ export default function MobileLayout({
           </div>
           
           <div className="flex items-center gap-1">
-            {(isChatDismissed || isTutorialDismissed) && (
+            {isChatDismissed && (
               <button
-                onClick={() => {
-                  recallChat();
-                  recallTutorial();
-                }}
+                onClick={() => recallChat()}
                 className="relative p-2 rounded-lg text-amber-600 hover:bg-amber-50 active:bg-amber-100 transition-colors"
-                aria-label={t("Restore Help")}
+                aria-label={t("Restore AI Chat")}
               >
-                <InformationCircleIcon className="h-5 w-5" />
+                <MessageCircle className="h-5 w-5" />
                 <span className="absolute top-1 right-1 flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+              </button>
+            )}
+            {isTutorialDismissed && (
+              <button
+                onClick={() => recallTutorial()}
+                className="relative p-2 rounded-lg text-purple-600 hover:bg-purple-50 active:bg-purple-100 transition-colors"
+                aria-label={t("Restore Tutorials")}
+              >
+                <HelpCircle className="h-5 w-5" />
+                <span className="absolute top-1 right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
                 </span>
               </button>
             )}

@@ -618,13 +618,26 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400"><T>Customer</T></p>
             {matchedCustomerId && <span className="text-[11px] font-semibold text-emerald-600"><T>Matched</T></span>}
           </div>
-          <div className="grid grid-cols-[88px_1fr] gap-2">
-            <input
-              value={phoneCountryCode}
-              onChange={(event) => setPhoneCountryCode(event.target.value)}
-              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-              aria-label="Phone country code"
-            />
+          <div className="grid grid-cols-[100px_1fr] gap-2">
+            <div className="relative">
+              <select
+                value={phoneCountryCode}
+                onChange={(event) => setPhoneCountryCode(event.target.value)}
+                className="w-full appearance-none rounded-xl border border-gray-200 py-2.5 pl-3 pr-7 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                aria-label="Phone country code"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 8px center",
+                }}
+              >
+                <option value="+91">🇮🇳 +91</option>
+                <option value="+977">🇳🇵 +977</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+44">🇬🇧 +44</option>
+                <option value="+971">🇦🇪 +971</option>
+              </select>
+            </div>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
