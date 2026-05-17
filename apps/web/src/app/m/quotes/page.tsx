@@ -341,7 +341,7 @@ export default function QuotesPage() {
       }
       const shopName = user?.shop?.shopName ?? "Our Store";
       const shopAddress = user?.shop?.address ?? "";
-      const shopPhone = (user?.shop as { contactPhone?: string; phone?: string } | undefined)?.contactPhone ?? (user?.shop as { phone?: string } | undefined)?.phone ?? "";
+      const shopPhone = user?.shop?.contactPhone ?? "";
       const rows = items
         .filter((i) => i.weightGrams > 0)
         .map(

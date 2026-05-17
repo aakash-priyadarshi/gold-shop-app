@@ -50,6 +50,7 @@ export interface User {
     contactPhone?: string;
     contactEmail?: string;
     currency?: string;
+    address?: string;
     verificationRequests?: Array<{
       id: string;
       status: string;
