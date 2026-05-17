@@ -20,6 +20,7 @@ import { Mail, MessageCircle, Phone, Send, Sparkles, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHelpUIStore } from "@/store/help-ui";
+import { T } from "@/components/ui/T";
 
 const FOUNDER = {
   name: "Aakash",
@@ -132,7 +133,17 @@ export function SupportBot() {
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  const { isChatDismissed, dismissChat } = useHelpUIStore();
+  const { isChatDismissed, dismissChat, isChatShaking } = useHelpUIStore();
+  const [bubbleVisible, setBubbleVisible] = useState(false);
+
+  // Auto-show bubble on mount or when chat is recalled
+  useEffect(() => {
+    if (!isChatDismissed) {
+      setBubbleVisible(true);
+      const timer = setTimeout(() => setBubbleVisible(false), 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [isChatDismissed]);
 
   // If chat is recalled (isChatDismissed becomes false), we can ensure it is visible
   useEffect(() => {
@@ -247,8 +258,8 @@ export function SupportBot() {
   const defaultRight = isMobile ? 16 : 20;
   const currentRight = pos?.right ?? defaultRight;
   const currentBottom = pos?.bottom ?? defaultBottom;
-  // User asked for the mobile launcher to be 1px smaller than the desktop one.
-  const launcherSizePx = isMobile ? 55 : 56;
+  // Size-adjust launcher: mobile is smaller (46px) than PC (56px)
+  const launcherSizePx = isMobile ? 46 : 56;
 
   const onLauncherPointerDown = useCallback(
     (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -312,29 +323,59 @@ export function SupportBot() {
     <>
       {/* Launcher */}
       {!open && !isChatDismissed && (
-        <button
-          type="button"
-          onPointerDown={onLauncherPointerDown}
-          onPointerMove={onLauncherPointerMove}
-          onPointerUp={onLauncherPointerUp}
-          onPointerCancel={onLauncherPointerUp}
-          aria-label="Open Orivraa support chat (drag to reposition)"
-          data-tour="support-bot"
+        <div
           style={{
+            position: "fixed",
             right: `${currentRight}px`,
             bottom: `${currentBottom}px`,
-            width: `${launcherSizePx}px`,
-            height: `${launcherSizePx}px`,
+            zIndex: 60,
             touchAction: "none",
           }}
-          className="fixed z-[60] rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-grab active:cursor-grabbing"
+          className={`flex flex-col items-end gap-1.5 ${isChatShaking ? "animate-shake" : ""}`}
         >
-          <MessageCircle className="h-6 w-6" />
-          <span className="absolute -top-1 -right-1 flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-          </span>
-        </button>
+          {isChatShaking && (
+            <style dangerouslySetInnerHTML={{__html: `
+              @keyframes chat-shake {
+                0%, 100% { transform: translate(0, 0) rotate(0deg); }
+                10%, 30%, 50%, 70%, 90% { transform: translate(-4px, 0) rotate(-3deg); }
+                20%, 40%, 60%, 80% { transform: translate(4px, 0) rotate(3deg); }
+              }
+              .animate-shake {
+                animation: chat-shake 0.5s ease-in-out infinite;
+              }
+            `}} />
+          )}
+
+          {bubbleVisible && (
+            <div className="bg-amber-500 text-white text-[11px] px-2.5 py-1 rounded-xl shadow-md whitespace-nowrap animate-bounce relative mb-1 shrink-0 font-medium">
+              <T>Need help? Ask AI!</T>
+              <span className="absolute -bottom-1 right-4 h-0 w-0 border-l-[6px] border-r-[0px] border-t-[6px] border-l-transparent border-t-amber-500" />
+            </div>
+          )}
+
+          <button
+            type="button"
+            onPointerDown={onLauncherPointerDown}
+            onPointerMove={onLauncherPointerMove}
+            onPointerUp={onLauncherPointerUp}
+            onPointerCancel={onLauncherPointerUp}
+            aria-label="Open Orivraa support chat (drag to reposition)"
+            data-tour="support-bot"
+            style={{
+              width: `${launcherSizePx}px`,
+              height: `${launcherSizePx}px`,
+            }}
+            className="rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-grab active:cursor-grabbing shrink-0"
+            onMouseEnter={() => setBubbleVisible(true)}
+            onMouseLeave={() => setBubbleVisible(false)}
+          >
+            <MessageCircle className={isMobile ? "h-5 w-5" : "h-6 w-6"} />
+            <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+            </span>
+          </button>
+        </div>
       )}
 
       {/* Panel */}

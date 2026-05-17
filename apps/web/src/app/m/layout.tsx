@@ -106,26 +106,37 @@ function GoldPriceBar({ rates }: { rates: GoldRate | null }) {
   return (
     <div
       data-tour="m-gold-ticker"
-      className="flex items-center justify-between px-4 py-3 bg-amber-500 text-white shadow-sm"
+      className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-sm text-center"
     >
-      <div className="flex gap-4">
+      <div className="grid grid-cols-4 gap-2 flex-1 mr-2 text-left">
         <div>
-          <span className="text-[10px] font-medium text-amber-200 uppercase block leading-none mb-1">24K Pure</span>
-          <span className="text-sm font-bold leading-none">
-            {rates.currency} {rates.rate24k.toLocaleString()}/g
+          <span className="text-[8px] font-medium text-amber-200 uppercase block leading-none mb-0.5">24K Gold</span>
+          <span className="text-[11px] font-bold leading-none whitespace-nowrap">
+            {rates.currency} {rates.rate24k.toLocaleString()}
           </span>
         </div>
-        <div className="w-[1px] bg-amber-400/50" />
-        <div>
-          <span className="text-[10px] font-medium text-amber-200 uppercase block leading-none mb-1">22K Standard</span>
-          <span className="text-sm font-bold leading-none">
-            {rates.currency} {rates.rate22k.toLocaleString()}/g
+        <div className="border-l border-amber-400/30 pl-2">
+          <span className="text-[8px] font-medium text-amber-200 uppercase block leading-none mb-0.5">22K Gold</span>
+          <span className="text-[11px] font-bold leading-none whitespace-nowrap">
+            {rates.currency} {rates.rate22k.toLocaleString()}
+          </span>
+        </div>
+        <div className="border-l border-amber-400/30 pl-2">
+          <span className="text-[8px] font-medium text-amber-200 uppercase block leading-none mb-0.5">18K Gold</span>
+          <span className="text-[11px] font-bold leading-none whitespace-nowrap">
+            {rates.currency} {rates.rate18k.toLocaleString()}
+          </span>
+        </div>
+        <div className="border-l border-amber-400/30 pl-2">
+          <span className="text-[8px] font-medium text-amber-200 uppercase block leading-none mb-0.5">Silver /g</span>
+          <span className="text-[11px] font-bold leading-none whitespace-nowrap">
+            {rates.currency} {rates.silver.toLocaleString()}
           </span>
         </div>
       </div>
-      <span className="text-[10px] text-amber-200 font-medium">
+      <div className="text-[8px] text-amber-200 font-medium text-right self-end whitespace-nowrap">
         {rates.updatedAt}
-      </span>
+      </div>
     </div>
   );
 }
@@ -133,7 +144,7 @@ function GoldPriceBar({ rates }: { rates: GoldRate | null }) {
 function MoreMenu({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const { logout } = useAuth();
-  const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial } = useHelpUIStore();
+  const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial, shakeChat, shakeTutorial } = useHelpUIStore();
 
   const sections = [
     {
@@ -210,7 +221,11 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => {
-                recallChat();
+                if (isChatDismissed) {
+                  recallChat();
+                } else {
+                  shakeChat();
+                }
                 onClose();
               }}
               className="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 active:bg-gray-50 text-left"
@@ -220,12 +235,16 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
               </div>
               <div>
                 <p className="text-sm font-bold text-gray-900"><T>AI Support Chat</T></p>
-                <p className="text-[11px] text-gray-500"><T>{isChatDismissed ? "Currently hidden" : "Open chat widget"}</T></p>
+                <p className="text-[11px] text-gray-500"><T>{isChatDismissed ? "Touch to bring back" : "Tap to shake & show"}</T></p>
               </div>
             </button>
             <button
               onClick={() => {
-                recallTutorial();
+                if (isTutorialDismissed) {
+                  recallTutorial();
+                } else {
+                  shakeTutorial();
+                }
                 onClose();
               }}
               className="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 active:bg-gray-50 text-left"
@@ -235,7 +254,7 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
               </div>
               <div>
                 <p className="text-sm font-bold text-gray-900"><T>Tutorials</T></p>
-                <p className="text-[11px] text-gray-500"><T>{isTutorialDismissed ? "Currently hidden" : "View screen guides"}</T></p>
+                <p className="text-[11px] text-gray-500"><T>{isTutorialDismissed ? "Touch to bring back" : "Tap to shake & show"}</T></p>
               </div>
             </button>
           </div>
