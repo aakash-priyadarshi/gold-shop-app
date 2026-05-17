@@ -248,7 +248,6 @@ export class InventoryService {
             shopNameNe: true,
             shopNameHi: true,
             country: true,
-            currency: true,
             city: true,
             address: true,
             contactPhone: true,

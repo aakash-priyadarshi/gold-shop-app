@@ -37,6 +37,18 @@ export class SellerSubscriptionsService {
     return this.stripe;
   }
 
+  isStripeConfigured(): boolean {
+    return this.stripe !== null;
+  }
+
+  constructWebhookEvent(
+    payload: Buffer | string,
+    sig: string,
+    secret: string,
+  ): Stripe.Event {
+    return this.stripeOrThrow.webhooks.constructEvent(payload, sig, secret);
+  }
+
   // ─── Subscribe / Change Plan ───────────────────────
 
   /**
