@@ -2,10 +2,6 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
-import { BlogHighlightsSection } from "@/components/marketing/BlogHighlightsSection";
-import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
-import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import {
@@ -196,56 +192,6 @@ export default function PartnerPage() {
                 <T>Read Seller Guide</T>
               </Link>
             </div>
-            <TrustSignals variant="compact" className="mt-10" />
-          </div>
-        </section>
-
-        {/* ── 3-step onboarding pitch ───────────────── */}
-        <section className="max-w-5xl mx-auto px-4 py-16">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              <T>Live in 3 simple steps</T>
-            </h2>
-            <p className="mt-3 text-gray-600 dark:text-gray-400">
-              <T>From signup to first order in under a week.</T>
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                step: "1",
-                title: "Sign up free",
-                desc: "Create your shop profile in under 10 minutes. No credit card, no setup fee, no commitment.",
-              },
-              {
-                step: "2",
-                title: "Import your inventory",
-                desc: "Bulk-upload products via CSV or use our AI to generate descriptions from photos. We support gold, silver, diamond, and gemstones.",
-              },
-              {
-                step: "3",
-                title: "Start selling",
-                desc: "Share your digital catalogue on WhatsApp, list on the marketplace, or use the QR code at your counter. You keep 100% of customer relationships.",
-              },
-            ].map((s) => (
-              <div
-                key={s.step}
-                className="relative bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm"
-              >
-                <div className="absolute -top-4 left-6 w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center font-bold shadow-lg">
-                  {s.step}
-                </div>
-                <h3 className="font-semibold text-gray-900 dark:text-white mt-3 mb-2">
-                  <T>{s.title}</T>
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                  <T>{s.desc}</T>
-                </p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-10">
-            <AISalesteamPromo variant="card" />
           </div>
         </section>
 
@@ -382,22 +328,6 @@ export default function PartnerPage() {
             </div>
           </div>
         </section>
-
-        <ComparisonClusterLinks
-          title="Comparison Pages Partners Can Share"
-          description="Use these pages when a seller asks how Orivraa compares to generic CRM tools or Indian billing software. They answer the shortlist question without adding more clutter to the main navigation."
-        />
-
-        <BlogHighlightsSection
-          title="Resources Partners Can Share With Traders"
-          description="These articles help jewellers understand how Orivraa saves money through better billing, cleaner tax reporting, and more modern shop workflows."
-          slugs={[
-            "best-billing-software-for-jewellery-shops-india-2026",
-            "how-tax-reports-save-jewellery-traders-money",
-            "how-jewellery-shops-can-go-digital",
-          ]}
-          ctaLabel="See the full blog"
-        />
 
         {/* ── FAQ ──────────────────────────────────────────── */}
         <section className="max-w-3xl mx-auto px-4 py-20">

@@ -2,43 +2,42 @@
 
 import { Button } from "@/components/ui/button";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { notificationsApi } from "@/lib/api";
 import { formatDistanceToNow } from "date-fns";
 import {
-    AlertCircle,
-    ArrowRightLeft,
-    Ban,
-    Bell,
-    BrainCircuit,
-    Check,
-    CheckCheck,
-    CheckCircle2,
-    DollarSign,
-    Hammer,
-    Lock,
-    MessageSquare,
-    Moon,
-    Package,
-    RotateCcw,
-    ShieldAlert,
-    ShoppingBag,
-    Sparkles,
-    TrendingUp,
-    Truck,
-    UserX,
+  AlertCircle,
+  ArrowRightLeft,
+  Ban,
+  Bell,
+  BrainCircuit,
+  Check,
+  CheckCheck,
+  CheckCircle2,
+  DollarSign,
+  Hammer,
+  Lock,
+  MessageSquare,
+  Moon,
+  Package,
+  RotateCcw,
+  ShieldAlert,
+  ShoppingBag,
+  Sparkles,
+  TrendingUp,
+  Truck,
+  UserX,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Notification {
   id: string;
@@ -211,44 +210,6 @@ const notificationConfig: Record<
       params?.amount
         ? `₹${params.amount.toLocaleString()} received`
         : "Payment has been received",
-  },
-  TICKET_CREATED: {
-    icon: MessageSquare,
-    color: "text-blue-500",
-    formatTitle: (params) =>
-      params?.ticketNumber ? `New Ticket #${params.ticketNumber}` : "New Support Ticket",
-    formatBody: (params) =>
-      params?.subject || params?.message || "A new support ticket needs attention",
-  },
-  TICKET_UPDATED: {
-    icon: MessageSquare,
-    color: "text-indigo-500",
-    formatTitle: (params) =>
-      params?.ticketNumber ? `Ticket #${params.ticketNumber} Updated` : "Ticket Updated",
-    formatBody: (params) =>
-      params?.status ? `Status changed to ${String(params.status).replace(/_/g, " ")}` : "A support ticket was updated",
-  },
-  TICKET_MESSAGE: {
-    icon: MessageSquare,
-    color: "text-blue-600",
-    formatTitle: (params) =>
-      params?.ticketNumber ? `Reply on Ticket #${params.ticketNumber}` : "New Ticket Reply",
-    formatBody: (params) =>
-      params?.message || params?.preview || "A new support message was posted",
-  },
-  TICKET_RESOLVED: {
-    icon: CheckCircle2,
-    color: "text-green-600",
-    formatTitle: (params) =>
-      params?.ticketNumber ? `Ticket #${params.ticketNumber} Resolved` : "Ticket Resolved",
-    formatBody: () => "The support ticket has been resolved",
-  },
-  TICKET_CLOSED: {
-    icon: Check,
-    color: "text-gray-500",
-    formatTitle: (params) =>
-      params?.ticketNumber ? `Ticket #${params.ticketNumber} Closed` : "Ticket Closed",
-    formatBody: () => "The support ticket has been closed",
   },
   // Production notifications
   PRODUCTION_STARTED: {
@@ -498,9 +459,8 @@ const notificationConfig: Record<
     icon: AlertCircle,
     color: "text-gray-500",
     formatTitle: (params) =>
-      params?.title || (params?.orderNumber ? `Order #${params.orderNumber}` : "System Alert"),
+      params?.orderNumber ? `Order #${params.orderNumber}` : "System Alert",
     formatBody: (params) => {
-      if (params?.message) return String(params.message);
       if (params?.status)
         return `Status updated to ${params.status.replace(/_/g, " ")}`;
       if (params?.itemName)
@@ -538,8 +498,6 @@ export function NotificationDropdown() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const seenNotificationIds = useRef<Set<string>>(new Set());
-  const hasLoadedNotifications = useRef(false);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -548,22 +506,7 @@ export function NotificationDropdown() {
         notificationsApi.getAll({ unreadOnly: false }),
         notificationsApi.getUnreadCount(),
       ]);
-      const nextNotifications: Notification[] = notifRes.data || [];
-      const freshUnread = nextNotifications.filter(
-        (notification) =>
-          !notification.isRead && !seenNotificationIds.current.has(notification.id),
-      );
-      nextNotifications.forEach((notification) => seenNotificationIds.current.add(notification.id));
-
-      if (hasLoadedNotifications.current && freshUnread.length > 0) {
-        freshUnread.slice(0, 3).forEach((notification) => {
-          const content = getNotificationContent(notification);
-          toast({ title: content.title, description: content.body });
-        });
-      }
-
-      hasLoadedNotifications.current = true;
-      setNotifications(nextNotifications);
+      setNotifications(notifRes.data || []);
       setUnreadCount(countRes.data?.count || 0);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -579,15 +522,9 @@ export function NotificationDropdown() {
       return;
     }
     fetchNotifications();
-    const handleNotificationRefresh = () => fetchNotifications();
-    window.addEventListener("orivraa:notifications-refresh", handleNotificationRefresh);
     // Poll for new notifications every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
-    return () => {
-      window.removeEventListener("orivraa:notifications-refresh", handleNotificationRefresh);
-      clearInterval(interval);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleMarkAsRead = async (id: string) => {
@@ -642,46 +579,27 @@ export function NotificationDropdown() {
   const getNotificationLink = (notification: Notification) => {
     if (!notification.referenceType || !notification.referenceId) return null;
 
-    const referenceType = notification.referenceType.toUpperCase();
     const isShopkeeper = user?.role === "SHOPKEEPER";
-    const isAdmin = user?.role === "ADMIN";
-    const isTestReference = notification.referenceId.startsWith("test-");
 
-    switch (referenceType) {
+    switch (notification.referenceType) {
       case "ORDER":
-        if (isTestReference) {
-          return isShopkeeper ? "/dashboard/shop/orders" : "/dashboard/customer/orders";
-        }
         return isShopkeeper
           ? `/dashboard/shop/orders/${notification.referenceId}`
           : `/dashboard/customer/orders/${notification.referenceId}`;
       case "RFQ":
-        if (isTestReference) {
-          return isShopkeeper ? "/dashboard/shop/rfqs" : "/dashboard/customer/rfqs";
-        }
         return isShopkeeper
-          ? `/dashboard/shop/rfqs/${notification.referenceId}`
+          ? `/dashboard/shop/rfq/${notification.referenceId}`
           : `/dashboard/customer/rfqs/${notification.referenceId}`;
-      case "TICKET":
-        return isAdmin
-          ? "/dashboard/admin/tickets"
-          : isShopkeeper
-            ? `/dashboard/shop/support`
-            : `/dashboard/customer/support`;
-      case "PAYMENT":
-        return isShopkeeper ? "/dashboard/shop/billing" : "/dashboard/customer/orders";
-      case "AI_CHAT":
-        return isAdmin ? "/dashboard/admin/messages?view=ai" : null;
       case "SHOP":
         return `/dashboard/shop`;
-      case "CONVERSATION":
+      case "Conversation":
         return isShopkeeper
           ? `/dashboard/shop/messages`
-          : isAdmin
-            ? `/dashboard/admin/messages`
+          : user?.role === "ADMIN"
+            ? `/dashboard/admin/chat-monitoring`
             : `/dashboard/customer/messages`;
-      case "USER":
-        return isAdmin
+      case "User":
+        return user?.role === "ADMIN"
           ? `/dashboard/admin/users?id=${notification.referenceId}`
           : null;
       default:

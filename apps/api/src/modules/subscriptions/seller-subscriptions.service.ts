@@ -1,10 +1,9 @@
 import {
-    BadRequestException,
-    ConflictException,
-    ForbiddenException,
-    Injectable,
-    Logger,
-    NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Stripe from "stripe";
@@ -36,30 +35,6 @@ export class SellerSubscriptionsService {
       );
     }
     return this.stripe;
-  }
-
-  /**
-   * Returns true when a Stripe client is configured. Used by the webhook
-   * controller to decide whether to short-circuit before signature checks.
-   */
-  isStripeConfigured(): boolean {
-    return this.stripe !== null;
-  }
-
-  /**
-   * Verify and construct a Stripe webhook event from a raw request body.
-   * Throws if Stripe is not configured or the signature is invalid.
-   */
-  constructWebhookEvent(
-    rawBody: Buffer,
-    signature: string,
-    endpointSecret: string,
-  ): Stripe.Event {
-    return this.stripeOrThrow.webhooks.constructEvent(
-      rawBody,
-      signature,
-      endpointSecret,
-    );
   }
 
   // ─── Subscribe / Change Plan ───────────────────────
@@ -413,7 +388,7 @@ export class SellerSubscriptionsService {
 
     // Verify shop ownership if shopId is provided
     if (opts.shopId && sub.shopId !== opts.shopId) {
-      throw new ForbiddenException(
+      throw new BadRequestException(
         "You can only cancel subscriptions for your own shop",
       );
     }
@@ -424,12 +399,7 @@ export class SellerSubscriptionsService {
       );
     }
 
-    // Cancel in Stripe if there's a Stripe subscription.
-    // CRITICAL: if the Stripe call fails we must NOT mark the local record
-    // cancelled, otherwise the customer keeps getting charged while our DB
-    // says cancelled (Stripe/local drift). Surface the error so the caller
-    // can retry. We still allow cancellation if the Stripe sub is already
-    // gone (resource_missing).
+    // Cancel in Stripe if there's a Stripe subscription
     if (sub.stripeSubscriptionId && this.stripe) {
       try {
         if (opts.immediate) {
@@ -439,21 +409,9 @@ export class SellerSubscriptionsService {
             cancel_at_period_end: true,
           });
         }
-      } catch (err: any) {
-        const code = err?.code || err?.raw?.code;
-        if (code === "resource_missing") {
-          this.logger.warn(
-            `Stripe subscription ${sub.stripeSubscriptionId} already gone — proceeding with local cancel`,
-          );
-        } else {
-          this.logger.error(
-            `Stripe cancel failed for sub ${sub.id} (${sub.stripeSubscriptionId}): ${err?.message}`,
-            err?.stack,
-          );
-          throw new BadRequestException(
-            "Could not cancel subscription with the payment provider. Please try again or contact support.",
-          );
-        }
+      } catch (err) {
+        this.logger.error(`Stripe cancel failed: ${err.message}`);
+        // Still proceed with local cancellation
       }
     }
 

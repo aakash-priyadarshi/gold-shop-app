@@ -42,7 +42,6 @@ import {
 import { BRAND } from "@/config/brand";
 import { useCart } from "@/contexts/CartContext";
 import { getDashboardRoute, useAuth, type UserRole } from "@/hooks/useAuth";
-import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { chatApi, notificationsApi, ordersApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -83,9 +82,8 @@ import {
     TruckIcon,
     UserIcon,
 } from "@heroicons/react/24/outline";
-import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 
 // Role-specific quick action icons configuration
@@ -158,10 +156,6 @@ const getRoleQuickActions = (role: UserRole | undefined) => {
 export function Header() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const { items, itemCount, subtotal, removeFromCart } = useCart();
-  const { features: platformFeatures } = usePlatformFeatures();
-  const customerFlowEnabled = platformFeatures.customerFlowEnabled;
-  const pathname = usePathname();
-  const hideCountrySelector = pathname === "/pricing";
   const t = useT();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -334,21 +328,12 @@ export function Header() {
     }
   };
 
-  // Primary nav links (flat) — only shown when customer flow is enabled.
-  // When customer flow is enabled: consumer browsing links.
-  // When disabled (seller-only mode): promote the highest-intent seller pages
-  // as flat top-nav links instead of burying everything in the dropdown.
-  const navigation = customerFlowEnabled
-    ? [
-        { name: "Shops", href: "/shops", icon: BuildingStorefrontIcon },
-        { name: "Designs", href: "/designs", icon: HeartIcon },
-        { name: "Custom Order", href: "/rfq/create", icon: SparklesIcon },
-      ]
-    : [
-        { name: "Shop Software", href: "/jewellery-shop-software", icon: Squares2X2Icon },
-        { name: "Pricing", href: "/pricing", icon: CreditCardIcon },
-        { name: "Download", href: "/download", icon: ComputerDesktopIcon },
-      ];
+  // Primary nav links (flat)
+  const navigation = [
+    { name: "Shops", href: "/shops", icon: BuildingStorefrontIcon },
+    { name: "Designs", href: "/designs", icon: HeartIcon },
+    { name: "Custom Order", href: "/rfq/create", icon: SparklesIcon },
+  ];
 
   // "For Sellers" dropdown items
   const sellerNavItems = [
@@ -504,26 +489,15 @@ export function Header() {
             <div className="flex flex-col h-[calc(100%-65px)]">
               {/* Mobile Navigation */}
               <div className="flex-1 p-4 space-y-1 overflow-y-auto">
-                {/* Primary nav — label differs by mode */}
-                {!customerFlowEnabled && navigation.length > 0 && (
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-3 pb-1">
-                    <T>Platform</T>
-                  </p>
-                )}
+                {/* Browse */}
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-colors touch-target ${
-                      item.href === "/rfq/create"
-                        ? "text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 font-semibold"
-                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-target"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <item.icon className={`h-5 w-5 ${
-                      item.href === "/rfq/create" ? "text-amber-500" : "text-gray-400 dark:text-gray-500"
-                    }`} />
+                    <item.icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     <T>{item.name}</T>
                   </Link>
                 ))}
@@ -548,21 +522,6 @@ export function Header() {
                       <T>{item.name}</T>
                     </Link>
                   ))}
-                </div>
-
-                {/* Contact — standalone */}
-                <div className="pt-3 mt-2 border-t border-gray-100 dark:border-gray-800">
-                  <Link
-                    href="/contact"
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-800/40 hover:bg-amber-100 dark:hover:bg-amber-950/60 transition-colors touch-target"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <ChatBubbleLeftRightIcon className="h-5 w-5 text-amber-500" />
-                    <div>
-                      <div><T>Contact Us</T></div>
-                      <div className="text-xs font-normal text-amber-600/80 dark:text-amber-400/70"><T>Talk to the founder — reply within hours</T></div>
-                    </div>
-                  </Link>
                 </div>
 
                 {/* More */}
@@ -630,36 +589,33 @@ export function Header() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {!hideCountrySelector && (
-                      <Select
-                        value={country}
-                        onValueChange={(v) => setCountry(v as CountryCode)}
-                      >
-                        <SelectTrigger className="flex-1 h-11 text-sm rounded-xl">
-                          <MapPinIcon className="h-4 w-4 mr-2 text-gray-400" />
-                          <SelectValue>
+                    {/* Country */}
+                    <Select
+                      value={country}
+                      onValueChange={(v) => setCountry(v as CountryCode)}
+                    >
+                      <SelectTrigger className="flex-1 h-11 text-sm rounded-xl">
+                        <MapPinIcon className="h-4 w-4 mr-2 text-gray-400" />
+                        <SelectValue>
+                          <span className="flex items-center gap-2">
+                            <FlagImage code={country as FlagCode} size={16} />
+                            {COUNTRIES[country]?.name}
+                          </span>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(COUNTRIES).map(([code, info]) => (
+                          <SelectItem key={code} value={code}>
                             <span className="flex items-center gap-2">
-                              <FlagImage code={country as FlagCode} size={16} />
-                              {COUNTRIES[country]?.name ?? country}
+                              <FlagImage code={code as FlagCode} size={16} />
+                              {info.name}
                             </span>
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <div className="px-2 py-1.5 text-xs text-muted-foreground border-b mb-1">
-                            {t("Tax Jurisdiction")}
-                          </div>
-                          {Object.entries(COUNTRIES).map(([code, info]) => (
-                            <SelectItem key={code} value={code}>
-                              <span className="flex items-center gap-2">
-                                <FlagImage code={code as FlagCode} size={14} />
-                                {info.name}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
+                    {/* Theme Toggle */}
                     <AnimatedThemeToggle
                       size={44}
                       className="shrink-0 border border-input"
@@ -717,7 +673,7 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <Button className="w-full h-12 rounded-xl text-base gold-gradient text-white">
-                        {customerFlowEnabled ? <T>Sign up</T> : <T>Get Started</T>}
+                        <T>Sign up</T>
                       </Button>
                     </Link>
                   </>
@@ -742,11 +698,7 @@ export function Header() {
             <Link
               key={item.name}
               href={item.href}
-              className={
-                item.href === "/rfq/create"
-                  ? "px-4 py-2 text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition-colors"
-                  : "px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-              }
+              className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
               <T>{item.name}</T>
             </Link>
@@ -808,14 +760,6 @@ export function Header() {
               </>
             )}
           </div>
-
-          {/* Contact link */}
-          <Link
-            href="/contact"
-            className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <T>Contact</T>
-          </Link>
 
           {/* About link */}
           <div
@@ -915,38 +859,36 @@ export function Header() {
               </Select>
 
               {/* Country Selector */}
-              {customerFlowEnabled && !hideCountrySelector && (
-                <Select
-                  value={country}
-                  onValueChange={(v) => setCountry(v as CountryCode)}
-                >
-                  <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
-                    <MapPinIcon className="h-3 w-3 mr-1 text-gray-400" />
-                    <SelectValue>
+              <Select
+                value={country}
+                onValueChange={(v) => setCountry(v as CountryCode)}
+              >
+                <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
+                  <MapPinIcon className="h-3 w-3 mr-1 text-gray-400" />
+                  <SelectValue>
+                    <span className="flex items-center gap-1">
+                      <FlagImage code={country as FlagCode} size={14} />
+                      {country}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground border-b mb-1">
+                    {t("Tax Jurisdiction")}
+                  </div>
+                  {Object.entries(COUNTRIES).map(([code, info]) => (
+                    <SelectItem key={code} value={code} className="text-xs">
                       <span className="flex items-center gap-1">
-                        <FlagImage code={country as FlagCode} size={14} />
-                        {country}
-                      </span>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground border-b mb-1">
-                      {t("Tax Jurisdiction")}
-                    </div>
-                    {Object.entries(COUNTRIES).map(([code, info]) => (
-                      <SelectItem key={code} value={code} className="text-xs">
-                        <span className="flex items-center gap-1">
-                          <FlagImage code={code as FlagCode} size={14} />
-                          {info.name}
-                          <span className="ml-1 text-muted-foreground">
-                            ({info.taxDisplay})
-                          </span>
+                        <FlagImage code={code as FlagCode} size={14} />
+                        {info.name}
+                        <span className="ml-1 text-muted-foreground">
+                          ({info.taxDisplay})
                         </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {/* Theme Toggle */}
               <AnimatedThemeToggle size={36} className="rounded-lg" />
@@ -1574,8 +1516,7 @@ export function Header() {
                 </PopoverContent>
               </Popover>
 
-              {/* Cart Popover — only when customer flow is on */}
-              {customerFlowEnabled && (
+              {/* Cart Popover */}
               <Popover open={cartPopoverOpen} onOpenChange={setCartPopoverOpen}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1701,7 +1642,6 @@ export function Header() {
                   )}
                 </PopoverContent>
               </Popover>
-              )}
 
               {/* Notifications Popover */}
               <Popover
@@ -1899,8 +1839,7 @@ export function Header() {
             </TooltipProvider>
           ) : (
             <>
-              {/* Cart for non-authenticated users — only when customer flow is on */}
-              {customerFlowEnabled && (
+              {/* Cart for non-authenticated users */}
               <Link href="/cart">
                 <Button
                   variant="ghost"
@@ -1915,7 +1854,6 @@ export function Header() {
                   )}
                 </Button>
               </Link>
-              )}
               <Link href="/auth/login">
                 <Button variant="ghost" className="h-9 rounded-lg">
                   <T>Log in</T>
@@ -1923,7 +1861,7 @@ export function Header() {
               </Link>
               <Link href="/auth/register">
                 <Button className="h-9 rounded-lg gold-gradient text-white">
-                  {customerFlowEnabled ? <T>Sign up</T> : <T>Get Started</T>}
+                  <T>Sign up</T>
                 </Button>
               </Link>
             </>

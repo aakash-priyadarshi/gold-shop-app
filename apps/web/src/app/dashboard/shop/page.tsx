@@ -8,11 +8,11 @@ import { AdminMessageBanner } from "@/components/ui/AdminMessageBanner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { T } from "@/components/ui/T";
@@ -21,15 +21,15 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi, ordersApi, rfqApi, sellerSubscriptionsApi, shopsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
-    AlertCircle,
-    ArrowUpRight,
-    Eye,
-    MessageSquare,
-    Package,
-    Plus,
-    ShoppingCart,
-    Star,
-    TrendingUp,
+  AlertCircle,
+  ArrowUpRight,
+  Eye,
+  MessageSquare,
+  Package,
+  Plus,
+  ShoppingCart,
+  Star,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -348,7 +348,7 @@ export default function ShopDashboard() {
             </CardContent>
           </Card>
 
-          <div data-tour="dash-stats" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat) => (
               <Card key={stat.title}>
                 <CardContent className="pt-6">
@@ -396,7 +396,7 @@ export default function ShopDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card data-tour="dash-orders">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
@@ -530,7 +530,7 @@ export default function ShopDashboard() {
             </CardContent>
           </Card>
 
-          <Card data-tour="dash-quick-actions">
+          <Card>
             <CardHeader>
               <CardTitle>
                 <T>Quick Actions</T>

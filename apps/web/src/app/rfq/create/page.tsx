@@ -8,130 +8,126 @@ import { SellerTierBadge } from "@/components/pricing/SellerTierBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import {
-    useMarket,
-    WEIGHT_UNIT_SYMBOLS,
-    type WeightUnit,
+  useMarket,
+  WEIGHT_UNIT_SYMBOLS,
+  type WeightUnit,
 } from "@/hooks/useMarket";
 import {
-    fetchTaxRules,
-    lookupTaxRate,
-    type TaxRule,
+  fetchTaxRules,
+  lookupTaxRate,
+  type TaxRule,
 } from "@/hooks/useTaxRules";
 import { getImageUrl } from "@/lib/image-upload";
 import { useT } from "@/providers/translation-provider";
 import {
-    COUNTRIES,
-    CURRENCIES,
-    usePreferencesStore,
-    type CurrencyCode,
+  COUNTRIES,
+  CURRENCIES,
+  usePreferencesStore,
+  type CurrencyCode,
 } from "@/store/preferences";
 import {
-    fromGrams,
-    getCitiesForCountry,
-    getStatesForCountry,
-    toGrams,
+  fromGrams,
+  getCitiesForCountry,
+  getStatesForCountry,
+  toGrams,
 } from "@gold-shop/shared";
 import {
-    AlertCircle,
-    AlertTriangle,
-    ArrowLeft,
-    ArrowRight,
-    Check,
-    ChevronDown,
-    ChevronUp,
-    Clock,
-    Filter,
-    Gem,
-    Image as ImageIcon,
-    Info,
-    Loader2,
-    MapPin,
-    Phone,
-    RotateCcw,
-    Send,
-    Settings,
-    ShieldCheck,
-    ShoppingBag,
-    Sparkles,
-    Star,
-    TrendingUp,
-    Upload,
-    X,
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Filter,
+  Gem,
+  Image as ImageIcon,
+  Info,
+  Loader2,
+  MapPin,
+  Phone,
+  RotateCcw,
+  Send,
+  Settings,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
+  Star,
+  TrendingUp,
+  Upload,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-    Fragment,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 
 // Alert Dialog for resume draft prompt
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 // New pricing components
 import {
-    AiDesignStudio,
-    type AiDesignVariation,
-} from "@/components/ai/AiDesignStudio";
-import {
-    AlloyBuilder,
-    type AlloyConfig,
+  AlloyBuilder,
+  type AlloyConfig,
 } from "@/components/pricing/AlloyBuilder";
 import {
-    GemstoneEditorV2,
-    type GemstoneEntry as GemstoneEntryV2,
+  GemstoneEditorV2,
+  type GemstoneEntry as GemstoneEntryV2,
 } from "@/components/pricing/GemstoneEditorV2";
 import { LivePricingPanel } from "@/components/pricing/LivePricingPanel";
 import {
-    MethodCSelector,
-    type MethodCConfig,
+  MethodCSelector,
+  type MethodCConfig,
 } from "@/components/pricing/MethodCSelector";
 import { getApiUrl, intelligenceApi, shopsApi } from "@/lib/api";
 import {
-    calculateEstimate,
-    CHAIN_STYLE_OPTIONS,
-    type BuildMethod,
-    type ChainStyleType,
-    type EstimateRequest,
+  calculateEstimate,
+  CHAIN_STYLE_OPTIONS,
+  type BuildMethod,
+  type ChainStyleType,
+  type EstimateRequest,
 } from "@/lib/pricing/calculate-estimate";
 
 const API_URL = getApiUrl();
@@ -3462,78 +3458,6 @@ export default function CreateRfqPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* AI Design Studio (Pro+) — generate 5 ready-to-order variations */}
-                      <AiDesignStudio
-                        currency={currency}
-                        defaultJewelryType={formData.jewelleryType || undefined}
-                        onSelect={(v: AiDesignVariation) => {
-                          setFormData((prev) => ({
-                            ...prev,
-                            jewelleryType: v.jewelryType,
-                            buildMethod: v.buildMethod as BuildMethod,
-                            metalType: v.metalType,
-                            estimatedWeight: v.estimatedWeight
-                              ? String(v.estimatedWeight)
-                              : prev.estimatedWeight,
-                            weightCategory:
-                              v.weightCategory || prev.weightCategory,
-                            surfaceFinish:
-                              v.surfaceFinish || prev.surfaceFinish,
-                            description: v.description || prev.description,
-                            hasGemstones: v.hasGemstones,
-                            budgetMin: v.estimatedCost?.total
-                              ? String(
-                                  Math.round(v.estimatedCost.total * 0.9),
-                                )
-                              : prev.budgetMin,
-                            budgetMax: v.estimatedCost?.total
-                              ? String(
-                                  Math.round(v.estimatedCost.total * 1.1),
-                                )
-                              : prev.budgetMax,
-                            alloyConfig:
-                              v.buildMethod === "METHOD_B" && v.alloyDetails
-                                ? ({
-                                    baseMetal:
-                                      v.alloyDetails.baseMetal || "GOLD",
-                                    karat: v.alloyDetails.karat,
-                                    alloyFamily: v.alloyDetails.alloyFamily,
-                                    recipePresetId: undefined,
-                                  } as AlloyConfig)
-                                : prev.alloyConfig,
-                            methodCConfig:
-                              v.buildMethod === "METHOD_C" && v.platingDetails
-                                ? ({
-                                    baseMetal:
-                                      v.platingDetails.baseMetal || "BRASS",
-                                    platingType:
-                                      v.platingDetails.platingType ||
-                                      "GOLD_PLATED",
-                                    platingTier:
-                                      v.platingDetails.platingTier ||
-                                      "STANDARD",
-                                  } as MethodCConfig)
-                                : prev.methodCConfig,
-                            methodDConfig:
-                              v.buildMethod === "METHOD_D" &&
-                              v.italianMachineDetails
-                                ? {
-                                    purity:
-                                      v.italianMachineDetails.purity || "18K",
-                                    chainStyle:
-                                      v.italianMachineDetails.chainStyle || "",
-                                  }
-                                : prev.methodDConfig,
-                            referenceImages: v.imageUrl
-                              ? [v.imageUrl, ...prev.referenceImages].slice(
-                                  0,
-                                  5,
-                                )
-                              : prev.referenceImages,
-                          }));
-                        }}
-                      />
-
                       {/* AI RFQ Builder Assistant */}
                       <div className="rounded-lg border border-gold-200 dark:border-amber-800/40 bg-gradient-to-r from-gold-50 to-amber-50 dark:from-amber-950/30 dark:to-yellow-950/20 p-4">
                         <button
