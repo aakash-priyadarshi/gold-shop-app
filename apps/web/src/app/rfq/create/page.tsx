@@ -1451,6 +1451,7 @@ export default function CreateRfqPage() {
       }
     };
     fetchMarketRates();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currency, country]);
 
   // Fetch templates when jewellery type changes
@@ -2174,7 +2175,6 @@ export default function CreateRfqPage() {
     country,
     currency,
     marketRates,
-    displayWeightUnit,
     shopPrices,
   ]);
 
@@ -7153,3 +7153,4 @@ export default function CreateRfqPage() {
     </TooltipProvider>
   );
 }
+/* eslint-disable @next/next/no-img-element */

@@ -525,6 +525,7 @@ export function NotificationDropdown() {
     // Poll for new notifications every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleMarkAsRead = async (id: string) => {
