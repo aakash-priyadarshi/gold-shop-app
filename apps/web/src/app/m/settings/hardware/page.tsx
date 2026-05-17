@@ -2,7 +2,7 @@
 
 import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
     buildEscPosReceipt,
     defaultHardwareConfig,

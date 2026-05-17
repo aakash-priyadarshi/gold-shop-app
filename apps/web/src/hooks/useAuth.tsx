@@ -47,6 +47,8 @@ export interface User {
     makingChargePercent?: number;
     isOnHold?: boolean;
     holdReason?: string;
+    contactPhone?: string;
+    contactEmail?: string;
     verificationRequests?: Array<{
       id: string;
       status: string;
