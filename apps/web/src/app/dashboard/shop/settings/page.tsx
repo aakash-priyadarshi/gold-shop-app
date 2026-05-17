@@ -184,7 +184,7 @@ const TIER_META: Record<
 };
 
 export default function ShopSettingsPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const t = useT();
   const { placeholders: countryPlaceholders, symbol: currencySymbol } =
     useShopCurrency();
@@ -335,6 +335,9 @@ export default function ShopSettingsPage() {
         title: "Settings Saved",
         description: "Your shop settings have been updated successfully",
       });
+      // Refresh auth user so the updated shop.country propagates to the
+      // preferences store (which makes it the overriding factor over geo).
+      await refreshUser();
     } catch (error: any) {
       console.error("Failed to save settings:", error);
       toast({

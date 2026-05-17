@@ -4,6 +4,11 @@ import OrivraaLoader, {
   useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import { api } from "@/lib/api";
+import {
+  COUNTRIES,
+  usePreferencesStore,
+  type CountryCode,
+} from "@/store/preferences";
 import { usePathname, useRouter } from "next/navigation";
 import React, {
   createContext,
@@ -136,6 +141,39 @@ interface AuthResponse {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Map shop/DB country codes (ISO 3166-1 alpha-2) to preferences store CountryCode.
+// Only codes that exist in the COUNTRIES map are listed here.
+const SHOP_TO_PREF_COUNTRY: Record<string, CountryCode> = {
+  NP: "NP",
+  IN: "IN",
+  AE: "AE",
+  GB: "UK",
+  UK: "UK",
+  US: "US",
+};
+
+/**
+ * For SHOPKEEPER users, override the global preferences store with the shop's
+ * configured country/currency so that geo-detection never wins over the shop's
+ * own locale setting (e.g. an Indian seller travelling abroad still sees INR).
+ */
+function syncShopCountryToPreferences(shopCountry: string) {
+  const prefCountry = SHOP_TO_PREF_COUNTRY[shopCountry.toUpperCase()];
+  if (!prefCountry || !COUNTRIES[prefCountry]) return;
+
+  const defaultCurrency = COUNTRIES[prefCountry].defaultCurrency;
+  usePreferencesStore.setState({
+    country: prefCountry,
+    currency: defaultCurrency,
+  });
+
+  // Mark as an explicit choice so initializeFromGeo doesn't overwrite it
+  if (typeof window !== "undefined") {
+    localStorage.setItem("orivraa_user_country_choice", "shop");
+    localStorage.setItem("orivraa_user_currency_choice", "shop");
+  }
+}
 
 // Token management
 const TOKEN_KEY = "token";
@@ -291,6 +329,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: false,
         error: null,
       });
+
+      // Shop's country/currency is the overriding factor for sellers.
+      // Apply it now so geo-detection (which runs earlier) doesn't win.
+      if (user.role === "SHOPKEEPER" && user.shop?.country) {
+        syncShopCountryToPreferences(user.shop.country);
+      }
     } catch (error: any) {
       console.error("Failed to fetch user:", error);
       clearTokens();
