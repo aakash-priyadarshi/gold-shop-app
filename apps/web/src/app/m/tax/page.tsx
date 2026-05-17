@@ -378,6 +378,7 @@ export default function TaxAuditPage() {
               "Select your country and the billing period",
               "Tap the blue info bar to see tax rates, deadlines, and portal links",
               "Download reports in the exact format each portal needs",
+              "All sales are audited and displayed in their respective local currencies (e.g. INR for India, AED for UAE).",
               "Share a secure link with your accountant (7-day expiry)",
             ]}
           />

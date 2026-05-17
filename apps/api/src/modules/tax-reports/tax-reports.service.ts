@@ -91,6 +91,14 @@ export class TaxReportsService {
     const b2bCount = filtered.filter((i) => i.customerType === "B2B").length;
     const b2cCount = filtered.filter((i) => i.customerType === "B2C").length;
 
+    const CURRENCY_MAP: Record<string, string> = {
+      NEPAL: "NPR", NP: "NPR",
+      INDIA: "INR", IN: "INR",
+      UAE: "AED", AE: "AED",
+      UK: "GBP", GB: "GBP",
+      EU: "EUR", US: "USD",
+    };
+
     return {
       country,
       period: p.label,
@@ -103,7 +111,7 @@ export class TaxReportsService {
       taxCollected,
       b2bCount,
       b2cCount,
-      currency: filtered[0]?.currency || "NPR",
+      currency: filtered[0]?.currency || CURRENCY_MAP[country] || "NPR",
     };
   }
 

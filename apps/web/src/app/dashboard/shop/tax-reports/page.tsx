@@ -125,7 +125,7 @@ export default function TaxReportsPage() {
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 <T>
                   All exports are logged with hashed IP for GDPR compliance. Share links
-                  expire in 7 days. No customer PII appears in filenames.
+                  expire in 7 days. No customer PII appears in filenames. In the tax auditing section, all sales and taxes are audited and displayed in their respective local currencies.
                 </T>
               </p>
             </div>
@@ -168,7 +168,7 @@ export default function TaxReportsPage() {
 }
 
 // ─── Reusable summary card ─────────────────────────────────────────
-function SummaryGrid({ data }: { data: Record<string, any> | null }) {
+function SummaryGrid({ data, currency }: { data: Record<string, any> | null; currency?: string }) {
   if (!data) return null;
   const entries = Object.entries(data).filter(
     ([k, v]) => !k.startsWith("_") && typeof v !== "object",
@@ -182,7 +182,7 @@ function SummaryGrid({ data }: { data: Record<string, any> | null }) {
         >
           <div className="text-xs text-gray-500 uppercase tracking-wide">{k}</div>
           <div className="text-lg font-semibold mt-1">
-            {typeof v === "number" ? v.toLocaleString() : String(v)}
+            {typeof v === "number" ? `${currency ? currency + " " : ""}${v.toLocaleString()}` : String(v)}
           </div>
         </div>
       ))}
@@ -308,7 +308,7 @@ function IndiaPanel({ period, canDownload, canShare }: { period: string; canDown
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? <SkeletonGrid /> : <SummaryGrid data={gstr3b} />}
+          {loading ? <SkeletonGrid /> : <SummaryGrid data={gstr3b} currency="INR" />}
         </CardContent>
       </Card>
 
@@ -347,11 +347,11 @@ function IndiaPanel({ period, canDownload, canShare }: { period: string; canDown
                   <th className="py-2 px-2">HSN</th>
                   <th className="py-2 px-2">Description</th>
                   <th className="py-2 px-2 text-right">Qty</th>
-                  <th className="py-2 px-2 text-right">Taxable Value</th>
-                  <th className="py-2 px-2 text-right">IGST</th>
-                  <th className="py-2 px-2 text-right">CGST</th>
-                  <th className="py-2 px-2 text-right">SGST</th>
-                  <th className="py-2 px-2 text-right">Total</th>
+                  <th className="py-2 px-2 text-right">Taxable Value (INR)</th>
+                  <th className="py-2 px-2 text-right">IGST (INR)</th>
+                  <th className="py-2 px-2 text-right">CGST (INR)</th>
+                  <th className="py-2 px-2 text-right">SGST (INR)</th>
+                  <th className="py-2 px-2 text-right">Total (INR)</th>
                 </tr>
               </thead>
               <tbody>
@@ -434,7 +434,7 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? <SkeletonGrid /> : <SummaryGrid data={data} />}
+              {loading ? <SkeletonGrid /> : <SummaryGrid data={data} currency="NPR" />}
               <p className="text-xs text-gray-500 mt-4">
                 <T>Gold/silver jewellery: 2% luxury tax on metal + making. Gemstones & services: 13% VAT.</T>
               </p>
@@ -563,7 +563,7 @@ function UaePanel({ period, canShare }: { period: string; canShare: boolean }) {
             <ShareWithCAButton country="AE" period={period} canShare={canShare} />
           </CardTitle>
         </CardHeader>
-        <CardContent>{loading ? <SkeletonGrid /> : <SummaryGrid data={data} />}</CardContent>
+        <CardContent>{loading ? <SkeletonGrid /> : <SummaryGrid data={data} currency="AED" />}</CardContent>
       </Card>
       <PhaseCNote items={["Direct submission to EmaraTax portal (requires FTA TRN integration)"]} />
     </div>
@@ -591,7 +591,7 @@ function UkPanel({ period, canShare }: { period: string; canShare: boolean }) {
             <ShareWithCAButton country="GB" period={period} canShare={canShare} />
           </CardTitle>
         </CardHeader>
-        <CardContent>{loading ? <SkeletonGrid /> : <SummaryGrid data={data} />}</CardContent>
+        <CardContent>{loading ? <SkeletonGrid /> : <SummaryGrid data={data} currency="GBP" />}</CardContent>
       </Card>
       <PhaseCNote items={["Direct submission to HMRC MTD API (requires HMRC OAuth + bridging certification)"]} />
     </div>
@@ -637,7 +637,7 @@ function EuPanel({ period, canDownload, canShare }: { period: string; canDownloa
         </CardHeader>
         <CardContent>
           {loading ? <SkeletonGrid /> : (
-            <CountryRowsTable rows={data?.rows || []} cols={["country", "invoiceCount", "netSales", "vatRate", "vatAmount"]} />
+            <CountryRowsTable rows={data?.rows || []} cols={["country", "invoiceCount", "netSales", "vatRate", "vatAmount"]} currency="EUR" />
           )}
         </CardContent>
       </Card>
@@ -686,7 +686,7 @@ function UsPanel({ period, canDownload, canShare }: { period: string; canDownloa
         <CardContent>
           {loading ? <SkeletonGrid /> : (
             <>
-              <CountryRowsTable rows={data?.rows || []} cols={["state", "invoiceCount", "netSales", "salesTax"]} />
+              <CountryRowsTable rows={data?.rows || []} cols={["state", "invoiceCount", "netSales", "salesTax"]} currency="USD" />
               {data?._note && (
                 <p className="text-xs text-amber-700 dark:text-amber-400 mt-3 flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /> {data._note}
@@ -702,7 +702,7 @@ function UsPanel({ period, canDownload, canShare }: { period: string; canDownloa
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────
-function CountryRowsTable({ rows, cols }: { rows: any[]; cols: string[] }) {
+function CountryRowsTable({ rows, cols, currency }: { rows: any[]; cols: string[]; currency?: string }) {
   if (!rows.length) {
     return <p className="text-sm text-gray-500"><T>No invoices in this period.</T></p>;
   }
@@ -710,14 +710,16 @@ function CountryRowsTable({ rows, cols }: { rows: any[]; cols: string[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="text-left border-b">
-          <tr>{cols.map((c) => <th key={c} className="py-2 px-2 capitalize">{c}</th>)}</tr>
+          <tr>{cols.map((c) => <th key={c} className="py-2 px-2 capitalize">{c.replace(/([A-Z])/g, ' $1').trim()}</th>)}</tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i} className="border-b">
               {cols.map((c) => (
                 <td key={c} className="py-2 px-2">
-                  {typeof r[c] === "number" ? r[c].toLocaleString() : String(r[c] ?? "")}
+                  {typeof r[c] === "number" 
+                    ? (currency && c !== "invoiceCount" && c !== "vatRate" ? `${currency} ` : "") + r[c].toLocaleString() 
+                    : String(r[c] ?? "")}
                 </td>
               ))}
             </tr>
