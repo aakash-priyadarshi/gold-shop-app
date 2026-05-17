@@ -45,6 +45,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useHelpUIStore } from "@/store/help-ui";
 import { InformationCircleIcon, ComputerDesktopIcon } from "@heroicons/react/24/outline";
+import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle";
+import { LANGUAGES, usePreferencesStore, type Language } from "@/store/preferences";
+import { Globe } from "lucide-react";
 
 // Lazy-load heavy floating widgets (driver.js CSS ~20 KB)
 const TutorialButton = dynamic(
@@ -145,6 +148,8 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const { logout } = useAuth();
   const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial, shakeChat, shakeTutorial } = useHelpUIStore();
+  const language = usePreferencesStore((state) => state.language);
+  const setLanguage = usePreferencesStore((state) => state.setLanguage);
 
   const sections = [
     {
@@ -261,6 +266,31 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="pt-4 pb-8 space-y-3">
+          <div className="flex items-center gap-3 px-4 py-4 rounded-2xl bg-white shadow-sm border border-gray-100 dark:bg-gray-900 dark:border-gray-800">
+            <Globe className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <div className="flex-1">
+              <span className="text-sm font-bold text-gray-900 dark:text-white"><T>Language</T></span>
+            </div>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as Language)}
+              className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2 outline-none"
+            >
+              {Object.entries(LANGUAGES).map(([code, info]) => (
+                <option key={code} value={code}>
+                  {info.nativeName}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white shadow-sm border border-gray-100 dark:bg-gray-900 dark:border-gray-800">
+            <div className="flex items-center gap-3">
+              <AnimatedThemeToggle size={24} className="rounded-lg text-gray-600 dark:text-gray-400 -ml-1" />
+              <span className="text-sm font-bold text-gray-900 dark:text-white"><T>Theme</T></span>
+            </div>
+          </div>
+
           <Link
             href="/m/settings"
             onClick={onClose}
@@ -312,6 +342,8 @@ export default function MobileLayout({
   const [switchingShopId, setSwitchingShopId] = useState<string | null>(null);
   const ratesRef = useRef(false);
   const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial } = useHelpUIStore();
+  const language = usePreferencesStore((state) => state.language);
+  const setLanguage = usePreferencesStore((state) => state.setLanguage);
 
   // Auth guard
   useEffect(() => {
@@ -530,6 +562,24 @@ export default function MobileLayout({
                 className={`h-5 w-5 ${ratesLoading ? "animate-spin text-amber-500" : ""}`}
               />
             </button>
+            <div className="relative flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 ml-1">
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as Language)}
+                className="appearance-none bg-transparent text-gray-700 dark:text-gray-300 text-xs font-semibold uppercase pr-3 pl-2 py-1 outline-none"
+                style={{ WebkitAppearance: 'none' }}
+              >
+                {Object.entries(LANGUAGES).map(([code]) => (
+                  <option key={code} value={code} className="text-gray-900">
+                    {code}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute right-1">
+                <ChevronDown className="h-3 w-3 text-gray-500" />
+              </div>
+            </div>
+            <AnimatedThemeToggle size={32} className="ml-0.5" />
           </div>
         </div>
         <GoldPriceBar rates={rates} />

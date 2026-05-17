@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTutorial } from "./useTutorial";
 import { useHelpUIStore } from "@/store/help-ui";
 import { usePathname } from "next/navigation";
+import { LANGUAGES, usePreferencesStore, type Language } from "@/store/preferences";
 
 interface TutorialButtonProps {
   className?: string;
@@ -86,6 +87,39 @@ export function TutorialButton({ className }: TutorialButtonProps) {
       onDestroyStarted: () => {
         driverObj.destroy();
         setRunning(false);
+      },
+      onPopoverRender: (popover) => {
+        const wrapper = popover.wrapper;
+        if (!wrapper) return;
+        setTimeout(() => {
+          const header = wrapper.querySelector(".driver-popover-title");
+          if (!header || header.parentElement?.querySelector(".driver-lang-wrap")) return;
+          
+          const wrap = document.createElement("div");
+          wrap.className = "driver-lang-wrap absolute top-[14px] right-10 z-10 flex items-center bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5";
+          
+          const select = document.createElement("select");
+          select.className = "text-[10px] bg-transparent border-none text-gray-600 dark:text-gray-300 font-bold uppercase outline-none cursor-pointer p-0 m-0 leading-none";
+          select.style.appearance = "none";
+          select.style.webkitAppearance = "none";
+          
+          const currentLang = usePreferencesStore.getState().language;
+          Object.entries(LANGUAGES).forEach(([code]) => {
+            const opt = document.createElement("option");
+            opt.value = code;
+            opt.innerText = code;
+            opt.selected = code === currentLang;
+            select.appendChild(opt);
+          });
+          
+          select.onchange = (e) => {
+            usePreferencesStore.getState().setLanguage((e.target as HTMLSelectElement).value as Language);
+            // The text will update automatically on next step, but ideally we force refresh.
+          };
+          
+          wrap.appendChild(select);
+          header.parentElement?.insertBefore(wrap, header);
+        }, 10);
       },
       steps,
     });

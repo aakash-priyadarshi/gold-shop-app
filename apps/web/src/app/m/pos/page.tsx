@@ -223,7 +223,7 @@ function CartDrawer({
                     : "border-gray-200 text-gray-600 bg-white"
                 }`}
               >
-                {p.label}
+                <T>{p.label}</T>
               </button>
             ))}
           </div>
@@ -305,7 +305,7 @@ function CartDrawer({
                     : "border-gray-100 text-gray-600 bg-white hover:border-gray-200"
                 }`}
               >
-                {pm.label}
+                <T>{pm.label}</T>
               </button>
             ))}
           </div>
