@@ -187,6 +187,55 @@ export class InventoryService {
     return { success: true };
   }
 
+  /**
+   * Lookup an inventory item (or variant) by barcode / SKU within a shop.
+   * Used by the POS barcode scanner. Matches in order:
+   *   1. InventoryItem.sku    (exact)
+   *   2. ProductVariant.sku   (exact)
+   *   3. InventoryItem.hallmarkNumber (exact)  – BIS hallmark also commonly barcoded
+   * Returns { item, variant? } or null when nothing matches.
+   */
+  async findByCode(shopId: string, code: string) {
+    const trimmed = code?.trim();
+    if (!trimmed) return null;
+
+    // 1. Direct SKU on inventory item
+    const bySku = await this.prisma.inventoryItem.findFirst({
+      where: {
+        shopId,
+        sku: trimmed,
+        status: { not: InventoryStatus.DISCONTINUED },
+      },
+    });
+    if (bySku) return { item: bySku, variant: null };
+
+    // 2. Variant SKU
+    const variant = await this.prisma.productVariant.findFirst({
+      where: {
+        sku: trimmed,
+        isActive: true,
+        inventoryItem: { shopId },
+      },
+      include: { inventoryItem: true },
+    });
+    if (variant) {
+      const { inventoryItem, ...rest } = variant;
+      return { item: inventoryItem, variant: rest };
+    }
+
+    // 3. Hallmark number (some shops barcode the BIS hallmark)
+    const byHallmark = await this.prisma.inventoryItem.findFirst({
+      where: {
+        shopId,
+        hallmarkNumber: trimmed,
+        status: { not: InventoryStatus.DISCONTINUED },
+      },
+    });
+    if (byHallmark) return { item: byHallmark, variant: null };
+
+    return null;
+  }
+
   // Get single item
   async findOne(itemId: string) {
     const item = await this.prisma.inventoryItem.findUnique({

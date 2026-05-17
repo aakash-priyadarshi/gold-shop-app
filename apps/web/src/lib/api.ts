@@ -154,6 +154,8 @@ export const inventoryApi = {
   getShopInventory: (shopId: string, params?: any) =>
     api.get(`/inventory/shop/${shopId}/items`, { params }),
   getStats: (shopId: string) => api.get(`/inventory/shop/${shopId}/stats`),
+  lookupByCode: (shopId: string, code: string) =>
+    api.get(`/inventory/shop/${shopId}/lookup`, { params: { code } }),
   updateVisibility: (itemId: string, visibility: string) =>
     api.patch(`/catalogues/inventory/${itemId}/visibility`, { visibility }),
 };

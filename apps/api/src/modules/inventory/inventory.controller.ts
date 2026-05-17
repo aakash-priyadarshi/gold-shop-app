@@ -107,6 +107,22 @@ export class InventoryController {
     return this.inventoryService.getInventoryStats(shopId);
   }
 
+  @Get("shop/:shopId/lookup")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Lookup inventory by barcode / SKU (for POS scanner)" })
+  async lookupByCode(
+    @Param("shopId") shopId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Query("code") code: string,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only scan your own shop inventory");
+    }
+    return this.inventoryService.findByCode(shopId, code);
+  }
+
   @Patch("shop/:shopId/bulk-prices")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("SHOPKEEPER")

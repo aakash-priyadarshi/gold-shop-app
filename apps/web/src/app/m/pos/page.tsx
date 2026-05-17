@@ -2,6 +2,9 @@
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
 import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
+import { BarcodeScannerSheet } from "@/components/mobile/BarcodeScannerSheet";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { loadHardwareConfig, printReceipt } from "@/lib/posHardware";
 import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
@@ -383,6 +386,7 @@ export default function MobilePOSPage() {
     total: number;
     customerPhone?: string;
   } | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const shopId = user?.shop?.id;
@@ -428,6 +432,53 @@ export default function MobilePOSPage() {
       return [...prev, { item, qty: 1, unitPrice: item.totalPriceNpr ?? 0 }];
     });
   };
+
+  const handleScannedCode = useCallback(
+    async (code: string) => {
+      if (!shopId) return;
+      try {
+        const res = await inventoryApi.lookupByCode(shopId, code);
+        const found = res.data?.item ?? null;
+        if (!found) {
+          haptic("error");
+          toast({
+            title: "Not found",
+            description: `No item with SKU "${code}" in this shop`,
+            variant: "destructive",
+          });
+          return;
+        }
+        const cfg = loadHardwareConfig().scanner;
+        if (cfg.autoAdd) {
+          addToCart(found as InventoryItem);
+          haptic("success");
+          toast({
+            title: "Added to cart",
+            description: found.nameEn,
+          });
+        } else {
+          setItems((prev) => {
+            const exists = prev.some((p) => p.id === found.id);
+            return exists ? prev : [found as InventoryItem, ...prev];
+          });
+          setSearch(found.sku ?? "");
+        }
+        setScannerOpen(false);
+      } catch {
+        haptic("error");
+        toast({
+          title: "Lookup failed",
+          description: "Could not reach the server",
+          variant: "destructive",
+        });
+      }
+    },
+    [shopId, haptic],
+  );
+
+  // Global keyboard-wedge scanner – fires anywhere on the POS page when an
+  // attached HID scanner sends a burst of keystrokes ending in Enter.
+  useBarcodeScanner(handleScannedCode, { ignoreEditable: true });
 
   const updateQty = (itemId: string, qty: number) => {
     if (qty <= 0) {
@@ -495,6 +546,42 @@ export default function MobilePOSPage() {
       setCart([]);
       haptic("success");
       toast({ title: "Bill created", description: `${formatNPR(total)}` });
+
+      // Auto-print receipt if a printer is configured
+      const hw = loadHardwareConfig();
+      if (hw.printer.enabled && hw.printer.autoPrint) {
+        try {
+          await printReceipt(
+            {
+              shopName: user?.shop?.shopName,
+              shopPhone: user?.shop?.contactPhone,
+              invoiceNumber: String(billId ?? "-"),
+              issuedAt: new Date(),
+              customerName,
+              customerPhone,
+              currency: user?.shop?.currency ?? "NPR",
+              lines: cart.map((c) => ({
+                label: c.item.nameEn,
+                qty: c.qty,
+                amount: c.unitPrice * c.qty,
+              })),
+              subtotal: cartTotal,
+              taxAmount: Math.round(cartTotal * (taxRate / 100)),
+              taxLabel: `Tax ${taxRate}%`,
+              total,
+              paid: total,
+              balance: 0,
+            },
+            { kickDrawer: hw.printer.kickCashDrawer && method === "CASH" },
+          );
+        } catch (e: any) {
+          toast({
+            title: "Bill created – print failed",
+            description: e?.message ?? "Check printer connection",
+            variant: "destructive",
+          });
+        }
+      }
     } catch (err: any) {
       haptic("error");
       toast({
@@ -538,16 +625,25 @@ export default function MobilePOSPage() {
         </div>
         {/* Search bar */}
         <div data-tour="m-pos-search" className="px-4 pt-1 pb-2 bg-white border-b border-gray-100">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              ref={searchRef}
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("Search products by name or SKU…")}
-              className="w-full pl-9 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={searchRef}
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("Search products by name or SKU…")}
+                className="w-full pl-9 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+            <button
+              onClick={() => setScannerOpen(true)}
+              aria-label="Scan barcode"
+              className="flex items-center justify-center h-10 w-10 rounded-xl bg-amber-100 text-amber-700 active:bg-amber-200"
+            >
+              <ScanLine className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
@@ -646,6 +742,13 @@ export default function MobilePOSPage() {
           onClose={() => setShowCart(false)}
         />
       )}
+
+      <BarcodeScannerSheet
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={handleScannedCode}
+        hint="Scan with the camera or type the SKU. A connected USB / Bluetooth scanner works anywhere on this screen."
+      />
     </MobileFeatureGate>
   );
 }

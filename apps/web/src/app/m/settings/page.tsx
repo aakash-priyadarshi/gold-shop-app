@@ -217,6 +217,24 @@ export default function MobileStoreSettingsPage() {
           </p>
         </section>
 
+        {/* Hardware link */}
+        <section>
+          <Link
+            href="/m/settings/hardware"
+            className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3"
+          >
+            <div>
+              <p className="text-sm font-semibold text-gray-900">
+                <T>POS Hardware</T>
+              </p>
+              <p className="text-[11px] text-gray-500">
+                <T>Barcode scanner · Receipt printer · Cash drawer</T>
+              </p>
+            </div>
+            <span className="text-amber-600 text-sm">→</span>
+          </Link>
+        </section>
+
         {error && (
           <div className="rounded-xl bg-red-50 border border-red-100 text-red-700 px-4 py-3 text-sm">
             {error}
