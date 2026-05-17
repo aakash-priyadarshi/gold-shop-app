@@ -42,6 +42,7 @@ const MOBILE_TO_BACKEND_FEATURE: Record<string, string | null> = {
   mobileCustomers: "crm",
   mobileTaxReports: "taxReports",
   mobileWhatsAppShare: "crm",
+  mobileCatalogue: "crm",
 };
 
 interface MobileFeatureGateProps {

@@ -10,6 +10,8 @@ import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import {
     Calculator,
     Check,
+    ChevronDown,
+    FileDown,
     Loader2,
     MessageCircle,
     Trash2,
@@ -173,6 +175,15 @@ export default function QuotesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [quoteResult, setQuoteResult] = useState<{ id: string; total: number } | null>(null);
 
+  // Optional / advanced quote fields (parity with PC quote form).
+  const [discountPct, setDiscountPct] = useState<number>(0);
+  const [validityDays, setValidityDays] = useState<number>(7);
+  const [terms, setTerms] = useState<string>(
+    "• Rates are subject to change at time of billing.\n• 50% advance required to lock making charges.\n• Quote is valid for the period stated above.",
+  );
+  const [notes, setNotes] = useState<string>("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const loadRates = useCallback(async () => {
     try {
       const params = getMobileMarketParams(user?.shop ?? null);
@@ -233,8 +244,17 @@ export default function QuotesPage() {
     (s, i) => s + i.weightGrams * goldRate * i.purity + i.makingCharges,
     0,
   );
-  const tax = Math.round(subtotal * 0.03);
-  const total = subtotal + tax;
+  const discount = Math.round((subtotal * (discountPct || 0)) / 100);
+  const taxable = Math.max(0, subtotal - discount);
+  const tax = Math.round(taxable * 0.03);
+  const total = taxable + tax;
+
+  const validUntilDate = new Date(Date.now() + (validityDays || 0) * 86400000);
+  const formattedValidUntil = validUntilDate.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   const handleSubmit = async () => {
     if (items.every((i) => i.weightGrams === 0)) {
@@ -243,6 +263,11 @@ export default function QuotesPage() {
     }
     setSubmitting(true);
     try {
+      const shopNotesParts: string[] = [];
+      if (validityDays) shopNotesParts.push(`Valid until: ${formattedValidUntil} (${validityDays} days).`);
+      if (discountPct) shopNotesParts.push(`Discount applied: ${discountPct}%.`);
+      if (terms.trim()) shopNotesParts.push(`Terms:\n${terms.trim()}`);
+      if (notes.trim()) shopNotesParts.push(`Notes:\n${notes.trim()}`);
       const res = await shopQuotesApi.create({
         customerName: customerName || "Walk-in Customer",
         customerPhone: customerPhone || undefined,
@@ -256,9 +281,16 @@ export default function QuotesPage() {
         })),
         goldRatePerGram: goldRate,
         subtotalNpr: subtotal,
+        discountNpr: discount,
+        discountPercent: discountPct,
         taxNpr: tax,
         totalNpr: total,
         currency,
+        validityDays,
+        validUntil: validUntilDate.toISOString(),
+        terms: terms.trim() || undefined,
+        shopNotes: shopNotesParts.join("\n\n") || undefined,
+        customerNotes: notes.trim() || undefined,
         source: "MOBILE_QUOTE",
       });
       setQuoteResult({ id: res.data?.id ?? res.data?.quoteId, total });
@@ -276,17 +308,108 @@ export default function QuotesPage() {
   if (quoteResult) {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://orivraa.com";
     const trackUrl = `${baseUrl}/track/${quoteResult.id}`;
+    const itemLines = items
+      .filter((i) => i.weightGrams > 0)
+      .map(
+        (i) =>
+          `• ${i.description || "Gold item"} (${i.weightGrams}g, ${PURITY_OPTIONS.find((p) => p.purity === i.purity)?.label ?? ""}): ${fmt(i.weightGrams * goldRate * i.purity + i.makingCharges, currency)}`,
+      )
+      .join("\n");
+    const totalsBlock = [
+      `Subtotal: ${fmt(subtotal, currency)}`,
+      discount > 0 ? `Discount (${discountPct}%): -${fmt(discount, currency)}` : "",
+      `Tax (3%): ${fmt(tax, currency)}`,
+      `*Total: ${fmt(total, currency)}*`,
+    ]
+      .filter(Boolean)
+      .join("\n");
     const msg = encodeURIComponent(
       `Hello${customerName ? ` ${customerName}` : ""},\n\nHere is your jewellery quote from *${user?.shop?.shopName ?? "our store"}*.\n\n` +
-        items
-          .filter((i) => i.weightGrams > 0)
-          .map(
-            (i) =>
-              `• ${i.description || "Gold item"} (${i.weightGrams}g, ${PURITY_OPTIONS.find((p) => p.purity === i.purity)?.label ?? ""}): ${fmt(i.weightGrams * goldRate * i.purity + i.makingCharges, currency)}`,
-          )
-          .join("\n") +
-        `\n\n*Total: ${fmt(total, currency)}* (incl. 3% tax)\n\nView full quote: ${trackUrl}`,
+        itemLines +
+        `\n\n${totalsBlock}\n\n` +
+        `Valid until: ${formattedValidUntil}\n` +
+        (terms.trim() ? `\nTerms:\n${terms.trim()}\n` : "") +
+        (notes.trim() ? `\nNotes:\n${notes.trim()}\n` : "") +
+        `\nView full quote: ${trackUrl}`,
     );
+
+    const exportPdf = () => {
+      const w = window.open("", "_blank", "width=720,height=900");
+      if (!w) {
+        toast({ title: "Pop-ups are blocked", description: "Allow pop-ups and try again.", variant: "destructive" });
+        return;
+      }
+      const shopName = user?.shop?.shopName ?? "Our Store";
+      const shopAddress = user?.shop?.address ?? "";
+      const shopPhone = (user?.shop as { contactPhone?: string; phone?: string } | undefined)?.contactPhone ?? (user?.shop as { phone?: string } | undefined)?.phone ?? "";
+      const rows = items
+        .filter((i) => i.weightGrams > 0)
+        .map(
+          (i, idx) => `
+            <tr>
+              <td>${idx + 1}</td>
+              <td>${(i.description || "Gold item").replace(/</g, "&lt;")}</td>
+              <td style="text-align:right">${i.weightGrams} g</td>
+              <td>${PURITY_OPTIONS.find((p) => p.purity === i.purity)?.label ?? ""}</td>
+              <td style="text-align:right">${fmt(i.makingCharges, currency)}</td>
+              <td style="text-align:right"><strong>${fmt(i.weightGrams * goldRate * i.purity + i.makingCharges, currency)}</strong></td>
+            </tr>`,
+        )
+        .join("");
+      const html = `<!doctype html>
+<html><head><meta charset="utf-8"><title>Quote ${quoteResult.id}</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;padding:32px;max-width:780px;margin:0 auto}
+  h1{color:#b45309;margin:0 0 4px}
+  .muted{color:#6b7280;font-size:12px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:24px 0}
+  table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
+  th,td{padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:left}
+  th{background:#fef3c7;color:#92400e;font-weight:600;font-size:11px;text-transform:uppercase}
+  .totals{margin-top:16px;float:right;width:280px}
+  .totals .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+  .totals .total{border-top:2px solid #b45309;color:#b45309;font-weight:700;font-size:16px;padding-top:8px;margin-top:8px}
+  .terms{clear:both;margin-top:32px;padding:14px;background:#fef9c3;border-left:3px solid #eab308;font-size:12px;white-space:pre-wrap}
+  .footer{margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280;text-align:center}
+  @media print{button{display:none}}
+</style></head>
+<body>
+  <button onclick="window.print()" style="position:fixed;top:16px;right:16px;padding:8px 16px;background:#b45309;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:600">Print / Save as PDF</button>
+  <h1>${shopName.replace(/</g, "&lt;")}</h1>
+  <div class="muted">${shopAddress} ${shopPhone ? "&middot; " + shopPhone : ""}</div>
+  <div class="grid">
+    <div>
+      <div class="muted" style="text-transform:uppercase;font-size:10px;font-weight:600">Quote For</div>
+      <div style="font-weight:600;margin-top:4px">${(customerName || "Walk-in Customer").replace(/</g, "&lt;")}</div>
+      ${customerPhone ? `<div class="muted">${customerPhone}</div>` : ""}
+    </div>
+    <div style="text-align:right">
+      <div class="muted" style="text-transform:uppercase;font-size:10px;font-weight:600">Quote #</div>
+      <div style="font-weight:600;margin-top:4px">${quoteResult.id}</div>
+      <div class="muted">Issued: ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div>
+      <div class="muted">Valid until: ${formattedValidUntil}</div>
+      <div class="muted">Gold rate: ${fmt(goldRate, currency)}/g</div>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Item</th><th style="text-align:right">Weight</th><th>Purity</th><th style="text-align:right">Making</th><th style="text-align:right">Amount</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="totals">
+    <div class="row"><span>Subtotal</span><span>${fmt(subtotal, currency)}</span></div>
+    ${discount > 0 ? `<div class="row"><span>Discount (${discountPct}%)</span><span>-${fmt(discount, currency)}</span></div>` : ""}
+    <div class="row"><span>Tax (3%)</span><span>${fmt(tax, currency)}</span></div>
+    <div class="row total"><span>Total</span><span>${fmt(total, currency)}</span></div>
+  </div>
+  ${terms.trim() ? `<div class="terms"><strong>Terms &amp; Conditions</strong>\n${terms.replace(/</g, "&lt;")}</div>` : ""}
+  ${notes.trim() ? `<div class="terms" style="background:#dbeafe;border-color:#3b82f6"><strong>Notes</strong>\n${notes.replace(/</g, "&lt;")}</div>` : ""}
+  <div class="footer">Track this quote: ${trackUrl}</div>
+  <script>setTimeout(function(){window.print();},400);</script>
+</body></html>`;
+      w.document.write(html);
+      w.document.close();
+    };
+
     const waUrl = customerPhone
       ? `https://wa.me/${customerPhone.replace(/\D/g, "")}?text=${msg}`
       : `https://wa.me/?text=${msg}`;
@@ -310,11 +433,20 @@ export default function QuotesPage() {
           <T>Send Quote via WhatsApp</T>
         </a>
         <button
+          onClick={exportPdf}
+          className="w-full max-w-xs py-3 border border-amber-300 text-amber-700 text-sm font-semibold rounded-2xl flex items-center justify-center gap-2"
+        >
+          <FileDown className="h-4 w-4" />
+          <T>Export as PDF</T>
+        </button>
+        <button
           onClick={() => {
             setQuoteResult(null);
             setItems([makeItem()]);
             setCustomerName("");
             setCustomerPhone("");
+            setDiscountPct(0);
+            setNotes("");
           }}
           className="text-sm text-amber-600 font-medium underline underline-offset-2"
         >
@@ -406,6 +538,102 @@ export default function QuotesPage() {
         </button>
       </div>
 
+      {/* Advanced options — discount, validity, T&C, notes (PC quote parity) */}
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-2xl border border-gray-100"
+        >
+          <div className="text-left">
+            <p className="text-sm font-semibold text-gray-900">
+              <T>Discount, validity & terms</T>
+            </p>
+            <p className="text-[11px] text-gray-400">
+              {discountPct > 0
+                ? `${discountPct}% off · `
+                : ""}
+              Valid {validityDays} days
+              {terms.trim() ? " · T&C included" : ""}
+            </p>
+          </div>
+          <ChevronDown
+            className={`h-4 w-4 text-gray-400 transition-transform ${
+              showAdvanced ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {showAdvanced && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-gray-400 font-medium uppercase">
+                  <T>Discount %</T>
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={discountPct || ""}
+                  onChange={(e) =>
+                    setDiscountPct(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))
+                  }
+                  placeholder="0"
+                  className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 font-medium uppercase">
+                  <T>Valid for (days)</T>
+                </label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  max="365"
+                  value={validityDays || ""}
+                  onChange={(e) =>
+                    setValidityDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))
+                  }
+                  placeholder="7"
+                  className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400 -mt-2">
+              <T>Quote valid until</T> {formattedValidUntil}
+            </p>
+            <div>
+              <label className="text-[10px] text-gray-400 font-medium uppercase">
+                <T>Terms & Conditions</T>
+              </label>
+              <textarea
+                value={terms}
+                onChange={(e) => setTerms(e.target.value)}
+                rows={4}
+                className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                placeholder="Bullet points; one per line"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 font-medium uppercase">
+                <T>Customer notes</T>
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+                className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                placeholder="Any special message for the customer"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Totals */}
       {subtotal > 0 && (
         <div data-tour="m-quote-total" className="bg-white rounded-2xl border border-gray-100 p-4 space-y-2">
@@ -413,6 +641,12 @@ export default function QuotesPage() {
             <span className="text-gray-500"><T>Subtotal</T></span>
             <span>{fmt(subtotal, currency)}</span>
           </div>
+          {discount > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500"><T>Discount</T> ({discountPct}%)</span>
+              <span className="text-green-600">-{fmt(discount, currency)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm">
             <span className="text-gray-500"><T>Tax (3%)</T></span>
             <span>{fmt(tax, currency)}</span>

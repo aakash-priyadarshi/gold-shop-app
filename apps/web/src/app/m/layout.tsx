@@ -27,6 +27,7 @@ import {
     RefreshCw,
     Scale,
     ScanLine,
+    Send,
     Settings,
     ShoppingBag,
     Users,
@@ -107,6 +108,7 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
   const items = [
     { href: "/m/rate-card", icon: Image, label: "Rate Card", desc: "Share today's gold rates" },
     { href: "/m/broadcast", icon: MessageCircle, label: "Rate Broadcast", desc: "1-tap WhatsApp morning message" },
+    { href: "/m/catalogue", icon: Send, label: "Catalogue Share", desc: "Send live inventory on WhatsApp" },
     { href: "/m/exchange", icon: Scale, label: "Old Gold Exchange", desc: "Calculate buyback value" },
     { href: "/m/summary", icon: BarChart2, label: "Daily Summary", desc: "Today's sales & revenue" },
     { href: "/m/tax", icon: Receipt, label: "Tax Reports", desc: "GST · VAT · MTD · OSS — 6 countries" },
