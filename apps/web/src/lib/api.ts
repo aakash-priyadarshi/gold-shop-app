@@ -16,12 +16,31 @@ export const api = axios.create({
   },
 });
 
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+}
+
+function clearCookie(name: string) {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${name}=; path=/; SameSite=Lax${secure}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  if (window.location.hostname.endsWith("orivraa.com")) {
+    document.cookie = `${name}=; path=/; domain=.orivraa.com; SameSite=Lax${secure}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  }
+}
+
 // Request interceptor to add auth token and currency header
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     // Add auth token
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token") || readCookie("token");
     if (token) {
+      localStorage.setItem("token", token);
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -50,6 +69,9 @@ api.interceptors.response.use(
       // Token expired or invalid
       if (typeof window !== "undefined") {
         localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        clearCookie("token");
+        clearCookie("refreshToken");
         window.location.href = "/auth/login";
       }
     }

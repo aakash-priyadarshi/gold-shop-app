@@ -24,6 +24,51 @@ const MOBILE_TOP_SEGMENTS = new Set([
   "purity",     // Gold Purity Calculator
 ]);
 
+function mapToSupportedMarket(countryCode: string): string {
+  const country = countryCode.toUpperCase();
+  if (["NP", "IN", "US", "UK", "EU", "AE"].includes(country)) return country;
+  if (country === "GB") return "UK";
+
+  const europeanCountries = new Set([
+    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
+    "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL",
+    "PL", "PT", "RO", "SK", "SI", "ES", "SE", "CH", "NO",
+  ]);
+  if (europeanCountries.has(country)) return "EU";
+
+  const middleEastCountries = new Set(["BH", "KW", "OM", "QA", "SA"]);
+  if (middleEastCountries.has(country)) return "AE";
+
+  return "US";
+}
+
+function withGeoCookies(request: NextRequest, response: NextResponse) {
+  const cfCountry = request.headers.get("cf-ipcountry");
+  const vercelCountry = request.headers.get("x-vercel-ip-country");
+  const rawCountry = cfCountry && cfCountry !== "XX" ? cfCountry : vercelCountry;
+
+  if (!rawCountry) return response;
+
+  const isProdDomain = request.nextUrl.hostname.endsWith("orivraa.com");
+  const cookieOptions = {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+    sameSite: "lax" as const,
+    secure: request.nextUrl.protocol === "https:",
+    ...(isProdDomain ? { domain: ".orivraa.com" } : {}),
+  };
+
+  response.cookies.set("orivraa_geo_country", mapToSupportedMarket(rawCountry), cookieOptions);
+  response.cookies.set(
+    "orivraa_geo_source",
+    cfCountry && cfCountry !== "XX" ? "cloudflare" : "vercel",
+    cookieOptions,
+  );
+  response.cookies.set("orivraa_geo_raw", rawCountry.toUpperCase(), cookieOptions);
+  response.headers.set("x-orivraa-country", mapToSupportedMarket(rawCountry));
+  return response;
+}
+
 export function middleware(request: NextRequest) {
   // request.nextUrl.hostname is the most reliable source in Next.js edge middleware.
   // It reflects the actual custom domain Vercel matched (e.g. m.orivraa.com),
@@ -43,29 +88,35 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/api/") ||
     pathname.includes(".") // static files (favicon.ico, images, etc.)
   ) {
-    return NextResponse.next();
+    return withGeoCookies(request, NextResponse.next());
   }
 
   // Detect mobile subdomain: m.orivraa.com or m.localhost
   const isMobileSubdomain = hostname === "m" || hostname.startsWith("m.");
 
   if (!isMobileSubdomain) {
-    return NextResponse.next();
+    return withGeoCookies(request, NextResponse.next());
   }
 
   // Already on /m/* path — don't double-rewrite
   if (pathname === "/m" || pathname.startsWith("/m/")) {
-    return NextResponse.next();
+    return withGeoCookies(request, NextResponse.next());
   }
 
   // Root → mobile home (POS)
   if (pathname === "/") {
-    return NextResponse.rewrite(new URL("/m/pos", request.url));
+    return withGeoCookies(
+      request,
+      NextResponse.rewrite(new URL("/m/pos", request.url)),
+    );
   }
 
   // Dashboard paths have no mobile equivalent — send shopkeepers to the POS
   if (pathname.startsWith("/dashboard")) {
-    return NextResponse.redirect(new URL("/m/pos", request.url));
+    return withGeoCookies(
+      request,
+      NextResponse.redirect(new URL("/m/pos", request.url)),
+    );
   }
 
   // Only rewrite paths whose first segment has a mobile equivalent.
@@ -73,10 +124,13 @@ export function middleware(request: NextRequest) {
   // regular desktop page on the same deployment.
   const firstSegment = pathname.split("/")[1];
   if (MOBILE_TOP_SEGMENTS.has(firstSegment)) {
-    return NextResponse.rewrite(new URL(`/m${pathname}`, request.url));
+    return withGeoCookies(
+      request,
+      NextResponse.rewrite(new URL(`/m${pathname}`, request.url)),
+    );
   }
 
-  return NextResponse.next();
+  return withGeoCookies(request, NextResponse.next());
 }
 
 export const config = {

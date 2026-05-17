@@ -140,20 +140,68 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Token management
 const TOKEN_KEY = "token";
 const REFRESH_TOKEN_KEY = "refreshToken";
+const REMEMBERED_TOKEN_MAX_AGE = 60 * 60 * 24 * 30;
+
+function getCookieValue(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+}
+
+function authCookieOptions(maxAge?: number) {
+  if (typeof window === "undefined") return "path=/; SameSite=Lax";
+  const domain = window.location.hostname.endsWith("orivraa.com")
+    ? "; domain=.orivraa.com"
+    : "";
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const expiry = maxAge ? `; max-age=${maxAge}` : "";
+  return `path=/${domain}; SameSite=Lax${secure}${expiry}`;
+}
+
+function setAuthCookie(name: string, value: string, maxAge?: number) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=${encodeURIComponent(value)}; ${authCookieOptions(maxAge)}`;
+}
+
+function clearAuthCookie(name: string) {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${name}=; path=/; SameSite=Lax${secure}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  if (window.location.hostname.endsWith("orivraa.com")) {
+    document.cookie = `${name}=; path=/; domain=.orivraa.com; SameSite=Lax${secure}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  }
+}
 
 const getStoredToken = () => {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY) || getCookieValue(TOKEN_KEY);
+  const refreshToken =
+    localStorage.getItem(REFRESH_TOKEN_KEY) || getCookieValue(REFRESH_TOKEN_KEY);
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  return token;
 };
 
-const storeTokens = (accessToken: string, refreshToken: string) => {
+const storeTokens = (
+  accessToken: string,
+  refreshToken: string,
+  rememberMe = false,
+) => {
   localStorage.setItem(TOKEN_KEY, accessToken);
   localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  const maxAge = rememberMe ? REMEMBERED_TOKEN_MAX_AGE : undefined;
+  setAuthCookie(TOKEN_KEY, accessToken, maxAge);
+  setAuthCookie(REFRESH_TOKEN_KEY, refreshToken, maxAge);
 };
 
 const clearTokens = () => {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  clearAuthCookie(TOKEN_KEY);
+  clearAuthCookie(REFRESH_TOKEN_KEY);
 };
 
 // Dashboard routes by role
@@ -286,7 +334,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           user: userData,
           isSuspended,
         } = response.data;
-        storeTokens(accessToken, refreshToken);
+        storeTokens(accessToken, refreshToken, rememberMe ?? false);
 
         // Fetch full user profile
         const meResponse = await api.get("/auth/me");

@@ -5,7 +5,12 @@ import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { materialsApi, shopQuotesApi } from "@/lib/api";
+import { materialsApi, shopQuotesApi, shopsApi } from "@/lib/api";
+import {
+  convertCurrencyAmount,
+  fetchFreeFxRates,
+  type SupportedCurrencyCode,
+} from "@/lib/currency";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import {
   Calculator,
@@ -48,8 +53,39 @@ const MATERIAL_OPTIONS = [
   { value: "SILVER_999", label: "Silver 999", category: "SILVER", purity: 0.999 },
   { value: "SILVER_925", label: "Silver 925", category: "SILVER", purity: 0.925 },
   { value: "PLATINUM_950", label: "Platinum 950", category: "PLATINUM", purity: 0.95 },
-  { value: "BASE_METAL", label: "Base metal / plated", category: "BASE_METAL" },
+  { value: "BRASS", label: "Brass", category: "BASE_METAL" },
+  { value: "BRONZE", label: "Bronze", category: "BASE_METAL" },
+  { value: "COPPER", label: "Copper", category: "BASE_METAL" },
+  { value: "STAINLESS_STEEL_316L", label: "Stainless steel 316L", category: "BASE_METAL" },
+  { value: "TITANIUM", label: "Titanium", category: "BASE_METAL" },
+  { value: "BASE_METAL", label: "Other base metal / plated", category: "BASE_METAL" },
 ];
+
+const TOLA_TO_GRAMS = 11.6638038;
+const SUPPORTED_CURRENCY_CODES = ["NPR", "INR", "AED", "USD", "GBP", "EUR", "AUD"] as const;
+const RATE_ALIASES: Record<string, string[]> = {
+  GOLD_24K: ["GOLD_24K", "XAU", "GOLD"],
+  GOLD_22K: ["GOLD_22K", "GOLD_24K", "XAU", "GOLD"],
+  GOLD_18K: ["GOLD_18K", "GOLD_24K", "XAU", "GOLD"],
+  SILVER_999: ["SILVER_999", "XAG", "SILVER"],
+  SILVER_925: ["SILVER_925", "SILVER_999", "XAG", "SILVER"],
+  PLATINUM_950: ["PLATINUM_950", "PLATINUM_PT950", "XPT", "PLATINUM"],
+  PLATINUM_900: ["PLATINUM_900", "PLATINUM_PT900", "XPT", "PLATINUM"],
+};
+
+type PricingMode = "auto" | "manual";
+type WeightUnit = "GRAM" | "TOLA";
+
+interface GemstoneRateOption {
+  key: string;
+  label: string;
+  stoneType: string;
+  origin: string;
+  sizeCategory: string;
+  qualityTier: string;
+  effectivePriceNpr: number;
+  shopPriceNpr?: number | null;
+}
 
 interface CustomerLookupResult {
   found?: boolean;
@@ -95,6 +131,27 @@ function readMetalRate(data: any, codes: string[]) {
   return 0;
 }
 
+function toSupportedCurrency(value?: string | null): SupportedCurrencyCode {
+  const normalized = value?.toUpperCase();
+  return SUPPORTED_CURRENCY_CODES.includes(normalized as SupportedCurrencyCode)
+    ? (normalized as SupportedCurrencyCode)
+    : "NPR";
+}
+
+function liveRateForMaterial(data: any, materialCode: string) {
+  const rate = readMetalRate(data, RATE_ALIASES[materialCode] ?? [materialCode]);
+  if (rate > 0 && (materialCode === "GOLD_22K" || materialCode === "GOLD_18K")) {
+    const pureGoldRate = readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]);
+    const purity = MATERIAL_OPTIONS.find((m) => m.value === materialCode)?.purity ?? 1;
+    return readMetalRate(data, [materialCode]) || (pureGoldRate > 0 ? pureGoldRate * purity : rate);
+  }
+  if (rate > 0 && materialCode === "SILVER_925") {
+    const pureSilverRate = readMetalRate(data, ["SILVER_999", "XAG", "SILVER"]);
+    return readMetalRate(data, [materialCode]) || (pureSilverRate > 0 ? pureSilverRate * 0.925 : rate);
+  }
+  return rate;
+}
+
 function numberFromInput(value: string) {
   return Number.parseFloat(value) || 0;
 }
@@ -106,6 +163,11 @@ export default function QuotesPage() {
   const [ratesLoading, setRatesLoading] = useState(true);
   const [goldRate, setGoldRate] = useState(0);
   const [silverRate, setSilverRate] = useState(0);
+  const [marketRateData, setMarketRateData] = useState<any>(null);
+  const [nprToDisplayCurrency, setNprToDisplayCurrency] = useState(1);
+  const [shopMaterialRatesNpr, setShopMaterialRatesNpr] = useState<Record<string, number>>({});
+  const [baseMetalPricesNpr, setBaseMetalPricesNpr] = useState<Record<string, number>>({});
+  const [gemstoneRateOptions, setGemstoneRateOptions] = useState<GemstoneRateOption[]>([]);
 
   const [phoneCountryCode, setPhoneCountryCode] = useState("+977");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -122,10 +184,15 @@ export default function QuotesPage() {
   const [materialCode, setMaterialCode] = useState("CUSTOM");
   const [quantity, setQuantity] = useState(1);
   const [targetTotalWeightG, setTargetTotalWeightG] = useState(0);
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>("GRAM");
   const [targetGoldWeightG, setTargetGoldWeightG] = useState(0);
   const [sizeOrLength, setSizeOrLength] = useState("");
+  const [metalCostMode, setMetalCostMode] = useState<PricingMode>("auto");
   const [metalCostNpr, setMetalCostNpr] = useState(0);
   const [makingChargeNpr, setMakingChargeNpr] = useState(0);
+  const [gemstoneCostMode, setGemstoneCostMode] = useState<PricingMode>("manual");
+  const [selectedGemstoneRateKey, setSelectedGemstoneRateKey] = useState("");
+  const [gemstoneCount, setGemstoneCount] = useState(1);
   const [gemstoneCostNpr, setGemstoneCostNpr] = useState(0);
   const [finishCostNpr, setFinishCostNpr] = useState(0);
   const [estimatedDays, setEstimatedDays] = useState(7);
@@ -141,21 +208,115 @@ export default function QuotesPage() {
     [materialCode],
   );
 
+  const resolvedWeightGrams = useMemo(
+    () => targetTotalWeightG * (weightUnit === "TOLA" ? TOLA_TO_GRAMS : 1),
+    [targetTotalWeightG, weightUnit],
+  );
+
+  const materialRateInfo = useMemo(() => {
+    const shopRateNpr = shopMaterialRatesNpr[materialCode];
+    if (shopRateNpr > 0) {
+      return {
+        ratePerGram: shopRateNpr * nprToDisplayCurrency,
+        source: "Store inventory rate",
+      };
+    }
+
+    const baseMetalRateNpr = baseMetalPricesNpr[materialCode];
+    if (baseMetalRateNpr > 0) {
+      return {
+        ratePerGram: baseMetalRateNpr * nprToDisplayCurrency,
+        source: "Store base metal rate",
+      };
+    }
+
+    const liveRate = liveRateForMaterial(marketRateData, materialCode);
+    if (liveRate > 0) {
+      return {
+        ratePerGram: liveRate,
+        source: "Live market rate",
+      };
+    }
+
+    return { ratePerGram: 0, source: "Manual rate" };
+  }, [baseMetalPricesNpr, materialCode, marketRateData, nprToDisplayCurrency, shopMaterialRatesNpr]);
+
+  const autoMetalCost = useMemo(() => {
+    if (!materialRateInfo.ratePerGram || !resolvedWeightGrams) return 0;
+    return Math.round(materialRateInfo.ratePerGram * resolvedWeightGrams * quantity);
+  }, [materialRateInfo.ratePerGram, quantity, resolvedWeightGrams]);
+
+  const selectedGemstoneRate = useMemo(
+    () => gemstoneRateOptions.find((option) => option.key === selectedGemstoneRateKey) ?? null,
+    [gemstoneRateOptions, selectedGemstoneRateKey],
+  );
+
+  const autoGemstoneCost = useMemo(() => {
+    if (!selectedGemstoneRate) return 0;
+    return Math.round(selectedGemstoneRate.effectivePriceNpr * nprToDisplayCurrency * gemstoneCount);
+  }, [gemstoneCount, nprToDisplayCurrency, selectedGemstoneRate]);
+
   const estimateTotal = metalCostNpr + makingChargeNpr + gemstoneCostNpr + finishCostNpr;
   const estimatedTax = Math.round(estimateTotal * 0.03);
   const estimatedTotalWithTax = estimateTotal + estimatedTax;
 
   const loadRates = useCallback(async () => {
     try {
+      setRatesLoading(true);
       const params = getMobileMarketParams(user?.shop ?? null);
-      const res = await materialsApi.getMarketRates(params);
+      const [res, shopMaterialsRes, gemstoneRes, componentRes] = await Promise.all([
+        materialsApi.getMarketRates(params),
+        shopsApi.getMaterials().catch(() => ({ data: { materials: [] } })),
+        shopsApi.getGemstonePricing().catch(() => ({ data: { rates: [] } })),
+        shopsApi.getComponentPricing().catch(() => ({ data: { baseMetalPrices: {} } })),
+      ]);
       const data = res.data;
+      const displayCurrency = toSupportedCurrency(data?.currency ?? params.currency);
+      const fxRates = await fetchFreeFxRates().catch(() => null);
+
+      setMarketRateData(data);
       setGoldRate(readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]));
       setSilverRate(readMetalRate(data, ["SILVER_999", "SILVER_925", "XAG", "SILVER"]));
-      setCurrency(data?.currency ?? params.currency);
+      setCurrency(displayCurrency);
+      setNprToDisplayCurrency(
+        fxRates ? convertCurrencyAmount(1, "NPR", displayCurrency, fxRates) : 1,
+      );
+
+      const materialRates = (shopMaterialsRes.data?.materials ?? []).reduce(
+        (acc: Record<string, number>, material: any) => {
+          const rate = Number(material?.pricePerGramNpr ?? 0);
+          if (material?.code && rate > 0) acc[material.code] = rate;
+          return acc;
+        },
+        {},
+      );
+      setShopMaterialRatesNpr(materialRates);
+      setBaseMetalPricesNpr(componentRes.data?.baseMetalPrices ?? {});
+
+      const gemstoneOptions = (gemstoneRes.data?.rates ?? [])
+        .map((rate: any): GemstoneRateOption | null => {
+          const effectivePriceNpr = Number(rate?.effectivePrice ?? 0);
+          if (!rate?.stoneType || !rate?.sizeCategory || !rate?.qualityTier || effectivePriceNpr <= 0) {
+            return null;
+          }
+          const origin = rate.origin ?? "NATURAL";
+          return {
+            key: [rate.stoneType, origin, rate.sizeCategory, rate.qualityTier].join("|"),
+            label: `${String(rate.stoneType).replace(/_/g, " ")} ${origin === "LAB_GROWN" ? "Lab" : "Natural"} ${rate.sizeCategory} ${rate.qualityTier}`,
+            stoneType: rate.stoneType,
+            origin,
+            sizeCategory: rate.sizeCategory,
+            qualityTier: rate.qualityTier,
+            effectivePriceNpr,
+            shopPriceNpr: rate.shopPrice,
+          };
+        })
+        .filter(Boolean) as GemstoneRateOption[];
+      setGemstoneRateOptions(gemstoneOptions);
     } catch {
       setGoldRate(0);
       setSilverRate(0);
+      setMarketRateData(null);
     } finally {
       setRatesLoading(false);
     }
@@ -164,6 +325,18 @@ export default function QuotesPage() {
   useEffect(() => {
     loadRates();
   }, [loadRates]);
+
+  useEffect(() => {
+    if (metalCostMode === "auto") {
+      setMetalCostNpr(autoMetalCost);
+    }
+  }, [autoMetalCost, metalCostMode]);
+
+  useEffect(() => {
+    if (gemstoneCostMode === "auto") {
+      setGemstoneCostNpr(autoGemstoneCost);
+    }
+  }, [autoGemstoneCost, gemstoneCostMode]);
 
   useEffect(() => {
     setCustomerCity((prev: string) => prev || (user?.shop as any)?.city || "");
@@ -229,13 +402,29 @@ export default function QuotesPage() {
         materialLabel: selectedMaterial.label,
         purity: selectedMaterial.purity,
         quantity,
+        weightInput: targetTotalWeightG || undefined,
+        weightUnit,
+        resolvedWeightGrams: resolvedWeightGrams || undefined,
         sizeOrLength: sizeOrLength.trim() || undefined,
         gemstoneNotes: gemstoneNotes.trim() || undefined,
+        gemstoneRate: selectedGemstoneRate
+          ? {
+              stoneType: selectedGemstoneRate.stoneType,
+              origin: selectedGemstoneRate.origin,
+              sizeCategory: selectedGemstoneRate.sizeCategory,
+              qualityTier: selectedGemstoneRate.qualityTier,
+              count: gemstoneCount,
+              ratePerStone: selectedGemstoneRate.effectivePriceNpr * nprToDisplayCurrency,
+              source: selectedGemstoneRate.shopPriceNpr ? "Store gemstone rate" : "Default gemstone rate",
+            }
+          : undefined,
         finishNotes: finishNotes.trim() || undefined,
         rateReference: {
           currency,
           gold24kRatePerGram: goldRate || undefined,
           silverRatePerGram: silverRate || undefined,
+          materialRatePerGram: materialRateInfo.ratePerGram || undefined,
+          materialRateSource: materialRateInfo.source,
         },
       };
 
@@ -260,7 +449,7 @@ export default function QuotesPage() {
         jewelleryType,
         buildMethod,
         composition,
-        targetTotalWeightG: targetTotalWeightG || undefined,
+        targetTotalWeightG: resolvedWeightGrams || undefined,
         targetGoldWeightG:
           selectedMaterial.category === "GOLD" && targetGoldWeightG
             ? targetGoldWeightG
@@ -330,7 +519,7 @@ h1{color:#b45309;margin:0 0 4px}.muted{color:#6b7280;font-size:12px}.grid{displa
 <h1>${safe(user?.shop?.shopName ?? "Quote")}</h1>
 <div class="muted">${safe((user?.shop as any)?.address ?? "")}</div>
 <div class="grid"><div><div class="muted">QUOTE FOR</div><strong>${safe(customerName)}</strong><div class="muted">${safe(phoneCountryCode)} ${safe(customerPhone)}</div></div><div style="text-align:right"><div class="muted">QUOTE</div><strong>${safe(quoteResult.quoteNumber ?? quoteResult.id)}</strong><div class="muted">${new Date().toLocaleDateString("en-IN")}</div></div></div>
-<div class="box"><div class="row"><span>Jewellery type</span><strong>${safe(jewelleryType.replace(/_/g, " "))}</strong></div><div class="row"><span>Build method</span><strong>${safe(BUILD_METHODS.find((m) => m.value === buildMethod)?.label ?? buildMethod)}</strong></div><div class="row"><span>Material</span><strong>${safe(selectedMaterial.label)}</strong></div><div class="row"><span>Weight</span><strong>${targetTotalWeightG || 0} g</strong></div></div>
+<div class="box"><div class="row"><span>Jewellery type</span><strong>${safe(jewelleryType.replace(/_/g, " "))}</strong></div><div class="row"><span>Build method</span><strong>${safe(BUILD_METHODS.find((m) => m.value === buildMethod)?.label ?? buildMethod)}</strong></div><div class="row"><span>Material</span><strong>${safe(selectedMaterial.label)}</strong></div><div class="row"><span>Weight</span><strong>${resolvedWeightGrams.toFixed(2)} g</strong></div></div>
 <div class="box"><div class="row"><span>Metal/material</span><span>${fmt(metalCostNpr, currency)}</span></div><div class="row"><span>Making</span><span>${fmt(makingChargeNpr, currency)}</span></div><div class="row"><span>Gemstone</span><span>${fmt(gemstoneCostNpr, currency)}</span></div><div class="row"><span>Finish</span><span>${fmt(finishCostNpr, currency)}</span></div><div class="row total"><span>Total estimate</span><span>${fmt(quoteResult.total, currency)}</span></div></div>
 ${specialInstructions.trim() ? `<div class="box notes"><strong>Instructions</strong>\n${safe(specialInstructions.trim())}</div>` : ""}
 ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl}</div>` : ""}
@@ -373,8 +562,14 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             setCustomerEmail("");
             setCustomerAddress("");
             setMatchedCustomerId(null);
+            setTargetTotalWeightG(0);
+            setWeightUnit("GRAM");
+            setMetalCostMode("auto");
             setMetalCostNpr(0);
             setMakingChargeNpr(0);
+            setSelectedGemstoneRateKey("");
+            setGemstoneCount(1);
+            setGemstoneCostMode("manual");
             setGemstoneCostNpr(0);
             setFinishCostNpr(0);
             setSpecialInstructions("");
@@ -520,7 +715,10 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
           </select>
           <select
             value={materialCode}
-            onChange={(event) => setMaterialCode(event.target.value)}
+            onChange={(event) => {
+              setMaterialCode(event.target.value);
+              setMetalCostMode("auto");
+            }}
             className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
             {MATERIAL_OPTIONS.map((material) => (
@@ -528,16 +726,32 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             ))}
           </select>
           <div className="grid grid-cols-2 gap-2">
-            <input
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.01"
-              value={targetTotalWeightG || ""}
-              onChange={(event) => setTargetTotalWeightG(numberFromInput(event.target.value))}
-              placeholder="Total weight g"
-              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-            />
+            <div className="grid grid-cols-[1fr_82px] gap-2">
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={targetTotalWeightG || ""}
+                onChange={(event) => {
+                  setTargetTotalWeightG(numberFromInput(event.target.value));
+                  setMetalCostMode("auto");
+                }}
+                placeholder="Weight"
+                className="min-w-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+              <select
+                value={weightUnit}
+                onChange={(event) => {
+                  setWeightUnit(event.target.value as WeightUnit);
+                  setMetalCostMode("auto");
+                }}
+                className="rounded-xl border border-gray-200 px-2 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                <option value="GRAM">g</option>
+                <option value="TOLA">tola</option>
+              </select>
+            </div>
             <input
               value={sizeOrLength}
               onChange={(event) => setSizeOrLength(event.target.value)}
@@ -557,6 +771,11 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           )}
+          {materialRateInfo.ratePerGram > 0 && resolvedWeightGrams > 0 && (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-700">
+              {fmt(materialRateInfo.ratePerGram, currency)}/g from {materialRateInfo.source}; {resolvedWeightGrams.toFixed(2)}g selected.
+            </p>
+          )}
         </section>
 
         <section className="space-y-3 rounded-2xl border border-gray-100 bg-white p-4">
@@ -565,11 +784,96 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400"><T>Pricing</T></p>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <input type="number" inputMode="decimal" min="0" value={metalCostNpr || ""} onChange={(event) => setMetalCostNpr(numberFromInput(event.target.value))} placeholder="Material cost" className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            <input type="number" inputMode="decimal" min="0" value={makingChargeNpr || ""} onChange={(event) => setMakingChargeNpr(numberFromInput(event.target.value))} placeholder="Making charge" className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            <input type="number" inputMode="decimal" min="0" value={gemstoneCostNpr || ""} onChange={(event) => setGemstoneCostNpr(numberFromInput(event.target.value))} placeholder="Gemstone cost" className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            <input type="number" inputMode="decimal" min="0" value={finishCostNpr || ""} onChange={(event) => setFinishCostNpr(numberFromInput(event.target.value))} placeholder="Finish cost" className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              value={metalCostNpr || ""}
+              onChange={(event) => {
+                setMetalCostMode("manual");
+                setMetalCostNpr(numberFromInput(event.target.value));
+              }}
+              placeholder="Material cost"
+              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              value={makingChargeNpr || ""}
+              onChange={(event) => setMakingChargeNpr(numberFromInput(event.target.value))}
+              placeholder="Making charge"
+              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              value={gemstoneCostNpr || ""}
+              onChange={(event) => {
+                setGemstoneCostMode("manual");
+                setGemstoneCostNpr(numberFromInput(event.target.value));
+              }}
+              placeholder="Gemstone cost"
+              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              value={finishCostNpr || ""}
+              onChange={(event) => setFinishCostNpr(numberFromInput(event.target.value))}
+              placeholder="Finish cost"
+              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
           </div>
+          {autoMetalCost > 0 && (
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2 text-[11px] text-gray-600">
+              <span>
+                {metalCostMode === "auto" ? "Auto material" : "Suggested material"}: {fmt(autoMetalCost, currency)}
+              </span>
+              {metalCostMode === "manual" && (
+                <button
+                  type="button"
+                  onClick={() => setMetalCostMode("auto")}
+                  className="shrink-0 font-semibold text-amber-700"
+                >
+                  Use auto
+                </button>
+              )}
+            </div>
+          )}
+          {gemstoneRateOptions.length > 0 && (
+            <div className="grid grid-cols-[1fr_72px] gap-2">
+              <select
+                value={selectedGemstoneRateKey}
+                onChange={(event) => {
+                  setSelectedGemstoneRateKey(event.target.value);
+                  setGemstoneCostMode(event.target.value ? "auto" : "manual");
+                }}
+                className="min-w-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                <option value="">Gemstone / diamond rate</option>
+                {gemstoneRateOptions.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label} - {fmt(option.effectivePriceNpr * nprToDisplayCurrency, currency)}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                value={gemstoneCount || ""}
+                onChange={(event) => {
+                  setGemstoneCount(Math.max(1, Number.parseInt(event.target.value) || 1));
+                  if (selectedGemstoneRateKey) setGemstoneCostMode("auto");
+                }}
+                placeholder="Qty"
+                className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+          )}
           <input type="number" inputMode="numeric" min="1" value={estimatedDays || ""} onChange={(event) => setEstimatedDays(Math.max(1, Number.parseInt(event.target.value) || 1))} placeholder="Estimated days" className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
           <textarea value={gemstoneNotes} onChange={(event) => setGemstoneNotes(event.target.value)} rows={2} placeholder="Gemstone details (optional)" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
           <textarea value={finishNotes} onChange={(event) => setFinishNotes(event.target.value)} rows={2} placeholder="Finish / plating / polish details" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
