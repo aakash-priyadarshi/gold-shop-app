@@ -135,7 +135,7 @@ const LF = 0x0a;
 
 const enc = (s: string) => new TextEncoder().encode(s);
 
-function concat(parts: (Uint8Array | number[])[]): Uint8Array {
+function concat(parts: (Uint8Array | number[])[]): Uint8Array<ArrayBuffer> {
   const total = parts.reduce(
     (n, p) => n + (p as Uint8Array | number[]).length,
     0,
@@ -181,7 +181,7 @@ export function buildEscPosReceipt(
   payload: ReceiptPayload,
   paperWidth: PaperWidth = 80,
   options: { kickDrawer?: boolean } = {},
-): Uint8Array {
+): Uint8Array<ArrayBuffer> {
   const cols = paperWidth === 58 ? 32 : 48;
   const fmt = (label: string, value: string) => {
     const v = value;
@@ -354,7 +354,7 @@ async function getPairedUsbPrinter(): Promise<UsbDevice | null> {
 }
 
 /** Send raw ESC/POS bytes to the currently paired printer. */
-export async function printReceiptBytes(bytes: Uint8Array): Promise<void> {
+export async function printReceiptBytes(bytes: Uint8Array<ArrayBuffer>): Promise<void> {
   const device = await getPairedUsbPrinter();
   if (!device) throw new Error("No paired USB printer. Pair one in Settings → Hardware.");
   if (!device.configuration) {
@@ -369,11 +369,7 @@ export async function printReceiptBytes(bytes: Uint8Array): Promise<void> {
     (e) => e.direction === "out",
   );
   if (!endpoint) throw new Error("Printer has no OUT endpoint");
-  // Ensure the buffer is a plain ArrayBuffer (not SharedArrayBuffer) for WebUSB
-  const safeBytes = bytes.buffer instanceof ArrayBuffer
-    ? bytes
-    : new Uint8Array(bytes);
-  await device.transferOut(endpoint.endpointNumber, safeBytes);
+  await device.transferOut(endpoint.endpointNumber, bytes);
 }
 
 /** Convenience: build + print a receipt using the saved config. */
