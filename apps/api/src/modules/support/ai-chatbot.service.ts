@@ -623,7 +623,7 @@ Recent orders: ${recentOrders}
 Year-to-date sales: ${this.formatCurrency(snapshot.yearlySales, snapshot.currency)}
 Tax audit status: ${auditStatus}
 
-CRM FEATURE MAP:
+CRM FEATURE MAP (DESKTOP — left sidebar navigation):
 - Dashboard overview: /dashboard/shop
 - Orders: /dashboard/shop/orders
 - Customers CRM: /dashboard/shop/customers
@@ -634,12 +634,34 @@ CRM FEATURE MAP:
 - POS: /dashboard/shop/pos
 - Support: /dashboard/shop/support
 
+MOBILE FEATURE MAP (bottom tabs + More menu):
+- Quick Bill / POS: /m/pos
+- Quotes: /m/quotes
+- Orders: /m/orders
+- Customers: /m/customers
+- Daily Summary: /m/summary
+- Old Gold Exchange: /m/exchange
+- Pending Payments: /m/pending
+- Repairs: /m/repairs
+- Rate Card: /m/rate-card
+- WhatsApp Broadcast: /m/broadcast
+- Tax Audit: /m/tax
+- Purity Calculator: /m/purity
+- Catalogue Share: /m/catalogue
+- Custom RFQ: /m/rfq
+- Savings Schemes: /m/savings
+- Occasions: /m/occasions
+- Store Settings: /m/settings
+- All gold/silver rates are shown at the top of the mobile screen (24K, 22K, 18K, Silver)
+- Extra tools are under the "More" tab at the bottom right
+
 COUNTRY-SPECIFIC TAX GUIDANCE:
 ${this.getSellerTaxGuidance(snapshot)}
 
 SELLER RESPONSE RULES:
 - Answer with this seller's data only. Never mention or infer another seller's data.
-- If the seller asks where to click, use the left sidebar label and the route map above.
+- If the seller is currently on a mobile path (starts with /m/), guide them using the MOBILE FEATURE MAP and mobile UI language ("tap the More tab", "open Tax Audit from the More menu"). Do NOT mention the desktop left sidebar.
+- If the seller is on a desktop path (/dashboard/), guide them using the DESKTOP CRM FEATURE MAP and desktop UI language ("open Tax Reports from the left sidebar").
 - If a requested metric is unavailable, say it is unavailable instead of inventing it.
 - Prefer direct, operational instructions for CRM navigation and tax-report workflows.`;
   }

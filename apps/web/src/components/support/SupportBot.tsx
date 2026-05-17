@@ -365,7 +365,7 @@ export function SupportBot() {
               width: `${launcherSizePx}px`,
               height: `${launcherSizePx}px`,
             }}
-            className="rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-grab active:cursor-grabbing shrink-0"
+            className="rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-grab active:cursor-grabbing shrink-0 relative"
             onMouseEnter={() => setBubbleVisible(true)}
             onMouseLeave={() => setBubbleVisible(false)}
           >
@@ -375,22 +375,36 @@ export function SupportBot() {
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
             </span>
           </button>
+          {/* Dismiss button — visible on mobile, hidden on desktop */}
+          {isMobile && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                dismissChat();
+              }}
+              className="absolute -top-0.5 -left-0.5 h-4 w-4 bg-white text-gray-500 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 shadow-sm z-10"
+              title="Hide chat widget"
+              aria-label="Hide chat widget"
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          )}
         </div>
       )}
 
       {/* Panel */}
       {open && (
         <div
-          style={{ right: `${currentRight}px`, bottom: `${currentBottom}px` }}
-          className={`fixed z-[60] w-[calc(100vw-2rem)] sm:w-[380px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden ${
-            isMobile
-              ? "h-[min(70vh,560px)] max-h-[calc(100dvh-7rem)]"
-              : "h-[560px] max-h-[calc(100vh-3rem)]"
-          }`}
+          style={isMobile ? undefined : { right: `${currentRight}px`, bottom: `${currentBottom}px` }}
+          className={isMobile
+            ? "fixed inset-0 z-[60] bg-white dark:bg-gray-900 flex flex-col"
+            : `fixed z-[60] w-[380px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden h-[560px] max-h-[calc(100vh-3rem)]`
+          }
         >
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-br from-amber-500 to-orange-600 text-white">
-            <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center">
+          <div className={`flex items-center gap-3 px-4 bg-gradient-to-br from-amber-500 to-orange-600 text-white ${isMobile ? "py-3 pt-[max(0.75rem,env(safe-area-inset-top))]" : "py-3"}`}>
+            <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
               <Sparkles className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
@@ -528,7 +542,7 @@ export function SupportBot() {
               <Send className="h-4 w-4" />
             </Button>
           </form>
-          <p className="text-[10px] text-center text-gray-400 dark:text-gray-500 pb-1.5">
+          <p className={`text-[10px] text-center text-gray-400 dark:text-gray-500 ${isMobile ? "pb-[max(0.375rem,env(safe-area-inset-bottom))]" : "pb-1.5"}`}>
             Need a human?{" "}
             <a
               href={`https://wa.me/${FOUNDER.phone.replace("+", "")}`}
