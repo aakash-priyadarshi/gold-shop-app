@@ -40,7 +40,7 @@ const MOBILE_TO_BACKEND_FEATURE: Record<string, string | null> = {
   // key (e.g. customerManagement) would unlock the UI but the API would still
   // return 403.
   mobileCustomers: "crm",
-  mobileTaxReports: "taxReports",
+  mobileTaxReports: "taxReportsDownload",
   mobileWhatsAppShare: "crm",
   mobileCatalogue: "crm",
 };

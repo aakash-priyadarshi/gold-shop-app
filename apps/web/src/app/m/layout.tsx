@@ -19,6 +19,7 @@ import {
     ChevronRight,
     FileText,
     FlaskConical,
+    Gem,
     Image,
     LogOut,
     MessageCircle,
@@ -58,6 +59,25 @@ interface GoldRate {
   silver: number;
   currency: string;
   updatedAt: string;
+}
+
+function readMetalRate(data: any, codes: string[]): number {
+  const metals = data?.metals;
+  if (Array.isArray(metals)) {
+    const match = metals.find((m: any) => codes.includes(m.code));
+    return Number(match?.ratePerGram ?? match?.rate ?? 0);
+  }
+  if (metals && typeof metals === "object") {
+    for (const code of codes) {
+      const value = metals[code];
+      if (typeof value === "number") return value;
+      if (value && typeof value === "object") {
+        const nested = Number(value.ratePerGram ?? value.rate ?? 0);
+        if (nested > 0) return nested;
+      }
+    }
+  }
+  return 0;
 }
 
 const BOTTOM_TABS = [
@@ -109,9 +129,10 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
     { href: "/m/rate-card", icon: Image, label: "Rate Card", desc: "Share today's gold rates" },
     { href: "/m/broadcast", icon: MessageCircle, label: "Rate Broadcast", desc: "1-tap WhatsApp morning message" },
     { href: "/m/catalogue", icon: Send, label: "Catalogue Share", desc: "Send live inventory on WhatsApp" },
+    { href: "/m/rfq", icon: Gem, label: "3-Step RFQ", desc: "Guided custom order request" },
     { href: "/m/exchange", icon: Scale, label: "Old Gold Exchange", desc: "Calculate buyback value" },
     { href: "/m/summary", icon: BarChart2, label: "Daily Summary", desc: "Today's sales & revenue" },
-    { href: "/m/tax", icon: Receipt, label: "Tax Reports", desc: "GST · VAT · MTD · OSS — 6 countries" },
+    { href: "/m/tax", icon: Receipt, label: "Tax Audit", desc: "Audit-ready GST/VAT/MTD reports" },
     { href: "/m/repairs", icon: Wrench, label: "Repairs", desc: "Track repair jobs" },
     { href: "/m/savings", icon: FileText, label: "Savings Schemes", desc: "Customer gold savings" },
     { href: "/m/alerts", icon: Bell, label: "Rate Alerts", desc: "Price threshold notifications" },
@@ -226,21 +247,23 @@ export default function MobileLayout({
       const params = getMobileMarketParams(user?.shop ?? null);
       const res = await materialsApi.getMarketRates(params);
       const data = res.data;
-      // Normalise to a flat rate object
-      const gold = data?.metals?.find?.(
-        (m: any) => m.code === "XAU" || m.code === "GOLD",
-      );
-      const silver = data?.metals?.find?.(
-        (m: any) => m.code === "XAG" || m.code === "SILVER",
-      );
-      const ratePerGram = gold?.ratePerGram ?? gold?.rate ?? 0;
+      // Normalise both backend shapes used in the app:
+      // - RFQ/PC market rates: { metals: { GOLD_24K, GOLD_22K, ... } }
+      // - Legacy rates:       { metals: [{ code, ratePerGram }] }
+      const rate24k = readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]);
+      const rate22k = readMetalRate(data, ["GOLD_22K"]);
+      const rate18k = readMetalRate(data, ["GOLD_18K"]);
+      const silver = readMetalRate(data, ["SILVER_999", "SILVER_925", "XAG", "SILVER"]);
       setRates({
-        rate24k: Math.round(ratePerGram),
-        rate22k: Math.round(ratePerGram * (22 / 24)),
-        rate18k: Math.round(ratePerGram * (18 / 24)),
-        silver: Math.round(silver?.ratePerGram ?? silver?.rate ?? 0),
+        rate24k: Math.round(rate24k),
+        rate22k: Math.round(rate22k || rate24k * (22 / 24)),
+        rate18k: Math.round(rate18k || rate24k * (18 / 24)),
+        silver: Math.round(silver),
         currency: data?.currency ?? params.currency,
-        updatedAt: new Date().toLocaleTimeString([], {
+        updatedAt: data?.updatedAt ? new Date(data.updatedAt).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }) : new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),

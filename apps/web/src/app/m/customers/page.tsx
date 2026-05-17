@@ -3,6 +3,7 @@
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
 import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { customerCrmApi } from "@/lib/api";
 import {
     ChevronRight,
@@ -16,12 +17,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Customer {
   id: string;
+  type?: "REGISTERED" | "WALK_IN";
+  name?: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
   email?: string;
+  orderCount?: number;
   totalOrders?: number;
+  rfqCount?: number;
+  quoteCount?: number;
+  totalSpent?: number;
   totalSpentNpr?: number;
+  lastActive?: string;
   lastOrderDate?: string;
 }
 
@@ -29,7 +37,9 @@ interface CustomerProfile {
   customer: Customer;
   stats: {
     totalOrders: number;
+    totalSpent?: number;
     totalSpentNpr: number;
+    averageOrderValue?: number;
     avgOrderValueNpr: number;
     lastOrderDate: string;
   };
@@ -41,6 +51,14 @@ interface CustomerProfile {
   }[];
 }
 
+function getCustomerName(customer?: Customer | null, fallback = "Customer") {
+  const fullName = [customer?.firstName, customer?.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return customer?.name || fullName || customer?.email || customer?.phone || fallback;
+}
+
 function CustomerCard({
   customer,
   onSelect,
@@ -48,7 +66,10 @@ function CustomerCard({
   customer: Customer;
   onSelect: () => void;
 }) {
-  const name = [customer.firstName, customer.lastName].filter(Boolean).join(" ") || "Unknown";
+  const name = getCustomerName(customer, "Unknown");
+  const totalOrders = customer.orderCount ?? customer.totalOrders;
+  const totalSpent = customer.totalSpent ?? customer.totalSpentNpr;
+  const { format } = useShopCurrency();
   return (
     <button
       onClick={onSelect}
@@ -56,7 +77,7 @@ function CustomerCard({
     >
       <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
         <span className="text-sm font-bold text-amber-600">
-          {(customer.firstName?.[0] ?? customer.email?.[0] ?? "?").toUpperCase()}
+          {(name[0] ?? "?").toUpperCase()}
         </span>
       </div>
       <div className="flex-1 min-w-0">
@@ -66,12 +87,12 @@ function CustomerCard({
         </p>
       </div>
       <div className="text-right flex-shrink-0">
-        {customer.totalOrders !== undefined && (
-          <p className="text-xs text-gray-400">{customer.totalOrders} orders</p>
+        {totalOrders !== undefined && (
+          <p className="text-xs text-gray-400">{totalOrders} orders</p>
         )}
-        {customer.totalSpentNpr !== undefined && (
+        {totalSpent !== undefined && totalSpent > 0 && (
           <p className="text-xs font-semibold text-amber-700">
-            NPR {customer.totalSpentNpr.toLocaleString()}
+            {format(totalSpent)}
           </p>
         )}
       </div>
@@ -112,7 +133,10 @@ function ProfileDrawer({
   }, [customerId]);
 
   const c = profile?.customer;
-  const name = [c?.firstName, c?.lastName].filter(Boolean).join(" ") || "Customer";
+  const name = getCustomerName(c, "Customer");
+  const { format } = useShopCurrency();
+  const totalSpent = profile?.stats?.totalSpent ?? profile?.stats?.totalSpentNpr ?? 0;
+  const avgOrderValue = profile?.stats?.averageOrderValue ?? profile?.stats?.avgOrderValueNpr ?? 0;
 
   return (
     <div className="fixed inset-0 z-40 bg-white flex flex-col">
@@ -153,11 +177,11 @@ function ProfileDrawer({
               />
               <StatBox
                 label="Total Spent"
-                value={`NPR ${(profile.stats?.totalSpentNpr ?? 0).toLocaleString()}`}
+                value={format(totalSpent)}
               />
               <StatBox
                 label="Avg Order"
-                value={`NPR ${(profile.stats?.avgOrderValueNpr ?? 0).toLocaleString()}`}
+                value={format(avgOrderValue)}
               />
               <StatBox
                 label="Last Order"
@@ -196,7 +220,7 @@ function ProfileDrawer({
                       </span>
                     </div>
                     <p className="text-sm font-bold text-amber-700">
-                      NPR {o.totalNpr?.toLocaleString()}
+                      {format(o.totalNpr ?? 0)}
                     </p>
                   </div>
                 ))}

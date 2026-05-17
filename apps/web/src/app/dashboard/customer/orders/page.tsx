@@ -419,7 +419,7 @@ export default function CustomerOrdersPage() {
                           : t(`No ${activeTab} orders`)}
                       </p>
                       <Button asChild>
-                        <Link href="/dashboard/customer/rfqs/new">
+                        <Link href="/rfq/create">
                           <T>Request a Quote</T>
                         </Link>
                       </Button>

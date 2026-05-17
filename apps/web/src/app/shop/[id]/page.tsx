@@ -8,9 +8,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCart } from "@/contexts/CartContext";
+import { useCurrencyConversion } from "@/hooks/useCurrencyConversion";
 import { toast } from "@/hooks/use-toast";
+import { useTaxRules } from "@/hooks/useTaxRules";
+import { getApiUrl } from "@/lib/api";
+import {
+  formatCurrencyAmount,
+  getCurrencyForCountry,
+  type SupportedCurrencyCode,
+} from "@/lib/currency";
 import { getImageUrl } from "@/lib/image-upload";
 import { useT } from "@/providers/translation-provider";
+import { usePreferencesStore } from "@/store/preferences";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -75,13 +84,11 @@ interface InventoryItem {
     addressLine1?: string;
     city?: string;
     phone?: string;
+    country?: string;
+    currency?: SupportedCurrencyCode;
     isVerified: boolean;
   };
 }
-
-import { useTaxRules } from "@/hooks/useTaxRules";
-import { getApiUrl } from "@/lib/api";
-import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 
 const API_URL = getApiUrl();
 
@@ -101,8 +108,8 @@ export default function ProductDetailPage() {
 
   // Get currency and country from global preferences store
   const currency = usePreferencesStore((state) => state.currency);
-  const currencyInfo = CURRENCIES[currency] || CURRENCIES.USD;
   const country = usePreferencesStore((state) => state.country);
+  const { formatWithConversion } = useCurrencyConversion();
 
   // Fetch dynamic tax rules for customer's country
   const { getTaxBreakdown, loading: taxLoading } = useTaxRules(country);
@@ -223,23 +230,21 @@ export default function ProductDetailPage() {
     }
   };
 
-  // Format price in user's preferred currency
-  const formatPrice = (priceNpr: number) => {
-    // TODO: Convert from NPR to user's currency using exchange rates
-    // For now, show in NPR with indication of user's currency preference
-    if (!mounted) {
-      return new Intl.NumberFormat("ne-NP", {
-        style: "currency",
-        currency: "NPR",
-        minimumFractionDigits: 0,
-      }).format(priceNpr);
-    }
+  const productCurrency =
+    item?.shop?.currency ?? getCurrencyForCountry(item?.shop?.country, "NPR");
 
-    return new Intl.NumberFormat(currencyInfo?.locale || "en-US", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-    }).format(priceNpr);
+  // Inventory amount fields are legacy-named *Npr, but seller inventory forms
+  // store amounts in the shop's local currency. Display from that source and
+  // use the platform's free FX converter only when the buyer selected another
+  // display currency.
+  const formatPrice = (amount: number) => {
+    if (!mounted) return formatCurrencyAmount(amount, productCurrency);
+    return formatWithConversion(amount, {
+      fromCurrency: productCurrency,
+      toCurrency: currency,
+      showOriginal: productCurrency !== currency,
+      decimals: 0,
+    });
   };
 
   if (loading) {

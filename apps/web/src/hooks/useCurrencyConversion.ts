@@ -1,43 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useMarket, CurrencyCode, CURRENCY_SYMBOLS } from './useMarket';
-
-interface FxRates {
-  NPR: number;
-  INR: number;
-  USD: number;
-  GBP: number;
-  EUR: number;
-  AED: number;
-}
-
-interface MarketRatesResponse {
-  fx: {
-    pair: string;
-    rate: number;
-    source: string;
-    updatedAt: string;
-  };
-  currency: string;
-}
-
-// Default FX rates (USD as base)
-const DEFAULT_FX_RATES: FxRates = {
-  USD: 1,
-  NPR: 133.5,
-  INR: 83.5,
-  GBP: 0.79,
-  EUR: 0.92,
-  AED: 3.67,
-};
+import {
+  CURRENCY_SYMBOLS,
+  DEFAULT_USD_FX_RATES,
+  convertCurrencyAmount,
+  fetchFreeFxRates,
+  type SupportedCurrencyCode,
+} from '@/lib/currency';
+import { useMarket, type CurrencyCode } from './useMarket';
 
 // Cache for FX rates
-let fxRatesCache: { rates: FxRates; expiresAt: Date } | null = null;
+let fxRatesCache: { rates: Record<SupportedCurrencyCode, number>; expiresAt: Date } | null = null;
 
 export function useCurrencyConversion() {
   const { selectedCurrency } = useMarket();
-  const [fxRates, setFxRates] = useState<FxRates>(DEFAULT_FX_RATES);
+  const [fxRates, setFxRates] = useState<Record<SupportedCurrencyCode, number>>(DEFAULT_USD_FX_RATES);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,46 +33,7 @@ export function useCurrencyConversion() {
       setError(null);
 
       try {
-        // Fetch rates for each currency to build conversion table
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.orivraa.com';
-        const currencies: CurrencyCode[] = ['NPR', 'INR', 'USD', 'GBP', 'EUR', 'AED'];
-        
-        const rates: FxRates = { ...DEFAULT_FX_RATES };
-        
-        // Fetch USD to NPR rate as base
-        const nprResponse = await fetch(`${API_URL}/market-rates?currency=NPR`);
-        if (nprResponse.ok) {
-          const nprData: MarketRatesResponse = await nprResponse.json();
-          rates.NPR = nprData.fx?.rate || DEFAULT_FX_RATES.NPR;
-        }
-
-        // Fetch USD to INR rate
-        const inrResponse = await fetch(`${API_URL}/market-rates?currency=INR`);
-        if (inrResponse.ok) {
-          const inrData: MarketRatesResponse = await inrResponse.json();
-          rates.INR = inrData.fx?.rate || DEFAULT_FX_RATES.INR;
-        }
-
-        // Fetch USD to GBP rate
-        const gbpResponse = await fetch(`${API_URL}/market-rates?currency=GBP`);
-        if (gbpResponse.ok) {
-          const gbpData: MarketRatesResponse = await gbpResponse.json();
-          rates.GBP = gbpData.fx?.rate || DEFAULT_FX_RATES.GBP;
-        }
-
-        // Fetch USD to EUR rate
-        const eurResponse = await fetch(`${API_URL}/market-rates?currency=EUR`);
-        if (eurResponse.ok) {
-          const eurData: MarketRatesResponse = await eurResponse.json();
-          rates.EUR = eurData.fx?.rate || DEFAULT_FX_RATES.EUR;
-        }
-
-        // Fetch USD to AED rate
-        const aedResponse = await fetch(`${API_URL}/market-rates?currency=AED`);
-        if (aedResponse.ok) {
-          const aedData: MarketRatesResponse = await aedResponse.json();
-          rates.AED = aedData.fx?.rate || DEFAULT_FX_RATES.AED;
-        }
+        const rates = await fetchFreeFxRates();
 
         // Cache the rates for 5 minutes
         fxRatesCache = {
@@ -122,24 +61,13 @@ export function useCurrencyConversion() {
    * @param toCurrency Target currency (defaults to user's selected currency)
    */
   const convertCurrency = useCallback(
-    (amount: number, fromCurrency: CurrencyCode = 'NPR', toCurrency?: CurrencyCode): number => {
+    (
+      amount: number,
+      fromCurrency: SupportedCurrencyCode = 'NPR',
+      toCurrency?: SupportedCurrencyCode,
+    ): number => {
       const targetCurrency = toCurrency || selectedCurrency;
-      
-      if (fromCurrency === targetCurrency) {
-        return amount;
-      }
-
-      // Convert from source to USD, then from USD to target
-      const fromRate = fxRates[fromCurrency];
-      const toRate = fxRates[targetCurrency];
-
-      // amount in source currency -> USD -> target currency
-      // amount / fromRate = USD amount
-      // USD amount * toRate = target currency amount
-      const amountInUsd = amount / fromRate;
-      const convertedAmount = amountInUsd * toRate;
-
-      return convertedAmount;
+      return convertCurrencyAmount(amount, fromCurrency, targetCurrency, fxRates);
     },
     [fxRates, selectedCurrency]
   );
@@ -153,8 +81,8 @@ export function useCurrencyConversion() {
     (
       amount: number,
       options?: {
-        fromCurrency?: CurrencyCode;
-        toCurrency?: CurrencyCode;
+        fromCurrency?: SupportedCurrencyCode;
+        toCurrency?: SupportedCurrencyCode;
         showOriginal?: boolean;
         decimals?: number;
       }
@@ -188,7 +116,7 @@ export function useCurrencyConversion() {
    * Get the FX rate between two currencies
    */
   const getRate = useCallback(
-    (fromCurrency: CurrencyCode, toCurrency: CurrencyCode): number => {
+    (fromCurrency: SupportedCurrencyCode, toCurrency: SupportedCurrencyCode): number => {
       const fromRate = fxRates[fromCurrency];
       const toRate = fxRates[toCurrency];
       return toRate / fromRate;

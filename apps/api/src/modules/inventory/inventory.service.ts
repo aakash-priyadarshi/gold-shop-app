@@ -247,7 +247,11 @@ export class InventoryService {
             shopName: true,
             shopNameNe: true,
             shopNameHi: true,
+            country: true,
+            currency: true,
             city: true,
+            address: true,
+            contactPhone: true,
             isVerified: true,
             metalRates: {
               orderBy: { lastUpdatedAt: "desc" },

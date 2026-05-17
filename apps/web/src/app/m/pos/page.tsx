@@ -4,6 +4,11 @@ import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
 import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { BarcodeScannerSheet } from "@/components/mobile/BarcodeScannerSheet";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import {
+  formatCurrencyAmount,
+  getCurrencyForCountry,
+  type SupportedCurrencyCode,
+} from "@/lib/currency";
 import { loadHardwareConfig, printReceipt } from "@/lib/posHardware";
 import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
@@ -20,10 +25,12 @@ import {
     ScanLine,
     Search,
     Share2,
+    ShoppingCart,
     Trash2,
     X,
 } from "lucide-react";
 import Image from "next/image";
+  import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface InventoryItem {
@@ -34,7 +41,11 @@ interface InventoryItem {
   totalPriceNpr: number;
   stockQuantity: number;
   weightGrams?: number;
+  totalWeightGrams?: number;
   metalPurity?: string;
+  jewelleryType?: string;
+  descriptionEn?: string;
+  descriptionNe?: string;
 }
 
 interface CartItem {
@@ -52,18 +63,20 @@ const PAYMENT_METHODS = [
   { value: "BANK", label: "Bank Transfer" },
 ];
 
-function formatNPR(amount: number) {
-  return `NPR ${amount.toLocaleString("en-IN")}`;
+function formatMoney(amount: number, currency: SupportedCurrencyCode) {
+  return formatCurrencyAmount(amount, currency);
 }
 
 function CartDrawer({
   cart,
+  currency,
   onQtyChange,
   onRemove,
   onCheckout,
   onClose,
 }: {
   cart: CartItem[];
+  currency: SupportedCurrencyCode;
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
   onCheckout: (
@@ -154,7 +167,7 @@ function CartDrawer({
               <p className="text-sm font-medium text-gray-900 truncate">
                 {c.item.nameEn}
               </p>
-              <p className="text-xs text-gray-500">{formatNPR(c.unitPrice)} <T>each</T></p>
+              <p className="text-xs text-gray-500">{formatMoney(c.unitPrice, currency)} <T>each</T></p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -209,21 +222,21 @@ function CartDrawer({
         <div className="mt-3 pt-3 border-t space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-500"><T>Subtotal</T></span>
-            <span>{formatNPR(subtotal)}</span>
+            <span>{formatMoney(subtotal, currency)}</span>
           </div>
           {making > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-gray-500"><T>Making Charge</T> ({makingPct}%)</span>
-              <span>{formatNPR(making)}</span>
+              <span>{formatMoney(making, currency)}</span>
             </div>
           )}
           <div className="flex justify-between text-sm">
             <span className="text-gray-500"><T>Tax (3%)</T></span>
-            <span>{formatNPR(tax)}</span>
+            <span>{formatMoney(tax, currency)}</span>
           </div>
           <div className="flex justify-between text-base font-bold border-t pt-2">
             <span><T>Total</T></span>
-            <span className="text-amber-700">{formatNPR(total + tax)}</span>
+            <span className="text-amber-700">{formatMoney(total + tax, currency)}</span>
           </div>
         </div>
 
@@ -304,7 +317,7 @@ function CartDrawer({
           ) : (
             <Check className="h-5 w-5" />
           )}
-          {t("Confirm Bill")} — {formatNPR(total + tax)}
+          {t("Confirm Bill")} — {formatMoney(total + tax, currency)}
         </button>
       </div>
     </div>
@@ -314,17 +327,19 @@ function CartDrawer({
 function BillSuccess({
   quoteId,
   total,
+  currency,
   customerPhone,
   onNew,
 }: {
   quoteId: string;
   total: number;
+  currency: SupportedCurrencyCode;
   customerPhone?: string;
   onNew: () => void;
 }) {
   const trackUrl = `${typeof window !== "undefined" ? window.location.origin : "https://orivraa.com"}/track/${quoteId}`;
   const whatsappMsg = encodeURIComponent(
-    `Thank you for your purchase at our store!\n\nBill Amount: NPR ${total.toLocaleString()}\nView/Download Bill: ${trackUrl}`,
+    `Thank you for your purchase at our store!\n\nBill Amount: ${formatMoney(total, currency)}\nView/Download Bill: ${trackUrl}`,
   );
   const whatsappUrl = customerPhone
     ? `https://wa.me/${customerPhone.replace(/\D/g, "")}?text=${whatsappMsg}`
@@ -338,7 +353,7 @@ function BillSuccess({
       <div>
         <h2 className="text-xl font-bold text-gray-900"><T>Bill Created!</T></h2>
         <p className="text-sm text-gray-500 mt-1">
-          {formatNPR(total)} — <T>Payment recorded</T>
+          {formatMoney(total, currency)} — <T>Payment recorded</T>
         </p>
       </div>
 
@@ -372,6 +387,162 @@ function BillSuccess({
   );
 }
 
+function ProductDetailSheet({
+  item,
+  currency,
+  inCartQty,
+  loading,
+  onAdd,
+  onQtyChange,
+  onRemove,
+  onClose,
+}: {
+  item: InventoryItem;
+  currency: SupportedCurrencyCode;
+  inCartQty: number;
+  loading: boolean;
+  onAdd: () => void;
+  onQtyChange: (qty: number) => void;
+  onRemove: () => void;
+  onClose: () => void;
+}) {
+  const image = item.images?.[0];
+  const weight = item.totalWeightGrams ?? item.weightGrams;
+
+  return (
+    <div className="fixed inset-0 z-30 bg-white flex flex-col">
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
+        <div>
+          <p className="text-xs text-gray-400"><T>Product details</T></p>
+          <h2 className="text-base font-semibold text-gray-900 line-clamp-1">
+            {item.nameEn}
+          </h2>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-2 rounded-full text-gray-400 hover:bg-gray-100"
+          aria-label="Close product details"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="aspect-square w-full rounded-2xl bg-gray-100 relative overflow-hidden">
+          {image ? (
+            <Image
+              src={image}
+              alt={item.nameEn}
+              fill
+              className="object-cover"
+              sizes="100vw"
+            />
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <ScanLine className="h-12 w-12 text-gray-300" />
+            </div>
+          )}
+          {loading && (
+            <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">{item.nameEn}</h3>
+              <p className="text-xs text-gray-400">SKU {item.sku || item.id}</p>
+            </div>
+            <p className="text-base font-bold text-amber-700 whitespace-nowrap">
+              {formatMoney(item.totalPriceNpr ?? 0, currency)}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {item.jewelleryType && (
+              <span className="px-2 py-1 rounded-full bg-gray-100 text-xs text-gray-600">
+                {item.jewelleryType.replace(/_/g, " ")}
+              </span>
+            )}
+            {item.metalPurity && (
+              <span className="px-2 py-1 rounded-full bg-amber-100 text-xs text-amber-700">
+                {item.metalPurity}
+              </span>
+            )}
+            {weight ? (
+              <span className="px-2 py-1 rounded-full bg-gray-100 text-xs text-gray-600">
+                {weight}g
+              </span>
+            ) : null}
+            <span className="px-2 py-1 rounded-full bg-gray-100 text-xs text-gray-600">
+              {item.stockQuantity} in stock
+            </span>
+          </div>
+        </div>
+
+        {(item.descriptionEn || item.descriptionNe) && (
+          <div className="rounded-2xl bg-gray-50 p-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase mb-2">
+              <T>Description</T>
+            </p>
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {item.descriptionEn || item.descriptionNe}
+            </p>
+          </div>
+        )}
+
+        <Link
+          href={`/shop/${item.id}`}
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-700"
+        >
+          <Share2 className="h-4 w-4" />
+          <T>Open full product page</T>
+        </Link>
+      </div>
+
+      <div className="p-4 border-t bg-white space-y-2">
+        {inCartQty > 0 ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onQtyChange(inCartQty - 1)}
+              className="h-12 w-12 rounded-2xl border border-gray-200 flex items-center justify-center"
+              aria-label="Decrease quantity"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <div className="flex-1 h-12 rounded-2xl bg-amber-50 text-amber-800 flex items-center justify-center text-sm font-bold">
+              {inCartQty} <T>in bill</T>
+            </div>
+            <button
+              onClick={() => onQtyChange(inCartQty + 1)}
+              className="h-12 w-12 rounded-2xl border border-gray-200 flex items-center justify-center"
+              aria-label="Increase quantity"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onRemove}
+              className="h-12 w-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center"
+              aria-label="Remove from bill"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onAdd}
+            className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            <T>Add to Bill</T>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function MobilePOSPage() {
   const { user } = useAuth();
   const t = useT();
@@ -387,9 +558,14 @@ export default function MobilePOSPage() {
     customerPhone?: string;
   } | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const shopId = user?.shop?.id;
+  const shopCurrency: SupportedCurrencyCode =
+    (user?.shop?.currency as SupportedCurrencyCode | undefined) ??
+    getCurrencyForCountry(user?.shop?.country, "NPR");
 
   const loadInventory = useCallback(
     async (q?: string) => {
@@ -432,6 +608,19 @@ export default function MobilePOSPage() {
       return [...prev, { item, qty: 1, unitPrice: item.totalPriceNpr ?? 0 }];
     });
   }, [haptic]);
+
+  const openProductDetails = useCallback(async (item: InventoryItem) => {
+    setSelectedItem(item);
+    setDetailLoading(true);
+    try {
+      const res = await inventoryApi.getById(item.id);
+      setSelectedItem({ ...item, ...(res.data ?? {}) });
+    } catch {
+      setSelectedItem(item);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
 
   const handleScannedCode = useCallback(
     async (code: string) => {
@@ -478,7 +667,9 @@ export default function MobilePOSPage() {
 
   // Global keyboard-wedge scanner – fires anywhere on the POS page when an
   // attached HID scanner sends a burst of keystrokes ending in Enter.
-  useBarcodeScanner(handleScannedCode, { ignoreEditable: true });  const updateQty = (itemId: string, qty: number) => {
+  useBarcodeScanner(handleScannedCode, { ignoreEditable: true });
+
+  const updateQty = (itemId: string, qty: number) => {
     if (qty <= 0) {
       setCart((prev) => prev.filter((c) => c.item.id !== itemId));
     } else {
@@ -543,7 +734,7 @@ export default function MobilePOSPage() {
       setBillResult({ quoteId: billId, total, customerPhone });
       setCart([]);
       haptic("success");
-      toast({ title: "Bill created", description: `${formatNPR(total)}` });
+      toast({ title: "Bill created", description: `${formatMoney(total, shopCurrency)}` });
 
       // Auto-print receipt if a printer is configured
       const hw = loadHardwareConfig();
@@ -595,6 +786,7 @@ export default function MobilePOSPage() {
       <BillSuccess
         quoteId={billResult.quoteId}
         total={billResult.total}
+        currency={shopCurrency}
         customerPhone={billResult.customerPhone}
         onNew={() => setBillResult(null)}
       />
@@ -608,18 +800,27 @@ export default function MobilePOSPage() {
         <div className="flex items-center justify-between px-4 pt-3 pb-1 bg-white">
           <div>
             <h1 className="text-base font-bold text-gray-900"><T>Quick Bill</T></h1>
-            <p className="text-[11px] text-gray-400">{cart.length > 0 ? `${cart.length} item${cart.length === 1 ? "" : "s"} in cart` : t("Tap items to add to bill")}</p>
+            <p className="text-[11px] text-gray-400">{cart.length > 0 ? `${cart.length} item${cart.length === 1 ? "" : "s"} in cart` : t("Tap products to view, use cart buttons to add")}</p>
           </div>
-          <MobileHelpButton
-            title="Quick Bill"
-            description="The fastest way to create a jewelry bill on your phone — search, tap, weigh, share."
-            tips={[
-              "Search a product by name or SKU, then tap to add to cart",
-              "Adjust weight, purity (24K/22K/18K) and making charge per item",
-              "GST/VAT and gold rate are calculated automatically",
-              "Tap the cart bar at the bottom to checkout and share invoice on WhatsApp",
-            ]}
-          />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setScannerOpen(true)}
+              className="h-9 px-3 rounded-xl bg-amber-100 text-amber-700 text-xs font-semibold flex items-center gap-1.5 active:bg-amber-200"
+            >
+              <ScanLine className="h-4 w-4" />
+              <T>Scan</T>
+            </button>
+            <MobileHelpButton
+              title="Quick Bill"
+              description="The fastest way to create a jewelry bill on your phone — search, view product details, add to bill, scan, and share."
+              tips={[
+                "Tap a product card to view product details from the same inventory source as the PC product page",
+                "Use the cart buttons on each product to add, decrease, or remove items from the bill",
+                "Tap Scan for camera barcode scanning; a USB/Bluetooth scanner works anywhere on this screen",
+                "Tap the cart bar at the bottom to checkout and share invoice on WhatsApp",
+              ]}
+            />
+          </div>
         </div>
         {/* Search bar */}
         <div data-tour="m-pos-search" className="px-4 pt-1 pb-2 bg-white border-b border-gray-100">
@@ -661,10 +862,15 @@ export default function MobilePOSPage() {
               {items.map((item) => {
                 const inCart = cart.find((c) => c.item.id === item.id);
                 return (
-                  <button
+                  <div
                     key={item.id}
-                    onClick={() => addToCart(item)}
-                    className={`relative flex flex-col rounded-2xl border overflow-hidden text-left active:scale-95 transition-transform ${
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openProductDetails(item)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") openProductDetails(item);
+                    }}
+                    className={`relative flex flex-col rounded-2xl border overflow-hidden text-left active:scale-95 transition-transform cursor-pointer ${
                       inCart
                         ? "border-amber-400 bg-amber-50"
                         : "border-gray-200 bg-white"
@@ -690,6 +896,9 @@ export default function MobilePOSPage() {
                           {inCart.qty}
                         </span>
                       )}
+                      <span className="absolute bottom-2 left-2 rounded-full bg-black/55 text-white text-[10px] font-medium px-2 py-1">
+                        <T>View details</T>
+                      </span>
                     </div>
 
                     {/* Info */}
@@ -698,15 +907,57 @@ export default function MobilePOSPage() {
                         {item.nameEn}
                       </p>
                       <p className="text-xs text-amber-700 font-semibold mt-1">
-                        {formatNPR(item.totalPriceNpr ?? 0)}
+                        {formatMoney(item.totalPriceNpr ?? 0, shopCurrency)}
                       </p>
-                      {item.metalPurity && (
-                        <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">
-                          {item.metalPurity}
-                        </span>
+                      <div className="mt-2 flex items-center justify-between gap-1.5">
+                        {item.metalPurity ? (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium truncate">
+                            {item.metalPurity}
+                          </span>
+                        ) : (
+                          <span />
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToCart(item);
+                          }}
+                          className="h-8 w-8 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm"
+                          aria-label={`Add ${item.nameEn} to bill`}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                      {inCart && (
+                        <div className="mt-2 flex items-center justify-between rounded-xl bg-white border border-amber-100 p-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateQty(item.id, inCart.qty - 1);
+                            }}
+                            className="h-7 w-7 rounded-lg flex items-center justify-center text-gray-600 active:bg-gray-100"
+                            aria-label={`Decrease ${item.nameEn}`}
+                          >
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                          <span className="text-xs font-bold text-amber-700">{inCart.qty}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFromCart(item.id);
+                            }}
+                            className="h-7 w-7 rounded-lg flex items-center justify-center text-red-500 active:bg-red-50"
+                            aria-label={`Remove ${item.nameEn}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       )}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -725,7 +976,7 @@ export default function MobilePOSPage() {
                 {cartCount}
               </span>
               <span><T>View Bill</T></span>
-              <span>{formatNPR(cartTotal)}</span>
+              <span>{formatMoney(cartTotal, shopCurrency)}</span>
             </button>
           </div>
         )}
@@ -734,10 +985,24 @@ export default function MobilePOSPage() {
       {showCart && (
         <CartDrawer
           cart={cart}
+          currency={shopCurrency}
           onQtyChange={updateQty}
           onRemove={removeFromCart}
           onCheckout={handleCheckout}
           onClose={() => setShowCart(false)}
+        />
+      )}
+
+      {selectedItem && (
+        <ProductDetailSheet
+          item={selectedItem}
+          currency={shopCurrency}
+          inCartQty={cart.find((c) => c.item.id === selectedItem.id)?.qty ?? 0}
+          loading={detailLoading}
+          onAdd={() => addToCart(selectedItem)}
+          onQtyChange={(qty) => updateQty(selectedItem.id, qty)}
+          onRemove={() => removeFromCart(selectedItem.id)}
+          onClose={() => setSelectedItem(null)}
         />
       )}
 
