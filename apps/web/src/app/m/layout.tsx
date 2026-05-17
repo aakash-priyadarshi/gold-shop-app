@@ -8,7 +8,7 @@ import { MobileLayoutLoader } from "@/components/mobile/MobileSkeleton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
-import { materialsApi } from "@/lib/api";
+import api, { materialsApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -16,6 +16,7 @@ import {
     Bell,
     Cake,
     Calculator,
+    ChevronDown,
     ChevronRight,
     FileText,
     FlaskConical,
@@ -31,6 +32,7 @@ import {
     Send,
     Settings,
     ShoppingBag,
+    Store,
     Users,
     Wallet,
     Wrench,
@@ -59,6 +61,13 @@ interface GoldRate {
   silver: number;
   currency: string;
   updatedAt: string;
+}
+
+interface MobileShopOption {
+  id: string;
+  name?: string;
+  shopName?: string;
+  city?: string;
 }
 
 function readMetalRate(data: any, codes: string[]): number {
@@ -212,7 +221,7 @@ export default function MobileLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, refreshUser } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const t = useT();
@@ -220,6 +229,9 @@ export default function MobileLayout({
   const [rates, setRates] = useState<GoldRate | null>(null);
   const [showMore, setShowMore] = useState(false);
   const [ratesLoading, setRatesLoading] = useState(false);
+  const [shops, setShops] = useState<MobileShopOption[]>([]);
+  const [shopMenuOpen, setShopMenuOpen] = useState(false);
+  const [switchingShopId, setSwitchingShopId] = useState<string | null>(null);
   const ratesRef = useRef(false);
 
   // Auth guard
@@ -235,6 +247,41 @@ export default function MobileLayout({
       router.push("/dashboard");
     }
   }, [isLoading, user, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== "SHOPKEEPER") return;
+    let cancelled = false;
+    api
+      .get("/shops/my-shops")
+      .then((res) => {
+        if (cancelled) return;
+        setShops(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch(() => setShops([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.role]);
+
+  const switchShop = useCallback(
+    async (shopId: string) => {
+      if (!shopId || shopId === user?.shop?.id) {
+        setShopMenuOpen(false);
+        return;
+      }
+      setSwitchingShopId(shopId);
+      try {
+        await api.patch("/users/me/active-shop", { shopId });
+        await refreshUser();
+        ratesRef.current = false;
+        setShopMenuOpen(false);
+        router.refresh();
+      } finally {
+        setSwitchingShopId(null);
+      }
+    },
+    [refreshUser, router, user?.shop?.id],
+  );
 
   const fetchRates = useCallback(async () => {
     if (ratesRef.current) return;
@@ -294,19 +341,74 @@ export default function MobileLayout({
   const isMoreActive = ["/m/rate-card", "/m/tax", "/m/repairs", "/m/savings"].some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );
+  const currentShopName = user?.shop?.shopName ?? user?.firstName ?? "Shop";
+  const currentShopId = user?.shop?.id;
 
   return (
     <div className="flex flex-col h-dvh bg-gray-50 overflow-hidden">
       {/* Top bar */}
       <header className="bg-white border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center justify-between px-4 py-3">
-          <div>
+          <div className="relative min-w-0 flex-1 pr-3">
             <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">
               Orivraa POS
             </p>
-            <p className="text-sm font-semibold text-gray-900 leading-tight truncate max-w-[180px]">
-              {user?.shop?.shopName ?? user?.firstName}
-            </p>
+            {shops.length > 1 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShopMenuOpen((value) => !value)}
+                  className="mt-0.5 flex max-w-[210px] items-center gap-1 rounded-lg text-left text-sm font-semibold leading-tight text-gray-900 active:text-amber-700"
+                >
+                  <Store className="h-3.5 w-3.5 flex-shrink-0 text-amber-600" />
+                  <span className="truncate">{currentShopName}</span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 flex-shrink-0 text-gray-400 transition-transform ${
+                      shopMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {shopMenuOpen && (
+                  <div className="absolute left-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl shadow-black/10">
+                    {shops.map((shop) => {
+                      const shopName = shop.shopName ?? shop.name ?? "Shop";
+                      const isActive = shop.id === currentShopId;
+                      return (
+                        <button
+                          key={shop.id}
+                          type="button"
+                          onClick={() => switchShop(shop.id)}
+                          disabled={switchingShopId === shop.id}
+                          className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm ${
+                            isActive
+                              ? "bg-amber-50 text-amber-700"
+                              : "text-gray-700 active:bg-gray-50"
+                          }`}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-semibold">{shopName}</span>
+                            {shop.city && (
+                              <span className="block truncate text-[11px] text-gray-400">
+                                {shop.city}
+                              </span>
+                            )}
+                          </span>
+                          {switchingShopId === shop.id ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : isActive ? (
+                            <span className="h-2 w-2 rounded-full bg-amber-500" />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm font-semibold text-gray-900 leading-tight truncate max-w-[180px]">
+                {currentShopName}
+              </p>
+            )}
           </div>
           <button
             onClick={() => {

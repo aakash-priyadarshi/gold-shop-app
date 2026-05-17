@@ -44,6 +44,7 @@ export function BarcodeScannerSheet({ open, onClose, onScan, hint }: Props) {
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
+  const cameraAvailable = hasBarcodeDetector() && hasCameraScanning();
 
   const stopCamera = useCallback(() => {
     if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
@@ -143,7 +144,7 @@ export function BarcodeScannerSheet({ open, onClose, onScan, hint }: Props) {
         <div className="flex gap-2 px-4 pt-3">
           <button
             onClick={() => setMode("camera")}
-            disabled={!hasBarcodeDetector() || !hasCameraScanning()}
+            disabled={!cameraAvailable}
             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
               mode === "camera"
                 ? "bg-amber-500 text-white"
@@ -170,6 +171,16 @@ export function BarcodeScannerSheet({ open, onClose, onScan, hint }: Props) {
         <div className="px-4 py-4 flex-1 overflow-y-auto">
           {hint && (
             <p className="text-xs text-gray-500 mb-3 text-center">{hint}</p>
+          )}
+
+          {!cameraAvailable && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mb-3 text-center">
+              <T>
+                Camera scanning is not supported by this browser. Type the SKU
+                here, or connect a USB/Bluetooth scanner and scan anywhere on
+                the POS screen.
+              </T>
+            </p>
           )}
 
           {mode === "camera" ? (

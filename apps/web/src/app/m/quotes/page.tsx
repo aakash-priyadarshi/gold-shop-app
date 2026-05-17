@@ -8,192 +8,154 @@ import { useAuth } from "@/hooks/useAuth";
 import { materialsApi, shopQuotesApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import {
-    Calculator,
-    Check,
-    ChevronDown,
-    FileDown,
-    Loader2,
-    MessageCircle,
-    Trash2,
-    User
+  Calculator,
+  Check,
+  FileDown,
+  Gem,
+  Loader2,
+  MapPin,
+  MessageCircle,
+  Phone,
+  User,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-const PURITY_OPTIONS = [
-  { label: "24K (99.9%)", purity: 0.999 },
-  { label: "22K (91.6%)", purity: 0.916 },
-  { label: "18K (75%)", purity: 0.75 },
-  { label: "14K (58.3%)", purity: 0.583 },
+const JEWELLERY_TYPES = [
+  "RING",
+  "NECKLACE",
+  "BRACELET",
+  "BANGLE",
+  "EARRING",
+  "PENDANT",
+  "CHAIN",
+  "ANKLET",
+  "MANGALSUTRA",
+  "OTHER",
 ];
 
-interface QuoteLineItem {
-  id: string;
-  description: string;
-  weightGrams: number;
-  purity: number;
-  makingCharges: number;
-  goldRatePerGram: number;
-  lineTotal: number;
-}
+const BUILD_METHODS = [
+  { value: "METHOD_A", label: "New custom piece" },
+  { value: "METHOD_B", label: "Repair or resize" },
+  { value: "METHOD_C", label: "Remodel old item" },
+  { value: "METHOD_D", label: "Customer material + shop work" },
+];
 
-function fmt(n: number, cur = "NPR") {
-  return `${cur} ${Math.round(n).toLocaleString("en-IN")}`;
-}
+const MATERIAL_OPTIONS = [
+  { value: "CUSTOM", label: "Other / customer-provided material", category: "OTHER" },
+  { value: "GOLD_24K", label: "Gold 24K", category: "GOLD", purity: 0.999 },
+  { value: "GOLD_22K", label: "Gold 22K", category: "GOLD", purity: 0.916 },
+  { value: "GOLD_18K", label: "Gold 18K", category: "GOLD", purity: 0.75 },
+  { value: "SILVER_999", label: "Silver 999", category: "SILVER", purity: 0.999 },
+  { value: "SILVER_925", label: "Silver 925", category: "SILVER", purity: 0.925 },
+  { value: "PLATINUM_950", label: "Platinum 950", category: "PLATINUM", purity: 0.95 },
+  { value: "BASE_METAL", label: "Base metal / plated", category: "BASE_METAL" },
+];
 
-function LineItemRow({
-  item,
-  goldRate,
-  currency,
-  onUpdate,
-  onRemove,
-}: {
-  item: QuoteLineItem;
-  goldRate: number;
-  currency: string;
-  onUpdate: (updated: QuoteLineItem) => void;
-  onRemove: () => void;
-}) {
-  const basePrice = item.weightGrams * goldRate * item.purity;
-  const total = basePrice + item.makingCharges;
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <input
-          type="text"
-          value={item.description}
-          onChange={(e) =>
-            onUpdate({ ...item, description: e.target.value, lineTotal: total })
-          }
-          placeholder="Item description (e.g. Gold ring 22K)"
-          className="flex-1 text-sm font-medium bg-transparent focus:outline-none text-gray-800"
-        />
-        <button onClick={onRemove} className="p-1 text-red-400 hover:text-red-600 ml-2">
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Purity selector */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-none">
-        {PURITY_OPTIONS.map((p) => (
-          <button
-            key={p.label}
-            onClick={() => onUpdate({ ...item, purity: p.purity, lineTotal: total })}
-            className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
-              item.purity === p.purity
-                ? "bg-amber-500 text-white"
-                : "bg-gray-100 text-gray-600"
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Weight + Making charges */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-[10px] text-gray-400 font-medium uppercase">
-            <T>Weight (g)</T>
-          </label>
-          <input
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            value={item.weightGrams || ""}
-            onChange={(e) =>
-              onUpdate({
-                ...item,
-                weightGrams: parseFloat(e.target.value) || 0,
-                lineTotal: total,
-              })
-            }
-            className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
-            placeholder="0.00"
-          />
-        </div>
-        <div>
-          <label className="text-[10px] text-gray-400 font-medium uppercase">
-            <T>Making Charges</T>
-          </label>
-          <input
-            type="number"
-            inputMode="numeric"
-            min="0"
-            value={item.makingCharges || ""}
-            onChange={(e) =>
-              onUpdate({
-                ...item,
-                makingCharges: parseFloat(e.target.value) || 0,
-                lineTotal: total,
-              })
-            }
-            className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
-            placeholder="0"
-          />
-        </div>
-      </div>
-
-      {/* Line total */}
-      <div className="flex items-center justify-between pt-1 border-t border-dashed border-gray-100">
-        <p className="text-xs text-gray-400">
-          {item.weightGrams}g × {fmt(goldRate * item.purity, currency)}/g + making
-        </p>
-        <p className="text-sm font-bold text-amber-700">{fmt(total, currency)}</p>
-      </div>
-    </div>
-  );
-}
-
-let nextId = 1;
-function makeItem(): QuoteLineItem {
-  return {
-    id: String(nextId++),
-    description: "",
-    weightGrams: 0,
-    purity: 0.916,
-    makingCharges: 0,
-    goldRatePerGram: 0,
-    lineTotal: 0,
+interface CustomerLookupResult {
+  found?: boolean;
+  customer?: {
+    id?: string;
+    name?: string;
+    phone?: string;
+    phoneCountryCode?: string;
+    email?: string | null;
+    address?: string | null;
+    city?: string | null;
+    country?: string | null;
   };
+}
+
+interface CreatedQuote {
+  id: string;
+  quoteNumber?: string;
+  trackingToken?: string;
+  total: number;
+}
+
+function fmt(amount?: number | null, currency = "NPR") {
+  return `${currency} ${Math.round(Number(amount ?? 0)).toLocaleString("en-IN")}`;
+}
+
+function readMetalRate(data: any, codes: string[]) {
+  const metals = data?.metals;
+  if (Array.isArray(metals)) {
+    const match = metals.find((m: any) => codes.includes(m.code));
+    return Number(match?.ratePerGram ?? match?.rate ?? 0);
+  }
+  if (metals && typeof metals === "object") {
+    for (const code of codes) {
+      const value = metals[code];
+      if (typeof value === "number") return value;
+      if (value && typeof value === "object") {
+        const nested = Number(value.ratePerGram ?? value.rate ?? 0);
+        if (nested > 0) return nested;
+      }
+    }
+  }
+  return 0;
+}
+
+function numberFromInput(value: string) {
+  return Number.parseFloat(value) || 0;
 }
 
 export default function QuotesPage() {
   const { user } = useAuth();
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [lookingUpCustomer, setLookingUpCustomer] = useState(false);
-  const [items, setItems] = useState<QuoteLineItem[]>([makeItem()]);
-  const [goldRate, setGoldRate] = useState<number>(0);
-  // Initial currency comes from the shop's country (geo cookie as fallback);
-  // updated when market rates arrive so the displayed currency always matches
-  // the rates that are actually loaded.
   const initialParams = getMobileMarketParams(user?.shop ?? null);
   const [currency, setCurrency] = useState(initialParams.currency);
   const [ratesLoading, setRatesLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [quoteResult, setQuoteResult] = useState<{ id: string; total: number } | null>(null);
+  const [goldRate, setGoldRate] = useState(0);
+  const [silverRate, setSilverRate] = useState(0);
 
-  // Optional / advanced quote fields (parity with PC quote form).
-  const [discountPct, setDiscountPct] = useState<number>(0);
-  const [validityDays, setValidityDays] = useState<number>(7);
-  const [terms, setTerms] = useState<string>(
-    "• Rates are subject to change at time of billing.\n• 50% advance required to lock making charges.\n• Quote is valid for the period stated above.",
+  const [phoneCountryCode, setPhoneCountryCode] = useState("+977");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [customerCity, setCustomerCity] = useState<string>((user?.shop as any)?.city ?? "");
+  const [customerCountry, setCustomerCountry] = useState<string>((user?.shop as any)?.country ?? "Nepal");
+  const [matchedCustomerId, setMatchedCustomerId] = useState<string | null>(null);
+  const [lookingUpCustomer, setLookingUpCustomer] = useState(false);
+
+  const [jewelleryType, setJewelleryType] = useState("RING");
+  const [buildMethod, setBuildMethod] = useState("METHOD_A");
+  const [materialCode, setMaterialCode] = useState("CUSTOM");
+  const [quantity, setQuantity] = useState(1);
+  const [targetTotalWeightG, setTargetTotalWeightG] = useState(0);
+  const [targetGoldWeightG, setTargetGoldWeightG] = useState(0);
+  const [sizeOrLength, setSizeOrLength] = useState("");
+  const [metalCostNpr, setMetalCostNpr] = useState(0);
+  const [makingChargeNpr, setMakingChargeNpr] = useState(0);
+  const [gemstoneCostNpr, setGemstoneCostNpr] = useState(0);
+  const [finishCostNpr, setFinishCostNpr] = useState(0);
+  const [estimatedDays, setEstimatedDays] = useState(7);
+  const [gemstoneNotes, setGemstoneNotes] = useState("");
+  const [finishNotes, setFinishNotes] = useState("");
+  const [specialInstructions, setSpecialInstructions] = useState("");
+  const [shopNotes, setShopNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [quoteResult, setQuoteResult] = useState<CreatedQuote | null>(null);
+
+  const selectedMaterial = useMemo(
+    () => MATERIAL_OPTIONS.find((m) => m.value === materialCode) ?? MATERIAL_OPTIONS[0],
+    [materialCode],
   );
-  const [notes, setNotes] = useState<string>("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const estimateTotal = metalCostNpr + makingChargeNpr + gemstoneCostNpr + finishCostNpr;
+  const estimatedTax = Math.round(estimateTotal * 0.03);
+  const estimatedTotalWithTax = estimateTotal + estimatedTax;
 
   const loadRates = useCallback(async () => {
     try {
       const params = getMobileMarketParams(user?.shop ?? null);
       const res = await materialsApi.getMarketRates(params);
-      const d = res.data;
-      const gold = d?.metals?.find?.((m: any) => m.code === "XAU" || m.code === "GOLD");
-      setGoldRate(gold?.ratePerGram ?? gold?.rate ?? 7200);
-      setCurrency(d?.currency ?? params.currency);
+      const data = res.data;
+      setGoldRate(readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]));
+      setSilverRate(readMetalRate(data, ["SILVER_999", "SILVER_925", "XAG", "SILVER"]));
+      setCurrency(data?.currency ?? params.currency);
     } catch {
-      setGoldRate(7200); // fallback
+      setGoldRate(0);
+      setSilverRate(0);
     } finally {
       setRatesLoading(false);
     }
@@ -203,97 +165,123 @@ export default function QuotesPage() {
     loadRates();
   }, [loadRates]);
 
-  // Auto-fill customer name from phone (debounced) — same pattern as PC RFQ.
+  useEffect(() => {
+    setCustomerCity((prev: string) => prev || (user?.shop as any)?.city || "");
+    setCustomerCountry((prev: string) => prev || (user?.shop as any)?.country || "Nepal");
+  }, [user?.shop]);
+
   useEffect(() => {
     const digits = customerPhone.replace(/\D/g, "");
-    if (digits.length < 7) return;
+    if (digits.length < 7) {
+      setMatchedCustomerId(null);
+      return;
+    }
+
     const handle = setTimeout(async () => {
       try {
         setLookingUpCustomer(true);
         const res = await shopQuotesApi.lookupCustomer({
-          phoneCountryCode: "+977",
+          phoneCountryCode,
           phone: digits,
         });
-        const found = res.data;
-        if (found?.name && !customerName) setCustomerName(found.name);
+        const result: CustomerLookupResult = res.data;
+        const customer = result?.customer;
+        if (result?.found && customer) {
+          setMatchedCustomerId(customer.id ?? null);
+          setCustomerName((prev) => prev || customer.name || "");
+          setCustomerEmail((prev) => prev || customer.email || "");
+          setCustomerAddress((prev) => prev || customer.address || "");
+          setCustomerCity((prev) => prev || customer.city || "");
+          setCustomerCountry((prev) => prev || customer.country || "Nepal");
+        } else {
+          setMatchedCustomerId(null);
+        }
       } catch {
-        // no existing customer — ignore
+        setMatchedCustomerId(null);
       } finally {
         setLookingUpCustomer(false);
       }
     }, 450);
+
     return () => clearTimeout(handle);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customerPhone]);
-
-  const recalcItems = (rawItems: QuoteLineItem[]) =>
-    rawItems.map((i) => ({
-      ...i,
-      lineTotal: i.weightGrams * goldRate * i.purity + i.makingCharges,
-    }));
-
-  const updateItem = (id: string, updated: QuoteLineItem) =>
-    setItems((prev) => recalcItems(prev.map((i) => (i.id === id ? updated : i))));
-
-  const removeItem = (id: string) =>
-    setItems((prev) => (prev.length > 1 ? prev.filter((i) => i.id !== id) : prev));
-
-  const addItem = () => setItems((prev) => [...prev, makeItem()]);
-
-  const subtotal = items.reduce(
-    (s, i) => s + i.weightGrams * goldRate * i.purity + i.makingCharges,
-    0,
-  );
-  const discount = Math.round((subtotal * (discountPct || 0)) / 100);
-  const taxable = Math.max(0, subtotal - discount);
-  const tax = Math.round(taxable * 0.03);
-  const total = taxable + tax;
-
-  const validUntilDate = new Date(Date.now() + (validityDays || 0) * 86400000);
-  const formattedValidUntil = validUntilDate.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  }, [customerPhone, phoneCountryCode]);
 
   const handleSubmit = async () => {
-    if (items.every((i) => i.weightGrams === 0)) {
-      toast({ title: "Please add at least one item with weight", variant: "destructive" });
+    const phoneDigits = customerPhone.replace(/\D/g, "");
+    if (phoneDigits.length < 7) {
+      toast({ title: "Enter the customer's phone first", variant: "destructive" });
       return;
     }
+    if (!customerName.trim()) {
+      toast({ title: "Customer name is required", variant: "destructive" });
+      return;
+    }
+    if (!jewelleryType || !buildMethod) {
+      toast({ title: "Select jewellery type and build method", variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const shopNotesParts: string[] = [];
-      if (validityDays) shopNotesParts.push(`Valid until: ${formattedValidUntil} (${validityDays} days).`);
-      if (discountPct) shopNotesParts.push(`Discount applied: ${discountPct}%.`);
-      if (terms.trim()) shopNotesParts.push(`Terms:\n${terms.trim()}`);
-      if (notes.trim()) shopNotesParts.push(`Notes:\n${notes.trim()}`);
+      const composition = {
+        materialCategory: selectedMaterial.category,
+        materialCode: selectedMaterial.value,
+        materialLabel: selectedMaterial.label,
+        purity: selectedMaterial.purity,
+        quantity,
+        sizeOrLength: sizeOrLength.trim() || undefined,
+        gemstoneNotes: gemstoneNotes.trim() || undefined,
+        finishNotes: finishNotes.trim() || undefined,
+        rateReference: {
+          currency,
+          gold24kRatePerGram: goldRate || undefined,
+          silverRatePerGram: silverRate || undefined,
+        },
+      };
+
+      const notes = [
+        matchedCustomerId ? `Matched customer ID: ${matchedCustomerId}` : "New walk-in customer from mobile quote.",
+        `Displayed currency: ${currency}`,
+        shopNotes.trim() ? `Shop notes: ${shopNotes.trim()}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
       const res = await shopQuotesApi.create({
-        customerName: customerName || "Walk-in Customer",
-        customerPhone: customerPhone || undefined,
-        items: items.map((i) => ({
-          description: i.description || "Gold item",
-          weightGrams: i.weightGrams,
-          metalPurity: i.purity,
-          makingCharges: i.makingCharges,
-          goldRatePerGram: goldRate,
-          lineTotalNpr: i.weightGrams * goldRate * i.purity + i.makingCharges,
-        })),
-        goldRatePerGram: goldRate,
-        subtotalNpr: subtotal,
-        discountNpr: discount,
-        discountPercent: discountPct,
-        taxNpr: tax,
-        totalNpr: total,
-        currency,
-        validityDays,
-        validUntil: validUntilDate.toISOString(),
-        terms: terms.trim() || undefined,
-        shopNotes: shopNotesParts.join("\n\n") || undefined,
-        customerNotes: notes.trim() || undefined,
-        source: "MOBILE_QUOTE",
+        customer: {
+          name: customerName.trim(),
+          phoneCountryCode,
+          phone: phoneDigits,
+          email: customerEmail.trim() || undefined,
+          address: customerAddress.trim() || "Not provided",
+          city: customerCity.trim() || (user?.shop as any)?.city || "Not provided",
+          country: customerCountry.trim() || (user?.shop as any)?.country || "Nepal",
+        },
+        jewelleryType,
+        buildMethod,
+        composition,
+        targetTotalWeightG: targetTotalWeightG || undefined,
+        targetGoldWeightG:
+          selectedMaterial.category === "GOLD" && targetGoldWeightG
+            ? targetGoldWeightG
+            : undefined,
+        specialInstructions: specialInstructions.trim() || undefined,
+        metalCostNpr: metalCostNpr || undefined,
+        makingChargeNpr: makingChargeNpr || undefined,
+        gemstoneCostNpr: gemstoneCostNpr || undefined,
+        finishCostNpr: finishCostNpr || undefined,
+        estimatedDays: estimatedDays || undefined,
+        shopNotes: notes || undefined,
       });
-      setQuoteResult({ id: res.data?.id ?? res.data?.quoteId, total });
+
+      const quote = res.data ?? {};
+      setQuoteResult({
+        id: quote.id,
+        quoteNumber: quote.quoteNumber,
+        trackingToken: quote.trackingToken,
+        total: Number(quote.totalPriceNpr ?? estimatedTotalWithTax),
+      });
+      toast({ title: "Quote created", description: quote.quoteNumber ?? "Ready to share" });
     } catch (err: any) {
       toast({
         title: "Failed to create quote",
@@ -307,134 +295,72 @@ export default function QuotesPage() {
 
   if (quoteResult) {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://orivraa.com";
-    const trackUrl = `${baseUrl}/track/${quoteResult.id}`;
-    const itemLines = items
-      .filter((i) => i.weightGrams > 0)
-      .map(
-        (i) =>
-          `• ${i.description || "Gold item"} (${i.weightGrams}g, ${PURITY_OPTIONS.find((p) => p.purity === i.purity)?.label ?? ""}): ${fmt(i.weightGrams * goldRate * i.purity + i.makingCharges, currency)}`,
-      )
-      .join("\n");
-    const totalsBlock = [
-      `Subtotal: ${fmt(subtotal, currency)}`,
-      discount > 0 ? `Discount (${discountPct}%): -${fmt(discount, currency)}` : "",
-      `Tax (3%): ${fmt(tax, currency)}`,
-      `*Total: ${fmt(total, currency)}*`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-    const msg = encodeURIComponent(
-      `Hello${customerName ? ` ${customerName}` : ""},\n\nHere is your jewellery quote from *${user?.shop?.shopName ?? "our store"}*.\n\n` +
-        itemLines +
-        `\n\n${totalsBlock}\n\n` +
-        `Valid until: ${formattedValidUntil}\n` +
-        (terms.trim() ? `\nTerms:\n${terms.trim()}\n` : "") +
-        (notes.trim() ? `\nNotes:\n${notes.trim()}\n` : "") +
-        `\nView full quote: ${trackUrl}`,
+    const trackingUrl = quoteResult.trackingToken
+      ? `${baseUrl}/track/${quoteResult.trackingToken}`
+      : "";
+    const message = encodeURIComponent(
+      `Hello ${customerName.trim()},\n\n` +
+        `Your quote from ${user?.shop?.shopName ?? "our store"} is ready.\n` +
+        `Quote: ${quoteResult.quoteNumber ?? quoteResult.id}\n` +
+        `Item: ${jewelleryType.replace(/_/g, " ")}\n` +
+        `Material: ${selectedMaterial.label}\n` +
+        `Estimate: ${fmt(quoteResult.total, currency)}\n` +
+        (trackingUrl ? `\nView quote: ${trackingUrl}` : ""),
     );
+    const whatsappUrl = customerPhone
+      ? `https://wa.me/${customerPhone.replace(/\D/g, "")}?text=${message}`
+      : `https://wa.me/?text=${message}`;
 
     const exportPdf = () => {
-      const w = window.open("", "_blank", "width=720,height=900");
-      if (!w) {
-        toast({ title: "Pop-ups are blocked", description: "Allow pop-ups and try again.", variant: "destructive" });
+      const printWindow = window.open("", "_blank", "width=720,height=900");
+      if (!printWindow) {
+        toast({ title: "Pop-ups are blocked", variant: "destructive" });
         return;
       }
-      const shopName = user?.shop?.shopName ?? "Our Store";
-      const shopAddress = user?.shop?.address ?? "";
-      const shopPhone = user?.shop?.contactPhone ?? "";
-      const rows = items
-        .filter((i) => i.weightGrams > 0)
-        .map(
-          (i, idx) => `
-            <tr>
-              <td>${idx + 1}</td>
-              <td>${(i.description || "Gold item").replace(/</g, "&lt;")}</td>
-              <td style="text-align:right">${i.weightGrams} g</td>
-              <td>${PURITY_OPTIONS.find((p) => p.purity === i.purity)?.label ?? ""}</td>
-              <td style="text-align:right">${fmt(i.makingCharges, currency)}</td>
-              <td style="text-align:right"><strong>${fmt(i.weightGrams * goldRate * i.purity + i.makingCharges, currency)}</strong></td>
-            </tr>`,
-        )
-        .join("");
-      const html = `<!doctype html>
-<html><head><meta charset="utf-8"><title>Quote ${quoteResult.id}</title>
+      const safe = (value: string) => value.replace(/</g, "&lt;");
+      printWindow.document.write(`<!doctype html>
+<html><head><meta charset="utf-8"><title>${safe(quoteResult.quoteNumber ?? "Quote")}</title>
 <style>
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;padding:32px;max-width:780px;margin:0 auto}
-  h1{color:#b45309;margin:0 0 4px}
-  .muted{color:#6b7280;font-size:12px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:24px 0}
-  table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
-  th,td{padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:left}
-  th{background:#fef3c7;color:#92400e;font-weight:600;font-size:11px;text-transform:uppercase}
-  .totals{margin-top:16px;float:right;width:280px}
-  .totals .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
-  .totals .total{border-top:2px solid #b45309;color:#b45309;font-weight:700;font-size:16px;padding-top:8px;margin-top:8px}
-  .terms{clear:both;margin-top:32px;padding:14px;background:#fef9c3;border-left:3px solid #eab308;font-size:12px;white-space:pre-wrap}
-  .footer{margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280;text-align:center}
-  @media print{button{display:none}}
-</style></head>
-<body>
-  <button onclick="window.print()" style="position:fixed;top:16px;right:16px;padding:8px 16px;background:#b45309;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:600">Print / Save as PDF</button>
-  <h1>${shopName.replace(/</g, "&lt;")}</h1>
-  <div class="muted">${shopAddress} ${shopPhone ? "&middot; " + shopPhone : ""}</div>
-  <div class="grid">
-    <div>
-      <div class="muted" style="text-transform:uppercase;font-size:10px;font-weight:600">Quote For</div>
-      <div style="font-weight:600;margin-top:4px">${(customerName || "Walk-in Customer").replace(/</g, "&lt;")}</div>
-      ${customerPhone ? `<div class="muted">${customerPhone}</div>` : ""}
-    </div>
-    <div style="text-align:right">
-      <div class="muted" style="text-transform:uppercase;font-size:10px;font-weight:600">Quote #</div>
-      <div style="font-weight:600;margin-top:4px">${quoteResult.id}</div>
-      <div class="muted">Issued: ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div>
-      <div class="muted">Valid until: ${formattedValidUntil}</div>
-      <div class="muted">Gold rate: ${fmt(goldRate, currency)}/g</div>
-    </div>
-  </div>
-  <table>
-    <thead><tr><th>#</th><th>Item</th><th style="text-align:right">Weight</th><th>Purity</th><th style="text-align:right">Making</th><th style="text-align:right">Amount</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <div class="totals">
-    <div class="row"><span>Subtotal</span><span>${fmt(subtotal, currency)}</span></div>
-    ${discount > 0 ? `<div class="row"><span>Discount (${discountPct}%)</span><span>-${fmt(discount, currency)}</span></div>` : ""}
-    <div class="row"><span>Tax (3%)</span><span>${fmt(tax, currency)}</span></div>
-    <div class="row total"><span>Total</span><span>${fmt(total, currency)}</span></div>
-  </div>
-  ${terms.trim() ? `<div class="terms"><strong>Terms &amp; Conditions</strong>\n${terms.replace(/</g, "&lt;")}</div>` : ""}
-  ${notes.trim() ? `<div class="terms" style="background:#dbeafe;border-color:#3b82f6"><strong>Notes</strong>\n${notes.replace(/</g, "&lt;")}</div>` : ""}
-  <div class="footer">Track this quote: ${trackUrl}</div>
-  <script>setTimeout(function(){window.print();},400);</script>
-</body></html>`;
-      w.document.write(html);
-      w.document.close();
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;padding:32px;max-width:760px;margin:0 auto}
+h1{color:#b45309;margin:0 0 4px}.muted{color:#6b7280;font-size:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:24px 0}
+.box{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-top:14px}.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6}.row:last-child{border-bottom:0}.total{font-size:18px;font-weight:700;color:#b45309}.notes{white-space:pre-wrap;font-size:12px;color:#374151}
+@media print{button{display:none}}
+</style></head><body>
+<button onclick="window.print()" style="position:fixed;top:16px;right:16px;padding:8px 16px;background:#b45309;color:#fff;border:0;border-radius:8px;font-weight:600">Print / Save as PDF</button>
+<h1>${safe(user?.shop?.shopName ?? "Quote")}</h1>
+<div class="muted">${safe((user?.shop as any)?.address ?? "")}</div>
+<div class="grid"><div><div class="muted">QUOTE FOR</div><strong>${safe(customerName)}</strong><div class="muted">${safe(phoneCountryCode)} ${safe(customerPhone)}</div></div><div style="text-align:right"><div class="muted">QUOTE</div><strong>${safe(quoteResult.quoteNumber ?? quoteResult.id)}</strong><div class="muted">${new Date().toLocaleDateString("en-IN")}</div></div></div>
+<div class="box"><div class="row"><span>Jewellery type</span><strong>${safe(jewelleryType.replace(/_/g, " "))}</strong></div><div class="row"><span>Build method</span><strong>${safe(BUILD_METHODS.find((m) => m.value === buildMethod)?.label ?? buildMethod)}</strong></div><div class="row"><span>Material</span><strong>${safe(selectedMaterial.label)}</strong></div><div class="row"><span>Weight</span><strong>${targetTotalWeightG || 0} g</strong></div></div>
+<div class="box"><div class="row"><span>Metal/material</span><span>${fmt(metalCostNpr, currency)}</span></div><div class="row"><span>Making</span><span>${fmt(makingChargeNpr, currency)}</span></div><div class="row"><span>Gemstone</span><span>${fmt(gemstoneCostNpr, currency)}</span></div><div class="row"><span>Finish</span><span>${fmt(finishCostNpr, currency)}</span></div><div class="row total"><span>Total estimate</span><span>${fmt(quoteResult.total, currency)}</span></div></div>
+${specialInstructions.trim() ? `<div class="box notes"><strong>Instructions</strong>\n${safe(specialInstructions.trim())}</div>` : ""}
+${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl}</div>` : ""}
+<script>setTimeout(function(){window.print();},400);</script></body></html>`);
+      printWindow.document.close();
     };
 
-    const waUrl = customerPhone
-      ? `https://wa.me/${customerPhone.replace(/\D/g, "")}?text=${msg}`
-      : `https://wa.me/?text=${msg}`;
-
     return (
-      <div className="flex flex-col items-center justify-center h-full px-6 text-center gap-6">
-        <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
+      <div className="flex h-full flex-col items-center justify-center gap-6 px-6 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
           <Check className="h-10 w-10 text-green-600" />
         </div>
         <div>
-          <h2 className="text-xl font-bold"><T>Quote Created!</T></h2>
-          <p className="text-sm text-gray-500 mt-1">{fmt(total, currency)}</p>
+          <h2 className="text-xl font-bold"><T>Quote Created</T></h2>
+          <p className="mt-1 text-sm text-gray-500">
+            {quoteResult.quoteNumber ?? quoteResult.id} - {fmt(quoteResult.total, currency)}
+          </p>
         </div>
         <a
-          href={waUrl}
+          href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full max-w-xs py-4 bg-[#25D366] text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2 shadow-lg"
+          className="flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-4 text-base font-semibold text-white shadow-lg"
         >
           <MessageCircle className="h-5 w-5" />
-          <T>Send Quote via WhatsApp</T>
+          <T>Send via WhatsApp</T>
         </a>
         <button
           onClick={exportPdf}
-          className="w-full max-w-xs py-3 border border-amber-300 text-amber-700 text-sm font-semibold rounded-2xl flex items-center justify-center gap-2"
+          className="flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl border border-amber-300 py-3 text-sm font-semibold text-amber-700"
         >
           <FileDown className="h-4 w-4" />
           <T>Export as PDF</T>
@@ -442,13 +368,18 @@ export default function QuotesPage() {
         <button
           onClick={() => {
             setQuoteResult(null);
-            setItems([makeItem()]);
-            setCustomerName("");
             setCustomerPhone("");
-            setDiscountPct(0);
-            setNotes("");
+            setCustomerName("");
+            setCustomerEmail("");
+            setCustomerAddress("");
+            setMatchedCustomerId(null);
+            setMetalCostNpr(0);
+            setMakingChargeNpr(0);
+            setGemstoneCostNpr(0);
+            setFinishCostNpr(0);
+            setSpecialInstructions("");
           }}
-          className="text-sm text-amber-600 font-medium underline underline-offset-2"
+          className="text-sm font-medium text-amber-600 underline underline-offset-2"
         >
           <T>New Quote</T>
         </button>
@@ -458,222 +389,213 @@ export default function QuotesPage() {
 
   return (
     <MobileFeatureGate feature="mobileQuotes" featureName="Quote Builder">
-      <div className="px-4 py-5 space-y-4 pb-32">
-      {/* Page header */}
-      <div className="flex items-start justify-between -mt-2 mb-1">
-        <div>
-          <h1 className="text-base font-bold text-gray-900"><T>Quote Builder</T></h1>
-          <p className="text-[11px] text-gray-400"><T>Build and share a custom estimate</T></p>
-        </div>
-        <MobileHelpButton
-          title="Quote Builder"
-          description="Create a multi-item estimate for jewelry, share it on WhatsApp, and convert to a bill when the customer agrees."
-          tips={[
-            "Add the customer's name & phone for direct WhatsApp sharing",
-            "Add as many line items as you need — weight, purity, making %",
-            "All prices use today's live gold rate; lock the rate per quote if needed",
-            "Share PDF or WhatsApp link directly; convert to bill from the Quote screen",
-          ]}
-        />
-      </div>
-      {/* Gold rate indicator */}
-      {!ratesLoading && goldRate > 0 && (
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 rounded-2xl">
-          <Calculator className="h-4 w-4 text-amber-600" />
-          <p className="text-sm text-amber-700 font-medium">
-            Using 24K rate: {fmt(goldRate, currency)}/g
-          </p>
-        </div>
-      )}
-
-      {/* Customer info */}
-      <div data-tour="m-quote-customer" className="space-y-3">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-          <T>Customer (Optional)</T>
-        </p>
-        <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Customer name"
-            className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
-          />
-        </div>
-        <div className="relative">
-          <input
-            type="tel"
-            value={customerPhone}
-            onChange={(e) => setCustomerPhone(e.target.value)}
-            placeholder="Phone (for WhatsApp) — auto-fills existing customers"
-            className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
-          />
-          {lookingUpCustomer && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-amber-500" />
-          )}
-        </div>
-      </div>
-
-      {/* Line items */}
-      <div data-tour="m-quote-items" className="space-y-3">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-          <T>Items</T>
-        </p>
-        {items.map((item) => (
-          <LineItemRow
-            key={item.id}
-            item={item}
-            goldRate={goldRate}
-            currency={currency}
-            onUpdate={(u) => updateItem(item.id, u)}
-            onRemove={() => removeItem(item.id)}
-          />
-        ))}
-        <button
-          onClick={addItem}
-          className="w-full py-3 border border-dashed border-amber-300 rounded-2xl text-amber-600 text-sm font-medium hover:bg-amber-50 active:bg-amber-100"
-        >
-          <T>+ Add Item</T>
-        </button>
-      </div>
-
-      {/* Advanced options — discount, validity, T&C, notes (PC quote parity) */}
-      <div className="space-y-3">
-        <button
-          type="button"
-          onClick={() => setShowAdvanced((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-2xl border border-gray-100"
-        >
-          <div className="text-left">
-            <p className="text-sm font-semibold text-gray-900">
-              <T>Discount, validity & terms</T>
-            </p>
-            <p className="text-[11px] text-gray-400">
-              {discountPct > 0
-                ? `${discountPct}% off · `
-                : ""}
-              Valid {validityDays} days
-              {terms.trim() ? " · T&C included" : ""}
-            </p>
+      <div className="space-y-4 px-4 py-5 pb-32">
+        <div className="-mt-2 mb-1 flex items-start justify-between">
+          <div>
+            <h1 className="text-base font-bold text-gray-900"><T>Quote Builder</T></h1>
+            <p className="text-[11px] text-gray-400"><T>Create a custom estimate from the seller quote flow</T></p>
           </div>
-          <ChevronDown
-            className={`h-4 w-4 text-gray-400 transition-transform ${
-              showAdvanced ? "rotate-180" : ""
-            }`}
+          <MobileHelpButton
+            title="Quote Builder"
+            description="Create a seller quote with customer lookup, material details, pricing, and WhatsApp sharing."
+            tips={[
+              "Enter phone first to fetch an existing customer before editing details",
+              "Choose the actual material or select other/customer-provided material",
+              "Use pricing fields to mirror the PC seller quote totals",
+              "The created quote keeps the same walk-in customer identity used on desktop",
+            ]}
           />
-        </button>
+        </div>
 
-        {showAdvanced && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-gray-400 font-medium uppercase">
-                  <T>Discount %</T>
-                </label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  max="100"
-                  step="0.5"
-                  value={discountPct || ""}
-                  onChange={(e) =>
-                    setDiscountPct(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))
-                  }
-                  placeholder="0"
-                  className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-400 font-medium uppercase">
-                  <T>Valid for (days)</T>
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  max="365"
-                  value={validityDays || ""}
-                  onChange={(e) =>
-                    setValidityDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))
-                  }
-                  placeholder="7"
-                  className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-              </div>
-            </div>
-            <p className="text-[11px] text-gray-400 -mt-2">
-              <T>Quote valid until</T> {formattedValidUntil}
+        {!ratesLoading && (goldRate > 0 || silverRate > 0) && (
+          <div className="flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-2.5">
+            <Calculator className="h-4 w-4 text-amber-600" />
+            <p className="text-xs font-medium text-amber-700">
+              <T>Market reference</T>: {goldRate > 0 ? `Gold ${fmt(goldRate, currency)}/g` : ""}
+              {goldRate > 0 && silverRate > 0 ? " | " : ""}
+              {silverRate > 0 ? `Silver ${fmt(silverRate, currency)}/g` : ""}
             </p>
-            <div>
-              <label className="text-[10px] text-gray-400 font-medium uppercase">
-                <T>Terms & Conditions</T>
-              </label>
-              <textarea
-                value={terms}
-                onChange={(e) => setTerms(e.target.value)}
-                rows={4}
-                className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
-                placeholder="Bullet points; one per line"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-gray-400 font-medium uppercase">
-                <T>Customer notes</T>
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-                className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
-                placeholder="Any special message for the customer"
-              />
-            </div>
           </div>
         )}
-      </div>
 
-      {/* Totals */}
-      {subtotal > 0 && (
-        <div data-tour="m-quote-total" className="bg-white rounded-2xl border border-gray-100 p-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500"><T>Subtotal</T></span>
-            <span>{fmt(subtotal, currency)}</span>
+        <section data-tour="m-quote-customer" className="space-y-3 rounded-2xl border border-gray-100 bg-white p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400"><T>Customer</T></p>
+            {matchedCustomerId && <span className="text-[11px] font-semibold text-emerald-600"><T>Matched</T></span>}
           </div>
-          {discount > 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500"><T>Discount</T> ({discountPct}%)</span>
-              <span className="text-green-600">-{fmt(discount, currency)}</span>
+          <div className="grid grid-cols-[88px_1fr] gap-2">
+            <input
+              value={phoneCountryCode}
+              onChange={(event) => setPhoneCountryCode(event.target.value)}
+              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              aria-label="Phone country code"
+            />
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="tel"
+                value={customerPhone}
+                onChange={(event) => setCustomerPhone(event.target.value)}
+                placeholder="Phone first"
+                className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+              {lookingUpCustomer && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-amber-500" />
+              )}
             </div>
-          )}
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500"><T>Tax (3%)</T></span>
-            <span>{fmt(tax, currency)}</span>
           </div>
-          <div className="flex justify-between font-bold border-t pt-2">
-            <span><T>Total</T></span>
-            <span className="text-amber-700">{fmt(total, currency)}</span>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={customerName}
+              onChange={(event) => setCustomerName(event.target.value)}
+              placeholder="Customer name"
+              className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
           </div>
-        </div>
-      )}
+          <input
+            type="email"
+            value={customerEmail}
+            onChange={(event) => setCustomerEmail(event.target.value)}
+            placeholder="Email (optional)"
+            className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          />
+          <div className="relative">
+            <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <textarea
+              value={customerAddress}
+              onChange={(event) => setCustomerAddress(event.target.value)}
+              placeholder="Address (optional)"
+              rows={2}
+              className="w-full resize-none rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              value={customerCity}
+              onChange={(event) => setCustomerCity(event.target.value)}
+              placeholder="City"
+              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            <input
+              value={customerCountry}
+              onChange={(event) => setCustomerCountry(event.target.value)}
+              placeholder="Country"
+              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+        </section>
 
-      {/* Submit */}
-      <div className="fixed bottom-16 left-0 right-0 px-4 pb-4 pt-2 bg-white border-t border-gray-100">
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 disabled:opacity-50"
-        >
-          {submitting ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <MessageCircle className="h-5 w-5" />
+        <section data-tour="m-quote-items" className="space-y-3 rounded-2xl border border-gray-100 bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400"><T>Item and Material</T></p>
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              value={jewelleryType}
+              onChange={(event) => setJewelleryType(event.target.value)}
+              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              {JEWELLERY_TYPES.map((type) => (
+                <option key={type} value={type}>{type.replace(/_/g, " ")}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min="1"
+              inputMode="numeric"
+              value={quantity || ""}
+              onChange={(event) => setQuantity(Math.max(1, Number.parseInt(event.target.value) || 1))}
+              placeholder="Qty"
+              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+          <select
+            value={buildMethod}
+            onChange={(event) => setBuildMethod(event.target.value)}
+            className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
+            {BUILD_METHODS.map((method) => (
+              <option key={method.value} value={method.value}>{method.label}</option>
+            ))}
+          </select>
+          <select
+            value={materialCode}
+            onChange={(event) => setMaterialCode(event.target.value)}
+            className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
+            {MATERIAL_OPTIONS.map((material) => (
+              <option key={material.value} value={material.value}>{material.label}</option>
+            ))}
+          </select>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              value={targetTotalWeightG || ""}
+              onChange={(event) => setTargetTotalWeightG(numberFromInput(event.target.value))}
+              placeholder="Total weight g"
+              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            <input
+              value={sizeOrLength}
+              onChange={(event) => setSizeOrLength(event.target.value)}
+              placeholder="Size / length"
+              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+          {selectedMaterial.category === "GOLD" && (
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              value={targetGoldWeightG || ""}
+              onChange={(event) => setTargetGoldWeightG(numberFromInput(event.target.value))}
+              placeholder="Gold weight g (optional)"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
           )}
-          Create Quote — {fmt(total, currency)}
-        </button>
+        </section>
+
+        <section className="space-y-3 rounded-2xl border border-gray-100 bg-white p-4">
+          <div className="flex items-center gap-2">
+            <Gem className="h-4 w-4 text-amber-600" />
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400"><T>Pricing</T></p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input type="number" inputMode="decimal" min="0" value={metalCostNpr || ""} onChange={(event) => setMetalCostNpr(numberFromInput(event.target.value))} placeholder="Material cost" className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <input type="number" inputMode="decimal" min="0" value={makingChargeNpr || ""} onChange={(event) => setMakingChargeNpr(numberFromInput(event.target.value))} placeholder="Making charge" className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <input type="number" inputMode="decimal" min="0" value={gemstoneCostNpr || ""} onChange={(event) => setGemstoneCostNpr(numberFromInput(event.target.value))} placeholder="Gemstone cost" className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <input type="number" inputMode="decimal" min="0" value={finishCostNpr || ""} onChange={(event) => setFinishCostNpr(numberFromInput(event.target.value))} placeholder="Finish cost" className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          </div>
+          <input type="number" inputMode="numeric" min="1" value={estimatedDays || ""} onChange={(event) => setEstimatedDays(Math.max(1, Number.parseInt(event.target.value) || 1))} placeholder="Estimated days" className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <textarea value={gemstoneNotes} onChange={(event) => setGemstoneNotes(event.target.value)} rows={2} placeholder="Gemstone details (optional)" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <textarea value={finishNotes} onChange={(event) => setFinishNotes(event.target.value)} rows={2} placeholder="Finish / plating / polish details" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <textarea value={specialInstructions} onChange={(event) => setSpecialInstructions(event.target.value)} rows={3} placeholder="Customer instructions" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <textarea value={shopNotes} onChange={(event) => setShopNotes(event.target.value)} rows={2} placeholder="Internal shop notes" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+        </section>
+
+        {estimateTotal > 0 && (
+          <section data-tour="m-quote-total" className="space-y-2 rounded-2xl border border-gray-100 bg-white p-4">
+            <div className="flex justify-between text-sm"><span className="text-gray-500"><T>Subtotal</T></span><span>{fmt(estimateTotal, currency)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-500"><T>Estimated tax</T></span><span>{fmt(estimatedTax, currency)}</span></div>
+            <div className="flex justify-between border-t pt-2 font-bold"><span><T>Total estimate</T></span><span className="text-amber-700">{fmt(estimatedTotalWithTax, currency)}</span></div>
+          </section>
+        )}
+
+        <div className="fixed bottom-16 left-0 right-0 border-t border-gray-100 bg-white px-4 pb-4 pt-2">
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-base font-semibold text-white shadow-lg shadow-amber-500/25 disabled:opacity-50"
+          >
+            {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <MessageCircle className="h-5 w-5" />}
+            <T>Create Quote</T> - {fmt(estimatedTotalWithTax, currency)}
+          </button>
+        </div>
       </div>
-    </div>
     </MobileFeatureGate>
   );
 }

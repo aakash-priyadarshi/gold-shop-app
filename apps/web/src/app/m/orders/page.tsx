@@ -16,6 +16,7 @@ import {
     Share2,
     XCircle,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 interface Invoice {
@@ -76,6 +77,7 @@ function InvoiceCard({
   shopName?: string;
   shopPhone?: string;
 }) {
+  const router = useRouter();
   const s = statusMeta(inv.status);
   const currency = inv.currency || "NPR";
   const amount = inv.totalAmount ?? 0;
@@ -112,8 +114,18 @@ function InvoiceCard({
     );
   };
 
+  const openDetails = () => router.push(`/m/orders/${inv.id}`);
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3.5">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={openDetails}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") openDetails();
+      }}
+      className="bg-white rounded-2xl border border-gray-100 px-4 py-3.5 active:bg-amber-50"
+    >
       <div className="flex items-center gap-3">
         <div
           className={`h-10 w-10 rounded-xl ${s.bg} flex items-center justify-center flex-shrink-0`}
@@ -299,7 +311,7 @@ export default function OrdersPage() {
                 key={inv.id}
                 inv={inv}
                 shopName={user?.shop?.shopName}
-                shopPhone={user?.shop?.contactPhone}
+                shopPhone={(user?.shop as any)?.contactPhone}
               />
             ))
           )}

@@ -17,6 +17,7 @@ import Picker from "@emoji-mart/react";
 import {
   AlertTriangle,
   ArrowLeft,
+  EyeOff,
   ExternalLink,
   FileText,
   ImageIcon,
@@ -32,6 +33,7 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -76,12 +78,15 @@ export function ChatPopupWidget() {
   const { user, refreshUser } = useAuth();
   const {
     isOpen,
+    isHidden,
     isMinimized,
     activeConversationId,
     openChat,
     openChatList,
     minimizeChat,
     closeChat,
+    hideChat,
+    restoreChat,
     toggleMinimize,
   } = useChatPopup();
 
@@ -113,11 +118,26 @@ export function ChatPopupWidget() {
   const seenMsgIds = useRef<Set<string>>(new Set());
   const [fileAccept, setFileAccept] = useState("");
   const pathname = usePathname();
+  const [bubblePosition, setBubblePosition] = useState(() => {
+    if (typeof window === "undefined") return { right: 96, bottom: 24 };
+    try {
+      const saved = localStorage.getItem("orivraa-chat-bubble-position");
+      return saved ? JSON.parse(saved) : { right: 96, bottom: 24 };
+    } catch {
+      return { right: 96, bottom: 24 };
+    }
+  });
+  const dragRef = useRef<{
+    active: boolean;
+    moved: boolean;
+    startX: number;
+    startY: number;
+  } | null>(null);
 
   const isShopkeeper = user?.role === "SHOPKEEPER";
   const shopId = user?.shop?.id;
 
-  const updateUnreadCount = (convs: Conversation[]) => {
+  const updateUnreadCount = useCallback((convs: Conversation[]) => {
     const unread = convs.reduce((acc, c) => {
       const lastMsg = c.messages?.[0];
       if (lastMsg && !lastMsg.isRead && lastMsg.senderRole !== user?.role) {
@@ -126,7 +146,7 @@ export function ChatPopupWidget() {
       return acc;
     }, 0);
     setUnreadCount(unread);
-  };
+  }, [user?.role]);
 
   /* ── Load conversations (full, with loading state) ── */
   const loadConversations = useCallback(async () => {
@@ -144,7 +164,7 @@ export function ChatPopupWidget() {
     } finally {
       setLoadingConvs(false);
     }
-  }, [user, isShopkeeper, shopId]);
+  }, [user, isShopkeeper, shopId, updateUnreadCount]);
 
   /* ── Quiet refresh (no loading spinner) ── */
   const loadConversationsQuiet = useCallback(async () => {
@@ -159,7 +179,7 @@ export function ChatPopupWidget() {
     } catch {
       /* silent */
     }
-  }, [user, isShopkeeper, shopId]);
+  }, [user, isShopkeeper, shopId, updateUnreadCount]);
 
   /* ── WebSocket: live message handling ── */
   const handleNewMessage = useCallback(
@@ -598,6 +618,82 @@ export function ChatPopupWidget() {
   /* ── Hide the chat bubble on /messages pages since it overlaps the send button ── */
   const isOnMessagesPage = pathname?.includes("/messages");
 
+  const clampBubblePosition = useCallback((right: number, bottom: number) => {
+    const maxRight = Math.max(8, window.innerWidth - 64);
+    const maxBottom = Math.max(8, window.innerHeight - 64);
+    return {
+      right: Math.min(Math.max(8, right), maxRight),
+      bottom: Math.min(Math.max(8, bottom), maxBottom),
+    };
+  }, []);
+
+  const moveBubbleBy = useCallback(
+    (dx: number, dy: number) => {
+      setBubblePosition((prev: { right: number; bottom: number }) => {
+        const next = clampBubblePosition(prev.right - dx, prev.bottom - dy);
+        localStorage.setItem(
+          "orivraa-chat-bubble-position",
+          JSON.stringify(next),
+        );
+        return next;
+      });
+    },
+    [clampBubblePosition],
+  );
+
+  const handleBubblePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current = {
+      active: true,
+      moved: false,
+      startX: event.clientX,
+      startY: event.clientY,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleBubblePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag?.active) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+    moveBubbleBy(dx, dy);
+    drag.startX = event.clientX;
+    drag.startY = event.clientY;
+  };
+
+  const handleBubblePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current = dragRef.current
+      ? { ...dragRef.current, active: false }
+      : null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  if (isHidden) {
+    if (isOnMessagesPage) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          restoreChat();
+          openChatList();
+        }}
+        style={{ right: bubblePosition.right, bottom: bubblePosition.bottom }}
+        className={cn(
+          "fixed z-50 flex h-11 w-11 items-center justify-center rounded-full",
+          "bg-white text-gold-700 border border-gold-200 shadow-lg shadow-gold-500/20",
+          "ring-2 ring-gold-300/60 animate-pulse",
+          "focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2",
+        )}
+        aria-label="Restore chat help"
+        title="Restore chat help"
+      >
+        <MessageSquare className="h-5 w-5" />
+        <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-gold-500" />
+      </button>
+    );
+  }
+
   /* ─────────────────────────────────────────────────────────
      RENDER: Floating bubble (when closed or minimized)
      ───────────────────────────────────────────────────────── */
@@ -605,27 +701,49 @@ export function ChatPopupWidget() {
     // Don't show bubble on messages pages — it hides the send button
     if (isOnMessagesPage) return null;
     return (
-      <button
-        onClick={() => (isOpen ? toggleMinimize() : openChatList())}
-        className={cn(
-          "fixed bottom-6 right-24 z-50",
-          "flex items-center justify-center",
-          "w-14 h-14 rounded-2xl",
-          "bg-gradient-to-br from-gold-500 to-gold-600",
-          "text-white shadow-lg shadow-gold-500/30",
-          "hover:shadow-xl hover:shadow-gold-500/40 hover:scale-105",
-          "transition-all duration-200",
-          "focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2",
-        )}
-        aria-label="Open chat"
+      <div
+        style={{ right: bubblePosition.right, bottom: bubblePosition.bottom }}
+        className="fixed z-50 touch-none"
+        onPointerDown={handleBubblePointerDown}
+        onPointerMove={handleBubblePointerMove}
+        onPointerUp={handleBubblePointerUp}
       >
-        <MessageSquare className="h-6 w-6" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 text-xs font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-[#161B22]">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
+        <button
+          onClick={() => {
+            if (dragRef.current?.moved) return;
+            isOpen ? toggleMinimize() : openChatList();
+          }}
+          className={cn(
+            "flex items-center justify-center",
+            "w-14 h-14 rounded-2xl",
+            "bg-gradient-to-br from-gold-500 to-gold-600",
+            "text-white shadow-lg shadow-gold-500/30",
+            "hover:shadow-xl hover:shadow-gold-500/40 hover:scale-105",
+            "transition-all duration-200 cursor-grab active:cursor-grabbing",
+            "focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2",
+          )}
+          aria-label="Open chat"
+        >
+          <MessageSquare className="h-6 w-6" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 text-xs font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-[#161B22]">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            hideChat();
+          }}
+          className="absolute -top-2 -left-2 h-7 w-7 rounded-full bg-white text-gray-500 shadow border border-gray-200 flex items-center justify-center"
+          aria-label="Hide chat"
+          title="Hide chat"
+        >
+          <EyeOff className="h-3.5 w-3.5" />
+        </button>
+      </div>
     );
   }
 
@@ -702,6 +820,14 @@ export function ChatPopupWidget() {
             aria-label="Minimize chat"
           >
             <Minus className="h-4 w-4" />
+          </button>
+          <button
+            onClick={hideChat}
+            className="p-1.5 rounded-lg hover:bg-white/20 transition"
+            aria-label="Hide chat bubble"
+            title="Hide chat bubble"
+          >
+            <EyeOff className="h-4 w-4" />
           </button>
           <button
             onClick={closeChat}
@@ -925,9 +1051,12 @@ export function ChatPopupWidget() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
-                                <img
+                                <Image
                                   src={msg.attachmentUrl}
                                   alt="Shared image"
+                                  width={320}
+                                  height={192}
+                                  unoptimized
                                   className="max-w-full max-h-48 rounded-lg object-cover cursor-pointer hover:opacity-90 transition"
                                 />
                               </a>
@@ -1011,9 +1140,12 @@ export function ChatPopupWidget() {
               {attachmentPreview && (
                 <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                   {attachmentPreview.startsWith("data:image") ? (
-                    <img
+                    <Image
                       src={attachmentPreview}
                       alt="Preview"
+                      width={40}
+                      height={40}
+                      unoptimized
                       className="w-10 h-10 rounded object-cover"
                     />
                   ) : attachmentPreview === "video" ? (

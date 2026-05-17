@@ -83,7 +83,7 @@ function CartDrawer({
     method: string,
     customerName: string,
     customerPhone?: string,
-    extras?: { taxRate?: number; makingPct?: number },
+    extras?: { taxRate?: number; makingPct?: number; customerId?: string },
   ) => Promise<void> | void;
   onClose: () => void;
 }) {
@@ -92,6 +92,7 @@ function CartDrawer({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [customerId, setCustomerId] = useState<string | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [makingPct, setMakingPct] = useState(0); // making charge %
 
@@ -99,7 +100,10 @@ function CartDrawer({
   // Same pattern as the PC quote builder (shopQuotesApi.lookupCustomer).
   useEffect(() => {
     const digits = phone.replace(/\D/g, "");
-    if (digits.length < 7) return;
+    if (digits.length < 7) {
+      setCustomerId(null);
+      return;
+    }
     const handle = setTimeout(async () => {
       try {
         setLookingUp(true);
@@ -107,9 +111,16 @@ function CartDrawer({
           phoneCountryCode: "+977",
           phone: digits,
         });
-        const found = res.data;
-        if (found?.name && !name) setName(found.name);
+        const result = res.data;
+        const customer = result?.customer;
+        if (result?.found && customer) {
+          setCustomerId(customer.id ?? null);
+          if (customer.name && !name) setName(customer.name);
+        } else {
+          setCustomerId(null);
+        }
       } catch {
+        setCustomerId(null);
         // no existing customer — ignore
       } finally {
         setLookingUp(false);
@@ -244,19 +255,7 @@ function CartDrawer({
         <div className="pt-2 space-y-2">
           <div>
             <label className="text-xs font-medium text-gray-500 block mb-1">
-              <T>Customer Name</T>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("Walk-in customer")}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-500 block mb-1">
-              <T>Customer Phone (optional — for WhatsApp bill)</T>
+              <T>Customer Phone (optional — for lookup and WhatsApp bill)</T>
               {lookingUp && (
                 <span className="ml-2 text-amber-500">
                   <Loader2 className="inline h-3 w-3 animate-spin" />
@@ -268,6 +267,23 @@ function CartDrawer({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder={t("+977 98XXXXXXXX")}
+              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            {customerId && (
+              <p className="mt-1 text-[11px] font-medium text-emerald-600">
+                <T>Customer matched</T>
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">
+              <T>Customer Name</T>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("Walk-in customer")}
               className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
@@ -306,7 +322,7 @@ function CartDrawer({
               method,
               name.trim() || "Walk-in Customer",
               phone || undefined,
-              { taxRate: 3, makingPct },
+              { taxRate: 3, makingPct, customerId: customerId || undefined },
             );
             setLoading(false);
           }}
@@ -690,7 +706,7 @@ export default function MobilePOSPage() {
     method: string,
     customerName: string,
     customerPhone?: string,
-    extras?: { taxRate?: number; makingPct?: number },
+    extras?: { taxRate?: number; makingPct?: number; customerId?: string },
   ) => {
     if (!cart.length) return;
     try {
@@ -701,7 +717,9 @@ export default function MobilePOSPage() {
       // The earlier implementation tried to POST to shopQuotesApi.create which
       // does NOT accept an `items` field, so class-validator rejected the body
       // with "property item should not exist". Mirroring the PC flow fixes it.
-      const sessionRes = await posApi.createSession({});
+      const sessionRes = await posApi.createSession({
+        customerId: extras?.customerId,
+      });
       const sessionId =
         sessionRes.data?.id ?? sessionRes.data?.sessionId;
       if (!sessionId) throw new Error("Could not start POS session");
@@ -836,13 +854,6 @@ export default function MobilePOSPage() {
                 className="w-full pl-9 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
-            <button
-              onClick={() => setScannerOpen(true)}
-              aria-label="Scan barcode"
-              className="flex items-center justify-center h-10 w-10 rounded-xl bg-amber-100 text-amber-700 active:bg-amber-200"
-            >
-              <ScanLine className="h-5 w-5" />
-            </button>
           </div>
         </div>
 

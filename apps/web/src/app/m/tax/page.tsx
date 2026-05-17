@@ -281,7 +281,8 @@ export default function TaxAuditPage() {
   }, [loadSummary]);
 
   const cur = summary?.currency ?? config.currency;
-  const fmt = (n: number) => `${cur} ${n.toLocaleString("en-IN")}`;
+  const fmt = (n?: number | null) =>
+    `${cur} ${Math.round(Number(n ?? 0)).toLocaleString("en-IN")}`;
 
   const handleDownload = async (type: string) => {
     setDownloading(type);
@@ -431,7 +432,7 @@ export default function TaxAuditPage() {
             <StatCard label="Taxable Amount" value={fmt(summary.taxableAmount)} />
             <StatCard
               label="Invoices"
-              value={String(summary.invoiceCount)}
+              value={String(summary.invoiceCount ?? 0)}
               sub={monthOptions.find((o) => o.value === period)?.label}
             />
             {(summary.zeroRatedAmount ?? 0) > 0 && (
