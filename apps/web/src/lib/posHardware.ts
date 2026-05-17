@@ -369,7 +369,11 @@ export async function printReceiptBytes(bytes: Uint8Array): Promise<void> {
     (e) => e.direction === "out",
   );
   if (!endpoint) throw new Error("Printer has no OUT endpoint");
-  await device.transferOut(endpoint.endpointNumber, bytes);
+  // Ensure the buffer is a plain ArrayBuffer (not SharedArrayBuffer) for WebUSB
+  const safeBytes = bytes.buffer instanceof ArrayBuffer
+    ? bytes
+    : new Uint8Array(bytes);
+  await device.transferOut(endpoint.endpointNumber, safeBytes);
 }
 
 /** Convenience: build + print a receipt using the saved config. */
