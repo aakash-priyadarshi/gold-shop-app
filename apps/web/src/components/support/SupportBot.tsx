@@ -245,6 +245,8 @@ export function SupportBot() {
   const [pos, setPos] = useState<LauncherPos | null>(() =>
     readSession<LauncherPos | null>(STORAGE_LAUNCHER_POS, null),
   );
+  const [isDragging, setIsDragging] = useState(false);
+  const [isOverDismissZone, setIsOverDismissZone] = useState(false);
   const dragInfo = useRef<{
     startX: number;
     startY: number;
@@ -260,6 +262,18 @@ export function SupportBot() {
   const currentBottom = pos?.bottom ?? defaultBottom;
   // Size-adjust launcher: mobile is smaller (46px) than PC (56px)
   const launcherSizePx = isMobile ? 46 : 56;
+
+  // Dismiss zone is at bottom-center of the viewport
+  const DISMISS_ZONE_SIZE = 64;
+  const DISMISS_ZONE_RADIUS = 50; // proximity threshold in px
+
+  const checkDismissZone = useCallback((clientX: number, clientY: number) => {
+    if (!isMobile) return false;
+    const zoneCenterX = window.innerWidth / 2;
+    const zoneCenterY = window.innerHeight - 100; // 100px from bottom
+    const dist = Math.hypot(clientX - zoneCenterX, clientY - zoneCenterY);
+    return dist < DISMISS_ZONE_RADIUS;
+  }, [isMobile]);
 
   const onLauncherPointerDown = useCallback(
     (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -285,6 +299,7 @@ export function SupportBot() {
       const dy = e.clientY - d.startY;
       if (!d.moved && Math.hypot(dx, dy) < 6) return; // ignore tiny jitter
       d.moved = true;
+      if (isMobile && !isDragging) setIsDragging(true);
       // We track from right/bottom — moving right (dx > 0) reduces `right`.
       const newRight = d.origRight - dx;
       const newBottom = d.origBottom - dy;
@@ -295,18 +310,30 @@ export function SupportBot() {
         right: Math.max(8, Math.min(maxRight, newRight)),
         bottom: Math.max(8, Math.min(maxBottom, newBottom)),
       });
+      // Check dismiss zone proximity
+      if (isMobile) {
+        setIsOverDismissZone(checkDismissZone(e.clientX, e.clientY));
+      }
     },
-    [launcherSizePx],
+    [launcherSizePx, isMobile, isDragging, checkDismissZone],
   );
 
   const onLauncherPointerUp = useCallback(
     (e: React.PointerEvent<HTMLButtonElement>) => {
       const d = dragInfo.current;
       dragInfo.current = null;
+      setIsDragging(false);
+      setIsOverDismissZone(false);
       if (!d) return;
       if (!d.moved) {
         // Treated as a tap → open chat
         setOpen(true);
+        return;
+      }
+      // If dropped on dismiss zone → dismiss the widget
+      if (isMobile && checkDismissZone(e.clientX, e.clientY)) {
+        dismissChat();
+        setPos(null); // reset position
         return;
       }
       // Persist final position
@@ -316,11 +343,40 @@ export function SupportBot() {
         /* quota */
       }
     },
-    [pos],
+    [pos, isMobile, checkDismissZone, dismissChat],
   );
 
   return (
     <>
+      {/* Mobile drag-to-dismiss zone — appears when dragging the launcher */}
+      {isDragging && isMobile && (
+        <div className="fixed inset-0 z-[59] pointer-events-none">
+          <div
+            className={`absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 transition-all duration-200 ${
+              isOverDismissZone ? "scale-125" : "scale-100"
+            }`}
+            style={{ bottom: "68px" }}
+          >
+            <div
+              className={`h-16 w-16 rounded-full flex items-center justify-center transition-all duration-200 ${
+                isOverDismissZone
+                  ? "bg-red-500 shadow-lg shadow-red-500/40"
+                  : "bg-gray-200 dark:bg-gray-700"
+              }`}
+            >
+              <X className={`h-7 w-7 transition-colors ${
+                isOverDismissZone ? "text-white" : "text-gray-500 dark:text-gray-400"
+              }`} />
+            </div>
+            <span className={`text-[10px] font-semibold transition-colors ${
+              isOverDismissZone ? "text-red-500" : "text-gray-400"
+            }`}>
+              <T>Drop to hide</T>
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Launcher */}
       {!open && !isChatDismissed && (
         <div
@@ -346,7 +402,7 @@ export function SupportBot() {
             `}} />
           )}
 
-          {bubbleVisible && (
+          {bubbleVisible && !isDragging && (
             <div className="bg-amber-500 text-white text-[11px] px-2.5 py-1 rounded-xl shadow-md whitespace-nowrap animate-bounce relative mb-1 shrink-0 font-medium">
               <T>Need help? Ask AI!</T>
               <span className="absolute -bottom-1 right-4 h-0 w-0 border-l-[6px] border-r-[0px] border-t-[6px] border-l-transparent border-t-amber-500" />
@@ -364,32 +420,22 @@ export function SupportBot() {
             style={{
               width: `${launcherSizePx}px`,
               height: `${launcherSizePx}px`,
+              opacity: isOverDismissZone ? 0.5 : 1,
             }}
-            className="rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-grab active:cursor-grabbing shrink-0 relative"
+            className={`rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 transition-all flex items-center justify-center cursor-grab active:cursor-grabbing shrink-0 ${
+              isDragging ? "scale-90" : "hover:scale-105 active:scale-95"
+            }`}
             onMouseEnter={() => setBubbleVisible(true)}
             onMouseLeave={() => setBubbleVisible(false)}
           >
             <MessageCircle className={isMobile ? "h-5 w-5" : "h-6 w-6"} />
-            <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-            </span>
+            {!isDragging && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+              </span>
+            )}
           </button>
-          {/* Dismiss button — visible on mobile, hidden on desktop */}
-          {isMobile && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                dismissChat();
-              }}
-              className="absolute -top-0.5 -left-0.5 h-4 w-4 bg-white text-gray-500 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 shadow-sm z-10"
-              title="Hide chat widget"
-              aria-label="Hide chat widget"
-            >
-              <X className="h-2.5 w-2.5" />
-            </button>
-          )}
         </div>
       )}
 
