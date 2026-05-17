@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { BuyerEducation } from "@/components/pricing/BuyerEducation";
@@ -7153,4 +7154,3 @@ export default function CreateRfqPage() {
     </TooltipProvider>
   );
 }
-/* eslint-disable @next/next/no-img-element */
