@@ -4,9 +4,10 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTutorial } from "./useTutorial";
+import { useHelpUIStore } from "@/store/help-ui";
 
 interface TutorialButtonProps {
   className?: string;
@@ -18,6 +19,7 @@ export function TutorialButton({ className }: TutorialButtonProps) {
   const [running, setRunning] = useState(false);
   const [bubbleVisible, setBubbleVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const { isTutorialDismissed, dismissTutorial } = useHelpUIStore();
 
   /* Show bubble for 3 s on first mount, then on hover */
   useEffect(() => {
@@ -65,7 +67,7 @@ export function TutorialButton({ className }: TutorialButtonProps) {
     driverObj.drive();
   }, [steps, hasSteps, running, nextLabel, backLabel, doneLabel]);
 
-  if (!hasSteps) return null;
+  if (!hasSteps || isTutorialDismissed) return null;
 
   return (
     <div
@@ -87,23 +89,39 @@ export function TutorialButton({ className }: TutorialButtonProps) {
         <span className="absolute -bottom-2 right-3 h-0 w-0 border-l-[8px] border-r-[0px] border-t-[8px] border-l-transparent border-t-amber-500" />
       </div>
 
-      {/* Circle button */}
-      <button
-        onClick={startTour}
-        disabled={running}
-        aria-label="Start page tutorial"
-        title={bubbleText}
-        className={cn(
-          "flex items-center justify-center",
-          "w-12 h-12 rounded-full shadow-lg",
-          "bg-amber-500 hover:bg-amber-600 active:bg-amber-700",
-          "text-white transition-colors",
-          "disabled:opacity-60 disabled:cursor-not-allowed",
-          className,
+      {/* Circle button container */}
+      <div className="relative">
+        <button
+          onClick={startTour}
+          disabled={running}
+          aria-label="Start page tutorial"
+          title={bubbleText}
+          className={cn(
+            "flex items-center justify-center",
+            "w-12 h-12 rounded-full shadow-lg",
+            "bg-amber-500 hover:bg-amber-600 active:bg-amber-700",
+            "text-white transition-colors",
+            "disabled:opacity-60 disabled:cursor-not-allowed",
+            className,
+          )}
+        >
+          <HelpCircle className="w-6 h-6" />
+        </button>
+        {/* Dismiss button */}
+        {!running && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              dismissTutorial();
+            }}
+            className="absolute -top-1 -right-1 h-5 w-5 bg-white text-gray-500 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 shadow-sm z-10"
+            title="Hide tutorial button"
+            aria-label="Hide tutorial button"
+          >
+            <X className="h-3 w-3" />
+          </button>
         )}
-      >
-        <HelpCircle className="w-6 h-6" />
-      </button>
+      </div>
     </div>
   );
 }

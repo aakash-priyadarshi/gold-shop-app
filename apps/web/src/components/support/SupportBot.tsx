@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 /**
  * SupportBot - floating AI help widget
@@ -19,6 +19,7 @@ import { api } from "@/lib/api";
 import { Mail, MessageCircle, Phone, Send, Sparkles, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useHelpUIStore } from "@/store/help-ui";
 
 const FOUNDER = {
   name: "Aakash",
@@ -130,6 +131,16 @@ export function SupportBot() {
   );
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const { isChatDismissed, dismissChat } = useHelpUIStore();
+
+  // If chat is recalled (isChatDismissed becomes false), we can ensure it is visible
+  useEffect(() => {
+    if (!isChatDismissed && !open && readSession(STORAGE_OPEN, false) === false) {
+      // Chat was just recalled from a hidden state, don't auto-open unless desired.
+      // We will just let the launcher appear.
+    }
+  }, [isChatDismissed, open]);
 
   const QUICK_ASKS = isMobile
     ? QUICK_ASKS_MOBILE
@@ -300,7 +311,7 @@ export function SupportBot() {
   return (
     <>
       {/* Launcher */}
-      {!open && (
+      {!open && !isChatDismissed && (
         <button
           type="button"
           onPointerDown={onLauncherPointerDown}
@@ -351,6 +362,18 @@ export function SupportBot() {
                   : "Powered by Gemini | Founder on standby"}
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                dismissChat();
+                setOpen(false);
+              }}
+              title="Hide chat widget completely"
+              aria-label="Hide chat widget"
+              className="text-[10px] px-2 py-1 mr-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors uppercase font-medium tracking-wide"
+            >
+              Hide
+            </button>
             <button
               type="button"
               onClick={() => setOpen(false)}

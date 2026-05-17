@@ -36,11 +36,15 @@ import {
     Users,
     Wallet,
     Wrench,
+    X,
+    HelpCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useHelpUIStore } from "@/store/help-ui";
+import { InformationCircleIcon, ComputerDesktopIcon } from "@heroicons/react/24/outline";
 
 // Lazy-load heavy floating widgets (driver.js CSS ~20 KB)
 const TutorialButton = dynamic(
@@ -102,28 +106,24 @@ function GoldPriceBar({ rates }: { rates: GoldRate | null }) {
   return (
     <div
       data-tour="m-gold-ticker"
-      className="flex items-center gap-3 px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs overflow-x-auto scrollbar-none whitespace-nowrap"
+      className="flex items-center justify-between px-4 py-3 bg-amber-500 text-white shadow-sm"
     >
-      <span className="font-semibold text-amber-800">24K</span>
-      <span className="text-amber-700">
-        {rates.currency} {rates.rate24k.toLocaleString()}/g
-      </span>
-      <span className="text-amber-300">|</span>
-      <span className="font-semibold text-amber-800">22K</span>
-      <span className="text-amber-700">
-        {rates.currency} {rates.rate22k.toLocaleString()}/g
-      </span>
-      <span className="text-amber-300">|</span>
-      <span className="font-semibold text-amber-800">18K</span>
-      <span className="text-amber-700">
-        {rates.currency} {rates.rate18k.toLocaleString()}/g
-      </span>
-      <span className="text-amber-300">|</span>
-      <span className="font-semibold text-gray-600">Silver</span>
-      <span className="text-gray-600">
-        {rates.currency} {rates.silver.toLocaleString()}/g
-      </span>
-      <span className="ml-auto text-gray-400 flex-shrink-0">
+      <div className="flex gap-4">
+        <div>
+          <span className="text-[10px] font-medium text-amber-200 uppercase block leading-none mb-1">24K Pure</span>
+          <span className="text-sm font-bold leading-none">
+            {rates.currency} {rates.rate24k.toLocaleString()}/g
+          </span>
+        </div>
+        <div className="w-[1px] bg-amber-400/50" />
+        <div>
+          <span className="text-[10px] font-medium text-amber-200 uppercase block leading-none mb-1">22K Standard</span>
+          <span className="text-sm font-bold leading-none">
+            {rates.currency} {rates.rate22k.toLocaleString()}/g
+          </span>
+        </div>
+      </div>
+      <span className="text-[10px] text-amber-200 font-medium">
         {rates.updatedAt}
       </span>
     </div>
@@ -133,69 +133,130 @@ function GoldPriceBar({ rates }: { rates: GoldRate | null }) {
 function MoreMenu({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const { logout } = useAuth();
+  const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial } = useHelpUIStore();
 
-  const items = [
-    { href: "/m/rate-card", icon: Image, label: "Rate Card", desc: "Share today's gold rates" },
-    { href: "/m/broadcast", icon: MessageCircle, label: "Rate Broadcast", desc: "1-tap WhatsApp morning message" },
-    { href: "/m/catalogue", icon: Send, label: "Catalogue Share", desc: "Send live inventory on WhatsApp" },
-    { href: "/m/rfq", icon: Gem, label: "3-Step RFQ", desc: "Guided custom order request" },
-    { href: "/m/exchange", icon: Scale, label: "Old Gold Exchange", desc: "Calculate buyback value" },
-    { href: "/m/summary", icon: BarChart2, label: "Daily Summary", desc: "Today's sales & revenue" },
-    { href: "/m/tax", icon: Receipt, label: "Tax Audit", desc: "Audit-ready GST/VAT/MTD reports" },
-    { href: "/m/repairs", icon: Wrench, label: "Repairs", desc: "Track repair jobs" },
-    { href: "/m/savings", icon: FileText, label: "Savings Schemes", desc: "Customer gold savings" },
-    { href: "/m/alerts", icon: Bell, label: "Rate Alerts", desc: "Price threshold notifications" },
-    { href: "/m/pending", icon: Wallet, label: "Pending Payments", desc: "Track credit & partial sales" },
-    { href: "/m/occasions", icon: Cake, label: "Occasions", desc: "Birthdays & anniversaries today" },
-    { href: "/m/purity", icon: FlaskConical, label: "Purity Calculator", desc: "Karat & assay gold value" },
-    { href: "/m/settings", icon: Settings, label: "Store Settings", desc: "Country, currency, contact, making charge" },
+  const sections = [
+    {
+      title: "Daily Operations",
+      items: [
+        { href: "/m/summary", icon: BarChart2, label: "Daily Summary" },
+        { href: "/m/exchange", icon: Scale, label: "Old Gold Exchange" },
+        { href: "/m/pending", icon: Wallet, label: "Pending Payments" },
+        { href: "/m/repairs", icon: Wrench, label: "Repairs" },
+      ]
+    },
+    {
+      title: "Tools & Calculators",
+      items: [
+        { href: "/m/rate-card", icon: Image, label: "Rate Card" },
+        { href: "/m/broadcast", icon: MessageCircle, label: "WhatsApp Broadcast" },
+        { href: "/m/tax", icon: Receipt, label: "Tax Audit" },
+        { href: "/m/purity", icon: FlaskConical, label: "Purity Calculator" },
+      ]
+    },
+    {
+      title: "More",
+      items: [
+        { href: "/m/catalogue", icon: Send, label: "Catalogue Share" },
+        { href: "/m/rfq", icon: Gem, label: "Custom RFQ" },
+        { href: "/m/savings", icon: FileText, label: "Savings Schemes" },
+        { href: "/m/occasions", icon: Cake, label: "Occasions" },
+      ]
+    }
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-40 bg-black/40"
-      onClick={onClose}
-    >
-      <div
-        className="absolute bottom-16 left-0 right-0 bg-white rounded-t-2xl shadow-2xl p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-1">
-          <T>More Tools</T>
-        </p>
-        <div className="grid grid-cols-1 gap-1">
-          {items.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
+    <div className="fixed inset-0 z-40 bg-gray-50 flex flex-col animate-in slide-in-from-bottom-2 duration-200">
+      <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 shadow-sm">
+        <h2 className="text-xl font-bold text-gray-900"><T>More Tools</T></h2>
+        <button
+          onClick={onClose}
+          className="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 active:bg-gray-200"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
+        {sections.map((sec) => (
+          <div key={sec.title}>
+            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 px-2">
+              <T>{sec.title}</T>
+            </h3>
+            <div className="grid grid-cols-4 gap-4">
+              {sec.items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onClose}
+                  className="flex flex-col items-center text-center gap-2"
+                >
+                  <div className="h-14 w-14 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center active:scale-95 transition-transform">
+                    <item.icon className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <span className="text-[11px] font-medium text-gray-700 leading-tight">
+                    <T>{item.label}</T>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        <div className="pt-4 border-t border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 px-2">
+            <T>Help & Support</T>
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => {
+                recallChat();
+                onClose();
+              }}
+              className="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 active:bg-gray-50 text-left"
             >
-              <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                <item.icon className="h-5 w-5 text-amber-600" />
+              <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 text-blue-600">
+                <MessageCircle className="h-5 w-5" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900"><T>{item.label}</T></p>
-                <p className="text-xs text-gray-500"><T>{item.desc}</T></p>
+              <div>
+                <p className="text-sm font-bold text-gray-900"><T>AI Support Chat</T></p>
+                <p className="text-[11px] text-gray-500"><T>{isChatDismissed ? "Currently hidden" : "Open chat widget"}</T></p>
               </div>
-              <ChevronRight className="h-4 w-4 text-gray-300" />
-            </Link>
-          ))}
+            </button>
+            <button
+              onClick={() => {
+                recallTutorial();
+                onClose();
+              }}
+              className="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 active:bg-gray-50 text-left"
+            >
+              <div className="h-10 w-10 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0 text-purple-600">
+                <HelpCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900"><T>Tutorials</T></p>
+                <p className="text-[11px] text-gray-500"><T>{isTutorialDismissed ? "Currently hidden" : "View screen guides"}</T></p>
+              </div>
+            </button>
+          </div>
         </div>
-        <div className="mt-3 border-t border-gray-100 pt-3">
+
+        <div className="pt-4 pb-8 space-y-3">
+          <Link
+            href="/m/settings"
+            onClick={onClose}
+            className="flex items-center gap-3 px-4 py-4 rounded-2xl bg-white shadow-sm border border-gray-100 active:bg-gray-50"
+          >
+            <Settings className="h-5 w-5 text-gray-600" />
+            <span className="text-sm font-bold text-gray-900"><T>Store Settings</T></span>
+          </Link>
           <Link
             href="/dashboard/shop"
             onClick={onClose}
-            className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 text-gray-600"
+            className="flex items-center gap-3 px-4 py-4 rounded-2xl bg-white shadow-sm border border-gray-100 active:bg-gray-50"
           >
-            <div className="h-10 w-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-              <ShoppingBag className="h-5 w-5 text-gray-500" />
-            </div>
-            <div>
-              <p className="text-sm font-medium"><T>Full Dashboard</T></p>
-              <p className="text-xs text-gray-400"><T>Switch to desktop view</T></p>
-            </div>
+            <ComputerDesktopIcon className="h-5 w-5 text-gray-600" />
+            <span className="text-sm font-bold text-gray-900"><T>Desktop Dashboard</T></span>
           </Link>
           <button
             onClick={async () => {
@@ -203,12 +264,10 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
               await logout();
               router.push("/auth/login");
             }}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-red-50 active:bg-red-100 text-red-600"
+            className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl bg-red-50 text-red-600 active:bg-red-100"
           >
-            <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-              <LogOut className="h-5 w-5 text-red-500" />
-            </div>
-            <p className="text-sm font-medium"><T>Sign out</T></p>
+            <LogOut className="h-5 w-5" />
+            <span className="text-sm font-bold"><T>Sign out</T></span>
           </button>
         </div>
       </div>
@@ -233,6 +292,7 @@ export default function MobileLayout({
   const [shopMenuOpen, setShopMenuOpen] = useState(false);
   const [switchingShopId, setSwitchingShopId] = useState<string | null>(null);
   const ratesRef = useRef(false);
+  const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial } = useHelpUIStore();
 
   // Auth guard
   useEffect(() => {
@@ -410,19 +470,38 @@ export default function MobileLayout({
               </p>
             )}
           </div>
-          <button
-            onClick={() => {
-              ratesRef.current = false;
-              fetchRates();
-            }}
-            disabled={ratesLoading}
-            className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-            aria-label={t("Refresh rates")}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${ratesLoading ? "animate-spin text-amber-500" : ""}`}
-            />
-          </button>
+          
+          <div className="flex items-center gap-1">
+            {(isChatDismissed || isTutorialDismissed) && (
+              <button
+                onClick={() => {
+                  recallChat();
+                  recallTutorial();
+                }}
+                className="relative p-2 rounded-lg text-amber-600 hover:bg-amber-50 active:bg-amber-100 transition-colors"
+                aria-label={t("Restore Help")}
+              >
+                <InformationCircleIcon className="h-5 w-5" />
+                <span className="absolute top-1 right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+              </button>
+            )}
+            <button
+              onClick={() => {
+                ratesRef.current = false;
+                fetchRates();
+              }}
+              disabled={ratesLoading}
+              className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+              aria-label={t("Refresh rates")}
+            >
+              <RefreshCw
+                className={`h-5 w-5 ${ratesLoading ? "animate-spin text-amber-500" : ""}`}
+              />
+            </button>
+          </div>
         </div>
         <GoldPriceBar rates={rates} />
       </header>
@@ -449,21 +528,21 @@ export default function MobileLayout({
 
             const inner = (
               <span
-                className={`relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-2xl min-w-[60px] transition-all duration-200 active:scale-95 ${
+                className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl min-w-[65px] transition-all duration-200 active:scale-95 ${
                   active ? "text-amber-600" : "text-gray-400"
                 }`}
               >
                 {/* Animated active indicator */}
                 {active && (
-                  <span className="absolute -top-1 left-1/2 -translate-x-1/2 h-1 w-8 rounded-full bg-amber-500 animate-in fade-in slide-in-from-top-1 duration-200" />
+                  <span className="absolute -top-1 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-amber-500 animate-in fade-in slide-in-from-top-1 duration-200" />
                 )}
                 <tab.icon
-                  className={`h-5 w-5 transition-transform duration-200 ${
+                  className={`h-6 w-6 transition-transform duration-200 ${
                     active ? "scale-110" : ""
                   }`}
                 />
-                <span className="text-[10px] font-medium">
-                  <T>{tab.label}</T>
+                <span className="text-[11px] font-bold">
+                  <T>{tab.label === "Bill" ? "New Sale" : tab.label}</T>
                 </span>
               </span>
             );

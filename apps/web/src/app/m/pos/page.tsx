@@ -180,27 +180,27 @@ function CartDrawer({
               </p>
               <p className="text-xs text-gray-500">{formatMoney(c.unitPrice, currency)} <T>each</T></p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => onQtyChange(c.item.id, c.qty - 1)}
-                className="h-8 w-8 rounded-full border border-gray-200 flex items-center justify-center active:bg-gray-100"
+                className="h-10 w-10 rounded-full border border-gray-200 flex items-center justify-center active:bg-gray-100"
               >
-                <Minus className="h-3 w-3" />
+                <Minus className="h-4 w-4" />
               </button>
-              <span className="w-5 text-center text-sm font-semibold">
+              <span className="w-6 text-center text-base font-semibold">
                 {c.qty}
               </span>
               <button
                 onClick={() => onQtyChange(c.item.id, c.qty + 1)}
-                className="h-8 w-8 rounded-full border border-gray-200 flex items-center justify-center active:bg-gray-100"
+                className="h-10 w-10 rounded-full border border-gray-200 flex items-center justify-center active:bg-gray-100"
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="h-4 w-4" />
               </button>
               <button
                 onClick={() => onRemove(c.item.id)}
-                className="h-8 w-8 rounded-full text-red-400 flex items-center justify-center active:bg-red-50 ml-1"
+                className="h-10 w-10 rounded-full text-red-500 bg-red-50 flex items-center justify-center active:bg-red-100 ml-2"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -230,23 +230,23 @@ function CartDrawer({
         </div>
 
         {/* Totals */}
-        <div className="mt-3 pt-3 border-t space-y-2">
-          <div className="flex justify-between text-sm">
+        <div className="mt-4 pt-4 border-t space-y-3">
+          <div className="flex justify-between text-base">
             <span className="text-gray-500"><T>Subtotal</T></span>
-            <span>{formatMoney(subtotal, currency)}</span>
+            <span className="font-medium">{formatMoney(subtotal, currency)}</span>
           </div>
           {making > 0 && (
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-base">
               <span className="text-gray-500"><T>Making Charge</T> ({makingPct}%)</span>
-              <span>{formatMoney(making, currency)}</span>
+              <span className="font-medium">{formatMoney(making, currency)}</span>
             </div>
           )}
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between text-base">
             <span className="text-gray-500"><T>Tax (3%)</T></span>
-            <span>{formatMoney(tax, currency)}</span>
+            <span className="font-medium">{formatMoney(tax, currency)}</span>
           </div>
-          <div className="flex justify-between text-base font-bold border-t pt-2">
-            <span><T>Total</T></span>
+          <div className="flex justify-between text-xl font-black border-t pt-3 pb-2">
+            <span><T>Final Total</T></span>
             <span className="text-amber-700">{formatMoney(total + tax, currency)}</span>
           </div>
         </div>
@@ -290,19 +290,19 @@ function CartDrawer({
         </div>
 
         {/* Payment method */}
-        <div>
-          <label className="text-xs font-medium text-gray-500 block mb-2">
-            <T>Payment Method</T>
+        <div className="pb-6">
+          <label className="text-sm font-semibold text-gray-700 block mb-3">
+            <T>Select Payment Method</T>
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {PAYMENT_METHODS.map((pm) => (
               <button
                 key={pm.value}
                 onClick={() => setMethod(pm.value)}
-                className={`py-2 rounded-xl text-xs font-medium border transition-colors ${
+                className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${
                   method === pm.value
-                    ? "bg-amber-500 border-amber-500 text-white"
-                    : "border-gray-200 text-gray-600 bg-white"
+                    ? "bg-amber-50 border-amber-500 text-amber-700 shadow-sm"
+                    : "border-gray-100 text-gray-600 bg-white hover:border-gray-200"
                 }`}
               >
                 {pm.label}
@@ -829,13 +829,14 @@ export default function MobilePOSPage() {
               <T>Scan</T>
             </button>
             <MobileHelpButton
-              title="Quick Bill"
-              description="The fastest way to create a jewelry bill on your phone — search, view product details, add to bill, scan, and share."
+              title="New Sale (POS)"
+              description="Quickly create a jewelry bill and record a sale from your mobile device."
               tips={[
-                "Tap a product card to view product details from the same inventory source as the PC product page",
-                "Use the cart buttons on each product to add, decrease, or remove items from the bill",
-                "Tap Scan for camera barcode scanning; a USB/Bluetooth scanner works anywhere on this screen",
-                "Tap the cart bar at the bottom to checkout and share invoice on WhatsApp",
+                "Tap a product card to see enlarged details, stock, and descriptions.",
+                "Tap the + button to instantly add items to the customer's bill.",
+                "Use the prominent 'Scan' button to scan barcode tags using your camera.",
+                "Review the large 'Final Total' in the cart and select a payment method.",
+                "Need help? Look for the pulsing 'i' icon in the top header to recall AI Support and Tutorials."
               ]}
             />
           </div>
@@ -922,7 +923,7 @@ export default function MobilePOSPage() {
                       </p>
                       <div className="mt-2 flex items-center justify-between gap-1.5">
                         {item.metalPurity ? (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium truncate">
+                          <span className="text-[11px] px-2 py-1 bg-amber-100 text-amber-800 rounded-full font-bold truncate">
                             {item.metalPurity}
                           </span>
                         ) : (
@@ -934,36 +935,36 @@ export default function MobilePOSPage() {
                             e.stopPropagation();
                             addToCart(item);
                           }}
-                          className="h-8 w-8 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm"
+                          className="h-10 w-10 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-md active:bg-amber-600 transition-colors"
                           aria-label={`Add ${item.nameEn} to bill`}
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="h-5 w-5" />
                         </button>
                       </div>
                       {inCart && (
-                        <div className="mt-2 flex items-center justify-between rounded-xl bg-white border border-amber-100 p-1">
+                        <div className="mt-3 flex items-center justify-between rounded-xl bg-amber-50 border border-amber-200 p-1.5">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               updateQty(item.id, inCart.qty - 1);
                             }}
-                            className="h-7 w-7 rounded-lg flex items-center justify-center text-gray-600 active:bg-gray-100"
+                            className="h-8 w-8 rounded-lg flex items-center justify-center bg-white text-gray-700 shadow-sm active:bg-gray-100"
                             aria-label={`Decrease ${item.nameEn}`}
                           >
-                            <Minus className="h-3.5 w-3.5" />
+                            <Minus className="h-4 w-4" />
                           </button>
-                          <span className="text-xs font-bold text-amber-700">{inCart.qty}</span>
+                          <span className="text-sm font-black text-amber-800">{inCart.qty}</span>
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               removeFromCart(item.id);
                             }}
-                            className="h-7 w-7 rounded-lg flex items-center justify-center text-red-500 active:bg-red-50"
+                            className="h-8 w-8 rounded-lg flex items-center justify-center bg-red-100 text-red-600 shadow-sm active:bg-red-200"
                             aria-label={`Remove ${item.nameEn}`}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       )}

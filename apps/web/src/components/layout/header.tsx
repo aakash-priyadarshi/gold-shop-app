@@ -85,6 +85,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
+import { useHelpUIStore } from "@/store/help-ui";
 
 // Role-specific quick action icons configuration
 const getRoleQuickActions = (role: UserRole | undefined) => {
@@ -183,6 +184,8 @@ export function Header() {
       items?: Array<{ product?: { name: string } }>;
     }>
   >([]);
+
+  const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial } = useHelpUIStore();
 
   // Get preferences from store
   const language = usePreferencesStore((state) => state.language);
@@ -898,6 +901,32 @@ export function Header() {
 
         {/* Desktop Auth/User Menu */}
         <div className="hidden lg:flex items-center gap-2">
+          {mounted && (isChatDismissed || isTutorialDismissed) && (
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative h-9 w-9 rounded-lg mr-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                    onClick={() => {
+                      recallChat();
+                      recallTutorial();
+                    }}
+                  >
+                    <InformationCircleIcon className="h-5 w-5" />
+                    <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p><T>Restore Help Widgets</T></p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {!mounted || authLoading ? (
             <div className="w-9 h-9 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
           ) : isAuthenticated && user ? (
