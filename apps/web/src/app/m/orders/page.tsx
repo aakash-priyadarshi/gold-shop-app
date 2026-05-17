@@ -1,7 +1,7 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
-import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
+
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { invoicesApi } from "@/lib/api";
@@ -227,15 +227,7 @@ export default function OrdersPage() {
               </p>
             </div>
             <div className="flex items-center gap-1">
-              <MobileHelpButton
-                title="Bills & Orders"
-                description="Every bill you create from POS appears here. Tap WhatsApp to share."
-                tips={[
-                  "Switch Today / All to widen the date range",
-                  "Filter by Paid / Pending to chase outstanding payments",
-                  "Tap WhatsApp on any bill to share it with the customer",
-                ]}
-              />
+
               <button
                 onClick={load}
                 disabled={loading}

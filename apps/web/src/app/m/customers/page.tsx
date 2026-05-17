@@ -1,7 +1,7 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
-import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
+
 import { T } from "@/components/ui/T";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { customerCrmApi } from "@/lib/api";
@@ -295,16 +295,7 @@ export default function CustomersPage() {
         <div className="bg-white border-b border-gray-100 px-4 py-3">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-base font-bold text-gray-900"><T>Customers</T></h1>
-            <MobileHelpButton
-              title="Customer CRM"
-              description="A lightweight CRM built into your POS — every bill auto-creates or updates the customer."
-              tips={[
-                "Search by name, phone or email",
-                "Tap a customer to see lifetime spend, last visit and savings membership",
-                "Use the WhatsApp icon to greet repeat buyers and share offers",
-                "Pro plan unlocks segmented broadcasts and birthday reminders",
-              ]}
-            />
+
           </div>
           <div data-tour="m-customers-search" className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

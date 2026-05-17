@@ -180,7 +180,7 @@ export function TutorialButton({ className }: TutorialButtonProps) {
 
       <div
         className={cn(
-          "fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-40 flex flex-col items-end gap-1.5",
+          "fixed bottom-[136px] sm:bottom-[136px] right-4 sm:right-6 z-40 flex flex-col items-end gap-1.5",
           isTutorialShaking ? "animate-shake-tut" : ""
         )}
         style={dragOffset ? {

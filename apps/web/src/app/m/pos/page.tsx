@@ -1,7 +1,7 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
-import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
+
 import { BarcodeScannerSheet } from "@/components/mobile/BarcodeScannerSheet";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import {
@@ -828,17 +828,7 @@ export default function MobilePOSPage() {
               <ScanLine className="h-4 w-4" />
               <T>Scan</T>
             </button>
-            <MobileHelpButton
-              title="New Sale (POS)"
-              description="Quickly create a jewelry bill and record a sale from your mobile device."
-              tips={[
-                "Tap a product card to see enlarged details, stock, and descriptions.",
-                "Tap the + button to instantly add items to the customer's bill.",
-                "Use the prominent 'Scan' button to scan barcode tags using your camera.",
-                "Review the large 'Final Total' in the cart and select a payment method.",
-                "Need help? Look for the pulsing 'i' icon in the top header to recall AI Support and Tutorials."
-              ]}
-            />
+
           </div>
         </div>
         {/* Search bar */}

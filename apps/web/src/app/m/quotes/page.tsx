@@ -1,7 +1,7 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
-import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
+
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -590,16 +590,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             <h1 className="text-base font-bold text-gray-900"><T>Quote Builder</T></h1>
             <p className="text-[11px] text-gray-400"><T>Create a custom estimate from the seller quote flow</T></p>
           </div>
-          <MobileHelpButton
-            title="Quote Builder"
-            description="Create a seller quote with customer lookup, material details, pricing, and WhatsApp sharing."
-            tips={[
-              "Enter phone first to fetch an existing customer before editing details",
-              "Choose the actual material or select other/customer-provided material",
-              "Use pricing fields to mirror the PC seller quote totals",
-              "The created quote keeps the same walk-in customer identity used on desktop",
-            ]}
-          />
+
         </div>
 
         {!ratesLoading && (goldRate > 0 || silverRate > 0) && (
