@@ -420,7 +420,7 @@ export default function MobilePOSPage() {
     return () => clearTimeout(t);
   }, [search, loadInventory]);
 
-  const addToCart = (item: InventoryItem) => {
+  const addToCart = useCallback((item: InventoryItem) => {
     haptic("light");
     setCart((prev) => {
       const existing = prev.find((c) => c.item.id === item.id);
@@ -431,7 +431,7 @@ export default function MobilePOSPage() {
       }
       return [...prev, { item, qty: 1, unitPrice: item.totalPriceNpr ?? 0 }];
     });
-  };
+  }, [haptic]);
 
   const handleScannedCode = useCallback(
     async (code: string) => {
@@ -473,14 +473,12 @@ export default function MobilePOSPage() {
         });
       }
     },
-    [shopId, haptic],
+    [shopId, haptic, addToCart],
   );
 
   // Global keyboard-wedge scanner – fires anywhere on the POS page when an
   // attached HID scanner sends a burst of keystrokes ending in Enter.
-  useBarcodeScanner(handleScannedCode, { ignoreEditable: true });
-
-  const updateQty = (itemId: string, qty: number) => {
+  useBarcodeScanner(handleScannedCode, { ignoreEditable: true });  const updateQty = (itemId: string, qty: number) => {
     if (qty <= 0) {
       setCart((prev) => prev.filter((c) => c.item.id !== itemId));
     } else {
