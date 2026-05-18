@@ -178,6 +178,16 @@ export class CreateShopQuoteDto {
   finishCostNpr?: number;
 
   @ApiPropertyOptional({
+    example: 1500,
+    description:
+      "Tax amount in NPR. When provided, overrides backend tax calculation so the stored total matches what the customer was shown.",
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  taxNpr?: number;
+
+  @ApiPropertyOptional({
     example: 14,
     description: "Estimated days to complete",
   })

@@ -358,16 +358,21 @@ export class ShopQuotesService {
     let totalPriceNpr: number | null = null;
     let taxNprValue = 0;
     if (dto.metalCostNpr !== undefined) {
-      totalPriceNpr =
+      const subtotal =
         (dto.metalCostNpr || 0) +
         (dto.makingChargeNpr || 0) +
         (dto.gemstoneCostNpr || 0) +
         (dto.finishCostNpr || 0);
 
-      // Use admin-configured tax rate
-      const taxRate = await this.getTaxRate("NP");
-      taxNprValue = totalPriceNpr * taxRate;
-      totalPriceNpr += taxNprValue;
+      // Use frontend-supplied tax when provided (ensures stored total matches
+      // what the customer was shown). Fall back to admin-configured rate.
+      if (dto.taxNpr !== undefined) {
+        taxNprValue = dto.taxNpr;
+      } else {
+        const taxRate = await this.getTaxRate("NP");
+        taxNprValue = subtotal * taxRate;
+      }
+      totalPriceNpr = subtotal + taxNprValue;
     }
 
     // Create the quote

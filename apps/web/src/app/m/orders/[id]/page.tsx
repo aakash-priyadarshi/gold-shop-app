@@ -5,6 +5,12 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { shopQuotesApi } from "@/lib/api";
+import {
+  convertCurrencyAmount,
+  fetchFreeFxRates,
+  type SupportedCurrencyCode,
+} from "@/lib/currency";
+import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { ArrowLeft, Banknote, Check, CreditCard, Loader2, Receipt } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -45,10 +51,6 @@ interface ShopQuote {
   shop?: { shopName?: string };
 }
 
-function money(amount?: number | null) {
-  return `NPR ${Math.round(Number(amount ?? 0)).toLocaleString("en-IN")}`;
-}
-
 function quotePaymentStatus(q: ShopQuote) {
   const balance = q.balanceDueNpr ?? 0;
   if (q.invoiceNumber && balance <= 0) return { label: "Paid in Full", color: "text-green-700", bg: "bg-green-100" };
@@ -74,6 +76,28 @@ export default function MobileOrderDetailPage() {
   const [payRemainingMethod, setPayRemainingMethod] = useState<"CASH" | "POS">("CASH");
   const [payingRemaining, setPayingRemaining] = useState(false);
   const [remainingPaid, setRemainingPaid] = useState(false);
+  const [displayCurrency, setDisplayCurrency] = useState("NPR");
+  const [nprToDisplayCurrency, setNprToDisplayCurrency] = useState(1);
+
+  // Load FX rates so stored NPR amounts are shown in the shop's display currency
+  useEffect(() => {
+    const params = getMobileMarketParams((user?.shop as any) ?? null);
+    setDisplayCurrency(params.currency);
+    if (params.currency !== "NPR") {
+      fetchFreeFxRates()
+        .then((fxRates) => {
+          const rate = convertCurrencyAmount(1, "NPR", params.currency as SupportedCurrencyCode, fxRates);
+          if (rate > 0) setNprToDisplayCurrency(rate);
+        })
+        .catch(() => {});
+    }
+  }, [user?.shop]);
+
+  // Convert a stored NPR amount to the shop's display currency for display
+  const money = (amount?: number | null) => {
+    const converted = Math.round((Number(amount ?? 0)) * nprToDisplayCurrency);
+    return `${displayCurrency} ${converted.toLocaleString("en-IN")}`;
+  };
 
   const load = useCallback(async () => {
     if (!params?.id) return;
