@@ -178,14 +178,14 @@ export default function ForSellersPage() {
                 href="/auth/register"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold text-base transition-colors shadow-lg shadow-amber-500/25"
               >
-                <T>Claim Your Free Shop Profile</T>
+                <T>Start free trial</T>
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
-                href="/seller-guide"
+                href="/jewellery-shop-software"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl font-semibold text-base border border-gray-200 dark:border-gray-700 hover:border-amber-300 transition-colors"
               >
-                <T>How it works</T>
+                <T>See all features</T>
               </Link>
             </div>
             <TrustSignals variant="compact" className="mt-10" />
@@ -354,14 +354,14 @@ export default function ForSellersPage() {
                 href="/auth/register"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold text-base transition-colors shadow-lg shadow-amber-500/25"
               >
-                <T>Claim Your Free Shop Profile</T>
+                <T>Start free trial</T>
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
                 href="/jewellery-shop-software"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-semibold text-base border border-gray-700 transition-colors"
               >
-                <T>See All Features</T>
+                <T>See all features</T>
               </Link>
             </div>
             <p className="mt-6 text-xs text-gray-600">

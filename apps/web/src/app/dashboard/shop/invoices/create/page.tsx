@@ -3,6 +3,15 @@
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
+import { useAuth } from "@/hooks/useAuth";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -331,8 +340,16 @@ function ModeToggle({
 
 export default function CreateInvoicePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { symbol: currencySymbol, country: shopCountry } = useShopCurrency();
   const [loading, setLoading] = useState(false);
+  const [showKycModal, setShowKycModal] = useState(false);
+
+  useEffect(() => {
+    if (user?.shop && !user.shop.isVerified) {
+      setShowKycModal(true);
+    }
+  }, [user?.shop]);
 
   // ── Country ──
   const [invoiceCountry, setInvoiceCountry] = useState(shopCountry);
@@ -844,6 +861,21 @@ export default function CreateInvoicePage() {
   return (
     <ShopGuard>
       <DashboardLayout>
+        <Dialog open={showKycModal} onOpenChange={(open) => !open && router.back()}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>KYC Verification Required</DialogTitle>
+              <DialogDescription>
+                You need to complete your shop's KYC verification to create invoices. Please submit your business details for admin approval.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2">
+              <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
+              <Button onClick={() => router.push("/dashboard/shop/kyc")}>Complete KYC</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <div className="space-y-6 max-w-4xl mx-auto">
           {/* Header */}
           <div className="flex items-center gap-4">

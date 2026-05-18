@@ -30,6 +30,9 @@ import {
   ShoppingCart,
   Star,
   TrendingUp,
+  CheckCircle2,
+  Circle,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -259,6 +262,78 @@ export default function ShopDashboard() {
 
           {/* Admin contact prompt — encourages shopkeepers to message admin@orivraa.com */}
           <AdminMessageBanner />
+
+          {/* Onboarding Checklist */}
+          {(!user?.shop?.isVerified || !currentSubscription || recentOrders.length === 0) && (
+            <Card className="border-gold-500/20 bg-gradient-to-br from-gold-50/50 to-white dark:from-gold-950/10 dark:to-[#161B22]">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Sparkles className="h-5 w-5 text-gold-500" />
+                  <T>Getting Started</T>
+                </CardTitle>
+                <CardDescription>
+                  <T>Complete these steps to set up your shop for success</T>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    {user?.shop?.isVerified ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-300 dark:text-gray-600 shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <p className={`font-medium ${user?.shop?.isVerified ? 'text-gray-500 line-through' : ''}`}>
+                        <T>Verify Your Shop</T>
+                      </p>
+                    </div>
+                    {!user?.shop?.isVerified && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/dashboard/shop/kyc"><T>Complete KYC</T></Link>
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {currentSubscription ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-300 dark:text-gray-600 shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <p className={`font-medium ${currentSubscription ? 'text-gray-500 line-through' : ''}`}>
+                        <T>Choose a Subscription Plan</T>
+                      </p>
+                    </div>
+                    {!currentSubscription && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/dashboard/shop/billing"><T>View Plans</T></Link>
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {recentOrders.length > 0 ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-300 dark:text-gray-600 shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <p className={`font-medium ${recentOrders.length > 0 ? 'text-gray-500 line-through' : ''}`}>
+                        <T>Create Your First Invoice</T>
+                      </p>
+                    </div>
+                    {recentOrders.length === 0 && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/dashboard/shop/invoices/create"><T>Create Invoice</T></Link>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {user?.shop && !user.shop.isVerified && (
             <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 rounded-lg p-4 flex items-start justify-between gap-3">

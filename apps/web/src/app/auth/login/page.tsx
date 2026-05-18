@@ -204,9 +204,9 @@ function LoginForm() {
         return;
       }
 
-      const redirect = searchParams.get("redirect");
-      if (redirect) {
-        router.push(decodeURIComponent(redirect));
+      const returnTo = searchParams.get("returnTo") || searchParams.get("redirect");
+      if (returnTo) {
+        router.push(decodeURIComponent(returnTo));
       } else {
         router.push(getDashboardRoute(user.role));
       }

@@ -40,6 +40,7 @@ import { useAuth, UserRole } from "@/hooks/useAuth";
 import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import {
     CURRENCIES,
     LANGUAGES,
@@ -868,6 +869,8 @@ function SidebarContent({
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout, isLoading } = useAuth();
   const pathname = usePathname();
+  const { features } = usePlatformFeatures();
+  const customerFlowEnabled = features.customerFlowEnabled;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
@@ -897,10 +900,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // TypeScript narrowing: user is guaranteed non-null after loader gate
   if (!user) return null;
 
-  // Filter nav items for user's role
-  const userNavItems = navItems.filter((item) =>
-    item.roles.includes(user.role),
-  );
+  // Filter nav items for user's role and feature flags
+  const userNavItems = navItems.filter((item) => {
+    if (!item.roles.includes(user.role)) return false;
+    
+    // Hide marketplace-specific features if customer flow is disabled
+    if (!customerFlowEnabled && user.role === "SHOPKEEPER") {
+      const marketplaceLinks = [
+        "/dashboard/shop/engagement", 
+        "/dashboard/shop/reviews", 
+        "/dashboard/shop/referrals", 
+        "/dashboard/shop/commissions"
+      ];
+      if (marketplaceLinks.includes(item.href)) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   const getRoleBadge = (role: UserRole) => {
     switch (role) {

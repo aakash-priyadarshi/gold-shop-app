@@ -87,6 +87,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { useHelpUIStore } from "@/store/help-ui";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 
 // Role-specific quick action icons configuration
 const getRoleQuickActions = (role: UserRole | undefined) => {
@@ -332,12 +333,15 @@ export function Header() {
     }
   };
 
+  const { features } = usePlatformFeatures();
+  const customerFlowEnabled = features.customerFlowEnabled;
+
   // Primary nav links (flat)
-  const navigation = [
+  const navigation = customerFlowEnabled ? [
     { name: "Shops", href: "/shops", icon: BuildingStorefrontIcon },
     { name: "Designs", href: "/designs", icon: HeartIcon },
     { name: "Custom Order", href: "/rfq/create", icon: SparklesIcon },
-  ];
+  ] : [];
 
   // "For Sellers" dropdown items
   const sellerNavItems = [
@@ -1567,131 +1571,133 @@ export function Header() {
               </Popover>
 
               {/* Cart Popover */}
-              <Popover open={cartPopoverOpen} onOpenChange={setCartPopoverOpen}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="relative h-9 w-9 rounded-lg"
-                      >
-                        <ShoppingCartIcon className="h-5 w-5" />
-                        {mounted && itemCount > 0 && (
-                          <span className="absolute -top-1 -right-1 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
-                            {itemCount > 9 ? "9+" : itemCount}
+              {customerFlowEnabled && (
+                <Popover open={cartPopoverOpen} onOpenChange={setCartPopoverOpen}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="relative h-9 w-9 rounded-lg"
+                        >
+                          <ShoppingCartIcon className="h-5 w-5" />
+                          {mounted && itemCount > 0 && (
+                            <span className="absolute -top-1 -right-1 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                              {itemCount > 9 ? "9+" : itemCount}
+                            </span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {t("Cart")} ({mounted ? itemCount : 0})
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <PopoverContent className="w-80 p-0" align="end">
+                    <div className="flex items-center justify-between p-3 border-b">
+                      <h3 className="font-semibold">
+                        <T>Shopping Cart</T>
+                      </h3>
+                      <span className="text-sm text-muted-foreground">
+                        {itemCount} {itemCount !== 1 ? t("items") : t("item")}
+                      </span>
+                    </div>
+                    <ScrollArea className="h-[280px]">
+                      {items.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-6 text-center">
+                          <ShoppingCartIcon className="h-12 w-12 text-gray-300 mb-3" />
+                          <p className="text-muted-foreground">
+                            <T>Your cart is empty</T>
+                          </p>
+                          <Link
+                            href="/shop"
+                            onClick={() => setCartPopoverOpen(false)}
+                          >
+                            <Button
+                              variant="link"
+                              className="mt-2 text-amber-600"
+                            >
+                              {t("Start Shopping")}
+                            </Button>
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className="divide-y">
+                          {items.slice(0, 5).map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800"
+                            >
+                              <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
+                                {item.product.image ? (
+                                  <Image
+                                    src={item.product.image}
+                                    alt={item.product.name}
+                                    width={56}
+                                    height={56}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <CubeIcon className="h-6 w-6 text-gray-400" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {item.product.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {t("Qty")}: {item.quantity}
+                                </p>
+                                <p className="text-sm font-semibold text-amber-600">
+                                  {formatPrice(
+                                    item.product.price * item.quantity,
+                                  )}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-gray-400 hover:text-red-500"
+                                onClick={() => removeFromCart(item.id)}
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          {items.length > 5 && (
+                            <div className="p-2 text-center text-xs text-muted-foreground">
+                              +{items.length - 5} {t("more items")}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </ScrollArea>
+                    {items.length > 0 && (
+                      <div className="border-t p-3 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">
+                            {t("Subtotal")}
                           </span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>
-                      {t("Cart")} ({mounted ? itemCount : 0})
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-                <PopoverContent className="w-80 p-0" align="end">
-                  <div className="flex items-center justify-between p-3 border-b">
-                    <h3 className="font-semibold">
-                      <T>Shopping Cart</T>
-                    </h3>
-                    <span className="text-sm text-muted-foreground">
-                      {itemCount} {itemCount !== 1 ? t("items") : t("item")}
-                    </span>
-                  </div>
-                  <ScrollArea className="h-[280px]">
-                    {items.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center p-6 text-center">
-                        <ShoppingCartIcon className="h-12 w-12 text-gray-300 mb-3" />
-                        <p className="text-muted-foreground">
-                          <T>Your cart is empty</T>
-                        </p>
+                          <span className="font-semibold">
+                            {formatPrice(subtotal)}
+                          </span>
+                        </div>
                         <Link
-                          href="/shop"
+                          href="/cart"
                           onClick={() => setCartPopoverOpen(false)}
                         >
-                          <Button
-                            variant="link"
-                            className="mt-2 text-amber-600"
-                          >
-                            {t("Start Shopping")}
+                          <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white">
+                            <T>View Cart & Checkout</T>
                           </Button>
                         </Link>
                       </div>
-                    ) : (
-                      <div className="divide-y">
-                        {items.slice(0, 5).map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800"
-                          >
-                            <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
-                              {item.product.image ? (
-                                <Image
-                                  src={item.product.image}
-                                  alt={item.product.name}
-                                  width={56}
-                                  height={56}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <CubeIcon className="h-6 w-6 text-gray-400" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">
-                                {item.product.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {t("Qty")}: {item.quantity}
-                              </p>
-                              <p className="text-sm font-semibold text-amber-600">
-                                {formatPrice(
-                                  item.product.price * item.quantity,
-                                )}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-gray-400 hover:text-red-500"
-                              onClick={() => removeFromCart(item.id)}
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                        {items.length > 5 && (
-                          <div className="p-2 text-center text-xs text-muted-foreground">
-                            +{items.length - 5} {t("more items")}
-                          </div>
-                        )}
-                      </div>
                     )}
-                  </ScrollArea>
-                  {items.length > 0 && (
-                    <div className="border-t p-3 space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">
-                          {t("Subtotal")}
-                        </span>
-                        <span className="font-semibold">
-                          {formatPrice(subtotal)}
-                        </span>
-                      </div>
-                      <Link
-                        href="/cart"
-                        onClick={() => setCartPopoverOpen(false)}
-                      >
-                        <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white">
-                          <T>View Cart & Checkout</T>
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
-                </PopoverContent>
-              </Popover>
+                  </PopoverContent>
+                </Popover>
+              )}
 
               {/* Notifications Popover */}
               <Popover

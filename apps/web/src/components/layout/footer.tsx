@@ -10,8 +10,11 @@ import {
     Youtube,
 } from "lucide-react";
 import Link from "next/link";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 
 export function Footer() {
+  const { features } = usePlatformFeatures();
+  const customerFlowEnabled = features.customerFlowEnabled;
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="container mx-auto px-4 py-8 lg:py-12">
@@ -60,30 +63,34 @@ export function Footer() {
               Quick Links
             </h3>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/shops"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  Browse Shops
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/designs"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  Explore Designs
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/rfq/create"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  Custom Order
-                </Link>
-              </li>
+              {customerFlowEnabled && (
+                <>
+                  <li>
+                    <Link
+                      href="/shops"
+                      className="hover:text-gold-400 transition-colors"
+                    >
+                      Browse Shops
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/designs"
+                      className="hover:text-gold-400 transition-colors"
+                    >
+                      Explore Designs
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/rfq/create"
+                      className="hover:text-gold-400 transition-colors"
+                    >
+                      Custom Order
+                    </Link>
+                  </li>
+                </>
+              )}
               <li>
                 <Link
                   href="/blog"

@@ -47,7 +47,7 @@ export const BRAND: {
   salesEmail: "sales@orivraa.com",
   contact: {
     address: "Kathmandu, Nepal",
-    phone: "+977 1-1234567",
+    phone: "+91 62039 65557",
     supportEmail: "support@orivraa.com",
   },
 

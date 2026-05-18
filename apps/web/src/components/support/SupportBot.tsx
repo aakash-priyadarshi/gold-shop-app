@@ -136,14 +136,34 @@ export function SupportBot() {
   const { isChatDismissed, dismissChat, isChatShaking } = useHelpUIStore();
   const [bubbleVisible, setBubbleVisible] = useState(false);
 
+  // Track session count to keep tooltip visible for new users
+  const [isNewUser, setIsNewUser] = useState(false);
+
+  useEffect(() => {
+    try {
+      const count = parseInt(localStorage.getItem("orivraa_chat_session_count") || "0", 10);
+      if (count < 3) {
+        setIsNewUser(true);
+        const sessionId = getOrCreateSessionId();
+        const lastSessionId = localStorage.getItem("orivraa_chat_last_session_id");
+        if (lastSessionId !== sessionId) {
+          localStorage.setItem("orivraa_chat_session_count", (count + 1).toString());
+          localStorage.setItem("orivraa_chat_last_session_id", sessionId);
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   // Auto-show bubble on mount or when chat is recalled
   useEffect(() => {
     if (!isChatDismissed) {
       setBubbleVisible(true);
-      const timer = setTimeout(() => setBubbleVisible(false), 4500);
-      return () => clearTimeout(timer);
+      if (!isNewUser) {
+        const timer = setTimeout(() => setBubbleVisible(false), 4500);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [isChatDismissed]);
+  }, [isChatDismissed, isNewUser]);
 
   // If chat is recalled (isChatDismissed becomes false), we can ensure it is visible
   useEffect(() => {

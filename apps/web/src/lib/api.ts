@@ -1,3 +1,4 @@
+import { toast } from "@/hooks/use-toast";
 import axios from "axios";
 
 // Ensure the API URL always ends with /api
@@ -68,11 +69,21 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expired or invalid
       if (typeof window !== "undefined") {
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
-        clearCookie("token");
-        clearCookie("refreshToken");
-        window.location.href = "/auth/login";
+        if (window.location.pathname !== "/auth/login") {
+          localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
+          clearCookie("token");
+          clearCookie("refreshToken");
+          
+          toast({
+            title: "Session Expired",
+            description: "Your session timed out. Please log in to continue.",
+            variant: "destructive",
+          });
+
+          const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = `/auth/login?returnTo=${returnTo}`;
+        }
       }
     }
     return Promise.reject(error);

@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
 import { T } from "@/components/ui/T";
 import { subscriptionPlansApi } from "@/lib/api";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import {
     COUNTRIES,
     CURRENCIES,
@@ -127,7 +128,7 @@ const softwareJsonLd = {
           priceCurrency: "INR",
           name: "Free Plan",
           description:
-            "Free jewellery shop software for all markets. Up to 15 products, basic inventory, customer chat, and marketplace listing. No credit card required.",
+            "Free jewellery shop software for all markets. Up to 15 products, basic inventory, and customer chat. No credit card required.",
           url: "https://www.orivraa.com/pricing",
         },
         {
@@ -327,6 +328,11 @@ const CORE_FEATURES = [
     desc: `Your products are automatically listed on Orivraa's marketplace, visible to buyers across ${BUYER_COUNTRY_COUNT} countries. Priority listing available for Pro sellers.`,
     icon: Store,
   },
+  {
+    title: "Karigar Management",
+    desc: "Track custom orders through manufacturing. Manage karigar ledgers, track gold issued, and monitor delivery timelines for custom pieces.",
+    icon: Users,
+  },
 ];
 
 const COMPARISON = [
@@ -487,6 +493,9 @@ const FAQS = [
 /* ────────────────────────────────────────────────────────────── */
 
 export default function JewelleryShopSoftwarePage() {
+  const { features: platformFeatures } = usePlatformFeatures();
+  const customerFlowEnabled = platformFeatures.customerFlowEnabled;
+
   const [plans, setPlans] = useState<PlanFromAPI[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
 
@@ -617,13 +626,6 @@ export default function JewelleryShopSoftwarePage() {
                 <h2 className="mt-2 text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                   <T>Current plans for</T> {pricingMarketLabel}
                 </h2>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 max-w-2xl">
-                  <T>
-                    This section uses the same live plan service as the pricing
-                    page, so the monthly rates here stay in sync with your
-                    market.
-                  </T>
-                </p>
               </div>
 
               <Link
@@ -655,7 +657,7 @@ export default function JewelleryShopSoftwarePage() {
                     {freePlan ? formatPrice(freePlan.monthlyPrice, freePlan.currency) : <T>Free</T>}
                   </div>
                   <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-                    <T>Marketplace access, catalogues, messaging, and core shop tools.</T>
+                    <T>{customerFlowEnabled ? "Marketplace access, catalogues, messaging, and core shop tools." : "Catalogues, messaging, and core shop tools."}</T>
                   </p>
                 </div>
 
@@ -737,7 +739,7 @@ export default function JewelleryShopSoftwarePage() {
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {CORE_FEATURES.map((f) => (
+            {CORE_FEATURES.filter(f => customerFlowEnabled || f.title !== "Marketplace Listing").map((f) => (
               <div
                 key={f.title}
                 className="p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-lg hover:shadow-amber-500/5 transition-all group"
@@ -795,7 +797,7 @@ export default function JewelleryShopSoftwarePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {COMPARISON.map((row, i) => (
+                  {COMPARISON.filter(row => customerFlowEnabled || row.feature !== "Online Marketplace").map((row, i) => (
                     <tr
                       key={row.feature}
                       className={`border-b border-gray-100 dark:border-gray-800 ${
@@ -806,7 +808,14 @@ export default function JewelleryShopSoftwarePage() {
                         <T>{row.feature}</T>
                       </td>
                       <td className="py-3 px-4 text-center bg-amber-50/50 dark:bg-amber-900/5 font-medium text-gray-900 dark:text-white">
-                        <T>{row.orivraa}</T>
+                        <div className="flex items-center justify-center gap-2">
+                          <T>{row.orivraa.split(' (')[0]}</T>
+                          {row.orivraa.includes('(Pro)') && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded">
+                              Pro
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">
                         <T>{row.zoho}</T>
@@ -853,7 +862,7 @@ export default function JewelleryShopSoftwarePage() {
             </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-6">
-            {USE_CASES.map((uc) => (
+            {USE_CASES.filter(uc => customerFlowEnabled || uc.title !== "Online Jewellery Sellers").map((uc) => (
               <div
                 key={uc.title}
                 className="flex gap-5 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
@@ -889,18 +898,18 @@ export default function JewelleryShopSoftwarePage() {
                 },
                 {
                   step: "2",
-                  title: "Set Up Shop",
-                  desc: "Add your shop details, logo, and configure tax & banking.",
+                  title: "Shop Verification (KYC)",
+                  desc: "Verify your shop details securely to get started.",
                 },
                 {
                   step: "3",
-                  title: "Add Products",
-                  desc: "Upload photos, set weight/purity, pricing, and descriptions.",
+                  title: "Setup & Add Products",
+                  desc: "Configure tax & banking, upload photos, set weights.",
                 },
                 {
                   step: "4",
                   title: "Start Selling",
-                  desc: "Go live on the marketplace and start receiving orders.",
+                  desc: "Manage orders and create tax-compliant bills.",
                 },
               ].map((s) => (
                 <div key={s.step}>
@@ -999,7 +1008,7 @@ export default function JewelleryShopSoftwarePage() {
               </h2>
             </div>
             <div className="space-y-3">
-              {FAQS.map((faq, i) => (
+              {FAQS.filter(faq => customerFlowEnabled || (!faq.q.includes("internationally") && !faq.a.includes("marketplace"))).map((faq, i) => (
                 <details
                   key={i}
                   className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 overflow-hidden"

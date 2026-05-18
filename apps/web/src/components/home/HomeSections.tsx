@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import { BLOG_POSTS } from "@/data/blog-posts";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { useT } from "@/providers/translation-provider";
 import {
     ArrowRight,
@@ -97,8 +98,13 @@ const shopFeatures = [
   },
 ];
 
-export function HomeSections() {
+export function BuyerSections() {
   const t = useT();
+  const { features: platformFeatures } = usePlatformFeatures();
+  
+  if (!platformFeatures.customerFlowEnabled) {
+    return null;
+  }
 
   return (
     <>
@@ -166,188 +172,213 @@ export function HomeSections() {
           </div>
         </div>
       </section>
+    </>
+  );
+}
 
-      {/* B2B: CMS for Jewellery Shops */}
-      <section className="py-12 lg:py-24 bg-white dark:bg-gray-950">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-10 lg:mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold-100 dark:bg-gold-900/30 text-gold-700 dark:text-gold-400 text-sm font-medium mb-4">
-              <Store className="h-4 w-4" />
-              <T>For Jewellery Shop Owners</T>
-            </div>
-            <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 lg:mb-4">
-              <T>Your Complete Shop Management Platform</T>
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-lg">
-              <T>
-                Take your jewellery business online with powerful CMS. Manage
-                inventory, accept orders, and reach buyers across Nepal, India,
-                Dubai, USA & UK — all from one dashboard.
-              </T>
-            </p>
-            <Link
-              href="/jewellery-shop-software"
-              className="inline-flex items-center gap-1 mt-3 text-sm text-gold-600 dark:text-gold-400 font-medium hover:underline"
-            >
-              <T>See all features</T>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+export function SellerFeaturesSection() {
+  const t = useT();
+  return (
+    <section className="py-12 lg:py-24 bg-white dark:bg-gray-950">
+      <div className="container mx-auto px-4">
+        <div className="text-center max-w-3xl mx-auto mb-10 lg:mb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold-100 dark:bg-gold-900/30 text-gold-700 dark:text-gold-400 text-sm font-medium mb-4">
+            <Store className="h-4 w-4" />
+            <T>For Jewellery Shop Owners</T>
           </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-10 lg:mb-14">
-            {shopFeatures.map((feature) => (
-              <div
-                key={feature.title}
-                className="group p-5 lg:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-gold-300 dark:hover:border-gold-700 hover:shadow-lg hover:shadow-gold-500/5 transition-all"
-              >
-                <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-gold-100 to-amber-50 dark:from-gold-900/30 dark:to-amber-900/20 rounded-xl flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform">
-                  <feature.icon className="h-5 w-5 lg:h-6 lg:w-6 text-gold-600 dark:text-gold-400" />
-                </div>
-                <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white mb-1.5">
-                  {t(feature.title)}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                  {t(feature.desc)}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Seller CTA */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 lg:gap-4">
-            <Link href="/for-sellers">
-              <Button
-                size="lg"
-                className="h-12 px-8 rounded-xl text-base gold-gradient text-white"
-              >
-                <T>Get Your Free Shop Profile</T>
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/seller-guide">
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 px-8 rounded-xl text-base"
-              >
-                <T>See How It Works</T>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Latest from Blog */}
-      <section className="py-12 lg:py-20 bg-stone-50 dark:bg-stone-900/40">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-8 lg:mb-12">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gold-600 dark:text-gold-400 mb-2">
-              <BookOpen className="h-3.5 w-3.5" />
-              <T>From the Blog</T>
-            </span>
-            <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white">
-              <T>Guides, Tips & Industry Insights</T>
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-2 max-w-lg mx-auto text-sm lg:text-base">
-              <T>
-                Practical resources to help jewellery businesses grow online and
-                optimise their operations.
-              </T>
-            </p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
-            {BLOG_POSTS.slice(0, 3).map((post) => (
-              <Link
-                key={post.slug}
-                href={`/blog/${post.slug}`}
-                className="group rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-gold-300 dark:hover:border-gold-700 hover:shadow-lg hover:shadow-gold-500/5 transition-all overflow-hidden bg-white dark:bg-gray-950"
-              >
-                <div className="p-5 lg:p-6">
-                  <span className="text-xs font-medium text-gold-600 dark:text-gold-400 uppercase tracking-wide">
-                    {t(post.category)}
-                  </span>
-                  <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white mt-2 mb-2 line-clamp-2 group-hover:text-gold-600 dark:group-hover:text-gold-400 transition-colors">
-                    {t(post.title)}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-4">
-                    {t(post.description)}
-                  </p>
-                  <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {(() => {
-                        const d = new Date(post.date + "T00:00:00");
-                        const months = [
-                          "Jan",
-                          "Feb",
-                          "Mar",
-                          "Apr",
-                          "May",
-                          "Jun",
-                          "Jul",
-                          "Aug",
-                          "Sep",
-                          "Oct",
-                          "Nov",
-                          "Dec",
-                        ];
-                        return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
-                      })()}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      <T>{post.readTime}</T>
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <div className="text-center mt-8">
-            <Link href="/blog">
-              <Button variant="outline" className="rounded-xl h-11 px-6">
-                <T>View All Posts</T>
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-12 lg:py-20 gold-gradient relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/patterns/luxury-pattern.svg')] opacity-10" />
-        <div className="container mx-auto px-4 text-center relative">
-          <h2 className="text-2xl lg:text-4xl font-bold text-white mb-3 lg:mb-4">
-            <T>Grow Your Jewellery Business Online</T>
+          <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 lg:mb-4">
+            <T>Your Complete Shop Management Platform</T>
           </h2>
-          <p className="text-gold-100 mb-6 lg:mb-8 max-w-xl mx-auto text-sm lg:text-base">
-            {t(
-              `Join hundreds of verified jewellers across Nepal, India, Dubai, USA & UK who are selling on ${BRAND.name}. List your shop for free and start receiving orders today.`,
-            )}
+          <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-lg">
+            <T>
+              Take your jewellery business online with powerful CMS. Manage
+              inventory, accept orders, and reach buyers across Nepal, India,
+              Dubai, USA & UK — all from one dashboard.
+            </T>
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/auth/register">
-              <Button
-                size="lg"
-                variant="secondary"
-                className="w-full sm:w-auto h-12 px-8 rounded-xl text-base"
-              >
-                <T>Register Your Shop</T>
-              </Button>
-            </Link>
-            <Link href="/partner">
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full sm:w-auto h-12 px-8 rounded-xl text-base bg-transparent text-white border-white hover:bg-white dark:bg-gray-900 hover:text-gold-600"
-              >
-                <T>Become a Partner</T>
-              </Button>
-            </Link>
-          </div>
+          <Link
+            href="/jewellery-shop-software"
+            className="inline-flex items-center gap-1 mt-3 text-sm text-gold-600 dark:text-gold-400 font-medium hover:underline"
+          >
+            <T>See all features</T>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
-      </section>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-10 lg:mb-14">
+          {shopFeatures.map((feature) => (
+            <div
+              key={feature.title}
+              className="group p-5 lg:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-gold-300 dark:hover:border-gold-700 hover:shadow-lg hover:shadow-gold-500/5 transition-all"
+            >
+              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-gold-100 to-amber-50 dark:from-gold-900/30 dark:to-amber-900/20 rounded-xl flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform">
+                <feature.icon className="h-5 w-5 lg:h-6 lg:w-6 text-gold-600 dark:text-gold-400" />
+              </div>
+              <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white mb-1.5">
+                {t(feature.title)}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                {t(feature.desc)}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Seller CTA */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 lg:gap-4">
+          <Link href="/auth/register">
+            <Button
+              size="lg"
+              className="h-12 px-8 rounded-xl text-base gold-gradient text-white"
+            >
+              <T>Start free trial</T>
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href="/seller-guide">
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-12 px-8 rounded-xl text-base"
+            >
+              <T>See How It Works</T>
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function BlogSection() {
+  const t = useT();
+  return (
+    <section className="py-12 lg:py-20 bg-stone-50 dark:bg-stone-900/40">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-8 lg:mb-12">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gold-600 dark:text-gold-400 mb-2">
+            <BookOpen className="h-3.5 w-3.5" />
+            <T>From the Blog</T>
+          </span>
+          <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white">
+            <T>Guides, Tips & Industry Insights</T>
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2 max-w-lg mx-auto text-sm lg:text-base">
+            <T>
+              Practical resources to help jewellery businesses grow online and
+              optimise their operations.
+            </T>
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
+          {BLOG_POSTS.slice(0, 3).map((post) => (
+            <Link
+              key={post.slug}
+              href={`/blog/${post.slug}`}
+              className="group rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-gold-300 dark:hover:border-gold-700 hover:shadow-lg hover:shadow-gold-500/5 transition-all overflow-hidden bg-white dark:bg-gray-950"
+            >
+              <div className="p-5 lg:p-6">
+                <span className="text-xs font-medium text-gold-600 dark:text-gold-400 uppercase tracking-wide">
+                  {t(post.category)}
+                </span>
+                <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white mt-2 mb-2 line-clamp-2 group-hover:text-gold-600 dark:group-hover:text-gold-400 transition-colors">
+                  {t(post.title)}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-4">
+                  {t(post.description)}
+                </p>
+                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {(() => {
+                      const d = new Date(post.date + "T00:00:00");
+                      const months = [
+                        "Jan",
+                        "Feb",
+                        "Mar",
+                        "Apr",
+                        "May",
+                        "Jun",
+                        "Jul",
+                        "Aug",
+                        "Sep",
+                        "Oct",
+                        "Nov",
+                        "Dec",
+                      ];
+                      return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+                    })()}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <T>{post.readTime}</T>
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+        <div className="text-center mt-8">
+          <Link href="/blog">
+            <Button variant="outline" className="rounded-xl h-11 px-6">
+              <T>View All Posts</T>
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function SellerCtaSection() {
+  const t = useT();
+  return (
+    <section className="py-12 lg:py-20 gold-gradient relative overflow-hidden">
+      <div className="absolute inset-0 bg-[url('/patterns/luxury-pattern.svg')] opacity-10" />
+      <div className="container mx-auto px-4 text-center relative">
+        <h2 className="text-2xl lg:text-4xl font-bold text-white mb-3 lg:mb-4">
+          <T>Grow Your Jewellery Business Online</T>
+        </h2>
+        <p className="text-gold-100 mb-6 lg:mb-8 max-w-xl mx-auto text-sm lg:text-base">
+          {t(
+            `Join hundreds of verified jewellers across Nepal, India, Dubai, USA & UK who are selling on ${BRAND.name}. List your shop for free and start receiving orders today.`,
+          )}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link href="/auth/register">
+            <Button
+              size="lg"
+              variant="secondary"
+              className="w-full sm:w-auto h-12 px-8 rounded-xl text-base text-gold-700 font-semibold"
+            >
+              <T>Start free trial</T>
+            </Button>
+          </Link>
+          <Link href="/partner">
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full sm:w-auto h-12 px-8 rounded-xl text-base bg-transparent text-white border-white hover:bg-white dark:bg-gray-900 hover:text-gold-600"
+            >
+              <T>Become a Partner</T>
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Keep the HomeSections export for compatibility if any other pages import it, 
+// though we will replace its usage in page.tsx
+export function HomeSections() {
+  return (
+    <>
+      <SellerFeaturesSection />
+      <BlogSection />
+      <SellerCtaSection />
+      <BuyerSections />
     </>
   );
 }

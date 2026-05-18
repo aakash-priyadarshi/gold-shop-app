@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import { subscriptionPlansApi } from "@/lib/api";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { GSTIN_READY_INVOICE_COPY } from "@/lib/seo/pricing-copy";
 import {
     COUNTRIES,
@@ -432,6 +433,7 @@ function formatPrice(amount: number, currency: CurrencyCode): string {
 /** Build feature rows from plan features for the cards */
 function buildFeatureList(
   plan: PlanFromAPI,
+  customerFlowEnabled: boolean
 ): { text: string; included: boolean }[] {
   const items: { text: string; included: boolean }[] = [];
 
@@ -445,10 +447,12 @@ function buildFeatureList(
   });
 
   // Commission
-  items.push({
-    text: `${plan.commissionPercent}% platform commission`,
-    included: true,
-  });
+  if (customerFlowEnabled) {
+    items.push({
+      text: `${plan.commissionPercent}% platform commission`,
+      included: true,
+    });
+  }
 
   // Key features from the features JSON
   const featureKeys = [
@@ -462,10 +466,11 @@ function buildFeatureList(
     "taxReportsDownload",
     "taxCaShare",
     "customBranding",
-    "bulkUpload",
-    "priorityListing",
     "prioritySupport",
   ];
+  if (customerFlowEnabled) {
+    featureKeys.push("bulkUpload", "priorityListing");
+  }
 
   for (const key of featureKeys) {
     const display = FEATURE_DISPLAY[key];
@@ -529,12 +534,16 @@ function buildFeatureList(
 }
 
 /** Build full comparison table from all plans */
-function buildComparisonTable(plans: PlanFromAPI[]) {
+function buildComparisonTable(plans: PlanFromAPI[], customerFlowEnabled: boolean) {
   // Collect all unique feature keys across all plans
   const allKeys = new Set<string>();
   for (const p of plans) {
     if (p.features) Object.keys(p.features).forEach((k) => allKeys.add(k));
   }
+
+  const actualCategoryOrder = customerFlowEnabled 
+    ? CATEGORY_ORDER 
+    : CATEGORY_ORDER.filter(c => c !== "Marketplace");
 
   // Group by category
   const categoryMap = new Map<
@@ -542,7 +551,7 @@ function buildComparisonTable(plans: PlanFromAPI[]) {
     { key: string; label: string; values: (boolean | string)[] }[]
   >();
 
-  for (const cat of CATEGORY_ORDER) {
+  for (const cat of actualCategoryOrder) {
     categoryMap.set(cat, []);
   }
 
@@ -556,18 +565,18 @@ function buildComparisonTable(plans: PlanFromAPI[]) {
     {
       key: "_listings",
       label: "Product listings",
-      category: "Marketplace",
+      category: customerFlowEnabled ? "Marketplace" : "CRM & Business Tools",
       values: plans.map((p) => {
         const limit = p.catalogueLimit ?? p.maxProducts;
         return limit ? limit.toLocaleString() : "Unlimited";
       }),
     },
-    {
+    ...(customerFlowEnabled ? [{
       key: "_commission",
       label: "Platform commission",
       category: "Marketplace",
       values: plans.map((p) => `${p.commissionPercent}%`),
-    },
+    }] : []),
     {
       key: "_aiCredits",
       label: "AI credits included",
@@ -600,7 +609,7 @@ function buildComparisonTable(plans: PlanFromAPI[]) {
     cat.push({ key, label: display.label, values });
   }
 
-  return CATEGORY_ORDER.map((cat) => ({
+  return actualCategoryOrder.map((cat) => ({
     category: cat,
     features: categoryMap.get(cat) ?? [],
   })).filter((c) => c.features.length > 0);
@@ -611,6 +620,9 @@ function buildComparisonTable(plans: PlanFromAPI[]) {
 /* ────────────────────────────────────────────────────────────── */
 
 export default function PricingPage() {
+  const { features: platformFeatures } = usePlatformFeatures();
+  const customerFlowEnabled = platformFeatures.customerFlowEnabled;
+
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
   const [showComparison, setShowComparison] = useState(false);
   const [plans, setPlans] = useState<PlanFromAPI[]>([]);
@@ -646,8 +658,8 @@ export default function PricingPage() {
   );
 
   const comparison = useMemo(
-    () => buildComparisonTable(sortedPlans),
-    [sortedPlans],
+    () => buildComparisonTable(sortedPlans, customerFlowEnabled),
+    [sortedPlans, customerFlowEnabled],
   );
 
   const cur =
@@ -771,7 +783,7 @@ export default function PricingPage() {
           >
             {sortedPlans.map((plan) => {
               const meta = TIER_META[plan.name] ?? TIER_META.FREE;
-              const features = buildFeatureList(plan);
+              const features = buildFeatureList(plan, customerFlowEnabled);
               const isEnterprise = plan.name === "ENTERPRISE";
               const ctaLink = isEnterprise
                 ? "/contact?interest=Enterprise+%2F+Multi-branch"
