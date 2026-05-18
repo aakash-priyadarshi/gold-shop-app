@@ -48,7 +48,9 @@ function PaymentPageInner() {
 
   const payAmount = paymentMode === "full" ? displayTotal : Number(customAmount) || 0;
   const outstanding = Math.max(0, displayTotal - payAmount);
-  const payAmountNpr = nprRate > 0 ? payAmount / nprRate : payAmount;
+  // *Npr fields store the shop's local currency (e.g. INR for Indian shops).
+  // payAmount is already in that same local currency — no conversion needed.
+  const payAmountNpr = Math.round(payAmount);
 
   const handlePay = async () => {
     if (!quoteId) return;

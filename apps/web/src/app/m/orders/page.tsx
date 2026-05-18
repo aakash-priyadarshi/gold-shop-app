@@ -6,11 +6,10 @@ import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { shopQuotesApi } from "@/lib/api";
 import {
-  convertCurrencyAmount,
-  fetchFreeFxRates,
+  formatCurrencyAmount,
+  getCurrencyForCountry,
   type SupportedCurrencyCode,
 } from "@/lib/currency";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import {
     CheckCircle,
     Clock,
@@ -78,11 +77,11 @@ const TAB_FILTERS = [
   { label: "Cancelled",   filterFn: (q: ShopQuote) => q.status === "CANCELLED" },
 ];
 
-function QuoteCard({ q, displayCurrency, nprToDisplay }: { q: ShopQuote; displayCurrency: string; nprToDisplay: number }) {
+function QuoteCard({ q, currency }: { q: ShopQuote; currency: SupportedCurrencyCode }) {
   const router = useRouter();
   const s = quoteStatusMeta(q);
-  const total = Math.round((q.totalPriceNpr ?? 0) * nprToDisplay);
-  const balance = Math.round((q.balanceDueNpr ?? 0) * nprToDisplay);
+  const total = q.totalPriceNpr ?? 0;
+  const balance = q.balanceDueNpr ?? 0;
   const date = q.createdAt ? new Date(q.createdAt) : null;
   const time = date?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) ?? "—";
   const dateStr = date?.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) ?? "";
@@ -107,7 +106,7 @@ function QuoteCard({ q, displayCurrency, nprToDisplay }: { q: ShopQuote; display
               {q.walkInCustomer?.name || "Walk-in"}
             </p>
             <p className="text-sm font-bold text-amber-700 flex-shrink-0 ml-2">
-              {displayCurrency} {total.toLocaleString("en-IN")}
+              {formatCurrencyAmount(total, currency)}
             </p>
           </div>
           <div className="flex items-center justify-between mt-0.5">
@@ -122,7 +121,7 @@ function QuoteCard({ q, displayCurrency, nprToDisplay }: { q: ShopQuote; display
             </p>
             {balance > 0 ? (
               <p className="text-[11px] text-amber-600 font-medium ml-2 flex-shrink-0">
-                Due {displayCurrency} {balance.toLocaleString("en-IN")}
+                Due {formatCurrencyAmount(balance, currency)}
               </p>
             ) : null}
           </div>
@@ -138,8 +137,9 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [activeFilterIdx, setActiveFilterIdx] = useState(0);
   const [scope, setScope] = useState<"today" | "all">("today");
-  const [displayCurrency, setDisplayCurrency] = useState("NPR");
-  const [nprToDisplayCurrency, setNprToDisplayCurrency] = useState(1);
+  // Derive the shop's local currency from its country setting (single source of truth).
+  // *Npr DB fields store amounts in this local currency — no FX conversion needed.
+  const currency = getCurrencyForCountry(user?.shop?.country) as SupportedCurrencyCode;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -155,20 +155,6 @@ export default function OrdersPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-
-  // Load FX rates so NPR amounts can be shown in the shop's display currency
-  useEffect(() => {
-    const params = getMobileMarketParams((user?.shop as any) ?? null);
-    setDisplayCurrency(params.currency);
-    if (params.currency !== "NPR") {
-      fetchFreeFxRates()
-        .then((fxRates) => {
-          const rate = convertCurrencyAmount(1, "NPR", params.currency as SupportedCurrencyCode, fxRates);
-          if (rate > 0) setNprToDisplayCurrency(rate);
-        })
-        .catch(() => {});
-    }
-  }, [user?.shop]);
 
   // Scope filter: today vs all
   const today = new Date().toISOString().split("T")[0];
@@ -249,7 +235,7 @@ export default function OrdersPage() {
               </p>
             </div>
           ) : (
-            displayed.map((q) => <QuoteCard key={q.id} q={q} displayCurrency={displayCurrency} nprToDisplay={nprToDisplayCurrency} />)
+            displayed.map((q) => <QuoteCard key={q.id} q={q} currency={currency} />)
           )}
         </div>
       </div>

@@ -435,17 +435,14 @@ export default function QuotesPage() {
         .filter(Boolean)
         .join("\n");
 
-      // All cost state variables are in display currency (e.g. INR for Indian
-      // shops). Convert each to NPR before sending to the backend so the stored
-      // *Npr fields hold true NPR values.
-      const displayToNpr = nprToDisplayCurrency > 0 ? 1 / nprToDisplayCurrency : 1;
-      const metalCostInNpr = metalCostNpr ? Math.round(metalCostNpr * displayToNpr) : undefined;
-      const makingChargeInNpr = makingChargeNpr ? Math.round(makingChargeNpr * displayToNpr) : undefined;
-      const gemstoneCostInNpr = gemstoneCostNpr ? Math.round(gemstoneCostNpr * displayToNpr) : undefined;
-      const finishCostInNpr = finishCostNpr ? Math.round(finishCostNpr * displayToNpr) : undefined;
-      const subtotalInNpr = (metalCostInNpr ?? 0) + (makingChargeInNpr ?? 0) + (gemstoneCostInNpr ?? 0) + (finishCostInNpr ?? 0);
-      // Use same 3% rate the UI shows so stored total matches what customer saw.
-      const taxInNpr = metalCostInNpr !== undefined ? Math.round(subtotalInNpr * 0.03) : undefined;
+      // The *Npr DB fields store the shop's local currency directly:
+      //   - Indian shop  → INR values stored in metalCostNpr, etc.
+      //   - Nepali shop  → NPR values (the historical default)
+      // No NPR conversion needed — the display-currency amount IS the stored amount.
+      // Send an explicit taxNpr (3% of the local-currency subtotal) so the backend
+      // uses our shown rate rather than recalculating with Nepal 13% VAT rules.
+      const localSubtotal = (metalCostNpr || 0) + (makingChargeNpr || 0) + (gemstoneCostNpr || 0) + (finishCostNpr || 0);
+      const taxForBackend = metalCostNpr !== undefined ? Math.round(localSubtotal * 0.03) : undefined;
 
       const res = await shopQuotesApi.create({
         customer: {
@@ -466,11 +463,11 @@ export default function QuotesPage() {
             ? targetGoldWeightG
             : undefined,
         specialInstructions: specialInstructions.trim() || undefined,
-        metalCostNpr: metalCostInNpr,
-        makingChargeNpr: makingChargeInNpr,
-        gemstoneCostNpr: gemstoneCostInNpr,
-        finishCostNpr: finishCostInNpr,
-        taxNpr: taxInNpr,
+        metalCostNpr: metalCostNpr || undefined,
+        makingChargeNpr: makingChargeNpr || undefined,
+        gemstoneCostNpr: gemstoneCostNpr || undefined,
+        finishCostNpr: finishCostNpr || undefined,
+        taxNpr: taxForBackend,
         estimatedDays: estimatedDays || undefined,
         shopNotes: notes || undefined,
       });

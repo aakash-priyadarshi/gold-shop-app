@@ -6,11 +6,10 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { shopQuotesApi } from "@/lib/api";
 import {
-  convertCurrencyAmount,
-  fetchFreeFxRates,
+  formatCurrencyAmount,
+  getCurrencyForCountry,
   type SupportedCurrencyCode,
 } from "@/lib/currency";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { ArrowLeft, Banknote, Check, CreditCard, Loader2, Receipt } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -76,28 +75,12 @@ export default function MobileOrderDetailPage() {
   const [payRemainingMethod, setPayRemainingMethod] = useState<"CASH" | "POS">("CASH");
   const [payingRemaining, setPayingRemaining] = useState(false);
   const [remainingPaid, setRemainingPaid] = useState(false);
-  const [displayCurrency, setDisplayCurrency] = useState("NPR");
-  const [nprToDisplayCurrency, setNprToDisplayCurrency] = useState(1);
 
-  // Load FX rates so stored NPR amounts are shown in the shop's display currency
-  useEffect(() => {
-    const params = getMobileMarketParams((user?.shop as any) ?? null);
-    setDisplayCurrency(params.currency);
-    if (params.currency !== "NPR") {
-      fetchFreeFxRates()
-        .then((fxRates) => {
-          const rate = convertCurrencyAmount(1, "NPR", params.currency as SupportedCurrencyCode, fxRates);
-          if (rate > 0) setNprToDisplayCurrency(rate);
-        })
-        .catch(() => {});
-    }
-  }, [user?.shop]);
-
-  // Convert a stored NPR amount to the shop's display currency for display
-  const money = (amount?: number | null) => {
-    const converted = Math.round((Number(amount ?? 0)) * nprToDisplayCurrency);
-    return `${displayCurrency} ${converted.toLocaleString("en-IN")}`;
-  };
+  // Derive the shop's local currency from its country setting (single source of truth).
+  // *Npr DB fields store amounts in this local currency — no FX conversion needed.
+  const shopCurrency = getCurrencyForCountry(user?.shop?.country) as SupportedCurrencyCode;
+  const money = (amount?: number | null) =>
+    formatCurrencyAmount(Math.round(Number(amount ?? 0)), shopCurrency);
 
   const load = useCallback(async () => {
     if (!params?.id) return;
