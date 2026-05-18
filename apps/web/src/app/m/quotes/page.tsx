@@ -1,6 +1,7 @@
 "use client";
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
+import { GemstoneEditorV2, type GemstoneEntry as GemstoneEntryV2 } from "@/components/pricing/GemstoneEditorV2";
 
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
@@ -192,6 +193,7 @@ export default function QuotesPage() {
   const [metalCostNpr, setMetalCostNpr] = useState(0);
   const [makingChargeNpr, setMakingChargeNpr] = useState(0);
   const [gemstoneCostMode, setGemstoneCostMode] = useState<PricingMode>("manual");
+  const [gemstonesV2, setGemstonesV2] = useState<GemstoneEntryV2[]>([]);
   const [selectedGemstoneRateKey, setSelectedGemstoneRateKey] = useState("");
   const [gemstoneCount, setGemstoneCount] = useState(1);
   const [gemstoneCostNpr, setGemstoneCostNpr] = useState(0);
@@ -253,9 +255,10 @@ export default function QuotesPage() {
   );
 
   const autoGemstoneCost = useMemo(() => {
-    if (!selectedGemstoneRate) return 0;
-    return Math.round(selectedGemstoneRate.effectivePriceNpr * nprToDisplayCurrency * gemstoneCount);
-  }, [gemstoneCount, nprToDisplayCurrency, selectedGemstoneRate]);
+    return Math.round(
+      gemstonesV2.reduce((sum, gem) => sum + (gem.estimatedPrice || 0) * gem.count * nprToDisplayCurrency, 0)
+    );
+  }, [gemstonesV2, nprToDisplayCurrency]);
 
   const estimateTotal = metalCostNpr + makingChargeNpr + gemstoneCostNpr + finishCostNpr;
   const estimatedTax = Math.round(estimateTotal * 0.03);
@@ -573,6 +576,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             setMakingChargeNpr(0);
             setSelectedGemstoneRateKey("");
             setGemstoneCount(1);
+            setGemstonesV2([]);
             setGemstoneCostMode("manual");
             setGemstoneCostNpr(0);
             setFinishCostNpr(0);
@@ -906,23 +910,21 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               )}
             </div>
           )}
-          {gemstoneRateOptions.length > 0 && (
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Gemstone Selection</T></label>
-              <button
-                type="button"
-                onClick={() => setIsGemstoneDrawerOpen(true)}
-                className="w-full text-left flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-gray-50 dark:bg-gray-800"
-              >
-                <span className="truncate text-gray-700 dark:text-gray-300">
-                  {selectedGemstoneRate
-                    ? `${selectedGemstoneRate.label} (${gemstoneCount}) = ${fmt(autoGemstoneCost, currency)}`
-                    : "Configure Gemstone"}
-                </span>
-                <span className="text-xs font-semibold text-amber-600 ml-2 shrink-0"><T>Edit</T></span>
-              </button>
-            </div>
-          )}
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Gemstone Selection</T></label>
+            <button
+              type="button"
+              onClick={() => setIsGemstoneDrawerOpen(true)}
+              className="w-full text-left flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-gray-50 dark:bg-gray-800"
+            >
+              <span className="truncate text-gray-700 dark:text-gray-300">
+                {gemstonesV2.length > 0
+                  ? `${gemstonesV2.length} Gemstone(s) = ${fmt(autoGemstoneCost, currency)}`
+                  : "Configure Gemstone"}
+              </span>
+              <span className="text-xs font-semibold text-amber-600 ml-2 shrink-0"><T>Edit</T></span>
+            </button>
+          </div>
           <div>
             <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Estimated days</T></label>
             <input type="number" inputMode="numeric" min="1" value={estimatedDays || ""} onChange={(event) => setEstimatedDays(Math.max(1, Number.parseInt(event.target.value) || 1))} placeholder="Estimated days" className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
@@ -978,56 +980,25 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Select Gemstone</T></label>
-                  <select
-                    value={selectedGemstoneRateKey}
-                    onChange={(event) => {
-                      setSelectedGemstoneRateKey(event.target.value);
-                      setGemstoneCostMode(event.target.value ? "auto" : "manual");
-                    }}
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white dark:bg-gray-900"
-                  >
-                    <option value="">No gemstone</option>
-                    {gemstoneRateOptions.map((option) => (
-                      <option key={option.key} value={option.key}>
-                        {option.label} - {fmt(option.effectivePriceNpr * nprToDisplayCurrency, currency)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {selectedGemstoneRateKey && (
-                  <div>
-                    <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Quantity</T></label>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min="1"
-                      value={gemstoneCount || ""}
-                      onChange={(event) => {
-                        setGemstoneCount(Math.max(1, Number.parseInt(event.target.value) || 1));
-                        setGemstoneCostMode("auto");
-                      }}
-                      className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white dark:bg-gray-900"
-                    />
-                  </div>
-                )}
-                {selectedGemstoneRate && (
-                  <div className="rounded-xl bg-amber-50 dark:bg-amber-900/10 p-4 mt-4">
-                    <p className="text-xs text-amber-700 dark:text-amber-500">
-                      <T>Estimate</T>:<br />{gemstoneCount} × {fmt(selectedGemstoneRate.effectivePriceNpr * nprToDisplayCurrency, currency)} = <strong className="text-base">{fmt(autoGemstoneCost, currency)}</strong>
-                    </p>
-                  </div>
-                )}
-              </div>
+              <GemstoneEditorV2
+                gemstones={gemstonesV2}
+                onChange={(updated) => {
+                  setGemstonesV2(updated);
+                  setGemstoneCostMode("auto");
+                }}
+                currencySymbol={
+                  currency === "NPR" ? "रु" : currency === "INR" ? "₹" : currency === "USD" ? "$" : currency
+                }
+                selectedCurrency={currency}
+                exchangeRate={nprToDisplayCurrency * 144}
+              />
             </div>
             <div className="shrink-0 border-t border-gray-100 dark:border-gray-800 p-4">
               <button
                 onClick={() => setIsGemstoneDrawerOpen(false)}
                 className="w-full rounded-2xl bg-gray-900 dark:bg-amber-600 py-3.5 text-sm font-semibold text-white shadow"
               >
-                <T>Confirm Selection</T>
+                <T>Save & Close</T>
               </button>
             </div>
           </div>
