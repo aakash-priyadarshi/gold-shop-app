@@ -10,7 +10,7 @@ import {
   getCurrencyForCountry,
   type SupportedCurrencyCode,
 } from "@/lib/currency";
-import { ArrowLeft, Banknote, Check, CreditCard, Loader2, Receipt } from "lucide-react";
+import { ArrowLeft, Banknote, Check, ChevronRight, CreditCard, Loader2, Receipt, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -40,6 +40,7 @@ interface ShopQuote {
   totalPriceNpr?: number | null;
   advancePaidNpr?: number;
   balanceDueNpr?: number | null;
+  estimatedDays?: number | null;
   paidInFullAt?: string | null;
   status: string;
   specialInstructions?: string | null;
@@ -65,6 +66,17 @@ function quotePaymentStatus(q: ShopQuote) {
   return map[q.status?.toUpperCase()] ?? { label: q.status, color: "text-gray-600", bg: "bg-gray-100" };
 }
 
+const STATUS_STEPS = ["QUOTED", "CONFIRMED", "IN_PROGRESS", "READY", "COMPLETED"] as const;
+const STATUS_LABELS: Record<string, string> = {
+  QUOTED: "Quote", CONFIRMED: "Confirmed", IN_PROGRESS: "In Progress", READY: "Ready", COMPLETED: "Completed", CANCELLED: "Cancelled",
+};
+const NEXT_STATUS: Record<string, string> = {
+  QUOTED: "CONFIRMED", CONFIRMED: "IN_PROGRESS", IN_PROGRESS: "READY", READY: "COMPLETED",
+};
+const STATUS_ADVANCE_LABELS: Record<string, string> = {
+  QUOTED: "Confirm Order", CONFIRMED: "Start Production", IN_PROGRESS: "Mark Ready", READY: "Mark Delivered",
+};
+
 export default function MobileOrderDetailPage() {
   const params = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -75,6 +87,8 @@ export default function MobileOrderDetailPage() {
   const [payRemainingMethod, setPayRemainingMethod] = useState<"CASH" | "POS">("CASH");
   const [payingRemaining, setPayingRemaining] = useState(false);
   const [remainingPaid, setRemainingPaid] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [payAmount, setPayAmount] = useState<string>("");
 
   // Derive the shop's local currency from its country setting (single source of truth).
   // *Npr DB fields store amounts in this local currency — no FX conversion needed.
@@ -101,16 +115,27 @@ export default function MobileOrderDetailPage() {
 
   const handlePayRemaining = async () => {
     if (!quote?.id || !quote.balanceDueNpr) return;
+    const amt = Math.round(Number(payAmount) || quote.balanceDueNpr);
+    if (amt <= 0 || amt > Math.round(quote.balanceDueNpr)) {
+      toast({ title: "Invalid amount", description: "Amount must be between 1 and the balance due.", variant: "destructive" });
+      return;
+    }
     setPayingRemaining(true);
     try {
       const methodLabel = payRemainingMethod === "CASH" ? "Cash at shop" : "POS / Card";
       await shopQuotesApi.recordPayment(quote.id, {
-        amountNpr: Math.round(quote.balanceDueNpr),
-        notes: `Remaining balance collected via ${methodLabel}.`,
+        amountNpr: amt,
+        notes: `${amt < Math.round(quote.balanceDueNpr) ? "Partial" : "Full"} balance collected via ${methodLabel}.`,
       });
-      setRemainingPaid(true);
+      // Convert to invoice if not already done (first payment path skipped the payment page)
+      if (!quote.invoiceNumber) {
+        await shopQuotesApi.convertToInvoice(quote.id, {
+          notes: `Payment collected via ${methodLabel}.`,
+        });
+      }
+      setRemainingPaid(amt >= Math.round(quote.balanceDueNpr));
       setPayRemainingOpen(false);
-      toast({ title: "Payment recorded!", description: `${money(quote.balanceDueNpr)} collected.` });
+      toast({ title: "Payment recorded!", description: `${money(amt)} collected.` });
       await load();
     } catch (err: any) {
       toast({ title: "Failed", description: err?.response?.data?.message ?? "Try again", variant: "destructive" });
@@ -119,8 +144,25 @@ export default function MobileOrderDetailPage() {
     }
   };
 
+  const handleStatusAdvance = async (newStatus: string) => {
+    if (!quote?.id) return;
+    setUpdatingStatus(true);
+    try {
+      await shopQuotesApi.updateStatus(quote.id, { status: newStatus });
+      toast({ title: "Status updated", description: `Order is now: ${STATUS_LABELS[newStatus] ?? newStatus}` });
+      await load();
+    } catch (err: any) {
+      toast({ title: "Failed", description: err?.response?.data?.message ?? "Try again", variant: "destructive" });
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   const status = quote ? quotePaymentStatus(quote) : null;
   const issuedAt = quote?.invoicedAt || quote?.createdAt;
+  const estDelivery = quote?.estimatedDays && quote.createdAt
+    ? new Date(new Date(quote.createdAt).getTime() + quote.estimatedDays * 86400000)
+    : null;
   const lineItems = quote ? [
     quote.metalCostNpr  ? { label: "Metal / Material",  amount: quote.metalCostNpr,  details: `${quote.jewelleryType?.replace(/_/g," ") ?? ""} · ${quote.targetTotalWeightG ?? "?"}g` } : null,
     quote.makingChargeNpr ? { label: "Making Charge",    amount: quote.makingChargeNpr } : null,
@@ -146,6 +188,17 @@ export default function MobileOrderDetailPage() {
               {status.label}
             </span>
           )}
+          {/* Share button */}
+          {quote?.walkInCustomer?.phone && (
+            <a
+              href={`https://wa.me/${quote.walkInCustomer.phone.replace(/\D/g,"")}?text=${encodeURIComponent(`Hi ${quote.walkInCustomer.name ?? ""}, your quote #${quote.invoiceNumber ?? quote.quoteNumber} is ready. Total: ${money(quote.totalPriceNpr)}. Balance due: ${money(quote.balanceDueNpr)}.`)}`}
+              target="_blank" rel="noopener noreferrer"
+              className="h-10 w-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center"
+              aria-label="Share on WhatsApp"
+            >
+              <Share2 className="h-4 w-4 text-green-600" />
+            </a>
+          )}
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -170,6 +223,11 @@ export default function MobileOrderDetailPage() {
                 {issuedAt && (
                   <p className="text-xs text-gray-400 pt-1">
                     {new Date(issuedAt).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                )}
+                {estDelivery && (
+                  <p className="text-xs text-amber-600 font-medium pt-0.5">
+                    Est. delivery: {estDelivery.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
                 )}
               </section>
@@ -218,6 +276,40 @@ export default function MobileOrderDetailPage() {
                 )}
               </section>
 
+              {/* Status Controls */}
+              {quote && !["COMPLETED", "CANCELLED"].includes(quote.status) && (
+                <section className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide"><T>Order Status</T></p>
+                  <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+                    {STATUS_STEPS.map((step, i) => (
+                      <div key={step} className="flex items-center gap-1 flex-shrink-0">
+                        <span className={`text-[11px] px-2 py-1 rounded-full font-semibold ${
+                          quote.status === step
+                            ? "bg-amber-500 text-white"
+                            : STATUS_STEPS.indexOf(step as typeof STATUS_STEPS[number]) < STATUS_STEPS.indexOf(quote.status as typeof STATUS_STEPS[number])
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+                        }`}>{STATUS_LABELS[step]}</span>
+                        {i < STATUS_STEPS.length - 1 && <ChevronRight className="h-3 w-3 text-gray-300 flex-shrink-0" />}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    {NEXT_STATUS[quote.status] && (
+                      <button onClick={() => handleStatusAdvance(NEXT_STATUS[quote.status])} disabled={updatingStatus}
+                        className="flex-1 py-2.5 rounded-xl bg-amber-500 text-sm font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-2">
+                        {updatingStatus ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                        <T>{STATUS_ADVANCE_LABELS[quote.status]}</T>
+                      </button>
+                    )}
+                    <button onClick={() => handleStatusAdvance("CANCELLED")} disabled={updatingStatus}
+                      className="px-4 py-2.5 rounded-xl border-2 border-red-200 dark:border-red-800 text-sm font-semibold text-red-500 disabled:opacity-50">
+                      <T>Cancel</T>
+                    </button>
+                  </div>
+                </section>
+              )}
+
               {/* Pay Remaining */}
               {(quote.balanceDueNpr ?? 0) > 0 && !remainingPaid && (
                 <section className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-amber-300 dark:border-amber-700 p-4 space-y-3">
@@ -229,11 +321,22 @@ export default function MobileOrderDetailPage() {
                     <span className="rounded-full bg-amber-100 dark:bg-amber-900/30 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-400">PENDING</span>
                   </div>
                   {!payRemainingOpen ? (
-                    <button onClick={() => setPayRemainingOpen(true)} className="w-full rounded-2xl bg-amber-600 py-3 text-sm font-semibold text-white">
+                    <button onClick={() => { setPayRemainingOpen(true); setPayAmount(String(Math.round(Number(quote.balanceDueNpr)))); }} className="w-full rounded-2xl bg-amber-600 py-3 text-sm font-semibold text-white">
                       <T>Collect Remaining Payment</T>
                     </button>
                   ) : (
                     <div className="space-y-3 pt-1">
+                      <div>
+                        <label className="text-xs font-semibold uppercase text-gray-400 block mb-1"><T>Amount to collect</T></label>
+                        <input
+                          type="number"
+                          value={payAmount}
+                          onChange={(e) => setPayAmount(e.target.value)}
+                          min={1}
+                          max={Math.round(Number(quote.balanceDueNpr))}
+                          className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 dark:bg-gray-800 dark:text-gray-100"
+                        />
+                      </div>
                       <p className="text-xs font-semibold uppercase text-gray-400"><T>Payment Method</T></p>
                       <div className="grid grid-cols-2 gap-2">
                         {(["CASH", "POS"] as const).map((m) => (

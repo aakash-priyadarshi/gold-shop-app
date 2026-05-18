@@ -17,6 +17,7 @@ import {
     Loader2,
     Receipt,
     RefreshCw,
+    Search,
     XCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -117,7 +118,7 @@ function QuoteCard({ q, currency }: { q: ShopQuote; currency: SupportedCurrencyC
           </div>
           <div className="flex items-center justify-between mt-1">
             <p className="text-[11px] text-gray-400 truncate">
-              {label}{dateStr && ` · ${dateStr}`}
+              {label}{dateStr && ` · ${dateStr}`}{q.jewelleryType && ` · ${q.jewelleryType.replace(/_/g, " ")}`}
             </p>
             {balance > 0 ? (
               <p className="text-[11px] text-amber-600 font-medium ml-2 flex-shrink-0">
@@ -137,6 +138,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [activeFilterIdx, setActiveFilterIdx] = useState(0);
   const [scope, setScope] = useState<"today" | "all">("today");
+  const [searchQuery, setSearchQuery] = useState("");
   // Derive the shop's local currency from its country setting (single source of truth).
   // *Npr DB fields store amounts in this local currency — no FX conversion needed.
   const currency = getCurrencyForCountry(user?.shop?.country) as SupportedCurrencyCode;
@@ -162,7 +164,19 @@ export default function OrdersPage() {
     ? quotes.filter((q) => q.createdAt?.startsWith(today))
     : quotes;
 
-  const displayed = scopeFiltered.filter(TAB_FILTERS[activeFilterIdx].filterFn);
+  // Search filter (by customer name, invoice or quote number)
+  const searchFiltered = searchQuery.trim()
+    ? scopeFiltered.filter((q) => {
+        const q2 = searchQuery.toLowerCase();
+        return (
+          q.walkInCustomer?.name?.toLowerCase().includes(q2) ||
+          q.invoiceNumber?.toLowerCase().includes(q2) ||
+          q.quoteNumber?.toLowerCase().includes(q2)
+        );
+      })
+    : scopeFiltered;
+
+  const displayed = searchFiltered.filter(TAB_FILTERS[activeFilterIdx].filterFn);
 
   return (
     <MobileFeatureGate feature="mobileOrders" featureName="Orders">
@@ -200,6 +214,18 @@ export default function OrdersPage() {
                 <T>{sc === "today" ? "Today" : "All time"}</T>
               </button>
             ))}
+          </div>
+
+          {/* Search */}
+          <div className="relative mb-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name or bill #"
+              className="w-full pl-8 pr-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 rounded-xl border-0 outline-none focus:ring-2 focus:ring-amber-400"
+            />
           </div>
 
           {/* Status tabs */}

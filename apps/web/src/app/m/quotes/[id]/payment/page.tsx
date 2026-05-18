@@ -244,7 +244,7 @@ ${outstandingAmount > 0 ? `<div class="row"><span class="label">Outstanding bala
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
-          href="/m/quotes"
+          href="/m/orders"
           className="rounded-full bg-gray-100 dark:bg-gray-800 p-2"
           aria-label="Back"
         >

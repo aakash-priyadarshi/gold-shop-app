@@ -15,6 +15,7 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { inventoryApi, posApi, shopQuotesApi } from "@/lib/api";
+import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { useT } from "@/providers/translation-provider";
 import {
     Check,
@@ -67,9 +68,21 @@ function formatMoney(amount: number, currency: SupportedCurrencyCode) {
   return formatCurrencyAmount(amount, currency);
 }
 
+const COUNTRY_PHONE_CODES: Record<string, string> = {
+  NP: "+977",
+  IN: "+91",
+  AE: "+971",
+  US: "+1",
+  GB: "+44",
+  AU: "+61",
+  SG: "+65",
+  CA: "+1",
+};
+
 function CartDrawer({
   cart,
   currency,
+  shopCountry,
   onQtyChange,
   onRemove,
   onCheckout,
@@ -77,6 +90,7 @@ function CartDrawer({
 }: {
   cart: CartItem[];
   currency: SupportedCurrencyCode;
+  shopCountry: string;
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
   onCheckout: (
@@ -95,6 +109,20 @@ function CartDrawer({
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [makingPct, setMakingPct] = useState(0); // making charge %
+  const [taxRate, setTaxRate] = useState(0.13);
+  const [taxLabel, setTaxLabel] = useState("VAT (13%)");
+
+  // Load country-specific tax rate
+  useEffect(() => {
+    if (!shopCountry) return;
+    fetchTaxRules(shopCountry).then((data) => {
+      const r = lookupTaxRate(data.rules, "ALL");
+      setTaxRate(r.rate);
+      setTaxLabel(`${r.name} (${Math.round(r.rate * 100)}%)`);
+    }).catch(() => { /* keep defaults */ });
+  }, [shopCountry]);
+
+  const phoneCode = COUNTRY_PHONE_CODES[shopCountry] ?? "+977";
 
   // Auto-fill customer name when phone matches an existing customer.
   // Same pattern as the PC quote builder (shopQuotesApi.lookupCustomer).
@@ -108,7 +136,7 @@ function CartDrawer({
       try {
         setLookingUp(true);
         const res = await shopQuotesApi.lookupCustomer({
-          phoneCountryCode: "+977",
+          phoneCountryCode: phoneCode,
           phone: digits,
         });
         const result = res.data;
@@ -142,7 +170,7 @@ function CartDrawer({
   const subtotal = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
   const making = Math.round(subtotal * (makingPct / 100));
   const total = subtotal + making;
-  const tax = Math.round(total * 0.03); // 3% GST / VAT placeholder
+  const tax = Math.round(total * taxRate);
 
   return (
     <div className="fixed inset-0 z-30 flex flex-col bg-white">
@@ -242,7 +270,7 @@ function CartDrawer({
             </div>
           )}
           <div className="flex justify-between text-base">
-            <span className="text-gray-500"><T>Tax (3%)</T></span>
+            <span className="text-gray-500">{taxLabel}</span>
             <span className="font-medium">{formatMoney(tax, currency)}</span>
           </div>
           <div className="flex justify-between text-xl font-black border-t pt-3 pb-2">
@@ -266,7 +294,7 @@ function CartDrawer({
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder={t("+977 98XXXXXXXX")}
+              placeholder={`${phoneCode} …`}
               className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             {customerId && (
@@ -322,7 +350,7 @@ function CartDrawer({
               method,
               name.trim() || "Walk-in Customer",
               phone || undefined,
-              { taxRate: 3, makingPct, customerId: customerId || undefined },
+              { taxRate: Math.round(taxRate * 100), makingPct, customerId: customerId || undefined },
             );
             setLoading(false);
           }}
@@ -988,6 +1016,7 @@ export default function MobilePOSPage() {
         <CartDrawer
           cart={cart}
           currency={shopCurrency}
+          shopCountry={user?.shop?.country ?? "NP"}
           onQtyChange={updateQty}
           onRemove={removeFromCart}
           onCheckout={handleCheckout}
