@@ -2,10 +2,11 @@
 
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
 import { T } from "@/components/ui/T";
+import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { invoicesApi } from "@/lib/api";
 import { shareBillOnWhatsApp } from "@/lib/billShare";
-import { ArrowLeft, Loader2, Receipt, Share2 } from "lucide-react";
+import { ArrowLeft, Banknote, Check, CreditCard, Loader2, Receipt, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -68,6 +69,10 @@ export default function MobileOrderDetailPage() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [payRemainingOpen, setPayRemainingOpen] = useState(false);
+  const [payRemainingMethod, setPayRemainingMethod] = useState<"CASH" | "POS">("CASH");
+  const [payingRemaining, setPayingRemaining] = useState(false);
+  const [remainingPaid, setRemainingPaid] = useState(false);
 
   const load = useCallback(async () => {
     if (!params?.id) return;
@@ -110,6 +115,29 @@ export default function MobileOrderDetailPage() {
       },
       invoice.customerPhone,
     );
+  };
+
+  const handlePayRemaining = async () => {
+    if (!invoice?.id || !invoice.balanceDue) return;
+    setPayingRemaining(true);
+    try {
+      const methodLabel = payRemainingMethod === "CASH" ? "Cash at shop" : "POS / Card";
+      await invoicesApi.updatePaymentStatus(invoice.id, {
+        status: "PAID",
+        paidAmount: invoice.totalAmount,
+        balanceDue: 0,
+        notes: `Remaining balance collected via ${methodLabel}.`,
+      });
+      setRemainingPaid(true);
+      setPayRemainingOpen(false);
+      toast({ title: "Payment recorded!", description: `Remaining ${money(invoice.balanceDue, invoice.currency ?? "NPR")} collected.` });
+      // Reload invoice to reflect updated status
+      await load();
+    } catch (err: any) {
+      toast({ title: "Failed", description: err?.response?.data?.message ?? "Try again", variant: "destructive" });
+    } finally {
+      setPayingRemaining(false);
+    }
   };
 
   const lineItems = parseLineItems(invoice?.lineItems);
@@ -256,6 +284,70 @@ export default function MobileOrderDetailPage() {
                   </div>
                 )}
               </section>
+
+              {/* Pay Remaining Balance */}
+              {(invoice.balanceDue ?? 0) > 0 && !remainingPaid && (
+                <section className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-amber-300 dark:border-amber-700 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-400"><T>Outstanding Balance</T></p>
+                      <p className="text-xl font-bold text-amber-700 dark:text-amber-400">{money(invoice.balanceDue, currency)}</p>
+                    </div>
+                    <span className="rounded-full bg-amber-100 dark:bg-amber-900/30 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-400">PENDING</span>
+                  </div>
+                  {!payRemainingOpen ? (
+                    <button
+                      onClick={() => setPayRemainingOpen(true)}
+                      className="w-full rounded-2xl bg-amber-600 py-3 text-sm font-semibold text-white"
+                    >
+                      <T>Collect Remaining Payment</T>
+                    </button>
+                  ) : (
+                    <div className="space-y-3 pt-1">
+                      <p className="text-xs font-semibold uppercase text-gray-400"><T>Payment Method</T></p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPayRemainingMethod("CASH")}
+                          className={`flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-semibold transition ${payRemainingMethod === "CASH" ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400" : "border-gray-200 dark:border-gray-700 text-gray-500"}`}
+                        >
+                          <Banknote className="h-4 w-4" /><T>Cash</T>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPayRemainingMethod("POS")}
+                          className={`flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-semibold transition ${payRemainingMethod === "POS" ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400" : "border-gray-200 dark:border-gray-700 text-gray-500"}`}
+                        >
+                          <CreditCard className="h-4 w-4" /><T>POS / Card</T>
+                        </button>
+                      </div>
+                      <p className="rounded-xl bg-green-50 dark:bg-green-900/10 px-3 py-2 text-[11px] text-green-700 dark:text-green-400">
+                        Collecting <strong>{money(invoice.balanceDue, currency)}</strong> will mark this order as <strong>Paid in Full</strong> and generate a final receipt.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button onClick={() => setPayRemainingOpen(false)} className="rounded-xl border border-gray-200 dark:border-gray-700 py-3 text-sm text-gray-500">
+                          <T>Cancel</T>
+                        </button>
+                        <button
+                          onClick={handlePayRemaining}
+                          disabled={payingRemaining}
+                          className="flex items-center justify-center gap-2 rounded-xl bg-green-600 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                        >
+                          {payingRemaining ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                          <T>Confirm Paid</T>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {remainingPaid && (
+                <section className="flex items-center gap-3 rounded-2xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10 p-4">
+                  <Check className="h-5 w-5 text-green-600 shrink-0" />
+                  <p className="text-sm font-semibold text-green-700 dark:text-green-400"><T>Remaining balance collected. Order fully paid.</T></p>
+                </section>
+              )}
 
               {(invoice.notes || invoice.terms) && (
                 <section className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">

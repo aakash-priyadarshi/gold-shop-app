@@ -15,8 +15,6 @@ import {
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import {
   Calculator,
-  Check,
-  FileDown,
   Gem,
   Loader2,
   MapPin,
@@ -24,6 +22,7 @@ import {
   Phone,
   User,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const JEWELLERY_TYPES = [
@@ -100,13 +99,6 @@ interface CustomerLookupResult {
     city?: string | null;
     country?: string | null;
   };
-}
-
-interface CreatedQuote {
-  id: string;
-  quoteNumber?: string;
-  trackingToken?: string;
-  total: number;
 }
 
 function fmt(amount?: number | null, currency = "NPR") {
@@ -204,7 +196,7 @@ export default function QuotesPage() {
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [shopNotes, setShopNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [quoteResult, setQuoteResult] = useState<CreatedQuote | null>(null);
+  const router = useRouter();
 
   const selectedMaterial = useMemo(
     () => MATERIAL_OPTIONS.find((m) => m.value === materialCode) ?? MATERIAL_OPTIONS[0],
@@ -471,13 +463,16 @@ export default function QuotesPage() {
       });
 
       const quote = res.data ?? {};
-      setQuoteResult({
-        id: quote.id,
-        quoteNumber: quote.quoteNumber,
-        trackingToken: quote.trackingToken,
-        total: Number(quote.totalPriceNpr ?? estimatedTotalWithTax),
-      });
       toast({ title: "Quote created", description: quote.quoteNumber ?? "Ready to share" });
+      const payParams = new URLSearchParams({
+        displayTotal: String(Math.round(estimatedTotalWithTax)),
+        currency,
+        nprRate: String(nprToDisplayCurrency),
+        name: customerName.trim(),
+        num: quote.quoteNumber ?? quote.id ?? "",
+        phone: customerPhone.replace(/\D/g, ""),
+      });
+      router.push(`/m/quotes/${quote.id}/payment?${payParams.toString()}`);
     } catch (err: any) {
       toast({
         title: "Failed to create quote",
@@ -488,107 +483,6 @@ export default function QuotesPage() {
       setSubmitting(false);
     }
   };
-
-  if (quoteResult) {
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://orivraa.com";
-    const trackingUrl = quoteResult.trackingToken
-      ? `${baseUrl}/track/${quoteResult.trackingToken}`
-      : "";
-    const message = encodeURIComponent(
-      `Hello ${customerName.trim()},\n\n` +
-        `Your quote from ${user?.shop?.shopName ?? "our store"} is ready.\n` +
-        `Quote: ${quoteResult.quoteNumber ?? quoteResult.id}\n` +
-        `Item: ${jewelleryType.replace(/_/g, " ")}\n` +
-        `Material: ${selectedMaterial.label}\n` +
-        `Estimate: ${fmt(quoteResult.total, currency)}\n` +
-        (trackingUrl ? `\nView quote: ${trackingUrl}` : ""),
-    );
-    const whatsappUrl = customerPhone
-      ? `https://wa.me/${customerPhone.replace(/\D/g, "")}?text=${message}`
-      : `https://wa.me/?text=${message}`;
-
-    const exportPdf = () => {
-      const printWindow = window.open("", "_blank", "width=720,height=900");
-      if (!printWindow) {
-        toast({ title: "Pop-ups are blocked", variant: "destructive" });
-        return;
-      }
-      const safe = (value: string) => value.replace(/</g, "&lt;");
-      printWindow.document.write(`<!doctype html>
-<html><head><meta charset="utf-8"><title>${safe(quoteResult.quoteNumber ?? "Quote")}</title>
-<style>
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;padding:32px;max-width:760px;margin:0 auto}
-h1{color:#b45309;margin:0 0 4px}.muted{color:#6b7280;font-size:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:24px 0}
-.box{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-top:14px}.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6}.row:last-child{border-bottom:0}.total{font-size:18px;font-weight:700;color:#b45309}.notes{white-space:pre-wrap;font-size:12px;color:#374151}
-@media print{button{display:none}}
-</style></head><body>
-<button onclick="window.print()" style="position:fixed;top:16px;right:16px;padding:8px 16px;background:#b45309;color:#fff;border:0;border-radius:8px;font-weight:600">Print / Save as PDF</button>
-<h1>${safe(user?.shop?.shopName ?? "Quote")}</h1>
-<div class="muted">${safe((user?.shop as any)?.address ?? "")}</div>
-<div class="grid"><div><div class="muted">QUOTE FOR</div><strong>${safe(customerName)}</strong><div class="muted">${safe(phoneCountryCode)} ${safe(customerPhone)}</div></div><div style="text-align:right"><div class="muted">QUOTE</div><strong>${safe(quoteResult.quoteNumber ?? quoteResult.id)}</strong><div class="muted">${new Date().toLocaleDateString("en-IN")}</div></div></div>
-<div class="box"><div class="row"><span>Jewellery type</span><strong>${safe(jewelleryType.replace(/_/g, " "))}</strong></div><div class="row"><span>Build method</span><strong>${safe(BUILD_METHODS.find((m) => m.value === buildMethod)?.label ?? buildMethod)}</strong></div><div class="row"><span>Material</span><strong>${safe(selectedMaterial.label)}</strong></div><div class="row"><span>Weight</span><strong>${resolvedWeightGrams.toFixed(2)} g</strong></div></div>
-<div class="box"><div class="row"><span>Metal/material</span><span>${fmt(metalCostNpr, currency)}</span></div><div class="row"><span>Making</span><span>${fmt(makingChargeNpr, currency)}</span></div><div class="row"><span>Gemstone</span><span>${fmt(gemstoneCostNpr, currency)}</span></div><div class="row"><span>Finish</span><span>${fmt(finishCostNpr, currency)}</span></div><div class="row total"><span>Total estimate</span><span>${fmt(quoteResult.total, currency)}</span></div></div>
-${specialInstructions.trim() ? `<div class="box notes"><strong>Instructions</strong>\n${safe(specialInstructions.trim())}</div>` : ""}
-${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl}</div>` : ""}
-<script>setTimeout(function(){window.print();},400);</script></body></html>`);
-      printWindow.document.close();
-    };
-
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-6 px-6 text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
-          <Check className="h-10 w-10 text-green-600" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold"><T>Quote Created</T></h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {quoteResult.quoteNumber ?? quoteResult.id} - {fmt(quoteResult.total, currency)}
-          </p>
-        </div>
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-4 text-base font-semibold text-white shadow-lg"
-        >
-          <MessageCircle className="h-5 w-5" />
-          <T>Send via WhatsApp</T>
-        </a>
-        <button
-          onClick={exportPdf}
-          className="flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl border border-amber-300 py-3 text-sm font-semibold text-amber-700"
-        >
-          <FileDown className="h-4 w-4" />
-          <T>Export as PDF</T>
-        </button>
-        <button
-          onClick={() => {
-            setQuoteResult(null);
-            setCustomerPhone("");
-            setCustomerName("");
-            setCustomerEmail("");
-            setCustomerAddress("");
-            setMatchedCustomerId(null);
-            setTargetTotalWeightG(0);
-            setWeightUnit("GRAM");
-            setMetalCostMode("auto");
-            setMetalCostNpr(0);
-            setMakingChargeNpr(0);
-            setSelectedGemstoneRateKey("");
-            setGemstoneCount(1);
-            setGemstonesV2([]);
-            setGemstoneCostMode("manual");
-            setGemstoneCostNpr(0);
-            setFinishCostNpr(0);
-            setSpecialInstructions("");
-          }}
-          className="text-sm font-medium text-amber-600 underline underline-offset-2"
-        >
-          <T>New Quote</T>
-        </button>
-      </div>
-    );
-  }
 
   return (
     <MobileFeatureGate feature="mobileQuotes" featureName="Quote Builder">
@@ -950,7 +844,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
         {estimateTotal > 0 && (
           <section data-tour="m-quote-total" className="space-y-2 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
             <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400"><T>Subtotal</T></span><span>{fmt(estimateTotal, currency)}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400"><T>Estimated tax</T></span><span>{fmt(estimatedTax, currency)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400"><T>Estimated tax (3%)</T></span><span>{fmt(estimatedTax, currency)}</span></div>
             <div className="flex justify-between border-t pt-2 font-bold"><span><T>Total estimate</T></span><span className="text-amber-700">{fmt(estimatedTotalWithTax, currency)}</span></div>
           </section>
         )}
