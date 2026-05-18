@@ -182,12 +182,12 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-40 bg-gray-50 flex flex-col animate-in slide-in-from-bottom-2 duration-200">
-      <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 shadow-sm">
-        <h2 className="text-xl font-bold text-gray-900"><T>More Tools</T></h2>
+    <div className="fixed inset-0 z-40 bg-gray-50 dark:bg-gray-950 flex flex-col animate-in slide-in-from-bottom-2 duration-200">
+      <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 shadow-sm">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100"><T>More Tools</T></h2>
         <button
           onClick={onClose}
-          className="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 active:bg-gray-200"
+          className="h-10 w-10 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-400 active:bg-gray-200"
         >
           <X className="h-5 w-5" />
         </button>
@@ -207,7 +207,7 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
                   onClick={onClose}
                   className="flex flex-col items-center text-center gap-2"
                 >
-                  <div className="h-14 w-14 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center active:scale-95 transition-transform">
+                  <div className="h-14 w-14 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center active:scale-95 transition-transform">
                     <item.icon className="h-6 w-6 text-amber-600" />
                   </div>
                   <span className="text-[11px] font-medium text-gray-700 leading-tight">
@@ -219,7 +219,7 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
           </div>
         ))}
 
-        <div className="pt-4 border-t border-gray-200">
+        <div className="pt-4 border-t dark:border-gray-800 border-gray-200 dark:border-gray-800">
           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 px-2">
             <T>Help & Support</T>
           </h3>
@@ -233,14 +233,14 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
                 }
                 onClose();
               }}
-              className="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 active:bg-gray-50 text-left"
+              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 active:bg-gray-50 dark:bg-gray-950 text-left"
             >
               <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 text-blue-600">
                 <MessageCircle className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-bold text-gray-900"><T>AI Support Chat</T></p>
-                <p className="text-[11px] text-gray-500"><T>{isChatDismissed ? "Touch to bring back" : "Tap to shake & show"}</T></p>
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100"><T>AI Support Chat</T></p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400"><T>{isChatDismissed ? "Touch to bring back" : "Tap to shake & show"}</T></p>
               </div>
             </button>
             <button
@@ -252,29 +252,29 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
                 }
                 onClose();
               }}
-              className="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 active:bg-gray-50 text-left"
+              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 active:bg-gray-50 dark:bg-gray-950 text-left"
             >
               <div className="h-10 w-10 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0 text-purple-600">
                 <HelpCircle className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-bold text-gray-900"><T>Tutorials</T></p>
-                <p className="text-[11px] text-gray-500"><T>{isTutorialDismissed ? "Touch to bring back" : "Tap to shake & show"}</T></p>
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100"><T>Tutorials</T></p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400"><T>{isTutorialDismissed ? "Touch to bring back" : "Tap to shake & show"}</T></p>
               </div>
             </button>
           </div>
         </div>
 
         <div className="pt-4 pb-8 space-y-3">
-          <div className="flex items-center gap-3 px-4 py-4 rounded-2xl bg-white shadow-sm border border-gray-100 dark:bg-gray-900 dark:border-gray-800">
-            <Globe className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+          <div className="flex items-center gap-3 px-4 py-4 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:border-gray-800">
+            <Globe className="h-5 w-5 text-gray-600 dark:text-gray-400 dark:text-gray-400" />
             <div className="flex-1">
-              <span className="text-sm font-bold text-gray-900 dark:text-white"><T>Language</T></span>
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100 dark:text-white"><T>Language</T></span>
             </div>
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value as Language)}
-              className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2 outline-none"
+              className="bg-gray-50 dark:bg-gray-950 dark:bg-gray-800 border border-gray-200 dark:border-gray-800 dark:border-gray-700 text-gray-900 dark:text-gray-100 dark:text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2 outline-none"
             >
               {Object.entries(LANGUAGES).map(([code, info]) => (
                 <option key={code} value={code}>
@@ -284,28 +284,28 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
             </select>
           </div>
           
-          <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white shadow-sm border border-gray-100 dark:bg-gray-900 dark:border-gray-800">
+          <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:border-gray-800">
             <div className="flex items-center gap-3">
-              <AnimatedThemeToggle size={24} className="rounded-lg text-gray-600 dark:text-gray-400 -ml-1" />
-              <span className="text-sm font-bold text-gray-900 dark:text-white"><T>Theme</T></span>
+              <AnimatedThemeToggle size={24} className="rounded-lg text-gray-600 dark:text-gray-400 dark:text-gray-400 -ml-1" />
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100 dark:text-white"><T>Theme</T></span>
             </div>
           </div>
 
           <Link
             href="/m/settings"
             onClick={onClose}
-            className="flex items-center gap-3 px-4 py-4 rounded-2xl bg-white shadow-sm border border-gray-100 active:bg-gray-50"
+            className="flex items-center gap-3 px-4 py-4 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 active:bg-gray-50 dark:bg-gray-950"
           >
-            <Settings className="h-5 w-5 text-gray-600" />
-            <span className="text-sm font-bold text-gray-900"><T>Store Settings</T></span>
+            <Settings className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <span className="text-sm font-bold text-gray-900 dark:text-gray-100"><T>Store Settings</T></span>
           </Link>
           <Link
             href="/dashboard/shop"
             onClick={onClose}
-            className="flex items-center gap-3 px-4 py-4 rounded-2xl bg-white shadow-sm border border-gray-100 active:bg-gray-50"
+            className="flex items-center gap-3 px-4 py-4 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 active:bg-gray-50 dark:bg-gray-950"
           >
-            <ComputerDesktopIcon className="h-5 w-5 text-gray-600" />
-            <span className="text-sm font-bold text-gray-900"><T>Desktop Dashboard</T></span>
+            <ComputerDesktopIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <span className="text-sm font-bold text-gray-900 dark:text-gray-100"><T>Desktop Dashboard</T></span>
           </Link>
           <button
             onClick={async () => {
@@ -456,9 +456,9 @@ export default function MobileLayout({
   const currentShopId = user?.shop?.id;
 
   return (
-    <div className="flex flex-col h-dvh bg-gray-50 overflow-hidden">
+    <div className="flex flex-col h-dvh bg-gray-50 dark:bg-gray-950 overflow-hidden">
       {/* Top bar */}
-      <header className="bg-white border-b border-gray-100 flex-shrink-0">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="relative min-w-0 flex-1 pr-3">
             <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">
@@ -469,7 +469,7 @@ export default function MobileLayout({
                 <button
                   type="button"
                   onClick={() => setShopMenuOpen((value) => !value)}
-                  className="mt-0.5 flex max-w-[210px] items-center gap-1 rounded-lg text-left text-sm font-semibold leading-tight text-gray-900 active:text-amber-700"
+                  className="mt-0.5 flex max-w-[210px] items-center gap-1 rounded-lg text-left text-sm font-semibold leading-tight text-gray-900 dark:text-gray-100 active:text-amber-700"
                 >
                   <Store className="h-3.5 w-3.5 flex-shrink-0 text-amber-600" />
                   <span className="truncate">{currentShopName}</span>
@@ -480,7 +480,7 @@ export default function MobileLayout({
                   />
                 </button>
                 {shopMenuOpen && (
-                  <div className="absolute left-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl shadow-black/10">
+                  <div className="absolute left-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl shadow-black/10">
                     {shops.map((shop) => {
                       const shopName = shop.shopName ?? shop.name ?? "Shop";
                       const isActive = shop.id === currentShopId;
@@ -493,7 +493,7 @@ export default function MobileLayout({
                           className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm ${
                             isActive
                               ? "bg-amber-50 text-amber-700"
-                              : "text-gray-700 active:bg-gray-50"
+                              : "text-gray-700 active:bg-gray-50 dark:bg-gray-950"
                           }`}
                         >
                           <span className="min-w-0">
@@ -516,7 +516,7 @@ export default function MobileLayout({
                 )}
               </>
             ) : (
-              <p className="text-sm font-semibold text-gray-900 leading-tight truncate max-w-[180px]">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate max-w-[180px]">
                 {currentShopName}
               </p>
             )}
@@ -555,14 +555,14 @@ export default function MobileLayout({
                 fetchRates();
               }}
               disabled={ratesLoading}
-              className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+              className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:bg-gray-800 active:bg-gray-200 transition-colors"
               aria-label={t("Refresh rates")}
             >
               <RefreshCw
                 className={`h-5 w-5 ${ratesLoading ? "animate-spin text-amber-500" : ""}`}
               />
             </button>
-            <div className="relative flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 ml-1">
+            <div className="relative flex items-center bg-gray-100 dark:bg-gray-800 dark:bg-gray-800 rounded-lg p-0.5 ml-1">
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as Language)}
@@ -570,13 +570,13 @@ export default function MobileLayout({
                 style={{ WebkitAppearance: 'none' }}
               >
                 {Object.entries(LANGUAGES).map(([code, info]) => (
-                  <option key={code} value={code} className="text-gray-900">
+                  <option key={code} value={code} className="text-gray-900 dark:text-gray-100">
                     {info.nativeName}
                   </option>
                 ))}
               </select>
               <div className="pointer-events-none absolute right-1">
-                <ChevronDown className="h-3 w-3 text-gray-500" />
+                <ChevronDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />
               </div>
             </div>
             <AnimatedThemeToggle size={32} className="ml-0.5" />
@@ -596,7 +596,7 @@ export default function MobileLayout({
       {/* Bottom navigation */}
       <nav
         data-tour="m-bottom-nav"
-        className="flex-shrink-0 bg-white border-t border-gray-100 safe-area-bottom"
+        className="flex-shrink-0 bg-white dark:bg-gray-900 border-t dark:border-gray-800 border-gray-100 dark:border-gray-800 safe-area-bottom"
       >
         <div className="flex items-center justify-around px-1 pt-1 pb-1">
           {BOTTOM_TABS.map((tab) => {

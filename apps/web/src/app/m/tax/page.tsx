@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-type Country = "NEPAL" | "INDIA" | "UAE" | "UK" | "EU" | "US";
+type Country = "NP" | "IN" | "AE" | "GB" | "EU" | "US";
 
 interface CountryConfig {
   code: Country;
@@ -35,7 +35,7 @@ interface CountryConfig {
 
 const COUNTRY_CONFIGS: CountryConfig[] = [
   {
-    code: "NEPAL",
+    code: "NP",
     flag: "🇳🇵",
     label: "Nepal",
     regime: "VAT",
@@ -47,7 +47,7 @@ const COUNTRY_CONFIGS: CountryConfig[] = [
     note: "Jewellery is subject to 13% VAT in Nepal. Registration required if annual turnover > NPR 5M.",
   },
   {
-    code: "INDIA",
+    code: "IN",
     flag: "🇮🇳",
     label: "India",
     regime: "GST",
@@ -59,7 +59,7 @@ const COUNTRY_CONFIGS: CountryConfig[] = [
     note: "Gold & silver jewellery attracts 3% GST. Making charges are taxable at 5%. GSTR-1 due 11th, GSTR-3B due 20th of next month.",
   },
   {
-    code: "UAE",
+    code: "AE",
     flag: "🇦🇪",
     label: "UAE",
     regime: "VAT",
@@ -71,7 +71,7 @@ const COUNTRY_CONFIGS: CountryConfig[] = [
     note: "UAE VAT is 5%. Investment gold (99%+ purity) is zero-rated. Fabricated jewellery is standard-rated at 5%. File VAT201 quarterly via FTA EmaraTax portal.",
   },
   {
-    code: "UK",
+    code: "GB",
     flag: "🇬🇧",
     label: "United Kingdom",
     regime: "VAT (MTD)",
@@ -252,7 +252,7 @@ function jsonDown(data: unknown, filename: string) {
 }
 
 export default function TaxAuditPage() {
-  const [country, setCountry] = useState<Country>("NEPAL");
+  const [country, setCountry] = useState<Country>("NP");
   const monthOptions = getMonthOptions();
   const [period, setPeriod] = useState(monthOptions[0].value);
   const [summary, setSummary] = useState<TaxSummary | null>(null);
@@ -287,7 +287,7 @@ export default function TaxAuditPage() {
   const handleDownload = async (type: string) => {
     setDownloading(type);
     try {
-      if (country === "INDIA") {
+      if (country === "IN") {
         if (type === "gstr1-csv") {
           const res = await taxReportsApi.indiaGstr1(period, "csv");
           blobDown(res.data, `GSTR1_${period}.csv`);
@@ -301,7 +301,7 @@ export default function TaxAuditPage() {
           const res = await taxReportsApi.indiaTallyXml(period);
           blobDown(res.data, `Tally_${period}.xml`);
         }
-      } else if (country === "NEPAL") {
+      } else if (country === "NP") {
         if (type === "vat") {
           const res = await taxReportsApi.nepalVat(period);
           jsonDown(res.data, `VAT_${period}.json`);
@@ -310,10 +310,10 @@ export default function TaxAuditPage() {
           const res = await taxReportsApi.nepalAudit(year);
           jsonDown(res.data, `NepalAudit_${year}.json`);
         }
-      } else if (country === "UAE") {
+      } else if (country === "AE") {
         const res = await taxReportsApi.uaeVat201(period);
         jsonDown(res.data, `UAE_VAT201_${period}.json`);
-      } else if (country === "UK") {
+      } else if (country === "GB") {
         const res = await taxReportsApi.ukMtd(period);
         jsonDown(res.data, `UK_MTD_${period}.json`);
       } else if (country === "EU") {
@@ -462,7 +462,7 @@ export default function TaxAuditPage() {
             <T>Download Reports</T>
           </p>
 
-          {country === "INDIA" && (
+          {country === "IN" && (
             <>
               <DownloadRow
                 label="GSTR-1 (CSV)"
@@ -495,7 +495,7 @@ export default function TaxAuditPage() {
             </>
           )}
 
-          {country === "NEPAL" && (
+          {country === "NP" && (
             <>
               <DownloadRow
                 label="VAT Return (JSON)"
@@ -514,7 +514,7 @@ export default function TaxAuditPage() {
             </>
           )}
 
-          {country === "UAE" && (
+          {country === "AE" && (
             <DownloadRow
               label="VAT201 Return (JSON)"
               desc="UAE FTA quarterly VAT201 return"
@@ -524,7 +524,7 @@ export default function TaxAuditPage() {
             />
           )}
 
-          {country === "UK" && (
+          {country === "GB" && (
             <DownloadRow
               label="MTD VAT Return (JSON)"
               desc="HMRC Making Tax Digital — quarterly filing"

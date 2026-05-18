@@ -160,6 +160,7 @@ export default function QuotesPage() {
   const { user } = useAuth();
   const initialParams = getMobileMarketParams(user?.shop ?? null);
   const [currency, setCurrency] = useState(initialParams.currency);
+  const [isGemstoneDrawerOpen, setIsGemstoneDrawerOpen] = useState(false);
   const [ratesLoading, setRatesLoading] = useState(true);
   const [goldRate, setGoldRate] = useState(0);
   const [silverRate, setSilverRate] = useState(0);
@@ -341,6 +342,9 @@ export default function QuotesPage() {
   useEffect(() => {
     setCustomerCity((prev: string) => prev || (user?.shop as any)?.city || "");
     setCustomerCountry((prev: string) => prev || (user?.shop as any)?.country || "Nepal");
+    if (user?.shop) {
+      setCurrency(toSupportedCurrency(getMobileMarketParams(user.shop).currency));
+    }
   }, [user?.shop]);
 
   useEffect(() => {
@@ -534,7 +538,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
         </div>
         <div>
           <h2 className="text-xl font-bold"><T>Quote Created</T></h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {quoteResult.quoteNumber ?? quoteResult.id} - {fmt(quoteResult.total, currency)}
           </p>
         </div>
@@ -587,7 +591,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
       <div className="space-y-4 px-4 py-5 pb-32">
         <div className="-mt-2 mb-1 flex items-start justify-between">
           <div>
-            <h1 className="text-base font-bold text-gray-900"><T>Quote Builder</T></h1>
+            <h1 className="text-base font-bold text-gray-900 dark:text-gray-100"><T>Quote Builder</T></h1>
             <p className="text-[11px] text-gray-400"><T>Create a custom estimate from the seller quote flow</T></p>
           </div>
 
@@ -604,19 +608,19 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
           </div>
         )}
 
-        <section data-tour="m-quote-customer" className="space-y-3 rounded-2xl border border-gray-100 bg-white p-4">
+        <section data-tour="m-quote-customer" className="space-y-3 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400"><T>Customer</T></p>
             {matchedCustomerId && <span className="text-[11px] font-semibold text-emerald-600"><T>Matched</T></span>}
           </div>
           <div className="grid grid-cols-[100px_1fr] gap-2">
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Code</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Code</T></label>
               <div className="relative">
                 <select
                   value={phoneCountryCode}
                   onChange={(event) => setPhoneCountryCode(event.target.value)}
-                  className="w-full appearance-none rounded-xl border border-gray-200 py-2.5 pl-3 pr-7 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                  className="w-full appearance-none rounded-xl border border-gray-200 dark:border-gray-800 py-2.5 pl-3 pr-7 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white dark:bg-gray-900"
                   aria-label="Phone country code"
                 style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
@@ -633,7 +637,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Phone First</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Phone First</T></label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input
@@ -641,7 +645,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                 value={customerPhone}
                 onChange={(event) => setCustomerPhone(event.target.value)}
                 placeholder="Phone first"
-                className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="w-full rounded-xl border border-gray-200 dark:border-gray-800 py-2.5 pl-9 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
               {lookingUpCustomer && (
                 <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-amber-500" />
@@ -650,7 +654,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Customer Name</T></label>
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Customer Name</T></label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
@@ -658,22 +662,22 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               value={customerName}
               onChange={(event) => setCustomerName(event.target.value)}
               placeholder="Customer name"
-              className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-800 py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Email</T> <span className="normal-case lowercase">(optional)</span></label>
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Email</T> <span className="normal-case lowercase">(optional)</span></label>
             <input
               type="email"
             value={customerEmail}
             onChange={(event) => setCustomerEmail(event.target.value)}
             placeholder="Email (optional)"
-            className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Address</T> <span className="normal-case lowercase">(optional)</span></label>
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Address</T> <span className="normal-case lowercase">(optional)</span></label>
             <div className="relative">
               <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <textarea
@@ -681,41 +685,41 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               onChange={(event) => setCustomerAddress(event.target.value)}
               placeholder="Address (optional)"
               rows={2}
-              className="w-full resize-none rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full resize-none rounded-xl border border-gray-200 dark:border-gray-800 py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>City</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>City</T></label>
               <input
                 value={customerCity}
               onChange={(event) => setCustomerCity(event.target.value)}
               placeholder="City"
-              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Country</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Country</T></label>
               <input
                 value={customerCountry}
               onChange={(event) => setCustomerCountry(event.target.value)}
               placeholder="Country"
-              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             </div>
           </div>
         </section>
 
-        <section data-tour="m-quote-items" className="space-y-3 rounded-2xl border border-gray-100 bg-white p-4">
+        <section data-tour="m-quote-items" className="space-y-3 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400"><T>Item and Material</T></p>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Jewellery Type</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Jewellery Type</T></label>
               <select
                 value={jewelleryType}
               onChange={(event) => setJewelleryType(event.target.value)}
-              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             >
               {JEWELLERY_TYPES.map((type) => (
                 <option key={type} value={type}>{type.replace(/_/g, " ")}</option>
@@ -723,7 +727,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             </select>
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Quantity</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Quantity</T></label>
               <input
                 type="number"
                 min="1"
@@ -731,16 +735,16 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                 value={quantity || ""}
                 onChange={(event) => setQuantity(Math.max(1, Number.parseInt(event.target.value) || 1))}
                 placeholder="Qty"
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Build Method</T></label>
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Build Method</T></label>
             <select
               value={buildMethod}
             onChange={(event) => setBuildMethod(event.target.value)}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
             {BUILD_METHODS.map((method) => (
               <option key={method.value} value={method.value}>{method.label}</option>
@@ -748,14 +752,14 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
           </select>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Material</T></label>
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Material</T></label>
             <select
               value={materialCode}
             onChange={(event) => {
               setMaterialCode(event.target.value);
               setMetalCostMode("auto");
             }}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
             {MATERIAL_OPTIONS.map((material) => (
               <option key={material.value} value={material.value}>{material.label}</option>
@@ -764,7 +768,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Target Weight</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Target Weight</T></label>
               <div className="grid grid-cols-[1fr_82px] gap-2">
                 <input
                   type="number"
@@ -777,7 +781,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                   setMetalCostMode("auto");
                 }}
                 placeholder="Weight"
-                className="min-w-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="min-w-0 rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
               <select
                 value={weightUnit}
@@ -785,7 +789,7 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                   setWeightUnit(event.target.value as WeightUnit);
                   setMetalCostMode("auto");
                 }}
-                className="rounded-xl border border-gray-200 px-2 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="rounded-xl border border-gray-200 dark:border-gray-800 px-2 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 <option value="GRAM">g</option>
                 <option value="TOLA">tola</option>
@@ -793,18 +797,18 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Size / Length</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Size / Length</T></label>
               <input
                 value={sizeOrLength}
               onChange={(event) => setSizeOrLength(event.target.value)}
               placeholder="Size / length"
-              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             </div>
           </div>
           {selectedMaterial.category === "GOLD" && (
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Gold weight</T> <span className="normal-case lowercase">(optional)</span></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Gold weight</T> <span className="normal-case lowercase">(optional)</span></label>
               <input
                 type="number"
               inputMode="decimal"
@@ -813,25 +817,26 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
               value={targetGoldWeightG || ""}
               onChange={(event) => setTargetGoldWeightG(numberFromInput(event.target.value))}
               placeholder="Gold weight g (optional)"
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             </div>
           )}
           {materialRateInfo.ratePerGram > 0 && resolvedWeightGrams > 0 && (
             <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-700">
-              {fmt(materialRateInfo.ratePerGram, currency)}/g from {materialRateInfo.source}; {resolvedWeightGrams.toFixed(2)}g selected.
+              <T>Estimated</T>: {resolvedWeightGrams.toFixed(2)}g × {fmt(materialRateInfo.ratePerGram, currency)} = {fmt(autoMetalCost, currency)}<br />
+              <span className="text-[10px] opacity-80">(From {materialRateInfo.source})</span>
             </p>
           )}
         </section>
 
-        <section className="space-y-3 rounded-2xl border border-gray-100 bg-white p-4">
+        <section className="space-y-3 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
           <div className="flex items-center gap-2">
             <Gem className="h-4 w-4 text-amber-600" />
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400"><T>Pricing</T></p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Material Cost</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Material Cost</T></label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -842,11 +847,11 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                 setMetalCostNpr(numberFromInput(event.target.value));
               }}
               placeholder="Material cost"
-              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Making Charge</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Making Charge</T></label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -854,11 +859,11 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                 value={makingChargeNpr || ""}
                 onChange={(event) => setMakingChargeNpr(numberFromInput(event.target.value))}
                 placeholder="Making charge"
-              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Gemstone Cost</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Gemstone Cost</T></label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -869,11 +874,11 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                 setGemstoneCostNpr(numberFromInput(event.target.value));
               }}
               placeholder="Gemstone cost"
-              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Finish Cost</T></label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Finish Cost</T></label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -881,12 +886,12 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
                 value={finishCostNpr || ""}
                 onChange={(event) => setFinishCostNpr(numberFromInput(event.target.value))}
                 placeholder="Finish cost"
-              className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             </div>
           </div>
           {autoMetalCost > 0 && (
-            <div className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2 text-[11px] text-gray-600">
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 dark:bg-gray-950 px-3 py-2 text-[11px] text-gray-600 dark:text-gray-400">
               <span>
                 {metalCostMode === "auto" ? "Auto material" : "Suggested material"}: {fmt(autoMetalCost, currency)}
               </span>
@@ -902,73 +907,53 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
             </div>
           )}
           {gemstoneRateOptions.length > 0 && (
-            <div className="grid grid-cols-[1fr_72px] gap-2">
-              <div>
-                <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Gemstone Selection</T></label>
-                <select
-                  value={selectedGemstoneRateKey}
-                onChange={(event) => {
-                  setSelectedGemstoneRateKey(event.target.value);
-                  setGemstoneCostMode(event.target.value ? "auto" : "manual");
-                }}
-                className="min-w-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            <div>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Gemstone Selection</T></label>
+              <button
+                type="button"
+                onClick={() => setIsGemstoneDrawerOpen(true)}
+                className="w-full text-left flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-gray-50 dark:bg-gray-800"
               >
-                <option value="">Gemstone / diamond rate</option>
-                {gemstoneRateOptions.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.label} - {fmt(option.effectivePriceNpr * nprToDisplayCurrency, currency)}
-                  </option>
-                ))}
-              </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Qty</T></label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  value={gemstoneCount || ""}
-                  onChange={(event) => {
-                  setGemstoneCount(Math.max(1, Number.parseInt(event.target.value) || 1));
-                  if (selectedGemstoneRateKey) setGemstoneCostMode("auto");
-                }}
-                placeholder="Qty"
-                className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
-              </div>
+                <span className="truncate text-gray-700 dark:text-gray-300">
+                  {selectedGemstoneRate
+                    ? `${selectedGemstoneRate.label} (${gemstoneCount}) = ${fmt(autoGemstoneCost, currency)}`
+                    : "Configure Gemstone"}
+                </span>
+                <span className="text-xs font-semibold text-amber-600 ml-2 shrink-0"><T>Edit</T></span>
+              </button>
             </div>
           )}
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Estimated days</T></label>
-            <input type="number" inputMode="numeric" min="1" value={estimatedDays || ""} onChange={(event) => setEstimatedDays(Math.max(1, Number.parseInt(event.target.value) || 1))} placeholder="Estimated days" className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Estimated days</T></label>
+            <input type="number" inputMode="numeric" min="1" value={estimatedDays || ""} onChange={(event) => setEstimatedDays(Math.max(1, Number.parseInt(event.target.value) || 1))} placeholder="Estimated days" className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Gemstone details</T> <span className="normal-case lowercase">(optional)</span></label>
-            <textarea value={gemstoneNotes} onChange={(event) => setGemstoneNotes(event.target.value)} rows={2} placeholder="Gemstone details (optional)" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Gemstone details</T> <span className="normal-case lowercase">(optional)</span></label>
+            <textarea value={gemstoneNotes} onChange={(event) => setGemstoneNotes(event.target.value)} rows={2} placeholder="Gemstone details (optional)" className="w-full resize-none rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Finish / plating details</T></label>
-            <textarea value={finishNotes} onChange={(event) => setFinishNotes(event.target.value)} rows={2} placeholder="Finish / plating / polish details" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Finish / plating details</T></label>
+            <textarea value={finishNotes} onChange={(event) => setFinishNotes(event.target.value)} rows={2} placeholder="Finish / plating / polish details" className="w-full resize-none rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Customer instructions</T></label>
-            <textarea value={specialInstructions} onChange={(event) => setSpecialInstructions(event.target.value)} rows={3} placeholder="Customer instructions" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Customer instructions</T></label>
+            <textarea value={specialInstructions} onChange={(event) => setSpecialInstructions(event.target.value)} rows={3} placeholder="Customer instructions" className="w-full resize-none rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T>Internal shop notes</T></label>
-            <textarea value={shopNotes} onChange={(event) => setShopNotes(event.target.value)} rows={2} placeholder="Internal shop notes" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Internal shop notes</T></label>
+            <textarea value={shopNotes} onChange={(event) => setShopNotes(event.target.value)} rows={2} placeholder="Internal shop notes" className="w-full resize-none rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
         </section>
 
         {estimateTotal > 0 && (
-          <section data-tour="m-quote-total" className="space-y-2 rounded-2xl border border-gray-100 bg-white p-4">
-            <div className="flex justify-between text-sm"><span className="text-gray-500"><T>Subtotal</T></span><span>{fmt(estimateTotal, currency)}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-500"><T>Estimated tax</T></span><span>{fmt(estimatedTax, currency)}</span></div>
+          <section data-tour="m-quote-total" className="space-y-2 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+            <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400"><T>Subtotal</T></span><span>{fmt(estimateTotal, currency)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400"><T>Estimated tax</T></span><span>{fmt(estimatedTax, currency)}</span></div>
             <div className="flex justify-between border-t pt-2 font-bold"><span><T>Total estimate</T></span><span className="text-amber-700">{fmt(estimatedTotalWithTax, currency)}</span></div>
           </section>
         )}
 
-        <div className="fixed bottom-16 left-0 right-0 border-t border-gray-100 bg-white px-4 pb-4 pt-2">
+        <div className="fixed bottom-16 left-0 right-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 pb-4 pt-2">
           <button
             onClick={handleSubmit}
             disabled={submitting}
@@ -979,6 +964,75 @@ ${trackingUrl ? `<div class="muted" style="margin-top:20px">Track: ${trackingUrl
           </button>
         </div>
       </div>
+
+      {isGemstoneDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40 transition-opacity">
+          <div className="relative mt-24 flex h-auto max-h-[85vh] flex-col rounded-t-3xl bg-white dark:bg-gray-900 shadow-xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100"><T>Configure Gemstone</T></h2>
+              <button
+                onClick={() => setIsGemstoneDrawerOpen(false)}
+                className="rounded-full bg-gray-100 dark:bg-gray-800 p-2 text-gray-500 dark:text-gray-400"
+              >
+                <T>Close</T>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Select Gemstone</T></label>
+                  <select
+                    value={selectedGemstoneRateKey}
+                    onChange={(event) => {
+                      setSelectedGemstoneRateKey(event.target.value);
+                      setGemstoneCostMode(event.target.value ? "auto" : "manual");
+                    }}
+                    className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white dark:bg-gray-900"
+                  >
+                    <option value="">No gemstone</option>
+                    {gemstoneRateOptions.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label} - {fmt(option.effectivePriceNpr * nprToDisplayCurrency, currency)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedGemstoneRateKey && (
+                  <div>
+                    <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400"><T>Quantity</T></label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      value={gemstoneCount || ""}
+                      onChange={(event) => {
+                        setGemstoneCount(Math.max(1, Number.parseInt(event.target.value) || 1));
+                        setGemstoneCostMode("auto");
+                      }}
+                      className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white dark:bg-gray-900"
+                    />
+                  </div>
+                )}
+                {selectedGemstoneRate && (
+                  <div className="rounded-xl bg-amber-50 dark:bg-amber-900/10 p-4 mt-4">
+                    <p className="text-xs text-amber-700 dark:text-amber-500">
+                      <T>Estimate</T>:<br />{gemstoneCount} × {fmt(selectedGemstoneRate.effectivePriceNpr * nprToDisplayCurrency, currency)} = <strong className="text-base">{fmt(autoGemstoneCost, currency)}</strong>
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="shrink-0 border-t border-gray-100 dark:border-gray-800 p-4">
+              <button
+                onClick={() => setIsGemstoneDrawerOpen(false)}
+                className="w-full rounded-2xl bg-gray-900 dark:bg-amber-600 py-3.5 text-sm font-semibold text-white shadow"
+              >
+                <T>Confirm Selection</T>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MobileFeatureGate>
   );
 }
