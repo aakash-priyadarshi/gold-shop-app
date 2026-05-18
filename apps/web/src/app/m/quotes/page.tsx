@@ -6,6 +6,7 @@ import { GemstoneEditorV2, type GemstoneEntry as GemstoneEntryV2 } from "@/compo
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { materialsApi, shopQuotesApi, shopsApi } from "@/lib/api";
 import {
   convertCurrencyAmount,
@@ -159,6 +160,9 @@ export default function QuotesPage() {
   const [silverRate, setSilverRate] = useState(0);
   const [marketRateData, setMarketRateData] = useState<any>(null);
   const [nprToDisplayCurrency, setNprToDisplayCurrency] = useState(1);
+  // Tax rate + label loaded from the server based on shop country (e.g. 3% GST for IN, 13% VAT for NP)
+  const [taxRate, setTaxRate] = useState(0.13);
+  const [taxLabel, setTaxLabel] = useState("VAT (13%)");
   const [shopMaterialRatesNpr, setShopMaterialRatesNpr] = useState<Record<string, number>>({});
   const [baseMetalPricesNpr, setBaseMetalPricesNpr] = useState<Record<string, number>>({});
   const [gemstoneRateOptions, setGemstoneRateOptions] = useState<GemstoneRateOption[]>([]);
@@ -253,7 +257,7 @@ export default function QuotesPage() {
   }, [gemstonesV2, nprToDisplayCurrency]);
 
   const estimateTotal = metalCostNpr + makingChargeNpr + gemstoneCostNpr + finishCostNpr;
-  const estimatedTax = Math.round(estimateTotal * 0.03);
+  const estimatedTax = Math.round(estimateTotal * taxRate);
   const estimatedTotalWithTax = estimateTotal + estimatedTax;
 
   const loadRates = useCallback(async () => {
@@ -321,6 +325,21 @@ export default function QuotesPage() {
   useEffect(() => {
     loadRates();
   }, [loadRates]);
+
+  // Load the correct tax rate + label from the server for the shop's country.
+  // E.g. Indian shops → GST 3%, Nepal shops → VAT 13%, UAE → VAT 5%.
+  useEffect(() => {
+    const country = (user?.shop as any)?.country || "NP";
+    fetchTaxRules(country).then((result) => {
+      if (result?.rules?.length) {
+        const { rate, name } = lookupTaxRate(result.rules);
+        if (rate > 0) {
+          setTaxRate(rate);
+          setTaxLabel(`${name} (${(rate * 100).toFixed(1)}%)`);
+        }
+      }
+    });
+  }, [user?.shop]);
 
   useEffect(() => {
     if (metalCostMode === "auto") {
@@ -439,10 +458,10 @@ export default function QuotesPage() {
       //   - Indian shop  → INR values stored in metalCostNpr, etc.
       //   - Nepali shop  → NPR values (the historical default)
       // No NPR conversion needed — the display-currency amount IS the stored amount.
-      // Send an explicit taxNpr (3% of the local-currency subtotal) so the backend
-      // uses our shown rate rather than recalculating with Nepal 13% VAT rules.
+      // Send explicit tax so the backend uses the same rate the customer was shown.
+      // taxRate is loaded from the server (e.g. 3% for Indian shops, 13% for Nepal).
       const localSubtotal = (metalCostNpr || 0) + (makingChargeNpr || 0) + (gemstoneCostNpr || 0) + (finishCostNpr || 0);
-      const taxForBackend = metalCostNpr !== undefined ? Math.round(localSubtotal * 0.03) : undefined;
+      const taxForBackend = metalCostNpr !== undefined ? Math.round(localSubtotal * taxRate) : undefined;
 
       const res = await shopQuotesApi.create({
         customer: {
@@ -854,7 +873,7 @@ export default function QuotesPage() {
         {estimateTotal > 0 && (
           <section data-tour="m-quote-total" className="space-y-2 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
             <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400"><T>Subtotal</T></span><span>{fmt(estimateTotal, currency)}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400"><T>Estimated tax (3%)</T></span><span>{fmt(estimatedTax, currency)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">{taxLabel}</span><span>{fmt(estimatedTax, currency)}</span></div>
             <div className="flex justify-between border-t pt-2 font-bold"><span><T>Total estimate</T></span><span className="text-amber-700">{fmt(estimatedTotalWithTax, currency)}</span></div>
           </section>
         )}

@@ -369,7 +369,8 @@ export class ShopQuotesService {
       if (dto.taxNpr !== undefined) {
         taxNprValue = dto.taxNpr;
       } else {
-        const taxRate = await this.getTaxRate("NP");
+        // Use the shop's own country for the correct tax rate (IN→3% GST, NP→13% VAT, etc.)
+        const taxRate = await this.getTaxRate(shop.country || "NP");
         taxNprValue = subtotal * taxRate;
       }
       totalPriceNpr = subtotal + taxNprValue;
