@@ -277,6 +277,58 @@ export class CustomerCrmService {
       this.prisma.order.count({ where: { customerId, shopId } }),
     ]);
 
+    // If no regular orders found, check if customerId is a walk-in customer ID
+    // and return their shop quotes instead
+    if (total === 0) {
+      const walkIn = await this.prisma.walkInCustomer.findFirst({
+        where: { id: customerId, createdByShopId: shopId },
+        select: { id: true },
+      });
+
+      if (walkIn) {
+        const [quotes, quoteTotal] = await Promise.all([
+          this.prisma.shopQuote.findMany({
+            where: { walkInCustomerId: customerId, shopId },
+            orderBy: { createdAt: "desc" },
+            take: limit,
+            skip,
+            select: {
+              id: true,
+              quoteNumber: true,
+              invoiceNumber: true,
+              status: true,
+              totalPriceNpr: true,
+              balanceDueNpr: true,
+              advancePaidNpr: true,
+              createdAt: true,
+              invoicedAt: true,
+            },
+          }),
+          this.prisma.shopQuote.count({
+            where: { walkInCustomerId: customerId, shopId },
+          }),
+        ]);
+
+        const mappedOrders = quotes.map((q) => ({
+          id: q.id,
+          orderNumber: q.invoiceNumber ?? q.quoteNumber,
+          status: q.status,
+          totalNpr: q.totalPriceNpr,
+          displayCurrency: "NPR",
+          createdAt: q.createdAt,
+          // Extra quote-specific fields
+          invoiceNumber: q.invoiceNumber,
+          quoteNumber: q.quoteNumber,
+          balanceDueNpr: q.balanceDueNpr,
+          advancePaidNpr: q.advancePaidNpr,
+          invoicedAt: q.invoicedAt,
+          isQuote: true,
+        }));
+
+        return { orders: mappedOrders, total: quoteTotal, page, limit };
+      }
+    }
+
     return { orders, total, page, limit };
   }
 
