@@ -33,6 +33,25 @@ export default function MobileStoreSettingsPage() {
   const [contactPhone, setContactPhone] = useState<string>("");
   const [whatsappNumber, setWhatsappNumber] = useState<string>("");
   const [makingChargePercent, setMakingChargePercent] = useState<number>(10);
+  // Shop identity
+  const [shopName, setShopName] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [contactEmail, setContactEmail] = useState<string>("");
+  // Location
+  const [state, setState] = useState<string>("");
+  const [pincode, setPincode] = useState<string>("");
+  // Business rules
+  const [isActive, setIsActive] = useState<boolean>(true);
+  const [codEnabled, setCodEnabled] = useState<boolean>(false);
+  const [codMaxValueNpr, setCodMaxValueNpr] = useState<number>(0);
+  const [minOrderValueNpr, setMinOrderValueNpr] = useState<number>(0);
+  const [maxOrderValueNpr, setMaxOrderValueNpr] = useState<number>(0);
+  // Bank details
+  const [bankName, setBankName] = useState<string>("");
+  const [accountNumber, setAccountNumber] = useState<string>("");
+  const [accountName, setAccountName] = useState<string>("");
+  const [branchName, setBranchName] = useState<string>("");
+  const [swiftCode, setSwiftCode] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,6 +68,21 @@ export default function MobileStoreSettingsPage() {
         setContactPhone(s.contactPhone || "");
         setWhatsappNumber(s.whatsappNumber || "");
         setMakingChargePercent(Number(s.makingChargePercent ?? 10));
+        setShopName(s.shopName || "");
+        setDescription(s.description || "");
+        setContactEmail(s.contactEmail || "");
+        setState(s.state || "");
+        setPincode(s.pincode || "");
+        setIsActive(s.isActive !== false);
+        setCodEnabled(s.codEnabled ?? false);
+        setCodMaxValueNpr(Number(s.codMaxValueNpr ?? 0));
+        setMinOrderValueNpr(Number(s.minOrderValueNpr ?? 0));
+        setMaxOrderValueNpr(Number(s.maxOrderValueNpr ?? 0));
+        setBankName(s.bankAccountDetails?.bankName || "");
+        setAccountNumber(s.bankAccountDetails?.accountNumber || "");
+        setAccountName(s.bankAccountDetails?.accountName || "");
+        setBranchName(s.bankAccountDetails?.branchName || "");
+        setSwiftCode(s.bankAccountDetails?.swiftCode || "");
       } catch {
         // ignore, fall back to defaults from user.shop
         if (user?.shop) {
@@ -78,6 +112,23 @@ export default function MobileStoreSettingsPage() {
         contactPhone: contactPhone || undefined,
         whatsappNumber: whatsappNumber || undefined,
         makingChargePercent: Number(makingChargePercent) || undefined,
+        shopName: shopName || undefined,
+        description: description || undefined,
+        contactEmail: contactEmail || undefined,
+        state: state || undefined,
+        pincode: pincode || undefined,
+        isActive,
+        codEnabled,
+        codMaxValueNpr: codMaxValueNpr || undefined,
+        minOrderValueNpr: minOrderValueNpr || undefined,
+        maxOrderValueNpr: maxOrderValueNpr || undefined,
+        bankAccountDetails: (bankName || accountNumber || accountName || branchName || swiftCode) ? {
+          bankName: bankName || undefined,
+          accountNumber: accountNumber || undefined,
+          accountName: accountName || undefined,
+          branchName: branchName || undefined,
+          swiftCode: swiftCode || undefined,
+        } : undefined,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -163,11 +214,46 @@ export default function MobileStoreSettingsPage() {
           </p>
         </section>
 
-        {/* Contact */}
+        {/* Shop Info */}
         <section className="space-y-3">
           <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
-            <T>Shop Contact</T>
+            <T>Shop Info</T>
           </label>
+          <input
+            type="text"
+            placeholder="Shop Name"
+            value={shopName}
+            onChange={(e) => setShopName(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+          />
+          <textarea
+            placeholder="Description (optional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm resize-none"
+          />
+          <input
+            type="email"
+            placeholder="Business email"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+          />
+        </section>
+
+        {/* Location */}
+        <section className="space-y-3">
+          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            <T>Location</T>
+          </label>
+          <input
+            type="text"
+            placeholder="State / Province"
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+          />
           <input
             type="text"
             placeholder="City"
@@ -177,11 +263,25 @@ export default function MobileStoreSettingsPage() {
           />
           <input
             type="text"
+            placeholder="Pincode / ZIP"
+            value={pincode}
+            onChange={(e) => setPincode(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+          />
+          <input
+            type="text"
             placeholder="Address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
           />
+        </section>
+
+        {/* Contact */}
+        <section className="space-y-3">
+          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            <T>Contact Numbers</T>
+          </label>
           <input
             type="tel"
             placeholder="Contact phone"
@@ -215,6 +315,124 @@ export default function MobileStoreSettingsPage() {
           <p className="text-[11px] text-gray-400 mt-1">
             <T>Used as the default in POS and quotes. Can be overridden per bill.</T>
           </p>
+        </section>
+
+        {/* Business Settings */}
+        <section className="space-y-3">
+          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            <T>Business Settings</T>
+          </label>
+          {/* isActive toggle */}
+          <button
+            type="button"
+            onClick={() => setIsActive((v) => !v)}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${
+              isActive ? "border-green-300 bg-green-50" : "border-gray-200 bg-white"
+            }`}
+          >
+            <div className="text-left">
+              <p className="text-sm font-semibold text-gray-900"><T>Shop Active</T></p>
+              <p className="text-xs text-gray-500"><T>Accept new orders from customers</T></p>
+            </div>
+            <div className={`h-6 w-11 rounded-full transition-colors relative ${isActive ? "bg-green-500" : "bg-gray-300"}`}>
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isActive ? "translate-x-5" : "translate-x-0.5"}`} />
+            </div>
+          </button>
+          {/* COD toggle */}
+          <button
+            type="button"
+            onClick={() => setCodEnabled((v) => !v)}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${
+              codEnabled ? "border-amber-300 bg-amber-50" : "border-gray-200 bg-white"
+            }`}
+          >
+            <div className="text-left">
+              <p className="text-sm font-semibold text-gray-900"><T>Cash on Delivery</T></p>
+              <p className="text-xs text-gray-500"><T>Allow COD orders</T></p>
+            </div>
+            <div className={`h-6 w-11 rounded-full transition-colors relative ${codEnabled ? "bg-amber-500" : "bg-gray-300"}`}>
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${codEnabled ? "translate-x-5" : "translate-x-0.5"}`} />
+            </div>
+          </button>
+          {codEnabled && (
+            <div className="space-y-2">
+              <label className="block text-xs text-gray-500"><T>Max COD Order Value</T></label>
+              <input
+                type="number"
+                min={0}
+                value={codMaxValueNpr || ""}
+                onChange={(e) => setCodMaxValueNpr(Number(e.target.value))}
+                placeholder="0 = no limit"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+              />
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1"><T>Min Order Value</T></label>
+              <input
+                type="number"
+                min={0}
+                value={minOrderValueNpr || ""}
+                onChange={(e) => setMinOrderValueNpr(Number(e.target.value))}
+                placeholder="0"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1"><T>Max Order Value</T></label>
+              <input
+                type="number"
+                min={0}
+                value={maxOrderValueNpr || ""}
+                onChange={(e) => setMaxOrderValueNpr(Number(e.target.value))}
+                placeholder="0 = no limit"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Bank Details */}
+        <section className="space-y-3">
+          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            <T>Bank Account Details</T>
+          </label>
+          <input
+            type="text"
+            placeholder="Bank name"
+            value={bankName}
+            onChange={(e) => setBankName(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+          />
+          <input
+            type="text"
+            placeholder="Branch name"
+            value={branchName}
+            onChange={(e) => setBranchName(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+          />
+          <input
+            type="text"
+            placeholder="Account holder name"
+            value={accountName}
+            onChange={(e) => setAccountName(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+          />
+          <input
+            type="text"
+            placeholder="Account number"
+            value={accountNumber}
+            onChange={(e) => setAccountNumber(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+          />
+          <input
+            type="text"
+            placeholder="SWIFT / IFSC code"
+            value={swiftCode}
+            onChange={(e) => setSwiftCode(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+          />
         </section>
 
         {/* Hardware link */}

@@ -22,6 +22,7 @@ import {
     Loader2,
     MessageCircle,
     Minus,
+    Package,
     Plus,
     ScanLine,
     Search,
@@ -67,6 +68,12 @@ const PAYMENT_METHODS = [
 function formatMoney(amount: number, currency: SupportedCurrencyCode) {
   return formatCurrencyAmount(amount, currency);
 }
+
+const JEWELLERY_TYPES = [
+  "RING", "NECKLACE", "PENDANT", "EARRING", "BRACELET",
+  "BANGLE", "CHAIN", "ANKLET", "BROOCH", "NOSE_PIN",
+  "MAANG_TIKKA", "OTHER",
+];
 
 const COUNTRY_PHONE_CODES: Record<string, string> = {
   NP: "+977",
@@ -116,6 +123,7 @@ function CartDrawer({
   useEffect(() => {
     if (!shopCountry) return;
     fetchTaxRules(shopCountry).then((data) => {
+      if (!data) return;
       const r = lookupTaxRate(data.rules, "ALL");
       setTaxRate(r.rate);
       setTaxLabel(`${r.name} (${Math.round(r.rate * 100)}%)`);
@@ -587,6 +595,258 @@ function ProductDetailSheet({
   );
 }
 
+function AddProductSheet({
+  shopId,
+  onClose,
+  onCreated,
+}: {
+  shopId: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const t = useT();
+  const [name, setName] = useState("");
+  const [sku, setSku] = useState(`SKU-${Date.now().toString(36).toUpperCase()}`);
+  const [jewelleryType, setJewelleryType] = useState("OTHER");
+  const [metalType, setMetalType] = useState("GOLD");
+  const [purity, setPurity] = useState("22K");
+  const [weightGrams, setWeightGrams] = useState("");
+  const [metalValue, setMetalValue] = useState("");
+  const [makingCharge, setMakingCharge] = useState("");
+  const [stockQty, setStockQty] = useState("1");
+  const [saving, setSaving] = useState(false);
+  const [skuScanOpen, setSkuScanOpen] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !weightGrams) {
+      toast({ title: t("Fill in name and weight"), variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      await inventoryApi.create(shopId, {
+        nameEn: name.trim(),
+        sku: sku.trim() || `SKU-${Date.now().toString(36).toUpperCase()}`,
+        jewelleryType,
+        buildMethod: "METHOD_B",
+        composition: { baseAlloy: { metal: metalType, purity } },
+        totalWeightGrams: parseFloat(weightGrams),
+        metalValueNpr: parseFloat(metalValue) || 0,
+        makingChargeNpr: parseFloat(makingCharge) || 0,
+        gemstoneValueNpr: 0,
+        stockQuantity: parseInt(stockQty) || 1,
+        images: [],
+      });
+      toast({ title: t("Product added!") });
+      onCreated();
+      onClose();
+    } catch (err: any) {
+      toast({
+        title: t("Failed to create product"),
+        description: err?.response?.data?.message ?? t("Please try again"),
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-30 bg-white flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
+        <div>
+          <p className="text-xs text-gray-400"><T>New inventory item</T></p>
+          <h2 className="text-base font-semibold text-gray-900"><T>Add Product</T></h2>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-2 rounded-full text-gray-400 hover:bg-gray-100"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Form */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {/* SKU with scan button */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+            <T>SKU / Barcode</T>
+          </label>
+          <div className="flex gap-2">
+            <input
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              className="flex-1 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            <button
+              type="button"
+              onClick={() => setSkuScanOpen(true)}
+              className="h-11 w-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0"
+              aria-label="Scan barcode"
+            >
+              <ScanLine className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Name */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+            <T>Product Name</T> *
+          </label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("e.g. Gold Necklace 22K")}
+            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+          />
+        </div>
+
+        {/* Jewellery type */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+            <T>Jewellery Type</T>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {JEWELLERY_TYPES.map((jt) => (
+              <button
+                key={jt}
+                type="button"
+                onClick={() => setJewelleryType(jt)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                  jewelleryType === jt
+                    ? "bg-amber-500 border-amber-500 text-white"
+                    : "border-gray-200 text-gray-600 bg-white"
+                }`}
+              >
+                {jt.replace(/_/g, " ")}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Metal + Purity */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+              <T>Metal</T>
+            </label>
+            <select
+              value={metalType}
+              onChange={(e) => setMetalType(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              {["GOLD", "SILVER", "PLATINUM", "PALLADIUM"].map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+              <T>Purity</T>
+            </label>
+            <select
+              value={purity}
+              onChange={(e) => setPurity(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              {["24K", "22K", "18K", "14K", "10K", "925", "999"].map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Weight */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+            <T>Weight (g)</T> *
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={weightGrams}
+            onChange={(e) => setWeightGrams(e.target.value)}
+            placeholder={t("e.g. 12.50")}
+            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+          />
+        </div>
+
+        {/* Prices */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+              <T>Metal Value</T>
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={metalValue}
+              onChange={(e) => setMetalValue(e.target.value)}
+              placeholder="0"
+              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+              <T>Making Charge</T>
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={makingCharge}
+              onChange={(e) => setMakingCharge(e.target.value)}
+              placeholder="0"
+              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+        </div>
+
+        {/* Stock */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+            <T>Stock Quantity</T>
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={stockQty}
+            onChange={(e) => setStockQty(e.target.value)}
+            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+          />
+        </div>
+      </div>
+
+      {/* Submit */}
+      <div className="p-4 border-t bg-white">
+        <button
+          onClick={handleSubmit}
+          disabled={saving}
+          className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 disabled:opacity-50 active:opacity-90"
+        >
+          {saving ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Package className="h-5 w-5" />
+          )}
+          {saving ? <T>Adding…</T> : <T>Add to Inventory</T>}
+        </button>
+      </div>
+
+      <BarcodeScannerSheet
+        open={skuScanOpen}
+        onClose={() => setSkuScanOpen(false)}
+        onScan={(code) => { setSku(code); setSkuScanOpen(false); }}
+        hint="Scan the product barcode/QR to auto-fill the SKU"
+      />
+    </div>
+  );
+}
+
 export default function MobilePOSPage() {
   const { user } = useAuth();
   const t = useT();
@@ -604,6 +864,7 @@ export default function MobilePOSPage() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [addProductOpen, setAddProductOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const shopId = user?.shop?.id;
@@ -856,7 +1117,14 @@ export default function MobilePOSPage() {
               <ScanLine className="h-4 w-4" />
               <T>Scan</T>
             </button>
-
+            <button
+              onClick={() => setAddProductOpen(true)}
+              className="h-9 px-3 rounded-xl bg-gray-100 text-gray-700 text-xs font-semibold flex items-center gap-1.5 active:bg-gray-200"
+              aria-label="Add product"
+            >
+              <Package className="h-4 w-4" />
+              <T>Add</T>
+            </button>
           </div>
         </div>
         {/* Search bar */}
@@ -1043,6 +1311,14 @@ export default function MobilePOSPage() {
         onScan={handleScannedCode}
         hint="Scan with the camera or type the SKU. A connected USB / Bluetooth scanner works anywhere on this screen."
       />
+
+      {addProductOpen && shopId && (
+        <AddProductSheet
+          shopId={shopId}
+          onClose={() => setAddProductOpen(false)}
+          onCreated={loadInventory}
+        />
+      )}
     </MobileFeatureGate>
   );
 }
