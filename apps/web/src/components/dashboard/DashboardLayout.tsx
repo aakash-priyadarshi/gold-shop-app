@@ -41,6 +41,13 @@ import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
+import { useHelpUIStore } from "@/store/help-ui";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
     CURRENCIES,
     LANGUAGES,
@@ -81,6 +88,8 @@ import {
     ShieldCheck,
     ShoppingCart,
     Star,
+    MessageCircle,
+    HelpCircle,
     Store,
     Ticket,
     TrendingUp,
@@ -101,6 +110,64 @@ const TutorialButton = dynamic(
     ),
   { ssr: false },
 );
+
+function RecallButtons() {
+  const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial } = useHelpUIStore();
+  const t = useT();
+
+  if (!isChatDismissed && !isTutorialDismissed) return null;
+
+  return (
+    <>
+      {isChatDismissed && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-9 w-9 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                onClick={() => recallChat()}
+              >
+                <MessageCircle className="h-5 w-5" />
+                <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t("Restore AI Chat")}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+      {isTutorialDismissed && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-9 w-9 rounded-lg text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+                onClick={() => recallTutorial()}
+              >
+                <HelpCircle className="h-5 w-5" />
+                <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t("Restore Tutorials")}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </>
+  );
+}
 
 function LanguageSelector() {
   const language = usePreferencesStore((s) => s.language);
@@ -1090,6 +1157,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Recall dismissed floating elements */}
+              <RecallButtons />
+
               {/* Language Selector */}
               <LanguageSelector />
 
