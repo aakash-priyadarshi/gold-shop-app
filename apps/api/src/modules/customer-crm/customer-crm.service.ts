@@ -352,7 +352,7 @@ export class CustomerCrmService {
 
       if (walkIn) {
         const quoteStats = await this.prisma.shopQuote.aggregate({
-          where: { walkInCustomerId: customerId, shopId, status: { in: ["CONFIRMED", "INVOICED", "DELIVERED", "COMPLETED"] } },
+          where: { walkInCustomerId: customerId, shopId, status: { in: ["CONFIRMED", "IN_PROGRESS", "READY", "COMPLETED"] } },
           _sum: { totalPriceNpr: true },
           _count: true,
           _avg: { totalPriceNpr: true },
