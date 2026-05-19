@@ -220,6 +220,18 @@ export class ShopsController {
   // MY SHOP ENDPOINTS (for authenticated shopkeeper)
   // ═══════════════════════════════════════════════════════════════
 
+  @Post("my-shop/demo-hydrate")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Hydrate a new shop with demo data (products, customers, invoices)" })
+  async hydrateDemoStore(
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") shopId: string,
+  ) {
+    return this.shopsService.hydrateDemoStore(userId, shopId);
+  }
+
   @Get("my-shop/settings")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)

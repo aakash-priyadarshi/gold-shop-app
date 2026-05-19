@@ -2026,6 +2026,11 @@ model Invoice {
   notes           String?
   terms           String?
 
+  // POS payment tracking (structured, replaces notes-string hacks)
+  paymentMethod   String?  // CASH, CARD, UPI, ESEWA, KHALTI, BANK_TRANSFER
+  makingChargeRate Float?   // percentage e.g. 8.0
+  makingChargesAmt Float?   // flat calculated amount
+
   // ── Tax filing fields (Sprint 1) ────────────────────────────────
   isTaxExempt      Boolean  @default(false)
   taxExemptReason  String?  // EXPORT, COMPOSITE, REVERSE_CHARGE, THRESHOLD, INVESTMENT_GOLD, OTHER

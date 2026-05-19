@@ -33,7 +33,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { posApi } from "@/lib/api";
+import { inventoryApi, posApi } from "@/lib/api";
+import Image from "next/image";
 import { useT } from "@/providers/translation-provider";
 import {
     Heart,
@@ -135,6 +136,12 @@ function PosPageInner() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
+  // ── Counter Mode ──
+  const [isCounterMode, setIsCounterMode] = useState(false);
+  const [counterSearch, setCounterSearch] = useState("");
+  const [counterItems, setCounterItems] = useState<any[]>([]);
+  const [counterLoading, setCounterLoading] = useState(false);
+
   // Checkout form
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -142,6 +149,25 @@ function PosPageInner() {
   const [notes, setNotes] = useState("");
   const [taxRate, setTaxRate] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [makingChargeRate, setMakingChargeRate] = useState(0);
+  const [checkoutSuccess, setCheckoutSuccess] = useState<{ invoiceNumber: string; total: number } | null>(null);
+
+  const shopCountry = user?.shop?.country || "NP";
+  const PAYMENT_METHODS = [
+    { value: "CASH", label: "Cash" },
+    { value: "CARD", label: "Card" },
+    { value: "UPI", label: "UPI / QR" },
+    { value: "ESEWA", label: "eSewa" },
+    { value: "KHALTI", label: "Khalti" },
+    { value: "BANK", label: "Bank Transfer" },
+  ];
+  const TAX_PRESETS = shopCountry === "IN"
+    ? [{ label: "GST 3%", value: 0.03 }, { label: "GST 5%", value: 0.05 }, { label: "Exempt", value: 0 }]
+    : shopCountry === "NP"
+      ? [{ label: "VAT 13%", value: 0.13 }, { label: "Exempt", value: 0 }]
+      : [{ label: "VAT 5%", value: 0.05 }, { label: "Exempt", value: 0 }];
+  const MAKING_PRESETS = [0, 8, 12, 14, 18];
 
   // Load active session on mount
   const loadActiveSession = useCallback(async () => {
@@ -166,6 +192,24 @@ function PosPageInner() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlCustomerId, urlConversationId]);
+
+  // ── Counter Mode: debounced product search ──
+  useEffect(() => {
+    if (!isCounterMode || !user?.shop?.id) return;
+    const timer = setTimeout(async () => {
+      setCounterLoading(true);
+      try {
+        const res = await inventoryApi.getShopInventory(user.shop!.id, {
+          search: counterSearch,
+          limit: 30,
+          page: 1,
+        });
+        setCounterItems(res.data?.items ?? res.data ?? []);
+      } catch { setCounterItems([]); }
+      finally { setCounterLoading(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [counterSearch, isCounterMode, user?.shop?.id]);
 
   // ─── Create Session ───
 
@@ -270,13 +314,20 @@ function PosPageInner() {
         notes: notes || undefined,
         taxRate,
         discountAmount,
+        paymentMethod,
+        makingChargeRate: makingChargeRate || undefined,
       });
+      const inv = res.data?.invoice;
       setSession(null);
       setCheckoutOpen(false);
       setCustomerPicks([]);
+      setCheckoutSuccess({
+        invoiceNumber: inv?.invoiceNumber || "N/A",
+        total: inv?.totalAmount || basketTotal,
+      });
       toast({
         title: t("Checkout complete!"),
-        description: t("Invoice") + ` ${res.data.invoice.invoiceNumber} ` + t("created"),
+        description: t("Invoice") + ` ${inv?.invoiceNumber} ` + t("created"),
       });
     } catch (err: any) {
       toast({
@@ -311,8 +362,9 @@ function PosPageInner() {
 
   const basketSubtotal =
     session?.items?.reduce((sum, i) => sum + i.lineTotal, 0) || 0;
-  const basketTax = basketSubtotal * (taxRate || 0);
-  const basketTotal = basketSubtotal + basketTax - (discountAmount || 0);
+  const basketMaking = makingChargeRate > 0 ? Math.round(basketSubtotal * (makingChargeRate / 100)) : 0;
+  const basketTax = (basketSubtotal + basketMaking) * (taxRate || 0);
+  const basketTotal = basketSubtotal + basketMaking + basketTax - (discountAmount || 0);
 
   // ─── Time remaining ───
 
@@ -326,14 +378,31 @@ function PosPageInner() {
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
-                <ScanLine className="h-6 w-6" /> <T>POS Basket</T>
+                <ScanLine className="h-6 w-6" /> <T>POS Terminal</T>
               </h1>
               <p className="text-muted-foreground text-sm mt-1">
-                <T>Load customer picks, build a basket, and checkout with an invoice</T>
+                <T>{isCounterMode ? "Fast counter checkout mode" : "Advanced ERP mode with stock locking"}</T>
               </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Mode Toggle */}
+              <div className="inline-flex items-center bg-muted rounded-full p-1 gap-0.5">
+                <button
+                  onClick={() => setIsCounterMode(false)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${!isCounterMode ? "bg-white dark:bg-gray-800 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <T>ERP Mode</T>
+                </button>
+                <button
+                  onClick={() => setIsCounterMode(true)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isCounterMode ? "bg-white dark:bg-gray-800 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <T>Counter Mode</T>
+                </button>
+              </div>
             </div>
             {session && (
               <div className="flex items-center gap-2">
@@ -390,8 +459,147 @@ function PosPageInner() {
             </Card>
           )}
 
-          {/* Active Session */}
-          {session && (
+          {/* ═══ Counter Mode Layout ═══ */}
+          {isCounterMode && session && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Left 2/3: Product Catalogue Grid */}
+              <div className="lg:col-span-2 space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-9 h-11 text-base"
+                    placeholder={t("Search by name, SKU, or category...")}
+                    value={counterSearch}
+                    onChange={(e) => setCounterSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                {counterLoading && <div className="text-center py-6 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>}
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[65vh] overflow-y-auto pr-1">
+                  {counterItems.map((item: any) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleAddItem(item.id)}
+                      className="group relative border rounded-xl p-3 text-left hover:border-primary hover:shadow-md transition-all bg-card"
+                    >
+                      <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-2">
+                        {item.images?.[0] ? (
+                          <img src={item.images[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center"><Package className="h-8 w-8 text-muted-foreground/40" /></div>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium truncate">{item.nameEn}</p>
+                      <p className="text-xs text-muted-foreground truncate">{item.sku}</p>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className="text-sm font-bold">NPR {item.totalPriceNpr?.toLocaleString()}</span>
+                        {item.metalPurity && <Badge variant="outline" className="text-[10px] px-1.5">{item.metalPurity}</Badge>}
+                      </div>
+                      {item.stockQuantity !== undefined && (
+                        <p className={`text-[10px] mt-1 ${item.stockQuantity <= 2 ? "text-red-500" : "text-muted-foreground"}`}>
+                          {item.stockQuantity} in stock
+                        </p>
+                      )}
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="bg-primary text-primary-foreground rounded-full p-1"><Plus className="h-3 w-3" /></div>
+                      </div>
+                    </button>
+                  ))}
+                  {!counterLoading && counterItems.length === 0 && (
+                    <div className="col-span-full text-center py-12 text-muted-foreground">
+                      <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm"><T>No products found</T></p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right 1/3: Cart Sidebar */}
+              <div className="lg:col-span-1">
+                <Card className="sticky top-4">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <ShoppingCart className="h-4 w-4" /> <T>Cart</T>
+                      {session.items?.length > 0 && <Badge variant="secondary">{session.items.length}</Badge>}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {(!session.items || session.items.length === 0) && (
+                      <p className="text-sm text-muted-foreground text-center py-4"><T>Tap products to add</T></p>
+                    )}
+                    <div className="max-h-[30vh] overflow-y-auto space-y-2">
+                      {session.items?.map((item) => (
+                        <div key={item.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{item.inventoryItem?.nameEn}</p>
+                            <p className="text-xs text-muted-foreground">NPR {item.unitPrice?.toLocaleString()}</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleUpdateQty(item.id, Math.max(0, item.qty - 1))}>
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-6 text-center text-sm font-medium">{item.qty}</span>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleUpdateQty(item.id, item.qty + 1)}>
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <span className="text-xs font-bold w-16 text-right">NPR {item.lineTotal?.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {session.items?.length > 0 && (
+                      <>
+                        {/* Making Charge Presets */}
+                        <div>
+                          <Label className="text-xs"><T>Making Charges</T></Label>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {MAKING_PRESETS.map((pct) => (
+                              <button
+                                key={pct}
+                                onClick={() => setMakingChargeRate(pct)}
+                                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${makingChargeRate === pct ? "bg-primary text-primary-foreground border-primary" : "bg-muted border-transparent hover:border-primary/50"}`}
+                              >
+                                {pct}%
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Tax Presets */}
+                        <div>
+                          <Label className="text-xs"><T>Tax</T></Label>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {TAX_PRESETS.map((tp) => (
+                              <button
+                                key={tp.label}
+                                onClick={() => setTaxRate(tp.value)}
+                                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${taxRate === tp.value ? "bg-primary text-primary-foreground border-primary" : "bg-muted border-transparent hover:border-primary/50"}`}
+                              >
+                                {tp.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Totals */}
+                        <div className="border-t pt-2 space-y-1 text-sm">
+                          <div className="flex justify-between"><span className="text-muted-foreground"><T>Subtotal</T></span><span>NPR {basketSubtotal.toLocaleString()}</span></div>
+                          {basketMaking > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Making ({makingChargeRate}%)</span><span>NPR {basketMaking.toLocaleString()}</span></div>}
+                          {basketTax > 0 && <div className="flex justify-between"><span className="text-muted-foreground"><T>Tax</T></span><span>NPR {Math.round(basketTax).toLocaleString()}</span></div>}
+                          <div className="flex justify-between font-bold text-base border-t pt-1"><span><T>Total</T></span><span>NPR {Math.round(basketTotal).toLocaleString()}</span></div>
+                        </div>
+                        <Button className="w-full h-12 text-base font-semibold" onClick={() => setCheckoutOpen(true)}>
+                          <T>Checkout</T> — NPR {Math.round(basketTotal).toLocaleString()}
+                        </Button>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ ERP Mode Layout (existing) ═══ */}
+          {!isCounterMode && session && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left: Customer Picks */}
               <div className="lg:col-span-1 space-y-4">
@@ -673,7 +881,7 @@ function PosPageInner() {
 
         {/* Checkout Dialog */}
         <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle><T>Checkout</T></DialogTitle>
               <DialogDescription>
@@ -708,9 +916,36 @@ function PosPageInner() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label><T>Tax Rate</T></Label>
+
+              {/* Payment Method */}
+              <div>
+                <Label className="text-sm font-medium"><T>Payment Method</T></Label>
+                <div className="grid grid-cols-3 gap-2 mt-1.5">
+                  {PAYMENT_METHODS.map((pm) => (
+                    <button
+                      key={pm.value}
+                      onClick={() => setPaymentMethod(pm.value)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${paymentMethod === pm.value ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-muted/50 border-muted-foreground/20 hover:border-primary/50"}`}
+                    >
+                      {pm.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tax Presets */}
+              <div>
+                <Label className="text-sm font-medium"><T>Tax Rate</T></Label>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {TAX_PRESETS.map((tp) => (
+                    <button
+                      key={tp.label}
+                      onClick={() => setTaxRate(tp.value)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${taxRate === tp.value ? "bg-primary text-primary-foreground border-primary" : "bg-muted border-transparent hover:border-primary/50"}`}
+                    >
+                      {tp.label}
+                    </button>
+                  ))}
                   <Input
                     type="number"
                     step="0.01"
@@ -718,9 +953,29 @@ function PosPageInner() {
                     max="1"
                     value={taxRate}
                     onChange={(e) => setTaxRate(Number(e.target.value))}
-                    placeholder={t("e.g. 0.13")}
+                    className="w-20 h-7 text-xs"
+                    placeholder="Custom"
                   />
                 </div>
+              </div>
+
+              {/* Making Charges */}
+              <div>
+                <Label className="text-sm font-medium"><T>Making Charges</T></Label>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {MAKING_PRESETS.map((pct) => (
+                    <button
+                      key={pct}
+                      onClick={() => setMakingChargeRate(pct)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${makingChargeRate === pct ? "bg-primary text-primary-foreground border-primary" : "bg-muted border-transparent hover:border-primary/50"}`}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label><T>Discount (NPR)</T></Label>
                   <Input
@@ -731,15 +986,14 @@ function PosPageInner() {
                     placeholder="0"
                   />
                 </div>
-              </div>
-              <div>
-                <Label><T>Notes</T></Label>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder={t("Optional notes...")}
-                  rows={2}
-                />
+                <div>
+                  <Label><T>Notes</T></Label>
+                  <Input
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder={t("Optional...")}
+                  />
+                </div>
               </div>
 
               {/* Summary */}
@@ -752,9 +1006,31 @@ function PosPageInner() {
                   <span><T>Subtotal</T></span>
                   <span>NPR {basketSubtotal.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between font-bold border-t pt-1">
+                {basketMaking > 0 && (
+                  <div className="flex justify-between">
+                    <span>Making ({makingChargeRate}%)</span>
+                    <span>NPR {basketMaking.toLocaleString()}</span>
+                  </div>
+                )}
+                {basketTax > 0 && (
+                  <div className="flex justify-between">
+                    <span><T>Tax</T> ({(taxRate * 100).toFixed(1)}%)</span>
+                    <span>NPR {Math.round(basketTax).toLocaleString()}</span>
+                  </div>
+                )}
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span><T>Discount</T></span>
+                    <span>- NPR {discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold border-t pt-1 text-base">
                   <span><T>Total</T></span>
-                  <span>NPR {basketTotal.toLocaleString()}</span>
+                  <span>NPR {Math.round(basketTotal).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span><T>Payment</T></span>
+                  <span>{paymentMethod}</span>
                 </div>
               </div>
             </div>
@@ -765,11 +1041,55 @@ function PosPageInner() {
               <Button
                 onClick={handleCheckout}
                 disabled={checkoutLoading || !customerName.trim()}
+                className="min-w-[140px]"
               >
                 {checkoutLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-1" />
                 ) : null}
                 <T>Complete Sale</T>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Receipt Success Dialog */}
+        <Dialog open={!!checkoutSuccess} onOpenChange={(open) => !open && setCheckoutSuccess(null)}>
+          <DialogContent className="sm:max-w-sm text-center">
+            <DialogHeader>
+              <DialogTitle className="text-center text-xl">
+                ✅ <T>Sale Complete!</T>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="text-3xl font-bold">
+                NPR {checkoutSuccess?.total?.toLocaleString()}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                <T>Invoice</T> #{checkoutSuccess?.invoiceNumber}
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    window.print();
+                  }}
+                >
+                  🖨️ <T>Print Receipt</T>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: NPR ${checkoutSuccess?.total?.toLocaleString()}\nThank you for your purchase!`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+                  }}
+                >
+                  💬 WhatsApp
+                </Button>
+              </div>
+            </div>
+            <DialogFooter className="justify-center">
+              <Button onClick={() => setCheckoutSuccess(null)}>
+                <T>Done</T>
               </Button>
             </DialogFooter>
           </DialogContent>

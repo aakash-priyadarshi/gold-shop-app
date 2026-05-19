@@ -690,6 +690,142 @@ export class ShopsService {
   }
 
   /**
+   * One-Click Demo Store Hydrator
+   * Populates an empty shop with realistic demo data to kickstart user onboarding.
+   */
+  async hydrateDemoStore(userId: string, shopId: string) {
+    const shop = await this.prisma.shop.findFirst({
+      where: { id: shopId, userId },
+    });
+
+    if (!shop) {
+      throw new NotFoundException("Shop not found for this user");
+    }
+
+    // Check if shop already has items to prevent double hydration
+    const existingItems = await this.prisma.inventoryItem.count({
+      where: { shopId },
+    });
+
+    if (existingItems > 0) {
+      throw new BadRequestException("Shop already has inventory. Demo hydration is only for empty shops.");
+    }
+
+    // Create 5 demo gold products
+    const items = await Promise.all([
+      this.prisma.inventoryItem.create({
+        data: {
+          shopId,
+          sku: "DEMO-RNG-01",
+          nameEn: "22K Classic Gold Band",
+          descriptionEn: "A timeless 22K gold wedding band with a polished finish.",
+          category: "RINGS",
+          metalType: "GOLD_22K",
+          metalPurity: "22K",
+          netWeight: 4.5,
+          totalWeight: 4.5,
+          makingChargeType: "PERCENTAGE",
+          makingChargeValue: 12,
+          stockQuantity: 5,
+          totalPriceNpr: 60000,
+          status: "IN_STOCK",
+        },
+      }),
+      this.prisma.inventoryItem.create({
+        data: {
+          shopId,
+          sku: "DEMO-NCK-01",
+          nameEn: "24K Bridal Choker",
+          descriptionEn: "Intricate 24K gold bridal choker necklace.",
+          category: "NECKLACES",
+          metalType: "GOLD_24K",
+          metalPurity: "24K",
+          netWeight: 25.0,
+          totalWeight: 25.0,
+          makingChargeType: "PERCENTAGE",
+          makingChargeValue: 15,
+          stockQuantity: 2,
+          totalPriceNpr: 350000,
+          status: "IN_STOCK",
+        },
+      }),
+      this.prisma.inventoryItem.create({
+        data: {
+          shopId,
+          sku: "DEMO-ERG-01",
+          nameEn: "18K Diamond Studs",
+          descriptionEn: "Elegant 18K gold earrings with minor diamond accents.",
+          category: "EARRINGS",
+          metalType: "GOLD_18K",
+          metalPurity: "18K",
+          netWeight: 2.2,
+          totalWeight: 2.5,
+          makingChargeType: "FLAT",
+          makingChargeValue: 5000,
+          stockQuantity: 10,
+          totalPriceNpr: 45000,
+          status: "IN_STOCK",
+        },
+      }),
+    ]);
+
+    // Create a demo customer
+    const customer = await this.prisma.shopCustomer.create({
+      data: {
+        shopId,
+        name: "Demo Customer (Walk-in)",
+        phoneCountryCode: "+977",
+        phone: "9800000000",
+        totalSpent: 60000,
+        totalPurchases: 1,
+      },
+    });
+
+    // Create a demo POS invoice
+    await this.prisma.invoice.create({
+      data: {
+        shopId,
+        customerId: customer.id,
+        invoiceNumber: `INV-DEMO-${Math.floor(1000 + Math.random() * 9000)}`,
+        status: "PAID",
+        paymentMethod: "CASH",
+        currency: "NPR",
+        subtotal: 53571.43,
+        taxTotal: 6428.57,
+        totalAmount: 60000,
+        paidAmount: 60000,
+        balanceDue: 0,
+        issueDate: new Date(),
+        dueDate: new Date(),
+        makingChargeRate: 12,
+        makingChargesAmt: 6428.57,
+        notes: "Demo POS Sale",
+        items: {
+          create: [
+            {
+              description: "22K Classic Gold Band",
+              quantity: 1,
+              unitPrice: 53571.43,
+              total: 53571.43,
+            },
+          ],
+        },
+      },
+    });
+
+    await this.auditService.log({
+      userId,
+      actorType: "USER",
+      action: "UPDATE",
+      resourceType: "SHOP",
+      resourceId: shopId,
+      newValue: { event: "demo_hydrated" },
+    });
+
+    return { success: true, message: "Demo store hydrated successfully", hydratedItems: items.length };
+  }
+
+  /**
    * Get shop settings for the current user
    */
   async getShopSettings(userId: string) {

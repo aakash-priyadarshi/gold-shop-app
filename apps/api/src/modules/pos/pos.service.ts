@@ -291,7 +291,14 @@ export class PosService {
     }
 
     // Build invoice line items
-    const lineItems = session.items.map((item) => ({
+    const lineItems: Array<{
+      label: string;
+      category: string;
+      quantity: number;
+      unitPrice: number;
+      amount: number;
+      details?: string;
+    }> = session.items.map((item) => ({
       label:
         item.inventoryItem.nameEn +
         (item.variant ? ` (${item.variant.sizeLabel})` : ""),
@@ -301,6 +308,29 @@ export class PosService {
       amount: item.lineTotal,
       details: item.variant?.sku || item.inventoryItem.sku,
     }));
+
+    // Calculate making charges (percentage on product subtotal)
+    const productSubtotal = lineItems.reduce((s, li) => s + li.amount, 0);
+    let makingChargesAmt = 0;
+    const makingChargeRate = dto.makingChargeRate ?? 0;
+
+    if (dto.makingChargesNpr && dto.makingChargesNpr > 0) {
+      // Flat override takes priority
+      makingChargesAmt = dto.makingChargesNpr;
+    } else if (makingChargeRate > 0) {
+      makingChargesAmt = Math.round(productSubtotal * (makingChargeRate / 100));
+    }
+
+    // Add making charges as a dedicated line item if applicable
+    if (makingChargesAmt > 0) {
+      lineItems.push({
+        label: `Making Charges (${makingChargeRate}%)`,
+        category: "MAKING",
+        quantity: 1,
+        unitPrice: makingChargesAmt,
+        amount: makingChargesAmt,
+      });
+    }
 
     // Create invoice via invoices service
     const invoice = await this.invoicesService.create(shopId, {
@@ -312,7 +342,23 @@ export class PosService {
       discountAmount: dto.discountAmount || 0,
       notes: dto.notes || "POS checkout",
       currency: "NPR",
+      paymentMethod: dto.paymentMethod || null,
+      makingChargeRate: makingChargeRate || null,
+      makingChargesAmt: makingChargesAmt || null,
     });
+
+    // ── Auto-mark POS counter invoices as PAID ──────────────────
+    // Walk-in POS transactions are paid on the spot. We automatically
+    // record full payment so the invoice ledger is immediately accurate.
+    // Traditional back-office invoices (created via /invoices/create)
+    // are NOT affected — they still follow standard credit terms.
+    if (invoice.totalAmount > 0) {
+      await this.invoicesService.recordPayment(invoice.id, shopId, {
+        amount: invoice.totalAmount,
+        paymentMethod: dto.paymentMethod || "CASH",
+        notes: "Auto-paid at POS counter checkout",
+      });
+    }
 
     // Decrement actual stock for each item
     for (const item of session.items) {
@@ -344,7 +390,14 @@ export class PosService {
       action: "POS_CHECKOUT",
       resourceType: "PosSession",
       resourceId: sessionId,
-      metadata: { shopId, invoiceId: invoice.id, total: invoice.totalAmount },
+      metadata: {
+        shopId,
+        invoiceId: invoice.id,
+        total: invoice.totalAmount,
+        paymentMethod: dto.paymentMethod || "CASH",
+        makingChargeRate,
+        makingChargesAmt,
+      },
     });
 
     return { session: { id: sessionId, status: "CHECKED_OUT" }, invoice };

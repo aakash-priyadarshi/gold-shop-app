@@ -853,7 +853,16 @@ export default function MobilePOSPage() {
   const haptic = useHaptics();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [search, setSearch] = useState("");
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    // ── Offline cart restore: load from localStorage on mount ──
+    if (typeof window === "undefined") return [];
+    try {
+      const userId = user?.id;
+      if (!userId) return [];
+      const saved = localStorage.getItem(`orivraa_cart_${userId}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [loading, setLoading] = useState(true);
   const [showCart, setShowCart] = useState(false);
   const [billResult, setBillResult] = useState<{
@@ -895,6 +904,14 @@ export default function MobilePOSPage() {
   useEffect(() => {
     loadInventory();
   }, [loadInventory]);
+
+  // ── Persist cart to localStorage on every change (offline resilience) ──
+  useEffect(() => {
+    if (typeof window === "undefined" || !user?.id) return;
+    try {
+      localStorage.setItem(`orivraa_cart_${user.id}`, JSON.stringify(cart));
+    } catch { /* quota exceeded — ignore */ }
+  }, [cart, user?.id]);
 
   useEffect(() => {
     const t = setTimeout(() => loadInventory(search), 350);
@@ -1026,7 +1043,9 @@ export default function MobilePOSPage() {
         customerName,
         customerPhone: customerPhone || undefined,
         taxRate,
-        notes: `Payment: ${method}${extras?.makingPct ? ` • Making ${extras.makingPct}%` : ""}`,
+        paymentMethod: method,
+        makingChargeRate: extras?.makingPct || undefined,
+        notes: undefined,
       });
 
       const data = checkoutRes.data ?? {};

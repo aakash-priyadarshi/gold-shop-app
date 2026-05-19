@@ -119,6 +119,19 @@ export class CreateInvoiceDto {
 
   @IsOptional()
   taxBreakdown?: Record<string, number>;
+
+  // ── POS payment tracking ───────────────────────────────────────
+  @IsOptional()
+  @IsString()
+  paymentMethod?: string;
+
+  @IsOptional()
+  @IsNumber()
+  makingChargeRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  makingChargesAmt?: number;
 }
 
 export class UpdatePaymentDto {

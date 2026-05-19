@@ -91,6 +91,7 @@ export interface AuthContextType extends AuthState {
   googleLogin: (
     role?: "CUSTOMER" | "SHOPKEEPER",
     mode?: "login" | "register",
+    rememberMe?: boolean,
   ) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -215,12 +216,11 @@ function clearAuthCookie(name: string) {
 
 const getStoredToken = () => {
   if (typeof window === "undefined") return null;
-  const token = localStorage.getItem(TOKEN_KEY) || getCookieValue(TOKEN_KEY);
-  const refreshToken =
-    localStorage.getItem(REFRESH_TOKEN_KEY) || getCookieValue(REFRESH_TOKEN_KEY);
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-  return token;
+  return (
+    localStorage.getItem(TOKEN_KEY) ||
+    sessionStorage.getItem(TOKEN_KEY) ||
+    getCookieValue(TOKEN_KEY)
+  );
 };
 
 const storeTokens = (
@@ -228,8 +228,19 @@ const storeTokens = (
   refreshToken: string,
   rememberMe = false,
 ) => {
-  localStorage.setItem(TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  if (rememberMe) {
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    localStorage.setItem("orivraa_remember_me", "1");
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  } else {
+    sessionStorage.setItem(TOKEN_KEY, accessToken);
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem("orivraa_remember_me");
+  }
   const maxAge = rememberMe ? REMEMBERED_TOKEN_MAX_AGE : undefined;
   setAuthCookie(TOKEN_KEY, accessToken, maxAge);
   setAuthCookie(REFRESH_TOKEN_KEY, refreshToken, maxAge);
@@ -238,6 +249,10 @@ const storeTokens = (
 const clearTokens = () => {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem("orivraa_remember_me");
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  sessionStorage.removeItem("orivraa_oauth_remember_me");
   clearAuthCookie(TOKEN_KEY);
   clearAuthCookie(REFRESH_TOKEN_KEY);
 };
@@ -552,7 +567,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (
       role: "CUSTOMER" | "SHOPKEEPER" = "CUSTOMER",
       mode: "login" | "register" = "login",
+      rememberMe = true,
     ) => {
+      // Persist rememberMe preference so the OAuth callback can restore it
+      // after the browser redirect destroys React component state.
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("orivraa_oauth_remember_me", rememberMe ? "1" : "0");
+      }
       // Use getApiUrl to get the correct base URL with /api
       const apiBaseUrl =
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";

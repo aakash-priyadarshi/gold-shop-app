@@ -48,6 +48,9 @@ function setCookie(name: string, value: string, maxAge?: number) {
 function forceLogout() {
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
+  localStorage.removeItem("orivraa_remember_me");
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("refreshToken");
   clearCookie("token");
   clearCookie("refreshToken");
 
@@ -72,7 +75,9 @@ async function attemptTokenRefresh(): Promise<string> {
 
   refreshPromise = (async () => {
     const storedRefresh =
-      localStorage.getItem("refreshToken") || readCookie("refreshToken");
+      localStorage.getItem("refreshToken") ||
+      sessionStorage.getItem("refreshToken") ||
+      readCookie("refreshToken");
     if (!storedRefresh) throw new Error("no_refresh_token");
 
     // Use a plain axios call (not the intercepted `api`) to avoid loops.
@@ -86,14 +91,22 @@ async function attemptTokenRefresh(): Promise<string> {
       expiresIn: number;
     };
 
-    // Preserve "remember me" duration: if the stored cookie already had a
-    // max-age we keep it; otherwise we just do a session cookie.
-    const rememberMeMaxAge = 60 * 60 * 24 * 30;
-    const hadRememberMe = !!readCookie("refreshToken"); // cookie existed → was persisted
-    const maxAge = hadRememberMe ? rememberMeMaxAge : undefined;
+// Preserve "remember me" routing: use the flag set by storeTokens/storeOAuthTokens.
+      const rememberMeMaxAge = 60 * 60 * 24 * 30;
+      const hadRememberMe = localStorage.getItem("orivraa_remember_me") === "1";
+      const maxAge = hadRememberMe ? rememberMeMaxAge : undefined;
 
-    localStorage.setItem("token", accessToken);
-    localStorage.setItem("refreshToken", refreshToken);
+      if (hadRememberMe) {
+        localStorage.setItem("token", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("refreshToken");
+      } else {
+        sessionStorage.setItem("token", accessToken);
+        sessionStorage.setItem("refreshToken", refreshToken);
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+      }
     setCookie("token", accessToken, maxAge);
     setCookie("refreshToken", refreshToken, maxAge);
 
@@ -108,11 +121,12 @@ async function attemptTokenRefresh(): Promise<string> {
 // Request interceptor to add auth token and currency header
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    // Add auth token
-    const token = localStorage.getItem("token") || readCookie("token");
-    if (token) {
-      localStorage.setItem("token", token);
-      config.headers.Authorization = `Bearer ${token}`;
+      // Add auth token — check both persistent (localStorage) and session storage
+      const token =
+        localStorage.getItem("token") ||
+        sessionStorage.getItem("token") ||
+        readCookie("token");
+      if (token) {
     }
 
     // Add currency header from preferences store
@@ -204,6 +218,7 @@ export const shopsApi = {
   updateRates: (id: string, data: any) =>
     api.patch(`/shops/${id}/metal-rates`, data),
   getDashboard: () => api.get("/shops/my-shop/dashboard"),
+  hydrateDemoStore: () => api.post("/shops/my-shop/demo-hydrate"),
   getSettings: () => api.get("/shops/my-shop/settings"),
   updateSettings: (data: any) => api.patch("/shops/my-shop/settings", data),
   getAnalytics: (params?: any) =>
@@ -1153,6 +1168,9 @@ export const posApi = {
       notes?: string;
       taxRate?: number;
       discountAmount?: number;
+      paymentMethod?: string;
+      makingChargeRate?: number;
+      makingChargesNpr?: number;
     },
   ) => api.post(`/pos/session/${sessionId}/checkout`, data),
   cancelSession: (sessionId: string) => api.delete(`/pos/session/${sessionId}`),

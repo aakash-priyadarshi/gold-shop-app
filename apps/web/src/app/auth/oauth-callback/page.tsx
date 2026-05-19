@@ -9,6 +9,44 @@ import { Suspense, useEffect } from "react";
 
 const TOKEN_KEY = "token";
 const REFRESH_TOKEN_KEY = "refreshToken";
+const REMEMBERED_TOKEN_MAX_AGE = 60 * 60 * 24 * 30;
+
+function setAuthCookieOAuth(name: string, value: string, maxAge?: number) {
+  if (typeof document === "undefined") return;
+  const domain = window.location.hostname.endsWith("orivraa.com")
+    ? "; domain=.orivraa.com"
+    : "";
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const expiry = maxAge ? `; max-age=${maxAge}` : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/${domain}; SameSite=Lax${secure}${expiry}`;
+}
+
+/** Stores tokens honouring the "Remember Me" checkbox the user set before
+ *  the Google OAuth redirect. Falls back to remembered (persistent) when no
+ *  preference is recorded (e.g. register flows that don't show the checkbox). */
+function storeOAuthTokens(accessToken: string, refreshToken: string) {
+  const raw = sessionStorage.getItem("orivraa_oauth_remember_me");
+  const rememberMe = raw !== "0"; // default true when absent
+  sessionStorage.removeItem("orivraa_oauth_remember_me");
+
+  if (rememberMe) {
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    localStorage.setItem("orivraa_remember_me", "1");
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  } else {
+    sessionStorage.setItem(TOKEN_KEY, accessToken);
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem("orivraa_remember_me");
+  }
+
+  const maxAge = rememberMe ? REMEMBERED_TOKEN_MAX_AGE : undefined;
+  setAuthCookieOAuth(TOKEN_KEY, accessToken, maxAge);
+  setAuthCookieOAuth(REFRESH_TOKEN_KEY, refreshToken, maxAge);
+}
 
 function OAuthCallbackHandler() {
   const router = useRouter();
@@ -144,9 +182,8 @@ function OAuthCallbackHandler() {
       }
 
       try {
-        // Store tokens
-        localStorage.setItem(TOKEN_KEY, accessToken);
-        localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+        // Store tokens honouring the "Remember Me" preference saved before redirect
+        storeOAuthTokens(accessToken, refreshToken);
 
         // Fetch user profile
         const response = await api.get("/auth/me");

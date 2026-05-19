@@ -89,6 +89,10 @@ export class InvoicesService {
         placeOfSupply: dto.placeOfSupply || null,
         hsnCode: dto.hsnCode || "7113", // default for jewellery
         taxBreakdown: (dto.taxBreakdown as any) || null,
+        // POS payment tracking
+        paymentMethod: dto.paymentMethod || null,
+        makingChargeRate: dto.makingChargeRate ?? null,
+        makingChargesAmt: dto.makingChargesAmt ?? null,
       },
     });
 
