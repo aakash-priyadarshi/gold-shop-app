@@ -6,7 +6,7 @@ import {
     Logger,
     NotFoundException,
 } from "@nestjs/common";
-import { UserRole } from "@prisma/client";
+import { UserRole, InventoryStatus, JewelleryType } from "@prisma/client";
 import { RedisService } from "../../common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
@@ -719,16 +719,15 @@ export class ShopsService {
           sku: "DEMO-RNG-01",
           nameEn: "22K Classic Gold Band",
           descriptionEn: "A timeless 22K gold wedding band with a polished finish.",
-          category: "RINGS",
-          metalType: "GOLD_22K",
-          metalPurity: "22K",
-          netWeight: 4.5,
-          totalWeight: 4.5,
-          makingChargeType: "PERCENTAGE",
-          makingChargeValue: 12,
-          stockQuantity: 5,
+          jewelleryType: JewelleryType.RING,
+          buildMethod: "CASTING",
+          composition: { metal: "GOLD", purity: "22K", weight: 4.5 },
+          totalWeightGrams: 4.5,
+          metalValueNpr: 53571.43,
+          makingChargeNpr: 6428.57,
           totalPriceNpr: 60000,
-          status: "IN_STOCK",
+          status: InventoryStatus.AVAILABLE,
+          stockQuantity: 5,
         },
       }),
       this.prisma.inventoryItem.create({
@@ -737,16 +736,15 @@ export class ShopsService {
           sku: "DEMO-NCK-01",
           nameEn: "24K Bridal Choker",
           descriptionEn: "Intricate 24K gold bridal choker necklace.",
-          category: "NECKLACES",
-          metalType: "GOLD_24K",
-          metalPurity: "24K",
-          netWeight: 25.0,
-          totalWeight: 25.0,
-          makingChargeType: "PERCENTAGE",
-          makingChargeValue: 15,
-          stockQuantity: 2,
+          jewelleryType: JewelleryType.NECKLACE,
+          buildMethod: "HANDMADE",
+          composition: { metal: "GOLD", purity: "24K", weight: 25.0 },
+          totalWeightGrams: 25.0,
+          metalValueNpr: 304347.83,
+          makingChargeNpr: 45652.17,
           totalPriceNpr: 350000,
-          status: "IN_STOCK",
+          status: InventoryStatus.AVAILABLE,
+          stockQuantity: 2,
         },
       }),
       this.prisma.inventoryItem.create({
@@ -755,61 +753,53 @@ export class ShopsService {
           sku: "DEMO-ERG-01",
           nameEn: "18K Diamond Studs",
           descriptionEn: "Elegant 18K gold earrings with minor diamond accents.",
-          category: "EARRINGS",
-          metalType: "GOLD_18K",
-          metalPurity: "18K",
-          netWeight: 2.2,
-          totalWeight: 2.5,
-          makingChargeType: "FLAT",
-          makingChargeValue: 5000,
-          stockQuantity: 10,
+          jewelleryType: JewelleryType.EARRING,
+          buildMethod: "HANDMADE",
+          composition: { metal: "GOLD", purity: "18K", weight: 2.2 },
+          totalWeightGrams: 2.5,
+          metalValueNpr: 40000,
+          makingChargeNpr: 5000,
           totalPriceNpr: 45000,
-          status: "IN_STOCK",
+          status: InventoryStatus.AVAILABLE,
+          stockQuantity: 10,
         },
       }),
     ]);
 
     // Create a demo customer
-    const customer = await this.prisma.shopCustomer.create({
-      data: {
-        shopId,
-        name: "Demo Customer (Walk-in)",
-        phoneCountryCode: "+977",
-        phone: "9800000000",
-        totalSpent: 60000,
-        totalPurchases: 1,
-      },
-    });
-
     // Create a demo POS invoice
     await this.prisma.invoice.create({
       data: {
         shopId,
-        customerId: customer.id,
         invoiceNumber: `INV-DEMO-${Math.floor(1000 + Math.random() * 9000)}`,
         status: "PAID",
+        paymentStatus: "PAID",
         paymentMethod: "CASH",
         currency: "NPR",
         subtotal: 53571.43,
-        taxTotal: 6428.57,
+        taxAmount: 6428.57,
+        taxRate: 12,
         totalAmount: 60000,
         paidAmount: 60000,
         balanceDue: 0,
-        issueDate: new Date(),
+        issuedAt: new Date(),
         dueDate: new Date(),
+        paidAt: new Date(),
         makingChargeRate: 12,
         makingChargesAmt: 6428.57,
         notes: "Demo POS Sale",
-        items: {
-          create: [
-            {
-              description: "22K Classic Gold Band",
-              quantity: 1,
-              unitPrice: 53571.43,
-              total: 53571.43,
-            },
-          ],
-        },
+        customerName: "Demo Customer (Walk-in)",
+        customerPhone: "+9779800000000",
+        customerEmail: "demo.customer@example.com",
+        lineItems: [
+          {
+            label: "22K Classic Gold Band",
+            category: "RING",
+            quantity: 1,
+            unitPrice: 53571.43,
+            amount: 53571.43,
+          },
+        ] as any,
       },
     });
 

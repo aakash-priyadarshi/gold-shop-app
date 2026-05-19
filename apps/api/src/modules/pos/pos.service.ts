@@ -342,9 +342,9 @@ export class PosService {
       discountAmount: dto.discountAmount || 0,
       notes: dto.notes || "POS checkout",
       currency: "NPR",
-      paymentMethod: dto.paymentMethod || null,
-      makingChargeRate: makingChargeRate || null,
-      makingChargesAmt: makingChargesAmt || null,
+      paymentMethod: dto.paymentMethod || undefined,
+      makingChargeRate: makingChargeRate || undefined,
+      makingChargesAmt: makingChargesAmt || undefined,
     });
 
     // ── Auto-mark POS counter invoices as PAID ──────────────────
