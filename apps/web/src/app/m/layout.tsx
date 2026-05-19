@@ -174,7 +174,7 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
       title: "More",
       items: [
         { href: "/m/catalogue", icon: Send, label: "Catalogue Share" },
-        { href: "/m/rfq", icon: Gem, label: "Custom RFQ" },
+        { href: "/m/quotes", icon: Gem, label: "Custom RFQ" },
         { href: "/m/savings", icon: FileText, label: "Savings Schemes" },
         { href: "/m/occasions", icon: Cake, label: "Occasions" },
       ]
@@ -201,11 +201,13 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
             </h3>
             <div className="grid grid-cols-4 gap-4">
               {sec.items.map((item) => (
-                <Link
+                <div
                   key={item.href}
-                  href={item.href}
-                  onClick={onClose}
-                  className="flex flex-col items-center text-center gap-2"
+                  onClick={() => {
+                    onClose();
+                    router.push(item.href);
+                  }}
+                  className="flex flex-col items-center text-center gap-2 cursor-pointer"
                 >
                   <div className="h-14 w-14 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center active:scale-95 transition-transform">
                     <item.icon className="h-6 w-6 text-amber-600" />
@@ -213,7 +215,7 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
                   <span className="text-[11px] font-medium text-gray-700 leading-tight">
                     <T>{item.label}</T>
                   </span>
-                </Link>
+                </div>
               ))}
             </div>
           </div>

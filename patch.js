@@ -1,10 +1,1 @@
-const fs = require('fs');
-
-let code = fs.readFileSync('apps/web/src/app/m/quotes/page.tsx', 'utf8');
-
-function wrapInput(label, oldStr) {
-  return <div>\n  <label className="mb-1 block text-[11px] font-semibold uppercase text-gray-500"><T></T></label>\n  \n</div>;
-}
-
-// Just load and manually replace specific patterns using regex or strings.
-// Or simply override the return statement.
+const fs = require('fs'); let C = fs.readFileSync('apps/web/src/app/m/tax/page.tsx', 'utf8'); C = C.replace(/country === 'INDIA'/g, 'country === \'IN\'').replace(/country === 'NEPAL'/g, 'country === \'NP\'').replace(/country === 'UAE'/g, 'country === \'AE\'').replace(/country === 'UK'/g, 'country === \'GB\'').replace(/country === "INDIA"/g, 'country === "IN"').replace(/country === "NEPAL"/g, 'country === "NP"').replace(/country === "UAE"/g, 'country === "AE"').replace(/country === "UK"/g, 'country === "GB"'); fs.writeFileSync('apps/web/src/app/m/tax/page.tsx', C);

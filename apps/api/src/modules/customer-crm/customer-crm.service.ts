@@ -344,6 +344,45 @@ export class CustomerCrmService {
       _avg: { totalNpr: true },
     });
 
+    if (orderStats._count === 0) {
+      // It might be a walk in customer, check quotes
+      const walkIn = await this.prisma.walkInCustomer.findFirst({
+        where: { id: customerId, createdByShopId: shopId },
+      });
+
+      if (walkIn) {
+        const quoteStats = await this.prisma.shopQuote.aggregate({
+          where: { walkInCustomerId: customerId, shopId, status: { in: ["CONFIRMED", "INVOICED", "DELIVERED", "COMPLETED"] } },
+          _sum: { totalPriceNpr: true },
+          _count: true,
+          _avg: { totalPriceNpr: true },
+        });
+
+        const [firstQuote, lastQuote] = await Promise.all([
+          this.prisma.shopQuote.findFirst({
+            where: { walkInCustomerId: customerId, shopId },
+            orderBy: { createdAt: "asc" },
+            select: { createdAt: true },
+          }),
+          this.prisma.shopQuote.findFirst({
+            where: { walkInCustomerId: customerId, shopId },
+            orderBy: { createdAt: "desc" },
+            select: { createdAt: true },
+          }),
+        ]);
+
+        return {
+          totalOrders: quoteStats._count,
+          totalSpent: quoteStats._sum?.totalPriceNpr || 0,
+          averageOrderValue: quoteStats._avg?.totalPriceNpr || 0,
+          firstOrderDate: firstQuote?.createdAt,
+          lastOrderDate: lastQuote?.createdAt,
+          activeRfqs: 0,
+          purchaseStats: [],
+        };
+      }
+    }
+
     // Get first & last order dates
     const [firstOrder, lastOrder] = await Promise.all([
       this.prisma.order.findFirst({

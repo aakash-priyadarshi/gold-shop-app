@@ -286,7 +286,7 @@ export class PricingEngineService {
     );
 
     // Track rates updated at
-    let ratesUpdatedAt = commodityRates.updatedAt;
+    const ratesUpdatedAt = commodityRates.updatedAt;
 
     // Step 3: Calculate material costs based on build method
     let subtotalUsd = 0;

@@ -149,6 +149,16 @@ export class OrderFilterDto {
   @IsOptional()
   shopId?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by start date (ISO string)' })
+  @IsString()
+  @IsOptional()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by end date (ISO string)' })
+  @IsString()
+  @IsOptional()
+  dateTo?: string;
+
   @ApiPropertyOptional({ description: 'Page number' })
   @Type(() => Number)
   @IsNumber()

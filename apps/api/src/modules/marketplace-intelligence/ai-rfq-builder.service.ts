@@ -693,7 +693,7 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
     const makingCharge = metalCost * (makingChargePct / 100);
 
     // Estimate gemstone cost (if applicable)
-    let gemstoneCost = 0;
+    const gemstoneCost = 0;
     // Simple estimate: gemstones add 20-50% on top for gemstone-heavy pieces
 
     // Estimate tax (varies by region)

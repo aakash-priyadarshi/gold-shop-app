@@ -404,11 +404,25 @@ export class OrdersService {
 
   // Find shop orders
   async findShopOrders(shopId: string, filters: OrderFilterDto) {
-    const { type, status, page = 1, limit = 20 } = filters;
+    const { type, status, page = 1, limit = 20, dateFrom, dateTo } = filters;
 
     const where: any = { shopId };
     if (type) where.orderType = type;
     if (status) where.status = status;
+    
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        from.setHours(0, 0, 0, 0);
+        where.createdAt.gte = from;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo);
+        to.setHours(23, 59, 59, 999);
+        where.createdAt.lte = to;
+      }
+    }
 
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({

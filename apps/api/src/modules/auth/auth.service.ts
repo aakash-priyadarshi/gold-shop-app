@@ -600,7 +600,7 @@ export class AuthService {
     const mode = googleUser.mode || "login"; // Default to login mode
 
     // Check if user exists by googleId or email
-    let user = await this.prisma.user.findFirst({
+    const user = await this.prisma.user.findFirst({
       where: {
         OR: [{ googleId: googleUser.googleId }, { email: googleUser.email }],
       },

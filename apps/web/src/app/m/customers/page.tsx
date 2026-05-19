@@ -67,7 +67,7 @@ function CustomerCard({
   onSelect: () => void;
 }) {
   const name = getCustomerName(customer, "Unknown");
-  const totalOrders = customer.orderCount ?? customer.totalOrders;
+  const totalOrders = (customer.orderCount ?? 0) + (customer.quoteCount ?? 0) || customer.totalOrders;
   const totalSpent = customer.totalSpent ?? customer.totalSpentNpr;
   const { format } = useShopCurrency();
   return (

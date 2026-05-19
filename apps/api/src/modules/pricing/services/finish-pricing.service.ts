@@ -257,7 +257,7 @@ export class FinishPricingService {
     tier: FinishTier,
     currency: SupportedCurrency,
   ): FinishPrice {
-    let priceNPR = DEFAULT_FINISH_PRICES_NPR[finishType]?.[tier] || 500;
+    const priceNPR = DEFAULT_FINISH_PRICES_NPR[finishType]?.[tier] || 500;
     
     // Convert to INR if needed
     const flatFeeLocal = currency === 'INR' 
