@@ -338,200 +338,296 @@ export default function ShopDashboard() {
             </div>
           </div>
 
-          {/* ═══ Gold Market Pulse Widget (Daily Habit Hook) ═══ */}
-          {goldRates && (
-            <Card className="overflow-hidden border-amber-200/50 dark:border-amber-800/30">
-              <div className="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 dark:from-amber-950/30 dark:via-yellow-950/20 dark:to-amber-950/30 px-5 py-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                      <Sparkles className="h-4 w-4 text-amber-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold"><T>Live Gold Rates</T></h3>
-                      <p className="text-[10px] text-muted-foreground"><T>Updated</T> {goldRates.updatedAt}</p>
-                    </div>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={`text-xs ${goldRates.changePercent >= 0 ? "border-green-300 text-green-700 bg-green-50 dark:bg-green-950/30" : "border-red-300 text-red-700 bg-red-50 dark:bg-red-950/30"}`}
-                  >
-                    {goldRates.changePercent >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                    {goldRates.changePercent >= 0 ? "+" : ""}{goldRates.changePercent}%
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-4 gap-3">
-                  {[
-                    { label: "24K Gold", value: goldRates.rate24k },
-                    { label: "22K Gold", value: goldRates.rate22k },
-                    { label: "18K Gold", value: goldRates.rate18k },
-                    { label: "Silver /g", value: goldRates.silver },
-                  ].map((r) => (
-                    <div key={r.label} className="bg-white/60 dark:bg-gray-900/40 rounded-lg px-3 py-2 text-center">
-                      <p className="text-[10px] font-medium text-amber-700 dark:text-amber-400 uppercase">{r.label}</p>
-                      <p className="text-sm font-bold mt-0.5">{goldRates.currency} {r.value.toLocaleString()}</p>
-                    </div>
-                  ))}
-                </div>
-                {/* AI Forecast Insight */}
-                <div className="mt-3 bg-white/70 dark:bg-gray-900/50 rounded-lg px-4 py-2.5 flex items-start gap-2.5">
-                  <Zap className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    <span className="font-semibold text-foreground"><T>AI Price Pulse:</T></span>{" "}
-                    {goldRates.changePercent >= 0
-                      ? t("Gold price rose today. Consider locking in inventory stock before weekend wedding demand.")
-                      : t("Gold price dipped today. Good opportunity to restock inventory at lower rates.")}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          )}
-
           {/* Admin contact prompt — encourages shopkeepers to message admin@orivraa.com */}
           <AdminMessageBanner />
 
-          {/* ═══ Gamified Onboarding Quests ═══ */}
-          {/* ═══ Gamified Onboarding Quests ═══ */}
-          {quests.length > 0 && doneCount < quests.length && (
-            <Card className="border-amber-200/50 dark:border-amber-800/30 overflow-hidden">
-              <CardHeader className="pb-3 bg-gradient-to-r from-amber-50/80 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/10">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Rocket className="h-5 w-5 text-amber-500" />
-                    <T>Setup Quests</T>
-                    <Badge variant="outline" className="text-xs ml-1">{doneCount}/{quests.length}</Badge>
-                  </CardTitle>
-                  {doneCount === quests.length && (
-                    <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                      🎉 <T>All Complete!</T>
-                    </Badge>
-                  )}
-                </div>
-                <Progress value={Math.round((doneCount / quests.length) * 100)} className="h-2 mt-2" />
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="space-y-3">
-                  {quests.map((quest: any) => (
-                    <div key={quest.id} className={`flex items-center gap-3 p-3 rounded-lg transition-all ${quest.done ? "bg-green-50/50 dark:bg-green-950/10" : "bg-muted/30 hover:bg-muted/60"}`}>
-                      {quest.done ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                      ) : (
-                        <Circle className="h-5 w-5 text-gray-300 dark:text-gray-600 shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-medium text-sm ${quest.done ? "text-gray-400 line-through" : ""}`}>{quest.label}</p>
-                        <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
-                          <Gift className="h-3 w-3" /> {quest.reward}
-                        </p>
+          {/* ═══ Onboarding Hub & Live Market Rates ═══ */}
+          {((quests.length > 0 && doneCount < quests.length) || ((!stats || stats.length === 0) && recentOrders.length === 0) || (user?.shop && !user.shop.isVerified)) ? (
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              
+              {/* Left Column: Onboarding Actions */}
+              <div className="xl:col-span-2 space-y-6">
+                
+                {/* 1. Gamified Quests (Takes priority over standalone KYC alert) */}
+                {quests.length > 0 && doneCount < quests.length ? (
+                  <Card className="border-amber-300 dark:border-amber-700/60 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 relative group">
+                    <div className="absolute top-0 right-0 p-32 bg-amber-400/5 blur-3xl rounded-full pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
+                    <CardHeader className="pb-3 bg-gradient-to-r from-amber-50 via-yellow-50/50 to-amber-100/30 dark:from-amber-950/40 dark:via-yellow-900/10 dark:to-amber-950/20 relative z-10 border-b border-amber-100 dark:border-amber-900/30">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2 text-lg text-amber-900 dark:text-amber-100">
+                          <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shadow-inner">
+                            <Rocket className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <T>Setup Quests</T>
+                          <Badge variant="outline" className="text-xs ml-1 border-amber-300 bg-white/50 dark:bg-black/20 text-amber-700 dark:text-amber-400">{doneCount}/{quests.length}</Badge>
+                        </CardTitle>
                       </div>
-                      {!quest.done && (
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={quest.href}>{quest.cta}</Link>
+                      <Progress value={Math.round((doneCount / quests.length) * 100)} className="h-1.5 mt-4 bg-amber-200/50 dark:bg-amber-900/30 [&>div]:bg-amber-500" />
+                    </CardHeader>
+                    <CardContent className="pt-4 relative z-10 bg-white/40 dark:bg-gray-950/20 backdrop-blur-sm">
+                      <div className="space-y-3">
+                        {quests.map((quest: any) => (
+                          <div key={quest.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3.5 rounded-xl border transition-all duration-300 ${quest.done ? "bg-green-50/50 border-green-100 dark:bg-green-950/10 dark:border-green-900/30" : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-amber-300 dark:hover:border-amber-700 shadow-sm hover:shadow"}`}>
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {quest.done ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-gray-300 dark:text-gray-600 shrink-0" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className={`font-medium text-sm ${quest.done ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}>{quest.label}</p>
+                                <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-1 font-medium">
+                                  <Gift className="h-3 w-3" /> {quest.reward}
+                                </p>
+                              </div>
+                            </div>
+                            {!quest.done && (
+                              <Button variant="outline" size="sm" className="shrink-0 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800/50 dark:text-amber-400 dark:hover:bg-amber-950 w-full sm:w-auto mt-2 sm:mt-0" asChild>
+                                <Link href={quest.href}>{quest.cta}</Link>
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  /* 2. Standalone KYC Banner (Shown ONLY if Quests are done but still unverified) */
+                  user?.shop && !user.shop.isVerified && (
+                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0 mt-0.5">
+                          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-amber-900 dark:text-amber-200 text-base">
+                            <T>
+                              {!user.shop.verificationRequests?.length
+                                ? "Action Required: Verify Your Shop"
+                                : "Verification Pending"}
+                            </T>
+                          </h3>
+                          <p className="text-sm text-amber-700 dark:text-amber-300/80 mt-1 leading-relaxed">
+                            <T>
+                              {!user.shop.verificationRequests?.length
+                                ? "Complete your KYC verification to unlock all marketplace and POS features securely."
+                                : "Your shop is currently under review by our compliance team. Full features will unlock soon."}
+                            </T>
+                          </p>
+                        </div>
+                      </div>
+                      {!user.shop.verificationRequests?.length && (
+                        <Button asChild className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white shadow-md transition-transform hover:scale-105 w-full sm:w-auto">
+                          <Link href="/dashboard/shop/kyc">
+                            <T>Start Verification</T>
+                          </Link>
                         </Button>
                       )}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                  )
+                )}
 
-          {/* ═══ Demo Store Sandbox Hydrator & 14-Day Free Trial ═══ */}
-          {(!stats || stats.length === 0) && recentOrders.length === 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="border-blue-200 dark:border-blue-800/30 bg-blue-50/30 dark:bg-blue-950/10">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2 text-blue-700 dark:text-blue-400">
-                    <Package className="h-4 w-4" /> <T>Explore Demo Shop</T>
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    <T>Zero setup required. Populate your store with 5 sample gold products, 2 customers, and 3 invoices instantly.</T>
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
-                    onClick={async (e) => {
-                      const btn = e.currentTarget;
-                      btn.disabled = true;
-                      btn.innerHTML = `<span class="animate-spin mr-2">⌛</span> Hydrating...`;
-                      try {
-                        await shopsApi.hydrateDemoStore();
-                        window.location.reload();
-                      } catch (err) {
-                        btn.disabled = false;
-                        btn.innerHTML = `Try Again`;
-                      }
-                    }}
-                  >
-                    <Zap className="h-4 w-4 mr-2" /> <T>Hydrate Demo Data</T>
-                  </Button>
-                </CardContent>
-              </Card>
+                {/* 3. Demo Hydrator & Free Trial */}
+                {(!stats || stats.length === 0) && recentOrders.length === 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Sandbox Hydrator */}
+                    <Card className="border-blue-200 dark:border-blue-800/40 bg-gradient-to-br from-blue-50/50 to-indigo-50/30 dark:from-blue-950/20 dark:to-indigo-950/10 hover:shadow-md transition-all group overflow-hidden relative">
+                      <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <Package className="h-32 w-32 text-blue-600" />
+                      </div>
+                      <CardHeader className="pb-3 relative z-10">
+                        <CardTitle className="text-base flex items-center gap-2 text-blue-800 dark:text-blue-300">
+                          <Package className="h-4 w-4" /> <T>Explore Demo Shop</T>
+                        </CardTitle>
+                        <CardDescription className="text-xs text-blue-600/70 dark:text-blue-400/70">
+                          <T>Populate your store with 5 sample products, 2 customers, and 3 invoices instantly.</T>
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="relative z-10">
+                        <Button 
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow transition-all group-hover:shadow-md" 
+                          onClick={async (e) => {
+                            const btn = e.currentTarget;
+                            btn.disabled = true;
+                            btn.innerHTML = `<span class="animate-spin mr-2">⌛</span> Hydrating...`;
+                            try {
+                              await shopsApi.hydrateDemoStore();
+                              window.location.reload();
+                            } catch (err) {
+                              btn.disabled = false;
+                              btn.innerHTML = `Try Again`;
+                            }
+                          }}
+                        >
+                          <Zap className="h-4 w-4 mr-2" /> <T>Hydrate Demo Data</T>
+                        </Button>
+                      </CardContent>
+                    </Card>
 
-              {!currentSubscription && (
-                <Card className="border-purple-200 dark:border-purple-800/30 bg-purple-50/30 dark:bg-purple-950/10">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2 text-purple-700 dark:text-purple-400">
-                      <Star className="h-4 w-4" /> <T>14-Day Free Pro Trial</T>
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      <T>Unlock all premium features including AI generation for 14 days. No credit card required.</T>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button 
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                      onClick={async (e) => {
-                        const btn = e.currentTarget;
-                        btn.disabled = true;
-                        btn.innerHTML = `<span class="animate-spin mr-2">⌛</span> Activating...`;
-                        try {
-                          // Note: Admin billing API handles subscriptions. We will route the user there or mock activation.
-                          window.location.href = "/dashboard/shop/billing";
-                        } catch (err) {
-                          btn.disabled = false;
-                          btn.innerHTML = `Try Again`;
-                        }
-                      }}
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" /> <T>Activate Free Trial</T>
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-
-          {user?.shop && !user.shop.isVerified && (
-            <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 rounded-lg p-4 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                <div>
-                  <h3 className="font-medium text-yellow-800 dark:text-yellow-200">
-                    <T>
-                      {!user.shop.verificationRequests?.length
-                        ? "Start Shop Verification"
-                        : "Shop Verification Pending"}
-                    </T>
-                  </h3>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                    <T>
-                      {!user.shop.verificationRequests?.length
-                        ? "Please complete your KYC verification process to unlock all shop features on the platform."
-                        : "Your shop is currently under review. Some features may be limited until verification is complete."}
-                    </T>
-                  </p>
-                </div>
+                    {/* Free Pro Trial */}
+                    {!currentSubscription && (
+                      <Card className="border-purple-200 dark:border-purple-800/40 bg-gradient-to-br from-purple-50/50 to-fuchsia-50/30 dark:from-purple-950/20 dark:to-fuchsia-950/10 hover:shadow-md transition-all group overflow-hidden relative">
+                        <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                          <Star className="h-32 w-32 text-purple-600" />
+                        </div>
+                        <CardHeader className="pb-3 relative z-10">
+                          <CardTitle className="text-base flex items-center gap-2 text-purple-800 dark:text-purple-300">
+                            <Star className="h-4 w-4" /> <T>14-Day Free Pro Trial</T>
+                          </CardTitle>
+                          <CardDescription className="text-xs text-purple-600/70 dark:text-purple-400/70">
+                            <T>Unlock all premium features including AI generation for 14 days. No credit card required.</T>
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="relative z-10">
+                          <Button 
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow transition-all group-hover:shadow-md"
+                            onClick={async (e) => {
+                              const btn = e.currentTarget;
+                              btn.disabled = true;
+                              btn.innerHTML = `<span class="animate-spin mr-2">⌛</span> Activating...`;
+                              try {
+                                window.location.href = "/dashboard/shop/billing";
+                              } catch (err) {
+                                btn.disabled = false;
+                                btn.innerHTML = `Try Again`;
+                              }
+                            }}
+                          >
+                            <Sparkles className="h-4 w-4 mr-2" /> <T>Activate Free Trial</T>
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
               </div>
-              {!user.shop.verificationRequests?.length && (
-                <Button size="sm" asChild className="shrink-0 bg-yellow-600 hover:bg-yellow-700 text-white">
-                  <Link href="/dashboard/shop/kyc">
-                    <T>Start Verification</T>
-                  </Link>
-                </Button>
-              )}
+
+              {/* Right Column: Live Gold Rates */}
+              <div className="xl:col-span-1">
+                {goldRates && (
+                  <Card className="h-full overflow-hidden border-amber-300/60 dark:border-amber-700/50 shadow-sm hover:shadow-lg hover:border-amber-400/80 dark:hover:border-amber-500/50 transition-all duration-500 group relative">
+                    <div className="absolute top-0 right-0 p-24 bg-amber-400/10 dark:bg-amber-400/5 blur-[40px] rounded-full mix-blend-multiply dark:mix-blend-lighten pointer-events-none group-hover:scale-125 group-hover:bg-amber-400/15 transition-all duration-700" />
+                    <div className="bg-gradient-to-br from-amber-50/90 via-yellow-100/40 to-amber-50/80 dark:from-amber-950/80 dark:via-yellow-900/20 dark:to-amber-950/60 px-6 py-6 h-full flex flex-col relative z-10">
+                      
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-200 to-yellow-400 dark:from-amber-700 dark:to-yellow-600 flex items-center justify-center shadow-inner">
+                            <Sparkles className="h-5 w-5 text-amber-900 dark:text-amber-100" />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-amber-950 dark:text-amber-100 tracking-tight"><T>Live Market Pulse</T></h3>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                              </span>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider"><T>Updated</T> {goldRates.updatedAt}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`px-2 py-1 border shadow-sm ${goldRates.changePercent >= 0 ? "border-green-300 text-green-700 bg-green-50/80 dark:bg-green-900/40 dark:border-green-800 dark:text-green-300" : "border-red-300 text-red-700 bg-red-50/80 dark:bg-red-900/40 dark:border-red-800 dark:text-red-300"}`}
+                        >
+                          {goldRates.changePercent >= 0 ? <TrendingUp className="h-3.5 w-3.5 mr-1" /> : <TrendingDown className="h-3.5 w-3.5 mr-1" />}
+                          <span className="font-semibold">{goldRates.changePercent >= 0 ? "+" : ""}{goldRates.changePercent}%</span>
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 mb-6 flex-1">
+                        {[
+                          { label: "24K Gold", value: goldRates.rate24k, featured: true },
+                          { label: "22K Gold", value: goldRates.rate22k },
+                          { label: "18K Gold", value: goldRates.rate18k },
+                          { label: "Silver /g", value: goldRates.silver },
+                        ].map((r) => (
+                          <div key={r.label} className={`rounded-xl px-4 py-3 text-center border transition-all duration-300 ${r.featured ? 'bg-gradient-to-b from-white to-amber-50/50 dark:from-gray-900 dark:to-amber-950/20 border-amber-200 dark:border-amber-800/60 shadow-sm' : 'bg-white/60 dark:bg-gray-900/40 border-white/40 dark:border-gray-800/50 hover:bg-white dark:hover:bg-gray-800'}`}>
+                            <p className={`text-[10px] font-bold uppercase tracking-wider ${r.featured ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>{r.label}</p>
+                            <p className={`mt-1 font-extrabold tabular-nums tracking-tight ${r.featured ? 'text-xl text-amber-950 dark:text-amber-50' : 'text-lg text-foreground'}`}>
+                              <span className="text-xs font-medium text-muted-foreground mr-0.5">{goldRates.currency}</span>
+                              {r.value.toLocaleString()}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-auto bg-white/80 dark:bg-gray-950/50 backdrop-blur-md border border-amber-100 dark:border-amber-900/30 rounded-xl p-3.5 flex items-start gap-3 shadow-sm">
+                        <div className="bg-amber-100 dark:bg-amber-900/50 p-1.5 rounded-lg shrink-0">
+                          <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          <span className="font-semibold text-amber-900 dark:text-amber-200"><T>AI Insight:</T></span>{" "}
+                          {goldRates.changePercent >= 0
+                            ? t("Prices are trending up. Consider locking in inventory stock to hedge against weekend demand.")
+                            : t("Prices dipped today. Great opportunity to restock key inventory and offer margin discounts.")}
+                        </p>
+                      </div>
+
+                    </div>
+                  </Card>
+                )}
+              </div>
             </div>
+          ) : (
+            /* Standalone Gold Rates if no onboarding elements remain */
+            goldRates && (
+              <div className="w-full">
+                  <Card className="overflow-hidden border-amber-300/60 dark:border-amber-700/50 shadow-sm hover:shadow-md transition-all duration-500 group relative">
+                    <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-amber-400/5 to-transparent pointer-events-none group-hover:opacity-100 opacity-50 transition-opacity duration-700" />
+                    <div className="bg-gradient-to-r from-amber-50/90 via-yellow-50/40 to-amber-50/80 dark:from-amber-950/80 dark:via-yellow-900/10 dark:to-amber-950/60 px-6 py-5 relative z-10">
+                      
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 md:w-1/4">
+                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-200 to-yellow-400 dark:from-amber-700 dark:to-yellow-600 flex items-center justify-center shadow-inner shrink-0">
+                            <Sparkles className="h-5 w-5 text-amber-900 dark:text-amber-100" />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-amber-950 dark:text-amber-100 tracking-tight"><T>Live Market Pulse</T></h3>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                              </span>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider"><T>Updated</T> {goldRates.updatedAt}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-1 items-center justify-around gap-2 px-2 md:px-6 md:border-x border-amber-200/50 dark:border-amber-800/30">
+                          {[
+                            { label: "24K Gold", value: goldRates.rate24k, featured: true },
+                            { label: "22K Gold", value: goldRates.rate22k },
+                            { label: "18K Gold", value: goldRates.rate18k },
+                            { label: "Silver /g", value: goldRates.silver },
+                          ].map((r) => (
+                            <div key={r.label} className="text-center">
+                              <p className={`text-[10px] font-bold uppercase tracking-wider ${r.featured ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>{r.label}</p>
+                              <p className={`mt-0.5 font-extrabold tabular-nums tracking-tight ${r.featured ? 'text-lg text-amber-950 dark:text-amber-50' : 'text-base text-foreground'}`}>
+                                <span className="text-[10px] font-medium text-muted-foreground mr-0.5">{goldRates.currency}</span>
+                                {r.value.toLocaleString()}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="md:w-1/4 flex flex-col items-end justify-center">
+                          <Badge
+                            variant="outline"
+                            className={`px-2 py-1 mb-2 border shadow-sm ${goldRates.changePercent >= 0 ? "border-green-300 text-green-700 bg-green-50/80 dark:bg-green-900/40 dark:border-green-800 dark:text-green-300" : "border-red-300 text-red-700 bg-red-50/80 dark:bg-red-900/40 dark:border-red-800 dark:text-red-300"}`}
+                          >
+                            {goldRates.changePercent >= 0 ? <TrendingUp className="h-3.5 w-3.5 mr-1" /> : <TrendingDown className="h-3.5 w-3.5 mr-1" />}
+                            <span className="font-semibold">{goldRates.changePercent >= 0 ? "+" : ""}{goldRates.changePercent}%</span>
+                          </Badge>
+                          <p className="text-[10px] text-muted-foreground text-right max-w-[200px] leading-tight">
+                            <span className="font-medium text-amber-800 dark:text-amber-300"><T>AI Insight:</T></span> {goldRates.changePercent >= 0 ? t("Prices rising, lock in stock.") : t("Prices dipped, good time to restock.")}
+                          </p>
+                        </div>
+                      </div>
+
+                    </div>
+                  </Card>
+              </div>
+            )
           )}
 
           {/* Plan Migration Banner */}
@@ -591,51 +687,55 @@ export default function ShopDashboard() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {stats.map((stat) => (
-              <Card key={stat.title}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {stat.title}
-                      </p>
-                      <p className="text-2xl font-bold mt-1">{stat.value}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {stats.map((stat, index) => {
+              // Map dynamic accent colors per card index
+              const accents = [
+                "text-blue-600 dark:text-blue-400 bg-blue-100/80 dark:bg-blue-900/40 group-hover:bg-blue-500 group-hover:text-white border-blue-200 dark:border-blue-800/30",
+                "text-purple-600 dark:text-purple-400 bg-purple-100/80 dark:bg-purple-900/40 group-hover:bg-purple-500 group-hover:text-white border-purple-200 dark:border-purple-800/30",
+                "text-amber-600 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-900/40 group-hover:bg-amber-500 group-hover:text-white border-amber-200 dark:border-amber-800/30",
+                "text-emerald-600 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-900/40 group-hover:bg-emerald-500 group-hover:text-white border-emerald-200 dark:border-emerald-800/30",
+              ];
+              const accent = accents[index % accents.length];
+              const borderClass = accent.split(' ').pop(); // Get the border color for the card container hover
+
+              return (
+                <Card key={stat.title} className={`overflow-hidden transition-all duration-300 hover:shadow-md hover:border-amber-300/50 dark:hover:border-amber-700/50 hover:-translate-y-1 group bg-white/60 dark:bg-gray-950/40 backdrop-blur-sm`}>
+                  <CardContent className="p-6 relative">
+                    <div className="absolute top-0 right-0 p-12 bg-gray-100/50 dark:bg-gray-800/20 blur-2xl rounded-full pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+                    
+                    <div className="flex items-center justify-between relative z-10">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                          {stat.title}
+                        </p>
+                        <p className="text-3xl font-bold tracking-tight mt-1.5 tabular-nums text-foreground">{stat.value}</p>
+                      </div>
+                      <div
+                        className={`p-3.5 rounded-2xl transition-all duration-300 shadow-sm ${accent.replace(borderClass || '', '')}`}
+                      >
+                        <stat.icon className="h-5 w-5" />
+                      </div>
                     </div>
-                    <div
-                      className={`p-3 rounded-full ${
-                        stat.changeType === "positive"
-                          ? "bg-green-100"
-                          : "bg-red-100"
-                      }`}
-                    >
-                      <stat.icon
-                        className={`h-5 w-5 ${
+                    <div className="flex items-center mt-4 text-xs font-medium relative z-10">
+                      <span
+                        className={`flex items-center px-1.5 py-0.5 rounded-md mr-2 ${
                           stat.changeType === "positive"
-                            ? "text-green-600"
-                            : "text-red-600"
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                         }`}
-                      />
+                      >
+                        {stat.changeType === "positive" ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <TrendingDown className="h-3 w-3 mr-0.5" />}
+                        {stat.change}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {stat.description}
+                      </span>
                     </div>
-                  </div>
-                  <div className="flex items-center mt-2 text-sm">
-                    <span
-                      className={`flex items-center ${
-                        stat.changeType === "positive"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      <ArrowUpRight className="h-4 w-4 mr-1" />
-                      {stat.change}
-                    </span>
-                    <span className="text-gray-500 dark:text-gray-400 ml-2">
-                      {stat.description}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
