@@ -26,6 +26,8 @@ const EXCLUDED_ROOT_SEGMENTS = new Set([
   "notifications",
   "orders",
   "payment",
+  "m",
+  "rfq",
 ]);
 
 const EXCLUDED_EXACT_ROUTES = new Set(["/blog", "/robots", "/sitemap"]);

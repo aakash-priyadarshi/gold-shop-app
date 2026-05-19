@@ -94,20 +94,63 @@ export function middleware(request: NextRequest) {
   // Detect mobile subdomain: m.orivraa.com or m.localhost
   const isMobileSubdomain = hostname === "m" || hostname.startsWith("m.");
 
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-url", request.url);
+  requestHeaders.set("x-pathname", pathname);
+
   if (!isMobileSubdomain) {
-    return withGeoCookies(request, NextResponse.next());
+    const userAgent = request.headers.get("user-agent") || "";
+    const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    const forceDesktop = request.cookies.get("orivraa_force_desktop")?.value === "true";
+
+    if (isMobileUserAgent && !forceDesktop) {
+      const mobileUrl = new URL(request.url);
+      const host = hostname;
+      if (host === "orivraa.com") {
+        mobileUrl.hostname = "m.orivraa.com";
+      } else if (host.startsWith("www.")) {
+        mobileUrl.hostname = host.replace("www.", "m.");
+      } else if (host === "localhost") {
+        mobileUrl.hostname = "m.localhost";
+      } else if (!host.startsWith("m.")) {
+        mobileUrl.hostname = `m.${host}`;
+      }
+
+      const redirectResponse = NextResponse.redirect(mobileUrl, 302);
+      return withGeoCookies(request, redirectResponse);
+    }
+
+    return withGeoCookies(
+      request,
+      NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      })
+    );
   }
 
   // Already on /m/* path — don't double-rewrite
   if (pathname === "/m" || pathname.startsWith("/m/")) {
-    return withGeoCookies(request, NextResponse.next());
+    return withGeoCookies(
+      request,
+      NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      })
+    );
   }
 
   // Root → mobile home (POS)
   if (pathname === "/") {
     return withGeoCookies(
       request,
-      NextResponse.rewrite(new URL("/m/pos", request.url)),
+      NextResponse.rewrite(new URL("/m/pos", request.url), {
+        request: {
+          headers: requestHeaders,
+        },
+      }),
     );
   }
 
@@ -126,11 +169,22 @@ export function middleware(request: NextRequest) {
   if (MOBILE_TOP_SEGMENTS.has(firstSegment)) {
     return withGeoCookies(
       request,
-      NextResponse.rewrite(new URL(`/m${pathname}`, request.url)),
+      NextResponse.rewrite(new URL(`/m${pathname}`, request.url), {
+        request: {
+          headers: requestHeaders,
+        },
+      }),
     );
   }
 
-  return withGeoCookies(request, NextResponse.next());
+  return withGeoCookies(
+    request,
+    NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    }),
+  );
 }
 
 export const config = {

@@ -9,6 +9,7 @@ import { BRAND } from "@/config/brand";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 
 const googleSiteVerification = process.env.GOOGLE_SITE_VERIFICATION;
@@ -21,19 +22,6 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.orivraa.com"),
-  alternates: {
-    canonical: "/",
-    languages: {
-      en: "https://www.orivraa.com",
-      fr: "https://www.orivraa.com",
-      de: "https://www.orivraa.com",
-      hi: "https://www.orivraa.com",
-      es: "https://www.orivraa.com",
-      ar: "https://www.orivraa.com",
-      ne: "https://www.orivraa.com",
-      "x-default": "https://www.orivraa.com",
-    },
-  },
   title: {
     default: BRAND.seo.title,
     template: BRAND.seo.titleTemplate,
@@ -120,9 +108,45 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const headersList = headers();
+  const rawPathname = headersList.get("x-pathname") || "/";
+  // Strip trailing slash if present (except for root path)
+  const pathname = rawPathname === "/" ? "" : rawPathname;
+
+  const host = headersList.get("host") || "";
+  const isMobileDomain = host.startsWith("m.");
+
+  // Build absolute URLs
+  const canonicalUrl = `https://www.orivraa.com${pathname || "/"}`;
+  const alternateUrl = `https://m.orivraa.com${pathname || "/"}`;
+  const languages = ["en", "fr", "de", "hi", "es", "ar", "ne"];
+
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
+        {/* Dynamic absolute canonical & mobile alternates relationships */}
+        <link rel="canonical" href={canonicalUrl} />
+        {!isMobileDomain && (
+          <link
+            rel="alternate"
+            media="only screen and (max-width: 640px)"
+            href={alternateUrl}
+          />
+        )}
+        {/* Dynamic translations alternates */}
+        {languages.map((lang) => (
+          <link
+            key={lang}
+            rel="alternate"
+            hrefLang={lang}
+            href={`https://www.orivraa.com${lang === "en" ? "" : `/${lang}`}${pathname}`}
+          />
+        ))}
+        <link
+          rel="alternate"
+          hrefLang="x-default"
+          href={`https://www.orivraa.com${pathname}`}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

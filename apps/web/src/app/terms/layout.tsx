@@ -4,7 +4,6 @@ export const metadata: Metadata = {
   title: "Terms of Service",
   description:
     "Read Orivraa's terms of service. Understand the rules, obligations, and agreements for using our jewellery marketplace platform.",
-  alternates: { canonical: "/terms" },
   robots: { index: true, follow: true },
 };
 

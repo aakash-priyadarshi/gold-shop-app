@@ -171,8 +171,20 @@ const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
   },
 };
 
-function getStaticPages(siteLaunch: string): MetadataRoute.Sitemap {
+function getStaticPages(siteLaunch: string, customerFlowEnabled: boolean): MetadataRoute.Sitemap {
   return (generatedRoutes as string[])
+    .filter((route) => {
+      if (!customerFlowEnabled) {
+        if (
+          route.startsWith("/designs") ||
+          route.startsWith("/shops") ||
+          route.startsWith("/shop")
+        ) {
+          return false;
+        }
+      }
+      return true;
+    })
     .map((route) => {
       const override = ROUTE_OVERRIDES[route];
       const meta = override ?? DEFAULT_ROUTE_META;
@@ -259,8 +271,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const latestBlogDate =
     BLOG_POSTS[0]?.updated ?? BLOG_POSTS[0]?.date ?? SITE_LAUNCH;
 
+  // ─── DYNAMIC FEATURE FLAG CHECK ──────────────────────────────
+  let customerFlowEnabled = false;
+  try {
+    const apiBaseUrl = resolvePublicApiBaseUrl();
+    const configResponse = await fetch(`${apiBaseUrl}/platform-config/public`, {
+      next: { revalidate: 3600 },
+    });
+    if (configResponse.ok) {
+      const configJson = await configResponse.json();
+      const features = configJson?.data?.features || configJson?.features || {};
+      customerFlowEnabled = features.customerFlowEnabled === true;
+    }
+  } catch (err) {
+    console.error("Error fetching platform configuration in sitemap.ts:", err);
+  }
+
   // ─── STATIC PAGES ─────────────────────────────────────────────
-  const staticPages = getStaticPages(SITE_LAUNCH);
+  const staticPages = getStaticPages(SITE_LAUNCH, customerFlowEnabled);
 
   const localizedAboutPages: MetadataRoute.Sitemap = ABOUT_LANGUAGES.map(
     (lang) => ({
@@ -273,10 +301,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // ─── DYNAMIC: Shop pages ──────────────────────────────────────
   let shopPages: MetadataRoute.Sitemap = [];
-  try {
-    shopPages = await getShopPagesForSitemap();
-  } catch (error) {
-    console.error("Error fetching shops for sitemap:", error);
+  if (customerFlowEnabled) {
+    try {
+      shopPages = await getShopPagesForSitemap();
+    } catch (error) {
+      console.error("Error fetching shops for sitemap:", error);
+    }
   }
 
   // ─── DYNAMIC: Blog posts ──────────────────────────────────────

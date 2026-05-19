@@ -14,6 +14,8 @@ Disallow: /checkout
 Disallow: /orders
 Disallow: /notifications
 Disallow: /admin/
+Disallow: /m/
+Disallow: /rfq/
 
 # NOTE: Do NOT disallow /_next/ — Googlebot needs /_next/static/
 # to render JavaScript and see page content for proper indexing.
