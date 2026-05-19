@@ -35,6 +35,76 @@ function clearCookie(name: string) {
   }
 }
 
+function setCookie(name: string, value: string, maxAge?: number) {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const domain = window.location.hostname.endsWith("orivraa.com")
+    ? "; domain=.orivraa.com"
+    : "";
+  const expiry = maxAge ? `; max-age=${maxAge}` : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; SameSite=Lax${secure}${domain}${expiry}`;
+}
+
+function forceLogout() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("refreshToken");
+  clearCookie("token");
+  clearCookie("refreshToken");
+
+  toast({
+    title: "Session Expired",
+    description: "Your session timed out. Please log in to continue.",
+    variant: "destructive",
+  });
+
+  const returnTo = encodeURIComponent(
+    window.location.pathname + window.location.search,
+  );
+  window.location.href = `/auth/login?returnTo=${returnTo}`;
+}
+
+// Track whether a token refresh is already in-flight so parallel 401s
+// queue up behind it instead of each triggering their own refresh.
+let refreshPromise: Promise<string> | null = null;
+
+async function attemptTokenRefresh(): Promise<string> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const storedRefresh =
+      localStorage.getItem("refreshToken") || readCookie("refreshToken");
+    if (!storedRefresh) throw new Error("no_refresh_token");
+
+    // Use a plain axios call (not the intercepted `api`) to avoid loops.
+    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+      refreshToken: storedRefresh,
+    });
+
+    const { accessToken, refreshToken, expiresIn } = response.data as {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+    };
+
+    // Preserve "remember me" duration: if the stored cookie already had a
+    // max-age we keep it; otherwise we just do a session cookie.
+    const rememberMeMaxAge = 60 * 60 * 24 * 30;
+    const hadRememberMe = !!readCookie("refreshToken"); // cookie existed → was persisted
+    const maxAge = hadRememberMe ? rememberMeMaxAge : undefined;
+
+    localStorage.setItem("token", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+    setCookie("token", accessToken, maxAge);
+    setCookie("refreshToken", refreshToken, maxAge);
+
+    return accessToken;
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
+}
+
 // Request interceptor to add auth token and currency header
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
@@ -62,30 +132,32 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor for error handling
+// Response interceptor — try a silent token refresh before giving up.
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      if (typeof window !== "undefined") {
-        if (window.location.pathname !== "/auth/login") {
-          localStorage.removeItem("token");
-          localStorage.removeItem("refreshToken");
-          clearCookie("token");
-          clearCookie("refreshToken");
-          
-          toast({
-            title: "Session Expired",
-            description: "Your session timed out. Please log in to continue.",
-            variant: "destructive",
-          });
+  async (error) => {
+    const originalRequest = error.config as typeof error.config & {
+      _retry?: boolean;
+    };
 
-          const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
-          window.location.href = `/auth/login?returnTo=${returnTo}`;
-        }
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      typeof window !== "undefined" &&
+      window.location.pathname !== "/auth/login"
+    ) {
+      originalRequest._retry = true;
+
+      try {
+        const newAccessToken = await attemptTokenRefresh();
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return api(originalRequest);
+      } catch {
+        // Refresh token is also expired / missing — hard logout.
+        forceLogout();
       }
     }
+
     return Promise.reject(error);
   },
 );
@@ -102,7 +174,8 @@ export const authApi = {
     api.post("/auth/login", data),
   logout: () => api.post("/auth/logout"),
   me: () => api.get("/auth/me"),
-  refresh: () => api.post("/auth/refresh"),
+  refresh: (refreshToken: string) =>
+    api.post("/auth/refresh", { refreshToken }),
   checkEmail: (email: string) =>
     api.get<{ exists: boolean }>("/auth/check-email", { params: { email } }),
   checkPhone: (phone: string) =>
