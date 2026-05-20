@@ -968,7 +968,7 @@ function PosPageInner() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label><T>Discount ({currencySymbol})</T></Label>
+                  <Label><T>Discount</T> ({currencySymbol})</Label>
                   <Input
                     type="number"
                     min="0"
