@@ -112,10 +112,11 @@ export default function ShopDashboard() {
 
   // ── Onboarding Quests & Confetti ──
   const quests: Array<{ id: string, label: string, reward: string, done: boolean, href: string, cta: string }> = useMemo(() => {
-    if (!user || user.shop?.isVerified && currentSubscription && recentOrders.length > 0 && stats.length > 0) return [];
+    const hasActiveSub = currentSubscription && currentSubscription.status !== "FREE" && currentSubscription.id !== null;
+    if (!user || (user.shop?.isVerified && hasActiveSub && recentOrders.length > 0 && stats.length > 0)) return [];
     return [
       { id: "verify", label: t("Verify Your Shop"), reward: "+5 AI Credits", done: !!user?.shop?.isVerified, href: "/dashboard/shop/kyc", cta: t("Complete KYC") },
-      { id: "plan", label: t("Choose a Subscription Plan"), reward: "+5 AI Credits", done: !!currentSubscription, href: "/dashboard/shop/billing", cta: t("View Plans") },
+      { id: "plan", label: t("Choose a Subscription Plan"), reward: "+5 AI Credits", done: !!hasActiveSub, href: "/dashboard/shop/billing", cta: t("View Plans") },
       { id: "product", label: t("Add Your First Gold Product"), reward: "+10 AI Credits", done: lowStockItems.length > 0 || stats.length > 0, href: "/dashboard/shop/products", cta: t("Add Product") },
       { id: "invoice", label: t("Create Your First Invoice"), reward: "+20 AI Credits", done: recentOrders.length > 0, href: "/dashboard/shop/pos", cta: t("Try Counter POS") },
     ];
@@ -471,7 +472,7 @@ export default function ShopDashboard() {
                     </Card>
 
                     {/* Free Pro Trial */}
-                    {!currentSubscription && (
+                    {(!currentSubscription || currentSubscription.status === "FREE") && (
                       <Card className="border-purple-200 dark:border-purple-800/40 bg-gradient-to-br from-purple-50/50 to-fuchsia-50/30 dark:from-purple-950/20 dark:to-fuchsia-950/10 hover:shadow-md transition-all group overflow-hidden relative">
                         <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
                           <Star className="h-32 w-32 text-purple-600" />

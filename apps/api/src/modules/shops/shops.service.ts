@@ -708,15 +708,17 @@ export class ShopsService {
     });
 
     if (existingItems > 0) {
-      throw new BadRequestException("Shop already has inventory. Demo hydration is only for empty shops.");
+      return { success: true, message: "Store is already hydrated or has products", hydratedItems: existingItems };
     }
 
-    // Create 5 demo gold products
+    const shortId = shopId.substring(0, 6).toUpperCase();
+
+    // Create demo gold products
     const items = await Promise.all([
       this.prisma.inventoryItem.create({
         data: {
           shopId,
-          sku: "DEMO-RNG-01",
+          sku: `DEMO-RNG-${shortId}`,
           nameEn: "22K Classic Gold Band",
           descriptionEn: "A timeless 22K gold wedding band with a polished finish.",
           jewelleryType: JewelleryType.RING,
@@ -733,7 +735,7 @@ export class ShopsService {
       this.prisma.inventoryItem.create({
         data: {
           shopId,
-          sku: "DEMO-NCK-01",
+          sku: `DEMO-NCK-${shortId}`,
           nameEn: "24K Bridal Choker",
           descriptionEn: "Intricate 24K gold bridal choker necklace.",
           jewelleryType: JewelleryType.NECKLACE,
@@ -750,7 +752,7 @@ export class ShopsService {
       this.prisma.inventoryItem.create({
         data: {
           shopId,
-          sku: "DEMO-ERG-01",
+          sku: `DEMO-ERG-${shortId}`,
           nameEn: "18K Diamond Studs",
           descriptionEn: "Elegant 18K gold earrings with minor diamond accents.",
           jewelleryType: JewelleryType.EARRING,
@@ -766,7 +768,34 @@ export class ShopsService {
       }),
     ]);
 
-    // Create a demo customer
+    // Create demo customers
+    const demoPhone1 = `+9198${Math.floor(10000000 + Math.random() * 90000000)}`;
+    const demoPhone2 = `+9198${Math.floor(10000000 + Math.random() * 90000000)}`;
+    try {
+      await this.prisma.walkInCustomer.createMany({
+        data: [
+          {
+            phone: demoPhone1,
+            name: "John Doe (Demo)",
+            email: "john.demo@example.com",
+            address: "123 Demo Street",
+            city: "Kathmandu",
+            createdByShopId: shopId,
+          },
+          {
+            phone: demoPhone2,
+            name: "Jane Smith (Demo)",
+            address: "456 Main Ave",
+            city: "Delhi",
+            createdByShopId: shopId,
+          }
+        ],
+        skipDuplicates: true
+      });
+    } catch (e) {
+      // Ignore if fails
+    }
+
     // Create a demo POS invoice
     await this.prisma.invoice.create({
       data: {
