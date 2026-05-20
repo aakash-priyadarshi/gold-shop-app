@@ -72,8 +72,8 @@ const FEATURES = [
   },
   {
     icon: BarChart3,
-    title: "Order & Quote Dashboard",
-    desc: "Track all your custom orders, quotes, and customer messages in one place. No more lost WhatsApp threads or forgotten orders.",
+    title: "Mobile POS & Dashboard",
+    desc: "Handle walk-in sales right from your phone. Track live gold rate trends, custom orders, quotes, and customer messages in one place.",
   },
   {
     icon: Globe,

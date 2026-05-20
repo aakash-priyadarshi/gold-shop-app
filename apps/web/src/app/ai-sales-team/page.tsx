@@ -216,11 +216,11 @@ const HOW_IT_WORKS = [
 const FAQS = [
   {
     q: "Can the AI actually answer questions about my specific products?",
-    a: "Yes. Orivraa AI is connected to your live inventory and product catalogue. It knows your current stock, pricing, making charges, and availability in real time. It won't hallucinate products you don't carry.",
+    a: "Yes. Orivraa AI is connected to your live inventory and product catalogue. It utilizes the live 7-day gold rate trend, knows your current stock, pricing, making charges, and availability in real time. It won't hallucinate products you don't carry.",
   },
   {
     q: "What happens when a customer wants to negotiate the price?",
-    a: "The agent is trained on jewellery sales psychology. It anchors value before discussing price, offers alternative products within budget, and can apply pre-authorised discount tiers you set. It never goes below your floor price.",
+    a: "The agent is trained on jewellery sales psychology. It anchors value before discussing price, offers alternative products within budget, and can apply pre-authorised discount tiers you set. If they are ready to buy, it logs an order that you can ring up directly on your Orivraa Mobile POS.",
   },
   {
     q: "How does the AI handle questions it can't answer?",

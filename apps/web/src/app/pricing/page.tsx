@@ -446,6 +446,16 @@ function buildFeatureList(
     included: true,
   });
 
+  items.push({
+    text: "Free Mobile POS App",
+    included: true,
+  });
+
+  items.push({
+    text: "7-Day Live Market Rate History",
+    included: true,
+  });
+
   // Commission
   if (customerFlowEnabled) {
     items.push({

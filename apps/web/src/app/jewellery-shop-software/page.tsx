@@ -3,6 +3,7 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
+import { MobilePosSpotlight } from "@/components/home/HomeSections";
 import { T } from "@/components/ui/T";
 import { subscriptionPlansApi } from "@/lib/api";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
@@ -211,6 +212,8 @@ const softwareJsonLd = {
         "Barcode/SKU support",
         "Multi-branch management",
         "International marketplace",
+        "Mobile POS (Point of Sale)",
+        "7-Day Live Gold Rate Trends",
         "Desktop & mobile app",
       ],
     },
@@ -283,6 +286,16 @@ const softwareJsonLd = {
 /* ────────────────────────────────────────────────────────────── */
 
 const CORE_FEATURES = [
+  {
+    title: "Mobile POS & Sales",
+    desc: "Complete walk-in sales from your smartphone. Share receipts instantly via WhatsApp. Auto-syncs with inventory and reflects in your analytics immediately.",
+    icon: Smartphone,
+  },
+  {
+    title: "Live Market Gold Trends",
+    desc: "Built-in 7-day live gold rate tracking for multiple currencies. Lock in prices accurately during sales and confidently justify pricing to customers.",
+    icon: TrendingUp,
+  },
   {
     title: "Inventory Management",
     desc: "Track gold, silver, diamond & gemstone inventory by weight, purity (24K/22K/18K), and making charges. Real-time stock levels with low-stock alerts. Bulk upload via CSV.",
@@ -724,6 +737,9 @@ export default function JewelleryShopSoftwarePage() {
             </div>
           </div>
         </section>
+
+        {/* ── Mobile POS Integration ───────────────────── */}
+        <MobilePosSpotlight />
 
         {/* ── Core Features ───────────────────────────────── */}
         <section className="max-w-6xl mx-auto px-4 py-20">
