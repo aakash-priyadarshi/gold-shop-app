@@ -1008,6 +1008,12 @@ export class MarketRatesService implements OnModuleInit {
         );
         totalSynced += Object.keys(metals).length;
 
+        // Record daily gold price history for this region/currency
+        await this.recordDailyGoldPrice(region, currency, metals.GOLD_24K);
+
+        // Compute day-over-day change using yesterday's history row
+        const changePercent = await this.computeChangePercent(region, currency, metals.GOLD_24K);
+
         // Also update the DB snapshot cache so getMarketRates() serves fresh data
         const freshResponse: MarketRatesResponse = {
           region,
@@ -1021,6 +1027,7 @@ export class MarketRatesService implements OnModuleInit {
           fxSnapshot,
           adjustments,
           metals,
+          changePercent,
           debug: {
             spotSource,
             fxSource: fxRate.source as any,
