@@ -132,6 +132,7 @@ const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
   "/about": {
     changeFrequency: "monthly",
     priority: 0.7,
+    lastModified: new Date("2026-05-20"),
   },
   "/contact": {
     changeFrequency: "yearly",

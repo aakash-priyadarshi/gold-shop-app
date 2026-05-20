@@ -307,18 +307,17 @@ export default function AboutPage() {
               viewport={{ once: true }}
               className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4"
             >
-              <T>Find Us On</T>
+              <T>Featured & Listed On</T>
             </motion.h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
             <p className="text-lg text-gray-600 dark:text-gray-300">
               <T>
-                Orivraa is listed on leading platforms. Visit our profiles to
-                learn more and leave a review.
+                Orivraa is verified and listed on leading software directories and review platforms. Visit our profiles to learn more and leave a review.
               </T>
             </p>
           </div>
           {/* Live profiles */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4 max-w-5xl mx-auto mb-10">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto mb-10">
             {LIVE_PLATFORMS.map((platform, index) => (
               <motion.a
                 key={platform.name}
@@ -451,6 +450,9 @@ export default function AboutPage() {
       <section className="py-12 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              <T>Available in Multiple Languages</T>
+            </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               <T>Orivraa currently supports these app languages:</T>
             </p>

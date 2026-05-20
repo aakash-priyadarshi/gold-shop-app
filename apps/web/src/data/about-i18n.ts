@@ -86,6 +86,12 @@ export const LIVE_PLATFORMS: PlatformProfile[] = [
     logo: "🛡️",
     category: "Consumer Trust Reviews",
   },
+  {
+    name: "Capterra",
+    url: "https://www.capterra.in/software/1097833/Orivraa",
+    logo: "🏆",
+    category: "Business Software Reviews",
+  },
 ];
 
 export interface ComingSoonPlatform {
@@ -97,7 +103,6 @@ export interface ComingSoonPlatform {
 /** Platforms where profiles are being set up. */
 export const COMING_SOON_PLATFORMS: ComingSoonPlatform[] = [
   { name: "Google Business", logo: "📍", category: "Local Business Listing" },
-  { name: "Capterra", logo: "⭐", category: "Business Software Directory" },
   { name: "Product Hunt", logo: "🎯", category: "Product Launch Platform" },
   { name: "AlternativeTo", logo: "🔄", category: "Software Alternatives" },
   { name: "BetaList", logo: "🌱", category: "Startup Discovery" },
