@@ -15,6 +15,7 @@ import {
     HeartHandshake,
     Package,
     ShieldCheck,
+    Smartphone,
     Sparkles,
     Star,
     Store,
@@ -281,7 +282,7 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
               }`}
             >
               <Sparkles className="h-4 w-4" />
-              <T>Built for jewellery shops in Nepal, India &amp; the GCC</T>
+              <T>Mobile POS · CRM · Live Gold Rates — all-in-one for jewellery shops</T>
             </div>
             <h1
               className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight ${
@@ -297,8 +298,8 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
             >
               <T>
                 Live gold &amp; silver pricing, GST/VAT-ready billing,
-                inventory across stores, customer chat, and a digital
-                catalogue you can share on WhatsApp &mdash; all in one place.
+                inventory across stores, mobile POS on any smartphone,
+                and a digital catalogue you can share on WhatsApp &mdash; all in one place.
               </T>
               <span className="block mt-2 font-medium">
                 <T>
@@ -362,7 +363,7 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
                 {[
                   { icon: Store, label: "Live gold & silver rates", value: "Auto" },
                   { icon: Package, label: "Inventory across stores", value: "Multi-branch" },
-                  { icon: BarChart3, label: "GST/VAT-ready billing", value: "Built-in" },
+                  { icon: Smartphone, label: "Mobile POS", value: "Any device" },
                   { icon: Zap, label: "Setup time", value: "< 10 min" },
                 ].map((item) => {
                   const Icon = item.icon;

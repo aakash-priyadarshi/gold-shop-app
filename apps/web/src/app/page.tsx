@@ -1,6 +1,7 @@
 import { HeroSection } from "@/components/home/HeroSection";
 import {
   BuyerSections,
+  MobilePosSpotlight,
   SellerFeaturesSection,
   BlogSection,
   SellerCtaSection,
@@ -62,6 +63,12 @@ export default function HomePage() {
 
           {/* 3: For Jewellery Shop Owners features section */}
           <SellerFeaturesSection />
+
+          {/* 3b: Mobile POS spotlight — newly launched */}
+          <MobilePosSpotlight />
+
+          {/* 3b: Mobile POS spotlight — newly launched */}
+          <MobilePosSpotlight />
 
           {/* 4: Demo video section */}
           <section className="py-12 lg:py-20 bg-gray-50 dark:bg-gray-900/50">

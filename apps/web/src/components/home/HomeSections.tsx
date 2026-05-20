@@ -11,6 +11,7 @@ import {
     BarChart3,
     BookOpen,
     Calendar,
+    CheckCircle2,
     Clock,
     Gem,
     Globe,
@@ -18,6 +19,7 @@ import {
     MessageSquare,
     Package,
     ShieldCheck,
+    Smartphone,
     Store,
     Truck,
     Zap,
@@ -92,9 +94,9 @@ const shopFeatures = [
     desc: "Track revenue, popular products, customer demographics, and conversion rates.",
   },
   {
-    icon: Zap,
-    title: "Zero Setup Cost",
-    desc: "Get started in minutes. No technical knowledge needed. We handle hosting, security & updates.",
+    icon: Smartphone,
+    title: "Mobile POS — Sell Anywhere",
+    desc: "Accept walk-in sales from your phone. Full billing, receipt, and inventory sync — no hardware needed.",
   },
 ];
 
@@ -364,6 +366,103 @@ export function SellerCtaSection() {
               <T>Become a Partner</T>
             </Button>
           </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const mobilePosPoints = [
+  "Full billing & GST/VAT receipts from any smartphone",
+  "Barcode scanner support — scan items to add instantly",
+  "Syncs with shop dashboard in real-time",
+  "Works offline — sales saved when connectivity returns",
+  "No extra hardware or app store download required",
+];
+
+export function MobilePosSpotlight() {
+  const t = useT();
+  return (
+    <section className="py-12 lg:py-20 bg-gradient-to-br from-amber-50 via-orange-50/30 to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 overflow-hidden">
+      <div className="container mx-auto px-4">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          {/* Left: copy */}
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold uppercase tracking-wide">
+              <Zap className="h-3.5 w-3.5" />
+              <T>New feature</T>
+            </div>
+            <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white">
+              <T>Run your counter from your phone</T>
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-base max-w-md">
+              <T>
+                Our Mobile POS lets you serve walk-in customers, issue GST/VAT
+                receipts, and update inventory — all from the phone in your
+                pocket. No dedicated terminal needed.
+              </T>
+            </p>
+            <ul className="space-y-3">
+              {mobilePosPoints.map((point) => (
+                <li key={point} className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm lg:text-base text-gray-700 dark:text-gray-300">{t(point)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Link href="/auth/register">
+                <Button size="lg" className="gold-gradient text-white h-11 px-7 rounded-xl text-sm">
+                  <T>Try Mobile POS free</T>
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: CSS phone mockup */}
+          <div className="flex justify-center lg:justify-end">
+            <div className="relative">
+              {/* Glow */}
+              <div className="absolute inset-0 bg-amber-400/20 blur-3xl rounded-full scale-110" />
+              {/* Phone frame */}
+              <div className="relative w-64 lg:w-72 bg-gray-900 rounded-[2.5rem] p-3 shadow-2xl border-4 border-gray-800 ring-1 ring-white/10">
+                {/* Notch */}
+                <div className="w-20 h-5 bg-gray-800 rounded-full mx-auto mb-3" />
+                {/* Screen */}
+                <div className="bg-white dark:bg-gray-100 rounded-[1.75rem] overflow-hidden">
+                  {/* Status bar */}
+                  <div className="bg-amber-600 px-4 py-3">
+                    <p className="text-white text-xs font-semibold"><T>Mobile POS</T></p>
+                    <p className="text-amber-100 text-[10px]"><T>New Sale</T></p>
+                  </div>
+                  {/* Item rows */}
+                  <div className="p-3 space-y-2">
+                    {[
+                      { name: "22K Gold Ring", weight: "4.2g", price: "NPR 42,000" },
+                      { name: "Silver Chain", weight: "12g", price: "NPR 8,400" },
+                    ].map((item) => (
+                      <div key={item.name} className="flex items-center justify-between bg-amber-50 rounded-lg px-3 py-2">
+                        <div>
+                          <p className="text-[11px] font-semibold text-gray-800">{item.name}</p>
+                          <p className="text-[10px] text-gray-500">{item.weight}</p>
+                        </div>
+                        <p className="text-[11px] font-bold text-amber-700">{item.price}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Total + checkout */}
+                  <div className="mx-3 mb-3 mt-1 bg-amber-600 rounded-xl px-4 py-3 text-center">
+                    <p className="text-amber-100 text-[10px]"><T>Total</T></p>
+                    <p className="text-white font-bold text-sm">NPR 50,400</p>
+                    <p className="text-amber-200 text-[10px] mt-1"><T>Tap to issue receipt ›</T></p>
+                  </div>
+                </div>
+                {/* Home bar */}
+                <div className="w-24 h-1 bg-gray-700 rounded-full mx-auto mt-3" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
