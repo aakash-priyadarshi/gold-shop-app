@@ -172,7 +172,7 @@ export default function ShopDashboard() {
         updatedAt: data?.updatedAt
           ? new Date(data.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
           : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        changePercent: data?.changePercent ?? +(Math.random() * 2 - 0.5).toFixed(2),
+        changePercent: data?.changePercent ?? 0,
       });
     } catch { /* rates are supplementary */ }
     finally { ratesRef.current = false; }

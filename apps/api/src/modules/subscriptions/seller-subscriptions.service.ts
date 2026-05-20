@@ -746,7 +746,7 @@ export class SellerSubscriptionsService {
    * Falls back to the FREE plan for the shop's country when no subscription exists.
    */
   async getShopSubscription(shopId: string) {
-    const sub = await this.prisma.sellerSubscription.findFirst({
+    let sub = await this.prisma.sellerSubscription.findFirst({
       where: {
         shopId,
         status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] },
@@ -761,11 +761,50 @@ export class SellerSubscriptionsService {
       orderBy: { createdAt: "desc" },
     });
 
+    if (!sub) {
+      // Check if there is a cancelled subscription that is still in its active period
+      sub = await this.prisma.sellerSubscription.findFirst({
+        where: {
+          shopId,
+          status: "CANCELLED",
+          currentPeriodEnd: { gt: new Date() },
+        },
+        include: {
+          plan: true,
+          payments: {
+            orderBy: { createdAt: "desc" },
+            take: 5,
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }
+
     if (sub) return sub;
 
     // No active subscription — return a synthetic response with the FREE plan
     const freePlan = await this.plansService.getActiveShopPlan(shopId);
-    if (!freePlan) return null;
+    if (!freePlan) {
+      return {
+        id: null,
+        shopId,
+        planId: "FREE",
+        status: "FREE",
+        plan: {
+          id: "FREE",
+          name: "FREE",
+          displayName: "Free Plan",
+          currency: "NPR",
+          monthlyPrice: 0,
+        },
+        payments: [],
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
+        stripeSubscriptionId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any;
+    }
 
     return {
       id: null,

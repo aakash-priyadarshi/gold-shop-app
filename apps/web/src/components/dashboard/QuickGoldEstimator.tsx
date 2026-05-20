@@ -28,6 +28,7 @@ export function QuickGoldEstimator() {
   const { user } = useAuth();
   const { symbol: currencySymbol } = useShopCurrency();
   const dashboardMode = usePreferencesStore((s) => s.dashboardMode);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   // Read rates
   useEffect(() => {
@@ -106,8 +107,10 @@ export function QuickGoldEstimator() {
   const gst = (goldValue * 0.03) + (mc * 0.05);
   const total = subtotal + gst;
 
+  if (isDismissed) return null;
+
   return (
-    <div className="fixed bottom-6 left-6 z-50">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {isOpen && (
         <Card className="w-80 mb-4 shadow-xl border-amber-200 dark:border-amber-800 animate-in slide-in-from-bottom-4">
           <CardHeader className="py-3 px-4 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-100 dark:border-amber-900/50 flex flex-row items-center justify-between">
@@ -196,14 +199,25 @@ export function QuickGoldEstimator() {
       )}
 
       {!isOpen && (
-        <Button
-          data-tour="quick-estimator"
-          onClick={() => setIsOpen(true)}
-          className="rounded-full shadow-lg h-12 w-12 bg-white text-amber-600 border border-amber-200 hover:bg-amber-50 dark:bg-gray-900 dark:border-amber-800 dark:hover:bg-gray-800"
-          title="Quick Estimator (Alt+E)"
-        >
-          <Calculator className="h-5 w-5" />
-        </Button>
+        <div className="relative group">
+          <Button
+            data-tour="quick-estimator"
+            onClick={() => setIsOpen(true)}
+            className="rounded-full shadow-lg h-12 w-12 bg-white text-amber-600 border border-amber-200 hover:bg-amber-50 dark:bg-gray-900 dark:border-amber-800 dark:hover:bg-gray-800"
+            title="Quick Estimator (Alt+E)"
+          >
+            <Calculator className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => { e.stopPropagation(); setIsDismissed(true); }}
+            className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/80 dark:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity p-0 border border-red-200 dark:border-red-800 scale-75"
+            title="Dismiss Estimator"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
       )}
     </div>
   );
