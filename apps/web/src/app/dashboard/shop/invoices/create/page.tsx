@@ -340,16 +340,22 @@ function ModeToggle({
 
 export default function CreateInvoicePage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { symbol: currencySymbol, country: shopCountry } = useShopCurrency();
   const [loading, setLoading] = useState(false);
   const [showKycModal, setShowKycModal] = useState(false);
 
+  // Refresh user data on mount to get the latest KYC approval status from the server.
   useEffect(() => {
-    if (user?.shop && !user.shop.isVerified) {
-      setShowKycModal(true);
+    refreshUser();
+  }, [refreshUser]);
+
+  // Show or hide the KYC modal based on the current verified status.
+  useEffect(() => {
+    if (user?.shop) {
+      setShowKycModal(!user.shop.isVerified);
     }
-  }, [user?.shop]);
+  }, [user?.shop, user?.shop?.isVerified]);
 
   // ── Country ──
   const [invoiceCountry, setInvoiceCountry] = useState(shopCountry);
