@@ -3,7 +3,7 @@
  * Types for metal spot prices, FX rates, region/currency pricing
  */
 
-import { FxSnapshot, CurrencyCode as FxCurrencyCode, FxRate, ExtendedFxSnapshot } from '../fx-rates';
+import { CurrencyCode as FxCurrencyCode, FxRate, ExtendedFxSnapshot } from '../fx-rates';
 
 // Re-export types for convenience
 export { FxRate, ExtendedFxSnapshot };
@@ -115,6 +115,9 @@ export interface MarketRatesResponse {
   
   // Warnings (e.g., "Using fallback rates")
   warnings?: string[];
+
+  // Day-over-day change percent for gold 24K (null when no history yet)
+  changePercent?: number | null;
 }
 
 // Purity multipliers

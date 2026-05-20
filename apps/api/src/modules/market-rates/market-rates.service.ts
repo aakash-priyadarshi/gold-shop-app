@@ -199,11 +199,20 @@ export class MarketRatesService implements OnModuleInit {
     try {
       const freshData = await this.fetchFreshRates(targetRegion, currency);
 
-      // Store in both caches
-      this.setMemoryCache(cacheKey, freshData);
-      await this.storeInDbCache(targetRegion, currency, freshData);
+      // Record today's price in history table (fire-and-forget)
+      this.recordDailyGoldPrice(targetRegion, currency, freshData.metals.GOLD_24K).catch(
+        (e) => this.logger.warn(`Failed to record gold price history: ${e}`),
+      );
 
-      return { ...freshData, cache: "miss" };
+      // Compute day-over-day change from history
+      const changePercent = await this.computeChangePercent(targetRegion, currency, freshData.metals.GOLD_24K);
+      const enriched = { ...freshData, changePercent };
+
+      // Store in both caches
+      this.setMemoryCache(cacheKey, enriched);
+      await this.storeInDbCache(targetRegion, currency, enriched);
+
+      return { ...enriched, cache: "miss" };
     } catch (error) {
       this.logger.error(`Failed to fetch fresh market rates: ${error}`);
 
@@ -800,6 +809,71 @@ export class MarketRatesService implements OnModuleInit {
       this.logger.debug(`DB cache miss or error: ${error}`);
     }
     return null;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // GOLD PRICE HISTORY — daily recording & trend computation
+  // ═══════════════════════════════════════════════════════════════
+
+  /** UTC date string like "2026-05-20" for a given timestamp. */
+  private toDateString(date: Date = new Date()): string {
+    return date.toISOString().slice(0, 10);
+  }
+
+  /**
+   * Upsert today's gold 24K rate into GoldPriceHistory.
+   * Safe to call multiple times per day — only one row per region+currency+day.
+   */
+  private async recordDailyGoldPrice(
+    region: MarketRegion,
+    currency: SupportedCurrency,
+    gold24kRate: number,
+  ): Promise<void> {
+    const recordedDate = this.toDateString();
+    await this.prisma.goldPriceHistory.upsert({
+      where: { region_currency_recordedDate: { region, currency, recordedDate } },
+      update: { gold24kRate },
+      create: { region, currency, gold24kRate, recordedDate },
+    });
+  }
+
+  /**
+   * Compute day-over-day change percent for gold 24K.
+   * Returns null when there is no prior day data yet.
+   */
+  private async computeChangePercent(
+    region: MarketRegion,
+    currency: SupportedCurrency,
+    todayRate: number,
+  ): Promise<number | null> {
+    try {
+      const yesterday = this.toDateString(new Date(Date.now() - 86_400_000));
+      const row = await this.prisma.goldPriceHistory.findUnique({
+        where: { region_currency_recordedDate: { region, currency, recordedDate: yesterday } },
+      });
+      if (!row || row.gold24kRate === 0) return null;
+      return parseFloat((((todayRate - row.gold24kRate) / row.gold24kRate) * 100).toFixed(2));
+    } catch (e) {
+      this.logger.warn(`Could not compute changePercent: ${e}`);
+      return null;
+    }
+  }
+
+  /**
+   * Remove GoldPriceHistory rows older than 7 days.
+   * Runs daily at 2:00 AM UTC.
+   */
+  @Cron("0 0 2 * * *")
+  async pruneGoldPriceHistory(): Promise<void> {
+    try {
+      const cutoff = this.toDateString(new Date(Date.now() - 7 * 86_400_000));
+      const { count } = await this.prisma.goldPriceHistory.deleteMany({
+        where: { recordedDate: { lt: cutoff } },
+      });
+      if (count > 0) this.logger.log(`Pruned ${count} old GoldPriceHistory rows`);
+    } catch (e) {
+      this.logger.warn(`GoldPriceHistory prune failed: ${e}`);
+    }
   }
 
   /**

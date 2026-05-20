@@ -998,6 +998,23 @@ model MarketRateSnapshot {
   @@index([region, currency, updatedAt])
 }
 
+/// Daily gold price history — one row per region+currency+day.
+/// Retained for 7 days then pruned by a scheduled cron.
+model GoldPriceHistory {
+  id           String       @id @default(uuid())
+  region       MarketRegion
+  currency     CurrencyCode
+  /// Gold 24K rate per gram in local currency
+  gold24kRate  Float
+  /// Date-only (UTC) used for deduplication — e.g. "2026-05-20"
+  recordedDate String
+  createdAt    DateTime     @default(now())
+
+  @@unique([region, currency, recordedDate])
+  @@index([region, currency, recordedDate])
+  @@index([createdAt])
+}
+
 model FxRateSnapshot {
   id        String   @id @default(uuid())
   pair      String   @unique
