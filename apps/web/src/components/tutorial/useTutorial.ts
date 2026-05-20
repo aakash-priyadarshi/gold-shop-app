@@ -834,6 +834,24 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='dash-live-rates']",
+      popover: {
+        title: "Live Market Pulse",
+        description: "See the latest market rates and AI-generated insights on when to restock.",
+        side: "left",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='dash-quests']",
+      popover: {
+        title: "Setup Quests",
+        description: "Complete these steps to fully configure your store and get verified.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
       element: "[data-tour='dash-stats']",
       popover: {
         title: "Today's Overview",
@@ -856,6 +874,24 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Recent Orders",
         description: "Your latest orders — click any row to manage it.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='dash-rfqs']",
+      popover: {
+        title: "RFQ Requests",
+        description: "New custom requests from customers. Respond to them quickly to win the deal.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='dash-low-stock']",
+      popover: {
+        title: "Low Stock Alerts",
+        description: "Items that have dropped below your min-stock threshold. Restock them here.",
         side: "top",
         align: "center",
       },

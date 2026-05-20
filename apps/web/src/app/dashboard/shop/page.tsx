@@ -356,7 +356,7 @@ export default function ShopDashboard() {
                 
                 {/* 1. Gamified Quests (Takes priority over standalone KYC alert) */}
                 {quests.length > 0 && doneCount < quests.length ? (
-                  <Card className="border-amber-300 dark:border-amber-700/60 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 relative group">
+                  <Card data-tour="dash-quests" className="border-amber-300 dark:border-amber-700/60 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 relative group">
                     <div className="absolute top-0 right-0 p-32 bg-amber-400/5 blur-3xl rounded-full pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
                     <CardHeader className="pb-3 bg-gradient-to-r from-amber-50 via-yellow-50/50 to-amber-100/30 dark:from-amber-950/40 dark:via-yellow-900/10 dark:to-amber-950/20 relative z-10 border-b border-amber-100 dark:border-amber-900/30">
                       <div className="flex items-center justify-between">
@@ -511,7 +511,7 @@ export default function ShopDashboard() {
               {/* Right Column: Live Gold Rates */}
               <div className="xl:col-span-1">
                 {goldRates && (
-                  <Card className="h-full overflow-hidden border-amber-300/60 dark:border-amber-700/50 shadow-sm hover:shadow-lg hover:border-amber-400/80 dark:hover:border-amber-500/50 transition-all duration-500 group relative">
+                  <Card data-tour="dash-live-rates" className="h-full overflow-hidden border-amber-300/60 dark:border-amber-700/50 shadow-sm hover:shadow-lg hover:border-amber-400/80 dark:hover:border-amber-500/50 transition-all duration-500 group relative">
                     <div className="absolute top-0 right-0 p-24 bg-amber-400/10 dark:bg-amber-400/5 blur-[40px] rounded-full mix-blend-multiply dark:mix-blend-lighten pointer-events-none group-hover:scale-125 group-hover:bg-amber-400/15 transition-all duration-700" />
                     <div className="bg-gradient-to-br from-amber-50/90 via-yellow-100/40 to-amber-50/80 dark:from-amber-950/80 dark:via-yellow-900/20 dark:to-amber-950/60 px-6 py-6 h-full flex flex-col relative z-10">
                       
@@ -578,7 +578,7 @@ export default function ShopDashboard() {
             /* Standalone Gold Rates if no onboarding elements remain */
             goldRates && (
               <div className="w-full">
-                  <Card className="overflow-hidden border-amber-300/60 dark:border-amber-700/50 shadow-sm hover:shadow-md transition-all duration-500 group relative">
+                  <Card data-tour="dash-live-rates" className="overflow-hidden border-amber-300/60 dark:border-amber-700/50 shadow-sm hover:shadow-md transition-all duration-500 group relative">
                     <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-amber-400/5 to-transparent pointer-events-none group-hover:opacity-100 opacity-50 transition-opacity duration-700" />
                     <div className="bg-gradient-to-r from-amber-50/90 via-yellow-50/40 to-amber-50/80 dark:from-amber-950/80 dark:via-yellow-900/10 dark:to-amber-950/60 px-6 py-5 relative z-10">
                       
@@ -693,7 +693,7 @@ export default function ShopDashboard() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div data-tour="dash-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {stats.map((stat, index) => {
               // Map dynamic accent colors per card index
               const accents = [
@@ -753,7 +753,7 @@ export default function ShopDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card data-tour="dash-orders">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
@@ -804,7 +804,7 @@ export default function ShopDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-tour="dash-rfqs">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
@@ -852,7 +852,7 @@ export default function ShopDashboard() {
             </Card>
           </div>
 
-          <Card>
+          <Card data-tour="dash-low-stock">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-orange-500" />
@@ -887,7 +887,7 @@ export default function ShopDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-tour="dash-quick-actions">
             <CardHeader>
               <CardTitle>
                 <T>Quick Actions</T>
