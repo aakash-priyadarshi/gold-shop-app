@@ -383,11 +383,11 @@ const mobilePosPoints = [
 export function MobilePosSpotlight() {
   const t = useT();
   return (
-    <section className="py-12 lg:py-20 bg-gradient-to-br from-amber-50 via-orange-50/30 to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 overflow-hidden">
+    <section id="mobile-pos" data-tour="m-pos-spotlight" className="py-12 lg:py-20 bg-gradient-to-br from-amber-50 via-orange-50/30 to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 overflow-hidden">
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: copy */}
-          <div className="space-y-6">
+          <div className="space-y-6" data-tour="m-pos-features">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold uppercase tracking-wide">
               <Zap className="h-3.5 w-3.5" />
               <T>New feature</T>

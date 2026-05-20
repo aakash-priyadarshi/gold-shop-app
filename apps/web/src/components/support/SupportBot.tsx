@@ -119,6 +119,24 @@ function getOrCreateSessionId(): string {
 
 /* ------------------------------ Component ------------------------------ */
 
+function parseTextWithT(text: string) {
+  const parts = [];
+  const regex = /<[tT]>(.*?)<\/[tT]>/g;
+  let match;
+  let lastIndex = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    parts.push(<T key={match.index}>{match[1]}</T>);
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+  return parts.length > 0 ? parts : text;
+}
+
 export function SupportBot() {
   const pathname = usePathname();
   const { user } = useAuth();
@@ -538,7 +556,7 @@ export function SupportBot() {
                       : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-sm"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{m.text}</p>
+                  <p className="whitespace-pre-wrap">{parseTextWithT(m.text)}</p>
                   {m.cta && m.cta.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {m.cta.map((c) => {

@@ -947,14 +947,14 @@ function FAQ() {
             className="w-full flex items-center justify-between px-5 py-4 text-left font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             onClick={() => setOpen(open === i ? null : i)}
           >
-            <span>{f.q}</span>
+            <span><T>{f.q}</T></span>
             <ChevronDown
               className={`w-4 h-4 flex-shrink-0 ml-2 transition-transform ${open === i ? "rotate-180" : ""}`}
             />
           </button>
           {open === i && (
             <div className="px-5 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-              {f.a}
+              <T>{f.a}</T>
             </div>
           )}
         </div>
