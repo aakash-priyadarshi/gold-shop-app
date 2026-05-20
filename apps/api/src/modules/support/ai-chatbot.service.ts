@@ -22,6 +22,7 @@ interface SellerSnapshot {
   currency: string;
   currentMonthLabel: string;
   currentPath?: string;
+  dashboardMode?: string;
   monthlyInvoiceCount: number;
   monthlySales: number;
   pendingInvoiceCount: number;
@@ -370,6 +371,11 @@ DEMO & TUTORIAL VIDEOS (recommend these proactively when users ask "how do I…"
 - When a user asks "how do I do X", reply briefly AND link the tutorial chapter, e.g. "POS is shown at 5:45 in our tutorial — https://orivraa.com/tutorial".
 - Prefer the 30-second demo for first-time visitors who say "show me what it looks like" or "give me an overview"; prefer the full tutorial for "how do I…" or feature-specific questions.
 
+ADMIN FEATURES (For Admin Users Only):
+- Admin users have access to /dashboard/admin/users for user management.
+- The Admin Users page features: Live Activity Stats (Online Now, Avg Session), User Directory with Risk Score badges, and Bulk Actions (Suspend, Export, Message).
+- Clicking the 👁 icon on any user opens a Deep Insights Panel (sliding sheet) with 5 tabs: Profile, Activity (with active sessions and revoke token option), Shops, Audit Log, and Direct Messaging.
+
 RESPONSE RULES:
 - Be concise and warm; aim for 2–4 sentences per reply
 - For pre-sales questions, guide the user toward the free trial at /auth/register
@@ -612,6 +618,7 @@ Shop id: ${snapshot.shopId}
 Shop name: ${snapshot.shopName}
 Shop country: ${snapshot.country}
 Current dashboard route: ${snapshot.currentPath ?? "Unavailable"}
+Dashboard mode: ${snapshot.dashboardMode ?? "Unavailable"} (EASY = Counter Mode, ADVANCED = Full ERP Mode)
 Reporting period: ${snapshot.currentMonthLabel}
 Invoices this month: ${snapshot.monthlyInvoiceCount}
 Total sales this month: ${this.formatCurrency(snapshot.monthlySales, snapshot.currency)}
@@ -622,6 +629,16 @@ Walk-in customer count: ${snapshot.walkInCustomerCount}
 Recent orders: ${recentOrders}
 Year-to-date sales: ${this.formatCurrency(snapshot.yearlySales, snapshot.currency)}
 Tax audit status: ${auditStatus}
+
+NEW SHOPKEEPER PC FEATURES:
+- Dashboard Mode Toggle: Switch between EASY (6 core links, simplified POS) and ADVANCED (full 21-link ERP sidebar) using the toggle in the top header.
+- Desktop Shortcuts (Active in Advanced Mode on PC):
+  * Alt+P: Open POS
+  * Alt+C: Create Invoice
+  * Alt+N: Customers CRM
+  * Alt+E: Toggle floating Quick Gold Estimator
+- Quick Gold Estimator: A floating calculator available on the dashboard (bottom-left) to instantly calculate gold value + making charges + GST based on live rates.
+- Interactive Dashboard: Click on "Active Orders", "Pending RFQs", or other stat cards on the dashboard home to jump directly to those pages.
 
 CRM FEATURE MAP (DESKTOP — left sidebar navigation):
 - Dashboard overview: /dashboard/shop
@@ -813,6 +830,7 @@ SELLER RESPONSE RULES:
     shopId: string,
     userId: string,
     currentPath?: string,
+    dashboardMode?: string,
   ): Promise<SellerSnapshot> {
     const now = new Date();
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -929,6 +947,7 @@ SELLER RESPONSE RULES:
       yearlySales,
       nepalAuditRequired,
       nepalAuditThresholdUsedPct,
+      dashboardMode,
     };
   }
 
@@ -945,6 +964,7 @@ SELLER RESPONSE RULES:
     sessionId?: string,
     userAgent?: string,
     currentPath?: string,
+    dashboardMode?: string,
   ): Promise<AiChatResponse> {
     let snapshot: SellerSnapshot | null = null;
 
@@ -974,7 +994,7 @@ SELLER RESPONSE RULES:
 
       await this.supportService.logAiChat(sessionId ?? null, "user", message, undefined, undefined, ipAddress);
 
-      snapshot = await this.buildSellerSnapshot(resolvedShopId, userId, currentPath);
+      snapshot = await this.buildSellerSnapshot(resolvedShopId, userId, currentPath, dashboardMode);
       const directAnswer = this.maybeAnswerSellerQuestion(snapshot, message);
       if (directAnswer) {
         await this.supportService.logAiChat(sessionId ?? null, "assistant", directAnswer.reply, undefined, directAnswer.confidence, ipAddress);

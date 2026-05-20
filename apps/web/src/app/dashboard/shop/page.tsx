@@ -3,6 +3,7 @@
 import { ShopkeeperGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { PlanMigrationBanner } from "@/components/dashboard/PlanMigrationBanner";
+import { QuickGoldEstimator } from "@/components/dashboard/QuickGoldEstimator";
 import { ShopkeeperSessionStats } from "@/components/dashboard/ShopkeeperSessionStats";
 import { AdminMessageBanner } from "@/components/ui/AdminMessageBanner";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,7 @@ interface Stat {
   changeType: "positive" | "negative";
   icon: any;
   description: string;
+  href?: string;
 }
 
 interface Order {
@@ -196,40 +198,44 @@ export default function ShopDashboard() {
       .then(([dashboardRes, ordersRes, rfqRes, lowStockRes, subscriptionRes]) => {
         const dash = dashboardRes.data?.stats || dashboardRes.data || {};
         setStats([
-          {
-            title: t("Active Orders"),
-            value: dash.activeOrders?.toString() || "0",
-            change: "+0",
-            changeType: "positive",
-            icon: ShoppingCart,
-            description: t("Orders in progress"),
-          },
-          {
-            title: t("Pending RFQs"),
-            value: dash.pendingRfqs?.toString() || "0",
-            change: "+0",
-            changeType: "positive",
-            icon: MessageSquare,
-            description: t("Awaiting response"),
-          },
-          {
-            title: t("Avg Rating"),
-            value: dash.averageRating ? dash.averageRating.toFixed(1) : "N/A",
-            change: "+0",
-            changeType: "positive",
-            icon: Star,
-            description: t(`${dash.recentRatings || 0} reviews`),
-          },
-          {
-            title: t("Shop Status"),
-            value: user?.shop?.isVerified ? t("Verified") : t("Pending"),
-            change: user?.shop?.isVerified ? "✓" : "!",
-            changeType: user?.shop?.isVerified ? "positive" : "negative",
-            icon: Package,
-            description: user?.shop?.isVerified
-              ? t("Shop is verified")
-              : t("Awaiting verification"),
-          },
+            {
+              title: t("Active Orders"),
+              value: dash.activeOrders?.toString() || "0",
+              change: "+0",
+              changeType: "positive",
+              icon: ShoppingCart,
+              description: t("Orders in progress"),
+              href: "/dashboard/shop/orders",
+            },
+            {
+              title: t("Pending RFQs"),
+              value: dash.pendingRfqs?.toString() || "0",
+              change: "+0",
+              changeType: "positive",
+              icon: MessageSquare,
+              description: t("Awaiting response"),
+              href: "/dashboard/shop/rfq",
+            },
+            {
+              title: t("Avg Rating"),
+              value: dash.averageRating ? dash.averageRating.toFixed(1) : "N/A",
+              change: "+0",
+              changeType: "positive",
+              icon: Star,
+              description: t(`${dash.recentRatings || 0} reviews`),
+              href: "/dashboard/shop/customers",
+            },
+            {
+              title: t("Shop Status"),
+              value: user?.shop?.isVerified ? t("Verified") : t("Pending"),
+              change: user?.shop?.isVerified ? "✓" : "!",
+              changeType: user?.shop?.isVerified ? "positive" : "negative",
+              icon: Package,
+              description: user?.shop?.isVerified
+                ? t("Shop is verified")
+                : t("Awaiting verification"),
+              href: "/dashboard/shop/kyc",
+            },
         ]);
 
         const orders =
@@ -699,8 +705,8 @@ export default function ShopDashboard() {
               const accent = accents[index % accents.length];
               const borderClass = accent.split(' ').pop(); // Get the border color for the card container hover
 
-              return (
-                <Card key={stat.title} className={`overflow-hidden transition-all duration-300 hover:shadow-md hover:border-amber-300/50 dark:hover:border-amber-700/50 hover:-translate-y-1 group bg-white/60 dark:bg-gray-950/40 backdrop-blur-sm`}>
+              const cardContent = (
+                <Card className={`overflow-hidden transition-all duration-300 hover:shadow-md hover:border-amber-300/50 dark:hover:border-amber-700/50 hover:-translate-y-1 group bg-white/60 dark:bg-gray-950/40 backdrop-blur-sm ${stat.href ? 'cursor-pointer' : ''}`}>
                   <CardContent className="p-6 relative">
                     <div className="absolute top-0 right-0 p-12 bg-gray-100/50 dark:bg-gray-800/20 blur-2xl rounded-full pointer-events-none group-hover:scale-150 transition-transform duration-700" />
                     
@@ -734,6 +740,14 @@ export default function ShopDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+              );
+
+              return stat.href ? (
+                <Link key={stat.title} href={stat.href} className="block">
+                  {cardContent}
+                </Link>
+              ) : (
+                <div key={stat.title}>{cardContent}</div>
               );
             })}
           </div>
@@ -932,6 +946,8 @@ export default function ShopDashboard() {
               </div>
             </CardContent>
           </Card>
+          
+          <QuickGoldEstimator />
         </div>
       </DashboardLayout>
     </ShopkeeperGuard>

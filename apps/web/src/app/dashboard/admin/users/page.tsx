@@ -590,7 +590,7 @@ export default function AdminUsersPage() {
 
             <TabsContent value="users" className="space-y-6 mt-0">
               {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+              <div data-tour="admin-users-stats" className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 {[
                   { label: "Total Users", value: userStats.total, color: "" },
                   { label: "Admins", value: userStats.admins, color: "text-purple-600" },
@@ -648,7 +648,7 @@ export default function AdminUsersPage() {
                       </SelectContent>
                     </Select>
                     {selectedUserIds.size > 0 && (
-                      <div className="flex items-center gap-2 ml-auto">
+                      <div data-tour="admin-users-bulk" className="flex items-center gap-2 ml-auto">
                         <span className="text-sm text-muted-foreground">{selectedUserIds.size} selected</span>
                         <Button size="sm" variant="outline" onClick={handleBulkExport} className="h-8 text-xs">Export CSV</Button>
                         <Button size="sm" variant="outline" onClick={handleBulkSuspend} disabled={bulkActionLoading}
@@ -669,7 +669,7 @@ export default function AdminUsersPage() {
                   ) : filteredUsers.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground"><Users className="h-12 w-12 mx-auto mb-3 opacity-30" /><p>No users found.</p></div>
                   ) : (
-                    <Table>
+                    <Table data-tour="admin-users-table">
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-10">

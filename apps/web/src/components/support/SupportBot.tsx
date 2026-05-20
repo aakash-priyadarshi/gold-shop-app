@@ -20,6 +20,7 @@ import { Mail, MessageCircle, Phone, Send, Sparkles, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHelpUIStore } from "@/store/help-ui";
+import { usePreferencesStore } from "@/store/preferences";
 import { T } from "@/components/ui/T";
 
 const FOUNDER = {
@@ -45,11 +46,11 @@ const QUICK_ASKS_PUBLIC = [
 ];
 
 const QUICK_ASKS_SELLER = [
+  "How do I switch to Easy Mode?",
   "What were my sales this month?",
   "What's my pending invoice amount?",
   "How do I create an invoice?",
   "How do I share my tax report with my CA?",
-  "What's my IRD audit status?",
 ];
 
 const QUICK_ASKS_MOBILE = [
@@ -134,6 +135,7 @@ export function SupportBot() {
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const { isChatDismissed, dismissChat, isChatShaking } = useHelpUIStore();
+  const dashboardMode = usePreferencesStore((s) => s.dashboardMode);
   const [bubbleVisible, setBubbleVisible] = useState(false);
 
   // Track session count to keep tooltip visible for new users
@@ -224,7 +226,7 @@ export function SupportBot() {
       const endpoint = isSellerLoggedIn ? "/tickets/seller-chat" : "/tickets/ai-chat";
       const res = await api.post<{ reply: string; shouldEscalate: boolean; confidence: number }>(
         endpoint,
-        { message: text, history, sessionId: getOrCreateSessionId(), currentPath: pathname },
+        { message: text, history, sessionId: getOrCreateSessionId(), currentPath: pathname, dashboardMode },
       );
 
       const botMsg: Message = {

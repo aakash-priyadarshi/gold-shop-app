@@ -82,6 +82,7 @@ export class TicketsController {
       message: string;
       sessionId?: string;
       currentPath?: string;
+      dashboardMode?: string;
       history?: Array<{ role: "user" | "assistant"; content: string }>;
     },
   ) {
@@ -94,6 +95,7 @@ export class TicketsController {
       body.sessionId,
       req.headers?.["user-agent"] as string | undefined,
       body.currentPath,
+      body.dashboardMode,
     );
   }
 

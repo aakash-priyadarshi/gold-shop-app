@@ -34,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { inventoryApi, posApi } from "@/lib/api";
+import { usePreferencesStore } from "@/store/preferences";
 import Image from "next/image";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -137,7 +138,9 @@ function PosPageInner() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   // ── Counter Mode ──
-  const [isCounterMode, setIsCounterMode] = useState(false);
+  const dashboardMode = usePreferencesStore((s) => s.dashboardMode);
+  const isCounterMode = dashboardMode === "EASY";
+  
   const [counterSearch, setCounterSearch] = useState("");
   const [counterItems, setCounterItems] = useState<any[]>([]);
   const [counterLoading, setCounterLoading] = useState(false);
@@ -388,21 +391,7 @@ function PosPageInner() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {/* Mode Toggle */}
-              <div className="inline-flex items-center bg-muted rounded-full p-1 gap-0.5">
-                <button
-                  onClick={() => setIsCounterMode(false)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${!isCounterMode ? "bg-white dark:bg-gray-800 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  <T>ERP Mode</T>
-                </button>
-                <button
-                  onClick={() => setIsCounterMode(true)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isCounterMode ? "bg-white dark:bg-gray-800 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  <T>Counter Mode</T>
-                </button>
-              </div>
+              {/* Mode Toggle removed: now lives globally in DashboardLayout header */}
             </div>
             {session && (
               <div className="flex items-center gap-2">

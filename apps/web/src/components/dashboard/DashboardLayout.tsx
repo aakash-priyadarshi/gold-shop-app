@@ -54,6 +54,7 @@ import {
     usePreferencesStore,
     type CurrencyCode,
     type Language,
+    type DashboardMode,
 } from "@/store/preferences";
 import {
     Activity,
@@ -94,9 +95,11 @@ import {
     Ticket,
     TrendingUp,
     UserCircle,
+    Briefcase,
     Users,
     Wrench,
 } from "lucide-react";
+import { useDesktopShortcuts } from "@/hooks/useDesktopShortcuts";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -940,6 +943,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const customerFlowEnabled = features.customerFlowEnabled;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
+  const dashboardMode = usePreferencesStore((s) => s.dashboardMode);
+  const setDashboardMode = usePreferencesStore((s) => s.setDashboardMode);
+
+  // Initialize desktop shortcuts
+  useDesktopShortcuts();
 
   // Fetch dynamic badge counts for admin
   useEffect(() => {
@@ -968,7 +976,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   if (!user) return null;
 
   // Filter nav items for user's role and feature flags
-  const userNavItems = navItems.filter((item) => {
+  const rawNavItems = navItems.filter((item) => {
     if (!item.roles.includes(user.role)) return false;
     
     // Hide marketplace-specific features if customer flow is disabled
@@ -985,6 +993,39 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
     return true;
   });
+
+  const userNavItems = user.role === "SHOPKEEPER" && dashboardMode === "EASY"
+    ? rawNavItems.reduce((acc, item) => {
+        const easyLinks = [
+          "/dashboard/shop",
+          "/dashboard/shop/pos",
+          "/dashboard/shop/messages",
+          "/dashboard/shop/customers",
+          "/dashboard/shop/catalogues",
+          "/dashboard/shop/settings",
+          "/dashboard/shop/desktop",
+          "/dashboard/shop/help"
+        ];
+        if (easyLinks.includes(item.href)) {
+          acc.push(item);
+        } else {
+          // Put the rest in "More ERP Tools" group
+          let moreGroup = acc.find((i) => i.label === "More ERP Tools");
+          if (!moreGroup) {
+            moreGroup = {
+              label: "More ERP Tools",
+              href: "#",
+              icon: Settings,
+              roles: ["SHOPKEEPER"],
+              children: [],
+            };
+            acc.push(moreGroup);
+          }
+          moreGroup.children!.push(item);
+        }
+        return acc;
+      }, [] as NavItem[])
+    : rawNavItems;
 
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
@@ -1168,6 +1209,37 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
               {/* Theme Toggle */}
               <AnimatedThemeToggle size={40} />
+
+              {/* Shopkeeper Mode Toggle */}
+              {user.role === "SHOPKEEPER" && (
+                <div 
+                  className="hidden md:inline-flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1"
+                  data-tour="dashboard-mode-toggle"
+                >
+                  <button
+                    onClick={() => setDashboardMode("EASY")}
+                    className={cn(
+                      "px-3 py-1 rounded-full text-xs font-medium transition-all",
+                      dashboardMode === "EASY" 
+                        ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" 
+                        : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    )}
+                  >
+                    <T>Easy</T>
+                  </button>
+                  <button
+                    onClick={() => setDashboardMode("ADVANCED")}
+                    className={cn(
+                      "px-3 py-1 rounded-full text-xs font-medium transition-all",
+                      dashboardMode === "ADVANCED" 
+                        ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" 
+                        : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    )}
+                  >
+                    <T>Advanced</T>
+                  </button>
+                </div>
+              )}
 
               <MessageDropdown />
               <NotificationDropdown />

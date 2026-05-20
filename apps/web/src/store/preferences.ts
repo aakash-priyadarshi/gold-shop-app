@@ -23,6 +23,8 @@ export type CountryCode = "NP" | "IN" | "AE" | "UK" | "EU" | "US";
 
 export type ThemeMode = "light" | "dark" | "system";
 
+export type DashboardMode = "EASY" | "ADVANCED";
+
 export type Language =
   | "en"
   | "hi"
@@ -141,6 +143,7 @@ interface PreferencesState {
   currency: CurrencyCode; // For DISPLAY only (FX conversion)
   country: CountryCode; // For TAX jurisdiction only
   theme: ThemeMode;
+  dashboardMode: DashboardMode;
   isAuthenticated: boolean;
   isSyncing: boolean;
   lastSyncedAt: number | null;
@@ -158,6 +161,7 @@ interface PreferencesState {
   setCurrency: (currency: CurrencyCode) => void;
   setCountry: (country: CountryCode) => void;
   setTheme: (theme: ThemeMode) => void;
+  setDashboardMode: (mode: DashboardMode) => void;
   setAuthenticated: (isAuthenticated: boolean) => void;
   dismissGeoMismatch: () => void;
   acceptDetectedCountry: () => void;
@@ -187,6 +191,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       currency: "USD",
       country: "US", // Default tax jurisdiction - updated by geo detection
       theme: "system",
+      dashboardMode: "ADVANCED", // Default to ADVANCED (full ERP)
       isAuthenticated: false,
       isSyncing: false,
       lastSyncedAt: null,
@@ -297,6 +302,10 @@ export const usePreferencesStore = create<PreferencesState>()(
         applyTheme(theme);
       },
 
+      setDashboardMode: (mode) => {
+        set({ dashboardMode: mode });
+      },
+
       setAuthenticated: (isAuthenticated) => {
         const wasAuthenticated = get().isAuthenticated;
         set({ isAuthenticated });
@@ -402,6 +411,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         currency: state.currency,
         country: state.country,
         theme: state.theme,
+        dashboardMode: state.dashboardMode,
         tourLanguage: state.tourLanguage,
         tourLangSyncWithApp: state.tourLangSyncWithApp,
       }),

@@ -816,6 +816,24 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
   ],
   "/dashboard/shop": [
     {
+      element: "[data-tour='dashboard-mode-toggle']",
+      popover: {
+        title: "Workspace Mode",
+        description: "Switch between Easy Mode (simplified tools) and Advanced Mode (full ERP suite) at any time. Your preference is saved.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='quick-estimator']",
+      popover: {
+        title: "Quick Gold Estimator",
+        description: "Need to quote a price quickly? Use this floating calculator to get an instant estimate using live gold rates. Tip: Press Alt+E to toggle it quickly.",
+        side: "right",
+        align: "end",
+      },
+    },
+    {
       element: "[data-tour='dash-stats']",
       popover: {
         title: "Today's Overview",
@@ -1122,6 +1140,41 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Payout Calculator",
         description: "The enrollment form auto-calculates the payout amount based on installments, bonus, and current gold rate so you and the customer know the expected final payout.",
+      },
+    },
+  ],
+  "/dashboard/admin/users": [
+    {
+      element: "[data-tour='admin-users-stats']",
+      popover: {
+        title: "Live Activity Stats",
+        description: "Monitor real-time platform engagement including how many users are 'Online Now' and the average session duration for today.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='admin-users-table']",
+      popover: {
+        title: "User Directory & Risk",
+        description: "View all users. Pay attention to the 'Last Seen' column for activity tracking and the 'Risk Score' badge indicating potential security or policy issues.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='admin-users-bulk']",
+      popover: {
+        title: "Bulk Actions",
+        description: "Select multiple users to perform bulk operations like suspending accounts, exporting data to CSV, or sending mass messages.",
+        side: "left",
+        align: "center",
+      },
+    },
+    {
+      popover: {
+        title: "Deep Insights Panel",
+        description: "Click the 👁 eye icon on any user to open the sliding panel. It features 5 tabs: Profile, Activity (with active sessions), Shops, Audit Log, and Direct Messaging (with AI compose).",
       },
     },
   ],
