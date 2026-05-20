@@ -999,11 +999,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         const easyLinks = [
           "/dashboard/shop",
           "/dashboard/shop/pos",
+          "/dashboard/shop/quotes",
+          "/dashboard/shop/invoices",
+          "/dashboard/shop/orders",
           "/dashboard/shop/messages",
           "/dashboard/shop/customers",
           "/dashboard/shop/catalogues",
           "/dashboard/shop/settings",
-          "/dashboard/shop/desktop",
+          "/dashboard/shop/support",
           "/dashboard/shop/help"
         ];
         if (easyLinks.includes(item.href)) {

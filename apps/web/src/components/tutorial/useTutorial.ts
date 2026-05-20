@@ -819,7 +819,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='dashboard-mode-toggle']",
       popover: {
         title: "Workspace Mode",
-        description: "Switch between Easy Mode (simplified tools) and Advanced Mode (full ERP suite) at any time. Your preference is saved.",
+        description: "Switch between Easy Mode (POS, Quotes, Invoices, Orders + 7 more core links) and Advanced Mode (full 21+ ERP tools). Your preference is saved.",
         side: "bottom",
         align: "center",
       },

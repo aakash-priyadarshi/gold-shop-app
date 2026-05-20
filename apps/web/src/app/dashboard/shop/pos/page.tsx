@@ -33,6 +33,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi, posApi } from "@/lib/api";
 import { usePreferencesStore } from "@/store/preferences";
 import Image from "next/image";
@@ -122,6 +123,7 @@ export default function PosPage() {
 
 function PosPageInner() {
   const { user } = useAuth();
+  const { symbol: currencySymbol } = useShopCurrency();
   const searchParams = useSearchParams();
   const t = useT();
 
@@ -481,7 +483,7 @@ function PosPageInner() {
                       <p className="text-sm font-medium truncate">{item.nameEn}</p>
                       <p className="text-xs text-muted-foreground truncate">{item.sku}</p>
                       <div className="flex items-center justify-between mt-1.5">
-                        <span className="text-sm font-bold">NPR {item.totalPriceNpr?.toLocaleString()}</span>
+                        <span className="text-sm font-bold">{currencySymbol} {item.totalPriceNpr?.toLocaleString()}</span>
                         {item.metalPurity && <Badge variant="outline" className="text-[10px] px-1.5">{item.metalPurity}</Badge>}
                       </div>
                       {item.stockQuantity !== undefined && (
@@ -521,7 +523,7 @@ function PosPageInner() {
                         <div key={item.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate">{item.inventoryItem?.nameEn}</p>
-                            <p className="text-xs text-muted-foreground">NPR {item.unitPrice?.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">{currencySymbol} {item.unitPrice?.toLocaleString()}</p>
                           </div>
                           <div className="flex items-center gap-1">
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleUpdateQty(item.id, Math.max(0, item.qty - 1))}>
@@ -532,7 +534,7 @@ function PosPageInner() {
                               <Plus className="h-3 w-3" />
                             </Button>
                           </div>
-                          <span className="text-xs font-bold w-16 text-right">NPR {item.lineTotal?.toLocaleString()}</span>
+                          <span className="text-xs font-bold w-16 text-right">{currencySymbol} {item.lineTotal?.toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
@@ -571,13 +573,13 @@ function PosPageInner() {
                         </div>
                         {/* Totals */}
                         <div className="border-t pt-2 space-y-1 text-sm">
-                          <div className="flex justify-between"><span className="text-muted-foreground"><T>Subtotal</T></span><span>NPR {basketSubtotal.toLocaleString()}</span></div>
-                          {basketMaking > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Making ({makingChargeRate}%)</span><span>NPR {basketMaking.toLocaleString()}</span></div>}
-                          {basketTax > 0 && <div className="flex justify-between"><span className="text-muted-foreground"><T>Tax</T></span><span>NPR {Math.round(basketTax).toLocaleString()}</span></div>}
-                          <div className="flex justify-between font-bold text-base border-t pt-1"><span><T>Total</T></span><span>NPR {Math.round(basketTotal).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground"><T>Subtotal</T></span><span>{currencySymbol} {basketSubtotal.toLocaleString()}</span></div>
+                          {basketMaking > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Making ({makingChargeRate}%)</span><span>{currencySymbol} {basketMaking.toLocaleString()}</span></div>}
+                          {basketTax > 0 && <div className="flex justify-between"><span className="text-muted-foreground"><T>Tax</T></span><span>{currencySymbol} {Math.round(basketTax).toLocaleString()}</span></div>}
+                          <div className="flex justify-between font-bold text-base border-t pt-1"><span><T>Total</T></span><span>{currencySymbol} {Math.round(basketTotal).toLocaleString()}</span></div>
                         </div>
                         <Button className="w-full h-12 text-base font-semibold" onClick={() => setCheckoutOpen(true)}>
-                          <T>Checkout</T> — NPR {Math.round(basketTotal).toLocaleString()}
+                          <T>Checkout</T> — {currencySymbol} {Math.round(basketTotal).toLocaleString()}
                         </Button>
                       </>
                     )}
@@ -654,7 +656,7 @@ function PosPageInner() {
                                 {pick.inventoryItem.nameEn}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {pick.inventoryItem.sku} · NPR{" "}
+                                {pick.inventoryItem.sku} · {currencySymbol}{" "}
                                 {pick.inventoryItem.totalPriceNpr?.toLocaleString()}
                               </p>
                               {pick.inventoryItem.variants?.length > 0 && (
@@ -780,7 +782,7 @@ function PosPageInner() {
                                   )}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  NPR {item.unitPrice?.toLocaleString()}
+                                  {currencySymbol} {item.unitPrice?.toLocaleString()}
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center justify-center gap-1">
@@ -813,7 +815,7 @@ function PosPageInner() {
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right font-medium">
-                                  NPR {item.lineTotal?.toLocaleString()}
+                                  {currencySymbol} {item.lineTotal?.toLocaleString()}
                                 </TableCell>
                                 <TableCell>
                                   <Button
@@ -836,27 +838,27 @@ function PosPageInner() {
                             <span className="text-muted-foreground">
                               <T>Subtotal</T>
                             </span>
-                            <span>NPR {basketSubtotal.toLocaleString()}</span>
+                            <span>{currencySymbol} {basketSubtotal.toLocaleString()}</span>
                           </div>
                           {taxRate > 0 && (
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">
                                 <T>Tax</T> ({(taxRate * 100).toFixed(1)}%)
                               </span>
-                              <span>NPR {basketTax.toLocaleString()}</span>
+                              <span>{currencySymbol} {basketTax.toLocaleString()}</span>
                             </div>
                           )}
                           {discountAmount > 0 && (
                             <div className="flex justify-between text-green-600">
                               <span><T>Discount</T></span>
                               <span>
-                                - NPR {discountAmount.toLocaleString()}
+                                - {currencySymbol} {discountAmount.toLocaleString()}
                               </span>
                             </div>
                           )}
                           <div className="flex justify-between font-bold text-base pt-2 border-t">
                             <span><T>Total</T></span>
-                            <span>NPR {basketTotal.toLocaleString()}</span>
+                            <span>{currencySymbol} {basketTotal.toLocaleString()}</span>
                           </div>
                         </div>
                       </>
@@ -966,7 +968,7 @@ function PosPageInner() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label><T>Discount (NPR)</T></Label>
+                  <Label><T>Discount ({currencySymbol})</T></Label>
                   <Input
                     type="number"
                     min="0"
@@ -993,29 +995,29 @@ function PosPageInner() {
                 </div>
                 <div className="flex justify-between">
                   <span><T>Subtotal</T></span>
-                  <span>NPR {basketSubtotal.toLocaleString()}</span>
+                  <span>{currencySymbol} {basketSubtotal.toLocaleString()}</span>
                 </div>
                 {basketMaking > 0 && (
                   <div className="flex justify-between">
                     <span>Making ({makingChargeRate}%)</span>
-                    <span>NPR {basketMaking.toLocaleString()}</span>
+                    <span>{currencySymbol} {basketMaking.toLocaleString()}</span>
                   </div>
                 )}
                 {basketTax > 0 && (
                   <div className="flex justify-between">
                     <span><T>Tax</T> ({(taxRate * 100).toFixed(1)}%)</span>
-                    <span>NPR {Math.round(basketTax).toLocaleString()}</span>
+                    <span>{currencySymbol} {Math.round(basketTax).toLocaleString()}</span>
                   </div>
                 )}
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span><T>Discount</T></span>
-                    <span>- NPR {discountAmount.toLocaleString()}</span>
+                    <span>- {currencySymbol} {discountAmount.toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold border-t pt-1 text-base">
                   <span><T>Total</T></span>
-                  <span>NPR {Math.round(basketTotal).toLocaleString()}</span>
+                  <span>{currencySymbol} {Math.round(basketTotal).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span><T>Payment</T></span>
@@ -1051,7 +1053,7 @@ function PosPageInner() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="text-3xl font-bold">
-                NPR {checkoutSuccess?.total?.toLocaleString()}
+                {currencySymbol} {checkoutSuccess?.total?.toLocaleString()}
               </div>
               <p className="text-sm text-muted-foreground">
                 <T>Invoice</T> #{checkoutSuccess?.invoiceNumber}
@@ -1068,7 +1070,7 @@ function PosPageInner() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: NPR ${checkoutSuccess?.total?.toLocaleString()}\nThank you for your purchase!`;
+                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: ${currencySymbol} ${checkoutSuccess?.total?.toLocaleString()}\nThank you for your purchase!`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
                   }}
                 >

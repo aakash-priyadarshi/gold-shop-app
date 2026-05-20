@@ -631,7 +631,9 @@ Year-to-date sales: ${this.formatCurrency(snapshot.yearlySales, snapshot.currenc
 Tax audit status: ${auditStatus}
 
 NEW SHOPKEEPER PC FEATURES:
-- Dashboard Mode Toggle: Switch between EASY (6 core links, simplified POS) and ADVANCED (full 21-link ERP sidebar) using the toggle in the top header.
+- Dashboard Mode Toggle: Switch between EASY and ADVANCED using the toggle in the top header.
+  * EASY MODE shows 11 core links: Dashboard, POS, Walk-in Quotes, Invoices, Orders, Messages, Customers, Catalogues, Settings, Help & Support, Tutorial. Everything else is under "More ERP Tools".
+  * ADVANCED MODE shows all 21+ ERP links flat in the sidebar.
 - Desktop Shortcuts (Active in Advanced Mode on PC):
   * Alt+P: Open POS
   * Alt+C: Create Invoice
@@ -639,6 +641,7 @@ NEW SHOPKEEPER PC FEATURES:
   * Alt+E: Toggle floating Quick Gold Estimator
 - Quick Gold Estimator: A floating calculator available on the dashboard (bottom-left) to instantly calculate gold value + making charges + GST based on live rates.
 - Interactive Dashboard: Click on "Active Orders", "Pending RFQs", or other stat cards on the dashboard home to jump directly to those pages.
+- Currency: The POS and all pages display prices in the shop's local currency (₹ for India, रु for Nepal, AED for UAE, etc.) based on the shop country setting.
 
 CRM FEATURE MAP (DESKTOP — left sidebar navigation):
 - Dashboard overview: /dashboard/shop
