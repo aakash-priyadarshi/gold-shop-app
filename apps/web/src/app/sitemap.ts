@@ -186,7 +186,7 @@ function getStaticPages(siteLaunch: string, customerFlowEnabled: boolean): Metad
       const override = ROUTE_OVERRIDES[route];
       const meta = override ?? DEFAULT_ROUTE_META;
       return {
-        url: route === "/" ? BASE_URL : `${BASE_URL}${route}`,
+        url: route === "/" ? `${BASE_URL}/` : `${BASE_URL}${route}`,
         lastModified: override?.lastModified ?? new Date(siteLaunch),
         changeFrequency: meta.changeFrequency,
         priority: meta.priority,
