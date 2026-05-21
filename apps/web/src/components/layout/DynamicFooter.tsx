@@ -226,6 +226,31 @@ export function DynamicFooter() {
           </div>
         </div>
 
+        {/* Also reviewed on */}
+        <div className="border-t border-gray-800 mt-6 pt-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+              <T>Also reviewed on</T>
+            </span>
+            {[
+              { label: "G2", href: "https://www.g2.com/products/orivraa/reviews" },
+              { label: "Capterra", href: "https://www.capterra.in/software/1097833/Orivraa" },
+              { label: "Trustpilot", href: "https://www.trustpilot.com/review/orivraa.com" },
+              { label: "Google Business", href: "https://share.google/9XsJWUQnuoWNLtrDb" },
+            ].map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs px-3 py-1.5 rounded-full bg-gray-800 hover:bg-gold-500/20 hover:text-gold-400 text-gray-400 transition-colors"
+              >
+                ⭐ {item.label}
+              </a>
+            ))}
+          </div>
+        </div>
+
         <div className="border-t border-gray-800 mt-6 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-gray-500 text-center md:text-left">
             © {new Date().getFullYear()} {BRAND.name}.{" "}
