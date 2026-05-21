@@ -376,10 +376,10 @@ export default function SellerGuidePage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/partner"
+                href="/support"
                 className="inline-flex items-center gap-2 px-8 py-3 text-white rounded-full font-semibold border border-gray-600 hover:border-amber-500 transition-colors"
               >
-                <T>Become a Partner</T>
+                <T>Get onboarding help</T>
               </Link>
             </div>
           </div>

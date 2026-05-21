@@ -13,7 +13,7 @@ import {
     Calendar,
     CheckCircle2,
     Clock,
-  CreditCard,
+    CreditCard,
     Gem,
     Globe,
     LayoutDashboard,
@@ -253,65 +253,56 @@ export function SellerFeaturesSection() {
   );
 }
 
+const resourceCards = [
+  {
+    href: "/demo",
+    title: "Watch the quick demo",
+    desc: "See the dashboard, billing flow, POS, and live metal-rate context in 30 seconds.",
+    cta: "Open demo",
+    icon: Clock,
+  },
+  {
+    href: "/tutorial",
+    title: "Walk through the full tutorial",
+    desc: "Get the complete product tour covering POS, GST, inventory, reports, and daily workflows.",
+    cta: "Open tutorial",
+    icon: BookOpen,
+  },
+  {
+    href: "/support",
+    title: "Get support and onboarding help",
+    desc: "Use the support center for AI answers, tickets, and direct contact with the team.",
+    cta: "Visit support",
+    icon: MessageSquare,
+  },
+  {
+    href: "/pricing",
+    title: "Review plans before you start",
+    desc: "See the free plan, paid tiers, regional pricing, and which setup fits your jewellery shop.",
+    cta: "View pricing",
+    icon: CreditCard,
+  },
+];
+
+const softwareLinks = [
+  { href: "/jewellery-shop-software", label: "Jewellery shop software" },
+  { href: "/jewellery-store-management-software", label: "Store management software" },
+  { href: "/jewellery-shop-billing-software", label: "Billing software" },
+  { href: "/jewellery-inventory-software", label: "Inventory software" },
+  { href: "/jewellery-pos-software", label: "Mobile POS" },
+  { href: "/jewellery-ecommerce-software", label: "Ecommerce software" },
+  { href: "/seller-guide", label: "Seller guide" },
+];
+
+const comparisonLinks = [
+  { href: "/compare/jewellery-crm-software-india", label: "Jewellery CRM software in India" },
+  { href: "/compare/billing-software-india-jewellery-shops", label: "Billing software for jewellery shops" },
+  { href: "/compare/orivraa-vs-tally", label: "Orivraa vs Tally" },
+  { href: "/compare/orivraa-vs-marg-erp", label: "Orivraa vs Marg ERP" },
+];
+
 export function SellerResourceHubSection() {
   const t = useT();
-  const resourceCards = [
-    {
-      href: "/demo",
-      title: "Watch the quick demo",
-      desc: "See the dashboard, billing flow, POS, and live metal-rate context in 30 seconds.",
-      cta: "Open demo",
-      icon: Clock,
-    },
-    {
-      href: "/tutorial",
-      title: "Walk through the full tutorial",
-      desc: "Get the complete product tour covering POS, GST, inventory, reports, and daily workflows.",
-      cta: "Open tutorial",
-      icon: BookOpen,
-    },
-    {
-      href: "/support",
-      title: "Get support and onboarding help",
-      desc: "Use the support center for AI answers, tickets, and direct contact with the team.",
-      cta: "Visit support",
-      icon: MessageSquare,
-    },
-    {
-      href: "/pricing",
-      title: "Review plans before you start",
-      desc: "See the free plan, paid tiers, regional pricing, and which setup fits your jewellery shop.",
-      cta: "View pricing",
-      icon: CreditCard,
-    },
-  ];
-
-  const softwareLinks = [
-    { href: "/jewellery-shop-software", label: "Jewellery shop software" },
-    {
-      href: "/jewellery-store-management-software",
-      label: "Store management software",
-    },
-    { href: "/jewellery-shop-billing-software", label: "Billing software" },
-    { href: "/jewellery-inventory-software", label: "Inventory software" },
-    { href: "/jewellery-pos-software", label: "Mobile POS" },
-    { href: "/jewellery-ecommerce-software", label: "Ecommerce software" },
-    { href: "/seller-guide", label: "Seller guide" },
-  ];
-
-  const comparisonLinks = [
-    {
-      href: "/compare/jewellery-crm-software-india",
-      label: "Jewellery CRM software in India",
-    },
-    {
-      href: "/compare/billing-software-india-jewellery-shops",
-      label: "Billing software for jewellery shops",
-    },
-    { href: "/compare/orivraa-vs-tally", label: "Orivraa vs Tally" },
-    { href: "/compare/orivraa-vs-marg-erp", label: "Orivraa vs Marg ERP" },
-  ];
-
   return (
     <section className="py-12 lg:py-20 bg-gray-50 dark:bg-gray-900/50">
       <div className="container mx-auto px-4">
@@ -336,7 +327,7 @@ export function SellerResourceHubSection() {
             <Link
               key={card.href}
               href={card.href}
-              className="group rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-5 lg:p-6 hover:border-gold-300 dark:hover:border-gold-700 hover:shadow-lg hover:shadow-gold-500/5 transition-all"
+              className="group flex flex-col rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-5 lg:p-6 hover:border-gold-300 dark:hover:border-gold-700 hover:shadow-lg hover:shadow-gold-500/5 transition-all"
             >
               <div className="w-11 h-11 rounded-xl bg-gold-100 dark:bg-gold-900/30 text-gold-700 dark:text-gold-300 flex items-center justify-center mb-4">
                 <card.icon className="h-5 w-5" />
@@ -344,7 +335,7 @@ export function SellerResourceHubSection() {
               <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 {t(card.title)}
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed min-h-[72px]">
+              <p className="flex-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                 {t(card.desc)}
               </p>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-gold-600 dark:text-gold-400">
