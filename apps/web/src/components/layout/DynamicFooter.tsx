@@ -5,6 +5,7 @@ import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import { LANG_META, type Language } from "@/data/about-i18n";
 import { useMarket } from "@/hooks/useMarket";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import {
     Facebook,
     Globe,
@@ -34,11 +35,47 @@ const FOOTER_LANGUAGES: { code: Language; href: string }[] = [
 
 export function DynamicFooter() {
   const { config } = useMarket();
+  const { features } = usePlatformFeatures();
+  const customerFlowEnabled = features.customerFlowEnabled;
 
   // Use market-specific contact info if available, otherwise fall back to BRAND config
   const contactEmail = config?.contactEmail || BRAND.contact.supportEmail;
   const contactPhone = config?.contactPhone || BRAND.contact.phone;
   const contactAddress = config?.contactAddress || BRAND.contact.address;
+
+  const quickLinks = customerFlowEnabled
+    ? [
+        { href: "/shop", label: "Browse Shop" },
+        { href: "/rfq/create", label: "Custom Order" },
+        { href: "/shops", label: "Find Sellers" },
+        { href: "/about", label: "About Us" },
+        { href: "/blog", label: "Blog" },
+      ]
+    : [
+        { href: "/jewellery-shop-software", label: "Jewellery Software" },
+        { href: "/pricing", label: "Pricing" },
+        { href: "/support", label: "Support" },
+        { href: "/demo", label: "Quick Demo" },
+        { href: "/tutorial", label: "Full Tutorial" },
+        { href: "/about", label: "About Us" },
+      ];
+
+  const sellerLinks = [
+    { href: "/for-sellers", label: "Start Selling Free" },
+    { href: "/jewellery-shop-software", label: "Shop Software" },
+    {
+      href: "/jewellery-store-management-software",
+      label: "Store Management",
+    },
+    { href: "/jewellery-pos-software", label: "Mobile POS" },
+    {
+      href: "/jewellery-inventory-software",
+      label: "Inventory Software",
+    },
+    { href: "/seller-guide", label: "Seller Guide" },
+    { href: "/download", label: "Download App" },
+    { href: "/support", label: "Support" },
+  ];
 
   return (
     <footer className="bg-gray-900 text-gray-300">
@@ -98,46 +135,16 @@ export function DynamicFooter() {
               <T>Quick Links</T>
             </h3>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/shop"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Browse Shop</T>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/rfq/create"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Custom Order</T>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/shops"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Find Sellers</T>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/about"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>About Us</T>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/blog"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Blog</T>
-                </Link>
-              </li>
+              {quickLinks.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="hover:text-gold-400 transition-colors"
+                  >
+                    <T>{item.label}</T>
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -147,70 +154,16 @@ export function DynamicFooter() {
               <T>For Jewellers</T>
             </h3>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/for-sellers"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Start Selling Free</T>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/jewellery-shop-software"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Shop Software</T>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/jewellery-store-management-software"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Store Management</T>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/partner"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Become a Partner</T>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/seller-guide"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Seller Guide</T>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/pricing"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Pricing</T>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/support"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Support</T>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/help"
-                  className="hover:text-gold-400 transition-colors"
-                >
-                  <T>Help Center</T>
-                </Link>
-              </li>
+              {sellerLinks.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="hover:text-gold-400 transition-colors"
+                  >
+                    <T>{item.label}</T>
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 

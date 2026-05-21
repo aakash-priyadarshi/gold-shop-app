@@ -75,6 +75,12 @@ export const LIVE_PLATFORMS: PlatformProfile[] = [
     category: "Professional Network",
   },
   {
+    name: "Google Business",
+    url: "https://share.google/9XsJWUQnuoWNLtrDb",
+    logo: "📍",
+    category: "Local Business Listing",
+  },
+  {
     name: "F6S",
     url: "https://www.f6s.com/orivraa-ltd",
     logo: "🚀",
@@ -102,7 +108,6 @@ export interface ComingSoonPlatform {
 
 /** Platforms where profiles are being set up. */
 export const COMING_SOON_PLATFORMS: ComingSoonPlatform[] = [
-  { name: "Google Business", logo: "📍", category: "Local Business Listing" },
   { name: "Product Hunt", logo: "🎯", category: "Product Launch Platform" },
   { name: "AlternativeTo", logo: "🔄", category: "Software Alternatives" },
   { name: "BetaList", logo: "🌱", category: "Startup Discovery" },

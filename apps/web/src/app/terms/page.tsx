@@ -4,6 +4,7 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { T } from "@/components/ui/T";
+import Link from "next/link";
 import {
     CreditCard,
     FileText,
@@ -50,8 +51,9 @@ export default function TermsPage() {
           </h1>
           <p className="mt-6 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
             <T>
-              Please read these terms carefully. They outline the rules, regulations, and 
-              responsibilities that govern your use of the Orivraa platform.
+              Please read these terms carefully. They govern your use of the
+              Orivraa marketplace, SaaS platform, mobile and desktop apps,
+              support services, and AI-assisted workflows.
             </T>
           </p>
           
@@ -110,11 +112,11 @@ export default function TermsPage() {
                 <T>2. Description of Service</T>
               </h2>
               <p>
-                <T>Orivraa provides an integrated B2B and B2C jewelry marketplace connecting buyers with worldwide 
-                verified artisans. Furthermore, we offer a comprehensive suite of tools for jewelry businesses, 
-                including shop management, inventory tracking (with offline desktop syncing capabilities), 
-                Customer Relationship Management (CRM), Request for Quote (RFQ) processing, marketplace 
-                intelligence, and integrated chat functionality.</T>
+                <T>Orivraa provides an integrated B2B and B2C jewelry marketplace and SaaS platform connecting buyers with worldwide 
+                verified artisans. We also offer a comprehensive suite of tools for jewelry businesses, including shop 
+                management, mobile POS, inventory tracking (with offline desktop syncing capabilities), Customer 
+                Relationship Management (CRM), Request for Quote (RFQ) processing, support-center workflows, AI assistance, 
+                marketplace intelligence, and integrated chat functionality.</T>
               </p>
 
               <h2 id="responsibilities">
@@ -143,10 +145,10 @@ export default function TermsPage() {
                 <T>5. Software License and Desktop Application</T>
               </h2>
               <p>
-                <T>For jewelry partners utilizing our desktop shop management software: Orivraa grants you a limited, 
+                <T>For jewelry partners utilizing our SaaS subscriptions, desktop shop management software, or mobile POS tools: Orivraa grants you a limited, 
                 non-exclusive, non-transferable license to use the software for managing your store. You are 
-                responsible for maintaining a stable internet connection for regular syncs to ensure data 
-                consistency between your local database and the Orivraa cloud platform.</T>
+                responsible for maintaining stable connectivity for regular syncs and for managing authorized team access so data 
+                stays consistent between your local workflows and the Orivraa cloud platform.</T>
               </p>
 
               <h2 id="liability">
@@ -168,12 +170,12 @@ export default function TermsPage() {
                   <h4 className="text-lg font-bold text-gray-900 dark:text-white m-0"><T>Need clarification?</T></h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-0"><T>Our support team is available to help explain any part of these terms.</T></p>
                 </div>
-                <a 
-                  href="/support" 
+                <Link
+                  href="/support"
                   className="md:ml-auto inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold transition-all shadow-md active:scale-95 no-underline"
                 >
-                  <T>Contact Support</T>
-                </a>
+                  <T>Open Support Center</T>
+                </Link>
               </div>
             </div>
           </div>

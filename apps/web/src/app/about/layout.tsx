@@ -5,7 +5,7 @@ const BASE_URL = "https://www.orivraa.com";
 export const metadata: Metadata = {
   title: "About Orivraa | Jewellery Software, Mobile POS & Marketplace",
   description:
-    "Learn about Orivraa — the jewellery software, Mobile POS, live gold-rate, AI sales, and marketplace platform helping verified jewellers serve buyers across Nepal, India, UAE, UK, and USA.",
+    "Learn about Orivraa — the jewellery software, Mobile POS, live gold-rate, AI assistant, and marketplace platform helping verified jewellers serve buyers across Nepal, India, UAE, UK, and USA.",
   alternates: {
     canonical: `${BASE_URL}/about`,
     languages: {
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "About Orivraa | Jewellery Software, Mobile POS & Marketplace",
     description:
-      "The story behind Orivraa: jewellery shop software, Mobile POS, live gold-rate tools, AI sales support, and a trusted marketplace for modern jewellers.",
+      "The story behind Orivraa: jewellery shop software, Mobile POS, live gold-rate tools, AI assistance, and a trusted marketplace for modern jewellers.",
     url: `${BASE_URL}/about`,
   },
 };

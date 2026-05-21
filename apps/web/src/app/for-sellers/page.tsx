@@ -368,10 +368,10 @@ export default function ForSellersPage() {
             <p className="mt-6 text-xs text-gray-600">
               <T>Questions?</T>{" "}
               <Link
-                href="/contact"
+                href="/support"
                 className="text-amber-400 hover:underline"
               >
-                <T>Talk to our team</T>
+                <T>Visit support</T>
               </Link>{" "}
               <T>— we&apos;ll help you get set up.</T>
             </p>

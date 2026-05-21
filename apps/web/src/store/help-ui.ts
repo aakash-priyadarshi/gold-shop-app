@@ -39,3 +39,13 @@ export const useHelpUIStore = create<HelpUIState>()(
     }
   )
 );
+
+export const OPEN_SUPPORT_CHAT_EVENT = "orivraa:open-support-chat";
+
+export function requestSupportChat(options: { message?: string } = {}) {
+  useHelpUIStore.getState().recallChat();
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(OPEN_SUPPORT_CHAT_EVENT, { detail: options }),
+  );
+}

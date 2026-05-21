@@ -4,6 +4,7 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { T } from "@/components/ui/T";
+import Link from "next/link";
 import {
     Eye,
     History,
@@ -99,9 +100,9 @@ export default function PrivacyPage() {
               </h2>
               <p>
                 <T>Welcome to Orivraa. This Privacy Policy explains how we collect, use, process, and protect your 
-                information when you use our website, mobile applications, and desktop software (including our 
-                offline-capable shop management applications). We are committed to safeguarding the privacy of 
-                our buyers, artisans, and jewelry business partners across the globe.</T>
+                information when you use our website, marketplace, SaaS platform, mobile applications, desktop 
+                software, support center, and AI assistant experiences. We are committed to safeguarding the privacy 
+                of our buyers, artisans, and jewelry business partners across the globe.</T>
               </p>
               
               <h2 id="collection">
@@ -115,6 +116,7 @@ export default function PrivacyPage() {
               <ul>
                 <li><strong><T>Account & Profile Data:</T></strong> <T>Name, email address, phone number, physical address, and business verification details when you register as a buyer or seller.</T></li>
                 <li><strong><T>CRM & Communications:</T></strong> <T>Data from customer relationship management processes, including built-in chat logs, RFQ (Request for Quote) discussions, and customer support interactions.</T></li>
+                <li><strong><T>AI Assistant & Support Data:</T></strong> <T>Messages shared with our public AI assistant, support center, onboarding flows, and ticketing channels so we can respond accurately and improve support quality.</T></li>
                 <li><strong><T>Transaction & Financial Data:</T></strong> <T>Information related to orders, custom manufacturing requests, invoices, payment history, and payment gateway processing details.</T></li>
                 <li><strong><T>Inventory & Shop Data:</T></strong> <T>For sellers using our desktop application, we process and securely synchronize local inventory, catalogue data, and sales analytics with our cloud services.</T></li>
                 <li><strong><T>Marketplace Intelligence:</T></strong> <T>Browsing behavior, search history, device information, and platform interactions to provide sales analytics, personalized recommendations, and market intelligence insights.</T></li>
@@ -130,6 +132,7 @@ export default function PrivacyPage() {
                 <li><T>Synchronize your offline shop inventory with your online global storefront using our desktop client.</T></li>
                 <li><T>Operate our built-in real-time chat, negotiation tools, and CRM systems for seamless communication.</T></li>
                 <li><T>Process payments securely via our integrated international payment gateways.</T></li>
+                <li><T>Run SaaS subscriptions, onboarding, support-center workflows, and AI-assisted help experiences for sellers and buyers.</T></li>
                 <li><T>Analyze marketplace trends to generate actionable intelligence reports and sales analytics for our partners.</T></li>
                 <li><T>Maintain platform security, prevent fraud, and verify the quality and purity standards of our artisans.</T></li>
               </ul>
@@ -165,12 +168,12 @@ export default function PrivacyPage() {
                   <h4 className="text-lg font-bold text-gray-900 dark:text-white m-0 truncate"><T>Contact Support</T></h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-0"><T>Our team is here to help with any privacy questions.</T></p>
                 </div>
-                <a 
-                  href="mailto:support@orivraa.com" 
+                <Link
+                  href="/support"
                   className="md:ml-auto inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold transition-all shadow-md active:scale-95 no-underline"
                 >
-                  support@orivraa.com
-                </a>
+                  <T>Open Support Center</T>
+                </Link>
               </div>
             </div>
           </div>

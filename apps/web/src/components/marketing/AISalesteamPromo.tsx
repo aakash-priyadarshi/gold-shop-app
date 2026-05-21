@@ -2,7 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
-import { ArrowRight, Mic, Phone, Sparkles } from "lucide-react";
+import { requestSupportChat } from "@/store/help-ui";
+import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 interface AISalesteamPromoProps {
@@ -12,8 +13,8 @@ interface AISalesteamPromoProps {
 }
 
 /**
- * Surfaces the existing AI sales agent and Pipecat voice bot as a
- * conversion CTA on seller-facing pages.
+ * Surfaces the floating Orivraa chat assistant and support center as the
+ * help CTA on seller-facing pages.
  */
 export function AISalesteamPromo({
   variant = "section",
@@ -26,29 +27,35 @@ export function AISalesteamPromo({
       >
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0">
-            <Mic className="h-6 w-6" />
+            <Sparkles className="h-6 w-6" />
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-              <T>Talk to our AI shopkeeper now</T>
+              <T>Ask Orivraa AI right now</T>
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
               <T>
-                Get answers about pricing, features, or onboarding in Hindi,
-                Nepali, or English — instantly.
+                Get instant answers about pricing, setup, GST, onboarding, or
+                product fit in Hindi, Nepali, or English.
               </T>
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/ai-sales-team">
-                <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white">
-                  <T>Start chat</T>
+              <Button
+                size="sm"
+                className="bg-amber-500 hover:bg-amber-600 text-white"
+                onClick={() =>
+                  requestSupportChat({
+                    message:
+                      "I want help choosing the right Orivraa setup for my jewellery shop.",
+                  })
+                }
+              >
+                  <T>Open Orivraa AI</T>
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
-              </Link>
-              <Link href="/ai-sales-team?mode=voice">
+              <Link href="/support">
                 <Button size="sm" variant="outline">
-                  <Phone className="mr-1 h-4 w-4" />
-                  <T>Voice call</T>
+                  <T>Support center</T>
                 </Button>
               </Link>
             </div>
@@ -70,38 +77,41 @@ export function AISalesteamPromo({
         <div className="max-w-3xl mx-auto text-center text-white">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-sm font-medium mb-6">
             <Sparkles className="h-4 w-4" />
-            <T>Founder-led support — reply within hours</T>
+            <T>Chat-first support for jewellers</T>
           </div>
           <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-            <T>Have questions? Talk to our team.</T>
+            <T>Need help before you sign up?</T>
           </h2>
           <p className="text-lg text-white/90 mb-8 leading-relaxed">
             <T>
-              Pricing, demos, onboarding, integrations — send us a message and
-              the founder will personally get back to you. Or use the chat
-              widget in the corner for an instant answer.
+              Ask Orivraa AI about pricing, demo paths, onboarding, GST, or
+              product fit. If you still need a human, the support center will
+              take you to ticketing and direct contact options.
             </T>
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/contact">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto bg-white text-amber-600 hover:bg-gray-100 h-12 px-8 rounded-xl text-base font-semibold"
-              >
-                <Sparkles className="mr-2 h-5 w-5" />
-                <T>Contact us</T>
-              </Button>
-            </Link>
-            <a href="https://wa.me/916203965557" target="_blank" rel="noopener noreferrer">
+            <Button
+              size="lg"
+              className="w-full sm:w-auto bg-white text-amber-600 hover:bg-gray-100 h-12 px-8 rounded-xl text-base font-semibold"
+              onClick={() =>
+                requestSupportChat({
+                  message:
+                    "I need help understanding Orivraa pricing, onboarding, and support options.",
+                })
+              }
+            >
+              <Sparkles className="mr-2 h-5 w-5" />
+              <T>Ask Orivraa AI</T>
+            </Button>
+            <Link href="/support">
               <Button
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto bg-transparent text-white border-white/60 hover:bg-white/10 h-12 px-8 rounded-xl text-base"
               >
-                <Phone className="mr-2 h-5 w-5" />
-                <T>WhatsApp the founder</T>
+                <T>Open support center</T>
               </Button>
-            </a>
+            </Link>
           </div>
         </div>
       </div>

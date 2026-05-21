@@ -4,6 +4,7 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
 import { contactApi } from "@/lib/api";
+import { requestSupportChat } from "@/store/help-ui";
 import {
     ArrowRight,
     Building2,
@@ -322,21 +323,28 @@ export default function ContactPage() {
               <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-6">
                 <Sparkles className="w-8 h-8 text-amber-500 mb-3" />
                 <h3 className="font-bold text-gray-900 dark:text-white mb-2">
-                  <T>AI Sales Team Demo</T>
+                  <T>Ask Orivraa AI</T>
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                   <T>
-                    Want to see our AI voice agents in action? Book a live
-                    20-minute demo with your own product catalogue.
+                    Need a quick answer about pricing, onboarding, GST, or the
+                    right setup for your jewellery business? Open the floating
+                    assistant and start chatting instantly.
                   </T>
                 </p>
-                <Link
-                  href="/ai-sales-team"
+                <button
+                  type="button"
+                  onClick={() =>
+                    requestSupportChat({
+                      message:
+                        "I am on the contact page and want help choosing the right Orivraa plan.",
+                    })
+                  }
                   className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-600 dark:text-amber-400 hover:underline"
                 >
-                  <T>Learn about AI Sales Team</T>
+                  <T>Open Orivraa AI</T>
                   <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                </button>
               </div>
 
               <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">

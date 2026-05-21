@@ -42,8 +42,10 @@ import {
 import { BRAND } from "@/config/brand";
 import { useCart } from "@/contexts/CartContext";
 import { getDashboardRoute, useAuth, type UserRole } from "@/hooks/useAuth";
+import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { chatApi, notificationsApi, ordersApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
+import { useHelpUIStore } from "@/store/help-ui";
 import {
     COUNTRIES,
     CURRENCIES,
@@ -83,11 +85,9 @@ import {
     UserIcon,
 } from "@heroicons/react/24/outline";
 import { HelpCircle, MessageCircle } from "lucide-react";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { useHelpUIStore } from "@/store/help-ui";
-import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 
 // Role-specific quick action icons configuration
 const getRoleQuickActions = (role: UserRole | undefined) => {
@@ -341,7 +341,20 @@ export function Header() {
     { name: "Shops", href: "/shops", icon: BuildingStorefrontIcon },
     { name: "Designs", href: "/designs", icon: HeartIcon },
     { name: "Custom Order", href: "/rfq/create", icon: SparklesIcon },
-  ] : [];
+  ] : [
+    {
+      name: "Jewellery Software",
+      href: "/jewellery-shop-software",
+      icon: Squares2X2Icon,
+    },
+    { name: "Pricing", href: "/pricing", icon: CreditCardIcon },
+    {
+      name: "Support",
+      href: "/support",
+      icon: ChatBubbleLeftRightIcon,
+    },
+    { name: "About", href: "/about", icon: InformationCircleIcon },
+  ];
 
   // "For Sellers" dropdown items
   const sellerNavItems = [
@@ -359,10 +372,16 @@ export function Header() {
       desc: "Free shop management platform",
     },
     {
-      name: "AI Sales Team",
-      href: "/ai-sales-team",
-      icon: SparklesIcon,
-      desc: "24/7 AI voice agents for your shop",
+      name: "Mobile POS",
+      href: "/jewellery-pos-software",
+      icon: ShoppingBagIcon,
+      desc: "Run billing and checkout on any smartphone",
+    },
+    {
+      name: "Store Management",
+      href: "/jewellery-store-management-software",
+      icon: BuildingOffice2Icon,
+      desc: "Inventory, CRM, billing, and operations in one place",
     },
     {
       name: "Pricing & Plans",
@@ -377,10 +396,10 @@ export function Header() {
       desc: "How to set up & grow your shop",
     },
     {
-      name: "Become a Partner",
-      href: "/partner",
-      icon: BuildingOffice2Icon,
-      desc: "Join our jeweller network",
+      name: "Support",
+      href: "/support",
+      icon: ChatBubbleLeftRightIcon,
+      desc: "Get onboarding, billing, and product help",
     },
     {
       name: "Download App",
@@ -399,10 +418,22 @@ export function Header() {
       desc: "Guides, tips & industry insights",
     },
     {
-      name: "About",
-      href: "/about",
-      icon: InformationCircleIcon,
-      desc: "Our story & mission",
+      name: "Demo",
+      href: "/demo",
+      icon: SparklesIcon,
+      desc: "Watch the 30-second Orivraa walkthrough",
+    },
+    {
+      name: "Tutorial",
+      href: "/tutorial",
+      icon: BookOpenIcon,
+      desc: "See the full product walkthrough",
+    },
+    {
+      name: "Help Center",
+      href: "/help",
+      icon: ChatBubbleLeftRightIcon,
+      desc: "Find guides and product how-tos",
     },
     {
       name: "Privacy Policy",
@@ -415,6 +446,12 @@ export function Header() {
       href: "/terms",
       icon: DocumentTextIcon,
       desc: "Usage terms & conditions",
+    },
+    {
+      name: "Refund Policy",
+      href: "/refund",
+      icon: CurrencyDollarIcon,
+      desc: "How subscription and marketplace refunds work",
     },
   ];
 
@@ -535,7 +572,7 @@ export function Header() {
                 {/* More */}
                 <div className="pt-3 mt-2 border-t border-gray-100 dark:border-gray-800">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-3 mb-2">
-                    <T>Company</T>
+                    <T>Resources</T>
                   </p>
                   {moreNavItems.map((item) => (
                     <Link
@@ -769,7 +806,7 @@ export function Header() {
             )}
           </div>
 
-          {/* About link */}
+          {/* Resources dropdown */}
           <div
             className="relative"
             onMouseEnter={() => setCompanyDropdownOpen(true)}
@@ -779,7 +816,7 @@ export function Header() {
               className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors inline-flex items-center gap-1"
               onClick={() => setCompanyDropdownOpen(!companyDropdownOpen)}
             >
-              <T>Company</T>
+              <T>Resources</T>
               <svg
                 className={`h-3.5 w-3.5 transition-transform ${companyDropdownOpen ? "rotate-180" : ""}`}
                 fill="none"

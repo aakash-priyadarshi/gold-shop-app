@@ -1,10 +1,11 @@
 import { HeroSection } from "@/components/home/HeroSection";
 import {
-  BuyerSections,
-  MobilePosSpotlight,
-  SellerFeaturesSection,
-  BlogSection,
-  SellerCtaSection,
+    BlogSection,
+    BuyerSections,
+    MobilePosSpotlight,
+    SellerCtaSection,
+    SellerFeaturesSection,
+  SellerResourceHubSection,
 } from "@/components/home/HomeSections";
 import { Header } from "@/components/layout/header";
 import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
@@ -67,19 +68,8 @@ export default function HomePage() {
           {/* 3b: Mobile POS spotlight - newly launched */}
           <MobilePosSpotlight />
 
-          {/* 4: Demo video section */}
-          <section className="py-12 lg:py-20 bg-gray-50 dark:bg-gray-900/50">
-            <div className="container mx-auto px-4 text-center">
-              <h2 className="text-2xl lg:text-4xl font-bold mb-6 text-gray-900 dark:text-white">
-                <T>See Orivraa in 90 seconds</T>
-              </h2>
-              <div className="max-w-4xl mx-auto aspect-video bg-gray-200 dark:bg-gray-800 rounded-2xl flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">
-                  <T>Demo video coming soon</T>
-                </p>
-              </div>
-            </div>
-          </section>
+          {/* 4: Resource hub linking demo, tutorial, support, and comparison pages */}
+          <SellerResourceHubSection />
 
           {/* 5: Security and trust block */}
           <section className="py-10 lg:py-14 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-900">

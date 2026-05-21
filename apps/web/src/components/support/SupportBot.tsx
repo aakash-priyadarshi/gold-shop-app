@@ -14,14 +14,14 @@
  */
 
 import { Button } from "@/components/ui/button";
+import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { OPEN_SUPPORT_CHAT_EVENT, useHelpUIStore } from "@/store/help-ui";
+import { usePreferencesStore } from "@/store/preferences";
 import { Mail, MessageCircle, Phone, Send, Sparkles, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useHelpUIStore } from "@/store/help-ui";
-import { usePreferencesStore } from "@/store/preferences";
-import { T } from "@/components/ui/T";
 
 const FOUNDER = {
   name: "Aakash",
@@ -192,6 +192,30 @@ export function SupportBot() {
       // We will just let the launcher appear.
     }
   }, [isChatDismissed, open]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleOpenRequest = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string }>).detail;
+      setBubbleVisible(false);
+      setOpen(true);
+      if (detail?.message) {
+        setInput(detail.message);
+      }
+    };
+
+    window.addEventListener(
+      OPEN_SUPPORT_CHAT_EVENT,
+      handleOpenRequest as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        OPEN_SUPPORT_CHAT_EVENT,
+        handleOpenRequest as EventListener,
+      );
+    };
+  }, []);
 
   const QUICK_ASKS = isMobile
     ? QUICK_ASKS_MOBILE

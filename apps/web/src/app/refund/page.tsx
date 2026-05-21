@@ -4,6 +4,7 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { T } from "@/components/ui/T";
+import Link from "next/link";
 import { 
   RefreshCcw, 
   Gem, 
@@ -102,10 +103,11 @@ export default function RefundPage() {
                 1. Policy Overview
               </h2>
               <p>
-                This Refund Policy outlines the terms and conditions for refunds across Orivraa's diverse 
-                ecosystem, including our Physical Jewellery Marketplace, SaaS Solutions (Store Management), 
-                and AI Sales Team services. By purchasing from Orivraa, you agree to the conditions 
-                outlined below.
+                This Refund Policy outlines the terms and conditions for refunds across Orivraa&apos;s
+                ecosystem, including our physical jewellery marketplace, SaaS subscriptions,
+                mobile and desktop shop software, and related AI assistance features. By
+                purchasing from Orivraa or subscribing to our software platform, you agree to
+                the conditions outlined below.
               </p>
               
               <h2 id="jewellery">
@@ -133,8 +135,9 @@ export default function RefundPage() {
                 3. SaaS & Software Subscription
               </h2>
               <p>
-                Orivraa provides SaaS solutions for jewellery shop management, including Free, Pro, and Pro+ plans. 
-                Our digital services operate on a "Pay-as-you-go" monthly basis.
+                Orivraa provides SaaS tools for jewellery businesses across web, mobile POS,
+                and desktop software, including Free, Pro, and Pro+ plans. These digital
+                services operate on a recurring monthly basis.
               </p>
               <ul>
                 <li><strong>No Refunds:</strong> SaaS subscription fees (Pro and Pro+) are strictly non-refundable. We do not provide pro-rated refunds for unused days within a billing cycle.</li>
@@ -152,8 +155,8 @@ export default function RefundPage() {
               </p>
               <ul>
                 <li><strong>Custom RFQs:</strong> Any jewellery produced via a custom Request for Quote (RFQ) is considered a bespoke commission and is non-refundable unless a structural defect is verified.</li>
-                <li><strong>AI Credits:</strong> Credits purchased for AI Sales Team interactions (Calls, Emails, or Meetings) are non-refundable and do not expire as long as an active account is maintained.</li>
-                <li><strong>Logistics Fees:</strong> Shipping, insurance, and international customs duties are non-refundable once the item has been dispatched from our or our partner's facility.</li>
+                <li><strong>AI Assistance Add-ons:</strong> Usage-based AI assistance credits or other digital service top-ups are non-refundable once allocated or consumed.</li>
+                <li><strong>Logistics Fees:</strong> Shipping, insurance, and international customs duties are non-refundable once the item has been dispatched from our facility or a partner facility.</li>
               </ul>
 
               <h2 id="process">
@@ -164,7 +167,9 @@ export default function RefundPage() {
                 To initiate a refund for eligible gold or silver items, please follow these steps:
               </p>
               <ol>
-                <li>Submit a request via the <strong>Returns Portal</strong> within 7 days of delivery.</li>
+                <li>
+                  Submit a request through the <Link href="/support" className="font-semibold text-amber-600 dark:text-amber-400 hover:underline">Support Center</Link> within 7 days of delivery.
+                </li>
                 <li>Our quality assurance team will verify the purity and weight of the returned item.</li>
                 <li>Once verified, the refund will be processed to your original payment method within 10-14 business days.</li>
               </ol>
@@ -177,12 +182,12 @@ export default function RefundPage() {
                   <h4 className="text-lg font-bold text-gray-900 dark:text-white m-0 truncate">Questions?</h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-0">Our support team is available 24/7 for refund inquiries.</p>
                 </div>
-                <a 
-                  href="mailto:support@orivraa.com" 
+                <Link
+                  href="/support"
                   className="md:ml-auto inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold transition-all shadow-md active:scale-95 no-underline"
                 >
-                  support@orivraa.com
-                </a>
+                  Open Support Center
+                </Link>
               </div>
             </div>
           </div>

@@ -13,6 +13,7 @@ import {
     Calendar,
     CheckCircle2,
     Clock,
+  CreditCard,
     Gem,
     Globe,
     LayoutDashboard,
@@ -252,6 +253,151 @@ export function SellerFeaturesSection() {
   );
 }
 
+export function SellerResourceHubSection() {
+  const t = useT();
+  const resourceCards = [
+    {
+      href: "/demo",
+      title: "Watch the quick demo",
+      desc: "See the dashboard, billing flow, POS, and live metal-rate context in 30 seconds.",
+      cta: "Open demo",
+      icon: Clock,
+    },
+    {
+      href: "/tutorial",
+      title: "Walk through the full tutorial",
+      desc: "Get the complete product tour covering POS, GST, inventory, reports, and daily workflows.",
+      cta: "Open tutorial",
+      icon: BookOpen,
+    },
+    {
+      href: "/support",
+      title: "Get support and onboarding help",
+      desc: "Use the support center for AI answers, tickets, and direct contact with the team.",
+      cta: "Visit support",
+      icon: MessageSquare,
+    },
+    {
+      href: "/pricing",
+      title: "Review plans before you start",
+      desc: "See the free plan, paid tiers, regional pricing, and which setup fits your jewellery shop.",
+      cta: "View pricing",
+      icon: CreditCard,
+    },
+  ];
+
+  const softwareLinks = [
+    { href: "/jewellery-shop-software", label: "Jewellery shop software" },
+    {
+      href: "/jewellery-store-management-software",
+      label: "Store management software",
+    },
+    { href: "/jewellery-shop-billing-software", label: "Billing software" },
+    { href: "/jewellery-inventory-software", label: "Inventory software" },
+    { href: "/jewellery-pos-software", label: "Mobile POS" },
+    { href: "/jewellery-ecommerce-software", label: "Ecommerce software" },
+    { href: "/seller-guide", label: "Seller guide" },
+  ];
+
+  const comparisonLinks = [
+    {
+      href: "/compare/jewellery-crm-software-india",
+      label: "Jewellery CRM software in India",
+    },
+    {
+      href: "/compare/billing-software-india-jewellery-shops",
+      label: "Billing software for jewellery shops",
+    },
+    { href: "/compare/orivraa-vs-tally", label: "Orivraa vs Tally" },
+    { href: "/compare/orivraa-vs-marg-erp", label: "Orivraa vs Marg ERP" },
+  ];
+
+  return (
+    <section className="py-12 lg:py-20 bg-gray-50 dark:bg-gray-900/50">
+      <div className="container mx-auto px-4">
+        <div className="text-center max-w-3xl mx-auto mb-8 lg:mb-12">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gold-600 dark:text-gold-400 mb-2">
+            <BookOpen className="h-3.5 w-3.5" />
+            <T>Plan Your Next Step</T>
+          </span>
+          <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white">
+            <T>See the product, compare it, or get help</T>
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2 max-w-2xl mx-auto text-sm lg:text-base">
+            <T>
+              Start with the fastest route for your team: watch the demo, open
+              the full tutorial, review pricing, or go straight to support.
+            </T>
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
+          {resourceCards.map((card) => (
+            <Link
+              key={card.href}
+              href={card.href}
+              className="group rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-5 lg:p-6 hover:border-gold-300 dark:hover:border-gold-700 hover:shadow-lg hover:shadow-gold-500/5 transition-all"
+            >
+              <div className="w-11 h-11 rounded-xl bg-gold-100 dark:bg-gold-900/30 text-gold-700 dark:text-gold-300 flex items-center justify-center mb-4">
+                <card.icon className="h-5 w-5" />
+              </div>
+              <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                {t(card.title)}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed min-h-[72px]">
+                {t(card.desc)}
+              </p>
+              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-gold-600 dark:text-gold-400">
+                {t(card.cta)}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-8 lg:mt-10 rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 lg:p-8 shadow-sm">
+          <div className="grid lg:grid-cols-[1.35fr_0.65fr] gap-8">
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                <T>Software pages worth visiting</T>
+              </p>
+              <div className="flex flex-wrap gap-2.5">
+                {softwareLinks.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:border-gold-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
+                  >
+                    {t(item.label)}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                <T>Popular comparison pages</T>
+              </p>
+              <div className="space-y-2">
+                {comparisonLinks.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center justify-between rounded-2xl border border-gray-200 dark:border-gray-800 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:border-gold-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
+                  >
+                    <span>{t(item.label)}</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function BlogSection() {
   const t = useT();
   return (
@@ -357,13 +503,13 @@ export function SellerCtaSection() {
               <T>Start free trial</T>
             </Button>
           </Link>
-          <Link href="/partner">
+          <Link href="/support">
             <Button
               size="lg"
               variant="outline"
               className="w-full sm:w-auto h-12 px-8 rounded-xl text-base bg-transparent text-white border-white hover:bg-white dark:bg-gray-900 hover:text-gold-600"
             >
-              <T>Become a Partner</T>
+              <T>Get onboarding help</T>
             </Button>
           </Link>
         </div>
@@ -475,6 +621,7 @@ export function HomeSections() {
   return (
     <>
       <SellerFeaturesSection />
+      <SellerResourceHubSection />
       <BlogSection />
       <SellerCtaSection />
       <BuyerSections />
