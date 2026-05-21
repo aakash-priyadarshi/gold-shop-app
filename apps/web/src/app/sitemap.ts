@@ -166,6 +166,46 @@ const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
     changeFrequency: "monthly",
     priority: 0.5,
   },
+  "/compare/orivraa-vs-jewel360": {
+    changeFrequency: "monthly",
+    priority: 0.8,
+  },
+  "/compare/orivraa-vs-lightspeed": {
+    changeFrequency: "monthly",
+    priority: 0.8,
+  },
+  "/compare/orivraa-vs-sortly": {
+    changeFrequency: "monthly",
+    priority: 0.8,
+  },
+  "/compare/orivraa-vs-the-edge": {
+    changeFrequency: "monthly",
+    priority: 0.8,
+  },
+  "/compare/orivraa-vs-vyapar": {
+    changeFrequency: "monthly",
+    priority: 0.8,
+  },
+  "/compare/orivraa-vs-zoho-inventory": {
+    changeFrequency: "monthly",
+    priority: 0.8,
+  },
+  "/np/jewellery-shop-software": {
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
+  "/uae/jewellery-shop-software": {
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
+  "/uk/jewellery-shop-software": {
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
+  "/us/jewelry-store-software": {
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
 };
 
 function getStaticPages(siteLaunch: string, customerFlowEnabled: boolean): MetadataRoute.Sitemap {

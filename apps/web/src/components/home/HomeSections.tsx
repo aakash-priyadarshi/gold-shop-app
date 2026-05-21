@@ -299,6 +299,19 @@ const comparisonLinks = [
   { href: "/compare/billing-software-india-jewellery-shops", label: "Billing software for jewellery shops" },
   { href: "/compare/orivraa-vs-tally", label: "Orivraa vs Tally" },
   { href: "/compare/orivraa-vs-marg-erp", label: "Orivraa vs Marg ERP" },
+  { href: "/compare/orivraa-vs-vyapar", label: "Orivraa vs Vyapar" },
+  { href: "/compare/orivraa-vs-lightspeed", label: "Orivraa vs Lightspeed" },
+  { href: "/compare/orivraa-vs-jewel360", label: "Orivraa vs Jewel360" },
+  { href: "/compare/orivraa-vs-the-edge", label: "Orivraa vs The Edge" },
+  { href: "/compare/orivraa-vs-zoho-inventory", label: "Orivraa vs Zoho Inventory" },
+  { href: "/compare/orivraa-vs-sortly", label: "Orivraa vs Sortly" },
+];
+
+const countryHubLinks = [
+  { href: "/us/jewelry-store-software", label: "🇺🇸 USA — jewelry store software" },
+  { href: "/uk/jewellery-shop-software", label: "🇬🇧 UK — jewellery shop software" },
+  { href: "/uae/jewellery-shop-software", label: "🇦🇪 UAE / Dubai — jewellery software" },
+  { href: "/np/jewellery-shop-software", label: "🇳🇵 Nepal — jewellery billing software" },
 ];
 
 const countryGuideLinks = [
@@ -398,6 +411,23 @@ export function SellerResourceHubSection() {
             </p>
             <div className="flex flex-wrap gap-2.5">
               {countryGuideLinks.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:border-gold-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
+                >
+                  {t(item.label)}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              <T>Country-specific software pages</T>
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              {countryHubLinks.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
