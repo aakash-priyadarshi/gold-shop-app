@@ -960,8 +960,458 @@ export const BLOG_POSTS: BlogPost[] = [
 </ul>
 
 <p>Orivraa handles GST compliance for Indian jewellers automatically — including the tricky making charges split. <a href="/auth/register">Start free</a> and see how it simplifies your billing.</p>
+
+<p><em>Jewellery tax guides for other markets: <a href="/blog/vat-on-gold-jewellery-uae-dubai-guide">VAT guide for UAE &amp; Dubai</a> &middot; <a href="/blog/jewellery-shop-software-tax-compliance-uk">UK VAT &amp; hallmarking</a> &middot; <a href="/blog/jewellery-billing-software-nepal-tax-guide">Nepal jewellery billing &amp; tax</a> &middot; <a href="/blog/jewellery-shop-software-usa-sales-tax-guide">US sales tax &amp; FinCEN guide</a></em></p>
 `,
   },
+
+  /* ── Post UAE/Dubai ──────────────────────────────────────────── */
+  {
+    slug: "vat-on-gold-jewellery-uae-dubai-guide",
+    title: "VAT on Gold Jewellery in UAE & Dubai: Complete Guide for Jewellers (2025–2026)",
+    description:
+      "Complete guide to VAT on gold jewellery in UAE and Dubai. 5% VAT on worked jewellery, zero-rated investment gold, FTA registration thresholds, tax invoice requirements, and how jewellery shop software helps Dubai jewellers stay compliant.",
+    date: "2026-05-18",
+    author: "Orivraa Team",
+    authorRole: "Tax Research & Compliance",
+    readTime: "8 min read",
+    category: "Tax & Compliance",
+    tags: [
+      "VAT on gold jewellery UAE",
+      "jewellery billing software Dubai",
+      "Dubai gold shop software",
+      "UAE jewellery tax 2025",
+      "gold jewellery VAT rate UAE",
+      "FTA compliant jewellery billing",
+      "jewellery management software Dubai",
+    ],
+    content: `
+<p>The UAE introduced a 5% Value Added Tax on 1 January 2018 under Federal Decree-Law No. 8 of 2017. For jewellery businesses operating in Dubai or anywhere else in the UAE, understanding which products attract VAT &mdash; and which do not &mdash; is essential for staying compliant with the Federal Tax Authority (FTA).</p>
+
+<p><em>This guide covers UAE VAT rules as of 2025&ndash;2026. Always verify current regulations with your UAE tax advisor or the FTA directly at uaevat.gov.ae.</em></p>
+
+<h2>UAE VAT Basics for Jewellery Businesses</h2>
+
+<p>The standard VAT rate in the UAE is <strong>5%</strong>, applied to most goods and services. Jewellery businesses must register for VAT if their taxable turnover exceeds AED 375,000 per year. Voluntary registration is available from AED 187,500 per year. All registered businesses receive a Tax Registration Number (TRN) which must appear on every VAT invoice issued.</p>
+
+<h2>What Is Taxed: Jewellery vs Investment Gold</h2>
+
+<p>This is where most confusion arises for UAE jewellers. The UAE has a specific &ldquo;investment precious metals&rdquo; regime that zero-rates bullion but taxes worked jewellery at the full 5%:</p>
+
+<table>
+<thead>
+<tr><th>Product Type</th><th>VAT Rate</th><th>Condition</th></tr>
+</thead>
+<tbody>
+<tr><td>Worked jewellery (rings, necklaces, bangles)</td><td><strong>5%</strong></td><td>All karat levels &mdash; 22K, 18K, 14K, etc.</td></tr>
+<tr><td>Investment gold bars / coins</td><td><strong>0% (zero-rated)</strong></td><td>Purity &ge;99% for bars; coins minted after 1800</td></tr>
+<tr><td>Investment silver bars / coins</td><td><strong>0% (zero-rated)</strong></td><td>Purity &ge;99%</td></tr>
+<tr><td>Investment platinum bars / coins</td><td><strong>0% (zero-rated)</strong></td><td>Purity &ge;99%</td></tr>
+<tr><td>Diamond and gemstone jewellery</td><td><strong>5%</strong></td><td>All worked pieces with diamonds or gemstones</td></tr>
+</tbody>
+</table>
+
+<p><strong>Key point:</strong> A 22K gold ring is standard jewellery and attracts 5% VAT even though the gold purity is high. Only bullion in bar or approved coin form qualifies as zero-rated investment gold. This is the most common compliance mistake at jewellery counters in Dubai.</p>
+
+<h2>Calculating VAT on a Gold Jewellery Sale in Dubai</h2>
+
+<p>Unlike India where metal value and making charges are taxed at different GST rates, UAE VAT applies a single 5% on the full retail price.</p>
+
+<p><strong>Example: 22K gold bangle, 15g net weight, gold rate AED 290/g, making charges AED 500</strong></p>
+
+<table>
+<thead>
+<tr><th>Component</th><th>Calculation</th><th>Amount (AED)</th></tr>
+</thead>
+<tbody>
+<tr><td>Metal value</td><td>15g &times; AED 290</td><td>AED 4,350</td></tr>
+<tr><td>Making charges</td><td>Fixed</td><td>AED 500</td></tr>
+<tr><td>Subtotal (pre-VAT)</td><td></td><td>AED 4,850</td></tr>
+<tr><td>VAT at 5%</td><td>AED 4,850 &times; 5%</td><td>AED 242.50</td></tr>
+<tr><td><strong>Invoice Total</strong></td><td></td><td><strong>AED 5,092.50</strong></td></tr>
+</tbody>
+</table>
+
+<h2>FTA-Compliant Tax Invoice Requirements</h2>
+
+<p>Every tax invoice issued by a UAE-registered jeweller must include:</p>
+
+<ul>
+<li>The words <strong>&ldquo;TAX INVOICE&rdquo;</strong> prominently displayed</li>
+<li>Your TRN (Tax Registration Number)</li>
+<li>Supplier name and registered address</li>
+<li>Customer name and address (required for B2B invoices above AED 10,000)</li>
+<li>Invoice date and a unique sequential invoice number</li>
+<li>Item description with quantity and unit price (weight, purity, making charges)</li>
+<li>Amount excluding VAT, VAT amount separately, and total including VAT</li>
+<li>Currency in AED (or foreign currency with AED equivalent stated)</li>
+</ul>
+
+<p>For retail sales below AED 10,000, a simplified tax invoice is permitted and may omit the customer&apos;s address, but your TRN and the VAT amount must still be shown.</p>
+
+<h2>Dubai Gold Souk and DMCC</h2>
+
+<p>Dubai is the world&apos;s largest retail gold trading hub. Jewellers operating in or supplying to Dubai should know:</p>
+
+<ul>
+<li><strong>DMCC (Dubai Multi Commodities Centre):</strong> Governs gold trading licences, storage, and export. DMCC-licenced traders access bonded warehousing and the Dubai Good Delivery (DGD) gold standard for bar quality.</li>
+<li><strong>Tourist VAT Refund Scheme:</strong> International tourists can reclaim 5% VAT on retail purchases above AED 250 at Planet and Global Blue kiosks at UAE airports. Jewellers enrolled in the scheme report higher tourist conversion &mdash; always issue a compliant tax invoice for tourist purchases.</li>
+<li><strong>Gold imports:</strong> All gold imported into the UAE requires UAE Customs clearance; DMCC-licenced businesses can use bonded facilities to defer VAT on stock held for re-export.</li>
+</ul>
+
+<h2>Common VAT Mistakes by UAE Jewellers</h2>
+
+<ul>
+<li>Applying 0% VAT to worked jewellery, wrongly treating it as investment gold</li>
+<li>Omitting TRN from invoices &mdash; FTA can impose fixed penalties per non-compliant invoice</li>
+<li>Displaying ex-VAT prices to consumers without making VAT-inclusive totals clear</li>
+<li>Missing the registration deadline once the AED 375,000 threshold is crossed</li>
+</ul>
+
+<h2>How Jewellery Software Helps UAE Compliance</h2>
+
+<p>Purpose-built <a href="/jewellery-shop-software">jewellery shop software</a> automates UAE VAT compliance so your team does not have to calculate manually at the counter:</p>
+
+<ul>
+<li>Automatic 5% VAT calculation on all jewellery sales; zero-rating for qualifying investment metals</li>
+<li>FTA-compliant invoice format with TRN, itemised VAT, and bilingual Arabic/English support</li>
+<li>Multi-currency billing in AED with INR, NPR, and USD equivalents for cross-border suppliers</li>
+<li>VAT summary reports ready for quarterly FTA filing</li>
+<li>Tourist sale tracking for VAT refund scheme records</li>
+</ul>
+
+<p>Orivraa supports AED pricing natively and generates tax invoices that meet FTA requirements. <a href="/auth/register">Start free</a> and see how it handles UAE VAT for your jewellery business.</p>
+
+<p><em>Related guides: <a href="/blog/jewellery-gst-billing-guide-india">GST billing for India</a> &middot; <a href="/blog/jewellery-shop-software-tax-compliance-uk">UK VAT &amp; hallmarking</a> &middot; <a href="/blog/jewellery-billing-software-nepal-tax-guide">Nepal jewellery billing</a> &middot; <a href="/blog/jewellery-shop-software-usa-sales-tax-guide">US sales tax &amp; FinCEN</a></em></p>
+`,
+  },
+
+  /* ── Post UK ─────────────────────────────────────────────────── */
+  {
+    slug: "jewellery-shop-software-tax-compliance-uk",
+    title: "Jewellery Business Software & Tax Compliance in UK: VAT, Hallmarking & MTD (2025)",
+    description:
+      "Complete guide for UK jewellers: 20% VAT on jewellery, mandatory hallmarking under the Hallmarking Act 1973, Making Tax Digital obligations, anti-money laundering duties as a High Value Dealer, and the best jewellery shop software for UK businesses.",
+    date: "2026-05-18",
+    author: "Orivraa Team",
+    authorRole: "Tax Research & Compliance",
+    readTime: "9 min read",
+    category: "Tax & Compliance",
+    tags: [
+      "jewellery shop software UK",
+      "VAT on jewellery UK",
+      "hallmarking requirements UK jewellers",
+      "Making Tax Digital jewellery",
+      "jewellery business UK compliance",
+      "gold shop software United Kingdom",
+      "HMRC jewellery high value dealer",
+    ],
+    content: `
+<p>UK jewellery businesses face a distinctive compliance stack: 20% VAT, mandatory hallmarking under the 1973 Hallmarking Act, digital record-keeping under Making Tax Digital, and anti-money laundering registration as a High Value Dealer. This guide covers all four areas so you can run your UK jewellery shop with confidence.</p>
+
+<p><em>UK tax rules change frequently. Always verify figures with HMRC or a qualified UK tax advisor before relying on them for compliance decisions.</em></p>
+
+<h2>VAT on Jewellery in the UK</h2>
+
+<p>The <strong>standard 20% VAT rate</strong> applies to most jewellery sold in the UK. There is one significant exception: investment gold.</p>
+
+<table>
+<thead>
+<tr><th>Product</th><th>VAT Rate</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Gold jewellery (worked) &mdash; 9ct, 14ct, 18ct, 22ct</td><td><strong>20%</strong></td><td>All karat levels; standard rate applies</td></tr>
+<tr><td>Silver jewellery</td><td><strong>20%</strong></td><td>Standard rate; no precious metal exemption for jewellery</td></tr>
+<tr><td>Platinum jewellery</td><td><strong>20%</strong></td><td>Standard rate</td></tr>
+<tr><td>Investment gold (bars/coins)</td><td><strong>0% (zero-rated)</strong></td><td>VATA 1994 Schedule 9 Group 15; purity &ge;99.5% bars; qualifying coins</td></tr>
+<tr><td>Fashion / costume jewellery</td><td><strong>20%</strong></td><td>Standard rate regardless of material</td></tr>
+</tbody>
+</table>
+
+<p>Investment gold is zero-rated under VATA 1994 Schedule 9 Group 15. To qualify, gold must be in bar or wafer form with purity &ge;99.5%, or be coins minted after 1800 with purity &ge;90% that were or are legal tender in their country of origin. Standard 9ct, 14ct, 18ct, and 22ct hallmarked gold jewellery does <strong>not</strong> qualify &mdash; 20% VAT applies to all worked gold jewellery in the UK. The VAT registration threshold is &pound;90,000 annual taxable turnover (April 2024 onwards).</p>
+
+<h2>Hallmarking: What the 1973 Act Requires</h2>
+
+<p>The <strong>Hallmarking Act 1973</strong> (as amended) makes hallmarking compulsory before any piece of metal may be described, offered for sale, or sold as gold, silver, or platinum in the UK. Selling unhallmarked jewellery above the weight thresholds is a criminal offence under the Act.</p>
+
+<table>
+<thead>
+<tr><th>Metal</th><th>Weight Threshold</th><th>Permitted Finenesses</th></tr>
+</thead>
+<tbody>
+<tr><td>Gold</td><td>&gt;1g</td><td>999, 990, 916 (22ct), 750 (18ct), 585 (14ct), 375 (9ct)</td></tr>
+<tr><td>Silver</td><td>&gt;7.78g</td><td>999, 970, 925 (Sterling), 800</td></tr>
+<tr><td>Platinum</td><td>&gt;0.5g</td><td>999, 950, 900, 850</td></tr>
+</tbody>
+</table>
+
+<p>There are four UK Assay Offices authorised to hallmark precious metals: <strong>London</strong> (Goldsmiths&apos; Company), <strong>Birmingham</strong>, <strong>Sheffield</strong>, and <strong>Edinburgh</strong>. Each office applies its own mark alongside the fineness mark, and an optional date letter. Online sellers shipping UK-destined jewellery from abroad must also comply with the Hallmarking Act.</p>
+
+<h2>Making Tax Digital (MTD) for Jewellers</h2>
+
+<p>Since April 2022, <strong>all VAT-registered businesses</strong> in the UK must follow Making Tax Digital rules &mdash; this includes every VAT-registered jewellery business:</p>
+
+<ul>
+<li><strong>Digital records:</strong> All VAT transactions must be recorded in MTD-compatible software. Spreadsheet-only record-keeping (without bridging software) no longer satisfies HMRC.</li>
+<li><strong>Digital submission:</strong> VAT returns must be submitted directly via MTD-compatible software using HMRC&apos;s API &mdash; not via HMRC&apos;s old online login.</li>
+<li><strong>MTD for Income Tax Self-Assessment (ITSA):</strong> Phased rollout from April 2026 for self-employed people with business or property income above &pound;50,000.</li>
+</ul>
+
+<p>Jewellers still filing manually risk penalties. Using MTD-compatible jewellery management software handles this automatically, keeping digital VAT records and submitting returns in the correct format.</p>
+
+<h2>Anti-Money Laundering: High Value Dealer (HVD) Registration</h2>
+
+<p>Jewellers accepting or making <strong>cash payments of &euro;10,000 or more</strong> (approximately &pound;8,500) in a single transaction, or linked transactions, must register with HMRC as a High Value Dealer (HVD). This is a legal requirement under the Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017.</p>
+
+<p>HVD obligations include:</p>
+
+<ul>
+<li>Annual registration fee paid to HMRC</li>
+<li>Written anti-money laundering (AML) risk assessment and policies</li>
+<li>Customer Due Diligence (CDD): verify identity of customers for transactions at or above the threshold (passport/driving licence + proof of address)</li>
+<li>Suspicious Activity Reports (SARs): file reports with the National Crime Agency (NCA) for suspicious transactions</li>
+<li>Staff AML training records kept for at least 5 years</li>
+</ul>
+
+<h2>Consumer Pricing and Trading Standards</h2>
+
+<ul>
+<li><strong>VAT-inclusive pricing:</strong> All prices displayed to UK retail consumers must include VAT. You cannot show ex-VAT prices to the public.</li>
+<li><strong>Weights and Measures Act 1985:</strong> Weight and purity markings must be accurate; Trading Standards enforce this actively in the jewellery sector.</li>
+<li><strong>Consumer Protection from Unfair Trading Regulations 2008:</strong> Misleading descriptions of metal type, karat, or gem quality are a criminal offence.</li>
+</ul>
+
+<h2>How Jewellery Software Helps UK Businesses</h2>
+
+<p>Purpose-built <a href="/jewellery-shop-software">jewellery shop software</a> manages the full UK compliance workload:</p>
+
+<ul>
+<li>20% VAT on all jewellery invoices; zero-rating for qualifying investment gold</li>
+<li>MTD-compatible digital record-keeping for HMRC VAT submissions</li>
+<li>Hallmark reference fields per item (London / Birmingham / Sheffield / Edinburgh)</li>
+<li>GBP pricing with multi-currency support for international buyers</li>
+<li>High-value transaction flags for AML compliance records</li>
+<li>GDPR-compliant customer data management for UK and EU buyers</li>
+</ul>
+
+<p>Orivraa supports GBP pricing and generates VAT invoices meeting HMRC requirements. <a href="/auth/register">Start free</a> and manage your UK jewellery business from one platform.</p>
+
+<p><em>Related guides: <a href="/blog/jewellery-gst-billing-guide-india">GST billing for India</a> &middot; <a href="/blog/vat-on-gold-jewellery-uae-dubai-guide">UAE &amp; Dubai VAT guide</a> &middot; <a href="/blog/jewellery-billing-software-nepal-tax-guide">Nepal jewellery billing</a> &middot; <a href="/blog/jewellery-shop-software-usa-sales-tax-guide">US sales tax &amp; FinCEN</a></em></p>
+`,
+  },
+
+  /* ── Post Nepal ──────────────────────────────────────────────── */
+  {
+    slug: "jewellery-billing-software-nepal-tax-guide",
+    title: "Jewellery Billing Software for Nepal: Gold Shop Management & Tax Guide (2025–2026)",
+    description:
+      "Complete guide for Nepalese jewellers: billing software in NPR, Nepal Rastra Bank gold rates, 13% VAT on jewellery, IRD and PAN registration, tola-based pricing, and how Orivraa supports Nepal gold shops and jewellery businesses.",
+    date: "2026-05-18",
+    author: "Orivraa Team",
+    authorRole: "Product & Market Research",
+    readTime: "8 min read",
+    category: "Tax & Compliance",
+    tags: [
+      "jewellery billing software Nepal",
+      "gold shop software Nepal",
+      "jewellery management software Nepal",
+      "Nepal jewellery VAT tax",
+      "Nepal gold rate billing software",
+      "jewellery shop software Kathmandu",
+      "Nepal Rastra Bank gold rate jewellery",
+    ],
+    content: `
+<p>Nepal has one of South Asia&apos;s most active gold jewellery markets, centred in Kathmandu Valley but extending across all major cities. Nepalese jewellery businesses range from small local goldsmiths to large trading houses exporting to the Nepali diaspora in the UK, USA, and Australia. Managing billing, inventory, and tax compliance accurately is increasingly important as Nepal&apos;s Inland Revenue Department (IRD) tightens e-billing requirements.</p>
+
+<p><em>Tax rules in Nepal are updated regularly. Always confirm current rates and registration thresholds with an IRD-registered tax advisor or chartered accountant.</em></p>
+
+<h2>Nepal&apos;s Jewellery Market: Key Centres</h2>
+
+<ul>
+<li><strong>Kathmandu:</strong> New Road gold bazaar, Asan Tole, and Indrachowk are the traditional hubs with hundreds of goldsmiths and retailers</li>
+<li><strong>Pokhara:</strong> Growing tourist-driven gold and silver jewellery market, with strong export demand from trekkers and international visitors</li>
+<li><strong>Birgunj and Biratnagar:</strong> Active border markets with high-volume India&ndash;Nepal cross-border gold trade</li>
+<li><strong>Dharan:</strong> Eastern Nepal&apos;s active gold and silver jewellery market</li>
+</ul>
+
+<h2>Nepal Rastra Bank Gold Rates</h2>
+
+<p>Unlike most countries where jewellery shops set their own gold price, <strong>Nepal Rastra Bank (NRB)</strong> publishes official gold and silver buying and selling rates every working day before market opening. Most Nepali jewellers price their gold based on the NRB published rate plus their making charges.</p>
+
+<ul>
+<li><strong>Fine gold (24K / 99.9%):</strong> NRB publishes buying and selling rates at nrb.org.np daily</li>
+<li><strong>Tejabi gold (approximately 22.5K / 92.5%):</strong> The most common grade used in Nepal jewellery; priced at a premium over fine gold. Most wedding jewellery in Nepal uses Tejabi gold.</li>
+<li><strong>Weight unit:</strong> Nepal uses <strong>tola</strong> as the primary gold weight unit. <em>1 tola = 11.6638 grams.</em> Jewellery billing software for Nepal must support tola alongside grams.</li>
+</ul>
+
+<h2>VAT on Jewellery in Nepal</h2>
+
+<p>Nepal&apos;s standard VAT rate is <strong>13%</strong>, administered by the Inland Revenue Department (IRD) under the Value Added Tax Act, 2052 (1995).</p>
+
+<table>
+<thead>
+<tr><th>Product Type</th><th>VAT Treatment</th></tr>
+</thead>
+<tbody>
+<tr><td>Raw gold / silver bullion (unworked bars)</td><td>VAT-exempt</td></tr>
+<tr><td>Worked gold jewellery (necklaces, rings, bangles, tika sets)</td><td>13% VAT (standard rate)</td></tr>
+<tr><td>Silver jewellery</td><td>13% VAT</td></tr>
+<tr><td>Gemstone and diamond jewellery</td><td>13% VAT</td></tr>
+</tbody>
+</table>
+
+<p><strong>Small business thresholds:</strong> Businesses with annual turnover below NPR 5 million are generally exempt from VAT registration and the 13% VAT obligation. Businesses in the NPR 2&ndash;5 million range may use a simplified taxation regime. Confirm current thresholds with IRD as these are periodically revised in Nepal&apos;s annual budget.</p>
+
+<h2>IRD Registration and PAN Requirements</h2>
+
+<ul>
+<li><strong>PAN (Permanent Account Number):</strong> Mandatory for businesses with annual turnover above NPR 2 million. PAN must appear on all business invoices.</li>
+<li><strong>VAT registration:</strong> Mandatory above NPR 5 million annual turnover. VAT-registered jewellers must issue formal tax invoices and file VAT returns with IRD.</li>
+<li><strong>E-billing (fiscal device):</strong> IRD is rolling out electronic fiscal device requirements for VAT-registered retailers in phases. Fiscal devices transmit invoice data to IRD in real time. Check current IRD notices for your district and business category.</li>
+<li><strong>Cash memo:</strong> Even non-registered businesses are required to issue a cash memo (bill) for all sales transactions above NPR 5,000.</li>
+</ul>
+
+<h2>Hallmarking and Quality Standards in Nepal</h2>
+
+<ul>
+<li>The <strong>Nepal Bureau of Standards and Metrology (NBSM)</strong> oversees quality standards for precious metals including gold and silver jewellery</li>
+<li>Hallmarking is not yet uniformly mandatory for all retail jewellers but is increasingly expected by customers and is required for export-quality pieces</li>
+<li>Common Nepali purity names: <em>Chhatis Aana</em> (24K), <em>Battis Aana / Tejabi</em> (22K), <em>Chaubis Aana</em> (18K)</li>
+<li>Export pieces increasingly carry international purity stamps: 999, 916, 750</li>
+</ul>
+
+<h2>How Orivraa Supports Nepal Jewellers</h2>
+
+<p>Orivraa is built to support the specific needs of Nepal&apos;s jewellery market:</p>
+
+<ul>
+<li><strong>NPR pricing:</strong> All transactions recorded in Nepali Rupee; tola-based weight calculations alongside grams</li>
+<li><strong>Nepal Pro plan:</strong> Available from NPR 399/month &mdash; designed for the Nepal market</li>
+<li><strong>NRB gold rate integration:</strong> Daily gold price updates aligned with Nepal Rastra Bank published rates</li>
+<li><strong>Nepali and Hindi language interface</strong></li>
+<li><strong>IRD-compatible invoicing:</strong> Invoice records aligned with Nepal&apos;s cash memo and VAT invoice requirements, including PAN on invoices</li>
+<li><strong>Offline desktop app:</strong> Works without a stable internet connection &mdash; essential in many parts of Nepal outside Kathmandu</li>
+</ul>
+
+<p>Nepal jewellers can <a href="/auth/register">start free on Orivraa</a> with full billing support and NPR pricing at no cost. The <a href="/pricing">Nepal Pro plan</a> unlocks unlimited inventory, advanced reports, and e-billing ready exports.</p>
+
+<p><em>Related guides: <a href="/blog/jewellery-gst-billing-guide-india">GST billing for India</a> &middot; <a href="/blog/vat-on-gold-jewellery-uae-dubai-guide">UAE &amp; Dubai VAT guide</a> &middot; <a href="/blog/jewellery-shop-software-tax-compliance-uk">UK VAT &amp; hallmarking</a> &middot; <a href="/blog/jewellery-shop-software-usa-sales-tax-guide">US sales tax &amp; FinCEN</a></em></p>
+`,
+  },
+
+  /* ── Post USA ─────────────────────────────────────────────────── */
+  {
+    slug: "jewellery-shop-software-usa-sales-tax-guide",
+    title: "Jewellery Shop Software for US Businesses: Sales Tax, FinCEN Compliance & Store Management (2025)",
+    description:
+      "Complete guide for US jewellery businesses: state sales tax on jewellery, FinCEN Form 8300 cash reporting for precious metal dealers, state-by-state precious metals exemptions, FTC jewellery disclosure rules, and the best jewellery management software for American jewellers.",
+    date: "2026-05-18",
+    author: "Orivraa Team",
+    authorRole: "Tax Research & Compliance",
+    readTime: "8 min read",
+    category: "Tax & Compliance",
+    tags: [
+      "jewellery shop software USA",
+      "jewelry store software United States",
+      "sales tax on jewelry USA",
+      "FinCEN jewelry cash reporting Form 8300",
+      "jewelry inventory management software US",
+      "gold jewellery business software America",
+      "jewellery billing software United States",
+    ],
+    content: `
+<p>Running a jewellery business in the United States involves a patchwork of state sales tax rules, federal cash reporting requirements under the Bank Secrecy Act, and FTC jewellery disclosure obligations. Unlike India or the UK, there is no single federal tax on jewellery &mdash; but the compliance requirements are no less real.</p>
+
+<p><em>US tax laws vary by state and are updated regularly. Always verify requirements with a licensed CPA or tax attorney before making compliance decisions for your specific state.</em></p>
+
+<h2>Sales Tax on Jewellery: State by State</h2>
+
+<p>The United States has <strong>no federal sales tax</strong> on jewellery. Each of the 45 states (plus Washington D.C.) that levy a sales tax sets its own rate and exemptions. Five states have no sales tax at all: <strong>Montana, Oregon, New Hampshire, Delaware, and Alaska</strong>.</p>
+
+<p>Combined state and local sales tax rates on jewellery in major US markets:</p>
+
+<table>
+<thead>
+<tr><th>State / City</th><th>Approx. Combined Rate</th><th>Precious Metal Bullion Exemption?</th></tr>
+</thead>
+<tbody>
+<tr><td>New York City, NY</td><td>~8.875%</td><td>No &mdash; jewellery fully taxed</td></tr>
+<tr><td>Los Angeles, CA</td><td>~10.25%</td><td>No</td></tr>
+<tr><td>Texas</td><td>8.25%</td><td>Yes &mdash; gold/silver bullion &amp; coins exempt</td></tr>
+<tr><td>Florida</td><td>6%</td><td>Yes &mdash; gold/silver bullion exempt</td></tr>
+<tr><td>Illinois (Chicago)</td><td>~10.25%</td><td>No</td></tr>
+<tr><td>Tennessee</td><td>~9.75%</td><td>No</td></tr>
+<tr><td>Montana / Oregon / New Hampshire</td><td>0%</td><td>N/A &mdash; no sales tax</td></tr>
+</tbody>
+</table>
+
+<h2>Precious Metals and Bullion Sales Tax Exemptions</h2>
+
+<p>Many US states distinguish between <strong>worked jewellery</strong> (almost always taxable) and <strong>investment precious metals</strong> (often exempt). States with notable precious metals exemptions include Texas, Florida, South Carolina, Iowa, Arizona, and Wisconsin. Exemption rules vary; some require a minimum purchase amount, others apply only to coins or bars meeting a specific purity threshold.</p>
+
+<p><strong>Critical rule:</strong> Jewellery &mdash; rings, necklaces, earrings, bracelets &mdash; is taxable in virtually all US states regardless of gold content or purity. Only unworked bullion bars and qualifying coins tend to qualify for any exemption.</p>
+
+<h2>Economic Nexus for Online Sellers: The Wayfair Rule</h2>
+
+<p>Since the 2018 Supreme Court decision in <em>South Dakota v. Wayfair</em>, online sellers must collect and remit sales tax in any state where they have <strong>economic nexus</strong> &mdash; even without a physical store there. Typical threshold:</p>
+
+<ul>
+<li>More than $100,000 in sales to customers in a state in the prior or current calendar year, <em>or</em></li>
+<li>More than 200 separate transactions to customers in a state in the prior or current year</li>
+</ul>
+
+<p>For jewellery businesses selling to US buyers through an online marketplace, nexus obligations can arise in multiple states quickly once volume grows. Jewellery management software that tracks per-state sales totals helps you identify when nexus thresholds are crossed.</p>
+
+<h2>FinCEN Form 8300: Cash Transaction Reporting</h2>
+
+<p>Under the Bank Secrecy Act (31 U.S.C. &sect;5331), <strong>jewellers are required to file IRS/FinCEN Form 8300</strong> for any cash transaction &mdash; or series of related transactions from the same buyer &mdash; exceeding $10,000. Precious metal dealers are explicitly covered by this requirement.</p>
+
+<p>What counts as &ldquo;cash&rdquo; for Form 8300:</p>
+<ul>
+<li>Physical currency (coins and bank notes)</li>
+<li>Cashier&apos;s checks, money orders, bank drafts, and traveller&apos;s checks with face value &le;$10,000 used as payment</li>
+</ul>
+
+<p>Credit cards, debit cards, and personal checks are <strong>not</strong> treated as cash for Form 8300. Key requirements:</p>
+
+<ul>
+<li>File within <strong>15 days</strong> of receiving the cash</li>
+<li>Obtain the customer&apos;s full name, address, and Tax Identification Number (SSN or EIN)</li>
+<li>Provide written notice to the customer that you filed a Form 8300 by January 31 of the following year</li>
+<li>Retain your copy for 5 years</li>
+<li>Wilful failure to file carries criminal penalties up to $250,000 and up to 5 years in prison</li>
+</ul>
+
+<h2>FTC Jewelry Guides: Disclosure Obligations</h2>
+
+<p>The FTC Jewelry Guides (16 CFR Part 23) govern how you can describe and market jewellery in the US:</p>
+
+<ul>
+<li><strong>Gold karat marking:</strong> Must be accurate. You cannot describe plated items as &ldquo;gold&rdquo; without qualification; &ldquo;18K gold plated&rdquo; or &ldquo;gold-filled&rdquo; must be stated clearly.</li>
+<li><strong>Diamond quality claims:</strong> Weight, colour, clarity, and cut representations must be truthful and substantiated</li>
+<li><strong>Treated gemstones:</strong> Heat treatment, fracture filling, irradiation, and other enhancements must be disclosed to buyers</li>
+<li><strong>Pearl descriptions:</strong> Must distinguish between natural, cultured, and imitation pearls</li>
+</ul>
+
+<h2>How Jewellery Software Helps US Businesses</h2>
+
+<p>The right <a href="/jewellery-shop-software">jewellery management software</a> helps US jewellers handle compliance without manual overhead:</p>
+
+<ul>
+<li>USD pricing with multi-state sales tax configuration per transaction</li>
+<li>Cash transaction logging with automatic alerts when the $10,000 Form 8300 threshold is approached or crossed</li>
+<li>Customer identification fields (name, address, TIN) for AML/FinCEN records</li>
+<li>Inventory tracked by weight (troy oz and grams), karat/purity, and item barcode</li>
+<li>Invoice records with FTC-required disclosure fields (karat, gemstone treatment disclosures)</li>
+<li>Full audit trail for 5-year record retention requirements</li>
+</ul>
+
+<p>Orivraa supports USD pricing and provides a full audit trail for cash transactions. <a href="/auth/register">Start free</a> and manage your US jewellery business from one platform.</p>
+
+<p><em>Related guides: <a href="/blog/jewellery-gst-billing-guide-india">GST billing for India</a> &middot; <a href="/blog/vat-on-gold-jewellery-uae-dubai-guide">UAE &amp; Dubai VAT guide</a> &middot; <a href="/blog/jewellery-shop-software-tax-compliance-uk">UK VAT &amp; hallmarking</a> &middot; <a href="/blog/jewellery-billing-software-nepal-tax-guide">Nepal jewellery billing</a></em></p>
+`,
+  },
+
   /* ── Post 6 ────────────────────────────────────────────────── */
   {
     slug: "best-jewellery-store-management-software-2026",

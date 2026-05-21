@@ -17,7 +17,7 @@ export default function BlogPage() {
   const itemListJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    itemListElement: BLOG_POSTS.slice(0, 12).map((post, index) => ({
+    itemListElement: BLOG_POSTS.slice(0, 20).map((post, index) => ({
       "@type": "ListItem",
       position: index + 1,
       name: post.title,
