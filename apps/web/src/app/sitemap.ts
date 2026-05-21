@@ -162,10 +162,6 @@ const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
     changeFrequency: "weekly",
     priority: 0.6,
   },
-  "/help": {
-    changeFrequency: "monthly",
-    priority: 0.6,
-  },
   "/support": {
     changeFrequency: "monthly",
     priority: 0.5,

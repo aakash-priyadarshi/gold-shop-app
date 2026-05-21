@@ -102,8 +102,11 @@ export function middleware(request: NextRequest) {
     const userAgent = request.headers.get("user-agent") || "";
     const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
     const forceDesktop = request.cookies.get("orivraa_force_desktop")?.value === "true";
+    // Never redirect crawlers/bots to the mobile subdomain — Googlebot's smartphone
+    // crawler uses a mobile UA (Android/iPhone) but should index the canonical www version.
+    const isCrawlerBot = /bot|crawl|spider|slurp|ia_archiver|prerender/i.test(userAgent);
 
-    if (isMobileUserAgent && !forceDesktop) {
+    if (isMobileUserAgent && !forceDesktop && !isCrawlerBot) {
       const mobileUrl = new URL(request.url);
       const host = hostname;
       if (host === "orivraa.com") {
