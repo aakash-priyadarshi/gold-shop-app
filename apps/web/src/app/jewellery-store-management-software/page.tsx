@@ -17,6 +17,7 @@ import {
     Package,
     Receipt,
     Scale,
+    Smartphone,
     Sparkles,
     Store,
     TrendingUp,
@@ -33,8 +34,18 @@ const jsonLd = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web, Windows, macOS, Android, iOS",
       description:
-        "Complete jewellery store management software with inventory tracking, billing, POS, customer management, analytics, and multi-currency support.",
+        "Complete jewellery store management software with inventory tracking, mobile POS billing, 7-day live gold rate trends, customer management, analytics, and multi-currency support.",
       url: "https://www.orivraa.com/jewellery-store-management-software",
+      featureList: [
+        "Inventory tracking by weight and purity",
+        "Mobile POS billing",
+        "7-day live gold rate trends",
+        "GST/VAT invoicing",
+        "Customer management",
+        "Digital catalogues",
+        "Analytics and reports",
+        "Marketplace listing",
+      ],
       offers: [
         {
           "@type": "Offer",
@@ -156,7 +167,17 @@ const FEATURES = [
   {
     icon: Receipt,
     title: "Billing & Invoicing",
-    desc: "Generate professional invoices with making charges, stone charges, old gold exchange, and tax calculations. GST/VAT compliant with customisable templates.",
+    desc: "Generate professional invoices from desktop or mobile POS with making charges, stone charges, old gold exchange, and GST/VAT tax calculations.",
+  },
+  {
+    icon: Smartphone,
+    title: "Mobile POS for Counter Sales",
+    desc: "Bill walk-in customers from any smartphone, scan items, share receipts, and sync sales back to inventory without buying a separate terminal.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Live Gold Rate Trends",
+    desc: "Use 7-day gold and silver rate history to price quotes, explain rate changes, and update product pricing with market context.",
   },
   {
     icon: Users,

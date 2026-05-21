@@ -2,11 +2,14 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Jewellery POS Software — Point of Sale for Gold & Diamond Shops | Orivraa 2026",
+    "Mobile Jewellery POS Software — Billing for Gold & Diamond Shops | Orivraa 2026",
   description:
-    "Best POS software for jewellery shops. Handle billing with making charges, weight-based pricing, old gold exchange, GST/VAT invoicing, and barcode scanning. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
+    "Mobile POS software for jewellery shops. Bill from any phone with live gold rate history, making charges, old gold exchange, GST/VAT invoicing, barcode scanning, and receipt sharing. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
   keywords: [
     "jewellery POS software",
+    "mobile jewellery POS software",
+    "mobile POS for gold shop",
+    "jewellery POS app",
     "jewellery point of sale",
     "gold shop POS",
     "POS for jewellery shop",
@@ -21,17 +24,17 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/jewellery-pos-software" },
   openGraph: {
-    title: "Jewellery POS Software — Point of Sale for Gold Shops | Orivraa",
+    title: "Mobile Jewellery POS Software for Gold Shops | Orivraa",
     description:
-      "Cloud-based POS for jewellery shops. Making charges, weight-based billing, barcode scanning, old gold exchange. Free to start.",
+      "Cloud-based mobile POS for jewellery shops. Live rate history, making charges, barcode scanning, old gold exchange, and GST/VAT receipts. Free to start.",
     url: "https://www.orivraa.com/jewellery-pos-software",
     type: "article",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Jewellery POS Software — Starts Free | Orivraa",
+    title: "Mobile Jewellery POS Software — Starts Free | Orivraa",
     description:
-      "Point-of-sale software designed for jewellery shops. Weight-based billing, making charges, GST compliance. 2000+ jewellers trust Orivraa.",
+      "Point-of-sale software designed for jewellery shops. Phone billing, live rates, weight-based pricing, making charges, and GST/VAT receipts.",
   },
 };
 

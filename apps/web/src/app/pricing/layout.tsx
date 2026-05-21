@@ -21,6 +21,8 @@ export async function generateMetadata(): Promise<Metadata> {
     "free jewellery software",
     "jewellery ERP pricing",
     "jewellery POS pricing",
+    "mobile jewellery POS pricing",
+    "live gold rate software pricing",
     "orivraa plans",
     "jewellery software free plan",
     "best jewellery software price comparison",
@@ -61,7 +63,18 @@ export default function PricingLayout({
         operatingSystem: "Web, Windows, macOS, Android, iOS",
         url: "https://www.orivraa.com/pricing",
         description:
-          "Jewellery shop software with local country pricing, inventory by weight and purity, billing, POS, GSTIN/VAT-ready invoices, tax reports, AI tools, and marketplace access.",
+          "Jewellery shop software with local country pricing, inventory by weight and purity, mobile POS, 7-day live gold rate trends, GSTIN/VAT-ready invoices, tax reports, AI tools, and marketplace access.",
+        featureList: [
+          "Free shop profile",
+          "Mobile POS billing",
+          "7-day live gold rate history",
+          "Inventory by weight and purity",
+          "GSTIN/VAT-ready invoices",
+          "Digital catalogues",
+          "Customer CRM and RFQ management",
+          "AI jewellery tools",
+          "Marketplace access",
+        ],
         author: {
           "@type": "Organization",
           name: "Orivraa Technologies Pvt. Ltd.",

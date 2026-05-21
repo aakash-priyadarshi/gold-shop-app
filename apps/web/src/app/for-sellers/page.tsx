@@ -21,9 +21,9 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Sell on Orivraa — Get Custom Orders from Real Buyers | Free to Join",
+  title: "Sell Jewellery on Orivraa | Free Shop Profile, Mobile POS & Buyer Leads",
   description:
-    "Jewellers: buyers in your city are already posting custom jewellery requests. Join Orivraa free — get a digital shop profile, receive RFQ leads, and manage orders from one dashboard. No commission until you sell.",
+    "Jewellers can join Orivraa free, create a digital shop profile, receive RFQ buyer leads, try mobile POS billing, track live gold rate trends, and manage orders from one dashboard. No commission until you sell.",
   alternates: { canonical: "https://www.orivraa.com/for-sellers" },
 };
 
@@ -73,7 +73,7 @@ const FEATURES = [
   {
     icon: BarChart3,
     title: "Mobile POS & Dashboard",
-    desc: "Handle walk-in sales right from your phone. Track live gold rate trends, custom orders, quotes, and customer messages in one place.",
+    desc: "Try phone-based billing, 7-day live gold rate trends, custom orders, quotes, customer messages, and dashboard analytics in one place.",
   },
   {
     icon: Globe,
@@ -139,7 +139,8 @@ export default function ForSellersPage() {
               <T>
                 Orivraa connects verified jewellers with buyers who are already
                 looking for custom pieces, ready-made jewellery, and trusted shops.
-                Get a free digital shop profile. Receive leads. Get paid securely.
+                Get a free digital shop profile, try the shop dashboard and
+                Mobile POS, receive leads, and get paid securely.
               </T>
             </p>
 

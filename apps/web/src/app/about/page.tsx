@@ -21,17 +21,20 @@ import {
     ShieldCheckIcon,
     SparklesIcon,
     StarIcon,
-    TruckIcon,
     UserGroupIcon,
+    DevicePhoneMobileIcon,
+    ReceiptPercentIcon,
+    ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 
 const stats = [
-  { label: "Verified Sellers", value: "500+", icon: BuildingStorefrontIcon },
-  { label: "Happy Customers", value: "10K+", icon: UserGroupIcon },
-  { label: "Countries", value: "15+", icon: GlobeAltIcon },
-  { label: "Custom Orders", value: "5K+", icon: SparklesIcon },
+  { label: "Verified jewellery network", value: "500+", icon: BuildingStorefrontIcon },
+  { label: "Customers and shop teams", value: "10K+", icon: UserGroupIcon },
+  { label: "Markets supported", value: "15+", icon: GlobeAltIcon },
+  { label: "Custom and POS workflows", value: "5K+", icon: SparklesIcon },
 ];
 
 const values = [
@@ -39,62 +42,69 @@ const values = [
     icon: ShieldCheckIcon,
     title: "Trust & Transparency",
     description:
-      "Every seller on our platform is verified. We ensure transparent pricing with real-time gold rates and no hidden fees.",
+      "Every seller experience is built around verification, clear pricing, audit trails, and local tax-ready workflows.",
   },
   {
     icon: SparklesIcon,
-    title: "Quality Craftsmanship",
+    title: "Craft Meets Software",
     description:
-      "Our sellers are skilled artisans who create beautiful, high-quality jewelry using traditional and modern techniques.",
+      "We respect traditional jewellery craft while giving shops modern tools for POS, inventory, catalogues, and AI-assisted selling.",
   },
   {
     icon: HeartIcon,
-    title: "Customer First",
+    title: "Human First",
     description:
-      "Your satisfaction is our priority. From custom designs to secure delivery, we ensure a seamless experience.",
+      "Customers need confidence and jewellers need control. Orivraa is designed to make both sides feel informed, supported, and safe.",
   },
   {
     icon: GlobeAltIcon,
-    title: "Global Reach",
+    title: "Local Shops, Global Reach",
     description:
-      "Connect with trusted jewelers from Nepal, India, UAE, and beyond. Find the perfect piece from anywhere in the world.",
+      "We help local jewellery shops serve walk-in buyers, online shoppers, and diaspora customers across markets from one platform.",
   },
 ];
 
 const features = [
   {
     icon: ChartBarIcon,
-    title: "Live Gold Prices",
+    title: "Live Gold Rate Trends",
     description:
-      "Real-time gold and silver rates from international markets, converted to local currencies.",
+      "Live market rates and 7-day trend context help jewellers quote with confidence before billing or updating catalogues.",
+  },
+  {
+    icon: DevicePhoneMobileIcon,
+    title: "Mobile POS",
+    description:
+      "Counter billing, GST/VAT receipts, barcode scanning, and inventory sync can run from any smartphone.",
   },
   {
     icon: CheckBadgeIcon,
-    title: "Verified Sellers",
+    title: "Verified Shop Profiles",
     description:
-      "All sellers undergo strict verification. Look for the blue badge for verified shops.",
+      "Seller verification, digital profiles, customer chat, and RFQs make online jewellery buying more accountable.",
   },
   {
-    icon: SparklesIcon,
-    title: "Custom Orders",
+    icon: ReceiptPercentIcon,
+    title: "Tax-Ready Operations",
     description:
-      "Request custom jewelry designs and get quotes from multiple sellers.",
-  },
-  {
-    icon: TruckIcon,
-    title: "Secure Shipping",
-    description:
-      "Insured shipping with tracking for all orders, whether local or international.",
+      "Billing workflows support GST, VAT, invoices, old gold exchange, making charges, and reporting across supported markets.",
   },
 ];
 
-const team = [
-  {
-    name: "Orivraa Team",
-    role: "Founders & Developers",
-    description:
-      "A passionate team dedicated to connecting jewelry lovers with trusted artisans worldwide.",
-  },
+const operatingPrinciples = [
+  "Built for jewellers, not generic retail",
+  "Transparent metal-rate context before every quote",
+  "Free to start, useful before a shop upgrades",
+  "Local currency and tax workflows by country",
+];
+
+const sellerTools = [
+  "Mobile POS",
+  "Inventory by weight and purity",
+  "Digital catalogues",
+  "RFQ and customer chat",
+  "Live gold rate trends",
+  "AI sales assistance",
 ];
 
 export default function AboutPage() {
@@ -102,67 +112,138 @@ export default function AboutPage() {
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-amber-600 to-amber-800 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/patterns/gold-pattern.svg')] opacity-10" />
-        <div className="container mx-auto px-4 py-20 md:py-28 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="max-w-3xl mx-auto text-center"
-          >
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              <T>About Orivraa</T>
-            </h1>
-            <p className="text-xl md:text-2xl text-amber-100 mb-8">
-              <T>
-                Your trusted marketplace for authentic gold and silver jewelry.
-                Connecting skilled artisans with jewelry lovers worldwide.
-              </T>
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="bg-white text-amber-700 hover:bg-amber-50"
-                asChild
-              >
-                <Link href="/shops">
-                  <T>Browse Sellers</T>
-                  <ArrowRightIcon className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white bg-transparent hover:bg-white hover:text-amber-700"
-                asChild
-              >
-                <Link href="/rfq/create">
-                  <T>Create Custom Order</T>
-                </Link>
-              </Button>
-            </div>
-          </motion.div>
+      <section className="relative overflow-hidden bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-900">
+        <div className="absolute inset-0 bg-[url('/patterns/gold-pattern.svg')] opacity-[0.035] dark:opacity-[0.05]" />
+        <div className="container mx-auto px-4 py-16 lg:py-24 relative">
+          <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-16 items-center">
+            <motion.div
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55 }}
+              className="max-w-2xl"
+            >
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
+                <SparklesIcon className="h-4 w-4" />
+                <T>Jewellery software, marketplace, and AI sales platform</T>
+              </div>
+              <h1 className="mt-7 text-4xl md:text-6xl font-extrabold tracking-tight text-gray-950 dark:text-white leading-tight">
+                <T>Building the operating system for modern jewellery businesses</T>
+              </h1>
+              <p className="mt-6 text-lg md:text-xl leading-relaxed text-gray-600 dark:text-gray-300">
+                <T>
+                  Orivraa helps jewellers move from scattered spreadsheets,
+                  manual rate checks, and disconnected customer chats to one
+                  trusted platform for Mobile POS, live gold trends, inventory,
+                  AI sales support, and verified marketplace discovery.
+                </T>
+              </p>
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <Button size="lg" className="gold-gradient text-white h-12 px-7 rounded-xl" asChild>
+                  <Link href="/auth/register">
+                    <T>Start free as a seller</T>
+                    <ArrowRightIcon className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 px-7 rounded-xl border-gray-300 dark:border-gray-700"
+                  asChild
+                >
+                  <Link href="/jewellery-shop-software">
+                    <T>Explore the software</T>
+                  </Link>
+                </Button>
+              </div>
+              <div className="mt-8 flex flex-wrap gap-2">
+                {operatingPrinciples.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300"
+                  >
+                    <T>{item}</T>
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.08 }}
+              className="relative"
+            >
+              <div className="rounded-[2rem] border border-gray-200 bg-gray-950 p-5 shadow-2xl shadow-amber-900/10 dark:border-gray-800">
+                <div className="rounded-[1.5rem] bg-white p-5 dark:bg-gray-900">
+                  <div className="flex items-center justify-between gap-4 border-b border-gray-100 pb-4 dark:border-gray-800">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/30">
+                        <Image
+                          src="/brand/orivraa-icon.svg"
+                          alt="Orivraa"
+                          width={30}
+                          height={30}
+                          priority
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-950 dark:text-white">Orivraa</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400"><T>Shop command center</T></p>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                      <T>Live</T>
+                    </span>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-3 py-5">
+                    {sellerTools.map((tool) => (
+                      <div key={tool} className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950">
+                        <CheckBadgeIcon className="h-5 w-5 text-amber-500" />
+                        <p className="mt-3 text-sm font-semibold text-gray-900 dark:text-white"><T>{tool}</T></p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="rounded-2xl bg-amber-50 p-4 dark:bg-amber-950/30">
+                    <div className="flex items-center gap-3">
+                      <Image
+                        src="/catalog/necklace.svg"
+                        alt="Jewellery catalogue preview"
+                        width={48}
+                        height={48}
+                        className="rounded-xl bg-white p-2"
+                      />
+                      <div>
+                        <p className="text-sm font-bold text-gray-950 dark:text-white"><T>From counter sale to online discovery</T></p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400"><T>One platform for jewellers, buyers, and teams.</T></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-12 bg-amber-50 dark:bg-gray-900 border-b dark:border-gray-800">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+      <section className="bg-gray-950 text-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/10">
             {stats.map((stat, index) => (
               <motion.div
                 key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
+                initial={false}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
-                className="text-center"
+                transition={{ duration: 0.4, delay: index * 0.06 }}
+                className="bg-gray-950 px-5 py-6 text-center"
               >
-                <stat.icon className="h-8 w-8 mx-auto text-amber-600 mb-2" />
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                <stat.icon className="h-7 w-7 mx-auto text-amber-400 mb-3" />
+                <div className="text-3xl md:text-4xl font-extrabold tracking-tight">
                   {stat.value}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300">
+                <div className="mt-1 text-xs sm:text-sm text-gray-400">
                   <T>{stat.label}</T>
                 </div>
               </motion.div>
@@ -172,42 +253,59 @@ export default function AboutPage() {
       </section>
 
       {/* Our Story Section */}
-      <section className="py-16 md:py-24">
+      <section className="py-16 md:py-24 bg-white dark:bg-gray-950">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              <T>Our Story</T>
-            </h2>
-            <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
-          </div>
+          <div className="grid lg:grid-cols-[0.85fr_1.15fr] gap-10 lg:gap-16 max-w-6xl mx-auto items-start">
+            <div className="lg:sticky lg:top-24">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
+                <T>Our story</T>
+              </p>
+              <h2 className="mt-3 text-3xl md:text-5xl font-bold tracking-tight text-gray-950 dark:text-white">
+                <T>Jewellery commerce should feel trustworthy on both sides of the counter.</T>
+              </h2>
+            </div>
 
-          <div className="max-w-4xl mx-auto">
-            <div className="prose prose-lg mx-auto text-gray-600 dark:text-gray-300">
-              <p className="text-lg leading-relaxed mb-6">
+            <div className="space-y-6 text-lg leading-relaxed text-gray-600 dark:text-gray-300">
+              <p>
                 <T>
-                  Orivraa was born from a simple idea: make it easy for people
-                  to find and purchase authentic, high-quality gold and silver
-                  jewelry from trusted artisans around the world.
+                  Orivraa started with a practical observation: jewellery shops
+                  were already serving serious buyers, but the tools around the
+                  business were fragmented. Gold rates lived in one place,
+                  inventory in another, customer conversations in WhatsApp, and
+                  billing in yet another system.
                 </T>
               </p>
-              <p className="text-lg leading-relaxed mb-6">
+              <p>
                 <T>
-                  In many countries, buying gold jewelry involves visiting
-                  multiple shops, comparing prices manually, and often dealing
-                  with unclear pricing. We wanted to change that by creating a
-                  transparent marketplace where buyers can see real-time gold
-                  prices, compare sellers, and order custom jewelry with
-                  confidence.
+                  We are building one connected platform where verified sellers
+                  can run day-to-day operations and buyers can discover trusted
+                  jewellers with more confidence. That means marketplace
+                  discovery, custom orders, Mobile POS, live market trends,
+                  tax-ready invoices, digital catalogues, and AI-assisted sales
+                  support working together.
                 </T>
               </p>
-              <p className="text-lg leading-relaxed">
+              <p>
                 <T>
-                  Today, Orivraa connects thousands of customers with verified
-                  jewelers across Nepal, India, UAE, and beyond. Whether you're
-                  looking for a traditional wedding set or a modern custom
-                  design, we help you find the perfect piece at a fair price.
+                  The mission is simple: help local jewellery businesses look
+                  as professional online as they are in person, while giving
+                  customers clearer pricing, better communication, and safer
+                  buying journeys.
                 </T>
               </p>
+              <div className="grid sm:grid-cols-2 gap-3 pt-3">
+                {[
+                  "Founded in Kathmandu",
+                  "Serving jewellery teams across key global markets",
+                  "Built around verified sellers and transparent pricing",
+                  "Designed for both walk-in and online jewellery sales",
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                    <CheckBadgeIcon className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                    <T>{item}</T>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -217,35 +315,37 @@ export default function AboutPage() {
       <section className="py-16 md:py-24 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              <T>Our Values</T>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
+              <T>How we build</T>
+            </p>
+            <h2 className="mt-3 text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+              <T>Principles that make Orivraa dependable</T>
             </h2>
-            <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
-            <p className="text-lg text-gray-600 dark:text-gray-300">
-              <T>The principles that guide everything we do</T>
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
+              <T>World-class software matters only when it respects how jewellers actually work.</T>
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-5xl mx-auto">
             {values.map((value, index) => (
               <motion.div
                 key={value.title}
-                initial={{ opacity: 0, y: 20 }}
+                initial={false}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
+                transition={{ duration: 0.35, delay: index * 0.06 }}
                 viewport={{ once: true }}
               >
-                <Card className="h-full hover:shadow-lg transition-shadow">
+                <Card className="h-full border-gray-200 bg-white shadow-sm hover:shadow-lg hover:border-amber-200 transition-all dark:border-gray-800 dark:bg-gray-950 dark:hover:border-amber-800">
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
-                      <div className="p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                        <value.icon className="h-6 w-6 text-amber-600" />
+                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/30">
+                        <value.icon className="h-6 w-6 text-amber-600 dark:text-amber-300" />
                       </div>
                       <div>
                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                           <T>{value.title}</T>
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300">
+                        <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                           <T>{value.description}</T>
                         </p>
                       </div>
@@ -259,35 +359,37 @@ export default function AboutPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 md:py-24">
+      <section className="py-16 md:py-24 bg-white dark:bg-gray-950">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              <T>Why Choose Orivraa?</T>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
+              <T>What Orivraa combines</T>
+            </p>
+            <h2 className="mt-3 text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+              <T>Marketplace trust with serious jewellery shop software</T>
             </h2>
-            <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
-            <p className="text-lg text-gray-600 dark:text-gray-300">
-              <T>Features that make us the trusted choice for gold jewelry</T>
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
+              <T>One connected system for discovery, counter sales, pricing, inventory, and follow-up.</T>
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
+                initial={false}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
+                transition={{ duration: 0.35, delay: index * 0.05 }}
                 viewport={{ once: true }}
-                className="text-center"
+                className="rounded-3xl border border-gray-200 bg-gray-50 p-6 dark:border-gray-800 dark:bg-gray-900/70"
               >
-                <div className="p-4 rounded-full bg-amber-100 dark:bg-amber-900/30 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <feature.icon className="h-8 w-8 text-amber-600" />
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-amber-600 shadow-sm dark:bg-gray-950 dark:text-amber-300">
+                  <feature.icon className="h-6 w-6" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   <T>{feature.title}</T>
                 </h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">
+                <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
                   <T>{feature.description}</T>
                 </p>
               </motion.div>
@@ -297,89 +399,128 @@ export default function AboutPage() {
       </section>
 
       {/* Find Us On Section */}
-      <section className="py-16 md:py-24 bg-amber-50 dark:bg-gray-900">
+      <section className="py-16 md:py-24 bg-gray-950 text-white">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-12">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              viewport={{ once: true }}
-              className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4"
-            >
-              <T>Featured & Listed On</T>
-            </motion.h2>
-            <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
-            <p className="text-lg text-gray-600 dark:text-gray-300">
-              <T>
-                Orivraa is verified and listed on leading software directories and review platforms. Visit our profiles to learn more and leave a review.
-              </T>
-            </p>
-          </div>
-          {/* Live profiles */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto mb-10">
-            {LIVE_PLATFORMS.map((platform, index) => (
-              <motion.a
-                key={platform.name}
-                href={platform.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                initial={{ opacity: 0, y: 20 }}
+          <div className="grid lg:grid-cols-[0.85fr_1.15fr] gap-10 lg:gap-14 max-w-6xl mx-auto items-start">
+            <div>
+              <motion.p
+                initial={false}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
+                transition={{ duration: 0.35 }}
                 viewport={{ once: true }}
-                className="group"
+                className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300"
               >
-                <Card className="h-full hover:shadow-lg hover:border-amber-400 transition-all">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl mb-2">{platform.logo}</div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">
-                      {platform.name}
-                    </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      <T>{platform.category}</T>
-                    </p>
-                    <span className="text-xs text-amber-600 group-hover:underline mt-2 inline-block">
-                      <T>Visit Profile</T> →
-                    </span>
-                  </CardContent>
-                </Card>
-              </motion.a>
-            ))}
-          </div>
-          {/* Coming soon */}
-          {COMING_SOON_PLATFORMS.length > 0 && (
-            <>
-              <div className="text-center mb-4">
-                <span className="text-sm font-medium uppercase tracking-wider text-gray-400">
-                  <T>Coming soon on</T>
-                </span>
+                <T>Proof and presence</T>
+              </motion.p>
+              <motion.h2
+                initial={false}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                viewport={{ once: true }}
+                className="mt-3 text-3xl md:text-5xl font-bold tracking-tight"
+              >
+                <T>Featured & Listed On</T>
+              </motion.h2>
+              <p className="mt-5 text-lg leading-relaxed text-gray-300">
+                <T>
+                  Orivraa is building public trust across software directories,
+                  startup platforms, professional networks, and review sites.
+                  The live profiles below help buyers, sellers, and partners
+                  verify our presence beyond our own website.
+                </T>
+              </p>
+              <div className="mt-7 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-2xl font-bold text-amber-300">{LIVE_PLATFORMS.length}</p>
+                  <p className="mt-1 text-gray-400"><T>Live public profiles</T></p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-2xl font-bold text-amber-300">{COMING_SOON_PLATFORMS.length}</p>
+                  <p className="mt-1 text-gray-400"><T>Launch listings in progress</T></p>
+                </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 max-w-5xl mx-auto">
-                {COMING_SOON_PLATFORMS.map((platform, index) => (
-                  <motion.div
-                    key={platform.name}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: index * 0.03 }}
-                    viewport={{ once: true }}
-                  >
-                    <Card className="h-full border-dashed border-gray-300 dark:border-gray-600 opacity-70">
-                      <CardContent className="p-3 text-center">
-                        <div className="text-xl mb-1">{platform.logo}</div>
-                        <h3 className="font-medium text-gray-600 dark:text-gray-400 text-xs mb-1">
+            </div>
+
+            <div className="space-y-5">
+              <div className="grid sm:grid-cols-2 gap-4">
+                {LIVE_PLATFORMS.map((platform, index) => {
+                  const isPriority = index < 2;
+                  return (
+                    <motion.a
+                      key={platform.name}
+                      href={platform.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      initial={false}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.04 }}
+                      viewport={{ once: true }}
+                      className={`group rounded-3xl border border-white/10 bg-white/[0.06] p-5 transition-all hover:-translate-y-0.5 hover:border-amber-300/70 hover:bg-white/[0.09] ${isPriority ? "sm:col-span-1" : ""}`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">
+                            {platform.logo}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-white">
+                              {platform.name}
+                            </h3>
+                            <p className="mt-1 text-xs text-gray-400">
+                              <T>{platform.category}</T>
+                            </p>
+                          </div>
+                        </div>
+                        <ArrowTopRightOnSquareIcon className="h-5 w-5 text-gray-500 transition-colors group-hover:text-amber-300" />
+                      </div>
+                      <div className="mt-5 flex items-center justify-between gap-3">
+                        <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-300/20">
+                          <T>Live profile</T>
+                        </span>
+                        <span className="text-xs font-semibold text-amber-300 group-hover:underline">
+                          <T>Open listing</T>
+                        </span>
+                      </div>
+                    </motion.a>
+                  );
+                })}
+              </div>
+
+              {COMING_SOON_PLATFORMS.length > 0 && (
+                <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <div>
+                      <p className="text-sm font-semibold text-white"><T>Next directories</T></p>
+                      <p className="text-xs text-gray-400"><T>Profiles being prepared for launch and review collection.</T></p>
+                    </div>
+                    <span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300 ring-1 ring-amber-300/20">
+                      <T>Coming soon</T>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {COMING_SOON_PLATFORMS.map((platform, index) => (
+                      <motion.div
+                        key={platform.name}
+                        initial={false}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25, delay: index * 0.03 }}
+                        viewport={{ once: true }}
+                        className="rounded-2xl border border-white/10 bg-gray-950/70 p-4 text-center"
+                      >
+                        <div className="text-2xl">{platform.logo}</div>
+                        <h3 className="mt-2 text-sm font-semibold text-gray-100">
                           {platform.name}
                         </h3>
-                        <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 font-medium">
-                          <T>Coming Soon</T>
-                        </span>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </>
-          )}
+                        <p className="mt-1 text-[11px] leading-snug text-gray-500">
+                          <T>{platform.category}</T>
+                        </p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -388,7 +529,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
             <motion.h2
-              initial={{ opacity: 0, y: 20 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
               viewport={{ once: true }}
@@ -405,7 +546,7 @@ export default function AboutPage() {
             {TESTIMONIALS.map((testimonial, index) => (
               <motion.div
                 key={testimonial.name}
-                initial={{ opacity: 0, y: 20 }}
+                initial={false}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
                 viewport={{ once: true }}
@@ -473,59 +614,70 @@ export default function AboutPage() {
       </section>
 
       {/* For Sellers Section */}
-      <section className="py-16 md:py-24 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+      <section className="py-16 md:py-24 bg-white dark:bg-gray-950">
         <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="max-w-6xl mx-auto rounded-[2rem] border border-gray-200 bg-gray-950 p-6 md:p-10 text-white dark:border-gray-800">
+            <div className="grid md:grid-cols-[1.05fr_0.95fr] gap-10 items-center">
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  <T>Become a Seller</T>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">
+                  <T>For jewellery businesses</T>
+                </p>
+                <h2 className="mt-3 text-3xl md:text-5xl font-bold tracking-tight">
+                  <T>Bring your shop online without losing the shop-floor workflow.</T>
                 </h2>
-                <div className="h-1 w-20 bg-amber-500 mb-6" />
-                <p className="text-lg text-gray-300 mb-6">
+                <p className="mt-5 text-lg leading-relaxed text-gray-300">
                   <T>
-                    Join our marketplace and reach thousands of customers
-                    looking for quality gold and silver jewelry. We handle the
-                    platform, you focus on your craft.
+                    Join Orivraa to get a free digital profile, Mobile POS,
+                    inventory tools, live rate context, catalogues, customer
+                    chat, and AI sales support. The platform handles the
+                    software layer so your team can focus on customers and
+                    craftsmanship.
                   </T>
                 </p>
-                <ul className="space-y-3 mb-8">
+                <ul className="mt-7 grid sm:grid-cols-2 gap-3 mb-8">
                   {[
-                    "Reach customers worldwide",
-                    "Easy shop management tools",
-                    "Secure payment processing",
-                    "Real-time order notifications",
-                    "Analytics and insights",
+                    "Free shop profile and QR link",
+                    "Mobile POS and GST/VAT receipts",
+                    "Inventory by weight and purity",
+                    "Live gold rate trends",
+                    "RFQ leads and customer chat",
+                    "AI sales assistant knowledge",
                   ].map((item, index) => (
-                    <li key={index} className="flex items-center gap-3">
+                    <li key={index} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
                       <CheckBadgeIcon className="h-5 w-5 text-amber-500" />
                       <span className="text-gray-200"><T>{item}</T></span>
                     </li>
                   ))}
                 </ul>
                 <Button size="lg" className="gold-gradient text-white" asChild>
-                  <Link href="/register?role=seller">
-                    <T>Register as Seller</T>
+                  <Link href="/auth/register">
+                    <T>Start free as a seller</T>
                     <ArrowRightIcon className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               </div>
-              <div className="hidden md:block">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-amber-500/20 rounded-2xl blur-3xl" />
-                  <Card className="relative bg-gray-800/50 border-gray-700">
-                    <CardContent className="p-8">
-                      <div className="text-center">
-                        <BuildingStorefrontIcon className="h-16 w-16 mx-auto text-amber-500 mb-4" />
-                        <h3 className="text-2xl font-bold text-white mb-2">
-                          500+ <T>Sellers</T>
-                        </h3>
-                        <p className="text-gray-400">
-                          <T>Already trust Orivraa to grow their business</T>
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+              <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+                <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-400/10 text-amber-300">
+                    <BuildingStorefrontIcon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="font-semibold"><T>Seller workspace</T></p>
+                    <p className="text-sm text-gray-400"><T>Everything a jewellery team needs to start.</T></p>
+                  </div>
+                </div>
+                <div className="space-y-3 pt-4">
+                  {[
+                    { label: "Mobile checkout", value: "Any phone" },
+                    { label: "Live rate context", value: "7-day trend" },
+                    { label: "Customer follow-up", value: "AI + CRM" },
+                    { label: "Marketplace profile", value: "Included" },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center justify-between rounded-2xl bg-gray-950/80 px-4 py-3">
+                      <span className="text-sm text-gray-400"><T>{item.label}</T></span>
+                      <span className="text-sm font-semibold text-white"><T>{item.value}</T></span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -534,17 +686,16 @@ export default function AboutPage() {
       </section>
 
       {/* Contact Section */}
-      <section className="py-16 md:py-24">
+      <section className="py-16 md:py-24 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
               <T>Get in Touch</T>
             </h2>
-            <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
             <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
               <T>
-                Have questions? We'd love to hear from you. Send us a message
-                and we'll respond as soon as possible.
+                Have questions about buying, selling, partnership, or the
+                software? Reach the team and we will point you to the right path.
               </T>
             </p>
 

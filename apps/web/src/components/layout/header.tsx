@@ -490,7 +490,7 @@ export function Header() {
           <SheetContent side="left" className="w-[300px] p-0">
             <SheetHeader className="p-4 border-b border-gray-100 dark:border-gray-800">
               <SheetTitle className="flex items-center gap-2">
-                <BrandLogo variant="icon" size="sm" />
+                <BrandLogo variant="icon" size="sm" linkToHome={false} />
                 <span className="font-bold text-lg">{BRAND.name}</span>
               </SheetTitle>
             </SheetHeader>
@@ -693,8 +693,8 @@ export function Header() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <BrandLogo variant="icon" size="sm" className="lg:hidden" />
-          <BrandLogo variant="icon" size="md" className="hidden lg:block" />
+          <BrandLogo variant="icon" size="sm" className="lg:hidden" linkToHome={false} />
+          <BrandLogo variant="icon" size="md" className="hidden lg:block" linkToHome={false} />
           <span className="font-bold text-base lg:text-xl tracking-tight">
             {BRAND.name}
           </span>

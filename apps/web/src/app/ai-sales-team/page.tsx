@@ -51,6 +51,8 @@ const jsonLd = {
     "42 languages supported",
     "Sub-800ms response latency",
     "Vector memory for personalised conversations",
+    "Live inventory and 7-day gold rate context",
+    "Mobile POS handoff for ready buyers",
     "Persona switching mid-call",
     "Automated meeting scheduling",
     "Post-call email follow-up",
@@ -216,7 +218,7 @@ const HOW_IT_WORKS = [
 const FAQS = [
   {
     q: "Can the AI actually answer questions about my specific products?",
-    a: "Yes. Orivraa AI is connected to your live inventory and product catalogue. It utilizes the live 7-day gold rate trend, knows your current stock, pricing, making charges, and availability in real time. It won't hallucinate products you don't carry.",
+    a: "Yes. Orivraa AI is connected to your live inventory and product catalogue. It can use 7-day gold rate context, current stock, pricing, making charges, and availability in real time, so it does not invent products you do not carry.",
   },
   {
     q: "What happens when a customer wants to negotiate the price?",

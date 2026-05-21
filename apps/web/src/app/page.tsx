@@ -64,10 +64,7 @@ export default function HomePage() {
           {/* 3: For Jewellery Shop Owners features section */}
           <SellerFeaturesSection />
 
-          {/* 3b: Mobile POS spotlight — newly launched */}
-          <MobilePosSpotlight />
-
-          {/* 3b: Mobile POS spotlight — newly launched */}
+          {/* 3b: Mobile POS spotlight - newly launched */}
           <MobilePosSpotlight />
 
           {/* 4: Demo video section */}

@@ -29,8 +29,18 @@ const jsonLd = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web, Windows, macOS, Android, iOS",
       description:
-        "Cloud-based POS software for jewellery shops with weight-based billing, making charges, old gold exchange, barcode scanning, and GST/VAT compliance.",
+        "Mobile and cloud-based POS software for jewellery shops with 7-day live gold rate history, weight-based billing, making charges, old gold exchange, barcode scanning, receipt sharing, and GST/VAT compliance.",
       url: "https://www.orivraa.com/jewellery-pos-software",
+      featureList: [
+        "Mobile POS billing from any smartphone",
+        "7-day live gold and silver rate history",
+        "Weight-based jewellery billing",
+        "Making charges and stone charges",
+        "Old gold exchange",
+        "Barcode and HUID scanning",
+        "GST/VAT-compliant receipts",
+        "WhatsApp receipt sharing",
+      ],
       offers: [
         {
           "@type": "Offer",
@@ -127,7 +137,7 @@ const jsonLd = {
           name: "Does Orivraa POS work offline?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Orivraa offers a desktop app for Windows and macOS that provides essential POS functionality with local caching. The cloud-based web version requires internet connection for real-time sync.",
+            text: "Orivraa's mobile POS is designed for shop counters where connectivity can drop. Offline PWA mode can keep sales locally and sync when connectivity returns, while full real-time dashboard updates require an internet connection.",
           },
         },
       ],
@@ -139,7 +149,7 @@ const POS_FEATURES = [
   {
     icon: Scale,
     title: "Weight-Based Billing",
-    desc: "Bill customers based on exact gold/silver weight with automatic price calculation using live metal rates. Supports grams, tola, ounce, and laal.",
+    desc: "Bill customers from phone or desktop using exact gold/silver weight, making charges, and live metal rate context. Supports grams, tola, ounce, and laal.",
   },
   {
     icon: Calculator,
@@ -229,11 +239,11 @@ export default function JewelleryPosSoftwarePage() {
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
               <T>
-                Stop struggling with generic POS systems. Orivraa's
-                point-of-sale module handles weight-based billing, making
-                charges, old gold exchange, barcode scanning, and
-                GST/VAT-compliant invoicing — all designed specifically for
-                jewellery businesses.
+                Stop struggling with generic POS systems. Orivraa's mobile
+                point-of-sale module handles 7-day live gold rate context,
+                weight-based billing, making charges, old gold exchange,
+                barcode scanning, and GST/VAT-compliant receipts for jewellery
+                counters.
               </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

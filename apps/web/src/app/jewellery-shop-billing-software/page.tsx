@@ -30,8 +30,17 @@ const jsonLd = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web, Windows, macOS, Android, iOS",
       description:
-        "Professional billing software for jewellery shops with GST/VAT-compliant invoicing, making charges, old gold exchange, weight-based pricing, and barcode scanning.",
+        "Professional billing software for jewellery shops with mobile POS receipts, 7-day live gold rate context, GST/VAT-compliant invoicing, making charges, old gold exchange, weight-based pricing, and barcode scanning.",
       url: "https://www.orivraa.com/jewellery-shop-billing-software",
+      featureList: [
+        "Mobile POS receipts",
+        "7-day live gold rate context",
+        "GST/VAT-compliant invoices",
+        "Making charges and wastage",
+        "Old gold exchange",
+        "Barcode and HUID quick billing",
+        "Tax reports and filing exports",
+      ],
       offers: [
         {
           "@type": "Offer",
@@ -140,7 +149,7 @@ const FEATURES = [
   {
     icon: Scale,
     title: "Weight-Based Invoice Lines",
-    desc: "Each invoice line item shows metal weight, purity, rate per gram, making charges, and stone charges. Automatic calculation based on today's metal rates.",
+    desc: "Each invoice line item shows metal weight, purity, rate per gram, making charges, and stone charges. Use current rates plus recent live-rate context before issuing the bill.",
   },
   {
     icon: Calculator,

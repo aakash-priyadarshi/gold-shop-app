@@ -3,7 +3,6 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
-import { MobilePosSpotlight } from "@/components/home/HomeSections";
 import { T } from "@/components/ui/T";
 import { subscriptionPlansApi } from "@/lib/api";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
@@ -113,7 +112,7 @@ const softwareJsonLd = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web, Windows, macOS, Android, iOS",
       description:
-        "Free cloud-based jewellery shop management software with inventory management, billing, POS, customer chat, digital catalogues, and analytics. Manage gold, silver & diamond inventory by weight and purity.",
+        "Free cloud-based jewellery shop management software with inventory management, mobile POS billing, 7-day live gold rate trends, customer chat, digital catalogues, tax-ready invoices, and analytics. Manage gold, silver & diamond inventory by weight and purity.",
       url: "https://www.orivraa.com/jewellery-shop-software",
       downloadUrl: "https://www.orivraa.com/download",
       screenshot: "https://www.orivraa.com/brand/orivraa-icon.svg",
@@ -212,8 +211,10 @@ const softwareJsonLd = {
         "Barcode/SKU support",
         "Multi-branch management",
         "International marketplace",
-        "Mobile POS (Point of Sale)",
-        "7-Day Live Gold Rate Trends",
+        "Mobile POS for smartphone counter billing",
+        "7-day live gold and silver rate trends",
+        "Barcode scanning and WhatsApp receipt sharing",
+        "Offline PWA mode for counter sales",
         "Desktop & mobile app",
       ],
     },
@@ -270,6 +271,22 @@ const softwareJsonLd = {
         },
         {
           "@type": "Question",
+          name: "Does Orivraa include mobile POS for jewellery counter sales?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. Orivraa includes a mobile POS workflow for jewellery shops. Sellers can scan items, calculate making charges and GST/VAT, share receipts, and sync stock from a smartphone without buying a separate billing terminal.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Can Orivraa show live gold rate trends before billing?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. Orivraa shows live market rates and 7-day gold and silver rate trends so jewellers can price walk-in sales, quotes, and catalogue updates with better context before locking a rate.",
+          },
+        },
+        {
+          "@type": "Question",
           name: "Which countries does Orivraa support?",
           acceptedAnswer: {
             "@type": "Answer",
@@ -288,12 +305,12 @@ const softwareJsonLd = {
 const CORE_FEATURES = [
   {
     title: "Mobile POS & Sales",
-    desc: "Complete walk-in sales from your smartphone. Share receipts instantly via WhatsApp. Auto-syncs with inventory and reflects in your analytics immediately.",
+    desc: "Complete walk-in sales from your smartphone. Scan items, apply making charges, share receipts instantly via WhatsApp, and sync every sale back to inventory and analytics.",
     icon: Smartphone,
   },
   {
     title: "Live Market Gold Trends",
-    desc: "Built-in 7-day live gold rate tracking for multiple currencies. Lock in prices accurately during sales and confidently justify pricing to customers.",
+    desc: "Built-in 7-day live gold and silver rate tracking across supported currencies. Lock prices accurately during sales and explain rate changes with confidence.",
     icon: TrendingUp,
   },
   {
@@ -455,6 +472,29 @@ const USE_CASES = [
     title: "Online Jewellery Sellers",
     desc: `List products on Orivraa's international marketplace. Create digital catalogues for social media. Reach buyers in ${BUYER_COUNTRY_COUNT} countries.`,
     icon: Globe,
+  },
+];
+
+const SOFTWARE_WORKFLOWS = [
+  {
+    icon: Smartphone,
+    title: "Counter billing from any phone",
+    desc: "Use Mobile POS at the shop counter to scan items, add making charges, calculate GST/VAT, and share receipts through WhatsApp without a separate terminal.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Rate-aware selling",
+    desc: "Check live market prices and 7-day gold and silver trends before confirming a quote, updating a catalogue price, or explaining a rate change to a customer.",
+  },
+  {
+    icon: Package,
+    title: "Inventory that updates as you sell",
+    desc: "Every POS sale, online order, and custom quote can update stock by product, branch, weight, purity, and SKU so the dashboard stays reliable.",
+  },
+  {
+    icon: MessageSquare,
+    title: "Follow-up after the bill",
+    desc: "Keep the customer history, RFQ messages, invoices, and AI sales follow-ups connected so one walk-in buyer can become a repeat customer.",
   },
 ];
 
@@ -738,8 +778,63 @@ export default function JewelleryShopSoftwarePage() {
           </div>
         </section>
 
-        {/* ── Mobile POS Integration ───────────────────── */}
-        <MobilePosSpotlight />
+        {/* ── Shop Workflows ───────────────────────────── */}
+        <section id="jewellery-software-workflows" data-tour="software-workflows" className="bg-white dark:bg-gray-900/50 border-y border-gray-200 dark:border-gray-800">
+          <div className="max-w-6xl mx-auto px-4 py-20">
+            <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
+                  <T>Built for daily jewellery workflows</T>
+                </p>
+                <h2 className="mt-3 text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
+                  <T>From counter sale to repeat customer, every step stays connected</T>
+                </h2>
+                <p className="mt-4 text-gray-600 dark:text-gray-400 leading-relaxed">
+                  <T>
+                    Orivraa is not just a catalogue or a billing screen. It
+                    connects mobile POS, live metal rate history, inventory,
+                    invoices, customer chat, RFQs, and analytics so jewellers
+                    can run the shop floor and online sales from one account.
+                  </T>
+                </p>
+                <div className="mt-7 flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/auth/register"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 transition-colors hover:bg-amber-600"
+                  >
+                    <T>Try the software free</T>
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="/jewellery-pos-software"
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-800 transition-colors hover:border-amber-300 dark:border-gray-700 dark:text-gray-100 dark:hover:border-amber-600"
+                  >
+                    <T>Explore POS workflows</T>
+                  </Link>
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                {SOFTWARE_WORKFLOWS.map((workflow) => (
+                  <div
+                    key={workflow.title}
+                    className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-950/70"
+                  >
+                    <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
+                      <workflow.icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      <T>{workflow.title}</T>
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+                      <T>{workflow.desc}</T>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* ── Core Features ───────────────────────────────── */}
         <section className="max-w-6xl mx-auto px-4 py-20">
@@ -970,6 +1065,14 @@ export default function JewelleryShopSoftwarePage() {
                 text: "Weight & purity tracking for precious metals",
               },
               {
+                icon: Smartphone,
+                text: "Mobile POS for walk-in billing",
+              },
+              {
+                icon: TrendingUp,
+                text: "7-day live gold rate trends",
+              },
+              {
                 icon: Globe,
                 text: `International marketplace (${BUYER_COUNTRY_COUNT} countries)`,
               },
@@ -996,10 +1099,6 @@ export default function JewelleryShopSoftwarePage() {
               {
                 icon: Users,
                 text: "Dedicated support for Pro sellers",
-              },
-              {
-                icon: Smartphone,
-                text: "Works beautifully on mobile",
               },
             ].map((item) => (
               <div

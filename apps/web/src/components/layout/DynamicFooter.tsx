@@ -47,7 +47,7 @@ export function DynamicFooter() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1 space-y-4">
             <Link href="/" className="flex items-center gap-2">
-              <BrandLogo variant="icon" size="md" theme="dark" />
+              <BrandLogo variant="icon" size="md" theme="dark" linkToHome={false} />
               <span className="text-xl font-bold text-white">{BRAND.name}</span>
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">

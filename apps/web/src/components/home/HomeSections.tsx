@@ -96,7 +96,7 @@ const shopFeatures = [
   {
     icon: Smartphone,
     title: "Mobile POS — Sell Anywhere",
-    desc: "Accept walk-in sales from your phone. Full billing, receipt, and inventory sync — no hardware needed.",
+    desc: "Create counter bills, share receipts, scan barcodes, and keep inventory synced from any smartphone.",
   },
 ];
 
@@ -373,11 +373,11 @@ export function SellerCtaSection() {
 }
 
 const mobilePosPoints = [
-  "Full billing & GST/VAT receipts from any smartphone",
-  "Barcode scanner support — scan items to add instantly",
-  "Syncs with shop dashboard in real-time",
-  "Works offline — sales saved when connectivity returns",
-  "No extra hardware or app store download required",
+  "GST/VAT-ready bills with making charges and item-level tax",
+  "Barcode scanner support to add inventory items instantly",
+  "7-day live gold and silver rate history before checkout",
+  "Inventory, orders, and analytics sync with the shop dashboard",
+  "Offline PWA mode saves sales when the connection drops",
 ];
 
 export function MobilePosSpotlight() {
@@ -393,13 +393,13 @@ export function MobilePosSpotlight() {
               <T>New feature</T>
             </div>
             <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white">
-              <T>Run your counter from your phone</T>
+              <T>Mobile POS for every jewellery counter</T>
             </h2>
             <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-base max-w-md">
               <T>
-                Our Mobile POS lets you serve walk-in customers, issue GST/VAT
-                receipts, and update inventory — all from the phone in your
-                pocket. No dedicated terminal needed.
+                Turn any smartphone into a jewellery POS. Serve walk-in
+                customers, check live metal trends, issue tax-ready receipts,
+                and update inventory without a dedicated terminal.
               </T>
             </p>
             <ul className="space-y-3">

@@ -191,8 +191,8 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
   },
 
   // Mobile POS
-  mobilePOS: { label: "Mobile POS — bill on the go", category: "Mobile POS" },
-  mobileRateCard: { label: "Live rate card on mobile", category: "Mobile POS" },
+  mobilePOS: { label: "Mobile POS billing on any phone", category: "Mobile POS" },
+  mobileRateCard: { label: "7-day live rate card on mobile", category: "Mobile POS" },
   mobileOrders: { label: "Today's orders view", category: "Mobile POS" },
   mobileQuotes: { label: "Quote builder on mobile", category: "Mobile POS" },
   mobileRepairs: { label: "Repair job tracker", category: "Mobile POS" },
@@ -446,16 +446,6 @@ function buildFeatureList(
     included: true,
   });
 
-  items.push({
-    text: "Free Mobile POS App",
-    included: true,
-  });
-
-  items.push({
-    text: "7-Day Live Market Rate History",
-    included: true,
-  });
-
   // Commission
   if (customerFlowEnabled) {
     items.push({
@@ -493,6 +483,21 @@ function buildFeatureList(
     text: GSTIN_READY_INVOICE_COPY,
     included: !!plan.features?.invoicing,
   });
+
+  const mobileKeys = [
+    "mobilePOS",
+    "mobileRateCard",
+    "mobileWhatsAppShare",
+    "mobileOfflineMode",
+  ];
+  for (const key of mobileKeys) {
+    const display = FEATURE_DISPLAY[key];
+    if (!display) continue;
+    const val = plan.features?.[key];
+    if (val !== undefined) {
+      items.push({ text: display.label, included: !!val });
+    }
+  }
 
   // AI section
   if (plan.includesAi && plan.monthlyAiCredits > 0) {
@@ -705,9 +710,9 @@ export default function PricingPage() {
           </h1>
           <p className="mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed">
             <T>
-              From free marketplace listings to a full AI-powered CRM — choose
-              the plan that fits your business today and upgrade as you grow. No
-              contracts, cancel anytime.
+              From a free shop profile to mobile POS, live gold rate history,
+              billing, inventory, CRM, and AI tools - choose the plan that fits
+              your jewellery business today and upgrade as you grow.
             </T>
           </p>
 

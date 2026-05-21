@@ -69,10 +69,10 @@ export const BRAND: {
   // SEO
   seo: {
     title:
-      "Orivraa - Premium Jewellery Marketplace | Gold & Diamond Jewellery Online",
+      "Orivraa - Jewellery Shop Software, Mobile POS & Marketplace",
     titleTemplate: "%s | Orivraa",
     defaultDescription:
-      "Shop gold, silver & diamond jewellery from verified artisans worldwide. Buy 22K gold necklaces, rings, earrings & custom designs online. Trusted jewellers in Nepal, India, Dubai, USA & UK. Free quality verification on every purchase.",
+      "All-in-one jewellery shop software with mobile POS, live gold rate trends, inventory, GST/VAT billing, digital catalogues, AI sales tools, and a verified jewellery marketplace across Nepal, India, UAE, UK, and USA.",
     keywords: [
       // Core terms (both spellings for US/UK coverage)
       "jewellery",
@@ -182,6 +182,9 @@ export const BRAND: {
       "jewellery billing software",
       "jewellery inventory software",
       "jewellery POS software",
+      "mobile POS for jewellery shop",
+      "live gold rate jewellery software",
+      "7 day gold rate history",
       "jewellery shop management",
       "jewellery CRM",
       "software for jewellery shops",

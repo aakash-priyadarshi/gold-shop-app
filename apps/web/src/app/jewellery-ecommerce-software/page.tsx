@@ -29,8 +29,17 @@ const jsonLd = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web, Windows, macOS, Android, iOS",
       description:
-        "Sell jewellery online through Orivraa's built-in marketplace. Digital catalogues, multi-currency pricing, international shipping, customer chat, and order management — no website needed.",
+        "Sell jewellery online through Orivraa's built-in marketplace. Digital catalogues, live rate-aware product updates, multi-currency pricing, mobile POS sync, customer chat, and order management - no website needed.",
       url: "https://www.orivraa.com/jewellery-ecommerce-software",
+      featureList: [
+        "Built-in jewellery marketplace",
+        "Digital catalogues",
+        "Live rate-aware price updates",
+        "Mobile POS and inventory sync",
+        "Multi-currency pricing",
+        "Customer chat and RFQ",
+        "AI product descriptions",
+      ],
       offers: [
         {
           "@type": "Offer",
@@ -149,7 +158,12 @@ const FEATURES = [
   {
     icon: Globe,
     title: "Multi-Currency Pricing",
-    desc: "Set prices in NPR, INR, AED, GBP, USD, or EUR. Buyers see prices in their local currency with automatic conversion and tax calculation.",
+    desc: "Set prices in NPR, INR, AED, GBP, USD, or EUR. Buyers see prices in their local currency, while sellers can use live rate context before updating gold prices.",
+  },
+  {
+    icon: BarChart3,
+    title: "Catalogue and POS Sync",
+    desc: "When products sell online or at the counter, stock and dashboard activity stay connected so your catalogue does not drift away from real inventory.",
   },
   {
     icon: ShoppingCart,

@@ -29,8 +29,17 @@ const jsonLd = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web, Windows, macOS, Android, iOS",
       description:
-        "Cloud-based jewellery inventory management software. Track gold, silver, diamond, and gemstone inventory by weight, purity, and category with automatic stock alerts.",
+        "Cloud-based jewellery inventory management software. Track gold, silver, diamond, and gemstone inventory by weight, purity, barcode, branch, and mobile POS sales with automatic stock alerts.",
       url: "https://www.orivraa.com/jewellery-inventory-software",
+      featureList: [
+        "Inventory by weight and purity",
+        "Barcode and HUID labels",
+        "Mobile POS stock sync",
+        "Low-stock alerts",
+        "Karigar material tracking",
+        "Real-time stock valuation",
+        "Bulk inventory import",
+      ],
       offers: [
         {
           "@type": "Offer",
@@ -170,6 +179,11 @@ const FEATURES = [
     icon: Database,
     title: "Real-Time Stock Valuation",
     desc: "See the total value of your inventory based on current metal rates. Break down by metal type, purity, category, or branch for precise financial tracking.",
+  },
+  {
+    icon: Tag,
+    title: "Mobile POS Stock Sync",
+    desc: "When an item is billed from the mobile POS, stock can update back to inventory so online catalogues, reports, and staff views stay aligned.",
   },
   {
     icon: Search,
