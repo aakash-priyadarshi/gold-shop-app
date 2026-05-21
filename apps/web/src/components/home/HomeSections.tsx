@@ -301,6 +301,14 @@ const comparisonLinks = [
   { href: "/compare/orivraa-vs-marg-erp", label: "Orivraa vs Marg ERP" },
 ];
 
+const countryGuideLinks = [
+  { href: "/blog/jewellery-gst-billing-guide-india", label: "🇮🇳 India — GST guide" },
+  { href: "/blog/jewellery-billing-software-nepal-tax-guide", label: "🇳🇵 Nepal — VAT guide" },
+  { href: "/blog/vat-on-gold-jewellery-uae-dubai-guide", label: "🇦🇪 UAE / Dubai — VAT guide" },
+  { href: "/blog/jewellery-shop-software-tax-compliance-uk", label: "🇬🇧 UK — VAT & hallmarking guide" },
+  { href: "/blog/jewellery-shop-software-usa-sales-tax-guide", label: "🇺🇸 USA — sales tax guide" },
+];
+
 export function SellerResourceHubSection() {
   const t = useT();
   return (
@@ -381,6 +389,23 @@ export function SellerResourceHubSection() {
                   </Link>
                 ))}
               </div>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              <T>Country compliance guides</T>
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              {countryGuideLinks.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:border-gold-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
+                >
+                  {t(item.label)}
+                </Link>
+              ))}
             </div>
           </div>
         </div>
