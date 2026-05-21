@@ -22,8 +22,8 @@ import {
 export default function RefundPage() {
   const sections = [
     { id: "overview", title: "1. Policy Overview", icon: RefreshCcw },
-    { id: "jewellery", title: "2. Jewellery Refunds", icon: Gem },
-    { id: "saas", title: "3. SaaS Subscription", icon: Zap },
+    { id: "saas", title: "2. SaaS Subscription", icon: Zap },
+    { id: "jewellery", title: "3. Jewellery & Physical Orders", icon: Gem },
     { id: "marketplace", title: "4. Marketplace Rules", icon: ShoppingBag },
     { id: "process", title: "5. Refund Process", icon: ShieldCheck },
   ];
@@ -104,35 +104,14 @@ export default function RefundPage() {
               </h2>
               <p>
                 This Refund Policy outlines the terms and conditions for refunds across Orivraa&apos;s
-                ecosystem, including our physical jewellery marketplace, SaaS subscriptions,
-                mobile and desktop shop software, and related AI assistance features. By
-                purchasing from Orivraa or subscribing to our software platform, you agree to
-                the conditions outlined below.
+                ecosystem — covering our SaaS subscriptions and software products (primary), as well as
+                physical jewellery marketplace orders. By purchasing from Orivraa or subscribing to our
+                software platform, you agree to the conditions outlined below.
               </p>
               
-              <h2 id="jewellery">
-                <Gem className="w-5 h-5 text-amber-500" />
-                2. Jewellery Refund Policy
-              </h2>
-              <p>
-                Due to the volatile nature of precious metal markets and the unique value of gemstones, 
-                our refund policy for physical jewellery is strictly partitioned by material type:
-              </p>
-              <div className="bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-500 p-6 my-6 rounded-r-xl">
-                <h4 className="text-amber-900 dark:text-amber-400 font-bold flex items-center gap-2 m-0">
-                  <Coins className="w-5 h-5" />
-                  Material Specific Rules
-                </h4>
-                <ul className="mt-4 mb-0 space-y-2">
-                  <li><strong>Gold & Silver:</strong> Refundable based on the daily market rate minus a standard 2% processing fee.</li>
-                  <li><strong>Diamonds & Gemstones:</strong> Non-refundable. Once a diamond or gemstone is set or sold, it is considered a final sale due to certification and security protocols.</li>
-                  <li><strong>Hybrid Pieces:</strong> For jewellery containing both precious metals and diamonds, **only the gold/silver component** is eligible for a refund. The value of the diamond/gemstone will be deducted from the total refund amount.</li>
-                </ul>
-              </div>
-
               <h2 id="saas">
                 <Zap className="w-5 h-5 text-amber-500" />
-                3. SaaS & Software Subscription
+                2. SaaS &amp; Software Subscription
               </h2>
               <p>
                 Orivraa provides SaaS tools for jewellery businesses across web, mobile POS,
@@ -142,13 +121,33 @@ export default function RefundPage() {
               <ul>
                 <li><strong>No Refunds:</strong> SaaS subscription fees (Pro and Pro+) are strictly non-refundable. We do not provide pro-rated refunds for unused days within a billing cycle.</li>
                 <li><strong>Cancel Anytime:</strong> You may unsubscribe at any time through your dashboard.</li>
-                <li><strong>Access Duration:</strong> Upon cancellation, you will retain full access to your plan's features until the end of the current paid billing month.</li>
+                <li><strong>Access Duration:</strong> Upon cancellation, you will retain full access to your plan&apos;s features until the end of the current paid billing month.</li>
                 <li><strong>Free Plan:</strong> Our Free version is available indefinitely to ensure you are satisfied with the software before upgrading to a paid tier.</li>
               </ul>
 
+              <h2 id="jewellery">
+                <Gem className="w-5 h-5 text-amber-500" />
+                3. Jewellery &amp; Physical Order Refunds
+              </h2>
+              <p>
+                Due to the volatile nature of precious metal markets and the unique value of gemstones,
+                our refund policy for physical jewellery is strictly partitioned by material type:
+              </p>
+              <div className="bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-500 p-6 my-6 rounded-r-xl">
+                <h4 className="text-amber-900 dark:text-amber-400 font-bold flex items-center gap-2 m-0">
+                  <Coins className="w-5 h-5" />
+                  Material Specific Rules
+                </h4>
+                <ul className="mt-4 mb-0 space-y-2">
+                  <li><strong>Gold &amp; Silver:</strong> Refundable based on the daily market rate minus a standard 2% processing fee.</li>
+                  <li><strong>Diamonds &amp; Gemstones:</strong> Non-refundable. Once a diamond or gemstone is set or sold, it is considered a final sale due to certification and security protocols.</li>
+                  <li><strong>Hybrid Pieces:</strong> For jewellery containing both precious metals and diamonds, only the gold/silver component is eligible for a refund. The value of the diamond/gemstone will be deducted from the total refund amount.</li>
+                </ul>
+              </div>
+
               <h2 id="marketplace">
                 <ShoppingBag className="w-5 h-5 text-amber-500" />
-                4. Marketplace & System Rules
+                4. Marketplace &amp; System Rules
               </h2>
               <p>
                 To maintain the integrity of our global B2B/B2C marketplace, the following additional rules apply:
@@ -164,14 +163,14 @@ export default function RefundPage() {
                 5. Refund Process
               </h2>
               <p>
-                To initiate a refund for eligible gold or silver items, please follow these steps:
+                To initiate a refund for eligible items, please follow these steps:
               </p>
               <ol>
                 <li>
-                  Submit a request through the <Link href="/support" className="font-semibold text-amber-600 dark:text-amber-400 hover:underline">Support Center</Link> within 7 days of delivery.
+                  Submit a refund request through the <Link href="/support" className="font-semibold text-amber-600 dark:text-amber-400 hover:underline">Support Center</Link> within 7 days of the relevant transaction or delivery.
                 </li>
-                <li>Our quality assurance team will verify the purity and weight of the returned item.</li>
-                <li>Once verified, the refund will be processed to your original payment method within 10-14 business days.</li>
+                <li>For marketplace jewellery: our quality assurance team will verify the purity and weight of the returned item. For SaaS billing disputes: our team will review your account and transaction records.</li>
+                <li>Once reviewed and approved, the refund will be processed to your original payment method within 10–14 business days.</li>
               </ol>
               
               <div className="mt-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-800 flex flex-col md:flex-row items-center gap-6">

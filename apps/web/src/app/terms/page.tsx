@@ -22,7 +22,7 @@ export default function TermsPage() {
     { id: "acceptance", title: "1. Acceptance of Terms", icon: Sparkles },
     { id: "service", title: "2. Description of Service", icon: Laptop },
     { id: "responsibilities", title: "3. User Responsibilities", icon: UserCheck },
-    { id: "payments", title: "4. Payments & Quotes", icon: CreditCard },
+    { id: "payments", title: "4. Plans, Billing & Payments", icon: CreditCard },
     { id: "software", title: "5. Software License", icon: FileText },
     { id: "liability", title: "6. Liability", icon: ShieldAlert },
   ];
@@ -112,11 +112,7 @@ export default function TermsPage() {
                 <T>2. Description of Service</T>
               </h2>
               <p>
-                <T>Orivraa provides an integrated B2B and B2C jewelry marketplace and SaaS platform connecting buyers with worldwide 
-                verified artisans. We also offer a comprehensive suite of tools for jewelry businesses, including shop 
-                management, mobile POS, inventory tracking (with offline desktop syncing capabilities), Customer 
-                Relationship Management (CRM), Request for Quote (RFQ) processing, support-center workflows, AI assistance, 
-                marketplace intelligence, and integrated chat functionality.</T>
+                <T>Orivraa is a SaaS platform providing a comprehensive suite of jewellery business management tools — including a web dashboard, mobile POS, desktop inventory management, CRM, invoicing, sales analytics, and an AI support assistant — available on Free, Pro, and Pro+ subscription plans. Orivraa also operates an integrated B2B/B2C jewellery marketplace connecting buyers with verified artisans and retailers worldwide, enabling custom manufacturing requests (RFQs), secure checkout, real-time chat, and international logistics coordination.</T>
               </p>
 
               <h2 id="responsibilities">
@@ -124,20 +120,22 @@ export default function TermsPage() {
                 <T>3. User and Partner Responsibilities</T>
               </h2>
               <ul>
+                <li><strong><T>Account Security:</T></strong> <T>You are responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. Notify our support team immediately of any unauthorized access or suspected compromise.</T></li>
+                <li><strong><T>Acceptable Use:</T></strong> <T>You agree not to misuse Orivraa&apos;s SaaS tools to process fraudulent data, attempt to reverse-engineer our software, scrape platform data, or intentionally exceed service usage limits.</T></li>
                 <li><strong><T>Accuracy of Information:</T></strong> <T>You must provide accurate and complete information when creating an account, registering a shop, or listing inventory.</T></li>
-                <li><strong><T>Quality and Purity Standards:</T></strong> <T>Sellers are strictly obligated to ensure that all jewelry listed meets the described purity (e.g., 22K gold), quality standards, and matches the custom manufacturing specifications requested by buyers.</T></li>
+                <li><strong><T>Quality and Purity Standards:</T></strong> <T>Marketplace sellers are obligated to ensure all jewellery listed meets the described purity (e.g., 22K gold), quality standards, and matches any custom manufacturing specifications agreed with buyers.</T></li>
                 <li><strong><T>Platform Conduct:</T></strong> <T>You agree not to misuse our chat, CRM, or RFQ systems for spam, harassment, fraudulent activities, or to bypass the Orivraa secure checkout process.</T></li>
               </ul>
 
               <h2 id="payments">
                 <CreditCard className="w-5 h-5 text-amber-500" />
-                <T>4. Transactions, Quotes, and Payments</T>
+                <T>4. Plans, Billing & Payments</T>
               </h2>
               <p>
-                <T>All payments, custom manufacturing quotes, and invoices generated through our platform are subject 
-                to the terms of our integrated international payment gateways. While Orivraa implements strict 
-                verification for artisans and offers Buyer Protection policies, users agree that final contracts 
-                for custom manufacturing are executed subject to the agreed-upon digital quotes within our system.</T>
+                <T>Orivraa offers Free, Pro, and Pro+ SaaS subscription tiers. Paid plans are billed on a monthly recurring basis. By subscribing, you authorize us to charge your payment method automatically at each renewal. You may cancel at any time from your dashboard; access to paid features continues through the end of the current billing period. Cancellations do not entitle you to a pro-rated refund (see our Refund Policy).</T>
+              </p>
+              <p>
+                <T>For marketplace transactions: all orders, custom manufacturing quotes (RFQs), and invoices are processed via our integrated international payment gateways. Orivraa implements strict seller verification and extends Buyer Protection policies to verified marketplace orders. Final contracts for custom manufacturing are executed subject to the agreed-upon digital quotes within the platform.</T>
               </p>
 
               <h2 id="software">
@@ -145,21 +143,20 @@ export default function TermsPage() {
                 <T>5. Software License and Desktop Application</T>
               </h2>
               <p>
-                <T>For jewelry partners utilizing our SaaS subscriptions, desktop shop management software, or mobile POS tools: Orivraa grants you a limited, 
-                non-exclusive, non-transferable license to use the software for managing your store. You are 
-                responsible for maintaining stable connectivity for regular syncs and for managing authorized team access so data 
-                stays consistent between your local workflows and the Orivraa cloud platform.</T>
+                <T>Orivraa grants you a limited, non-exclusive, non-transferable, revocable license to access and use our web, mobile, and desktop SaaS software for managing your jewellery business, subject to your active subscription plan. You may not sublicense, resell, or redistribute the platform or any of its components.</T>
               </p>
+              <ul>
+                <li><strong><T>Data Portability:</T></strong> <T>You may export your shop data, inventory records, invoices, and analytics reports from your dashboard at any time. Your business data belongs to you.</T></li>
+                <li><strong><T>Service Availability:</T></strong> <T>Orivraa provides its SaaS platform on a commercially reasonable best-effort basis. Planned maintenance windows and unforeseen outages may cause temporary interruptions. We do not guarantee uninterrupted or error-free service.</T></li>
+                <li><strong><T>Team Access:</T></strong> <T>You are responsible for managing authorized team member access to your account so that data stays consistent between your local workflows and the Orivraa cloud platform.</T></li>
+              </ul>
 
               <h2 id="liability">
                 <ShieldAlert className="w-5 h-5 text-amber-500" />
                 <T>6. Limitation of Liability</T>
               </h2>
               <p>
-                <T>Orivraa provides its platform on an "as-is" basis. To the maximum extent permitted by law, 
-                Orivraa shall not be liable for indirect, incidental, or consequential damages resulting from 
-                the use or inability to use our services, including but not limited to lost profits, delayed 
-                logistics, or data loss resulting from a failure to synchronize desktop inventory.</T>
+                <T>Orivraa provides its platform on an &quot;as-is&quot; basis. To the maximum extent permitted by law, Orivraa shall not be liable for indirect, incidental, or consequential damages resulting from the use or inability to use our services, including but not limited to lost profits, delayed logistics, business interruption, data loss, or temporary service unavailability.</T>
               </p>
               
               <div className="mt-12 bg-amber-50 dark:bg-amber-900/10 rounded-xl p-6 border border-amber-100 dark:border-amber-900/20 flex flex-col md:flex-row items-center gap-6">

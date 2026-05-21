@@ -114,6 +114,7 @@ export default function PrivacyPage() {
                 B2B/B2C jewelry marketplace and shop management platform:</T>
               </p>
               <ul>
+                <li><strong><T>Subscription & Billing Data:</T></strong> <T>Payment method details (processed by our payment gateway providers), billing history, subscription plan tier, and renewal dates for SaaS accounts.</T></li>
                 <li><strong><T>Account & Profile Data:</T></strong> <T>Name, email address, phone number, physical address, and business verification details when you register as a buyer or seller.</T></li>
                 <li><strong><T>CRM & Communications:</T></strong> <T>Data from customer relationship management processes, including built-in chat logs, RFQ (Request for Quote) discussions, and customer support interactions.</T></li>
                 <li><strong><T>AI Assistant & Support Data:</T></strong> <T>Messages shared with our public AI assistant, support center, onboarding flows, and ticketing channels so we can respond accurately and improve support quality.</T></li>
@@ -128,11 +129,13 @@ export default function PrivacyPage() {
               </h2>
               <p><T>Your data is essential for us to deliver our comprehensive suite of services. We use your data to:</T></p>
               <ul>
-                <li><T>Facilitate secure transactions, custom order routing, and order fulfillment between global buyers and verified sellers.</T></li>
-                <li><T>Synchronize your offline shop inventory with your online global storefront using our desktop client.</T></li>
+                <li><T>Manage your SaaS subscription, process recurring payments, and deliver plan upgrade, downgrade, or renewal notifications.</T></li>
+                <li><T>Power the web dashboard, mobile POS, desktop inventory management, CRM, invoicing, analytics, and AI support assistant for your jewellery business.</T></li>
+                <li><T>Facilitate secure marketplace transactions, custom order routing, and order fulfilment between global buyers and verified sellers.</T></li>
+                <li><T>Synchronize your offline shop inventory with your online storefront using our desktop client.</T></li>
                 <li><T>Operate our built-in real-time chat, negotiation tools, and CRM systems for seamless communication.</T></li>
                 <li><T>Process payments securely via our integrated international payment gateways.</T></li>
-                <li><T>Run SaaS subscriptions, onboarding, support-center workflows, and AI-assisted help experiences for sellers and buyers.</T></li>
+                <li><T>Run support-center workflows and AI-assisted help experiences for sellers and buyers.</T></li>
                 <li><T>Analyze marketplace trends to generate actionable intelligence reports and sales analytics for our partners.</T></li>
                 <li><T>Maintain platform security, prevent fraud, and verify the quality and purity standards of our artisans.</T></li>
               </ul>
@@ -154,10 +157,7 @@ export default function PrivacyPage() {
                 <T>5. Your Rights and Choices</T>
               </h2>
               <p>
-                <T>You have the right to access, correct, update, or request the deletion of your personal data. 
-                Sellers may also manage their synced inventory data via their dedicated dashboard. For any 
-                privacy-related inquiries, data requests, or to exercise your rights, please contact our 
-                dedicated Data Protection team.</T>
+                <T>You have the right to access, correct, update, or request the deletion of your personal data. SaaS subscribers may manage their subscription plan, export shop data and reports, and control team member access from their dashboard. For any privacy-related inquiries, data requests, or to exercise your rights, please contact our dedicated Data Protection team.</T>
               </p>
               
               <div className="mt-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-800 flex flex-col md:flex-row items-center gap-6">
