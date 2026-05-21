@@ -134,6 +134,30 @@ const jsonLd = {
         },
         {
           "@type": "Question",
+          name: "Does Orivraa support VAT on gold jewellery in UAE and Dubai?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. UAE applies 5% VAT on all worked jewellery. Orivraa generates FTA-compliant tax invoices with your Tax Registration Number (TRN), itemised VAT breakdown, and AED pricing. Investment gold bars and coins (99%+ purity) are zero-rated — Orivraa handles this distinction automatically.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Is Orivraa's billing software compliant for UK jewellers?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. UK jewellers charge 20% VAT on all worked jewellery (investment gold is zero-rated). Orivraa generates HMRC-compliant VAT invoices, keeps MTD-compatible digital records, and includes hallmark reference fields per item to support Hallmarking Act 1973 requirements.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Can Nepal jewellers use Orivraa for billing and VAT compliance?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. Orivraa supports Nepal natively: NPR currency, tola weight calculations, Nepal Rastra Bank daily gold rate integration, and 13% VAT on worked jewellery. IRD-compatible invoices include PAN number for registered businesses. The Nepal Pro plan starts at NPR 399/month.",
+          },
+        },
+        {
+          "@type": "Question",
           name: "Can I handle old gold exchange in billing?",
           acceptedAnswer: {
             "@type": "Answer",
@@ -436,6 +460,18 @@ export default function JewellerBillingSoftwarePage() {
                 {
                   q: "Does it generate GST returns data?",
                   a: "Yes. Orivraa generates reports in GSTR-1 and GSTR-3B format for Indian GST filing. Export the data directly for your chartered accountant or upload to the GST portal.",
+                },
+                {
+                  q: "Does Orivraa support VAT for UAE and Dubai jewellers?",
+                  a: "Yes. UAE applies 5% VAT on worked jewellery. Orivraa generates FTA-compliant tax invoices with your TRN, itemised VAT, and AED pricing. Investment gold bars and coins (99%+ purity) are zero-rated — Orivraa handles the distinction automatically.",
+                },
+                {
+                  q: "Is Orivraa VAT and hallmarking compliant for UK jewellers?",
+                  a: "Yes. Orivraa generates HMRC-compliant 20% VAT invoices for UK jewellery sales, keeps MTD-compatible digital records, and includes hallmark reference fields (London, Birmingham, Sheffield, or Edinburgh assay marks) per item — supporting Hallmarking Act 1973 compliance.",
+                },
+                {
+                  q: "Can Nepal jewellers use Orivraa with NPR and tola weights?",
+                  a: "Yes. Orivraa is built for the Nepal market: NPR pricing, tola weight calculations alongside grams, Nepal Rastra Bank daily gold rate integration, and 13% VAT on worked jewellery with IRD-compatible invoices and PAN support. Nepal Pro plan from NPR 399/month.",
                 },
                 {
                   q: "Can I handle advance payments and layaway?",

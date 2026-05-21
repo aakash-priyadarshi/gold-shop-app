@@ -31,6 +31,8 @@ const ROWS: {
   { feature: "Making charges & wastage support", orivraa: true, tally: "Manual" },
   { feature: "Old gold exchange & buy-back", orivraa: true, tally: false },
   { feature: "GST / VAT compliant invoicing", orivraa: true, tally: true },
+  { feature: "Works in Nepal, UAE, UK & USA (global markets)", orivraa: true, tally: false, note: "Tally is built for India only; no localisation for Nepal, UAE, UK, or USA" },
+  { feature: "Multi-currency: INR, NPR, AED, GBP, USD, EUR", orivraa: true, tally: "INR only" },
   { feature: "Multi-store / multi-branch", orivraa: true, tally: "Add-on" },
   { feature: "Cloud-based, access anywhere", orivraa: true, tally: false, note: "Tally is desktop-first" },
   { feature: "Built-in customer chat & RFQ", orivraa: true, tally: false },
@@ -81,9 +83,10 @@ export default function OrivraaVsTallyPage() {
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed mb-8">
               <T>
                 Tally is a great general-purpose accounting tool — but it
-                wasn&apos;t built for jewellery. Here&apos;s an honest, side-by-side
-                look at how Orivraa stacks up for shops that sell gold, silver,
-                and diamond.
+                wasn&apos;t built for jewellery, and it&apos;s designed exclusively
+                for India. Here&apos;s an honest, side-by-side look at how Orivraa
+                stacks up for gold, silver, and diamond shops across India,
+                Nepal, UAE, UK, and USA.
               </T>
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">

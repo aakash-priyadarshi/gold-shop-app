@@ -23,7 +23,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Sell Jewellery on Orivraa | Free Shop Profile, Mobile POS & Buyer Leads",
   description:
-    "Jewellers can join Orivraa free, create a digital shop profile, receive RFQ buyer leads, try mobile POS billing, track live gold rate trends, and manage orders from one dashboard. No commission until you sell.",
+    "Jewellers in India, Nepal, UAE, UK, and USA can join Orivraa free. Create a digital shop profile, receive buyer leads, use mobile POS billing with local tax compliance (GST / VAT / sales tax), and manage orders from one dashboard. No commission until you sell.",
   alternates: { canonical: "https://www.orivraa.com/for-sellers" },
 };
 
@@ -52,6 +52,10 @@ const OBJECTIONS = [
     q: "I'm not tech-savvy. Is this complicated?",
     a: "Setup takes under 10 minutes. If you can use WhatsApp, you can use Orivraa. We also offer free onboarding support over call if you need it.",
   },
+  {
+    q: "I'm based outside India — does Orivraa work for my shop?",
+    a: "Yes. Orivraa supports jewellers in Nepal (NPR, 13% VAT, NRB gold rates), UAE/Dubai (AED, 5% VAT, FTA-compliant invoices), UK (GBP, 20% VAT, hallmark fields), and USA (USD, state-level sales tax). Your pricing, tax rates, and invoice format automatically match your country.",
+  },
 ];
 
 const FEATURES = [
@@ -77,8 +81,8 @@ const FEATURES = [
   },
   {
     icon: Globe,
-    title: "Reach NRI & Global Buyers",
-    desc: "Buyers from the Indian diaspora in the UAE, UK, and USA are actively looking for trustworthy jewellers back home for custom pieces. Your shop becomes visible to them.",
+    title: "Reach Buyers in 6+ Countries",
+    desc: "Buyers from the Indian and Nepali diaspora in the UAE, UK, and USA are searching for trusted jewellers. Jewellers based in Nepal, Dubai, London, or New York also use Orivraa to manage their shop and attract buyers globally — with local currency billing and country-specific tax compliance included.",
   },
   {
     icon: ShieldCheck,
