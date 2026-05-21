@@ -58,6 +58,7 @@ export function DynamicFooter() {
         { href: "/demo", label: "Quick Demo" },
         { href: "/tutorial", label: "Full Tutorial" },
         { href: "/about", label: "About Us" },
+        { href: "/contact", label: "Contact" },
       ];
 
   const sellerLinks = [
@@ -248,6 +249,12 @@ export function DynamicFooter() {
               className="text-gray-400 hover:text-gold-400 transition-colors"
             >
               <T>Refund Policy</T>
+            </Link>
+            <Link
+              href="/platform-guidelines"
+              className="text-gray-400 hover:text-gold-400 transition-colors"
+            >
+              <T>Platform Guidelines</T>
             </Link>
           </div>
         </div>

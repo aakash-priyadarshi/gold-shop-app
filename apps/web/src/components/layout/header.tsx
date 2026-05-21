@@ -429,30 +429,6 @@ export function Header() {
       icon: BookOpenIcon,
       desc: "See the full product walkthrough",
     },
-    {
-      name: "Help Center",
-      href: "/help",
-      icon: ChatBubbleLeftRightIcon,
-      desc: "Find guides and product how-tos",
-    },
-    {
-      name: "Privacy Policy",
-      href: "/privacy",
-      icon: ShieldCheckIcon,
-      desc: "How we protect your data",
-    },
-    {
-      name: "Terms of Service",
-      href: "/terms",
-      icon: DocumentTextIcon,
-      desc: "Usage terms & conditions",
-    },
-    {
-      name: "Refund Policy",
-      href: "/refund",
-      icon: CurrencyDollarIcon,
-      desc: "How subscription and marketplace refunds work",
-    },
   ];
 
   // State for "For Sellers" dropdown
@@ -572,7 +548,7 @@ export function Header() {
                 {/* More */}
                 <div className="pt-3 mt-2 border-t border-gray-100 dark:border-gray-800">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-3 mb-2">
-                    <T>Resources</T>
+                    <T>Learn</T>
                   </p>
                   {moreNavItems.map((item) => (
                     <Link
@@ -806,7 +782,7 @@ export function Header() {
             )}
           </div>
 
-          {/* Resources dropdown */}
+          {/* Learn dropdown */}
           <div
             className="relative"
             onMouseEnter={() => setCompanyDropdownOpen(true)}
@@ -816,7 +792,7 @@ export function Header() {
               className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors inline-flex items-center gap-1"
               onClick={() => setCompanyDropdownOpen(!companyDropdownOpen)}
             >
-              <T>Resources</T>
+              <T>Learn</T>
               <svg
                 className={`h-3.5 w-3.5 transition-transform ${companyDropdownOpen ? "rotate-180" : ""}`}
                 fill="none"
