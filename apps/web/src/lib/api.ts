@@ -45,7 +45,51 @@ function setCookie(name: string, value: string, maxAge?: number) {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; SameSite=Lax${secure}${domain}${expiry}`;
 }
 
-function forceLogout() {
+// Routes that are publicly accessible — no login required, no login redirect
+// when a session expires. Prefix-matched against window.location.pathname.
+const PUBLIC_ROUTE_PREFIXES = [
+  "/",
+  "/about",
+  "/ai-sales-team",
+  "/auth/",
+  "/blog",
+  "/compare/",
+  "/contact",
+  "/demo",
+  "/designs",
+  "/download",
+  "/for-sellers",
+  "/jewellery-ecommerce-software",
+  "/jewellery-inventory-software",
+  "/jewellery-pos-software",
+  "/jewellery-shop-billing-software",
+  "/jewellery-shop-software",
+  "/jewellery-store-management-software",
+  "/np/",
+  "/partner",
+  "/platform-guidelines",
+  "/pricing",
+  "/privacy",
+  "/refund",
+  "/seller-guide",
+  "/shop",
+  "/shops",
+  "/support",
+  "/terms",
+  "/tutorial",
+  "/uae/",
+  "/uk/",
+  "/us/",
+];
+
+function isPublicRoute(pathname: string): boolean {
+  if (pathname === "/") return true;
+  return PUBLIC_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix),
+  );
+}
+
+function clearTokens() {
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("orivraa_remember_me");
@@ -53,6 +97,17 @@ function forceLogout() {
   sessionStorage.removeItem("refreshToken");
   clearCookie("token");
   clearCookie("refreshToken");
+}
+
+function forceLogout() {
+  clearTokens();
+
+  // On public pages, don't redirect to login — just silently clear the expired
+  // session so the user sees the page as a guest. Redirecting Googlebot (and
+  // real users) to the login page from public routes is the #1 SEO killer.
+  if (typeof window !== "undefined" && isPublicRoute(window.location.pathname)) {
+    return;
+  }
 
   toast({
     title: "Session Expired",
