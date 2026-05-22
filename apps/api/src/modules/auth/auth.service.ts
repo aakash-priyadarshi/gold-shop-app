@@ -923,8 +923,8 @@ export class AuthService {
     });
 
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
-      const result = { ...user };
-      delete result.passwordHash;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { passwordHash, ...result } = user;
       return result;
     }
     return null;
