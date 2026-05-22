@@ -48,7 +48,6 @@ function setCookie(name: string, value: string, maxAge?: number) {
 // Routes that are publicly accessible — no login required, no login redirect
 // when a session expires. Prefix-matched against window.location.pathname.
 const PUBLIC_ROUTE_PREFIXES = [
-  "/",
   "/about",
   "/ai-sales-team",
   "/auth/",
@@ -105,7 +104,10 @@ function forceLogout() {
   // On public pages, don't redirect to login — just silently clear the expired
   // session so the user sees the page as a guest. Redirecting Googlebot (and
   // real users) to the login page from public routes is the #1 SEO killer.
-  if (typeof window !== "undefined" && isPublicRoute(window.location.pathname)) {
+  if (
+    typeof window !== "undefined" &&
+    isPublicRoute(window.location.pathname)
+  ) {
     return;
   }
 
@@ -146,22 +148,22 @@ async function attemptTokenRefresh(): Promise<string> {
       expiresIn: number;
     };
 
-// Preserve "remember me" routing: use the flag set by storeTokens/storeOAuthTokens.
-      const rememberMeMaxAge = 60 * 60 * 24 * 30;
-      const hadRememberMe = localStorage.getItem("orivraa_remember_me") === "1";
-      const maxAge = hadRememberMe ? rememberMeMaxAge : undefined;
+    // Preserve "remember me" routing: use the flag set by storeTokens/storeOAuthTokens.
+    const rememberMeMaxAge = 60 * 60 * 24 * 30;
+    const hadRememberMe = localStorage.getItem("orivraa_remember_me") === "1";
+    const maxAge = hadRememberMe ? rememberMeMaxAge : undefined;
 
-      if (hadRememberMe) {
-        localStorage.setItem("token", accessToken);
-        localStorage.setItem("refreshToken", refreshToken);
-        sessionStorage.removeItem("token");
-        sessionStorage.removeItem("refreshToken");
-      } else {
-        sessionStorage.setItem("token", accessToken);
-        sessionStorage.setItem("refreshToken", refreshToken);
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
-      }
+    if (hadRememberMe) {
+      localStorage.setItem("token", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("refreshToken");
+    } else {
+      sessionStorage.setItem("token", accessToken);
+      sessionStorage.setItem("refreshToken", refreshToken);
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+    }
     setCookie("token", accessToken, maxAge);
     setCookie("refreshToken", refreshToken, maxAge);
 
@@ -176,12 +178,13 @@ async function attemptTokenRefresh(): Promise<string> {
 // Request interceptor to add auth token and currency header
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-      // Add auth token — check both persistent (localStorage) and session storage
-      const token =
-        localStorage.getItem("token") ||
-        sessionStorage.getItem("token") ||
-        readCookie("token");
-      if (token) {
+    // Add auth token — check both persistent (localStorage) and session storage
+    const token =
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("token") ||
+      readCookie("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
     // Add currency header from preferences store
@@ -676,8 +679,7 @@ export const shopQuotesApi = {
     api.post(`/shop-quotes/${id}/send-tracking-link`, { method }),
 
   // Public: track by token (no auth)
-  trackByToken: (token: string) =>
-    api.get(`/shop-quotes/track/${token}`),
+  trackByToken: (token: string) => api.get(`/shop-quotes/track/${token}`),
 
   // Statistics and analytics
   getStats: () => api.get("/shop-quotes/stats"),
@@ -897,7 +899,8 @@ export const taxReportsApi = {
   uaeVat201: (period: string) =>
     api.get("/tax-reports/uae/vat201", { params: { period } }),
   // UK
-  ukMtd: (period: string) => api.get("/tax-reports/uk/mtd", { params: { period } }),
+  ukMtd: (period: string) =>
+    api.get("/tax-reports/uk/mtd", { params: { period } }),
   // EU
   euOss: (period: string, format: "json" | "csv" = "json") =>
     api.get("/tax-reports/eu/oss", {
@@ -911,15 +914,20 @@ export const taxReportsApi = {
       responseType: format === "csv" ? "blob" : "json",
     }),
   // CA share
-  createShareLink: (data: { country: string; period: string; ttlDays?: number }) =>
-    api.post("/tax-reports/share-link", data),
+  createShareLink: (data: {
+    country: string;
+    period: string;
+    ttlDays?: number;
+  }) => api.post("/tax-reports/share-link", data),
 };
 
 // Admin Tax Reports API (admin-only, accepts shopId as query param)
 export const adminTaxApi = {
   stats: () => api.get("/tax-reports/admin/stats"),
   shopSummary: (shopId: string, country: string, period: string) =>
-    api.get("/tax-reports/admin/shop-summary", { params: { shopId, country, period } }),
+    api.get("/tax-reports/admin/shop-summary", {
+      params: { shopId, country, period },
+    }),
   indiaGstr3b: (shopId: string, period: string) =>
     api.get("/tax-reports/admin/india/gstr3b", { params: { shopId, period } }),
   indiaHsn: (shopId: string, period: string, format: "json" | "csv" = "json") =>
@@ -927,7 +935,11 @@ export const adminTaxApi = {
       params: { shopId, period, format },
       responseType: format === "csv" ? "blob" : "json",
     }),
-  indiaGstr1: (shopId: string, period: string, format: "json" | "csv" = "json") =>
+  indiaGstr1: (
+    shopId: string,
+    period: string,
+    format: "json" | "csv" = "json",
+  ) =>
     api.get("/tax-reports/admin/india/gstr1", {
       params: { shopId, period, format },
       responseType: format === "csv" ? "blob" : "json",
@@ -1097,7 +1109,8 @@ export const supportApi = {
   getAiAnalytics: () => api.get("/support/ai-analytics"),
   getContacts: () => api.get("/support/contacts"),
   createContact: (data: any) => api.post("/support/contacts", data),
-  updateContact: (id: string, data: any) => api.patch(`/support/contacts/${id}`, data),
+  updateContact: (id: string, data: any) =>
+    api.patch(`/support/contacts/${id}`, data),
   deleteContact: (id: string) => api.delete(`/support/contacts/${id}`),
 };
 
@@ -1391,7 +1404,12 @@ export const metricsApi = {
   }) => api.patch("/metrics/grafana-settings", data),
   getDbPerformance: () => api.get("/metrics/db-performance"),
   getCronSummary: () => api.get("/metrics/cron/summary"),
-  getCronLogs: (params?: { date?: string; app?: string; jobName?: string; limit?: number }) => {
+  getCronLogs: (params?: {
+    date?: string;
+    app?: string;
+    jobName?: string;
+    limit?: number;
+  }) => {
     const q = new URLSearchParams();
     if (params?.date) q.set("date", params.date);
     if (params?.app) q.set("app", params.app);
@@ -1407,10 +1425,17 @@ export const metricsApi = {
   },
   // Cron config management
   getCronConfigs: () => api.get("/metrics/cron/config"),
-  updateCronConfig: (jobName: string, data: { intervalMinutes?: number; enabled?: boolean }) =>
-    api.patch(`/metrics/cron/config/${encodeURIComponent(jobName)}`, data),
-  bulkUpdateCronConfigs: (updates: Array<{ jobName: string; intervalMinutes?: number; enabled?: boolean }>) =>
-    api.patch("/metrics/cron/config", { updates }),
+  updateCronConfig: (
+    jobName: string,
+    data: { intervalMinutes?: number; enabled?: boolean },
+  ) => api.patch(`/metrics/cron/config/${encodeURIComponent(jobName)}`, data),
+  bulkUpdateCronConfigs: (
+    updates: Array<{
+      jobName: string;
+      intervalMinutes?: number;
+      enabled?: boolean;
+    }>,
+  ) => api.patch("/metrics/cron/config", { updates }),
   resetAllCronConfigs: () => api.post("/metrics/cron/config/reset-all"),
   resetCronConfig: (jobName: string) =>
     api.post(`/metrics/cron/config/${encodeURIComponent(jobName)}/reset`),

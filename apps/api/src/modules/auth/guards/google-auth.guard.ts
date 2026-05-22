@@ -11,7 +11,8 @@ export class GoogleAuthGuard extends AuthGuard("google") {
     if (
       request.query?.role ||
       request.query?.mode ||
-      request.query?.desktop_port
+      request.query?.desktop_port ||
+      request.query?.rememberMe
     ) {
       const stateData: Record<string, string> = {
         role: request.query.role || "CUSTOMER",
@@ -19,6 +20,9 @@ export class GoogleAuthGuard extends AuthGuard("google") {
       };
       if (request.query.desktop_port) {
         stateData.desktop_port = request.query.desktop_port;
+      }
+      if (request.query.rememberMe !== undefined) {
+        stateData.rememberMe = String(request.query.rememberMe);
       }
       // Encode as base64 to pass through OAuth state parameter
       request.query.state = Buffer.from(JSON.stringify(stateData)).toString(

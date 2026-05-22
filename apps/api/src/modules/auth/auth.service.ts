@@ -1,11 +1,11 @@
 import {
-    BadRequestException,
-    ConflictException,
-    ForbiddenException,
-    Injectable,
-    Logger,
-    NotFoundException,
-    UnauthorizedException,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { CurrencyCode, UserRole, UserStatus } from "@prisma/client";
@@ -286,7 +286,8 @@ export class AuthService {
       throw new BadRequestException("User already has a shop");
     }
 
-    const preferredCurrency = (shopDto.currency as CurrencyCode) || user.preferredCurrency;
+    const preferredCurrency =
+      (shopDto.currency as CurrencyCode) || user.preferredCurrency;
 
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedUser = await tx.user.update({
@@ -334,7 +335,9 @@ export class AuthService {
     this.mailService
       .sendShopkeeperWelcome(result.user.email, result.user.firstName)
       .catch((err: any) =>
-        this.logger.error(`Failed to send seller welcome email: ${err.message}`),
+        this.logger.error(
+          `Failed to send seller welcome email: ${err.message}`,
+        ),
       );
 
     // Generate fresh tokens
@@ -381,13 +384,17 @@ export class AuthService {
       this.mailService
         .sendShopkeeperWelcome(user.email, user.firstName)
         .catch((err: any) =>
-          this.logger.error(`Failed to send seller welcome email: ${err.message}`),
+          this.logger.error(
+            `Failed to send seller welcome email: ${err.message}`,
+          ),
         );
     } else {
       this.mailService
         .sendWelcome(user.email, user.firstName)
         .catch((err) =>
-          this.logger.error(`Failed to send customer welcome email: ${err.message}`),
+          this.logger.error(
+            `Failed to send customer welcome email: ${err.message}`,
+          ),
         );
     }
 
@@ -582,6 +589,7 @@ export class AuthService {
       picture?: string;
       requestedRole?: string;
       mode?: string;
+      rememberMe?: boolean;
       // Google People API enriched fields
       googleBirthday?: string;
       googleGender?: string;
@@ -597,7 +605,6 @@ export class AuthService {
       googleUser.requestedRole === "SHOPKEEPER"
         ? UserRole.SHOPKEEPER
         : UserRole.CUSTOMER;
-    const mode = googleUser.mode || "login"; // Default to login mode
 
     // Check if user exists by googleId or email
     const user = await this.prisma.user.findFirst({
@@ -625,14 +632,23 @@ export class AuthService {
       }
       // Always update enriched Google data on login
       const enriched: Record<string, unknown> = {};
-      if (googleUser.googleBirthday) enriched.googleBirthday = googleUser.googleBirthday;
-      if (googleUser.googleGender) enriched.googleGender = googleUser.googleGender;
-      if (googleUser.googlePhoneRaw) enriched.googlePhoneRaw = googleUser.googlePhoneRaw;
-      if (googleUser.googleAddressRaw) enriched.googleAddressRaw = googleUser.googleAddressRaw;
-      if (googleUser.googleLocale) enriched.googleLocale = googleUser.googleLocale;
-      if (googleUser.googlePicture) enriched.googlePicture = googleUser.googlePicture;
+      if (googleUser.googleBirthday)
+        enriched.googleBirthday = googleUser.googleBirthday;
+      if (googleUser.googleGender)
+        enriched.googleGender = googleUser.googleGender;
+      if (googleUser.googlePhoneRaw)
+        enriched.googlePhoneRaw = googleUser.googlePhoneRaw;
+      if (googleUser.googleAddressRaw)
+        enriched.googleAddressRaw = googleUser.googleAddressRaw;
+      if (googleUser.googleLocale)
+        enriched.googleLocale = googleUser.googleLocale;
+      if (googleUser.googlePicture)
+        enriched.googlePicture = googleUser.googlePicture;
       if (Object.keys(enriched).length) {
-        await this.prisma.user.update({ where: { id: user.id }, data: enriched });
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: enriched,
+        });
       }
 
       // Block only deactivated — suspended users are allowed to log in
@@ -666,6 +682,7 @@ export class AuthService {
         user.shops?.[0] || null,
         ipAddress,
         userAgent,
+        googleUser.rememberMe ?? true,
       );
 
       // If user is SHOPKEEPER but has no shop, they need to complete setup
@@ -701,12 +718,24 @@ export class AuthService {
         preferredLanguage: "en",
         preferredCurrency: CurrencyCode.NPR,
         // Store enriched Google People API data on signup
-        ...(googleUser.googleBirthday && { googleBirthday: googleUser.googleBirthday }),
-        ...(googleUser.googleGender && { googleGender: googleUser.googleGender }),
-        ...(googleUser.googlePhoneRaw && { googlePhoneRaw: googleUser.googlePhoneRaw }),
-        ...(googleUser.googleAddressRaw && { googleAddressRaw: googleUser.googleAddressRaw as any }),
-        ...(googleUser.googleLocale && { googleLocale: googleUser.googleLocale }),
-        ...(googleUser.googlePicture && { googlePicture: googleUser.googlePicture }),
+        ...(googleUser.googleBirthday && {
+          googleBirthday: googleUser.googleBirthday,
+        }),
+        ...(googleUser.googleGender && {
+          googleGender: googleUser.googleGender,
+        }),
+        ...(googleUser.googlePhoneRaw && {
+          googlePhoneRaw: googleUser.googlePhoneRaw,
+        }),
+        ...(googleUser.googleAddressRaw && {
+          googleAddressRaw: googleUser.googleAddressRaw as any,
+        }),
+        ...(googleUser.googleLocale && {
+          googleLocale: googleUser.googleLocale,
+        }),
+        ...(googleUser.googlePicture && {
+          googlePicture: googleUser.googlePicture,
+        }),
       },
     });
 
@@ -728,25 +757,28 @@ export class AuthService {
     );
 
     // Send welcome email
-      if (newUser.role === "SHOPKEEPER") {
-        this.mailService
-          .sendShopkeeperWelcome(newUser.email, newUser.firstName)
-          .catch((err: any) =>
-            this.logger.error(`Failed to send seller welcome email: ${err.message}`),
-          );
-      } else {
-        this.mailService
-          .sendWelcome(newUser.email, newUser.firstName)
-          .catch((err) =>
-            this.logger.error(`Failed to send welcome email: ${err.message}`),
-          );
-      }
+    if (newUser.role === "SHOPKEEPER") {
+      this.mailService
+        .sendShopkeeperWelcome(newUser.email, newUser.firstName)
+        .catch((err: any) =>
+          this.logger.error(
+            `Failed to send seller welcome email: ${err.message}`,
+          ),
+        );
+    } else {
+      this.mailService
+        .sendWelcome(newUser.email, newUser.firstName)
+        .catch((err) =>
+          this.logger.error(`Failed to send welcome email: ${err.message}`),
+        );
+    }
 
     const tokens = await this.generateTokens(
       newUser,
       null,
       ipAddress,
       userAgent,
+      googleUser.rememberMe ?? true,
     );
 
     // If SHOPKEEPER, they need to complete shop setup
@@ -891,7 +923,8 @@ export class AuthService {
     });
 
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
-      const { passwordHash, ...result } = user;
+      const result = { ...user };
+      delete result.passwordHash;
       return result;
     }
     return null;
@@ -1022,7 +1055,12 @@ export class AuthService {
     const pinHash = await bcrypt.hash(pin, 10);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { pinHash, pinSetAt: new Date(), pinFailedCount: 0, pinLockedUntil: null },
+      data: {
+        pinHash,
+        pinSetAt: new Date(),
+        pinFailedCount: 0,
+        pinLockedUntil: null,
+      },
     });
     this.logger.log(`PIN set for user ${userId}`);
     return { message: "PIN set successfully" };
@@ -1057,7 +1095,9 @@ export class AuthService {
 
     if (!isValid) {
       const failedCount = (user.pinFailedCount || 0) + 1;
-      const updateData: Record<string, unknown> = { pinFailedCount: failedCount };
+      const updateData: Record<string, unknown> = {
+        pinFailedCount: failedCount,
+      };
 
       if (failedCount >= 5) {
         // Lock for 15 minutes
@@ -1065,7 +1105,10 @@ export class AuthService {
         updateData.pinFailedCount = 0;
       }
 
-      await this.prisma.user.update({ where: { id: userId }, data: updateData });
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+      });
       throw new UnauthorizedException(
         failedCount >= 5
           ? "Too many failed attempts. PIN locked for 15 minutes."
@@ -1076,7 +1119,11 @@ export class AuthService {
     // PIN correct — reset counter and issue tokens
     await this.prisma.user.update({
       where: { id: userId },
-      data: { pinFailedCount: 0, pinLockedUntil: null, lastLoginAt: new Date() },
+      data: {
+        pinFailedCount: 0,
+        pinLockedUntil: null,
+        lastLoginAt: new Date(),
+      },
     });
 
     await this.auditService.log({
@@ -1090,14 +1137,24 @@ export class AuthService {
       userAgent,
     });
 
-    return this.generateTokens(user, user.shops?.[0] || null, ipAddress, userAgent);
+    return this.generateTokens(
+      user,
+      user.shops?.[0] || null,
+      ipAddress,
+      userAgent,
+    );
   }
 
   /** Remove PIN from account */
   async removePin(userId: string): Promise<{ message: string }> {
     await this.prisma.user.update({
       where: { id: userId },
-      data: { pinHash: null, pinSetAt: null, pinFailedCount: 0, pinLockedUntil: null },
+      data: {
+        pinHash: null,
+        pinSetAt: null,
+        pinFailedCount: 0,
+        pinLockedUntil: null,
+      },
     });
     return { message: "PIN removed successfully" };
   }

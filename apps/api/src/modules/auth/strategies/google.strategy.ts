@@ -39,6 +39,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
     let mode = "login";
     let desktopPort: string | undefined;
     let source: string | undefined;
+    let rememberMe = true;
 
     if (req.query?.state) {
       try {
@@ -49,11 +50,17 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
         mode = stateData.mode || "login";
         desktopPort = stateData.desktop_port;
         source = stateData.source;
+        if (stateData.rememberMe !== undefined) {
+          rememberMe =
+            stateData.rememberMe === "1" || stateData.rememberMe === "true";
+        }
         this.logger.log(
-          `Decoded OAuth state: role=${role}, mode=${mode}, desktop_port=${desktopPort || "none"}, source=${source || "main"}`,
+          `Decoded OAuth state: role=${role}, mode=${mode}, rememberMe=${rememberMe}, desktop_port=${desktopPort || "none"}, source=${source || "main"}`,
         );
       } catch (error) {
-        this.logger.warn(`Failed to decode OAuth state: ${(error as Error).message}`);
+        this.logger.warn(
+          `Failed to decode OAuth state: ${(error as Error).message}`,
+        );
       }
     }
 
@@ -81,22 +88,26 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
         }
         googleGender = people.genders?.[0]?.value as string | undefined;
         googlePhoneRaw = people.phoneNumbers?.[0]?.value as string | undefined;
-        googleAddressRaw = (people.addresses?.[0] as Record<string, unknown>) || undefined;
+        googleAddressRaw =
+          (people.addresses?.[0] as Record<string, unknown>) || undefined;
         googleLocale = people.locales?.[0]?.value as string | undefined;
       }
     } catch (err) {
-      this.logger.warn(`Google People API fetch failed: ${(err as Error).message}`);
+      this.logger.warn(
+        `Google People API fetch failed: ${(err as Error).message}`,
+      );
     }
 
     const user = {
       googleId: id as string,
-      email: (emails[0].value as string),
+      email: emails[0].value as string,
       firstName: (name.givenName as string) || "",
       lastName: (name.familyName as string) || "",
       picture: photos[0]?.value as string | undefined,
       accessToken,
       requestedRole: role,
       mode,
+      rememberMe,
       desktopPort,
       source,
       // Enriched People API data stored on User model
@@ -109,7 +120,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
     };
 
     this.logger.log(
-      `Google OAuth: ${user.email}, role=${role}, mode=${mode}, source=${source || "main"}`,
+      `Google OAuth: ${user.email}, role=${role}, mode=${mode}, rememberMe=${rememberMe}, source=${source || "main"}`,
     );
     done(null, user);
   }
