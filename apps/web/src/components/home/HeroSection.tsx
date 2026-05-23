@@ -282,14 +282,14 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
               }`}
             >
               <Sparkles className="h-4 w-4" />
-              <T>Mobile POS · CRM · Live Gold Rates — all-in-one for jewellery shops</T>
+              <T>Jewellery ERP · Mobile POS · Bullion &amp; Karigar Wastage Tracker</T>
             </div>
             <h1
               className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight ${
                 videoSrc ? "text-white drop-shadow-lg" : "text-gray-900"
               }`}
             >
-              <T>The all-in-one CRM &amp; POS software for jewellery shops</T>
+              <T>The premium cloud ERP &amp; POS software for jewellery shops</T>
             </h1>
             <p
               className={`text-base lg:text-lg max-w-xl mx-auto lg:mx-0 ${
@@ -297,13 +297,12 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
               }`}
             >
               <T>
-                Live gold &amp; silver pricing, GST/VAT-ready billing,
-                inventory across stores, mobile POS on any smartphone,
-                and a digital catalogue you can share on WhatsApp &mdash; all in one place.
+                Live rate card feeds, Karigar metal ledgers, bullion inventory tracking,
+                mobile counter POS billing, and GST/VAT-ready invoices &mdash; all on one modern dashboard.
               </T>
               <span className="block mt-2 font-medium">
                 <T>
-                  Free 30-day trial. No credit card. Setup in under 10 minutes.
+                  Free 30-day trial. No credit card required. Setup in under 10 minutes.
                 </T>
               </span>
             </p>
@@ -362,7 +361,7 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
               <div className="grid grid-cols-2 gap-3 lg:gap-4">
                 {[
                   { icon: Store, label: "Live gold & silver rates", value: "Auto" },
-                  { icon: Package, label: "Inventory across stores", value: "Multi-branch" },
+                  { icon: Package, label: "Karigar & Bullion ledgers", value: "Unified ERP" },
                   { icon: Smartphone, label: "Mobile POS", value: "Any device" },
                   { icon: Zap, label: "Setup time", value: "< 10 min" },
                 ].map((item) => {

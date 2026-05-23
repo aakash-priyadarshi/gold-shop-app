@@ -39,6 +39,12 @@ import {
   Zap,
   Gift,
   Rocket,
+  Hammer,
+  Coins,
+  Users,
+  Database,
+  RefreshCw,
+  Scale,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -109,6 +115,39 @@ export default function ShopDashboard() {
   const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const t = useT();
+
+  // ── Karigar & Bullion States ──
+  const [bullionGold, setBullionGold] = useState(185.50);
+  const [bullionSilver, setBullionSilver] = useState(1450.00);
+  const [karigars, setKarigars] = useState([
+    { name: "Ramesh Karigar", goldOutstanding: 12.45, silverOutstanding: 0.00, wastageLimit: 1.2, activeJob: "Bridal Gold Choker (22K)" },
+    { name: "Suna Benchwork", goldOutstanding: 0.00, silverOutstanding: 48.20, wastageLimit: 0.8, activeJob: "Filigree Silver Bangles (92.5)" }
+  ]);
+
+  // Modal toggles & inputs
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [selectedKarigarIndex, setSelectedKarigarIndex] = useState<number | null>(null);
+  
+  const [issueWeight, setIssueWeight] = useState("");
+  const [issueMetalType, setIssueMetalType] = useState<"GOLD" | "SILVER">("GOLD");
+  const [issueJob, setIssueJob] = useState("");
+
+  const [receiveWeight, setReceiveWeight] = useState("");
+  const [receiveScrap, setReceiveScrap] = useState("");
+  const [receiveWastage, setReceiveWastage] = useState("");
+
+  const [adjustGoldWeight, setAdjustGoldWeight] = useState("");
+  const [adjustSilverWeight, setAdjustSilverWeight] = useState("");
+
+  const [dashboardToast, setDashboardToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  // Trigger brief alert notification
+  const triggerToast = (msg: string, type: "success" | "error" = "success") => {
+    setDashboardToast({ message: msg, type });
+    setTimeout(() => setDashboardToast(null), 4000);
+  };
 
   // ── Onboarding Quests & Confetti ──
   const quests: Array<{ id: string, label: string, reward: string, done: boolean, href: string, cta: string }> = useMemo(() => {
@@ -852,6 +891,434 @@ export default function ShopDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* ═══ Karigar & Bullion Supply Chain Tracker ═══ */}
+          {dashboardToast && (
+            <div className={`fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg border flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${dashboardToast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/90 dark:border-emerald-800 dark:text-emerald-200' : 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/90 dark:border-rose-800 dark:text-rose-200'}`}>
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <p className="text-sm font-semibold">{dashboardToast.message}</p>
+            </div>
+          )}
+
+          <Card className="border-amber-200 dark:border-amber-900/60 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+            <CardHeader className="pb-3 bg-gradient-to-r from-amber-50/50 via-yellow-50/20 to-orange-50/20 dark:from-amber-950/20 dark:via-yellow-950/5 dark:to-orange-950/5 border-b border-amber-100/50 dark:border-amber-900/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg text-amber-950 dark:text-amber-100">
+                    <Hammer className="h-5 w-5 text-amber-600 dark:text-gold-400" />
+                    <T>Karigar &amp; Bullion Supply Chain Tracker</T>
+                  </CardTitle>
+                  <CardDescription>
+                    <T>Real-time workshop materials and artisan wastage balance sheets</T>
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800/60 dark:text-amber-400 dark:hover:bg-amber-950 flex items-center gap-1.5"
+                    onClick={() => {
+                      setAdjustGoldWeight(bullionGold.toString());
+                      setAdjustSilverWeight(bullionSilver.toString());
+                      setIsAdjustModalOpen(true);
+                    }}
+                  >
+                    <Database className="h-4 w-4" />
+                    <T>Adjust Bullion Reserves</T>
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* 1. Bullion Stock reserves */}
+                <div className="lg:col-span-1 space-y-4 border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-gray-800 pb-6 lg:pb-0 lg:pr-6">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-amber-800 dark:text-gold-400 flex items-center gap-2">
+                    <Coins className="h-4 w-4" />
+                    <T>Pure Bullion reserves</T>
+                  </h3>
+                  
+                  <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+                    {/* Gold reserves card */}
+                    <div className="bg-gradient-to-b from-white to-amber-50/50 dark:from-gray-900 dark:to-amber-950/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/40 shadow-sm relative group">
+                      <div className="absolute top-2 right-2 bg-amber-100 dark:bg-amber-950 p-1.5 rounded-lg">
+                        <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-gold-400" />
+                      </div>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider"><T>24K Pure Gold</T></p>
+                      <p className="text-2xl font-extrabold text-amber-950 dark:text-amber-50 mt-1 tabular-nums">
+                        {bullionGold.toFixed(2)} <span className="text-sm font-medium text-muted-foreground">g</span>
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+                        <T>Valued at:</T> <span className="font-semibold">{currencySymbol} {Math.round(bullionGold * (goldRates?.rate24k || 7100)).toLocaleString()}</span>
+                      </p>
+                    </div>
+
+                    {/* Silver reserves card */}
+                    <div className="bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-950/40 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm relative group">
+                      <div className="absolute top-2 right-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-lg">
+                        <Scale className="h-3.5 w-3.5 text-gray-500" />
+                      </div>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider"><T>Pure 999 Silver</T></p>
+                      <p className="text-2xl font-extrabold text-gray-950 dark:text-gray-100 mt-1 tabular-nums">
+                        {bullionSilver.toFixed(2)} <span className="text-sm font-medium text-muted-foreground">g</span>
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+                        <T>Valued at:</T> <span className="font-semibold">{currencySymbol} {Math.round(bullionSilver * (goldRates?.silver || 82)).toLocaleString()}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Karigar Accounts */}
+                <div className="lg:col-span-2 space-y-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <T>Karigar Ledger Accounts</T>
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    {karigars.map((k, index) => (
+                      <div key={k.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-sm hover:shadow hover:border-amber-200/50 dark:hover:border-amber-800/40 transition-all gap-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-gray-900 dark:text-white text-base">{k.name}</p>
+                            <Badge variant="secondary" className="text-[10px] font-medium bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400">
+                              <T>Wastage limit:</T> {k.wastageLimit}%
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs pt-1">
+                            {k.goldOutstanding > 0 && (
+                              <p className="text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-1">
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                <T>Gold Balance:</T> <span className="tabular-nums font-bold">{k.goldOutstanding.toFixed(2)} g</span>
+                              </p>
+                            )}
+                            {k.silverOutstanding > 0 && (
+                              <p className="text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-1">
+                                <span className="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                <T>Silver Balance:</T> <span className="tabular-nums font-bold">{k.silverOutstanding.toFixed(2)} g</span>
+                              </p>
+                            )}
+                            {k.goldOutstanding === 0 && k.silverOutstanding === 0 && (
+                              <p className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                                <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                                <T>No outstanding metal balance</T>
+                              </p>
+                            )}
+                          </div>
+                          
+                          <p className="text-xs text-muted-foreground pt-1 flex items-center gap-1">
+                            <span className="font-semibold text-gray-700 dark:text-gray-300"><T>Active Job:</T></span> {k.activeJob}
+                          </p>
+                        </div>
+
+                        <div className="flex gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="flex-1 sm:flex-none border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800/40 dark:text-amber-400 dark:hover:bg-amber-950 flex items-center justify-center gap-1.5 text-xs font-semibold"
+                            onClick={() => {
+                              setSelectedKarigarIndex(index);
+                              setIssueWeight("");
+                              setIssueJob(k.activeJob);
+                              setIssueMetalType(k.goldOutstanding > 0 || k.silverOutstanding === 0 ? "GOLD" : "SILVER");
+                              setIsIssueModalOpen(true);
+                            }}
+                          >
+                            <T>Issue Metal</T>
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            className="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center gap-1.5 text-xs font-semibold"
+                            onClick={() => {
+                              setSelectedKarigarIndex(index);
+                              setReceiveWeight("");
+                              setReceiveScrap("");
+                              setReceiveWastage("");
+                              setIsReceiveModalOpen(true);
+                            }}
+                          >
+                            <T>Receive Piece</T>
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Modal 1: Issue Metal */}
+          {isIssueModalOpen && selectedKarigarIndex !== null && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 text-gray-900 dark:text-white">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="bg-amber-600 text-white px-6 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Hammer className="h-5 w-5" />
+                    <h3 className="font-bold text-lg"><T>Issue Metal to Karigar</T></h3>
+                  </div>
+                  <button className="text-white/80 hover:text-white font-bold text-xl" onClick={() => setIsIssueModalOpen(false)}>×</button>
+                </div>
+                
+                <div className="p-6 space-y-4">
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1"><T>Karigar Artisan</T></p>
+                    <p className="font-bold text-base text-gray-950 dark:text-white">{karigars[selectedKarigarIndex].name}</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => setIssueMetalType("GOLD")}
+                      className={`py-3 rounded-xl border flex flex-col items-center justify-center font-bold transition-all gap-1 text-xs ${issueMetalType === 'GOLD' ? 'bg-amber-50 border-amber-500 text-amber-800 dark:bg-amber-950/40 dark:border-amber-700 dark:text-amber-300' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}
+                    >
+                      <span className="text-lg">🟡</span>
+                      <T>Fine Gold (24K)</T>
+                    </button>
+                    <button 
+                      onClick={() => setIssueMetalType("SILVER")}
+                      className={`py-3 rounded-xl border flex flex-col items-center justify-center font-bold transition-all gap-1 text-xs ${issueMetalType === 'SILVER' ? 'bg-gray-50 border-gray-400 text-gray-800 dark:bg-gray-800/80 dark:border-gray-600 dark:text-gray-200' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}
+                    >
+                      <span className="text-lg">⚪</span>
+                      <T>Pure Silver (999)</T>
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2"><T>Weight to Issue (Grams)</T></label>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={issueWeight} 
+                        onChange={(e) => setIssueWeight(e.target.value)}
+                        placeholder="e.g. 10.00" 
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-base font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                      <span className="absolute right-4 top-3 text-sm text-gray-400 font-bold">g</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1">
+                      <T>Available stock reserves:</T> <span className="font-semibold text-gray-800 dark:text-gray-200">{issueMetalType === 'GOLD' ? `${bullionGold.toFixed(2)}g Gold` : `${bullionSilver.toFixed(2)}g Silver`}</span>
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2"><T>Active Fabrication Job</T></label>
+                    <input 
+                      type="text" 
+                      value={issueJob} 
+                      onChange={(e) => setIssueJob(e.target.value)}
+                      placeholder="e.g. Wedding Ring Set" 
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex gap-3">
+                    <Button variant="outline" className="w-1/2 rounded-xl py-3 text-sm font-semibold h-11" onClick={() => setIsIssueModalOpen(false)}><T>Cancel</T></Button>
+                    <Button 
+                      className="w-1/2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl py-3 text-sm font-semibold h-11 shadow-md"
+                      onClick={() => {
+                        const wt = parseFloat(issueWeight);
+                        if (isNaN(wt) || wt <= 0) return triggerToast(t("Please enter a valid weight to issue"), "error");
+                        if (issueMetalType === "GOLD") {
+                          if (wt > bullionGold) return triggerToast(t("Insufficient gold reserves in bullion stock"), "error");
+                          setBullionGold(prev => prev - wt);
+                          setKarigars(prev => prev.map((k, idx) => idx === selectedKarigarIndex ? { ...k, goldOutstanding: k.goldOutstanding + wt, activeJob: issueJob || k.activeJob } : k));
+                        } else {
+                          if (wt > bullionSilver) return triggerToast(t("Insufficient silver reserves in bullion stock"), "error");
+                          setBullionSilver(prev => prev - wt);
+                          setKarigars(prev => prev.map((k, idx) => idx === selectedKarigarIndex ? { ...k, silverOutstanding: k.silverOutstanding + wt, activeJob: issueJob || k.activeJob } : k));
+                        }
+                        setIsIssueModalOpen(false);
+                        triggerToast(t(`Successfully issued ${wt} grams to ${karigars[selectedKarigarIndex].name}`));
+                      }}
+                    >
+                      <T>Confirm Issue</T>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal 2: Receive Finished Piece */}
+          {isReceiveModalOpen && selectedKarigarIndex !== null && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 text-gray-900 dark:text-white">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="bg-amber-600 text-white px-6 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5" />
+                    <h3 className="font-bold text-lg"><T>Receive Finished Piece</T></h3>
+                  </div>
+                  <button className="text-white/80 hover:text-white font-bold text-xl" onClick={() => setIsReceiveModalOpen(false)}>×</button>
+                </div>
+                
+                <div className="p-6 space-y-4">
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1"><T>Karigar Artisan</T></p>
+                    <p className="font-bold text-base text-gray-950 dark:text-white">{karigars[selectedKarigarIndex].name}</p>
+                    <div className="text-xs text-muted-foreground mt-1 flex gap-2">
+                      {karigars[selectedKarigarIndex].goldOutstanding > 0 && <span>Gold Balance: {karigars[selectedKarigarIndex].goldOutstanding.toFixed(2)}g</span>}
+                      {karigars[selectedKarigarIndex].silverOutstanding > 0 && <span>Silver Balance: {karigars[selectedKarigarIndex].silverOutstanding.toFixed(2)}g</span>}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2"><T>Finished Weight Returned (Grams)</T></label>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={receiveWeight} 
+                        onChange={(e) => setReceiveWeight(e.target.value)}
+                        placeholder="e.g. 9.85" 
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-base font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                      <span className="absolute right-4 top-3 text-sm text-gray-400 font-bold">g</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5"><T>Scrap Returned (g)</T></label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={receiveScrap} 
+                        onChange={(e) => setReceiveScrap(e.target.value)}
+                        placeholder="e.g. 0.05" 
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5"><T>Process Wastage (g)</T></label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={receiveWastage} 
+                        onChange={(e) => setReceiveWastage(e.target.value)}
+                        placeholder="e.g. 0.10" 
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex gap-3">
+                    <Button variant="outline" className="w-1/2 rounded-xl py-3 text-sm font-semibold h-11" onClick={() => setIsReceiveModalOpen(false)}><T>Cancel</T></Button>
+                    <Button 
+                      className="w-1/2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl py-3 text-sm font-semibold h-11 shadow-md"
+                      onClick={() => {
+                        const wt = parseFloat(receiveWeight);
+                        const scrap = parseFloat(receiveScrap) || 0;
+                        const waste = parseFloat(receiveWastage) || 0;
+                        if (isNaN(wt) || wt <= 0) return triggerToast(t("Please enter a valid returned weight"), "error");
+                        
+                        const totalDeducted = wt + scrap + waste;
+                        const isGold = karigars[selectedKarigarIndex].goldOutstanding > 0;
+                        
+                        if (isGold) {
+                          const outstanding = karigars[selectedKarigarIndex].goldOutstanding;
+                          if (totalDeducted > outstanding + 0.1) {
+                            return triggerToast(t("Returned gold weight exceeds outstanding gold!"), "error");
+                          }
+                          // Return scrap gold to bullion reserves
+                          if (scrap > 0) setBullionGold(prev => prev + scrap);
+                          
+                          setKarigars(prev => prev.map((k, idx) => idx === selectedKarigarIndex ? { 
+                            ...k, 
+                            goldOutstanding: Math.max(0, k.goldOutstanding - totalDeducted),
+                            activeJob: Math.max(0, k.goldOutstanding - totalDeducted) === 0 ? t("No outstanding jobs") : k.activeJob
+                          } : k));
+                        } else {
+                          const outstanding = karigars[selectedKarigarIndex].silverOutstanding;
+                          if (totalDeducted > outstanding + 0.1) {
+                            return triggerToast(t("Returned silver weight exceeds outstanding silver!"), "error");
+                          }
+                          // Return scrap silver to bullion reserves
+                          if (scrap > 0) setBullionSilver(prev => prev + scrap);
+                          
+                          setKarigars(prev => prev.map((k, idx) => idx === selectedKarigarIndex ? { 
+                            ...k, 
+                            silverOutstanding: Math.max(0, k.silverOutstanding - totalDeducted),
+                            activeJob: Math.max(0, k.silverOutstanding - totalDeducted) === 0 ? t("No outstanding jobs") : k.activeJob
+                          } : k));
+                        }
+                        setIsReceiveModalOpen(false);
+                        triggerToast(t(`Received finished piece (${wt}g) successfully from ${karigars[selectedKarigarIndex].name}.`));
+                      }}
+                    >
+                      <T>Confirm Receive</T>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal 3: Adjust Bullion Stock */}
+          {isAdjustModalOpen && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 text-gray-900 dark:text-white">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="bg-amber-600 text-white px-6 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Database className="h-5 w-5" />
+                    <h3 className="font-bold text-lg"><T>Adjust Bullion Reserves</T></h3>
+                  </div>
+                  <button className="text-white/80 hover:text-white font-bold text-xl" onClick={() => setIsAdjustModalOpen(false)}>×</button>
+                </div>
+                
+                <div className="p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2"><T>Gold Reserves (g)</T></label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={adjustGoldWeight} 
+                        onChange={(e) => setAdjustGoldWeight(e.target.value)}
+                        placeholder="e.g. 185.50" 
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-base font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2"><T>Silver Reserves (g)</T></label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={adjustSilverWeight} 
+                        onChange={(e) => setAdjustSilverWeight(e.target.value)}
+                        placeholder="e.g. 1450.00" 
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-base font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex gap-3">
+                    <Button variant="outline" className="w-1/2 rounded-xl py-3 text-sm font-semibold h-11" onClick={() => setIsAdjustModalOpen(false)}><T>Cancel</T></Button>
+                    <Button 
+                      className="w-1/2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl py-3 text-sm font-semibold h-11 shadow-md"
+                      onClick={() => {
+                        const gold = parseFloat(adjustGoldWeight);
+                        const silver = parseFloat(adjustSilverWeight);
+                        if (isNaN(gold) || gold < 0 || isNaN(silver) || silver < 0) {
+                          return triggerToast(t("Please enter valid weight adjustments"), "error");
+                        }
+                        setBullionGold(gold);
+                        setBullionSilver(silver);
+                        setIsAdjustModalOpen(false);
+                        triggerToast(t("Successfully adjusted bullion inventory stock reserves."));
+                      }}
+                    >
+                      <T>Save Changes</T>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <Card data-tour="dash-low-stock">
             <CardHeader>

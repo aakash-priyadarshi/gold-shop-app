@@ -69,10 +69,10 @@ export const BRAND: {
   // SEO
   seo: {
     title:
-      "Orivraa - Jewellery Shop Software, Mobile POS & Marketplace",
+      "Orivraa - Jewellery ERP, POS Software &amp; Bullion Tracker",
     titleTemplate: "%s | Orivraa",
     defaultDescription:
-      "All-in-one jewellery shop software with mobile POS, live gold rate trends, inventory, GST/VAT billing, digital catalogues, AI sales tools, and a verified jewellery marketplace across Nepal, India, UAE, UK, and USA.",
+      "Modern jewellery shop ERP software with touchscreen counter POS, live gold rate cards, Karigar wastage ledgers, bullion inventory tracking, GST/VAT-ready invoicing, and digital catalogues.",
     keywords: [
       // Core terms (both spellings for US/UK coverage)
       "jewellery",
