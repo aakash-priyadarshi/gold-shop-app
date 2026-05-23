@@ -475,6 +475,8 @@ export const adminApi = {
   // Emails
   getEmailLogs: (params?: { page?: number; limit?: number }) =>
     api.get("/admin/emails", { params }),
+  sendMessage: (data: { recipientId: string; content: string; subject?: string }) =>
+    api.post("/admin/messages/send", data),
 
   // Stats
   getStats: () => api.get("/admin/stats"),

@@ -1,5 +1,5 @@
 import { Controller, Post, Body, Headers, Logger, HttpCode, HttpStatus } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Webhooks')
