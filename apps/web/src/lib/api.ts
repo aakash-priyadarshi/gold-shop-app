@@ -472,6 +472,10 @@ export const otpApi = {
 
 // Admin API
 export const adminApi = {
+  // Emails
+  getEmailLogs: (params?: { page?: number; limit?: number }) =>
+    api.get("/admin/emails", { params }),
+
   // Stats
   getStats: () => api.get("/admin/stats"),
 

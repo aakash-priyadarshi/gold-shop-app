@@ -76,6 +76,8 @@ model User {
   desktopSessions      DesktopSession[]
   // Web app sessions
   webSessions          WebSession[]
+  // Email logs
+  emailLogs            EmailLog[]         @relation("UserEmails")
   
   // Custom Profile Enrivhment fields
   dateOfBirth          DateTime?
@@ -367,6 +369,27 @@ model Shop {
   @@index([country, city])
   @@index([isActive, isVerified])
   @@index([sellerTier])
+}
+
+// Model to track outbound and inbound email communications for CRM
+model EmailLog {
+  id          String   @id @default(uuid())
+  threadId    String?  // Used for correlating replies into a conversation
+  direction   String   // "OUTBOUND" or "INBOUND"
+  fromAddress String
+  toAddress   String
+  subject     String
+  body        String   @db.Text
+  userId      String?  // The customer/user associated with this email
+  adminId     String?  // Admin who initiated the outbound email (if applicable)
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation("UserEmails", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([threadId])
 }
 
 model ShopMetalRate {

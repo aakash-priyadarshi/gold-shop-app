@@ -181,7 +181,7 @@ function BotSessionRow({ session }: { session: BotSession }) {
 export default function AdminMessagesPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const [activeView, setActiveView] = useState<"conversations" | "ai">("conversations");
+  const [activeView, setActiveView] = useState<"conversations" | "ai" | "emails">("conversations");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
@@ -208,6 +208,14 @@ export default function AdminMessagesPage() {
   const [botTotal, setBotTotal] = useState(0);
   const [botLoading, setBotLoading] = useState(false);
 
+  const [emailLogs, setEmailLogs] = useState<any[]>([]);
+  const [emailPage, setEmailPage] = useState(1);
+  const [emailTotal, setEmailTotal] = useState(0);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState<any | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+
   useEffect(() => {
     if (searchParams.get("view") === "ai") setActiveView("ai");
   }, [searchParams]);
@@ -222,8 +230,9 @@ export default function AdminMessagesPage() {
 
   useEffect(() => {
     if (activeView === "ai") loadBotSessions(botPage);
+    if (activeView === "emails") loadEmails(emailPage);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView, botPage]);
+  }, [activeView, botPage, emailPage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -293,6 +302,39 @@ export default function AdminMessagesPage() {
     }
   }
 
+  async function loadEmails(page = emailPage) {
+    setEmailLoading(true);
+    try {
+      const res = await adminApi.getEmailLogs({ page, limit: 20 });
+      setEmailLogs(res.data.emails || []);
+      setEmailTotal(res.data.total || 0);
+    } catch (e) {
+      console.error("Failed to load email logs", e);
+    } finally {
+      setEmailLoading(false);
+    }
+  }
+
+  async function handleSendReply() {
+    if (!replyText.trim() || !selectedEmail?.user?.id) return;
+    setSendingReply(true);
+    try {
+      await adminApi.sendMessage({
+        recipientId: selectedEmail.user.id,
+        content: replyText,
+        subject: `Re: ${selectedEmail.subject}`,
+      });
+      setReplyText("");
+      setSelectedEmail(null);
+      loadEmails();
+      toast({ title: "Email Sent", description: "Your reply has been sent." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.response?.data?.message || "Failed to send reply" });
+    } finally {
+      setSendingReply(false);
+    }
+  }
+
   async function loadMessages(conversationId: string) {
     try {
       const res = await chatApi.getMessages(conversationId);
@@ -358,10 +400,10 @@ export default function AdminMessagesPage() {
         <div className="flex flex-col h-[calc(100vh-8rem)]">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
-              {activeView === "ai" ? <Bot className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
+              {activeView === "ai" ? <Bot className="h-6 w-6" /> : activeView === "emails" ? <Mail className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
               <h1 className="text-2xl font-bold">All Messages</h1>
               <Badge variant="secondary" className="ml-2">
-                {activeView === "ai" ? `${botTotal} AI sessions` : `${conversations.length} conversations`}
+                {activeView === "ai" ? `${botTotal} AI sessions` : activeView === "emails" ? `${emailTotal} emails` : `${conversations.length} conversations`}
               </Badge>
             </div>
             <div className="flex rounded-lg border bg-muted/30 p-1">
@@ -380,6 +422,14 @@ export default function AdminMessagesPage() {
                 onClick={() => setActiveView("ai")}
               >
                 <Bot className="h-4 w-4" /> AI Assistant Chats
+              </Button>
+              <Button
+                size="sm"
+                variant={activeView === "emails" ? "default" : "ghost"}
+                className="gap-1"
+                onClick={() => setActiveView("emails")}
+              >
+                <Mail className="h-4 w-4" /> Emails
               </Button>
             </div>
           </div>
@@ -660,6 +710,94 @@ export default function AdminMessagesPage() {
               )}
             </div>
           </div>
+          ) : activeView === "emails" ? (
+            <div className="flex flex-1 gap-4 min-h-0 bg-background border rounded-lg overflow-hidden relative">
+              <div className="w-1/3 border-r overflow-y-auto">
+                <div className="p-4 border-b sticky top-0 bg-background z-10 flex justify-between items-center">
+                  <h2 className="font-semibold">Email History</h2>
+                  <Button variant="outline" size="sm" onClick={() => loadEmails(emailPage)} disabled={emailLoading}>
+                    <RefreshCw className={`h-4 w-4 ${emailLoading ? "animate-spin" : ""}`} />
+                  </Button>
+                </div>
+                {emailLoading && emailLogs.length === 0 ? (
+                  <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+                ) : emailLogs.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">No email logs found.</div>
+                ) : (
+                  <div className="divide-y">
+                    {emailLogs.map((log) => (
+                      <button
+                        key={log.id}
+                        onClick={() => setSelectedEmail(log)}
+                        className={`w-full text-left p-4 hover:bg-muted/50 transition-colors ${selectedEmail?.id === log.id ? "bg-muted" : ""}`}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-medium truncate pr-2">
+                            {log.direction === "OUTBOUND" ? "To: " + log.toAddress : "From: " + log.fromAddress}
+                          </span>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {new Date(log.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold truncate text-foreground">{log.subject}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge variant={log.direction === "OUTBOUND" ? "secondary" : "default"} className="text-[10px]">
+                            {log.direction}
+                          </Badge>
+                          {log.user && (
+                            <span className="text-xs text-muted-foreground truncate">{log.user.firstName} {log.user.lastName} ({log.user.role})</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="p-4 border-t flex justify-between items-center sticky bottom-0 bg-background">
+                  <Button variant="outline" size="sm" onClick={() => setEmailPage(p => Math.max(1, p - 1))} disabled={emailPage === 1 || emailLoading}>Previous</Button>
+                  <span className="text-sm text-muted-foreground">Page {emailPage}</span>
+                  <Button variant="outline" size="sm" onClick={() => setEmailPage(p => p + 1)} disabled={emailLogs.length < 20 || emailLoading}>Next</Button>
+                </div>
+              </div>
+              <div className="w-2/3 flex flex-col">
+                {selectedEmail ? (
+                  <>
+                    <div className="p-6 border-b">
+                      <h2 className="text-xl font-bold mb-4">{selectedEmail.subject}</h2>
+                      <div className="flex flex-col gap-1 text-sm text-muted-foreground mb-4">
+                        <div><span className="font-medium text-foreground">From:</span> {selectedEmail.fromAddress}</div>
+                        <div><span className="font-medium text-foreground">To:</span> {selectedEmail.toAddress}</div>
+                        <div><span className="font-medium text-foreground">Date:</span> {new Date(selectedEmail.createdAt).toLocaleString()}</div>
+                      </div>
+                      <div className="prose prose-sm dark:prose-invert max-w-none p-4 bg-muted/20 rounded-md whitespace-pre-wrap">
+                        {selectedEmail.body}
+                      </div>
+                    </div>
+                    {selectedEmail.user && (
+                      <div className="p-4 border-t mt-auto">
+                        <h3 className="text-sm font-medium mb-2">Reply to {selectedEmail.user.firstName}</h3>
+                        <AutoResizeTextarea
+                          placeholder="Type your reply here..."
+                          className="min-h-[100px] mb-2"
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                        />
+                        <div className="flex justify-end">
+                          <Button onClick={handleSendReply} disabled={!replyText.trim() || sendingReply}>
+                            {sendingReply ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                            Send Reply
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+                    <Mail className="h-12 w-12 mb-4 opacity-20" />
+                    <p>Select an email to view details</p>
+                  </div>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
               <div className="grid gap-4 md:grid-cols-4">

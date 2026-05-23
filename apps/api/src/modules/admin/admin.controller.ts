@@ -86,7 +86,7 @@ export class AdminController {
   @ApiOperation({ summary: "Approve a verification request" })
   async approveVerification(
     @Param("id") id: string,
-    @CurrentUser("id") adminId: string,
+    @CurrentUser("id") _adminId: string,
   ) {
     const request = await this.prisma.verificationRequest.findUnique({
       where: { id },
@@ -1361,5 +1361,149 @@ export class AdminController {
   // Helper method to mask phone number for logging
   private maskPhoneNumber(phone: string): string {
     return `***${phone.slice(-4)}`;
+  }
+
+  // ═══════════════════════════════════════
+  // MESSAGING & EMAILS
+  // ═══════════════════════════════════════
+
+  @Get("emails")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Get email interaction history" })
+  async getEmailLogs(@Query("limit") limit?: string, @Query("page") page?: string) {
+    const limitNum = parseInt(limit || "50", 10);
+    const pageNum = parseInt(page || "1", 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [emails, total] = await Promise.all([
+      this.prisma.emailLog.findMany({
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limitNum,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              role: true,
+            },
+          },
+        },
+      }),
+      this.prisma.emailLog.count(),
+    ]);
+
+    return { emails, total, page: pageNum, limit: limitNum };
+  }
+
+  @Post("messages/send")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Send an email/message to a user" })
+  async sendMessage(
+    @Body() data: { recipientId: string; content: string; subject?: string },
+    @CurrentUser("id") adminId: string,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: data.recipientId },
+    });
+
+    if (!user) {
+      throw new BadRequestException("User not found");
+    }
+
+    const subject = data.subject || "Message from Orivraa Admin";
+
+    // 1. Send Email
+    const result = await this.mailService.send({
+      to: user.email,
+      subject,
+      template: "admin-alert", // Basic template with a message
+      context: {
+        title: subject,
+        message: data.content,
+        alertType: "Admin Message",
+      },
+    });
+
+    if (!result.success) {
+      throw new BadRequestException("Failed to send email");
+    }
+
+    // 2. Log Email
+    await this.prisma.emailLog.create({
+      data: {
+        direction: "OUTBOUND",
+        fromAddress: "admin@orivraa.com",
+        toAddress: user.email,
+        subject,
+        body: data.content,
+        userId: user.id,
+        adminId,
+      },
+    });
+
+    // 3. Create Notification
+    await this.notificationsService.create({
+      userId: user.id,
+      type: "SYSTEM_ALERT",
+      titleKey: subject,
+      bodyKey: data.content,
+      channels: ["IN_APP", "PUSH"],
+    });
+
+    this.logger.log(`Admin ${adminId} sent message/email to user ${user.id}`);
+
+    return { success: true, messageId: result.messageId };
+  }
+
+  @Post("messages/ai-compose")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Generate a message draft using Gemini Flash" })
+  async aiComposeMessage(
+    @Body() data: { intent: string; recipientName?: string; recipientRole?: string },
+  ) {
+    if (!data.intent) {
+      throw new BadRequestException("Intent is required");
+    }
+
+    const apiKey = this.configService.get<string>("GEMINI_API_KEY");
+    if (!apiKey) {
+      throw new BadRequestException("GEMINI_API_KEY is not configured");
+    }
+
+    const prompt = `
+You are an expert admin/customer support agent for Orivraa (a B2B jewellery marketplace).
+Write a professional, polite, and concise message to a user.
+Recipient Name: ${data.recipientName || "Valued User"}
+Recipient Role: ${data.recipientRole || "Customer/Seller"}
+Admin Intent/Subject: ${data.intent}
+
+Instructions:
+- Write the final message content directly. Do not include placeholders like "[Your Name]".
+- Keep it concise, helpful, and professional.
+- Do not add any greeting/salutation if it's too formal, but a simple "Hi [Name]" is okay.
+- Sign off with "The Orivraa Team".
+`;
+
+    try {
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 500,
+          },
+        },
+      );
+
+      const message = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      return { success: true, message: message.trim() };
+    } catch (error: any) {
+      this.logger.error("Gemini AI Compose failed:", error.message);
+      throw new BadRequestException("Failed to generate message using AI");
+    }
   }
 }
