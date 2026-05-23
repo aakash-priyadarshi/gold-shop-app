@@ -132,10 +132,10 @@ export const TESTIMONIALS: Testimonial[] = [
     rating: 5,
   },
   {
-    name: "Priya S.",
-    role: "Customer",
-    location: "Mumbai, India",
-    text: "I ordered a custom gold necklace through Orivraa. The transparent pricing and direct artisan communication made me confident in my purchase.",
+    name: "Ananya R.",
+    role: "Shop Manager",
+    location: "Patna, India",
+    text: "Using Orivraa for our billing and counter POS has cut customer wait times in half. The automated tax invoicing is incredibly simple to use.",
     rating: 5,
   },
   {
@@ -146,10 +146,10 @@ export const TESTIMONIALS: Testimonial[] = [
     rating: 5,
   },
   {
-    name: "Sarah L.",
-    role: "Customer",
-    location: "London, UK",
-    text: "Beautiful craftsmanship and fair prices. The RFQ system let me get quotes from multiple sellers before choosing. Highly recommend!",
+    name: "Devendra B.",
+    role: "Store Cashier",
+    location: "Butwal, Nepal",
+    text: "The live metal rate syncing and weight-based pricing calculator have eliminated all manual pricing errors at our checkout counter. Strongly recommend!",
     rating: 4,
   },
   {

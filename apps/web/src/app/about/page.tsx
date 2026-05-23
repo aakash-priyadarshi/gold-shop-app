@@ -295,7 +295,7 @@ export default function AboutPage() {
               </p>
               <div className="grid sm:grid-cols-2 gap-3 pt-3">
                 {[
-                  "Founded in Kathmandu",
+                  "Founded in Patna, Bihar, India (Problem discovered in Butwal, Nepal)",
                   "Serving jewellery teams across key global markets",
                   "Built around verified sellers and transparent pricing",
                   "Designed for both walk-in and online jewellery sales",

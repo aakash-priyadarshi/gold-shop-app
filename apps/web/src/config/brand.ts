@@ -46,7 +46,7 @@ export const BRAND: {
   supportEmail: "support@orivraa.com",
   salesEmail: "sales@orivraa.com",
   contact: {
-    address: "Kathmandu, Nepal",
+    address: "Patna, Bihar, India",
     phone: "+91 62039 65557",
     supportEmail: "support@orivraa.com",
   },
@@ -117,6 +117,8 @@ export const BRAND: {
       "gold shop in Nepal",
       "jewellers in Kathmandu",
       "best jewellery shop Kathmandu",
+      "jewellers in Butwal",
+      "best gold shop Butwal",
       "Nepal gold jewellery",
       "nepali jewellery",
 
@@ -127,6 +129,9 @@ export const BRAND: {
       "jewellers in Delhi",
       "jewellers in Mumbai",
       "jewellers in Jaipur",
+      "jewellers in Patna",
+      "best gold shop in Patna",
+      "jewellery POS Bihar",
       "tanishq alternative",
       "Indian gold jewellery online",
       "hallmarked gold jewellery",

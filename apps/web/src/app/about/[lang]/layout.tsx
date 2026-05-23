@@ -68,8 +68,9 @@ function generateJsonLd(lang: AboutContentLanguage) {
       founder: { "@type": "Organization", name: "Orivraa Technologies Pvt. Ltd." },
       address: {
         "@type": "PostalAddress",
-        addressLocality: "Kathmandu",
-        addressCountry: "NP",
+        addressLocality: "Patna",
+        addressRegion: "Bihar",
+        addressCountry: "IN",
       },
       contactPoint: {
         "@type": "ContactPoint",

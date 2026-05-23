@@ -165,8 +165,9 @@ export default function RootLayout({
                   description: BRAND.seo.defaultDescription,
                   address: {
                     "@type": "PostalAddress",
-                    addressLocality: "Kathmandu",
-                    addressCountry: "NP",
+                    addressLocality: "Patna",
+                    addressRegion: "Bihar",
+                    addressCountry: "IN",
                   },
                   areaServed: [
                     { "@type": "Country", name: "Nepal" },
