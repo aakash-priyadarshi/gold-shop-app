@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { metricsApi } from "@/lib/api";
+import { adminApi, metricsApi } from "@/lib/api";
 import {
     Activity,
     AlertTriangle,
@@ -206,6 +206,14 @@ export default function AdminPerformancePage() {
   const [cronConfigEdits, setCronConfigEdits] = useState<Record<string, number>>({});
   const [cronConfigSaving, setCronConfigSaving] = useState<string | null>(null);
 
+  // Database Backups
+  const [backups, setBackups] = useState<any[]>([]);
+  const [backupSchedules, setBackupSchedules] = useState<any[]>([]);
+  const [backupsLoading, setBackupsLoading] = useState(false);
+  const [triggeringBackup, setTriggeringBackup] = useState(false);
+  const [newScheduleCron, setNewScheduleCron] = useState("0 0 * * *");
+  const [newScheduleName, setNewScheduleName] = useState("Daily Backup");
+
   // ── Data Fetching ──
 
   const loadMetrics = useCallback(async () => {
@@ -338,6 +346,75 @@ export default function AdminPerformancePage() {
     }
   };
 
+  const loadBackups = useCallback(async () => {
+    setBackupsLoading(true);
+    try {
+      const [bRes, sRes] = await Promise.all([
+        adminApi.backups.list(),
+        adminApi.backups.getSchedules()
+      ]);
+      setBackups(bRes.data);
+      setBackupSchedules(sRes.data);
+    } catch (e) {
+      console.error("Failed to load backups", e);
+    } finally {
+      setBackupsLoading(false);
+    }
+  }, []);
+
+  const triggerBackup = async () => {
+    setTriggeringBackup(true);
+    try {
+      await adminApi.backups.triggerManual();
+      alert("Backup triggered successfully!");
+      await loadBackups();
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Failed to trigger backup");
+    } finally {
+      setTriggeringBackup(false);
+    }
+  };
+
+  const deleteBackup = async (filename: string) => {
+    if (!confirm(`Delete backup ${filename}?`)) return;
+    try {
+      await adminApi.backups.delete(filename);
+      await loadBackups();
+    } catch {
+      alert("Failed to delete backup");
+    }
+  };
+
+  const createSchedule = async () => {
+    try {
+      await adminApi.backups.createSchedule({ name: newScheduleName, cronExp: newScheduleCron });
+      setNewScheduleName("");
+      setNewScheduleCron("0 0 * * *");
+      await loadBackups();
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Failed to create schedule");
+    }
+  };
+
+  const deleteSchedule = async (id: string) => {
+    if (!confirm("Delete this schedule?")) return;
+    try {
+      await adminApi.backups.deleteSchedule(id);
+      await loadBackups();
+    } catch {
+      alert("Failed to delete schedule");
+    }
+  };
+
+  const toggleSchedule = async (id: string, isActive: boolean) => {
+    try {
+      await adminApi.backups.toggleSchedule(id, isActive);
+      await loadBackups();
+    } catch {
+      alert("Failed to toggle schedule");
+    }
+  };
+
   useEffect(() => {
     loadMetrics();
     loadHistory();
@@ -345,7 +422,8 @@ export default function AdminPerformancePage() {
     loadDbPerformance();
     loadCronMetrics();
     loadCronConfigs();
-  }, [loadMetrics, loadHistory, loadGrafanaSettings, loadDbPerformance, loadCronMetrics, loadCronConfigs]);
+    loadBackups();
+  }, [loadMetrics, loadHistory, loadGrafanaSettings, loadDbPerformance, loadCronMetrics, loadCronConfigs, loadBackups]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -490,6 +568,10 @@ export default function AdminPerformancePage() {
                 <TabsTrigger value="crons">
                   <Clock className="h-3.5 w-3.5 mr-1" />
                   Cron Jobs
+                </TabsTrigger>
+                <TabsTrigger value="backups">
+                  <HardDrive className="h-3.5 w-3.5 mr-1" />
+                  Database Backups
                 </TabsTrigger>
               </TabsList>
 
@@ -688,6 +770,96 @@ export default function AdminPerformancePage() {
                       <p className="text-xs text-muted-foreground">
                         Since last restart
                       </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              {/* ════════ Tab: Database Backups ════════ */}
+              <TabsContent value="backups" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Schedules Config */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Backup Schedules</CardTitle>
+                      <CardDescription>Configure automated backup routines via cron expressions.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex gap-2 items-end">
+                        <div className="flex-1 space-y-1">
+                          <Label>Schedule Name</Label>
+                          <Input value={newScheduleName} onChange={e => setNewScheduleName(e.target.value)} placeholder="e.g. Daily Backup" />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <Label>Cron Expression</Label>
+                          <Input value={newScheduleCron} onChange={e => setNewScheduleCron(e.target.value)} placeholder="e.g. 0 0 * * *" />
+                        </div>
+                        <Button onClick={createSchedule}>Add Schedule</Button>
+                      </div>
+                      
+                      <div className="mt-4 border rounded-lg divide-y">
+                        {backupSchedules.length === 0 ? (
+                          <div className="p-4 text-center text-sm text-muted-foreground">No active schedules.</div>
+                        ) : backupSchedules.map(schedule => (
+                          <div key={schedule.id} className="flex items-center justify-between p-4 bg-card">
+                            <div>
+                              <p className="font-medium text-sm">{schedule.name}</p>
+                              <p className="text-xs font-mono text-muted-foreground mt-1">{schedule.cronExp}</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <Switch 
+                                checked={schedule.isActive} 
+                                onCheckedChange={(val) => toggleSchedule(schedule.id, val)} 
+                              />
+                              <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => deleteSchedule(schedule.id)}>
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Manual Backup & List */}
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle>Available Backups</CardTitle>
+                        <CardDescription>Recent database snapshots (retention: 7 days).</CardDescription>
+                      </div>
+                      <Button onClick={triggerBackup} disabled={triggeringBackup}>
+                        {triggeringBackup ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <HardDrive className="h-4 w-4 mr-2" />}
+                        Run Backup Now
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      {backupsLoading ? (
+                        <div className="py-8 text-center"><RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>
+                      ) : backups.length === 0 ? (
+                        <div className="py-8 text-center text-muted-foreground border rounded-lg border-dashed">No backups found. Trigger one manually or wait for the schedule.</div>
+                      ) : (
+                        <div className="border rounded-lg divide-y">
+                          {backups.map(b => (
+                            <div key={b.filename} className="flex items-center justify-between p-4 bg-card">
+                              <div>
+                                <p className="font-medium text-sm text-foreground">{b.filename}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {new Date(b.createdAt).toLocaleString()} · {(b.sizeBytes / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={adminApi.backups.downloadUrl(b.filename)} download>Download</a>
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => deleteBackup(b.filename)}>
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>

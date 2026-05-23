@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { ScheduleModule } from "@nestjs/schedule";
 
 // Core modules
 import { HttpClientModule } from "./common/http-client";
@@ -12,6 +13,7 @@ import { AdminModule } from "./modules/admin/admin.module";
 import { AiCreditsModule } from "./modules/ai-credits/ai-credits.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { AuthModule } from "./modules/auth/auth.module";
+import { BackupModule } from "./modules/backup/backup.module";
 import { BlogModule } from "./modules/blog/blog.module";
 import { CatalogueModule } from "./modules/catalogue/catalogue.module";
 import { ChatModule } from "./modules/chat/chat.module";
@@ -104,6 +106,9 @@ import { PrismaModule } from "./prisma/prisma.module";
 
     // Database
     PrismaModule,
+    
+    // Scheduling
+    ScheduleModule.forRoot(),
 
     // Global Redis cache
     RedisModule,
@@ -160,6 +165,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     EnterpriseModule,
     TranslationModule,
     TestingModule,
+    BackupModule,
   ],
   providers: [
     // Apply ThrottlerGuard globally so @Throttle() decorators are enforced

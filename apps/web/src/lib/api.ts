@@ -478,6 +478,18 @@ export const adminApi = {
   sendMessage: (data: { recipientId: string; content: string; subject?: string }) =>
     api.post("/admin/messages/send", data),
 
+  // Backups
+  backups: {
+    list: () => api.get("/backups"),
+    triggerManual: () => api.post("/backups/trigger"),
+    delete: (filename: string) => api.delete(`/backups/${filename}`),
+    downloadUrl: (filename: string) => `${process.env.NEXT_PUBLIC_API_URL || 'https://api.orivraa.com'}/backups/download/${filename}`,
+    getSchedules: () => api.get("/backups/schedules"),
+    createSchedule: (data: { name: string; cronExp: string }) => api.post("/backups/schedules", data),
+    toggleSchedule: (id: string, isActive: boolean) => api.patch(`/backups/schedules/${id}/toggle`, { isActive }),
+    deleteSchedule: (id: string) => api.delete(`/backups/schedules/${id}`),
+  },
+
   // Stats
   getStats: () => api.get("/admin/stats"),
 

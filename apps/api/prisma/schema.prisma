@@ -392,6 +392,16 @@ model EmailLog {
   @@index([threadId])
 }
 
+// Backup scheduling configuration
+model BackupSchedule {
+  id        String   @id @default(uuid())
+  name      String
+  cronExp   String   // e.g. "0 0 * * *"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model ShopMetalRate {
   id             String   @id @default(uuid())
   shopId         String

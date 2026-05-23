@@ -1,7 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { CronJob } from 'cron';
 import { MailService } from '../mail/mail.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
@@ -10,21 +12,49 @@ import * as path from 'path';
 const execAsync = promisify(exec);
 
 @Injectable()
-export class BackupService {
+export class BackupService implements OnModuleInit {
   private readonly logger = new Logger(BackupService.name);
 
   constructor(
     private configService: ConfigService,
     private mailService: MailService,
+    private prisma: PrismaService,
+    private schedulerRegistry: SchedulerRegistry,
   ) {}
 
-  @Cron(CronExpression.EVERY_WEEKEND) // Runs every Sunday at midnight
-  async handleWeeklyBackup() {
-    this.logger.log('Starting automated weekly database backup...');
-    try {
-      await this.createBackupAndNotify();
-    } catch (error) {
-      this.logger.error(`Automated backup failed: ${(error as Error).message}`);
+  async onModuleInit() {
+    this.logger.log('Initializing dynamic backup schedules...');
+    await this.loadSchedules();
+  }
+
+  async loadSchedules() {
+    // Clear existing dynamic jobs that start with "backup_schedule_"
+    const existingJobs = this.schedulerRegistry.getCronJobs();
+    existingJobs.forEach((job, key) => {
+      if (key.startsWith('backup_schedule_')) {
+        this.schedulerRegistry.deleteCronJob(key);
+      }
+    });
+
+    // Load from database
+    const schedules = await this.prisma.backupSchedule.findMany({
+      where: { isActive: true },
+    });
+
+    for (const schedule of schedules) {
+      try {
+        const job = new CronJob(schedule.cronExp, async () => {
+          this.logger.log(`Executing dynamic backup job: ${schedule.name}`);
+          await this.createBackupAndNotify();
+        });
+
+        const jobName = `backup_schedule_${schedule.id}`;
+        this.schedulerRegistry.addCronJob(jobName, job);
+        job.start();
+        this.logger.log(`Started backup job "${schedule.name}" with cron: ${schedule.cronExp}`);
+      } catch (e) {
+        this.logger.error(`Invalid cron expression for schedule ${schedule.id}: ${schedule.cronExp}`);
+      }
     }
   }
 
@@ -45,8 +75,6 @@ export class BackupService {
     const fileName = `db-backup-${dateStr}.sql`;
     const filePath = path.join(backupDir, fileName);
 
-    // Using pg_dump to export the database (requires postgresql-client installed in host/container)
-    // We export using plaintext because it's easier to restore via pure SQL scripts or DBeaver.
     const command = `pg_dump --clean --if-exists --no-owner "${dbUrl}" > "${filePath}"`;
 
     try {
@@ -54,22 +82,18 @@ export class BackupService {
       await execAsync(command);
       this.logger.log('pg_dump completed successfully.');
 
-      // Send email to the system administrator informing them to download the backup locally.
       const adminEmail = 'admin@orivraa.com';
       const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://orivraa.com';
-      const downloadLink = `${frontendUrl}/dashboard/admin/backups`; // New admin UI view we will build or they can download directly
+      const downloadLink = `${frontendUrl}/dashboard/admin/performance`;
 
       await this.mailService.sendAdminAlert(adminEmail, {
         alertType: 'info',
-        title: `Weekly Database Backup Available (${dateStr})`,
-        message: `Your weekly database backup has been automatically generated and securely stored. File: ${fileName}. Because Railway Hobby plans do not have automatic data retention, it is highly advised that you download this backup to your local hard drive every week.`,
+        title: `Database Backup Created (${dateStr})`,
+        message: `A database backup has been automatically generated and securely stored. File: ${fileName}. Because Railway Hobby plans do not have automatic data retention, it is highly advised that you download this backup to your local hard drive regularly.`,
         actionUrl: downloadLink,
-        actionText: 'Download Backup in Admin Dashboard',
+        actionText: 'Manage Backups',
       });
 
-      this.logger.log(`Automated Backup email sent to ${adminEmail}`);
-
-      // Optional: Cleanup old backups automatically to prevent server disk bloat.
       this.cleanupOldBackups(backupDir);
     } catch (error: any) {
       this.logger.error(`Error generating backup via pg_dump: ${error.message}`);
@@ -98,16 +122,24 @@ export class BackupService {
     await this.createBackupAndNotify();
   }
 
+  deleteBackup(filename: string) {
+    const backupDir = path.join(process.cwd(), 'backups');
+    const filePath = path.join(backupDir, filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      return { success: true };
+    }
+    throw new NotFoundException('Backup file not found');
+  }
+
   private cleanupOldBackups(backupDir: string) {
-    const MAX_BACKUPS = 5;
+    const MAX_BACKUPS = 7;
     const files = fs.readdirSync(backupDir).filter(f => f.endsWith('.sql'));
     
     if (files.length > MAX_BACKUPS) {
-      // Sort oldest to newest
       const sorted = files.sort((a, b) => {
         return fs.statSync(path.join(backupDir, a)).birthtimeMs - fs.statSync(path.join(backupDir, b)).birthtimeMs;
       });
-      // Delete the oldest ones
       const toDelete = sorted.slice(0, files.length - MAX_BACKUPS);
       toDelete.forEach(file => {
         try {
@@ -118,5 +150,39 @@ export class BackupService {
         }
       });
     }
+  }
+
+  // --- Schedule Management ---
+  async getSchedules() {
+    return this.prisma.backupSchedule.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async createSchedule(data: { name: string, cronExp: string }) {
+    // Validate cron
+    try {
+      new CronJob(data.cronExp, () => {});
+    } catch (e) {
+      throw new Error('Invalid cron expression');
+    }
+    const schedule = await this.prisma.backupSchedule.create({ data });
+    await this.loadSchedules();
+    return schedule;
+  }
+
+  async toggleSchedule(id: string, isActive: boolean) {
+    const schedule = await this.prisma.backupSchedule.update({
+      where: { id },
+      data: { isActive }
+    });
+    await this.loadSchedules();
+    return schedule;
+  }
+
+  async deleteSchedule(id: string) {
+    await this.prisma.backupSchedule.delete({ where: { id } });
+    await this.loadSchedules();
+    return { success: true };
   }
 }
