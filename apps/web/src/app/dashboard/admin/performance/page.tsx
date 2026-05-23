@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { adminApi, metricsApi } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import {
     Activity,
     AlertTriangle,
@@ -367,22 +368,23 @@ export default function AdminPerformancePage() {
     setTriggeringBackup(true);
     try {
       await adminApi.backups.triggerManual();
-      alert("Backup triggered successfully!");
+      toast({ title: "Backup Started", description: "Your database backup has been triggered and is uploading to Cloudflare R2." });
       await loadBackups();
     } catch (e: any) {
-      alert(e.response?.data?.message || "Failed to trigger backup");
+      toast({ variant: "destructive", title: "Backup Failed", description: e.response?.data?.message || "Failed to trigger backup" });
     } finally {
       setTriggeringBackup(false);
     }
   };
 
   const deleteBackup = async (filename: string) => {
-    if (!confirm(`Delete backup ${filename}?`)) return;
+    if (!window.confirm(`Delete backup "${filename}"? This cannot be undone.`)) return;
     try {
       await adminApi.backups.delete(filename);
+      toast({ title: "Backup Deleted", description: `"${filename}" has been permanently removed.` });
       await loadBackups();
     } catch {
-      alert("Failed to delete backup");
+      toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete the backup. Please try again." });
     }
   };
 
@@ -391,28 +393,31 @@ export default function AdminPerformancePage() {
       await adminApi.backups.createSchedule({ name: newScheduleName, cronExp: newScheduleCron });
       setNewScheduleName("");
       setNewScheduleCron("0 0 * * *");
+      toast({ title: "Schedule Created", description: `"${newScheduleName}" schedule has been added.` });
       await loadBackups();
     } catch (e: any) {
-      alert(e.response?.data?.message || "Failed to create schedule");
+      toast({ variant: "destructive", title: "Schedule Failed", description: e.response?.data?.message || "Failed to create schedule" });
     }
   };
 
   const deleteSchedule = async (id: string) => {
-    if (!confirm("Delete this schedule?")) return;
+    if (!window.confirm("Delete this schedule? It will stop running automatically.")) return;
     try {
       await adminApi.backups.deleteSchedule(id);
+      toast({ title: "Schedule Deleted", description: "The backup schedule has been removed." });
       await loadBackups();
     } catch {
-      alert("Failed to delete schedule");
+      toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete the schedule. Please try again." });
     }
   };
 
   const toggleSchedule = async (id: string, isActive: boolean) => {
     try {
       await adminApi.backups.toggleSchedule(id, isActive);
+      toast({ title: isActive ? "Schedule Enabled" : "Schedule Paused", description: isActive ? "This backup schedule is now active." : "This backup schedule has been paused." });
       await loadBackups();
     } catch {
-      alert("Failed to toggle schedule");
+      toast({ variant: "destructive", title: "Toggle Failed", description: "Could not update the schedule. Please try again." });
     }
   };
 
