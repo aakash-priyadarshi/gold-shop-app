@@ -12,11 +12,14 @@ import {
     Calculator,
     CreditCard,
     Globe,
+    MessageSquare,
     Printer,
     Receipt,
     RefreshCw,
     Scale,
     ScanBarcode,
+    Smartphone,
+    CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -324,6 +327,132 @@ export default function JewelleryPosSoftwarePage() {
                   designed for how jewellery shops actually work.
                 </T>
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Mobile-First POS Callout ───────────────────── */}
+        <section className="py-16 lg:py-20 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 rounded-3xl p-8 lg:p-12 border border-amber-100 dark:border-gray-700 overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-200/50 dark:bg-amber-900/20 blur-[80px] rounded-full"></div>
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-200/50 dark:bg-orange-900/20 blur-[80px] rounded-full"></div>
+              
+              <div className="relative z-10 flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+                <div className="flex-1 space-y-6">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-sm font-semibold">
+                    <Smartphone className="h-4 w-4" />
+                    <T>Mobile-First POS</T>
+                  </div>
+                  <h2 className="text-3xl lg:text-4xl font-bold leading-tight text-gray-900 dark:text-white">
+                    <T>Run Your Shop Without a PC.</T>
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
+                    <T>
+                      A bulky Windows PC setup can cost $500+ and take up valuable counter space. Orivraa was built mobile-first, allowing small and medium jewellers to run their entire billing operation from an Android or iOS device.
+                    </T>
+                  </p>
+                  <ul className="space-y-4 pt-2">
+                    {[
+                      "Scan product barcodes using your phone's camera",
+                      "Check live gold/silver rates instantly",
+                      "Send digital GST/VAT invoices via WhatsApp or SMS",
+                      "No expensive thermal printers required",
+                    ].map((item, i) => (
+                      <li key={i} className="flex items-center gap-3">
+                        <div className="h-6 w-6 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <span className="text-gray-700 dark:text-gray-200 font-medium">
+                          <T>{item}</T>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="pt-4">
+                    <Link
+                      href="/auth/register?role=SELLER"
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
+                    >
+                      <T>Get the Mobile App</T>
+                      <Smartphone className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+                
+                <div className="flex-1 w-full max-w-sm lg:max-w-md mx-auto">
+                  <div className="relative bg-gray-900 rounded-[2.5rem] border-[6px] border-gray-800 shadow-2xl overflow-hidden aspect-[9/18] flex flex-col">
+                    {/* Fake Notch */}
+                    <div className="absolute top-0 inset-x-0 h-5 bg-gray-800 rounded-b-xl w-28 mx-auto z-20"></div>
+                    
+                    {/* Fake App Header */}
+                    <div className="bg-amber-600 text-white p-4 pt-8 shrink-0 z-10 flex justify-between items-center shadow-md">
+                      <div className="font-bold text-lg"><T>Orivraa POS</T></div>
+                      <div className="bg-white/20 px-2 py-1 rounded text-xs font-medium tracking-wide">
+                        <T>Live: 22K ₹7,100/g</T>
+                      </div>
+                    </div>
+                    
+                    {/* Fake App Body */}
+                    <div className="flex-1 bg-gray-50 p-4 flex flex-col gap-3 z-10 overflow-hidden">
+                      {/* Barcode Scanner Button */}
+                      <button className="w-full bg-blue-50 border border-blue-200 text-blue-700 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm shadow-sm">
+                        <ScanBarcode className="h-5 w-5" />
+                        <T>Scan Barcode with Camera</T>
+                      </button>
+                      
+                      {/* Cart Item */}
+                      <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-200">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <div className="font-semibold text-gray-900 text-sm"><T>Gold Bangle 22K</T></div>
+                            <div className="text-xs text-gray-500">12.50 g • 15% Making</div>
+                          </div>
+                          <div className="font-bold text-gray-900 text-sm">₹ 102,062</div>
+                        </div>
+                      </div>
+                      
+                      {/* Cart Item 2 */}
+                      <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-200">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <div className="font-semibold text-gray-900 text-sm"><T>Diamond Ring</T></div>
+                            <div className="text-xs text-gray-500">2.10 g • IGI Certified</div>
+                          </div>
+                          <div className="font-bold text-gray-900 text-sm">₹ 45,000</div>
+                        </div>
+                      </div>
+                      
+                      {/* Bottom Total Sheet */}
+                      <div className="mt-auto bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                        <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <span><T>Subtotal</T></span>
+                          <span>₹ 147,062</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600 mb-3 pb-3 border-b border-gray-100">
+                          <span><T>Tax</T></span>
+                          <span>₹ 4,411</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-gray-900 text-lg mb-4">
+                          <span><T>Total</T></span>
+                          <span>₹ 151,473</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2">
+                          <button className="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-bold shadow text-sm flex items-center justify-center gap-1.5">
+                            <MessageSquare className="h-4 w-4" />
+                            <T>WhatsApp</T>
+                          </button>
+                          <button className="bg-gray-900 hover:bg-black text-white py-2.5 rounded-lg font-bold shadow text-sm flex items-center justify-center gap-1.5">
+                            <Receipt className="h-4 w-4" />
+                            <T>Print Bill</T>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
