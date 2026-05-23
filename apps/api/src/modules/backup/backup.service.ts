@@ -70,7 +70,7 @@ export class BackupService implements OnModuleInit {
         });
 
         const jobName = `backup_schedule_${schedule.id}`;
-        this.schedulerRegistry.addCronJob(jobName, job);
+        this.schedulerRegistry.addCronJob(jobName, job as any);
         job.start();
         this.logger.log(`Started backup job "${schedule.name}" with cron: ${schedule.cronExp}`);
       } catch (e) {
