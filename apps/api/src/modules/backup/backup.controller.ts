@@ -6,9 +6,6 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { BackupService } from './backup.service';
 import { Response } from 'express';
-import * as path from 'path';
-import * as fs from 'fs';
-
 @ApiTags('backups')
 @Controller('backups')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -45,15 +42,18 @@ export class BackupController {
 
   @Get('download/:filename')
   @ApiOperation({ summary: 'Download a specific backup file as an SQL attachment' })
-  downloadBackup(@Param('filename') filename: string, @Res() res: Response) {
+  async downloadBackup(@Param('filename') filename: string, @Res() res: Response) {
     if (!filename.endsWith('.sql') || filename.includes('..') || filename.includes('/')) {
       throw new NotFoundException('Invalid backup filename.');
     }
-    const filePath = path.join(process.cwd(), 'backups', filename);
-    if (!fs.existsSync(filePath)) {
+    
+    try {
+      const signedUrl = await this.backupService.getDownloadUrl(filename);
+      // Redirect the user to the presigned URL
+      res.redirect(signedUrl);
+    } catch (e) {
       throw new NotFoundException('Requested backup file not found. It may have expired.');
     }
-    res.download(filePath);
   }
 
   // --- Schedule Management ---

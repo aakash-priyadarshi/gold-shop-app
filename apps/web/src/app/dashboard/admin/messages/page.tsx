@@ -12,6 +12,7 @@ import { adminApi, chatApi, ticketsApi } from "@/lib/api";
 import { Bot, ChevronDown, ChevronRight, Loader2, Lock, Mail, MessageSquare, RefreshCw, Search, Send, Shield, Store, Users, Wand2, Zap } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "@/hooks/use-toast";
 
 interface Conversation {
   id: string;

@@ -8,19 +8,42 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
+import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const execAsync = promisify(exec);
 
 @Injectable()
 export class BackupService implements OnModuleInit {
   private readonly logger = new Logger(BackupService.name);
+  private s3Client: S3Client | null = null;
+  private bucketName: string;
 
   constructor(
     private configService: ConfigService,
     private mailService: MailService,
     private prisma: PrismaService,
     private schedulerRegistry: SchedulerRegistry,
-  ) {}
+  ) {
+    const accountId = this.configService.get<string>('R2_ACCOUNT_ID');
+    const accessKeyId = this.configService.get<string>('R2_ACCESS_KEY_ID');
+    const secretAccessKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY');
+    this.bucketName = this.configService.get<string>('R2_BUCKET_NAME') || 'backups';
+
+    if (accountId && accessKeyId && secretAccessKey) {
+      this.s3Client = new S3Client({
+        region: 'auto',
+        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
+      });
+      this.logger.log('Cloudflare R2 S3Client initialized.');
+    } else {
+      this.logger.warn('Cloudflare R2 credentials missing. Backups will fail.');
+    }
+  }
 
   async onModuleInit() {
     this.logger.log('Initializing dynamic backup schedules...');
@@ -28,7 +51,6 @@ export class BackupService implements OnModuleInit {
   }
 
   async loadSchedules() {
-    // Clear existing dynamic jobs that start with "backup_schedule_"
     const existingJobs = this.schedulerRegistry.getCronJobs();
     existingJobs.forEach((job, key) => {
       if (key.startsWith('backup_schedule_')) {
@@ -36,7 +58,6 @@ export class BackupService implements OnModuleInit {
       }
     });
 
-    // Load from database
     const schedules = await this.prisma.backupSchedule.findMany({
       where: { isActive: true },
     });
@@ -59,18 +80,22 @@ export class BackupService implements OnModuleInit {
   }
 
   async createBackupAndNotify(): Promise<void> {
+    if (!this.s3Client) {
+      this.logger.error('S3 Client is not initialized. Check R2 credentials.');
+      return;
+    }
+
     const dbUrl = this.configService.get<string>('DATABASE_URL');
     if (!dbUrl) {
       this.logger.error('DATABASE_URL is not configured for pg_dump.');
       return;
     }
 
-    const backupDir = path.join(process.cwd(), 'backups');
+    const backupDir = path.join(process.cwd(), 'tmp_backups');
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
 
-    // Daily datestring format for sorting
     const dateStr = new Date().toISOString().replace(/:/g, '-').split('.')[0];
     const fileName = `db-backup-${dateStr}.sql`;
     const filePath = path.join(backupDir, fileName);
@@ -80,7 +105,22 @@ export class BackupService implements OnModuleInit {
     try {
       this.logger.log(`Executing pg_dump to ${filePath}`);
       await execAsync(command);
-      this.logger.log('pg_dump completed successfully.');
+      this.logger.log('pg_dump completed successfully. Uploading to R2...');
+
+      const fileContent = fs.readFileSync(filePath);
+      
+      const uploadCommand = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: fileName,
+        Body: fileContent,
+        ContentType: 'application/sql',
+      });
+
+      await this.s3Client.send(uploadCommand);
+      this.logger.log(`Successfully uploaded ${fileName} to R2.`);
+
+      // Clean up local temp file
+      fs.unlinkSync(filePath);
 
       const adminEmail = 'admin@orivraa.com';
       const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://orivraa.com';
@@ -89,66 +129,104 @@ export class BackupService implements OnModuleInit {
       await this.mailService.sendAdminAlert(adminEmail, {
         alertType: 'info',
         title: `Database Backup Created (${dateStr})`,
-        message: `A database backup has been automatically generated and securely stored. File: ${fileName}. Because Railway Hobby plans do not have automatic data retention, it is highly advised that you download this backup to your local hard drive regularly.`,
+        message: `A database backup has been automatically generated and securely stored in Cloudflare R2. File: ${fileName}.`,
         actionUrl: downloadLink,
         actionText: 'Manage Backups',
       });
 
-      this.cleanupOldBackups(backupDir);
+      await this.cleanupOldBackups();
     } catch (error: any) {
-      this.logger.error(`Error generating backup via pg_dump: ${error.message}`);
+      this.logger.error(`Error generating backup: ${error.message}`);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
       throw error;
     }
   }
 
-  getAvailableBackups() {
-    const backupDir = path.join(process.cwd(), 'backups');
-    if (!fs.existsSync(backupDir)) return [];
+  async getAvailableBackups() {
+    if (!this.s3Client) return [];
 
-    return fs.readdirSync(backupDir)
-      .filter(f => f.endsWith('.sql'))
-      .map(file => {
-        const stats = fs.statSync(path.join(backupDir, file));
-        return {
-          filename: file,
-          sizeBytes: stats.size,
-          createdAt: stats.birthtime,
-        };
-      })
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    try {
+      const command = new ListObjectsV2Command({
+        Bucket: this.bucketName,
+      });
+      const response = await this.s3Client.send(command);
+      
+      if (!response.Contents) return [];
+
+      return response.Contents
+        .filter(obj => obj.Key?.endsWith('.sql'))
+        .map(obj => ({
+          filename: obj.Key!,
+          sizeBytes: obj.Size || 0,
+          createdAt: obj.LastModified || new Date(),
+        }))
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    } catch (err: any) {
+      this.logger.error(`Failed to list backups from R2: ${err.message}`);
+      return [];
+    }
+  }
+
+  async getDownloadUrl(filename: string): Promise<string> {
+    if (!this.s3Client) throw new NotFoundException('S3 client not initialized');
+
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: filename,
+      });
+      
+      // Presign URL valid for 1 hour
+      const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
+      return signedUrl;
+    } catch (err: any) {
+      this.logger.error(`Failed to generate signed URL for ${filename}: ${err.message}`);
+      throw new NotFoundException('Failed to generate download URL');
+    }
   }
 
   async triggerManualBackup() {
     await this.createBackupAndNotify();
   }
 
-  deleteBackup(filename: string) {
-    const backupDir = path.join(process.cwd(), 'backups');
-    const filePath = path.join(backupDir, filename);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+  async deleteBackup(filename: string) {
+    if (!this.s3Client) throw new NotFoundException('S3 client not initialized');
+
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: filename,
+      });
+      await this.s3Client.send(command);
       return { success: true };
+    } catch (err: any) {
+      this.logger.error(`Failed to delete backup ${filename} from R2: ${err.message}`);
+      throw new NotFoundException('Failed to delete backup');
     }
-    throw new NotFoundException('Backup file not found');
   }
 
-  private cleanupOldBackups(backupDir: string) {
+  private async cleanupOldBackups() {
+    if (!this.s3Client) return;
     const MAX_BACKUPS = 7;
-    const files = fs.readdirSync(backupDir).filter(f => f.endsWith('.sql'));
-    
-    if (files.length > MAX_BACKUPS) {
-      const sorted = files.sort((a, b) => {
-        return fs.statSync(path.join(backupDir, a)).birthtimeMs - fs.statSync(path.join(backupDir, b)).birthtimeMs;
-      });
-      const toDelete = sorted.slice(0, files.length - MAX_BACKUPS);
-      toDelete.forEach(file => {
-        try {
-          fs.unlinkSync(path.join(backupDir, file));
-          this.logger.log(`Deleted stale backup: ${file}`);
-        } catch (err) {
-          this.logger.error(`Failed to delete old backup ${file}`);
+
+    try {
+      const backups = await this.getAvailableBackups();
+      if (backups.length > MAX_BACKUPS) {
+        // Since backups are sorted descending, the first 7 are the newest
+        const toDelete = backups.slice(MAX_BACKUPS);
+        for (const backup of toDelete) {
+          try {
+            await this.deleteBackup(backup.filename);
+            this.logger.log(`Deleted stale backup from R2: ${backup.filename}`);
+          } catch (err) {
+            this.logger.error(`Failed to delete stale backup ${backup.filename}`);
+          }
         }
-      });
+      }
+    } catch (e: any) {
+      this.logger.error(`Cleanup failed: ${e.message}`);
     }
   }
 
@@ -160,7 +238,6 @@ export class BackupService implements OnModuleInit {
   }
 
   async createSchedule(data: { name: string, cronExp: string }) {
-    // Validate cron
     try {
       new CronJob(data.cronExp, () => {});
     } catch (e) {
