@@ -224,6 +224,53 @@ export class SupportService {
     }
   }
 
+  /**
+   * Saves contact info (email or phone) captured by the AI during a
+   * guest conversation. Sends an admin notification on first capture.
+   */
+  async saveLeadContact(
+    sessionId: string,
+    contactType: "email" | "phone",
+    contactValue: string,
+    guestName?: string,
+  ) {
+    const existing = await this.prisma.botSession.findUnique({
+      where: { id: sessionId },
+      select: { contactCaptured: true, leadIntents: true, messageCount: true, guestName: true },
+    });
+
+    const updateData: any = {
+      contactCaptured: true,
+      ...(guestName ? { guestName } : (existing?.guestName ? {} : {})),
+    };
+    if (contactType === "email") updateData.guestEmail = contactValue;
+    else updateData.guestPhone = contactValue;
+    if (guestName) updateData.guestName = guestName;
+
+    await this.prisma.botSession.update({ where: { id: sessionId }, data: updateData });
+
+    // Notify admins only on first-time contact capture for this session
+    if (!existing?.contactCaptured) {
+      const contactLabel = contactType === "email" ? contactValue : `📞 ${contactValue}`;
+      await this.notifications.notifyAdmins({
+        type: "SYSTEM_ALERT",
+        titleKey: "notification.admin.ai_lead_contact.title",
+        titleParams: { title: "New lead contact captured via AI chat" },
+        bodyKey: "notification.admin.ai_lead_contact.body",
+        bodyParams: {
+          message: `${guestName || "A visitor"} shared their ${contactType}: ${contactLabel}`,
+          guestName: guestName || existing?.guestName,
+          contact: contactLabel,
+          leadIntents: existing?.leadIntents ?? [],
+          messageCount: existing?.messageCount ?? 0,
+        },
+        referenceType: "AI_CHAT",
+        referenceId: sessionId,
+        channels: ["IN_APP"],
+      });
+    }
+  }
+
   async logAiChat(
     sessionId: string | null,
     role: "user" | "assistant",

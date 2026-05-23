@@ -569,8 +569,10 @@ export const adminApi = {
   ) => api.patch(`/shops/${shopId}/kyc-status`, { action, reason }),
 
   // Email settings
-  getEmailLogs: (params?: { page?: number; limit?: number }) =>
+  getEmailLogs: (params?: { page?: number; limit?: number; type?: string; direction?: string }) =>
     api.get("/admin/emails", { params }),
+  aiComposeEmail: (data: { prompt: string; recipientName?: string; recipientRole?: string }) =>
+    api.post<{ success: boolean; subject: string; message: string }>("/admin/messages/ai-compose", data),
   getEmailTriggers: () => api.get("/admin/email/triggers"),
   getEmailTemplates: () => api.get("/admin/email/templates"),
   getEmailTemplate: (id: string) => api.get(`/admin/email/templates/${id}`),
@@ -583,12 +585,20 @@ export const adminApi = {
     api.post(`/admin/email/templates/${id}/preview`, { context }),
   previewEmailTemplateDraft: (data: Record<string, any>) =>
     api.post("/admin/email/templates/preview", data),
+  searchUsers: (q: string) =>
+    api.get<{ users: { id: string; firstName: string; lastName: string; email: string; role: string }[] }>(
+      "/admin/users/search",
+      { params: { q } },
+    ),
   sendMessage: (data: {
-    recipientId: string;
+    recipientId?: string;
+    recipientEmail?: string;
+    recipientName?: string;
     content: string;
     subject?: string;
   }) => api.post("/admin/messages/send", data),
   getEmailStatus: () => api.get("/admin/email/status"),
+
   sendTestEmail: (email: string) => api.post("/admin/email/test", { email }),
   updateAdminEmail: (data: { email: string; currentPassword: string }) =>
     api.patch("/admin/email/admin-address", data),

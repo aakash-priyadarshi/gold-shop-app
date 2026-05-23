@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { adminApi, chatApi, ticketsApi } from "@/lib/api";
-import { Bot, ChevronDown, ChevronRight, Eye, FileText, Loader2, Lock, Mail, MessageSquare, Plus, RefreshCw, Save, Search, Send, Shield, Store, Trash2, Users, Wand2, Zap } from "lucide-react";
+import { Bot, ChevronDown, ChevronRight, Eye, FileText, Loader2, Lock, Mail, MessageSquare, Phone, Plus, RefreshCw, Save, Search, Send, Shield, Store, Trash2, Users, Wand2, X, Zap } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "@/hooks/use-toast";
@@ -60,6 +60,8 @@ interface BotSession {
   leadIntents: string[];
   guestName?: string;
   guestEmail?: string;
+  guestPhone?: string;
+  contactCaptured?: boolean;
   startedAt: string;
   lastMessageAt: string;
   logs: BotLog[];
@@ -122,6 +124,14 @@ interface EmailTemplateDraft {
   variables: string;
   isActive: boolean;
   isSystem: boolean;
+}
+
+interface UserSearchResult {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
 }
 
 const emptyEmailTemplateDraft: EmailTemplateDraft = {
@@ -191,7 +201,7 @@ function IntentBadge({ intent }: { intent: string }) {
 
 function BotSessionRow({ session }: { session: BotSession }) {
   const [open, setOpen] = useState(false);
-  const displayName = session.guestName || session.guestEmail || session.ipAddress || "Anonymous visitor";
+  const displayName = session.guestName || session.guestEmail || session.guestPhone || session.ipAddress || "Anonymous visitor";
 
   return (
     <div className="border rounded-lg overflow-hidden bg-background">
@@ -208,6 +218,14 @@ function BotSessionRow({ session }: { session: BotSession }) {
                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <Mail className="h-3 w-3" /> {session.guestEmail}
                 </span>
+              )}
+              {session.guestPhone && (
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <Phone className="h-3 w-3" /> {session.guestPhone}
+                </span>
+              )}
+              {session.contactCaptured && !session.escalated && (
+                <Badge className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 border-0">lead captured</Badge>
               )}
               {session.escalated && <Badge variant="destructive" className="text-xs">escalated</Badge>}
             </div>
@@ -312,6 +330,9 @@ export default function AdminMessagesPage() {
   const [selectedEmail, setSelectedEmail] = useState<any | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
+  // Email filter
+  const [emailTypeFilter, setEmailTypeFilter] = useState<"all" | "manual" | "automated">("all");
+  const [emailDirectionFilter, setEmailDirectionFilter] = useState<"all" | "OUTBOUND" | "INBOUND">("all");
   const [emailTriggers, setEmailTriggers] = useState<EmailTrigger[]>([]);
   const [triggerLoading, setTriggerLoading] = useState(false);
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
@@ -320,6 +341,23 @@ export default function AdminMessagesPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [templateDraft, setTemplateDraft] = useState<EmailTemplateDraft>(emptyEmailTemplateDraft);
   const [templatePreview, setTemplatePreview] = useState<{ subject: string; html: string; from: string; replyTo?: string | null } | null>(null);
+
+  // ── Compose new email ────────────────────────────────────────────────────
+  const [composingNew, setComposingNew] = useState(false);
+  const [composeRecipientMode, setComposeRecipientMode] = useState<"search" | "manual">("search");
+  const [composeUserId, setComposeUserId] = useState<string | null>(null);
+  const [composeEmail, setComposeEmail] = useState("");
+  const [composeName, setComposeName] = useState("");
+  const [composeSubject, setComposeSubject] = useState("");
+  const [composeMessage, setComposeMessage] = useState("");
+  const [composeSending, setComposeSending] = useState(false);
+  const [composeUserQuery, setComposeUserQuery] = useState("");
+  const [composeUserResults, setComposeUserResults] = useState<UserSearchResult[]>([]);
+  const [composeUserSearching, setComposeUserSearching] = useState(false);
+  // AI writer
+  const [aiWriterOpen, setAiWriterOpen] = useState(false);
+  const [aiWriterPrompt, setAiWriterPrompt] = useState("");
+  const [aiWriterLoading, setAiWriterLoading] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("view") === "ai") setActiveView("ai");
@@ -335,11 +373,11 @@ export default function AdminMessagesPage() {
 
   useEffect(() => {
     if (activeView === "ai") loadBotSessions(botPage);
-    if (activeView === "emails") loadEmails(emailPage);
+    if (activeView === "emails") loadEmails(emailPage, emailTypeFilter, emailDirectionFilter);
     if (activeView === "triggers") loadEmailTriggers();
     if (activeView === "templates") loadEmailTemplates();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView, botPage, emailPage]);
+  }, [activeView, botPage, emailPage, emailTypeFilter, emailDirectionFilter]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -368,6 +406,26 @@ export default function AdminMessagesPage() {
       setIsSearchingUsers(false);
     }
   }, [userSearchText]);
+
+  // Debounced user search for compose
+  useEffect(() => {
+    if (composeUserQuery.trim().length < 2) {
+      setComposeUserResults([]);
+      return;
+    }
+    setComposeUserSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await adminApi.searchUsers(composeUserQuery.trim());
+        setComposeUserResults(res.data.users || []);
+      } catch {
+        // silently fail — user can still type manual email
+      } finally {
+        setComposeUserSearching(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [composeUserQuery]);
 
   async function startNewChat(userId: string) {
     try {
@@ -409,10 +467,15 @@ export default function AdminMessagesPage() {
     }
   }
 
-  async function loadEmails(page = emailPage) {
+  async function loadEmails(page = emailPage, typeFilter = emailTypeFilter, dirFilter = emailDirectionFilter) {
     setEmailLoading(true);
     try {
-      const res = await adminApi.getEmailLogs({ page, limit: 20 });
+      const res = await adminApi.getEmailLogs({
+        page,
+        limit: 20,
+        ...(typeFilter !== "all" ? { type: typeFilter } : {}),
+        ...(dirFilter !== "all" ? { direction: dirFilter } : {}),
+      });
       setEmailLogs(res.data.emails || []);
       setEmailTotal(res.data.total || 0);
     } catch (e) {
@@ -532,6 +595,75 @@ export default function AdminMessagesPage() {
       toast({ variant: "destructive", title: "Error", description: e.response?.data?.message || "Failed to send reply" });
     } finally {
       setSendingReply(false);
+    }
+  }
+
+  function resetCompose() {
+    setComposingNew(false);
+    setComposeRecipientMode("search");
+    setComposeUserId(null);
+    setComposeEmail("");
+    setComposeName("");
+    setComposeSubject("");
+    setComposeMessage("");
+    setComposeUserQuery("");
+    setComposeUserResults([]);
+    setAiWriterOpen(false);
+    setAiWriterPrompt("");
+  }
+
+  async function handleAiWrite() {
+    if (!aiWriterPrompt.trim()) return;
+    setAiWriterLoading(true);
+    try {
+      const res = await adminApi.aiComposeEmail({
+        prompt: aiWriterPrompt.trim(),
+        recipientName: composeName || undefined,
+        recipientRole: undefined,
+      });
+      if (res.data.subject) setComposeSubject(res.data.subject);
+      if (res.data.message) setComposeMessage(res.data.message);
+      setAiWriterOpen(false);
+      setAiWriterPrompt("");
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "AI writer failed", description: e.response?.data?.message || "Could not generate email." });
+    } finally {
+      setAiWriterLoading(false);
+    }
+  }
+
+  function selectComposeUser(user: UserSearchResult) {
+    setComposeUserId(user.id);
+    setComposeEmail(user.email);
+    setComposeName(`${user.firstName} ${user.lastName}`.trim());
+    setComposeUserQuery("");
+    setComposeUserResults([]);
+  }
+
+  async function handleSendCompose() {
+    if (!composeMessage.trim()) return;
+    if (composeRecipientMode === "search" && !composeUserId) {
+      toast({ variant: "destructive", title: "No recipient", description: "Select a user from the search results." });
+      return;
+    }
+    if (composeRecipientMode === "manual" && !composeEmail.trim()) {
+      toast({ variant: "destructive", title: "No recipient", description: "Enter a recipient email address." });
+      return;
+    }
+    setComposeSending(true);
+    try {
+      const payload =
+        composeRecipientMode === "search"
+          ? { recipientId: composeUserId!, content: composeMessage, subject: composeSubject || undefined }
+          : { recipientEmail: composeEmail.trim(), recipientName: composeName.trim() || undefined, content: composeMessage, subject: composeSubject || undefined };
+      await adminApi.sendMessage(payload);
+      toast({ title: "Email sent", description: `Email delivered to ${composeEmail || composeName}.` });
+      resetCompose();
+      loadEmails(emailPage);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Failed to send", description: e.response?.data?.message || "Something went wrong." });
+    } finally {
+      setComposeSending(false);
     }
   }
 
@@ -930,11 +1062,49 @@ export default function AdminMessagesPage() {
           ) : activeView === "emails" ? (
             <div className="flex flex-1 gap-4 min-h-0 bg-background border rounded-lg overflow-hidden relative">
               <div className="w-1/3 border-r overflow-y-auto">
-                <div className="p-4 border-b sticky top-0 bg-background z-10 flex justify-between items-center">
-                  <h2 className="font-semibold">Email History</h2>
-                  <Button variant="outline" size="sm" onClick={() => loadEmails(emailPage)} disabled={emailLoading}>
-                    <RefreshCw className={`h-4 w-4 ${emailLoading ? "animate-spin" : ""}`} />
-                  </Button>
+                <div className="sticky top-0 bg-background z-10 border-b">
+                  <div className="p-4 flex justify-between items-center gap-2">
+                    <h2 className="font-semibold">Email History</h2>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => { setComposingNew(true); setSelectedEmail(null); }}
+                        className="gap-1"
+                      >
+                        <Plus className="h-4 w-4" /> Compose
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => loadEmails(emailPage, emailTypeFilter, emailDirectionFilter)} disabled={emailLoading}>
+                        <RefreshCw className={`h-4 w-4 ${emailLoading ? "animate-spin" : ""}`} />
+                      </Button>
+                    </div>
+                  </div>
+                  {/* Filter bar */}
+                  <div className="px-3 pb-2 space-y-2">
+                    <div className="flex rounded-md border overflow-hidden text-xs">
+                      {(["all", "manual", "automated"] as const).map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => { setEmailTypeFilter(f); setEmailPage(1); }}
+                          className={`flex-1 py-1.5 font-medium transition-colors capitalize ${emailTypeFilter === f ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                        >
+                          {f === "manual" ? "Manual" : f === "automated" ? "Automated" : "All"}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex rounded-md border overflow-hidden text-xs">
+                      {([["all", "All"], ["OUTBOUND", "Outbound"], ["INBOUND", "Inbound"]] as const).map(([val, label]) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => { setEmailDirectionFilter(val); setEmailPage(1); }}
+                          className={`flex-1 py-1.5 font-medium transition-colors ${emailDirectionFilter === val ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 {emailLoading && emailLogs.length === 0 ? (
                   <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
@@ -945,8 +1115,8 @@ export default function AdminMessagesPage() {
                     {emailLogs.map((log) => (
                       <button
                         key={log.id}
-                        onClick={() => setSelectedEmail(log)}
-                        className={`w-full text-left p-4 hover:bg-muted/50 transition-colors ${selectedEmail?.id === log.id ? "bg-muted" : ""}`}
+                        onClick={() => { setSelectedEmail(log); setComposingNew(false); }}
+                        className={`w-full text-left p-4 hover:bg-muted/50 transition-colors ${!composingNew && selectedEmail?.id === log.id ? "bg-muted" : ""}`}
                       >
                         <div className="flex justify-between items-start mb-1">
                           <span className="font-medium truncate pr-2">
@@ -975,8 +1145,193 @@ export default function AdminMessagesPage() {
                   <Button variant="outline" size="sm" onClick={() => setEmailPage(p => p + 1)} disabled={emailLogs.length < 20 || emailLoading}>Next</Button>
                 </div>
               </div>
-              <div className="w-2/3 flex flex-col">
-                {selectedEmail ? (
+              <div className="w-2/3 flex flex-col overflow-y-auto">
+                {composingNew ? (
+                  /* ── Compose form ──────────────────────────────────────────────── */
+                  <div className="flex flex-col h-full">
+                    <div className="p-5 border-b flex items-center justify-between">
+                      <div>
+                        <h2 className="text-lg font-semibold">New Email</h2>
+                        <p className="text-sm text-muted-foreground">Send an email to a registered user or any email address.</p>
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={resetCompose} title="Cancel">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="flex-1 p-5 space-y-5 overflow-y-auto">
+                      {/* Recipient mode toggle */}
+                      <div className="space-y-3">
+                        <label className="text-sm font-medium">Recipient</label>
+                        <div className="flex rounded-lg border overflow-hidden text-sm">
+                          <button
+                            type="button"
+                            onClick={() => { setComposeRecipientMode("search"); setComposeUserId(null); setComposeEmail(""); setComposeName(""); }}
+                            className={`flex-1 px-4 py-2 transition-colors ${composeRecipientMode === "search" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                          >
+                            Find user
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setComposeRecipientMode("manual"); setComposeUserId(null); setComposeUserQuery(""); setComposeUserResults([]); }}
+                            className={`flex-1 px-4 py-2 transition-colors ${composeRecipientMode === "manual" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                          >
+                            Manual email
+                          </button>
+                        </div>
+
+                        {composeRecipientMode === "search" ? (
+                          <div className="space-y-2">
+                            {/* Selected user chip */}
+                            {composeUserId ? (
+                              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/40">
+                                <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{composeName}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{composeEmail}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => { setComposeUserId(null); setComposeEmail(""); setComposeName(""); }}
+                                  className="text-muted-foreground hover:text-foreground"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="relative">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  placeholder="Search by name or email..."
+                                  className="pl-9"
+                                  value={composeUserQuery}
+                                  onChange={(e) => setComposeUserQuery(e.target.value)}
+                                />
+                                {composeUserSearching && (
+                                  <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+                                )}
+                                {!composeUserSearching && composeUserResults.length > 0 && (
+                                  <div className="absolute left-0 right-0 top-full mt-1 bg-background border rounded-lg shadow-lg z-30 max-h-56 overflow-y-auto">
+                                    {composeUserResults.map((u) => (
+                                      <button
+                                        key={u.id}
+                                        type="button"
+                                        onClick={() => selectComposeUser(u)}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted text-left border-b last:border-0"
+                                      >
+                                        <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium truncate">{u.firstName} {u.lastName}</p>
+                                          <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                                        </div>
+                                        <Badge variant="outline" className="text-[10px] shrink-0">{u.role}</Badge>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                {!composeUserSearching && composeUserQuery.trim().length >= 2 && composeUserResults.length === 0 && (
+                                  <div className="absolute left-0 right-0 top-full mt-1 bg-background border rounded-lg shadow-lg z-30 p-3 text-sm text-center text-muted-foreground">
+                                    No users found
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <label className="space-y-1.5 text-sm block">
+                              <span className="font-medium">Email address <span className="text-destructive">*</span></span>
+                              <Input
+                                type="email"
+                                placeholder="recipient@example.com"
+                                value={composeEmail}
+                                onChange={(e) => setComposeEmail(e.target.value)}
+                              />
+                            </label>
+                            <label className="space-y-1.5 text-sm block">
+                              <span className="font-medium">Display name <span className="text-muted-foreground">(optional)</span></span>
+                              <Input
+                                placeholder="Recipient name"
+                                value={composeName}
+                                onChange={(e) => setComposeName(e.target.value)}
+                              />
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* AI Writer */}
+                      <div className="rounded-lg border overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setAiWriterOpen((o) => !o)}
+                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors text-sm font-medium"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Wand2 className="h-4 w-4 text-indigo-500" />
+                            Write with AI
+                          </div>
+                          <span className="text-xs text-muted-foreground">{aiWriterOpen ? "Hide" : "Expand"}</span>
+                        </button>
+                        {aiWriterOpen && (
+                          <div className="border-t p-4 space-y-3 bg-muted/10">
+                            <p className="text-xs text-muted-foreground">Describe what you want to say and AI will write the subject and message for you.</p>
+                            <AutoResizeTextarea
+                              autoFocus
+                              placeholder='e.g. "Tell the seller their account was approved and they can now list products"'
+                              className="min-h-[80px] text-sm"
+                              value={aiWriterPrompt}
+                              onChange={(e) => setAiWriterPrompt(e.target.value)}
+                              disabled={aiWriterLoading}
+                            />
+                            <div className="flex justify-end">
+                              <Button
+                                size="sm"
+                                onClick={handleAiWrite}
+                                disabled={aiWriterLoading || !aiWriterPrompt.trim()}
+                                className="gap-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+                              >
+                                {aiWriterLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                                {aiWriterLoading ? "Generating..." : "Generate Email"}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Subject */}
+                      <label className="space-y-1.5 text-sm font-medium block">
+                        Subject <span className="text-muted-foreground">(optional)</span>
+                        <Input
+                          placeholder="Message from Orivraa Support"
+                          value={composeSubject}
+                          onChange={(e) => setComposeSubject(e.target.value)}
+                        />
+                      </label>
+
+                      {/* Message */}
+                      <label className="space-y-1.5 text-sm font-medium block">
+                        Message <span className="text-destructive">*</span>
+                        <AutoResizeTextarea
+                          placeholder="Write your message here..."
+                          className="min-h-[160px]"
+                          value={composeMessage}
+                          onChange={(e) => setComposeMessage(e.target.value)}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="p-5 border-t flex items-center justify-end gap-2">
+                      <Button variant="outline" onClick={resetCompose} disabled={composeSending}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSendCompose} disabled={composeSending || !composeMessage.trim()}>
+                        {composeSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                        Send Email
+                      </Button>
+                    </div>
+                  </div>
+                ) : selectedEmail ? (
                   <>
                     <div className="p-6 border-b">
                       <h2 className="text-xl font-bold mb-4">{selectedEmail.subject}</h2>
@@ -1011,6 +1366,7 @@ export default function AdminMessagesPage() {
                   <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
                     <Mail className="h-12 w-12 mb-4 opacity-20" />
                     <p>Select an email to view details</p>
+                    <p className="text-sm mt-1">or click <strong>Compose</strong> to send a new email</p>
                   </div>
                 )}
               </div>

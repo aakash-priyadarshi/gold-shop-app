@@ -666,6 +666,30 @@ export class AdminController {
   }
 
   // ═══════════════════════════════════════
+  // USER SEARCH (for compose / messaging)
+  // ═══════════════════════════════════════
+
+  @Get("users/search")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Search all users by name or email (for compose)" })
+  async searchUsers(@Query("q") q?: string) {
+    if (!q || q.trim().length < 2) return { users: [] };
+    const users = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { firstName: { contains: q, mode: "insensitive" } },
+          { lastName: { contains: q, mode: "insensitive" } },
+          { email: { contains: q, mode: "insensitive" } },
+        ],
+      },
+      select: { id: true, firstName: true, lastName: true, email: true, role: true },
+      take: 10,
+      orderBy: { firstName: "asc" },
+    });
+    return { users };
+  }
+
+  // ═══════════════════════════════════════
   // CUSTOMER CRM (Admin-level, cross-shop)
   // ═══════════════════════════════════════
 
@@ -1373,13 +1397,29 @@ export class AdminController {
   @Get("emails")
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: "Get email interaction history" })
-  async getEmailLogs(@Query("limit") limit?: string, @Query("page") page?: string) {
+  async getEmailLogs(
+    @Query("limit") limit?: string,
+    @Query("page") page?: string,
+    @Query("type") type?: string,      // 'manual' | 'automated' | 'all'
+    @Query("direction") direction?: string, // 'OUTBOUND' | 'INBOUND' | 'all'
+  ) {
     const limitNum = parseInt(limit || "50", 10);
     const pageNum = parseInt(page || "1", 10);
     const skip = (pageNum - 1) * limitNum;
 
+    const where: Record<string, any> = {};
+    if (type === "manual") {
+      where.adminId = { not: null };
+    } else if (type === "automated") {
+      where.adminId = null;
+    }
+    if (direction && direction !== "all") {
+      where.direction = direction;
+    }
+
     const [emails, total] = await Promise.all([
       this.prisma.emailLog.findMany({
+        where,
         orderBy: { createdAt: "desc" },
         skip,
         take: limitNum,
@@ -1395,7 +1435,7 @@ export class AdminController {
           },
         },
       }),
-      this.prisma.emailLog.count(),
+      this.prisma.emailLog.count({ where }),
     ]);
 
     return { emails, total, page: pageNum, limit: limitNum };
@@ -1667,31 +1707,54 @@ export class AdminController {
 
   @Post("messages/send")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: "Send an email/message to a user" })
+  @ApiOperation({ summary: "Send an email/message to a registered user or a manual email address" })
   async sendMessage(
-    @Body() data: { recipientId: string; content: string; subject?: string },
+    @Body()
+    data: {
+      recipientId?: string;
+      recipientEmail?: string;
+      recipientName?: string;
+      content: string;
+      subject?: string;
+    },
     @CurrentUser("id") adminId: string,
   ) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: data.recipientId },
-    });
-
-    if (!user) {
-      throw new BadRequestException("User not found");
-    }
-
     const message = data.content?.trim();
     if (!message) {
       throw new BadRequestException("Message content is required");
     }
 
     const subject = data.subject?.trim() || "Message from Orivraa Support";
+
+    // ── Resolve recipient ──────────────────────────────────────────────────
+    let toEmail: string;
+    let toName: string;
+    let toUserId: string | undefined;
+
+    if (data.recipientId) {
+      // Registered user path
+      const user = await this.prisma.user.findUnique({
+        where: { id: data.recipientId },
+      });
+      if (!user) throw new BadRequestException("User not found");
+      toEmail = user.email;
+      toName = user.firstName || user.email;
+      toUserId = user.id;
+    } else if (data.recipientEmail) {
+      // Manual email path
+      toEmail = data.recipientEmail.trim();
+      toName = data.recipientName?.trim() || toEmail;
+    } else {
+      throw new BadRequestException("Either recipientId or recipientEmail is required");
+    }
+
+    // ── Render template ────────────────────────────────────────────────────
     const rendered = await this.emailTemplateService.renderByKey(
       "manual_user_message",
       {
         title: subject,
         message,
-        recipientName: user.firstName || user.email,
+        recipientName: toName,
         sentAt: new Date(),
       },
       {
@@ -1704,9 +1767,9 @@ export class AdminController {
       },
     );
 
-    // 1. Send Email
+    // ── Send email ─────────────────────────────────────────────────────────
     const result = await this.mailService.sendHtml({
-      to: user.email,
+      to: toEmail,
       subject: rendered.subject,
       html: rendered.html,
       from: rendered.from,
@@ -1717,43 +1780,45 @@ export class AdminController {
       throw new BadRequestException("Failed to send email");
     }
 
-    // 2. Log Email
+    // ── Log email ──────────────────────────────────────────────────────────
     await this.prisma.emailLog.create({
       data: {
         direction: "OUTBOUND",
         fromAddress: rendered.from,
-        toAddress: user.email,
+        toAddress: toEmail,
         subject: rendered.subject,
         body: message,
-        userId: user.id,
+        ...(toUserId ? { userId: toUserId } : {}),
         adminId,
         messageId: result.messageId,
         templateKey: rendered.key,
       },
     });
 
-    // 3. Create Notification
-    await this.notificationsService.create({
-      userId: user.id,
-      type: "SYSTEM_ALERT",
-      titleKey: subject,
-      bodyKey: data.content,
-      channels: ["IN_APP", "PUSH"],
-    });
+    // ── In-app notification (registered users only) ────────────────────────
+    if (toUserId) {
+      await this.notificationsService.create({
+        userId: toUserId,
+        type: "SYSTEM_ALERT",
+        titleKey: subject,
+        bodyKey: data.content,
+        channels: ["IN_APP", "PUSH"],
+      });
+    }
 
-    this.logger.log(`Admin ${adminId} sent message/email to user ${user.id}`);
+    this.logger.log(`Admin ${adminId} sent email to ${toEmail}${toUserId ? ` (userId: ${toUserId})` : " (external)"}`);
 
     return { success: true, messageId: result.messageId };
   }
 
   @Post("messages/ai-compose")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: "Generate a message draft using Gemini Flash" })
+  @ApiOperation({ summary: "Generate an email subject + body using Gemini 2.5 Flash" })
   async aiComposeMessage(
-    @Body() data: { intent: string; recipientName?: string; recipientRole?: string },
+    @Body() data: { prompt: string; recipientName?: string; recipientRole?: string },
   ) {
-    if (!data.intent) {
-      throw new BadRequestException("Intent is required");
+    if (!data.prompt?.trim()) {
+      throw new BadRequestException("Prompt is required");
     }
 
     const apiKey = this.configService.get<string>("GEMINI_API_KEY");
@@ -1761,37 +1826,50 @@ export class AdminController {
       throw new BadRequestException("GEMINI_API_KEY is not configured");
     }
 
-    const prompt = `
-You are an expert admin/customer support agent for Orivraa (a B2B jewellery marketplace).
-Write a professional, polite, and concise message to a user.
+    const systemPrompt = `You are an expert admin support agent for Orivraa (a B2B jewellery marketplace).
+Generate a professional email based on the admin's instruction.
 Recipient Name: ${data.recipientName || "Valued User"}
 Recipient Role: ${data.recipientRole || "Customer/Seller"}
-Admin Intent/Subject: ${data.intent}
+Admin instruction: ${data.prompt.trim()}
 
-Instructions:
-- Write the final message content directly. Do not include placeholders like "[Your Name]".
-- Keep it concise, helpful, and professional.
-- Do not add any greeting/salutation if it's too formal, but a simple "Hi [Name]" is okay.
+Rules:
+- Write in first-person from "The Orivraa Team".
+- Keep it concise and professional.
+- Do NOT include placeholders like "[Your Name]" or "[Date]".
 - Sign off with "The Orivraa Team".
-`;
+- Respond ONLY with a valid JSON object on a single line, no markdown, no explanation:
+{"subject":"<email subject line>","message":"<full email body text>"}`;
 
     try {
       const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
         {
-          contents: [{ parts: [{ text: prompt }] }],
+          contents: [{ parts: [{ text: systemPrompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 500,
+            maxOutputTokens: 600,
+            responseMimeType: "application/json",
           },
         },
       );
 
-      const message = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      return { success: true, message: message.trim() };
+      const raw = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      let parsed: { subject?: string; message?: string };
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        // Fallback: extract from raw text if JSON parsing fails
+        parsed = { subject: "", message: raw.trim() };
+      }
+
+      return {
+        success: true,
+        subject: (parsed.subject || "").trim(),
+        message: (parsed.message || "").trim(),
+      };
     } catch (error: any) {
       this.logger.error("Gemini AI Compose failed:", error.message);
-      throw new BadRequestException("Failed to generate message using AI");
+      throw new BadRequestException("Failed to generate email using AI");
     }
   }
 }

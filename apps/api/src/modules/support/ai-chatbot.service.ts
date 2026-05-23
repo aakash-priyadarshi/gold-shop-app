@@ -137,6 +137,19 @@ export class AiChatbotService {
                 },
                 required: ["guestName", "guestEmail", "issueType", "summary"]
               }
+            },
+            {
+              name: "captureLeadContact",
+              description: "Saves the visitor's email address or phone number so the founder can personally follow up. Call this IMMEDIATELY when the visitor shares an email address or phone number — do not ask for both, one is enough. Never call this if the visitor hasn't explicitly provided their contact info.",
+              parameters: {
+                type: "OBJECT",
+                properties: {
+                  contactType: { type: "STRING", description: "Must be exactly 'email' or 'phone'" },
+                  contactValue: { type: "STRING", description: "The email address or phone number the visitor provided, exactly as they typed it." },
+                  guestName: { type: "STRING", description: "The visitor's name if they mentioned it during the conversation." }
+                },
+                required: ["contactType", "contactValue"]
+              }
             }
           ]
         }
@@ -222,6 +235,26 @@ export class AiChatbotService {
              shouldEscalate: false, 
              confidence: 1.0
           };
+       }
+
+       if (name === "captureLeadContact") {
+          const { contactType, contactValue, guestName } = args as {
+            contactType: "email" | "phone";
+            contactValue: string;
+            guestName?: string;
+          };
+          if (sessionId) {
+            await this.supportService.saveLeadContact(sessionId, contactType, contactValue, guestName);
+          }
+          const replyVariants = [
+            `Perfect, got it! 🙌 Aakash will personally reach out to you${guestName ? `, ${guestName}` : ""} — he loves chatting with jewellers about their workflow. In the meantime, feel free to keep asking me anything!`,
+            `Awesome sauce! 🎉 I've noted that down. Aakash (our founder) will personally ping you — he's the real human behind Orivraa and loves these conversations. Anything else I can help with?`,
+            `You're in! ✨ Aakash will be in touch personally${guestName ? `, ${guestName}` : ""}. He responds to every message himself — no bots on that end, promise 😄 Keep the questions coming!`,
+            `Noted and saved! 💎 Aakash will reach out personally — he genuinely enjoys these conversations with jewellers. Got more questions? Fire away!`,
+          ];
+          const reply = replyVariants[Math.floor(Math.random() * replyVariants.length)];
+          await this.supportService.logAiChat(sessionId ?? null, "assistant", reply, "captureLeadContact", 1.0, ipAddress);
+          return { reply, shouldEscalate: false, confidence: 1.0 };
        }
 
        return {
@@ -416,9 +449,24 @@ RESPONSE RULES:
 - Never fabricate prices or percentages not stated here
 - If unsure, offer to connect the user with Aakash directly
 
+LEAD CONTACT CAPTURE (guest visitors only — this does NOT apply to logged-in sellers):
+You are talking to a potential customer who hasn't signed up yet. Your goal is to make them feel welcome AND gently capture their contact so Aakash can personally follow up.
+Rules:
+- Wait until the visitor has sent at least 2 messages before asking (do NOT ask on the first message)
+- Ask once, naturally woven into your reply — never as a standalone message, never twice
+- Make it feel personal and fun, not like a form. Make them smile. Examples of the tone you should use:
+  * "Quick one before I forget — what's the best way to reach you? Email or WhatsApp number both work, and Aakash (our founder) will personally ping you if you have any follow-up questions 📬"
+  * "You're asking exactly the right things! If you'd love a quick 1:1 with Aakash, just drop your email or WhatsApp number here 💎 No spam, ever — he replies himself."
+  * "Ooh, great question! By the way — mind if I grab your email or phone? Aakash loves chatting with jewellers and will personally follow up 🙌"
+  * "That's a solid question! Side note — want Aakash to reach out personally? Drop your email or WhatsApp and he'll check in within 24 hours 🏆"
+- Vary the wording every time; never repeat the same phrasing
+- If the visitor shares an email or phone number at ANY point in the conversation, call captureLeadContact IMMEDIATELY
+- If the visitor declines or seems annoyed, drop it gracefully and never ask again
+
 AVAILABLE TOOLS:
 1. sendPasswordReset — call when user forgot password AND has given their email; otherwise ask for email first
-2. autoEscalateTicket — call for locked accounts, suspensions, missing refunds, technical bugs; ask for name and email first if not provided`;
+2. autoEscalateTicket — call for locked accounts, suspensions, missing refunds, technical bugs; ask for name and email first if not provided
+3. captureLeadContact — call IMMEDIATELY when a visitor shares their email or phone number (do NOT ask for both — one is enough)`;
 
     if (knowledgeContext) {
       return `${base}\n\nADDITIONAL CONTEXT FROM KNOWLEDGE BASE:\n${knowledgeContext}`;

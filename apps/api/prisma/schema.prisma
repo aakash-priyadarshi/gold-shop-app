@@ -3539,8 +3539,10 @@ model BotSession {
   messageCount  Int        @default(0)      // counts user turns only
   escalated     Boolean    @default(false)
   leadIntents   String[]                    // e.g. ["pricing","trial","comparison"]
-  guestName     String?                     // populated on escalation
-  guestEmail    String?                     // populated on escalation
+  guestName     String?                     // populated on escalation or lead capture
+  guestEmail    String?                     // populated on escalation or lead capture
+  guestPhone    String?                     // populated when visitor shares phone number
+  contactCaptured Boolean  @default(false)  // true once any contact info is saved
   startedAt     DateTime   @default(now())
   lastMessageAt DateTime   @default(now())
   expiresAt     DateTime                    // startedAt + 12 months (retention policy)
