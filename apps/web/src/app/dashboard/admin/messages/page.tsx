@@ -134,6 +134,35 @@ interface UserSearchResult {
   role: string;
 }
 
+interface EmailThread {
+  threadId: string;
+  subject: string;
+  emails: any[];     // sorted oldest → newest
+  latestEmail: any;
+  emailCount: number;
+}
+
+function buildEmailThreads(emails: any[]): EmailThread[] {
+  const map = new Map<string, any[]>();
+  for (const email of emails) {
+    const key = email.threadId || email.id;
+    const arr = map.get(key) || [];
+    arr.push(email);
+    map.set(key, arr);
+  }
+  return Array.from(map.entries())
+    .map(([threadId, msgs]) => {
+      const sorted = [...msgs].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
+      const latest = sorted[sorted.length - 1];
+      return { threadId, subject: latest.subject, emails: sorted, latestEmail: latest, emailCount: sorted.length };
+    })
+    .sort(
+      (a, b) => new Date(b.latestEmail.createdAt).getTime() - new Date(a.latestEmail.createdAt).getTime(),
+    );
+}
+
 const emptyEmailTemplateDraft: EmailTemplateDraft = {
   key: "",
   name: "",
@@ -324,10 +353,11 @@ export default function AdminMessagesPage() {
   const [botLoading, setBotLoading] = useState(false);
 
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
+  const [emailThreads, setEmailThreads] = useState<EmailThread[]>([]);
   const [emailPage, setEmailPage] = useState(1);
   const [emailTotal, setEmailTotal] = useState(0);
   const [emailLoading, setEmailLoading] = useState(false);
-  const [selectedEmail, setSelectedEmail] = useState<any | null>(null);
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   // Email filter
@@ -358,6 +388,9 @@ export default function AdminMessagesPage() {
   const [aiWriterOpen, setAiWriterOpen] = useState(false);
   const [aiWriterPrompt, setAiWriterPrompt] = useState("");
   const [aiWriterLoading, setAiWriterLoading] = useState(false);
+
+  // Derived: selected thread from ID
+  const selectedThread = emailThreads.find((t) => t.threadId === selectedThreadId) ?? null;
 
   useEffect(() => {
     if (searchParams.get("view") === "ai") setActiveView("ai");
@@ -472,12 +505,17 @@ export default function AdminMessagesPage() {
     try {
       const res = await adminApi.getEmailLogs({
         page,
-        limit: 20,
+        limit: 100,
         ...(typeFilter !== "all" ? { type: typeFilter } : {}),
         ...(dirFilter !== "all" ? { direction: dirFilter } : {}),
       });
-      setEmailLogs(res.data.emails || []);
+      const emails = res.data.emails || [];
+      setEmailLogs(emails);
       setEmailTotal(res.data.total || 0);
+      const threads = buildEmailThreads(emails);
+      setEmailThreads(threads);
+      // Re-select same thread if one was already selected
+      setSelectedThreadId((prev) => (prev && threads.some((t) => t.threadId === prev) ? prev : null));
     } catch (e) {
       console.error("Failed to load email logs", e);
     } finally {
@@ -579,16 +617,16 @@ export default function AdminMessagesPage() {
   }
 
   async function handleSendReply() {
-    if (!replyText.trim() || !selectedEmail?.user?.id) return;
+    if (!replyText.trim() || !selectedThread?.latestEmail?.user?.id) return;
     setSendingReply(true);
     try {
       await adminApi.sendMessage({
-        recipientId: selectedEmail.user.id,
+        recipientId: selectedThread.latestEmail.user.id,
         content: replyText,
-        subject: `Re: ${selectedEmail.subject}`,
+        subject: selectedThread.subject.startsWith("Re: ") ? selectedThread.subject : `Re: ${selectedThread.subject}`,
+        threadId: selectedThread.threadId,
       });
       setReplyText("");
-      setSelectedEmail(null);
       loadEmails();
       toast({ title: "Email Sent", description: "Your reply has been sent." });
     } catch (e: any) {
@@ -1068,7 +1106,7 @@ export default function AdminMessagesPage() {
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
-                        onClick={() => { setComposingNew(true); setSelectedEmail(null); }}
+                        onClick={() => { setComposingNew(true); setSelectedThreadId(null); }}
                         className="gap-1"
                       >
                         <Plus className="h-4 w-4" /> Compose
@@ -1106,33 +1144,36 @@ export default function AdminMessagesPage() {
                     </div>
                   </div>
                 </div>
-                {emailLoading && emailLogs.length === 0 ? (
+                {emailLoading && emailThreads.length === 0 ? (
                   <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-                ) : emailLogs.length === 0 ? (
+                ) : emailThreads.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">No email logs found.</div>
                 ) : (
                   <div className="divide-y">
-                    {emailLogs.map((log) => (
+                    {emailThreads.map((thread) => (
                       <button
-                        key={log.id}
-                        onClick={() => { setSelectedEmail(log); setComposingNew(false); }}
-                        className={`w-full text-left p-4 hover:bg-muted/50 transition-colors ${!composingNew && selectedEmail?.id === log.id ? "bg-muted" : ""}`}
+                        key={thread.threadId}
+                        onClick={() => { setSelectedThreadId(thread.threadId); setComposingNew(false); }}
+                        className={`w-full text-left p-4 hover:bg-muted/50 transition-colors ${!composingNew && selectedThreadId === thread.threadId ? "bg-muted" : ""}`}
                       >
                         <div className="flex justify-between items-start mb-1">
                           <span className="font-medium truncate pr-2">
-                            {log.direction === "OUTBOUND" ? "To: " + log.toAddress : "From: " + log.fromAddress}
+                            {thread.latestEmail.direction === "OUTBOUND" ? "To: " + thread.latestEmail.toAddress : "From: " + thread.latestEmail.fromAddress}
                           </span>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {new Date(log.createdAt).toLocaleDateString()}
+                          <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                            {thread.emailCount > 1 && (
+                              <Badge variant="outline" className="text-[9px] px-1 h-4">{thread.emailCount}</Badge>
+                            )}
+                            {new Date(thread.latestEmail.createdAt).toLocaleDateString()}
                           </span>
                         </div>
-                        <p className="text-sm font-semibold truncate text-foreground">{log.subject}</p>
+                        <p className="text-sm font-semibold truncate text-foreground">{thread.subject}</p>
                         <div className="flex items-center gap-2 mt-2">
-                          <Badge variant={log.direction === "OUTBOUND" ? "secondary" : "default"} className="text-[10px]">
-                            {log.direction}
+                          <Badge variant={thread.latestEmail.direction === "OUTBOUND" ? "secondary" : "default"} className="text-[10px]">
+                            {thread.latestEmail.direction}
                           </Badge>
-                          {log.user && (
-                            <span className="text-xs text-muted-foreground truncate">{log.user.firstName} {log.user.lastName} ({log.user.role})</span>
+                          {thread.latestEmail.user && (
+                            <span className="text-xs text-muted-foreground truncate">{thread.latestEmail.user.firstName} {thread.latestEmail.user.lastName} ({thread.latestEmail.user.role})</span>
                           )}
                         </div>
                       </button>
@@ -1331,25 +1372,39 @@ export default function AdminMessagesPage() {
                       </Button>
                     </div>
                   </div>
-                ) : selectedEmail ? (
-                  <>
-                    <div className="p-6 border-b">
-                      <h2 className="text-xl font-bold mb-4">{selectedEmail.subject}</h2>
-                      <div className="flex flex-col gap-1 text-sm text-muted-foreground mb-4">
-                        <div><span className="font-medium text-foreground">From:</span> {selectedEmail.fromAddress}</div>
-                        <div><span className="font-medium text-foreground">To:</span> {selectedEmail.toAddress}</div>
-                        <div><span className="font-medium text-foreground">Date:</span> {new Date(selectedEmail.createdAt).toLocaleString()}</div>
-                      </div>
-                      <div className="prose prose-sm dark:prose-invert max-w-none p-4 bg-muted/20 rounded-md whitespace-pre-wrap">
-                        {selectedEmail.body}
-                      </div>
+                ) : selectedThread ? (
+                  <div className="flex flex-col h-full">
+                    {/* Thread header */}
+                    <div className="p-5 border-b shrink-0">
+                      <h2 className="text-xl font-bold">{selectedThread.subject}</h2>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {selectedThread.emailCount === 1 ? "1 message" : `${selectedThread.emailCount} messages`}
+                        {selectedThread.latestEmail.user && ` · ${selectedThread.latestEmail.user.firstName} ${selectedThread.latestEmail.user.lastName}`}
+                      </p>
                     </div>
-                    {selectedEmail.user && (
-                      <div className="p-4 border-t mt-auto">
-                        <h3 className="text-sm font-medium mb-2">Reply to {selectedEmail.user.firstName}</h3>
+
+                    {/* Conversation messages */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                      {selectedThread.emails.map((email) => (
+                        <div key={email.id} className={`flex ${email.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${email.direction === "OUTBOUND" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm"}`}>
+                            <div className={`text-[11px] mb-1.5 flex gap-3 ${email.direction === "OUTBOUND" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                              <span>{email.direction === "OUTBOUND" ? "You → " + email.toAddress : email.fromAddress}</span>
+                              <span className="ml-auto shrink-0">{new Date(email.createdAt).toLocaleString()}</span>
+                            </div>
+                            <div className="text-sm whitespace-pre-wrap">{email.body}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Reply box — only if thread has a registered user */}
+                    {selectedThread.latestEmail.user && (
+                      <div className="p-4 border-t shrink-0">
+                        <h3 className="text-sm font-medium mb-2">Reply to {selectedThread.latestEmail.user.firstName}</h3>
                         <AutoResizeTextarea
                           placeholder="Type your reply here..."
-                          className="min-h-[100px] mb-2"
+                          className="min-h-[90px] mb-2"
                           value={replyText}
                           onChange={(e) => setReplyText(e.target.value)}
                         />
@@ -1361,7 +1416,7 @@ export default function AdminMessagesPage() {
                         </div>
                       </div>
                     )}
-                  </>
+                  </div>
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
                     <Mail className="h-12 w-12 mb-4 opacity-20" />

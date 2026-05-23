@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import {
     BadRequestException,
     Body,
@@ -1716,6 +1717,7 @@ export class AdminController {
       recipientName?: string;
       content: string;
       subject?: string;
+      threadId?: string;
     },
     @CurrentUser("id") adminId: string,
   ) {
@@ -1781,6 +1783,7 @@ export class AdminController {
     }
 
     // ── Log email ──────────────────────────────────────────────────────────
+    const loggedThreadId = data.threadId || randomUUID();
     await this.prisma.emailLog.create({
       data: {
         direction: "OUTBOUND",
@@ -1792,6 +1795,7 @@ export class AdminController {
         adminId,
         messageId: result.messageId,
         templateKey: rendered.key,
+        threadId: loggedThreadId,
       },
     });
 
@@ -1808,7 +1812,7 @@ export class AdminController {
 
     this.logger.log(`Admin ${adminId} sent email to ${toEmail}${toUserId ? ` (userId: ${toUserId})` : " (external)"}`);
 
-    return { success: true, messageId: result.messageId };
+    return { success: true, messageId: result.messageId, threadId: loggedThreadId };
   }
 
   @Post("messages/ai-compose")

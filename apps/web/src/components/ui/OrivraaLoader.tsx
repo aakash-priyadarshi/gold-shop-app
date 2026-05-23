@@ -42,187 +42,202 @@ export function useMinLoadingTime(isLoading: boolean, minMs = 4000): boolean {
   return !minTimeElapsed || isLoading;
 }
 
-// ─── SVG PATH DATA ─────────────────────────────────────────────
-// Diamond facets (viewBox 0 0 24 24) — staggered wireframe draw
-const DIAMOND_FACETS = [
-  // Outer shell
-  "M6.236 1C5.1 1 4.06 1.642 3.553 2.658L1.148 7.468A3 3 0 001.402 10.569L9.57 21.85c1.198 1.653 3.662 1.653 4.86 0L22.598 10.57A3 3 0 0022.852 7.468L20.447 2.658C19.94 1.642 18.9 1 17.764 1H6.236Z",
-  // Top-left facet
-  "M5.342 3.553C5.511 3.214 5.857 3 6.236 3H8.674L7.246 8H3.118L5.342 3.553Z",
-  // Top-center facet
-  "M9.326 8L10.754 3H13.246L14.674 8H9.326Z",
-  // Center facet (heart of diamond)
-  "M14.646 10H9.354L12 18.6L14.646 10Z",
-  // Right body
-  "M13.929 19.131L16.739 10H20.541L13.929 19.131Z",
-  // Top-right facet
-  "M16.754 8L15.326 3H17.764C18.143 3 18.489 3.214 18.658 3.553L20.882 8H16.754Z",
-  // Left body
-  "M3.459 10H7.261L10.071 19.131L3.459 10Z",
-];
+// ─── BESPOKE BRAND LOGO LOADER (Concept 4: Diamond Forge & Solitaire Bloom) ───
 
-// Pendant wireframe (viewBox 0 0 512 512) — subtle background decoration
-const PENDANT_PATH =
-  "M29.018 18.875c-2.63 10.297.047 21.72 8.044 29.72 10.035 10.034 25.46 11.696 37.29 5 5.914 5.346 11.686 10.373 17.357 15.12-.338 1.818-.522 3.687-.522 5.597 0 17.024 14.008 31 31.03 31 4.917 0 9.576-1.17 13.72-3.24 5.755 3.91 11.562 7.715 17.482 11.48-.474 2.142-.732 4.36-.732 6.635 0 17.024 14.008 31 31.03 31 7.577 0 14.55-2.772 19.964-7.345l13.873 8.125c-.263 1.535-.414 3.113-.414 4.732v38.904L114.07 255.27v160.064l138.284 80.053 138.283-80.053V255.27l-104.047-60.233V156.7c0-.983-.067-1.946-.172-2.897 5.393-3.07 10.655-6.08 15.697-8.994 5.226 3.992 11.736 6.377 18.762 6.377 17.023 0 31-13.976 31-31 0-1.867-.176-3.695-.498-5.476 6.047-3.987 12.012-8.058 17.978-12.298 3.97 1.855 8.38 2.9 13.02 2.9 17.023 0 31.03-13.976 31.03-31 0-1.973-.194-3.903-.553-5.78 5.273-4.45 10.697-9.14 16.318-14.116 11.6 5.714 26.135 3.778 35.736-5.822 7.998-7.998 10.675-19.42 8.045-29.72h-20.413c4.018 4.888 3.736 11.916-.85 16.5-4.887 4.888-12.55 4.89-17.437 0-4.585-4.585-4.867-11.614-.85-16.5h-20.414c-1.915 7.5-1 15.592 2.72 22.528-4.12 3.636-8.123 7.105-12.034 10.434-5.575-5.288-13.083-8.555-21.297-8.555-17.024 0-31.03 14.01-31.03 31.032 0 5.45 1.438 10.583 3.948 15.05-4.245 2.958-8.5 5.84-12.797 8.673-5.6-5.48-13.24-8.88-21.62-8.88-17.025 0-31.032 14.01-31.032 31.032 0 3.166.484 6.225 1.383 9.11-4.23 2.445-8.744 5.028-13.247 7.605-1.028-.994-2.112-1.91-3.246-2.716-6.692-4.768-14.72-6.882-22.714-7.014-7.996-.132-16.15 1.718-22.97 6.504-.807.565-1.586 1.186-2.337 1.85-4.367-2.573-8.764-5.164-12.947-7.622.642-2.47.984-5.056.984-7.716 0-17.024-14.007-31.032-31.03-31.032-7.977 0-15.29 3.075-20.812 8.094-4.47-2.838-8.894-5.69-13.248-8.596 2.267-4.297 3.56-9.178 3.56-14.34 0-17.025-13.977-31.033-31-31.033-8.26 0-15.804 3.304-21.388 8.642-4.515-3.827-9.1-7.833-13.79-12.067 3.063-6.575 3.715-14.03 1.94-20.98H68.568c4.018 4.887 3.736 11.915-.85 16.5-4.887 4.887-12.55 4.888-17.437 0-4.584-4.586-4.865-11.615-.848-16.5H29.018zm93.2 43.094c6.924 0 12.313 5.42 12.313 12.343s-5.387 12.312-12.31 12.312c-6.926 0-12.345-5.39-12.345-12.313 0-6.923 5.42-12.343 12.344-12.343zm260.157 0c6.924 0 12.344 5.42 12.344 12.343s-5.42 12.312-12.345 12.312c-6.924 0-12.344-5.39-12.344-12.313 0-6.923 5.42-12.343 12.345-12.343zM183.72 107.843c6.922 0 12.343 5.42 12.343 12.344 0 6.923-5.42 12.312-12.344 12.312-6.926 0-12.345-5.39-12.345-12.313 0-6.923 5.42-12.343 12.344-12.343zm137.155 0c6.924 0 12.313 5.42 12.313 12.344 0 6.923-5.39 12.312-12.313 12.312-6.924 0-12.344-5.39-12.344-12.313 0-6.923 5.42-12.343 12.345-12.343zm-69.164 38.013c4.695.078 9.355 1.536 12.18 3.55 2.826 2.012 4.01 3.805 4.01 7.292v27.52l-15.546-9-16.526 9.565V156.7c0-4.09 1.258-5.835 3.953-7.725 2.696-1.89 7.237-3.195 11.93-3.118zm-8.122 56.03v32.728l-74.182 43.21-28.558-16.462 102.74-59.476zm18.687.67l102.16 59.138-28.624 16.502-73.533-42.83-.002-32.81zm-9.988 48.62l72.256 42.085-.002 84.316-72.253 42.086-72.256-42.086.003-84.314 72.254-42.088zm.465 18.33l-56.883 98.15v.724l56.566 32.977L309 368.38v-66.085l-56.248-32.79zm-119.994 8.764l28.586 16.48v84.027l-28.586 16.48V278.272zm239.19.668l-.003 115.648-28.715-16.553v-82.54l28.717-16.555zM333.493 393.99l28.414 16.38-99.63 57.677v-32.574l71.216-41.483zm-161.77.375l71.864 41.86v32.494l-100.21-58.013 28.345-16.342z";
-
-// ─── CURRENCY SYMBOLS (global marketplace feel) ─────────────────
-const CURRENCIES = [
-  { symbol: "₹", label: "INR" },
-  { symbol: "$", label: "USD" },
-  { symbol: "£", label: "GBP" },
-  { symbol: "€", label: "EUR" },
-  { symbol: "د.إ", label: "AED" },
-];
-
-// ─── PREMIUM LOADER COMPONENT ───────────────────────────────────
-// Pure CSS @keyframes for all animations — zero framer-motion.
-// SVG wireframe: CSS stroke-dashoffset (rock-solid, no SSR issues).
-// Price counter: React state + requestAnimationFrame.
-// Currency: cycles through ₹ $ £ € د.إ every 400ms.
 export default function OrivraaLoader() {
-  const [price, setPrice] = useState(0);
-  const [currIdx, setCurrIdx] = useState(0);
-
-  // Price counter animation (rAF)
-  useEffect(() => {
-    const duration = 3500;
-    const start = performance.now();
-    let raf: number;
-
-    const tick = (now: number) => {
-      const elapsed = now - start;
-      const t = Math.min(elapsed / duration, 1);
-      const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-      let val = Math.round(eased * 75000);
-      if (t > 0.05 && t < 0.9) {
-        val += Math.round((Math.random() - 0.5) * 1500 * (1 - t));
-      }
-      setPrice(Math.max(0, Math.min(75000, val)));
-      if (t < 1) raf = requestAnimationFrame(tick);
-      else setPrice(75000);
-    };
-
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  // Currency symbol rotation (loops continuously)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrIdx((prev) => (prev + 1) % CURRENCIES.length);
-    }, 400);
-    return () => clearInterval(interval);
-  }, []);
-
-  const { symbol, label } = CURRENCIES[currIdx];
-  const formattedNumber = new Intl.NumberFormat("en-IN", {
-    maximumFractionDigits: 0,
-  }).format(price);
-
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: LOADER_CSS }} />
 
-      <div className="ovr-root">
-        {/* ── DATA PARTICLES: fly from corners to center ── */}
-        {Array.from({ length: 20 }, (_, i) => {
-          const corner = i % 4;
-          return (
-            <div
-              key={`p${i}`}
-              className="ovr-particle"
-              style={
-                {
-                  "--sx": corner % 2 === 0 ? "-50vw" : "50vw",
-                  "--sy": corner < 2 ? "-50vh" : "50vh",
-                  animationDelay: `${i * 0.18}s`,
-                  animationDuration: `${1.8 + (i % 4) * 0.3}s`,
-                } as React.CSSProperties
-              }
-            />
-          );
-        })}
+      <div className="loader-container trigger-anim" id="loader">
+        
+        {/* Ambient Glow behind the Logo */}
+        <div className="ambient-glow"></div>
+        
+        {/* Shimmer Sweep overlay */}
+        <div className="shimmer-sweep"></div>
 
-        {/* ── BACKGROUND PENDANT WIREFRAME ── */}
-        <svg className="ovr-pendant-bg" viewBox="0 0 512 512" fill="none">
-          <path d={PENDANT_PATH} className="ovr-pendant-stroke" />
-        </svg>
+        {/* Sparkle Flare Wrapper (Centered at Star Center cx=52.28, cy=51.73 on 120x96.49 canvas) */}
+        <div className="sparkle-wrap">
+          <div className="flare-core"></div>
+          <div className="flare-ray ray-h"></div>
+          <div className="flare-ray ray-v"></div>
+          <div className="flare-ray ray-d1"></div>
+          <div className="flare-ray ray-d2"></div>
+        </div>
 
-        {/* ── RADIAL GLOW ── */}
-        <div className="ovr-glow" />
+        {/* The 3D Brand Logo Scene */}
+        <div className="logo-scene">
+          <svg id="Layer_1" data-name="Layer 1" className="brand-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 96.49">
+            <defs>
+              <linearGradient id="linear-gradient" x1="32.59" y1="46.69" x2="104.08" y2="46.69" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#e5a31e"/>
+                <stop offset=".11" stopColor="#e5a626"/>
+                <stop offset=".29" stopColor="#e8b13c"/>
+                <stop offset=".51" stopColor="#ecc260"/>
+                <stop offset=".75" stopColor="#f2d992"/>
+                <stop offset=".78" stopColor="#f3dd99"/>
+              </linearGradient>
+              <linearGradient id="linear-gradient-2" x1="0" y1="53.35" x2="79.08" y2="53.35" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#e5a31e"/>
+                <stop offset=".05" stopColor="#e7af37"/>
+                <stop offset=".12" stopColor="#ebbf5a"/>
+                <stop offset=".2" stopColor="#efcc75"/>
+                <stop offset=".28" stopColor="#f1d589"/>
+                <stop offset=".36" stopColor="#f2db95"/>
+                <stop offset=".44" stopColor="#f3dd99"/>
+                <stop offset=".66" stopColor="#f1db97"/>
+                <stop offset=".74" stopColor="#edd491"/>
+                <stop offset=".8" stopColor="#e5c888"/>
+                <stop offset=".85" stopColor="#dab77a"/>
+                <stop offset=".89" stopColor="#cba168"/>
+                <stop offset=".92" stopColor="#ba8652"/>
+                <stop offset=".95" stopColor="#a46637"/>
+                <stop offset=".98" stopColor="#8c4119"/>
+                <stop offset="1" stopColor="#782200"/>
+              </linearGradient>
+              <linearGradient id="linear-gradient-3" x1="99.66" y1="21.21" x2="120" y2="21.21" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#e5a31e"/>
+                <stop offset=".09" stopColor="#e5a421"/>
+                <stop offset=".18" stopColor="#e6aa2d"/>
+                <stop offset=".27" stopColor="#e8b340"/>
+                <stop offset=".36" stopColor="#ebbf5a"/>
+                <stop offset=".44" stopColor="#efcf7d"/>
+                <stop offset=".5" stopColor="#f3dd99"/>
+                <stop offset=".59" stopColor="#f0d996"/>
+                <stop offset=".67" stopColor="#eacf8e"/>
+                <stop offset=".74" stopColor="#dfbf80"/>
+                <stop offset=".8" stopColor="#cfa76d"/>
+                <stop offset=".86" stopColor="#bb8854"/>
+                <stop offset=".92" stopColor="#a36335"/>
+                <stop offset=".97" stopColor="#863711"/>
+                <stop offset="1" stopColor="#782200"/>
+              </linearGradient>
+              <linearGradient id="linear-gradient-4" x1="111.51" y1="9.94" x2="119.54" y2="9.94" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#e5a31e"/>
+                <stop offset=".09" stopColor="#e5a421"/>
+                <stop offset=".18" stopColor="#e6aa2d"/>
+                <stop offset=".27" stopColor="#e8b340"/>
+                <stop offset=".36" stopColor="#ebbf5a"/>
+                <stop offset=".44" stopColor="#efcf7d"/>
+                <stop offset=".5" stopColor="#f3dd99"/>
+                <stop offset=".56" stopColor="#ead08e"/>
+                <stop offset=".66" stopColor="#d5af73"/>
+                <stop offset=".8" stopColor="#b17947"/>
+                <stop offset=".97" stopColor="#81300b"/>
+                <stop offset="1" stopColor="#782200"/>
+              </linearGradient>
+              <linearGradient id="linear-gradient-5" x1="85.89" y1="12.36" x2="111.51" y2="12.36" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#e5a31e"/>
+                <stop offset=".09" stopColor="#e5a421"/>
+                <stop offset=".18" stopColor="#e6aa2d"/>
+                <stop offset=".27" stopColor="#e8b340"/>
+                <stop offset=".36" stopColor="#ebbf5a"/>
+                <stop offset=".44" stopColor="#efcf7d"/>
+                <stop offset=".5" stopColor="#f3dd99"/>
+                <stop offset=".7" stopColor="#f1db97"/>
+                <stop offset=".77" stopColor="#edd491"/>
+                <stop offset=".82" stopColor="#e5c888"/>
+                <stop offset=".86" stopColor="#dab77a"/>
+                <stop offset=".9" stopColor="#cba168"/>
+                <stop offset=".93" stopColor="#ba8652"/>
+                <stop offset=".96" stopColor="#a46637"/>
+                <stop offset=".98" stopColor="#8c4119"/>
+                <stop offset="1" stopColor="#782200"/>
+              </linearGradient>
+              <linearGradient id="linear-gradient-6" x1="75.33" y1="9.58" x2="85.35" y2="9.58" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#e5a31e"/>
+                <stop offset=".09" stopColor="#e5a421"/>
+                <stop offset=".18" stopColor="#e6aa2d"/>
+                <stop offset=".27" stopColor="#e8b340"/>
+                <stop offset=".36" stopColor="#ebbf5a"/>
+                <stop offset=".44" stopColor="#efcf7d"/>
+                <stop offset=".5" stopColor="#f3dd99"/>
+                <stop offset=".56" stopColor="#ead08e"/>
+                <stop offset=".66" stopColor="#d5af73"/>
+                <stop offset=".8" stopColor="#b17947"/>
+                <stop offset=".97" stopColor="#81300b"/>
+                <stop offset="1" stopColor="#782200"/>
+              </linearGradient>
+              <linearGradient id="linear-gradient-7" x1="77.17" y1="3.31" x2="89.02" y2="3.31" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#e5a31e"/>
+                <stop offset=".09" stopColor="#e5a421"/>
+                <stop offset=".18" stopColor="#e6aa2d"/>
+                <stop offset=".27" stopColor="#e8b340"/>
+                <stop offset=".36" stopColor="#ebbf5a"/>
+                <stop offset=".44" stopColor="#efcf7d"/>
+                <stop offset=".5" stopColor="#f3dd99"/>
+                <stop offset=".56" stopColor="#ead08e"/>
+                <stop offset=".66" stopColor="#d5af73"/>
+                <stop offset=".8" stopColor="#b17947"/>
+                <stop offset=".97" stopColor="#81300b"/>
+                <stop offset="1" stopColor="#782200"/>
+              </linearGradient>
+              <radialGradient id="New_Gradient_Swatch_4" data-name="New Gradient Swatch 4" cx="52.28" cy="51.73" fx="52.28" fy="51.73" r="15.19" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#fffeee"/>
+                <stop offset=".28" stopColor="#f3f3e9"/>
+                <stop offset=".75" stopColor="#d7dade"/>
+                <stop offset=".88" stopColor="#dcd8d4"/>
+              </radialGradient>
+            </defs>
 
-        {/* ── HERO DIAMOND WIREFRAME ── */}
-        <div className="ovr-diamond-wrap">
-          <svg viewBox="0 0 24 24" fill="none" className="ovr-diamond-svg">
-            {/* Wireframe strokes — each facet draws independently */}
-            {DIAMOND_FACETS.map((d, i) => (
-              <path
-                key={`s${i}`}
-                d={d}
-                className="ovr-facet-stroke"
-                style={{ animationDelay: `${i * 0.25}s` }}
-              />
-            ))}
-            {/* Gold fill — blooms after wireframe completes */}
-            {DIAMOND_FACETS.map((d, i) => (
-              <path
-                key={`f${i}`}
-                d={d}
-                className="ovr-facet-fill"
-                style={{ animationDelay: `${2.0 + i * 0.06}s` }}
-              />
-            ))}
+            {/* ==================== ANIMATED BACKGROUND OUTLINES ==================== */}
+            
+            {/* Outer Gold Ribbon Outline */}
+            <path className="svg-draw-path ribbon-stroke-1" d="M32.59,6.72c.02-1.16,17.16-5.21,34.71,0,23.28,6.91,32.05,25.57,32.9,27.47,6.54,14.59,5.39,34.21-7.85,45.78-2.26,1.98-8.52,6.87-18.11,8.63-16.07,2.95-30.83-4.85-30.48-6.02.19-.62,4.6,1.13,11.47.26,10.33-1.31,19.77-7.74,24.81-15.73,4.28-6.77,4.41-13.11,4.44-16.17.07-8.95-3.65-15.43-5.89-19.22-1.76-2.98-6.71-11.12-17.25-17.16-.92-.53-4.98-2.81-10.94-4.7-10.29-3.25-17.81-2.63-17.81-3.14Z"/>
+            
+            {/* Inner Copper/Gold Ribbon Outline */}
+            <path className="svg-draw-path ribbon-stroke-2" d="M60.73,17.38c-.18.87-5.2-.56-11.59.55-7.45,1.29-12.51,5.33-14.74,7.04-2.03,1.56-11.84,9.38-13.58,22-2.65,19.17,15.23,32.48,18.86,35.18,3.74,2.78,9.81,7.3,18.86,8.58,10.73,1.51,20.22-2.31,20.52-1.51.23.59-4.84,2.98-10.74,4.62-3.99,1.11-19.27,5.36-35.75,0-3.38-1.1-28.25-10.63-32.29-35.34,0,0-3.69-22.55,15.01-40.05,4.43-4.15,12.3-7.93,16.61-7.93h0c4.22-.67,8.07-.09,10.3.24.83.12,1.59.26,2.31.41,2.28.48,4.04,1.03,5.11,1.39,4.39,1.47,11.31,3.79,11.09,4.82Z"/>
+
+            {/* Upper Right Facets Outlines */}
+            <polygon className="svg-draw-path facet-stroke f-1" points="99.66 27.64 120 17.23 111.66 14.78 99.66 27.64"/>
+            <polygon className="svg-draw-path facet-stroke f-2" points="111.51 13.59 119.54 15.18 112.35 4.71 111.51 13.59"/>
+            <polygon className="svg-draw-path facet-stroke f-3" points="96.52 24.72 110.59 14.78 104.4 6.76 111.51 5.17 91.01 0 96.06 4.13 86.58 8.02 85.89 12.36 91.4 19.35 88.87 9.54 106.31 13.85 96.52 24.72"/>
+            <polygon className="svg-draw-path facet-stroke f-4" points="75.33 5.9 84.36 13.26 85.35 7.76 75.33 5.9"/>
+            <polygon className="svg-draw-path facet-stroke f-5" points="77.17 4.71 85.35 6.63 89.02 0 77.17 4.71"/>
+
+            {/* Center Diamond Star Outline */}
+            <path className="svg-draw-path star-stroke" d="M36.23,51.73c0-1,6.92-.13,11.31-3.73,4.69-3.85,3.76-10.55,4.96-10.53,1.17.01.06,6.44,4.47,10.32,4.29,3.78,11.35,2.98,11.36,4.09,0,1.1-6.8.37-11.13,4.08-4.47,3.82-3.61,10.05-4.82,10.04-1.23-.01-.16-6.41-4.61-10.27-4.36-3.79-11.56-2.98-11.55-3.99Z"/>
+
+            {/* ==================== SOLID BRAND LOGO (BLOOM FILL) ==================== */}
+            <g id="brand-logo-solid">
+              <path className="cls-7" d="M32.59,6.72c.02-1.16,17.16-5.21,34.71,0,23.28,6.91,32.05,25.57,32.9,27.47,6.54,14.59,5.39,34.21-7.85,45.78-2.26,1.98-8.52,6.87-18.11,8.63-16.07,2.95-30.83-4.85-30.48-6.02.19-.62,4.6,1.13,11.47.26,10.33-1.31,19.77-7.74,24.81-15.73,4.28-6.77,4.41-13.11,4.44-16.17.07-8.95-3.65-15.43-5.89-19.22-1.76-2.98-6.71-11.12-17.25-17.16-.92-.53-4.98-2.81-10.94-4.7-10.29-3.25-17.81-2.63-17.81-3.14Z" fill="url(#linear-gradient)"/>
+              <path className="cls-1" d="M60.73,17.38c-.18.87-5.2-.56-11.59.55-7.45,1.29-12.51,5.33-14.74,7.04-2.03,1.56-11.84,9.38-13.58,22-2.65,19.17,15.23,32.48,18.86,35.18,3.74,2.78,9.81,7.3,18.86,8.58,10.73,1.51,20.22-2.31,20.52-1.51.23.59-4.84,2.98-10.74,4.62-3.99,1.11-19.27,5.36-35.75,0-3.38-1.1-28.25-10.63-32.29-35.34,0,0-3.69-22.55,15.01-40.05,4.43-4.15,12.3-7.93,16.61-7.93h0c4.22-.67,8.07-.09,10.3.24.83.12,1.59.26,2.31.41,2.28.48,4.04,1.03,5.11,1.39,4.39,1.47,11.31,3.79,11.09,4.82Z" fill="url(#linear-gradient-2)"/>
+              <polygon className="cls-3" points="99.66 27.64 120 17.23 111.66 14.78 99.66 27.64" fill="url(#linear-gradient-3)"/>
+              <polygon className="cls-2" points="111.51 13.59 119.54 15.18 112.35 4.71 111.51 13.59" fill="url(#linear-gradient-4)"/>
+              <polygon className="cls-4" points="96.52 24.72 110.59 14.78 104.4 6.76 111.51 5.17 91.01 0 96.06 4.13 86.58 8.02 85.89 12.36 91.4 19.35 88.87 9.54 106.31 13.85 96.52 24.72" fill="url(#linear-gradient-5)"/>
+              <polygon className="cls-6" points="75.33 5.9 84.36 13.26 85.35 7.76 75.33 5.9" fill="url(#linear-gradient-6)"/>
+              <polygon className="cls-5" points="77.17 4.71 85.35 6.63 89.02 0 77.17 4.71" fill="url(#linear-gradient-7)"/>
+              <path className="cls-8" d="M36.23,51.73c0-1,6.92-.13,11.31-3.73,4.69-3.85,3.76-10.55,4.96-10.53,1.17.01.06,6.44,4.47,10.32,4.29,3.78,11.35,2.98,11.36,4.09,0,1.1-6.8.37-11.13,4.08-4.47,3.82-3.61,10.05-4.82,10.04-1.23-.01-.16-6.41-4.61-10.27-4.36-3.79-11.56-2.98-11.55-3.99Z" fill="url(#New_Gradient_Swatch_4)"/>
+            </g>
           </svg>
-          {/* Shimmer light-sweep on completed diamond */}
-          <div className="ovr-shimmer" />
         </div>
 
-        {/* ── PRICE COUNTER with rotating currency ── */}
-        <div className="ovr-price">
-          <span className="ovr-currency" key={label}>
-            {symbol}
-          </span>
-          {formattedNumber}
+        {/* Refined Brand Name (Orivraa) */}
+        <div className="brand-wrap">
+          <div className="brand-title">
+            <span className="l-0">O</span>
+            <span className="l-1">r</span>
+            <span className="l-2">i</span>
+            <span className="l-3">v</span>
+            <span className="l-4">r</span>
+            <span className="l-5">a</span>
+            <span className="l-6">a</span>
+          </div>
+          <div className="tagline">Premium Jewellery Platform</div>
+          
+          {/* Live connection indicator */}
+          <div className="sub-indicator">
+            <div className="status-dot"></div>
+            <span>Secure POS Environment</span>
+          </div>
         </div>
 
-        {/* ── ENGINE LABEL ── */}
-        <div className="ovr-engine">AI Pricing Engine Active</div>
-
-        {/* ── MARKET INDICATORS ── */}
-        <div className="ovr-markets">
-          <span className="ovr-mkt" style={{ animationDelay: "0s" }}>
-            Live Metal Rates
-          </span>
-          <span className="ovr-mkt-dot">·</span>
-          <span className="ovr-mkt" style={{ animationDelay: "0.35s" }}>
-            Tax Verified
-          </span>
-          <span className="ovr-mkt-dot">·</span>
-          <span className="ovr-mkt" style={{ animationDelay: "0.7s" }}>
-            Orivraa Escrow
-          </span>
+        {/* Progress linear bar */}
+        <div className="progress-track">
+          <div className="progress-fill"></div>
         </div>
 
-        {/* ── BRAND NAME ── */}
-        <div className="ovr-brand">
-          {"Orivraa".split("").map((ch, i) => (
-            <span
-              key={i}
-              className={i < 3 ? "ovr-ch-w" : "ovr-ch-g"}
-              style={{ animationDelay: `${2.0 + i * 0.09}s` }}
-            >
-              {ch}
-            </span>
-          ))}
-        </div>
-
-        {/* ── TAGLINE ── */}
-        <div className="ovr-tagline">Premium Jewellery Marketplace</div>
-
-        {/* ── PROGRESS BAR ── */}
-        <div className="ovr-pbar-track">
-          <div className="ovr-pbar-fill" />
-        </div>
       </div>
     </>
   );
@@ -231,284 +246,386 @@ export default function OrivraaLoader() {
 // ─── ALL CSS — injected via <style> tag ─────────────────────────
 const LOADER_CSS = `
 /* ═══════════════════════════════════════════════════
-   ORIVRAA PREMIUM LOADER — Pure CSS Animations
+   ORIVRAA PREMIUM BRAND LOADER — Concept 4
    ═══════════════════════════════════════════════════ */
 
-/* === ROOT === */
-.ovr-root {
+/* === RESET & FOUNDATION === */
+.loader-container {
   position: fixed; inset: 0; z-index: 99999;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  background: #0B0C10;
+  background: #050608;
   overflow: hidden;
   user-select: none; -webkit-user-select: none;
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  perspective: 1000px;
 }
 
-/* === DATA PARTICLES (fly from corners → center) === */
-.ovr-particle {
-  position: absolute;
-  width: 3px; height: 3px;
-  background: #D4AF37;
-  border-radius: 50%;
-  box-shadow: 0 0 6px rgba(212,175,55,0.8), 0 0 12px rgba(212,175,55,0.3);
-  left: 50%; top: 50%;
-  pointer-events: none;
-  animation: ovr-fly 2s ease-in infinite;
-}
-@keyframes ovr-fly {
-  0%   { transform: translate(var(--sx), var(--sy)); opacity: 0; }
-  15%  { opacity: 1; }
-  85%  { opacity: 0.6; }
-  100% { transform: translate(0, 0); opacity: 0; }
-}
-
-/* === BACKGROUND PENDANT WIREFRAME === */
-.ovr-pendant-bg {
+/* === RADIAL AMBIENT GLOW === */
+.ambient-glow {
   position: absolute;
   width: 320px; height: 320px;
-  opacity: 0.07;
-  pointer-events: none;
-}
-@media (min-width: 640px) {
-  .ovr-pendant-bg { width: 420px; height: 420px; }
-}
-.ovr-pendant-stroke {
-  stroke: #D4AF37;
-  stroke-width: 2;
-  fill: none;
-  stroke-dasharray: 12000;
-  stroke-dashoffset: 12000;
-  animation: ovr-draw-pendant 5s ease-in-out 0.3s forwards;
-}
-@keyframes ovr-draw-pendant {
-  to { stroke-dashoffset: 0; }
-}
-
-/* === RADIAL GLOW (behind diamond) === */
-.ovr-glow {
-  position: absolute;
-  width: 200px; height: 200px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(212,175,55,0.18) 0%,
-    rgba(212,175,55,0.04) 50%,
+    rgba(229, 163, 30, 0.15) 0%,
+    rgba(229, 163, 30, 0.03) 45%,
     transparent 70%
   );
-  animation: ovr-pulse 2.5s ease-in-out infinite;
+  filter: blur(25px);
+  z-index: 1;
+  transform: scale(0.9);
+  animation: pulse-glow 4s ease-in-out infinite;
   pointer-events: none;
 }
-@keyframes ovr-pulse {
-  0%, 100% { transform: scale(1);   opacity: 0.5; }
-  50%      { transform: scale(1.5); opacity: 1; }
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(0.9); opacity: 0.5; }
+  50%      { transform: scale(1.2); opacity: 1; }
 }
 
-/* === HERO DIAMOND === */
-.ovr-diamond-wrap {
-  position: relative; z-index: 20;
-  width: 160px; height: 160px;
+/* === LOGO CONTAINER (3D SCENE) === */
+.logo-scene {
+  position: relative;
+  width: 200px; height: 170px;
+  z-index: 10;
+  transform-style: preserve-3d;
+  transform: rotateX(10deg) translateY(-10px);
+  animation: float-logo 6s ease-in-out infinite;
 }
 @media (min-width: 640px) {
-  .ovr-diamond-wrap { width: 200px; height: 200px; }
+  .logo-scene { width: 260px; height: 220px; }
 }
-.ovr-diamond-svg {
-  width: 100%; height: 100%;
-  filter: drop-shadow(0 0 8px rgba(212,175,55,0.25));
+@keyframes float-logo {
+  0%, 100% { transform: rotateX(10deg) translateY(-10px) rotateY(0deg); }
+  50%      { transform: rotateX(14deg) translateY(-22px) rotateY(2deg); }
 }
 
-/* Facet wireframe strokes — each draws itself */
-.ovr-facet-stroke {
-  stroke: #D4AF37;
-  stroke-width: 0.35;
-  fill: none;
+.brand-svg {
+  width: 100%; height: 100%;
+  overflow: visible;
+}
+
+/* === SVG OUTLINES (FORGING) === */
+.svg-draw-path {
+  fill: none !important;
+  stroke-width: 0.8px;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 100;
-  stroke-dashoffset: 100;
-  animation: ovr-draw-facet 1.8s ease-in-out forwards;
+  stroke-dashoffset: 600;
+  stroke-dasharray: 600;
 }
-@keyframes ovr-draw-facet {
+
+/* Rich Gold Ribbon outline */
+.ribbon-stroke-1 {
+  stroke: #ffd992;
+  filter: drop-shadow(0 0 4px rgba(229, 163, 30, 0.6));
+}
+.trigger-anim .ribbon-stroke-1 {
+  animation: draw-path 2.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Warm Copper Ribbon outline */
+.ribbon-stroke-2 {
+  stroke: #e5a31e;
+  filter: drop-shadow(0 0 2px rgba(229, 163, 30, 0.4));
+}
+.trigger-anim .ribbon-stroke-2 {
+  animation: draw-path 2.4s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+}
+
+/* Diamond center star outline */
+.star-stroke {
+  stroke: #ffffff;
+  stroke-width: 0.6px;
+  stroke-dashoffset: 150;
+  stroke-dasharray: 150;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
+}
+.trigger-anim .star-stroke {
+  animation: draw-path 1.2s cubic-bezier(0.25, 1, 0.5, 1) 2.2s forwards;
+}
+
+/* Diamond facets outlines */
+.facet-stroke {
+  stroke: #ffffff;
+  stroke-width: 0.4px;
+  stroke-dashoffset: 200;
+  stroke-dasharray: 200;
+  opacity: 0.7;
+}
+.trigger-anim .facet-stroke {
+  animation: draw-path 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.trigger-anim .f-1 { animation-delay: 1.3s; }
+.trigger-anim .f-2 { animation-delay: 1.5s; }
+.trigger-anim .f-3 { animation-delay: 1.7s; }
+.trigger-anim .f-4 { animation-delay: 1.8s; }
+.trigger-anim .f-5 { animation-delay: 1.9s; }
+
+@keyframes draw-path {
   to { stroke-dashoffset: 0; }
 }
 
-/* Facet fill — subtle gold bloom after wireframe */
-.ovr-facet-fill {
-  stroke: none;
-  fill: rgba(212,175,55,0);
-  animation: ovr-bloom 0.6s ease-out forwards;
-  animation-fill-mode: backwards;
-}
-@keyframes ovr-bloom {
-  from { fill: rgba(212,175,55,0); }
-  to   { fill: rgba(212,175,55,0.12); }
+/* === SOLID GRADIENT BLOOM === */
+.cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6, .cls-7, .cls-8 {
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
 }
 
-/* Shimmer sweep across completed diamond */
-.ovr-shimmer {
+.trigger-anim .cls-7 { animation: bloom-fill 1.8s cubic-bezier(0.25, 1, 0.5, 1) 2.2s forwards; }
+.trigger-anim .cls-1 { animation: bloom-fill 1.8s cubic-bezier(0.25, 1, 0.5, 1) 2.4s forwards; }
+.trigger-anim .cls-8 { animation: bloom-fill-bright 1.6s cubic-bezier(0.25, 1, 0.5, 1) 2.8s forwards; }
+
+/* Facets bloom */
+.trigger-anim .cls-3 { animation: bloom-fill 1.2s ease-out 2.5s forwards; }
+.trigger-anim .cls-2 { animation: bloom-fill 1.2s ease-out 2.6s forwards; }
+.trigger-anim .cls-4 { animation: bloom-fill 1.2s ease-out 2.7s forwards; }
+.trigger-anim .cls-6 { animation: bloom-fill 1.2s ease-out 2.8s forwards; }
+.trigger-anim .cls-5 { animation: bloom-fill 1.2s ease-out 2.9s forwards; }
+
+@keyframes bloom-fill {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes bloom-fill-bright {
+  from { opacity: 0; filter: brightness(0.5); }
+  to   { opacity: 1; filter: brightness(1.2) drop-shadow(0 0 10px rgba(255,255,255,0.4)); }
+}
+
+/* === LENS FLARE (SPARKLE ON STAR) === */
+.sparkle-wrap {
   position: absolute;
-  inset: -10%;
-  background: linear-gradient(
-    105deg,
-    transparent 30%,
-    rgba(255,255,255,0.25) 48%,
-    rgba(255,255,255,0.4) 50%,
-    rgba(255,255,255,0.25) 52%,
-    transparent 70%
-  );
-  opacity: 0;
+  top: 54%;
+  left: 44%;
+  width: 0; height: 0;
+  display: flex;
+  align-items: center; justify-content: center;
   pointer-events: none;
-  animation: ovr-sweep 0.8s ease-in-out 2.8s forwards;
+  z-index: 20;
 }
-@keyframes ovr-sweep {
-  0%   { transform: translateX(-150%); opacity: 1; }
-  100% { transform: translateX(150%);  opacity: 0; }
-}
-
-/* Assembled glow burst behind diamond */
-.ovr-diamond-wrap::after {
-  content: "";
-  position: absolute; inset: -30%;
+.flare-core {
+  position: absolute;
+  width: 5px; height: 5px;
+  background: #ffffff;
   border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(212,175,55,0.2) 0%,
-    transparent 70%
-  );
+  box-shadow: 
+    0 0 25px 8px #ffffff, 
+    0 0 45px 18px rgba(229, 163, 30, 0.8), 
+    0 0 75px 30px rgba(255, 255, 255, 0.4);
   opacity: 0;
-  animation: ovr-assembled 1s ease-out 2.5s forwards;
-  pointer-events: none;
+  transform: scale(0);
 }
-@keyframes ovr-assembled {
-  from { opacity: 0; transform: scale(0.5); }
-  to   { opacity: 1; transform: scale(1); }
+.trigger-anim .flare-core {
+  animation: flare-burst 1.6s cubic-bezier(0.16, 1, 0.3, 1) 2.8s forwards;
 }
 
-/* === PRICE COUNTER === */
-.ovr-price {
-  margin-top: 28px; z-index: 30;
-  font-size: 2rem; font-weight: 300;
-  color: #FFFFFF;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 20px rgba(212,175,55,0.3);
+.flare-ray {
+  position: absolute;
+  background: linear-gradient(90deg, transparent, #ffffff 50%, transparent);
   opacity: 0;
-  animation: ovr-fade-up 0.5s ease-out 0.4s forwards;
-  display: flex; align-items: baseline; gap: 4px;
+  transform: scaleX(0);
+}
+.ray-h { width: 160px; height: 1.5px; }
+.ray-v { 
+  width: 1.5px; height: 160px; 
+  background: linear-gradient(180deg, transparent, #ffffff 50%, transparent);
+}
+.ray-d1 { width: 110px; height: 1px; transform: rotate(45deg) scaleX(0); }
+.ray-d2 { width: 110px; height: 1px; transform: rotate(-45deg) scaleX(0); }
+
+.trigger-anim .flare-ray {
+  animation: ray-burst 1.4s cubic-bezier(0.16, 1, 0.3, 1) 2.8s forwards;
+}
+.trigger-anim .ray-d1 { animation: ray-burst-rotated-1 1.4s cubic-bezier(0.16, 1, 0.3, 1) 2.8s forwards; }
+.trigger-anim .ray-d2 { animation: ray-burst-rotated-2 1.4s cubic-bezier(0.16, 1, 0.3, 1) 2.8s forwards; }
+
+@keyframes flare-burst {
+  0% { opacity: 0; transform: scale(0); }
+  30% { opacity: 1; transform: scale(1.5); }
+  65% { opacity: 0.9; transform: scale(0.95); }
+  100% { opacity: 0; transform: scale(0); }
+}
+@keyframes ray-burst {
+  0% { opacity: 0; transform: scaleX(0); }
+  25% { opacity: 1; transform: scaleX(1.3); }
+  100% { opacity: 0; transform: scaleX(0); }
+}
+@keyframes ray-burst-rotated-1 {
+  0% { opacity: 0; transform: rotate(45deg) scaleX(0); }
+  25% { opacity: 0.8; transform: rotate(45deg) scaleX(1.1); }
+  100% { opacity: 0; transform: rotate(45deg) scaleX(0); }
+}
+@keyframes ray-burst-rotated-2 {
+  0% { opacity: 0; transform: rotate(-45deg) scaleX(0); }
+  25% { opacity: 0.8; transform: rotate(-45deg) scaleX(1.1); }
+  100% { opacity: 0; transform: rotate(-45deg) scaleX(0); }
+}
+
+/* === SHIMMER SWEEP OVER LOGO === */
+.shimmer-sweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.4) 48%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0.4) 52%,
+    transparent 65%
+  );
+  mix-blend-mode: overlay;
+  opacity: 0;
+  transform: translateX(-120%) skewX(-15deg);
+  pointer-events: none;
+  z-index: 15;
+}
+.trigger-anim .shimmer-sweep {
+  animation: sweep-effect 1.2s cubic-bezier(0.16, 1, 0.3, 1) 3.0s forwards;
+}
+@keyframes sweep-effect {
+  0%   { transform: translateX(-120%) skewX(-15deg); opacity: 0; }
+  25%  { opacity: 1; }
+  75%  { opacity: 1; }
+  100% { transform: translateX(120%) skewX(-15deg); opacity: 0; }
+}
+
+/* === BRAND INFO & TEXTS === */
+.brand-wrap {
+  margin-top: -10px;
+  text-align: center;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brand-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  display: flex;
+  gap: 2px;
+  margin-bottom: 8px;
 }
 @media (min-width: 640px) {
-  .ovr-price { font-size: 2.75rem; }
+  .brand-title { font-size: 36px; }
 }
-/* Currency symbol — quick swap animation */
-.ovr-currency {
+
+.brand-title span {
   display: inline-block;
-  min-width: 1.2em;
-  text-align: right;
-  color: #D4AF37;
-  font-weight: 500;
-  animation: ovr-curr-swap 0.25s ease-out;
+  opacity: 0;
+  transform: translateY(20px) scale(0.9);
 }
-@keyframes ovr-curr-swap {
-  0%   { opacity: 0; transform: translateY(-8px); }
-  100% { opacity: 1; transform: translateY(0); }
+.trigger-anim .brand-title span {
+  animation: letter-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* === ENGINE LABEL === */
-.ovr-engine {
-  margin-top: 6px; z-index: 30;
-  font-size: 9px; font-weight: 700;
+/* Staggered brand letters (O r i v r a a) */
+.trigger-anim .l-0 { animation-delay: 2.7s; color: #ffffff; }
+.trigger-anim .l-1 { animation-delay: 2.8s; color: #ffffff; }
+.trigger-anim .l-2 { animation-delay: 2.9s; color: #ffffff; }
+.trigger-anim .l-3 { animation-delay: 3.0s; color: #e5a31e; }
+.trigger-anim .l-4 { animation-delay: 3.1s; color: #e5a31e; }
+.trigger-anim .l-5 { animation-delay: 3.2s; color: #e5a31e; }
+.trigger-anim .l-6 { animation-delay: 3.3s; color: #e5a31e; }
+
+@keyframes letter-in {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tagline {
+  font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.3em;
-  color: #D4AF37;
+  letter-spacing: 0.35em;
+  color: rgba(229, 163, 30, 0.65);
   font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 600;
   opacity: 0;
-  animation: ovr-fade-up 0.5s ease-out 1s forwards;
+  transform: translateY(10px);
+}
+@media (min-width: 640px) {
+  .tagline { font-size: 10.5px; }
+}
+.trigger-anim .tagline {
+  animation: fade-up-tag 0.8s cubic-bezier(0.16, 1, 0.3, 1) 3.4s forwards;
 }
 
-/* === MARKET INDICATORS === */
-.ovr-markets {
-  margin-top: 10px; z-index: 30;
-  display: flex; gap: 8px;
+.sub-indicator {
+  margin-top: 18px;
+  font-size: 8.5px;
+  font-family: system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: rgba(255, 255, 255, 0.3);
+  display: flex;
   align-items: center;
+  gap: 6px;
   opacity: 0;
-  animation: ovr-fade-up 0.5s ease-out 1.3s forwards;
 }
-.ovr-mkt {
-  font-size: 8px; text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: rgba(255,255,255,0.35);
-  font-family: system-ui, -apple-system, sans-serif;
-  animation: ovr-blink 1.2s ease-in-out infinite;
+.trigger-anim .sub-indicator {
+  animation: fade-in-indicator 0.6s ease-out 3.7s forwards;
 }
-.ovr-mkt-dot {
-  font-size: 10px;
-  color: rgba(212,175,55,0.3);
-  font-family: system-ui, -apple-system, sans-serif;
+
+.status-dot {
+  width: 4px; height: 4px;
+  background-color: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #22c55e;
+  animation: pulse-dot 1.5s infinite;
 }
-@keyframes ovr-blink {
-  0%, 100% { opacity: 0.3; }
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.4; }
   50%      { opacity: 1; }
 }
 
-/* === BRAND NAME === */
-.ovr-brand {
-  margin-top: 24px; z-index: 30;
-  display: flex; align-items: baseline;
-}
-.ovr-ch-w, .ovr-ch-g {
-  font-size: 1.75rem; font-weight: 700;
-  letter-spacing: 0.05em;
-  opacity: 0;
-  transform: translateY(16px);
-  animation: ovr-letter-in 0.35s ease-out forwards;
-}
-@media (min-width: 640px) {
-  .ovr-ch-w, .ovr-ch-g { font-size: 2.25rem; }
-}
-.ovr-ch-w { color: #FFFFFF; }
-.ovr-ch-g { color: #D4AF37; }
-@keyframes ovr-letter-in {
+@keyframes fade-up-tag {
   to { opacity: 1; transform: translateY(0); }
 }
-
-/* === TAGLINE === */
-.ovr-tagline {
-  margin-top: 8px; z-index: 30;
-  font-size: 9px; text-transform: uppercase;
-  letter-spacing: 0.35em;
-  color: rgba(212,175,55,0.5);
-  font-family: system-ui, -apple-system, sans-serif;
-  opacity: 0;
-  animation: ovr-fade-up 0.5s ease-out 2.6s forwards;
-}
-@media (min-width: 640px) {
-  .ovr-tagline { font-size: 11px; }
+@keyframes fade-in-indicator {
+  to { opacity: 1; }
 }
 
-/* === PROGRESS BAR === */
-.ovr-pbar-track {
-  margin-top: 20px; z-index: 30;
-  width: 140px; height: 1.5px;
+/* === PROGRESS LINE === */
+.progress-track {
+  margin-top: 24px;
+  width: 150px; height: 1.5px;
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 999px;
-  background: rgba(255,255,255,0.04);
   overflow: hidden;
+  opacity: 0;
 }
 @media (min-width: 640px) {
-  .ovr-pbar-track { width: 180px; }
+  .progress-track { width: 190px; }
 }
-.ovr-pbar-fill {
-  height: 100%; border-radius: 999px;
-  background: linear-gradient(90deg, #B8941F, #D4AF37, #FFD700);
-  width: 0%;
-  animation: ovr-fill 3s ease-in-out forwards;
+.trigger-anim .progress-track {
+  animation: fade-in-indicator 0.4s ease-out 2.5s forwards;
 }
-@keyframes ovr-fill {
+
+.progress-fill {
+  width: 0%; height: 100%;
+  background: linear-gradient(90deg, #782200, #e5a31e, #f3dd99, #ffffff);
+  border-radius: 999px;
+}
+.trigger-anim .progress-fill {
+  animation: fill-pbar 3.2s cubic-bezier(0.4, 0, 0.2, 1) 0.5s forwards;
+}
+@keyframes fill-pbar {
   to { width: 100%; }
 }
 
-/* === SHARED: FADE UP === */
-@keyframes ovr-fade-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* Subtle 3D Scale Bump at Climax */
+.trigger-anim {
+  animation: trigger-scene-scale 4.2s ease-in-out forwards;
+}
+@keyframes trigger-scene-scale {
+  0% { transform: scale(0.96) rotateX(10deg) translateY(-10px); }
+  65% { transform: scale(0.96) rotateX(10deg) translateY(-10px); }
+  72% { transform: scale(1.02) rotateX(12deg) translateY(-12px); filter: brightness(1.15); }
+  80% { transform: scale(1) rotateX(10deg) translateY(-10px); filter: brightness(1); }
+  100% { transform: scale(1) rotateX(10deg) translateY(-10px); }
 }
 `;
+;

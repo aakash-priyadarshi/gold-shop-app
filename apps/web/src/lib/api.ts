@@ -596,7 +596,8 @@ export const adminApi = {
     recipientName?: string;
     content: string;
     subject?: string;
-  }) => api.post("/admin/messages/send", data),
+    threadId?: string;
+  }) => api.post<{ success: boolean; messageId?: string; threadId: string }>("/admin/messages/send", data),
   getEmailStatus: () => api.get("/admin/email/status"),
 
   sendTestEmail: (email: string) => api.post("/admin/email/test", { email }),
