@@ -1,7 +1,12 @@
 FROM node:20-slim
 
-# Prisma requires OpenSSL
-RUN apt-get update && apt-get install -y openssl postgresql-client && rm -rf /var/lib/apt/lists/*
+# Prisma requires OpenSSL and we need PostgreSQL 16 client to match Railway's database
+RUN apt-get update && apt-get install -y curl ca-certificates gnupg \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main" > /etc/apt/sources.list.d/postgresql.list \
+    && apt-get update \
+    && apt-get install -y openssl postgresql-client-16 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate

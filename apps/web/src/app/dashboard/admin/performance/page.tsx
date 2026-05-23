@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { adminApi, metricsApi } from "@/lib/api";
 import {
     Activity,
@@ -791,8 +792,19 @@ export default function AdminPerformancePage() {
                           <Input value={newScheduleName} onChange={e => setNewScheduleName(e.target.value)} placeholder="e.g. Daily Backup" />
                         </div>
                         <div className="flex-1 space-y-1">
-                          <Label>Cron Expression</Label>
-                          <Input value={newScheduleCron} onChange={e => setNewScheduleCron(e.target.value)} placeholder="e.g. 0 0 * * *" />
+                          <Label>Frequency</Label>
+                          <Select value={newScheduleCron} onValueChange={setNewScheduleCron}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Frequency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="0 * * * *">Every Hour</SelectItem>
+                              <SelectItem value="0 0 * * *">Daily at Midnight</SelectItem>
+                              <SelectItem value="0 12 * * *">Daily at Noon</SelectItem>
+                              <SelectItem value="0 0 * * 0">Weekly (Sunday Midnight)</SelectItem>
+                              <SelectItem value="0 0 1 * *">Monthly (1st of Month)</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <Button onClick={createSchedule}>Add Schedule</Button>
                       </div>
@@ -804,7 +816,14 @@ export default function AdminPerformancePage() {
                           <div key={schedule.id} className="flex items-center justify-between p-4 bg-card">
                             <div>
                               <p className="font-medium text-sm">{schedule.name}</p>
-                              <p className="text-xs font-mono text-muted-foreground mt-1">{schedule.cronExp}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {schedule.cronExp === "0 * * * *" ? "Every Hour" :
+                                 schedule.cronExp === "0 0 * * *" ? "Daily at Midnight" :
+                                 schedule.cronExp === "0 12 * * *" ? "Daily at Noon" :
+                                 schedule.cronExp === "0 0 * * 0" ? "Weekly (Sunday Midnight)" :
+                                 schedule.cronExp === "0 0 1 * *" ? "Monthly (1st of Month)" :
+                                 `Custom (${schedule.cronExp})`}
+                              </p>
                             </div>
                             <div className="flex items-center gap-4">
                               <Switch 
