@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { adminApi, chatApi, ticketsApi } from "@/lib/api";
-import { Bot, ChevronDown, ChevronRight, Loader2, Lock, Mail, MessageSquare, RefreshCw, Search, Send, Shield, Store, Users, Wand2, Zap } from "lucide-react";
+import { Bot, ChevronDown, ChevronRight, Eye, FileText, Loader2, Lock, Mail, MessageSquare, Plus, RefreshCw, Save, Search, Send, Shield, Store, Trash2, Users, Wand2, Zap } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "@/hooks/use-toast";
@@ -72,6 +72,102 @@ interface BotStats {
   avgMessagesPerSession: string;
   intentBreakdown: { intent: string; count: number }[];
   dailySessions: { day: string; count: number }[];
+}
+
+interface EmailTrigger {
+  key: string;
+  name: string;
+  audience: string;
+  trigger: string;
+  backend: string;
+  template: string;
+  sender: string;
+  replyTo?: string | null;
+  variables: string[];
+  editable: boolean;
+  notes: string;
+}
+
+interface EmailTemplate {
+  id: string;
+  key: string;
+  name: string;
+  description?: string | null;
+  audience: string;
+  trigger?: string | null;
+  subject: string;
+  html: string;
+  text?: string | null;
+  senderName: string;
+  senderEmail: string;
+  replyTo?: string | null;
+  variables: string[];
+  isActive: boolean;
+  isSystem: boolean;
+  updatedAt: string;
+}
+
+interface EmailTemplateDraft {
+  key: string;
+  name: string;
+  description: string;
+  audience: string;
+  trigger: string;
+  subject: string;
+  html: string;
+  text: string;
+  senderName: string;
+  senderEmail: string;
+  replyTo: string;
+  variables: string;
+  isActive: boolean;
+  isSystem: boolean;
+}
+
+const emptyEmailTemplateDraft: EmailTemplateDraft = {
+  key: "",
+  name: "",
+  description: "",
+  audience: "customer",
+  trigger: "",
+  subject: "",
+  html: "",
+  text: "",
+  senderName: "Orivraa Support",
+  senderEmail: "support@orivraa.com",
+  replyTo: "support@orivraa.com",
+  variables: "title, recipientName, message, sentAt",
+  isActive: true,
+  isSystem: false,
+};
+
+function templateToDraft(template: EmailTemplate): EmailTemplateDraft {
+  return {
+    key: template.key,
+    name: template.name,
+    description: template.description || "",
+    audience: template.audience,
+    trigger: template.trigger || "",
+    subject: template.subject,
+    html: template.html,
+    text: template.text || "",
+    senderName: template.senderName,
+    senderEmail: template.senderEmail,
+    replyTo: template.replyTo || "",
+    variables: template.variables.join(", "),
+    isActive: template.isActive,
+    isSystem: template.isSystem,
+  };
+}
+
+function draftPayload(draft: EmailTemplateDraft) {
+  return {
+    ...draft,
+    variables: draft.variables
+      .split(",")
+      .map((variable) => variable.trim())
+      .filter(Boolean),
+  };
 }
 
 const INTENT_COLOURS: Record<string, string> = {
@@ -182,7 +278,7 @@ function BotSessionRow({ session }: { session: BotSession }) {
 export default function AdminMessagesPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const [activeView, setActiveView] = useState<"conversations" | "ai" | "emails">("conversations");
+  const [activeView, setActiveView] = useState<"conversations" | "ai" | "emails" | "triggers" | "templates">("conversations");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
@@ -216,6 +312,14 @@ export default function AdminMessagesPage() {
   const [selectedEmail, setSelectedEmail] = useState<any | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
+  const [emailTriggers, setEmailTriggers] = useState<EmailTrigger[]>([]);
+  const [triggerLoading, setTriggerLoading] = useState(false);
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [templateDraft, setTemplateDraft] = useState<EmailTemplateDraft>(emptyEmailTemplateDraft);
+  const [templatePreview, setTemplatePreview] = useState<{ subject: string; html: string; from: string; replyTo?: string | null } | null>(null);
 
   useEffect(() => {
     if (searchParams.get("view") === "ai") setActiveView("ai");
@@ -232,6 +336,8 @@ export default function AdminMessagesPage() {
   useEffect(() => {
     if (activeView === "ai") loadBotSessions(botPage);
     if (activeView === "emails") loadEmails(emailPage);
+    if (activeView === "triggers") loadEmailTriggers();
+    if (activeView === "templates") loadEmailTemplates();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView, botPage, emailPage]);
 
@@ -316,6 +422,99 @@ export default function AdminMessagesPage() {
     }
   }
 
+  async function loadEmailTriggers() {
+    setTriggerLoading(true);
+    try {
+      const res = await adminApi.getEmailTriggers();
+      setEmailTriggers(res.data.triggers || []);
+    } catch (e) {
+      console.error("Failed to load email triggers", e);
+    } finally {
+      setTriggerLoading(false);
+    }
+  }
+
+  async function loadEmailTemplates(selectId = selectedTemplateId) {
+    setTemplateLoading(true);
+    try {
+      const res = await adminApi.getEmailTemplates();
+      const templates: EmailTemplate[] = res.data.templates || [];
+      setEmailTemplates(templates);
+      const selected = templates.find((template) => template.id === selectId) || templates[0];
+      if (selected) {
+        setSelectedTemplateId(selected.id);
+        setTemplateDraft(templateToDraft(selected));
+      }
+    } catch (e) {
+      console.error("Failed to load email templates", e);
+      toast({ variant: "destructive", title: "Error", description: "Failed to load email templates" });
+    } finally {
+      setTemplateLoading(false);
+    }
+  }
+
+  function selectEmailTemplate(template: EmailTemplate) {
+    setSelectedTemplateId(template.id);
+    setTemplateDraft(templateToDraft(template));
+    setTemplatePreview(null);
+  }
+
+  function startNewEmailTemplate() {
+    setSelectedTemplateId(null);
+    setTemplateDraft({ ...emptyEmailTemplateDraft });
+    setTemplatePreview(null);
+  }
+
+  async function saveEmailTemplate() {
+    setTemplateSaving(true);
+    try {
+      const payload = draftPayload(templateDraft);
+      const res = selectedTemplateId
+        ? await adminApi.updateEmailTemplate(selectedTemplateId, payload)
+        : await adminApi.createEmailTemplate(payload);
+      const saved = res.data.template as EmailTemplate;
+      setSelectedTemplateId(saved.id);
+      setTemplateDraft(templateToDraft(saved));
+      setTemplatePreview(null);
+      await loadEmailTemplates(saved.id);
+      toast({ title: "Template saved", description: `${saved.name} is ready to use.` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.response?.data?.message || "Failed to save template" });
+    } finally {
+      setTemplateSaving(false);
+    }
+  }
+
+  async function deleteEmailTemplate() {
+    if (!selectedTemplateId) return;
+    if (!window.confirm("Delete this email template? Existing sent emails will stay in history.")) return;
+    setTemplateSaving(true);
+    try {
+      await adminApi.deleteEmailTemplate(selectedTemplateId);
+      setSelectedTemplateId(null);
+      setTemplateDraft({ ...emptyEmailTemplateDraft });
+      setTemplatePreview(null);
+      await loadEmailTemplates(null);
+      toast({ title: "Template deleted" });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.response?.data?.message || "Failed to delete template" });
+    } finally {
+      setTemplateSaving(false);
+    }
+  }
+
+  async function previewEmailTemplateDraft() {
+    setTemplateSaving(true);
+    try {
+      const res = await adminApi.previewEmailTemplateDraft(draftPayload(templateDraft));
+      setTemplatePreview(res.data);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Preview failed", description: e.response?.data?.message || "Failed to render preview" });
+    } finally {
+      setTemplateSaving(false);
+    }
+  }
+
   async function handleSendReply() {
     if (!replyText.trim() || !selectedEmail?.user?.id) return;
     setSendingReply(true);
@@ -393,6 +592,7 @@ export default function AdminMessagesPage() {
   }
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
+  const selectedEmailTemplate = emailTemplates.find((template) => template.id === selectedTemplateId) || null;
   const botTotalPages = Math.max(1, Math.ceil(botTotal / 20));
 
   return (
@@ -401,10 +601,10 @@ export default function AdminMessagesPage() {
         <div className="flex flex-col h-[calc(100vh-8rem)]">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
-              {activeView === "ai" ? <Bot className="h-6 w-6" /> : activeView === "emails" ? <Mail className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
+              {activeView === "ai" ? <Bot className="h-6 w-6" /> : activeView === "emails" || activeView === "triggers" || activeView === "templates" ? <Mail className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
               <h1 className="text-2xl font-bold">All Messages</h1>
               <Badge variant="secondary" className="ml-2">
-                {activeView === "ai" ? `${botTotal} AI sessions` : activeView === "emails" ? `${emailTotal} emails` : `${conversations.length} conversations`}
+                {activeView === "ai" ? `${botTotal} AI sessions` : activeView === "emails" ? `${emailTotal} emails` : activeView === "triggers" ? `${emailTriggers.length} triggers` : activeView === "templates" ? `${emailTemplates.length} templates` : `${conversations.length} conversations`}
               </Badge>
             </div>
             <div className="flex rounded-lg border bg-muted/30 p-1">
@@ -431,6 +631,22 @@ export default function AdminMessagesPage() {
                 onClick={() => setActiveView("emails")}
               >
                 <Mail className="h-4 w-4" /> Emails
+              </Button>
+              <Button
+                size="sm"
+                variant={activeView === "triggers" ? "default" : "ghost"}
+                className="gap-1"
+                onClick={() => setActiveView("triggers")}
+              >
+                <Shield className="h-4 w-4" /> Triggers
+              </Button>
+              <Button
+                size="sm"
+                variant={activeView === "templates" ? "default" : "ghost"}
+                className="gap-1"
+                onClick={() => setActiveView("templates")}
+              >
+                <FileText className="h-4 w-4" /> Templates
               </Button>
             </div>
           </div>
@@ -797,6 +1013,270 @@ export default function AdminMessagesPage() {
                     <p>Select an email to view details</p>
                   </div>
                 )}
+              </div>
+            </div>
+          ) : activeView === "triggers" ? (
+            <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg bg-background">
+              <div className="p-4 border-b flex items-center justify-between gap-3 sticky top-0 bg-background z-10">
+                <div>
+                  <h2 className="font-semibold">Email Triggers</h2>
+                  <p className="text-sm text-muted-foreground">Current code-driven email moments, templates, senders, and variables.</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={loadEmailTriggers} disabled={triggerLoading}>
+                  {triggerLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                  Refresh
+                </Button>
+              </div>
+
+              {triggerLoading && emailTriggers.length === 0 ? (
+                <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+              ) : emailTriggers.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">No email triggers found.</div>
+              ) : (
+                <div className="divide-y">
+                  {emailTriggers.map((trigger) => (
+                    <div key={trigger.key} className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold text-base">{trigger.name}</h3>
+                            <Badge variant={trigger.audience.toLowerCase().includes("admin") ? "destructive" : "secondary"} className="text-xs">
+                              {trigger.audience}
+                            </Badge>
+                            <Badge variant={trigger.editable ? "default" : "outline"} className="text-xs">
+                              {trigger.editable ? "Editable" : "Code-managed"}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{trigger.trigger}</p>
+                        </div>
+                        <div className="text-xs text-muted-foreground text-right shrink-0">
+                          <div>{trigger.backend}</div>
+                          <div className="mt-1 font-medium text-foreground">{trigger.template}.hbs</div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-3 mt-4 text-sm">
+                        <div className="rounded-md border p-3">
+                          <div className="text-xs uppercase text-muted-foreground font-medium mb-1">Sender</div>
+                          <div className="break-words">{trigger.sender}</div>
+                          {trigger.replyTo && <div className="text-xs text-muted-foreground mt-1">Reply-to: {trigger.replyTo}</div>}
+                        </div>
+                        <div className="rounded-md border p-3 md:col-span-2">
+                          <div className="text-xs uppercase text-muted-foreground font-medium mb-2">Variables</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {trigger.variables.map((variable) => (
+                              <Badge key={variable} variant="outline" className="font-mono text-[11px]">
+                                {`{{${variable}}}`}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground mt-3">{trigger.notes}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : activeView === "templates" ? (
+            <div className="flex flex-1 gap-4 min-h-0 bg-background border rounded-lg overflow-hidden">
+              <div className="w-80 border-r flex flex-col min-h-0">
+                <div className="p-4 border-b flex items-center justify-between gap-2">
+                  <div>
+                    <h2 className="font-semibold">Templates</h2>
+                    <p className="text-xs text-muted-foreground">Create and edit reusable email formats.</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={startNewEmailTemplate} className="gap-1">
+                    <Plus className="h-4 w-4" /> New
+                  </Button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                  {templateLoading && emailTemplates.length === 0 ? (
+                    <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                  ) : emailTemplates.length === 0 ? (
+                    <div className="p-6 text-sm text-center text-muted-foreground">No templates yet.</div>
+                  ) : (
+                    <div className="divide-y">
+                      {emailTemplates.map((template) => (
+                        <button
+                          key={template.id}
+                          type="button"
+                          onClick={() => selectEmailTemplate(template)}
+                          className={`w-full text-left p-4 hover:bg-muted/50 transition ${selectedTemplateId === template.id ? "bg-muted" : ""}`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium truncate">{template.name}</span>
+                            {!template.isActive && <Badge variant="outline" className="text-[10px]">Inactive</Badge>}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate mt-1">{template.key}</p>
+                          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                            <Badge variant={template.audience.toLowerCase().includes("admin") ? "destructive" : "secondary"} className="text-[10px]">
+                              {template.audience}
+                            </Badge>
+                            {template.isSystem && <Badge variant="outline" className="text-[10px]">Default</Badge>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1 min-w-0 overflow-y-auto">
+                <div className="p-4 border-b flex items-center justify-between gap-3 sticky top-0 bg-background z-10">
+                  <div>
+                    <h2 className="font-semibold">{selectedTemplateId ? "Edit Template" : "New Template"}</h2>
+                    <p className="text-sm text-muted-foreground">Variables use Handlebars format, for example {"{{recipientName}}"}.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={previewEmailTemplateDraft} disabled={templateSaving || !templateDraft.html.trim()} className="gap-1">
+                      {templateSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                      Preview
+                    </Button>
+                    {selectedTemplateId && !selectedEmailTemplate?.isSystem && (
+                      <Button variant="outline" size="sm" onClick={deleteEmailTemplate} disabled={templateSaving} className="gap-1 text-destructive hover:text-destructive">
+                        <Trash2 className="h-4 w-4" /> Delete
+                      </Button>
+                    )}
+                    <Button size="sm" onClick={saveEmailTemplate} disabled={templateSaving} className="gap-1">
+                      {templateSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                      Save
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+                  <div className="space-y-4">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="space-y-1.5 text-sm font-medium">
+                        Name
+                        <Input value={templateDraft.name} onChange={(e) => setTemplateDraft((draft) => ({ ...draft, name: e.target.value }))} placeholder="Manual support message" />
+                      </label>
+                      <label className="space-y-1.5 text-sm font-medium">
+                        Key
+                        <Input value={templateDraft.key} onChange={(e) => setTemplateDraft((draft) => ({ ...draft, key: e.target.value }))} placeholder="manual_user_message" disabled={Boolean(selectedTemplateId)} />
+                      </label>
+                    </div>
+
+                    <label className="space-y-1.5 text-sm font-medium block">
+                      Description
+                      <Input value={templateDraft.description} onChange={(e) => setTemplateDraft((draft) => ({ ...draft, description: e.target.value }))} placeholder="What this email is used for" />
+                    </label>
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="space-y-1.5 text-sm font-medium">
+                        Audience
+                        <Input value={templateDraft.audience} onChange={(e) => setTemplateDraft((draft) => ({ ...draft, audience: e.target.value }))} placeholder="customer, seller, admin" />
+                      </label>
+                      <label className="space-y-1.5 text-sm font-medium">
+                        Trigger
+                        <Input value={templateDraft.trigger} onChange={(e) => setTemplateDraft((draft) => ({ ...draft, trigger: e.target.value }))} placeholder="POST /admin/messages/send" />
+                      </label>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <label className="space-y-1.5 text-sm font-medium">
+                        Sender name
+                        <Input value={templateDraft.senderName} onChange={(e) => setTemplateDraft((draft) => ({ ...draft, senderName: e.target.value }))} />
+                      </label>
+                      <label className="space-y-1.5 text-sm font-medium">
+                        Sender email
+                        <select
+                          className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={templateDraft.senderEmail}
+                          onChange={(e) => setTemplateDraft((draft) => ({ ...draft, senderEmail: e.target.value }))}
+                        >
+                          <option value="support@orivraa.com">support@orivraa.com</option>
+                          <option value="orders@orivraa.com">orders@orivraa.com</option>
+                          <option value="noreply@orivraa.com">noreply@orivraa.com</option>
+                          <option value="admin@orivraa.com">admin@orivraa.com</option>
+                        </select>
+                      </label>
+                      <label className="space-y-1.5 text-sm font-medium">
+                        Reply-to
+                        <Input value={templateDraft.replyTo} onChange={(e) => setTemplateDraft((draft) => ({ ...draft, replyTo: e.target.value }))} placeholder="support@orivraa.com" />
+                      </label>
+                    </div>
+
+                    <label className="space-y-1.5 text-sm font-medium block">
+                      Subject
+                      <Input value={templateDraft.subject} onChange={(e) => setTemplateDraft((draft) => ({ ...draft, subject: e.target.value }))} placeholder="{{title}}" />
+                    </label>
+
+                    <label className="space-y-1.5 text-sm font-medium block">
+                      HTML template
+                      <textarea
+                        className="min-h-[320px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        value={templateDraft.html}
+                        onChange={(e) => setTemplateDraft((draft) => ({ ...draft, html: e.target.value }))}
+                        spellCheck={false}
+                      />
+                    </label>
+
+                    <label className="space-y-1.5 text-sm font-medium block">
+                      Plain text fallback
+                      <AutoResizeTextarea
+                        className="min-h-[90px]"
+                        value={templateDraft.text}
+                        onChange={(e) => setTemplateDraft((draft) => ({ ...draft, text: e.target.value }))}
+                        placeholder="{{message}}"
+                      />
+                    </label>
+
+                    <label className="space-y-1.5 text-sm font-medium block">
+                      Variables
+                      <Input value={templateDraft.variables} onChange={(e) => setTemplateDraft((draft) => ({ ...draft, variables: e.target.value }))} placeholder="title, recipientName, message, sentAt" />
+                    </label>
+
+                    <div className="flex items-center gap-6 text-sm">
+                      <label className="inline-flex items-center gap-2">
+                        <input type="checkbox" checked={templateDraft.isActive} onChange={(e) => setTemplateDraft((draft) => ({ ...draft, isActive: e.target.checked }))} />
+                        Active
+                      </label>
+                      <label className="inline-flex items-center gap-2">
+                        <input type="checkbox" checked={templateDraft.isSystem} onChange={(e) => setTemplateDraft((draft) => ({ ...draft, isSystem: e.target.checked }))} />
+                        Default template
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="rounded-lg border p-4">
+                      <h3 className="font-medium mb-3">Available Variables</h3>
+                      <div className="flex flex-wrap gap-1.5">
+                        {draftPayload(templateDraft).variables.map((variable) => (
+                          <Badge key={variable} variant="outline" className="font-mono text-[11px]">
+                            {`{{${variable}}}`}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="p-4 border-b">
+                        <h3 className="font-medium">Preview</h3>
+                        {templatePreview ? (
+                          <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                            <div><span className="font-medium text-foreground">From:</span> {templatePreview.from}</div>
+                            <div><span className="font-medium text-foreground">Subject:</span> {templatePreview.subject}</div>
+                            {templatePreview.replyTo && <div><span className="font-medium text-foreground">Reply-to:</span> {templatePreview.replyTo}</div>}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground mt-1">Render a preview to inspect the final email.</p>
+                        )}
+                      </div>
+                      {templatePreview ? (
+                        <iframe title="Email preview" srcDoc={templatePreview.html} className="w-full h-[520px] bg-white" />
+                      ) : (
+                        <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">
+                          No preview rendered yet
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (

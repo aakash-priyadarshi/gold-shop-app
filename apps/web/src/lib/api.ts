@@ -472,24 +472,6 @@ export const otpApi = {
 
 // Admin API
 export const adminApi = {
-  // Emails
-  getEmailLogs: (params?: { page?: number; limit?: number }) =>
-    api.get("/admin/emails", { params }),
-  sendMessage: (data: { recipientId: string; content: string; subject?: string }) =>
-    api.post("/admin/messages/send", data),
-
-  // Backups
-  backups: {
-    list: () => api.get("/backups"),
-    triggerManual: () => api.post("/backups/trigger"),
-    delete: (filename: string) => api.delete(`/backups/${filename}`),
-    downloadUrl: (filename: string) => `${process.env.NEXT_PUBLIC_API_URL || 'https://api.orivraa.com'}/backups/download/${filename}`,
-    getSchedules: () => api.get("/backups/schedules"),
-    createSchedule: (data: { name: string; cronExp: string }) => api.post("/backups/schedules", data),
-    toggleSchedule: (id: string, isActive: boolean) => api.patch(`/backups/schedules/${id}/toggle`, { isActive }),
-    deleteSchedule: (id: string) => api.delete(`/backups/schedules/${id}`),
-  },
-
   // Stats
   getStats: () => api.get("/admin/stats"),
 
@@ -587,6 +569,25 @@ export const adminApi = {
   ) => api.patch(`/shops/${shopId}/kyc-status`, { action, reason }),
 
   // Email settings
+  getEmailLogs: (params?: { page?: number; limit?: number }) =>
+    api.get("/admin/emails", { params }),
+  getEmailTriggers: () => api.get("/admin/email/triggers"),
+  getEmailTemplates: () => api.get("/admin/email/templates"),
+  getEmailTemplate: (id: string) => api.get(`/admin/email/templates/${id}`),
+  createEmailTemplate: (data: Record<string, any>) =>
+    api.post("/admin/email/templates", data),
+  updateEmailTemplate: (id: string, data: Record<string, any>) =>
+    api.patch(`/admin/email/templates/${id}`, data),
+  deleteEmailTemplate: (id: string) => api.delete(`/admin/email/templates/${id}`),
+  previewEmailTemplate: (id: string, context?: Record<string, any>) =>
+    api.post(`/admin/email/templates/${id}/preview`, { context }),
+  previewEmailTemplateDraft: (data: Record<string, any>) =>
+    api.post("/admin/email/templates/preview", data),
+  sendMessage: (data: {
+    recipientId: string;
+    content: string;
+    subject?: string;
+  }) => api.post("/admin/messages/send", data),
   getEmailStatus: () => api.get("/admin/email/status"),
   sendTestEmail: (email: string) => api.post("/admin/email/test", { email }),
   updateAdminEmail: (data: { email: string; currentPassword: string }) =>
@@ -651,6 +652,22 @@ export const adminApi = {
   checkApisHealth: () => api.get("/admin/health/apis"),
   testSmsSendingWithTwilio: (phoneNumber: string) =>
     api.post("/admin/health/test-sms", { phoneNumber }),
+
+  // Backups
+  backups: {
+    list: () => api.get("/backups"),
+    triggerManual: () => api.post("/backups/trigger"),
+    delete: (filename: string) =>
+      api.delete(`/backups/${encodeURIComponent(filename)}`),
+    downloadUrl: (filename: string) =>
+      `${API_BASE_URL}/backups/download/${encodeURIComponent(filename)}`,
+    getSchedules: () => api.get("/backups/schedules"),
+    createSchedule: (data: { name: string; cronExp: string }) =>
+      api.post("/backups/schedules", data),
+    toggleSchedule: (id: string, isActive: boolean) =>
+      api.patch(`/backups/schedules/${id}/toggle`, { isActive }),
+    deleteSchedule: (id: string) => api.delete(`/backups/schedules/${id}`),
+  },
 };
 
 // Materials API

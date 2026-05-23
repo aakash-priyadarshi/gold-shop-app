@@ -24,7 +24,8 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { MailService } from "../mail/mail.service";
+import { EmailTemplateService } from "../mail/email-template.service";
+import { EMAIL_SENDERS, MailService } from "../mail/mail.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { SellerEngagementService } from "../seller-performance/seller-engagement.service";
 
@@ -39,6 +40,7 @@ export class AdminController {
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
     private mailService: MailService,
+    private emailTemplateService: EmailTemplateService,
     private sellerEngagement: SellerEngagementService,
     private configService: ConfigService,
     private redisService: RedisService,
@@ -542,6 +544,7 @@ export class AdminController {
         testTime: new Date().toISOString(),
         adminId,
       },
+      allowAdminLinks: true,
     });
 
     if (result.success) {
@@ -1398,6 +1401,270 @@ export class AdminController {
     return { emails, total, page: pageNum, limit: limitNum };
   }
 
+  @Get("email/triggers")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Get email trigger and template inventory" })
+  async getEmailTriggers() {
+    const defaultNoReply = `Orivraa <${EMAIL_SENDERS.NO_REPLY}>`;
+    const ordersSender = `Orivraa Orders <${EMAIL_SENDERS.ORDERS}>`;
+    const adminSender = `Orivraa Admin <${EMAIL_SENDERS.ADMIN}>`;
+    const supportSender = `Orivraa Support <${EMAIL_SENDERS.SUPPORT}>`;
+
+    const triggers = [
+      {
+        key: "manual_user_message",
+        name: "Manual support message",
+        audience: "Selected customer, seller, or user",
+        trigger: "Admin sends a manual message from CRM, user detail, or email reply views",
+        backend: "POST /admin/messages/send",
+        template: "support-message",
+        sender: supportSender,
+        replyTo: EMAIL_SENDERS.SUPPORT,
+        variables: ["title", "recipientName", "message", "sentAt", "appName", "appUrl", "supportEmail", "year"],
+        editable: true,
+        notes: "Customer-safe template with no admin dashboard links.",
+      },
+      {
+        key: "email_verification_otp",
+        name: "Email verification code",
+        audience: "User verifying their email address",
+        trigger: "User requests or resends email verification OTP",
+        backend: "OtpService.sendEmailOtp",
+        template: "otp",
+        sender: defaultNoReply,
+        replyTo: null,
+        variables: ["name", "otp", "expiresIn", "appName", "appUrl", "supportEmail", "year"],
+        editable: false,
+        notes: "Transactional security email.",
+      },
+      {
+        key: "password_reset_otp",
+        name: "Password reset code",
+        audience: "User resetting their password",
+        trigger: "User requests password reset OTP",
+        backend: "OtpService.sendEmailOtp",
+        template: "password-reset-otp",
+        sender: defaultNoReply,
+        replyTo: null,
+        variables: ["name", "otp", "expiresIn", "appName", "appUrl", "supportEmail", "year"],
+        editable: false,
+        notes: "Transactional security email.",
+      },
+      {
+        key: "customer_welcome",
+        name: "Customer welcome",
+        audience: "New customer account",
+        trigger: "Customer account registration or OAuth first sign-in",
+        backend: "AuthService.sendWelcome",
+        template: "welcome",
+        sender: defaultNoReply,
+        replyTo: null,
+        variables: ["name", "appName", "appUrl", "supportEmail", "year"],
+        editable: false,
+        notes: "Sent after customer onboarding.",
+      },
+      {
+        key: "shopkeeper_welcome",
+        name: "Shopkeeper welcome",
+        audience: "New seller/shopkeeper account",
+        trigger: "Shopkeeper account registration or OAuth first sign-in",
+        backend: "AuthService.sendShopkeeperWelcome",
+        template: "welcome-shopkeeper",
+        sender: defaultNoReply,
+        replyTo: null,
+        variables: ["name", "appName", "appUrl", "supportEmail", "year"],
+        editable: false,
+        notes: "Points sellers to the shop dashboard.",
+      },
+      {
+        key: "order_confirmation",
+        name: "Order confirmation",
+        audience: "Customer who placed an order",
+        trigger: "Order is created successfully",
+        backend: "OrdersService.createOrder",
+        template: "order-confirmation",
+        sender: ordersSender,
+        replyTo: null,
+        variables: ["customerName", "orderNumber", "items", "subtotal", "shipping", "tax", "total", "currency", "shippingAddress", "shopName"],
+        editable: false,
+        notes: "Transactional order receipt.",
+      },
+      {
+        key: "order_status_update",
+        name: "Order status update",
+        audience: "Customer with an active order",
+        trigger: "Order status, shipping, or delivery helper is called",
+        backend: "MailService order helpers",
+        template: "order-status / order-shipped / order-delivered",
+        sender: ordersSender,
+        replyTo: null,
+        variables: ["customerName", "orderNumber", "status", "trackingNumber", "trackingUrl", "carrier", "estimatedDelivery", "shopName"],
+        editable: false,
+        notes: "Uses a more specific template for shipped and delivered events.",
+      },
+      {
+        key: "seller_new_order",
+        name: "Seller new order notification",
+        audience: "Shop owner",
+        trigger: "New order is placed in the seller's shop",
+        backend: "OrdersService.createOrder",
+        template: "seller-new-order",
+        sender: ordersSender,
+        replyTo: null,
+        variables: ["shopOwnerName", "orderNumber", "customerName", "items", "total", "currency", "dashboardUrl"],
+        editable: false,
+        notes: "Seller-facing order alert.",
+      },
+      {
+        key: "seller_new_rfq",
+        name: "Seller new RFQ notification",
+        audience: "Shop owner",
+        trigger: "New quote request is created for a seller",
+        backend: "MailService.sendNewRfqNotification",
+        template: "seller-new-rfq",
+        sender: defaultNoReply,
+        replyTo: null,
+        variables: ["shopOwnerName", "rfqNumber", "customerName", "itemDescription", "material", "weight", "dashboardUrl"],
+        editable: false,
+        notes: "Seller-facing quote request alert.",
+      },
+      {
+        key: "shop_quote_tracking_link",
+        name: "Shop quote tracking link",
+        audience: "Walk-in quote customer",
+        trigger: "Shop sends tracking link by email from shop quote tools",
+        backend: "ShopQuotesService.sendTrackingLink",
+        template: "tracking-link",
+        sender: ordersSender,
+        replyTo: null,
+        variables: ["customerName", "quoteNumber", "shopName", "jewelleryType", "estimatedDays", "trackingUrl"],
+        editable: false,
+        notes: "Sent only when the shop chooses email delivery.",
+      },
+      {
+        key: "shop_verification_status",
+        name: "Shop verification status",
+        audience: "Shop owner",
+        trigger: "Admin approves or rejects shop verification",
+        backend: "MailService.sendShopVerificationStatus",
+        template: "shop-verification",
+        sender: adminSender,
+        replyTo: null,
+        variables: ["shopOwnerName", "shopName", "status", "reason", "dashboardUrl"],
+        editable: false,
+        notes: "Admin-originated seller account status email.",
+      },
+      {
+        key: "commission_reminder",
+        name: "Commission payment reminder",
+        audience: "Shop owner",
+        trigger: "Commission reminder helper is called",
+        backend: "MailService.sendCommissionReminder",
+        template: "commission-reminder",
+        sender: adminSender,
+        replyTo: null,
+        variables: ["shopOwnerName", "shopName", "pendingAmount", "currency", "dueDate", "paymentUrl"],
+        editable: false,
+        notes: "Finance/admin-originated reminder.",
+      },
+      {
+        key: "system_admin_alert",
+        name: "Internal admin alert",
+        audience: "Admins only",
+        trigger: "Backup, AI description, or system health service sends an admin alert",
+        backend: "MailService.sendAdminAlert",
+        template: "admin-alert",
+        sender: `Orivraa System <${EMAIL_SENDERS.ADMIN}>`,
+        replyTo: null,
+        variables: ["alertType", "title", "message", "details", "actionUrl", "actionText", "now"],
+        editable: false,
+        notes: "Only internal/admin emails may contain admin dashboard links.",
+      },
+      {
+        key: "contact_form",
+        name: "Website inquiry",
+        audience: "Sales inbox",
+        trigger: "Visitor submits contact form",
+        backend: "ContactController",
+        template: "contact-form",
+        sender: defaultNoReply,
+        replyTo: "Visitor email address",
+        variables: ["name", "email", "phone", "company", "interest", "message", "source"],
+        editable: false,
+        notes: "Reply-to is the visitor's submitted email.",
+      },
+    ];
+
+    return {
+      triggers,
+      total: triggers.length,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  @Get("email/templates")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "List editable email templates" })
+  async getEmailTemplates() {
+    const templates = await this.emailTemplateService.listTemplates();
+    return { templates };
+  }
+
+  @Get("email/templates/:id")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Get an editable email template" })
+  async getEmailTemplate(@Param("id") id: string) {
+    const template = await this.emailTemplateService.getTemplate(id);
+    return { template };
+  }
+
+  @Post("email/templates")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Create an email template" })
+  async createEmailTemplate(
+    @Body() data: any,
+    @CurrentUser("id") adminId: string,
+  ) {
+    const template = await this.emailTemplateService.createTemplate(data, adminId);
+    return { template };
+  }
+
+  @Patch("email/templates/:id")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Update an email template" })
+  async updateEmailTemplate(
+    @Param("id") id: string,
+    @Body() data: any,
+    @CurrentUser("id") adminId: string,
+  ) {
+    const template = await this.emailTemplateService.updateTemplate(id, data, adminId);
+    return { template };
+  }
+
+  @Delete("email/templates/:id")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Delete an email template" })
+  async deleteEmailTemplate(@Param("id") id: string) {
+    return this.emailTemplateService.deleteTemplate(id);
+  }
+
+  @Post("email/templates/:id/preview")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Preview an email template" })
+  async previewEmailTemplate(
+    @Param("id") id: string,
+    @Body() data: { context?: Record<string, any> },
+  ) {
+    return this.emailTemplateService.previewTemplate(id, data?.context || {});
+  }
+
+  @Post("email/templates/preview")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Preview an email template draft" })
+  async previewEmailTemplateDraft(@Body() data: any) {
+    return this.emailTemplateService.previewDraft(data);
+  }
+
   @Post("messages/send")
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: "Send an email/message to a user" })
@@ -1413,18 +1680,37 @@ export class AdminController {
       throw new BadRequestException("User not found");
     }
 
-    const subject = data.subject || "Message from Orivraa Admin";
+    const message = data.content?.trim();
+    if (!message) {
+      throw new BadRequestException("Message content is required");
+    }
+
+    const subject = data.subject?.trim() || "Message from Orivraa Support";
+    const rendered = await this.emailTemplateService.renderByKey(
+      "manual_user_message",
+      {
+        title: subject,
+        message,
+        recipientName: user.firstName || user.email,
+        sentAt: new Date(),
+      },
+      {
+        subject,
+        templateName: "support-message",
+        senderName: "Orivraa Support",
+        senderEmail: EMAIL_SENDERS.SUPPORT,
+        replyTo: EMAIL_SENDERS.SUPPORT,
+        audience: "customer",
+      },
+    );
 
     // 1. Send Email
-    const result = await this.mailService.send({
+    const result = await this.mailService.sendHtml({
       to: user.email,
-      subject,
-      template: "admin-alert", // Basic template with a message
-      context: {
-        title: subject,
-        message: data.content,
-        alertType: "Admin Message",
-      },
+      subject: rendered.subject,
+      html: rendered.html,
+      from: rendered.from,
+      replyTo: rendered.replyTo || EMAIL_SENDERS.SUPPORT,
     });
 
     if (!result.success) {
@@ -1435,12 +1721,14 @@ export class AdminController {
     await this.prisma.emailLog.create({
       data: {
         direction: "OUTBOUND",
-        fromAddress: "admin@orivraa.com",
+        fromAddress: rendered.from,
         toAddress: user.email,
-        subject,
-        body: data.content,
+        subject: rendered.subject,
+        body: message,
         userId: user.id,
         adminId,
+        messageId: result.messageId,
+        templateKey: rendered.key,
       },
     });
 

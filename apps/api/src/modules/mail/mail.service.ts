@@ -13,6 +13,7 @@ export interface EmailOptions {
   context: Record<string, any>;
   from?: string;
   replyTo?: string;
+  allowAdminLinks?: boolean;
   attachments?: Array<{
     filename: string;
     content?: Buffer | string;
@@ -25,6 +26,21 @@ export interface SendResult {
   success: boolean;
   messageId?: string;
   error?: string;
+}
+
+export interface RenderedEmailOptions {
+  to: string | string[];
+  subject: string;
+  html: string;
+  from?: string;
+  replyTo?: string;
+  allowAdminLinks?: boolean;
+  attachments?: Array<{
+    filename: string;
+    content?: Buffer | string;
+    path?: string;
+    contentType?: string;
+  }>;
 }
 
 // Sender identities
@@ -184,6 +200,59 @@ export class MailService {
     }
   }
 
+  private assertSafeCustomerEmail(templateName: string, html: string) {
+    if (html.includes('/dashboard/admin')) {
+      throw new Error(
+        `Email template ${templateName} contains an admin dashboard link. Set allowAdminLinks only for internal/admin-only emails.`,
+      );
+    }
+  }
+
+  private buildTemplateContext(context: Record<string, any>) {
+    const now = new Date();
+    return {
+      ...context,
+      now,
+      year: now.getFullYear(),
+      appName: 'Orivraa',
+      appUrl: this.configService.get<string>('APP_URL', 'https://www.orivraa.com'),
+      supportEmail: EMAIL_SENDERS.SUPPORT,
+    };
+  }
+
+  renderTemplateString(source: string, context: Record<string, any>): string {
+    return handlebars.compile(source)(this.buildTemplateContext(context));
+  }
+
+  async sendHtml(options: RenderedEmailOptions): Promise<SendResult> {
+    if (this.provider === 'none') {
+      this.logger.warn('Email sending skipped - no email provider configured');
+      return { success: false, error: 'No email provider configured' };
+    }
+
+    try {
+      if (!options.allowAdminLinks) {
+        this.assertSafeCustomerEmail('rendered-html', options.html);
+      }
+
+      const from = options.from || `Orivraa <${EMAIL_SENDERS.NO_REPLY}>`;
+      const to = Array.isArray(options.to) ? options.to : [options.to];
+
+      if (this.provider === 'resend' && this.resend) {
+        return this.sendWithResend(from, to, options.subject, options.html, options.replyTo);
+      }
+
+      if (this.provider === 'smtp' && this.transporter) {
+        return this.sendWithSmtp(from, to, options.subject, options.html, options.replyTo, options.attachments);
+      }
+
+      return { success: false, error: 'No email provider available' };
+    } catch (error: any) {
+      this.logger.error(`❌ Failed to send email to ${options.to}:`, error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
   async send(options: EmailOptions): Promise<SendResult> {
     if (this.provider === 'none') {
       this.logger.warn('Email sending skipped - no email provider configured');
@@ -194,12 +263,12 @@ export class MailService {
       // Load and compile template
       const template = await this.loadTemplate(options.template);
       const html = template({
-        ...options.context,
-        year: new Date().getFullYear(),
-        appName: 'Orivraa',
-        appUrl: this.configService.get<string>('APP_URL', 'https://www.orivraa.com'),
-        supportEmail: EMAIL_SENDERS.SUPPORT,
+        ...this.buildTemplateContext(options.context),
       });
+
+      if (!options.allowAdminLinks) {
+        this.assertSafeCustomerEmail(options.template, html);
+      }
 
       // Determine sender
       const from = options.from || `Orivraa <${EMAIL_SENDERS.NO_REPLY}>`;
@@ -509,6 +578,7 @@ export class MailService {
       template: 'admin-alert',
       context: data,
       from: `Orivraa System <${EMAIL_SENDERS.ADMIN}>`,
+      allowAdminLinks: true,
     });
   }
 

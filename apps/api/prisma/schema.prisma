@@ -40,6 +40,7 @@ model User {
   twoFactorBackupCodes String[]
   apiTokens            ApiToken[]
   auditLogs            AuditLog[]
+  emailLogs            EmailLog[]
   notifications        Notification[]
   customerOrders       Order[]                 @relation("CustomerOrders")
   refreshTokens        RefreshToken[]
@@ -76,8 +77,6 @@ model User {
   desktopSessions      DesktopSession[]
   // Web app sessions
   webSessions          WebSession[]
-  // Email logs
-  emailLogs            EmailLog[]         @relation("UserEmails")
   
   // Custom Profile Enrivhment fields
   dateOfBirth          DateTime?
@@ -206,6 +205,77 @@ model HtmlTranslation {
 
   @@unique([locale, contentHash])
   @@index([locale])
+}
+
+model EmailLog {
+  id          String   @id @default(uuid())
+  direction   String
+  fromAddress String
+  toAddress   String
+  subject     String
+  body        String   @db.Text
+  userId      String?
+  adminId     String?
+  threadId    String?
+  messageId   String?
+  provider    String?
+  templateKey String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([direction])
+  @@index([templateKey])
+  @@index([userId])
+}
+
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  audience    String
+  trigger     String?
+  subject     String   @db.Text
+  html        String   @db.Text
+  text        String?  @db.Text
+  senderName  String
+  senderEmail String
+  replyTo     String?
+  variables   String[]
+  isActive    Boolean  @default(true)
+  isSystem    Boolean  @default(false)
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  versions EmailTemplateVersion[]
+
+  @@index([audience])
+  @@index([isActive])
+}
+
+model EmailTemplateVersion {
+  id          String   @id @default(uuid())
+  templateId  String
+  version     Int
+  subject     String   @db.Text
+  html        String   @db.Text
+  text        String?  @db.Text
+  senderName  String
+  senderEmail String
+  replyTo     String?
+  variables   String[]
+  createdBy   String?
+  createdAt   DateTime @default(now())
+
+  template EmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, version])
+  @@index([templateId, createdAt])
 }
 
 model RefreshToken {
@@ -369,37 +439,6 @@ model Shop {
   @@index([country, city])
   @@index([isActive, isVerified])
   @@index([sellerTier])
-}
-
-// Model to track outbound and inbound email communications for CRM
-model EmailLog {
-  id          String   @id @default(uuid())
-  threadId    String?  // Used for correlating replies into a conversation
-  direction   String   // "OUTBOUND" or "INBOUND"
-  fromAddress String
-  toAddress   String
-  subject     String
-  body        String   @db.Text
-  userId      String?  // The customer/user associated with this email
-  adminId     String?  // Admin who initiated the outbound email (if applicable)
-  createdAt   DateTime @default(now())
-
-  user        User?    @relation("UserEmails", fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([adminId])
-  @@index([createdAt])
-  @@index([threadId])
-}
-
-// Backup scheduling configuration
-model BackupSchedule {
-  id        String   @id @default(uuid())
-  name      String
-  cronExp   String   // e.g. "0 0 * * *"
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model ShopMetalRate {
@@ -3041,6 +3080,18 @@ model ScheduledReport {
 
   @@index([shopId, isActive])
   @@index([nextRunAt])
+}
+
+model BackupSchedule {
+  id        String   @id @default(uuid())
+  name      String
+  cronExp   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([createdAt])
 }
 
 enum ReportType {
