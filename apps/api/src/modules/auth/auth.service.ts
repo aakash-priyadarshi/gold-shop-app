@@ -1,11 +1,11 @@
 import {
-    BadRequestException,
-    ConflictException,
-    ForbiddenException,
-    Injectable,
-    Logger,
-    NotFoundException,
-    UnauthorizedException,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { CurrencyCode, UserRole, UserStatus } from "@prisma/client";
@@ -15,6 +15,7 @@ import { RedisService } from "../../common/redis";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { MailService } from "../mail/mail.service";
+import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { SellerSubscriptionsService } from "../subscriptions/seller-subscriptions.service";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
@@ -68,6 +69,7 @@ export class AuthService {
     private otpService: OtpService,
     private redisService: RedisService,
     private sellerSubscriptionsService: SellerSubscriptionsService,
+    private platformConfigService: PlatformConfigService,
   ) {}
 
   /**
@@ -145,6 +147,16 @@ export class AuthService {
     dto: RegisterDto,
     ipAddress?: string,
   ): Promise<RegisterResponse> {
+    if (dto.role === UserRole.CUSTOMER) {
+      const isCustomerEnabled =
+        await this.platformConfigService.isCustomerFlowEnabled();
+      if (!isCustomerEnabled) {
+        throw new ForbiddenException(
+          "Customer registration is currently disabled.",
+        );
+      }
+    }
+
     // Check if email already exists (using cached check)
     const emailCheck = await this.checkEmailExists(dto.email);
     if (emailCheck.exists) {
@@ -695,6 +707,17 @@ export class AuthService {
 
     // User doesn't exist
     // User doesn't exist yet but tried to log in using Google Auth
+
+    if (requestedRole === UserRole.CUSTOMER) {
+      const isCustomerEnabled =
+        await this.platformConfigService.isCustomerFlowEnabled();
+      if (!isCustomerEnabled) {
+        throw new ForbiddenException(
+          "Customer registration is currently disabled.",
+        );
+      }
+    }
+
     // Instead of throwing an error, we seamlessly auto-register them using the role requested.
     this.logger.log(
       `Auto-registering new Google account via OAuth: ${googleUser.email} (Role: ${requestedRole})`,

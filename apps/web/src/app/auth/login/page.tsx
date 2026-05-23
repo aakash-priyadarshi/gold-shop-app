@@ -4,24 +4,24 @@ import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
 import { Turnstile } from "@/components/auth/Turnstile";
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import OrivraaLoader, {
-    useMinLoadingTime,
+  useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import { T } from "@/components/ui/T";
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { getDashboardRoute, useAuth } from "@/hooks/useAuth";
@@ -29,14 +29,14 @@ import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
 import {
-    ArrowPathIcon,
-    ArrowRightIcon,
-    CheckCircleIcon,
-    EnvelopeIcon,
-    ExclamationCircleIcon,
-    EyeIcon,
-    EyeSlashIcon,
-    LockClosedIcon,
+  ArrowPathIcon,
+  ArrowRightIcon,
+  CheckCircleIcon,
+  EnvelopeIcon,
+  ExclamationCircleIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -99,7 +99,7 @@ function LoginForm() {
       title: t("Verification failed"),
       description: t("Please try again or refresh the page."),
     });
-  }, [toast]);
+  }, [toast, t]);
   const handleTurnstileExpire = useCallback(() => {
     setTurnstileToken("");
     setTurnstileError(true);
@@ -145,7 +145,7 @@ function LoginForm() {
         description: t(errorParam),
       });
     }
-  }, [searchParams, toast, router]);
+  }, [searchParams, toast, router, t]);
 
   // Check if user has visited before (skip intro for returning users)
   useEffect(() => {
@@ -204,7 +204,8 @@ function LoginForm() {
         return;
       }
 
-      const returnTo = searchParams.get("returnTo") || searchParams.get("redirect");
+      const returnTo =
+        searchParams.get("returnTo") || searchParams.get("redirect");
       if (returnTo) {
         router.push(decodeURIComponent(returnTo));
       } else {
@@ -508,7 +509,13 @@ function LoginForm() {
           <Button
             type="button"
             variant="outline"
-              onClick={() => googleLogin("CUSTOMER", "login", rememberMe)}
+            onClick={() =>
+              googleLogin(
+                customerFlowEnabled ? "CUSTOMER" : "SHOPKEEPER",
+                "login",
+                rememberMe,
+              )
+            }
             className="w-full h-12 rounded-xl border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center gap-3"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
