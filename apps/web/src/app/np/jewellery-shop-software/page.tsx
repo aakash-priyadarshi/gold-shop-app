@@ -3,7 +3,7 @@ import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
-import { ArrowRight, CheckCircle2, ShieldCheck, TrendingUp, Scale, FileText } from "lucide-react";
+import { ArrowRight, CheckCircle2, ShieldCheck, TrendingUp, Scale, FileText, Smartphone } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Jewellery Shop Software Nepal | Tola Billing, NRB Gold Rate & 13% VAT | Orivraa",
@@ -185,6 +185,107 @@ export default function NepalJewelleryShopSoftwarePage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </section>
+
+        {/* Mobile POS Section */}
+        <section className="py-16 lg:py-24 bg-gray-900 text-white overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-600/20 to-transparent pointer-events-none"></div>
+          <div className="container mx-auto px-4 max-w-5xl relative z-10">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-300 text-sm font-semibold">
+                  <Smartphone className="h-4 w-4" />
+                  <T>Mobile-First POS</T>
+                </div>
+                <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
+                  <T>No PC? No Problem. Run your jewellery shop entirely from your phone.</T>
+                </h2>
+                <p className="text-gray-300 text-lg leading-relaxed">
+                  <T>
+                    We know that many small sellers in Nepal cannot afford or do not have space for a dedicated PC setup. That's why we built Orivraa to work flawlessly as a mobile POS. Generate IRD-compatible invoices, check NRB gold rates, and track your stock—all from your smartphone.
+                  </T>
+                </p>
+                <ul className="space-y-4 pt-4">
+                  {[
+                    "Works on any Android or iOS device",
+                    "Scan barcodes using your phone camera",
+                    "Share PDF bills directly via WhatsApp or Viber",
+                    "Real-time backup and instant sync"
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3">
+                      <div className="h-6 w-6 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="h-4 w-4 text-amber-400" />
+                      </div>
+                      <span className="text-gray-200"><T>{item}</T></span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="pt-6">
+                   <Link
+                    href="/auth/register"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-amber-500/25"
+                  >
+                    <T>Try Mobile POS Free</T>
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+              <div className="relative mx-auto w-full max-w-[300px] md:max-w-none">
+                {/* A glowing effect behind the phone */}
+                <div className="absolute inset-0 bg-amber-500/30 blur-[100px] rounded-full"></div>
+                
+                {/* Mockup frame container */}
+                <div className="relative bg-gray-800 rounded-[3rem] border-[8px] border-gray-700 shadow-2xl overflow-hidden aspect-[9/19] w-full max-w-[300px] mx-auto flex flex-col">
+                  {/* Fake notch */}
+                  <div className="absolute top-0 inset-x-0 h-6 bg-gray-700 rounded-b-2xl w-32 mx-auto z-20"></div>
+                  
+                  {/* Fake UI Header */}
+                  <div className="bg-amber-500 text-white p-4 pt-8 shrink-0 z-10">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="font-bold text-lg"><T>Orivraa POS</T></div>
+                      <div className="text-xs bg-amber-600 px-2 py-1 rounded"><T>NRB Rate: ₹ 142,000</T></div>
+                    </div>
+                  </div>
+                  
+                  {/* Fake UI Content */}
+                  <div className="flex-1 bg-gray-50 p-4 flex flex-col gap-3 overflow-hidden z-10">
+                    <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+                      <div>
+                        <div className="font-semibold text-gray-800 text-sm"><T>24K Gold Ring</T></div>
+                        <div className="text-xs text-gray-500">0.5 Tola • HUID: 8A9B</div>
+                      </div>
+                      <div className="font-bold text-gray-800">₹ 71,000</div>
+                    </div>
+                    <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+                      <div>
+                        <div className="font-semibold text-gray-800 text-sm"><T>Making Charges</T></div>
+                        <div className="text-xs text-gray-500">12%</div>
+                      </div>
+                      <div className="font-bold text-gray-800">₹ 8,520</div>
+                    </div>
+                    
+                    <div className="mt-auto bg-gray-100 p-4 -mx-4 -mb-4 border-t border-gray-200">
+                      <div className="flex justify-between text-sm text-gray-600 mb-1">
+                        <span><T>Subtotal</T></span>
+                        <span>₹ 79,520</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600 mb-3">
+                        <span><T>VAT (13%)</T></span>
+                        <span>₹ 10,337</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-gray-900 text-lg mb-4">
+                        <span><T>Total</T></span>
+                        <span>₹ 89,857</span>
+                      </div>
+                      <button className="w-full bg-emerald-500 text-white py-3 rounded-xl font-bold shadow-md shadow-emerald-500/20 text-sm">
+                        <T>Generate Bill</T>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
