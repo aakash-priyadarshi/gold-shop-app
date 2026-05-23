@@ -689,6 +689,29 @@ export const shopQuotesApi = {
     api.get(`/shop-quotes/customer/${customerId}`),
 };
 
+// Pricing API
+export const pricingApi = {
+  getTaxRules: (region: string) =>
+    api.get("/pricing/tax-rules", { params: { region } }),
+};
+
+export const adminTaxSyncApi = {
+  getSources: () => api.get("/pricing/tax-sync/sources"),
+  getRuns: (limit = 10) =>
+    api.get("/pricing/tax-sync/runs", { params: { limit } }),
+  getProposals: (params?: {
+    status?: string;
+    region?: string;
+    limit?: number;
+  }) => api.get("/pricing/tax-sync/proposals", { params }),
+  runSync: (data?: { region?: string }) =>
+    api.post("/pricing/tax-sync/run", data || {}),
+  approveProposal: (id: string, note?: string) =>
+    api.post(`/pricing/tax-sync/proposals/${id}/approve`, note ? { note } : {}),
+  rejectProposal: (id: string, note?: string) =>
+    api.post(`/pricing/tax-sync/proposals/${id}/reject`, note ? { note } : {}),
+};
+
 // Platform Config API
 export const platformConfigApi = {
   getAll: () => api.get("/platform-config"),

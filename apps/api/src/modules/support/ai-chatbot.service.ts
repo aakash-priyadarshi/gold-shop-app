@@ -324,10 +324,42 @@ ONBOARDING:
 - Most shops are live the same day; free onboarding call included
 - /contact?interest=Onboarding to book a call
 
-COMPARISONS:
-- vs Tally: Orivraa has live gold rates, HUID billing, mobile POS, free plan — Tally has none of these
-- vs Marg ERP: same gaps — Marg wasn't built for jewellery; no AI, no cloud, no mobile POS
-- Side-by-side: /compare/orivraa-vs-tally and /compare/orivraa-vs-marg-erp
+COMPARISONS (DETAILED COMPETITIVE INTEL):
+
+US Market:
+- vs The Edge: Orivraa is cloud-native ($12.99/mo Pro) vs Edge's on-premise ($4,600 license + local Windows servers + proprietary hardware). Edge requires $515 tag printers, $315 barcode scanners. Edge has batch-processed backups causing overselling of one-of-a-kind items online. Orivraa syncs in real time. Edge migration tools are known to fail — users report "more components that did not migrate than expected". Side-by-side: /compare/orivraa-vs-the-edge
+- vs Jewel360: Both cloud-native, but Jewel360 is $199+/mo vs Orivraa $12.99/mo. Jewel360 lacks manufacturing/karigar workflows and marketplace. Side-by-side: /compare/orivraa-vs-jewel360
+- vs WJewel: WJewel offers $125/mo lease or $1,500–$3,500 perpetual purchase. Marketed as "cloud" but is often a hosted desktop app, not true multi-tenant SaaS. Users report it "needs modernisation for integration with GIA and other websites".
+- vs Lightspeed: Horizontal retail POS, no jewellery-specific features — no weight×purity pricing, no live gold rates, no hallmark fields. Users report inventory sync failures between C-Series and R-Series — cancelled orders fail to update inventory. Side-by-side: /compare/orivraa-vs-lightspeed
+- vs RightClick: Wholesale-focused at ~$500/mo. Good for memo operations and RapNet integration but anchored to older SQL architecture, lacks true cloud agility.
+
+India Market:
+- vs Tally: Tally requires custom TDL development for making charges, wastage, gold rate tracking — fragile, expensive to maintain, dependent on third-party developers. Orivraa has all this natively. Tally is desktop-only, no mobile POS, no live gold rates, no digital catalogues, no marketplace, no HUID tracking. Tally perpetual license ~₹18,000+. Orivraa Pro is ₹299/mo (₹2,990/yr) and Pro+ is ₹599/mo (₹5,990/yr). Side-by-side: /compare/orivraa-vs-tally
+- vs Marg ERP: Desktop-only (₹8,100–₹10,300/year + AMC). Windows-only, no cloud, no mobile app, no marketplace. Orivraa is cloud-native, works on any device. Side-by-side: /compare/orivraa-vs-marg-erp
+- vs Jwelly ERP: Strong manufacturing/karigar module but outdated UI (Windows 95 aesthetics), poor e-commerce integration, limited mobile. Orivraa combines manufacturing tracking with modern cloud UX.
+- vs Alpha-E JSoft: Good old-gold management and refinery tracking, but cluttered interface, mobile apps are "bolted on" utilities not native experiences. One-time ₹65,000–₹1,30,000 + annual maintenance.
+- vs Vyapar: General billing app (₹699–₹4,099/year), not built for jewellery — no weight/purity tracking, no live gold rates, no hallmark/HUID support. Side-by-side: /compare/orivraa-vs-vyapar
+- vs Zoho: General CRM starting at ₹749/mo per user. No jewellery-specific features, treats diamonds as generic widgets, no weight×purity inventory. Side-by-side: /compare/orivraa-vs-zoho-inventory
+- vs Online Munim: ₹7,670/year, no free plan. Orivraa Pro is ₹2,990/year (Pro+ ₹5,990/year) with a free plan always available.
+
+Nepal Market:
+- vs Tally: Same custom TDL issues as India + requires additional custom work for tola billing and NRB gold rate integration. Orivraa auto-pulls NRB rates daily and supports tola (1 tola = 11.664g) natively. Tally perpetual license costs NPR 12,000+. Orivraa Pro is NPR 399/mo. Side-by-side: /compare/orivraa-vs-tally
+- vs Marg ERP: Some adoption via Indian distributors. Desktop-only, INR-only. Orivraa supports NPR billing natively. Side-by-side: /compare/orivraa-vs-marg-erp
+- vs Vyapar: Basic billing, no jewellery features, no NRB rate integration, no tola support. Side-by-side: /compare/orivraa-vs-vyapar
+
+UAE/Dubai Market:
+- vs Tally: Many Dubai gold souk traders use Tally with custom TDL. Same fragility issues. Orivraa handles investment gold zero-rating (0% VAT on 99%+ purity), Arabic + English bilingual invoices, making charges, and FTA compliance natively — no custom development needed. Side-by-side: /compare/orivraa-vs-tally
+- vs Lightspeed: No Arabic invoice support, no investment gold VAT distinction, no weight×purity pricing, no FTA-specific mandatory fields. Side-by-side: /compare/orivraa-vs-lightspeed
+- vs Zoho Inventory: No Arabic invoices, no FTA-specific VAT fields, no jewellery-specific inventory. Side-by-side: /compare/orivraa-vs-zoho-inventory
+
+UK Market:
+- vs Lightspeed: Popular UK retail POS but no jewellery features. Starts at £69+/mo vs Orivraa £9.99/mo. No hallmark fields (London, Birmingham, Sheffield, Edinburgh assay offices), no weight×purity pricing, no investment gold zero-rating. Side-by-side: /compare/orivraa-vs-lightspeed
+- vs Zoho Inventory: No hallmark fields, no UK assay office support, no jewellery-specific inventory, treats diamonds as generic widgets. Side-by-side: /compare/orivraa-vs-zoho-inventory
+
+Manufacturing (Global):
+- vs PIRO Fusion: Good cloud-native manufacturing BOM at $299/mo, but lacks retail POS elegance and e-commerce sync. Orivraa unifies manufacturing + retail + marketplace.
+- vs Katana Cloud MRP: Horizontal manufacturing MRP — no precious metal alloy mixing, no GIA/IGI integrations, no jewellery-specific forensic tracking.
+- vs Orderry: Repair shop workflow tool at $39/mo — good for job lifecycle but no deep inventory, no retail POS, no manufacturing BOMs for jewellery.
 
 SECURITY:
 - TLS 1.3 in transit, AES-256 encrypted backups at rest

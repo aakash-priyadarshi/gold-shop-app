@@ -142,6 +142,15 @@ const softwareJsonLd = {
         },
         {
           "@type": "Offer",
+          price: "599",
+          priceCurrency: "INR",
+          name: "Pro+ Plan — India",
+          description:
+            "Orivraa Pro+ for India: ₹599/month. Includes everything in Pro plus AI credits, advanced automation, and higher limits.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
           price: "399",
           priceCurrency: "NPR",
           name: "Pro Plan — Nepal",
@@ -242,7 +251,7 @@ const softwareJsonLd = {
           name: "How does Orivraa compare to Zoho, Marg ERP, and Vyapar for jewellery?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Orivraa is purpose-built for jewellery businesses, unlike general-purpose tools like Zoho (starting at ₹749/month) or Vyapar (₹699–₹4,099/year). Orivraa Pro costs ₹299/month (₹3,588/year) for India — cheaper than Online Munim (₹7,670/year), Marg ERP (₹8,100–₹10,300/year), and Nebu Jewellery (₹3,692/year). Key advantages: (1) Free plan always available — Zoho, Marg, and Online Munim charge from day one, (2) Cloud-based with mobile app — Marg ERP is Windows desktop only, (3) Built-in jewellery marketplace with international buyers, (4) Weight and purity tracking for gold/silver/diamond, (5) Digital catalogues shareable on WhatsApp, (6) AI-powered product descriptions optimised for jewellery.",
+            text: "Orivraa is purpose-built for jewellery businesses, unlike general-purpose tools like Zoho (starting at ₹749/month) or Vyapar (₹699–₹4,099/year). Orivraa Pro costs ₹299/month (₹2,990/year) and Pro+ is ₹599/month (₹5,990/year) for India — cheaper than a Tally perpetual license (₹18,000+) plus custom TDLs, Online Munim (₹7,670/year), and Marg ERP (₹8,100–₹10,300/year). Key advantages: (1) Free plan always available, (2) Cloud-based with Android mobile app — Tally and Marg ERP are Windows desktop only, (3) Built-in auto-split GST (3% and 5%), (4) Weight and purity tracking for gold/silver/diamond, (5) Digital catalogues shareable on WhatsApp, (6) No custom TDL development required.",
           },
         },
         {
@@ -365,90 +374,85 @@ const CORE_FEATURES = [
   },
 ];
 
+const PAIN_POINTS = [
+  {
+    icon: Store,
+    title: "No Custom TDL Needed — Unlike Tally",
+    desc: "Tally requires expensive third-party developers to add making charges, wastage tracking, and live gold rate lookups via custom TDL. This code is fragile and breaks on Tally updates. Orivraa has all of this built-in from day one.",
+  },
+  {
+    icon: Smartphone,
+    title: "Works on Your Phone — No PC Needed",
+    desc: "Marg ERP and Tally require a dedicated Windows PC. Orivraa works on any Android phone or tablet — generate GST bills, check live gold rates, and share WhatsApp invoices directly from your pocket.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "GST 3% & 5% Auto-Calculated",
+    desc: "No more manual tax ledger entries. Orivraa automatically splits 3% GST on gold value and 5% GST on making charges exactly as per Indian tax rules, with HSN code support built-in.",
+  },
+  {
+    icon: Cloud,
+    title: "Real-Time Cloud Sync — No 'Data Corruption'",
+    desc: "Tally data often gets corrupted or held hostage by ransomware. Orivraa is 100% cloud-based with instant backups. If your shop PC crashes, just log in on your phone and keep billing.",
+  },
+];
+
 const COMPARISON = [
   {
     feature: "Starting Price",
-    orivraa: "Free + local monthly plans",
-    zoho: "Per-user monthly",
-    marg: "Licence + AMC",
-    vyapar: "Paid annual plans",
+    orivraa: "Free + ₹299/mo",
+    tally: "₹18,000+ (Perpetual)",
+    marg: "₹8,100+/yr",
+    online_munim: "₹7,670+/yr",
   },
   {
     feature: "Built for Jewellery",
     orivraa: "✓ Purpose-built",
-    zoho: "✗ Generic CRM",
-    marg: "✓ Jewellery module",
-    vyapar: "✗ General billing",
-  },
-  {
-    feature: "Online Marketplace",
-    orivraa: `✓ Built-in (${BUYER_COUNTRY_COUNT} buyer countries)`,
-    zoho: "✗ No marketplace",
-    marg: "✗ No marketplace",
-    vyapar: "✗ No marketplace",
-  },
-  {
-    feature: "Weight & Purity Tracking",
-    orivraa: "✓ Full support",
-    zoho: "✗ Manual setup",
+    tally: "✗ Needs custom TDL",
     marg: "✓ Full support",
-    vyapar: "✗ Basic only",
+    online_munim: "✓ Full support",
   },
   {
-    feature: "Digital Catalogues",
-    orivraa: "✓ Auto-generated",
-    zoho: "✗ Not available",
-    marg: "✗ Not available",
-    vyapar: "✗ Not available",
+    feature: "Live Gold Rate Auto-Pull",
+    orivraa: "✓ Automatic",
+    tally: "✗ Manual entry",
+    marg: "✗ Manual entry",
+    online_munim: "✗ Manual entry",
   },
   {
-    feature: "Customer Chat & RFQ",
+    feature: "Works on Phone (Mobile POS)",
+    orivraa: "✓ Any Android/iOS",
+    tally: "✗ Windows PC only",
+    marg: "✗ Windows PC only",
+    online_munim: "✓ Mobile App",
+  },
+  {
+    feature: "GST 3% / 5% Auto-Split",
     orivraa: "✓ Built-in",
-    zoho: "✓ Paid add-on",
-    marg: "✗ Not available",
-    vyapar: "✗ Not available",
+    tally: "~ Requires setup",
+    marg: "✓ Built-in",
+    online_munim: "✓ Built-in",
   },
   {
-    feature: "AI Product Descriptions",
-    orivraa: "✓ Included (Pro)",
-    zoho: "✗ Not available",
-    marg: "✗ Not available",
-    vyapar: "✗ Not available",
+    feature: "Digital Catalogues & WhatsApp",
+    orivraa: "✓ Built-in",
+    tally: "✗ No",
+    marg: "✗ No",
+    online_munim: "~ Limited",
   },
   {
-    feature: "Multi-Currency Support",
-    orivraa: "✓ 6 currencies",
-    zoho: "✓ Multi-currency",
-    marg: "✗ INR only",
-    vyapar: "✗ INR only",
+    feature: "Cloud & Real-Time Backup",
+    orivraa: "✓ Instant cloud sync",
+    tally: "✗ Desktop",
+    marg: "✗ Desktop only",
+    online_munim: "✓ Cloud",
   },
   {
-    feature: "International Tax (GST/VAT)",
-    orivraa: "✓ Auto per country",
-    zoho: "✓ GST module",
-    marg: "✓ GST only",
-    vyapar: "✓ GST only",
-  },
-  {
-    feature: "Mobile App",
-    orivraa: "✓ Web + Desktop app",
-    zoho: "✓ Mobile app",
-    marg: "✓ Mobile app",
-    vyapar: "✓ Mobile app",
-  },
-  {
-    feature: "Cloud-Based",
-    orivraa: "✓ Fully cloud",
-    zoho: "✓ Cloud",
-    marg: "✗ Desktop + cloud",
-    vyapar: "✓ Cloud",
-  },
-  {
-    feature: "Setup Time",
-    orivraa: "< 5 minutes",
-    zoho: "1–2 hours",
-    marg: "Professional setup",
-    vyapar: "30 minutes",
+    feature: "Free Plan (No Time Limit)",
+    orivraa: "✓ Always free tier",
+    tally: "✗ No",
+    marg: "✗ No",
+    online_munim: "✗ No",
   },
 ];
 
@@ -869,17 +873,89 @@ export default function JewelleryShopSoftwarePage() {
           </div>
         </section>
 
+        {/* ── Why Jewellers Are Switching ─────────────────── */}
+        <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-950">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-400 mb-3">
+                <Zap className="h-4 w-4" />
+                <T>Why jewellers are switching</T>
+              </div>
+              <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+                <T>Tally &amp; Marg ERP weren&apos;t built for Jewellery</T>
+              </h2>
+              <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                <T>
+                  Stop paying for expensive custom TDL development and manual
+                  gold rate entry. Orivraa has everything modern jewellers need —
+                  natively, in the cloud, on your Android phone.
+                </T>
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-6">
+              {PAIN_POINTS.map((p) => {
+                const Icon = p.icon;
+                return (
+                  <div
+                    key={p.title}
+                    className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-4">
+                      <Icon className="h-5 w-5 text-red-500 dark:text-red-400" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                      <T>{p.title}</T>
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                      <T>{p.desc}</T>
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Mobile POS Callout */}
+        <section className="py-12 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="flex flex-col sm:flex-row items-center gap-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-2xl p-6 border border-amber-100 dark:border-amber-900/30">
+              <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                <Smartphone className="h-7 w-7 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                  <T>No PC? Run your entire shop from your phone.</T>
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  <T>
+                    Don't have space or budget for a Windows PC? Orivraa works flawlessly as a Mobile POS on any Android or iOS device. Generate GST bills, scan barcodes, and share WhatsApp invoices directly from your pocket.
+                  </T>{" "}
+                  <Link
+                    href="/jewellery-pos-software"
+                    className="text-amber-600 dark:text-amber-400 font-bold hover:underline inline-flex items-center gap-1 mt-2 sm:mt-0"
+                  >
+                    <T>See Mobile POS features</T> <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ── Comparison Table ─────────────────────────────── */}
         <section className="bg-white dark:bg-gray-900/50 border-y border-gray-200 dark:border-gray-800">
           <div className="max-w-6xl mx-auto px-4 py-20">
             <div className="text-center mb-14">
+              <div className="inline-flex items-center gap-2 text-sm font-semibold text-orange-700 dark:text-orange-400 mb-3">
+                🇮🇳 <T>India Market Comparison</T>
+              </div>
               <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
                 <T>Orivraa vs Other Jewellery Software</T>
               </h2>
               <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
                 <T>
-                  See how Orivraa compares to Zoho, Marg ERP, and Vyapar for
-                  jewellery shop management
+                  See how Orivraa compares to Tally ERP 9 / Prime, Marg ERP, and Online Munim for jewellery shop management.
                 </T>
               </p>
             </div>
@@ -897,13 +973,13 @@ export default function JewelleryShopSoftwarePage() {
                       </div>
                     </th>
                     <th className="text-center py-4 px-4 font-medium text-gray-600 dark:text-gray-400 min-w-[120px]">
-                      Zoho
+                      Tally + TDL
                     </th>
                     <th className="text-center py-4 px-4 font-medium text-gray-600 dark:text-gray-400 min-w-[120px]">
                       Marg ERP
                     </th>
                     <th className="text-center py-4 px-4 font-medium text-gray-600 dark:text-gray-400 min-w-[120px]">
-                      Vyapar
+                      Online Munim
                     </th>
                   </tr>
                 </thead>
@@ -929,13 +1005,13 @@ export default function JewelleryShopSoftwarePage() {
                         </div>
                       </td>
                       <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">
-                        <T>{row.zoho}</T>
+                        <T>{row.tally}</T>
                       </td>
                       <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">
                         <T>{row.marg}</T>
                       </td>
                       <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">
-                        <T>{row.vyapar}</T>
+                        <T>{row.online_munim}</T>
                       </td>
                     </tr>
                   ))}

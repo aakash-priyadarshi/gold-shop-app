@@ -25,12 +25,14 @@ import { PricingEstimateService } from './services/pricing-estimate.service';
 // New pricing engine services
 import { CommodityRatesService } from './services/commodity-rates.service';
 import { TaxRulesService } from './services/tax-rules.service';
+import { TaxRuleSyncService } from './services/tax-rule-sync.service';
 import { PricingEngineService } from './services/pricing-engine.service';
 import { BackendTaxEngineService } from './services/backend-tax-engine.service';
 
 // Controllers
 import { PricingController as LegacyPricingController } from './pricing.controller';
 import { PricingController } from './controllers/pricing.controller';
+import { TaxSyncController } from './controllers/tax-sync.controller';
 
 // External modules
 import { MarketRatesModule } from '../market-rates/market-rates.module';
@@ -46,6 +48,7 @@ import { FxRatesModule } from '../fx-rates';
   controllers: [
     LegacyPricingController,
     PricingController,
+    TaxSyncController,
   ],
   providers: [
     // Legacy services
@@ -58,6 +61,7 @@ import { FxRatesModule } from '../fx-rates';
     // New pricing engine services
     CommodityRatesService,
     TaxRulesService,
+    TaxRuleSyncService,
     PricingEngineService,
     BackendTaxEngineService,
   ],
@@ -72,6 +76,7 @@ import { FxRatesModule } from '../fx-rates';
     // New exports
     CommodityRatesService,
     TaxRulesService,
+    TaxRuleSyncService,
     PricingEngineService,
     BackendTaxEngineService,
   ],

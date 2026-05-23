@@ -1210,6 +1210,58 @@ model TaxRuleConfig {
   @@index([category])
 }
 
+model TaxSyncRun {
+  id           String                  @id @default(uuid())
+  triggerSource String                 @default("MANUAL")
+  status       String                  @default("PENDING")
+  region       MarketRegion?
+  summary      Json?
+  errorMessage String?
+  triggeredBy  String?
+  startedAt    DateTime                @default(now())
+  completedAt  DateTime?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  proposals    TaxRuleChangeProposal[]
+
+  @@index([status, startedAt])
+  @@index([region, startedAt])
+}
+
+model TaxRuleChangeProposal {
+  id                  String      @id @default(uuid())
+  syncRunId           String
+  marketRegion        MarketRegion
+  taxType             String
+  taxName             String
+  category            String
+  stateCode           String?
+  currentRate         Float?
+  proposedRate        Float
+  changeDelta         Float?
+  proposedDescription String?
+  status              String      @default("PENDING")
+  sourceLabel         String
+  sourceUrl           String
+  sourceExcerpt       String?
+  evidence            Json?
+  confidence          Float?
+  rationale           String?
+  dedupeKey           String      @unique
+  effectiveFrom       DateTime?
+  reviewedBy          String?
+  reviewedAt          DateTime?
+  reviewNotes         String?
+  appliedRuleId       String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  syncRun             TaxSyncRun  @relation(fields: [syncRunId], references: [id], onDelete: Cascade)
+
+  @@index([status, marketRegion, createdAt])
+  @@index([marketRegion, category, status])
+  @@index([syncRunId])
+}
+
 model ShopPriceOverride {
   id            String       @id @default(uuid())
   shopId        String

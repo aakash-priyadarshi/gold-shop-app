@@ -7,7 +7,7 @@
  * - Configurable rules from DB
  *
  * Tax types supported:
- * - GST (India) - 3% on making charges for gold jewellery
+ * - GST (India) - 3% on metal/gemstone value, 5% on making charges
  * - VAT (Nepal, UAE, UK, EU) - varies by region
  * - Sales Tax (US) - state-specific, configurable
  *
@@ -37,9 +37,9 @@ export const DEFAULT_TAX_RATES: Record<
     taxName: "GST",
     rates: {
       PRECIOUS_METAL: 0.03, // 3% GST on gold/silver
-      MAKING_CHARGE: 0.18, // 18% GST on making charges (service)
+      MAKING_CHARGE: 0.05, // 5% GST on making charges (service)
       GEMSTONE: 0.03, // 3% GST
-      FINISH: 0.18, // 18% GST (service)
+      FINISH: 0.18, // 18% GST on finishing/plating services
       ALL: 0.03, // Default fallback
     },
     defaultRate: 0.03,

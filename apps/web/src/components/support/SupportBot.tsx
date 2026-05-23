@@ -43,6 +43,9 @@ const QUICK_ASKS_PUBLIC = [
   "Does it work offline?",
   "How is GST handled?",
   "Compare with Tally",
+  "Compare with The Edge",
+  "Compare with Jewel360",
+  "Compare with Lightspeed",
 ];
 
 const QUICK_ASKS_SELLER = [

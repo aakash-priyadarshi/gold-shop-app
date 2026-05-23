@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminTaxRulesPanel } from "@/components/admin/AdminTaxRulesPanel";
+import { AdminTaxSyncPanel } from "@/components/admin/AdminTaxSyncPanel";
 import { MarketConfigTab } from "@/components/admin/MarketConfigTab";
 import { PagesManagerTab } from "@/components/admin/PagesManagerTab";
 import { AdminGuard } from "@/components/auth/RouteGuard";
@@ -2278,6 +2279,22 @@ export default function AdminSettingsPage() {
                     </CardHeader>
                     <CardContent>
                       <AdminTaxRulesPanel />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5" />
+                        Trusted-source Sync Review
+                      </CardTitle>
+                      <CardDescription>
+                        Check official tax sources, review AI-extracted evidence,
+                        and approve rate changes before they go live.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <AdminTaxSyncPanel />
                     </CardContent>
                   </Card>
                 </div>

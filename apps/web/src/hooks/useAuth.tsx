@@ -1,22 +1,22 @@
 "use client";
 
 import OrivraaLoader, {
-  useMinLoadingTime,
+    useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import { api } from "@/lib/api";
 import {
-  COUNTRIES,
-  usePreferencesStore,
-  type CountryCode,
+    COUNTRIES,
+    usePreferencesStore,
+    type CountryCode,
 } from "@/store/preferences";
 import { usePathname, useRouter } from "next/navigation";
 import React, {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
+    createContext,
+    ReactNode,
+    useCallback,
+    useContext,
+    useEffect,
+    useState,
 } from "react";
 
 // Types matching backend

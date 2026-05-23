@@ -26,7 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { invoicesApi, shopQuotesApi } from "@/lib/api";
+import { invoicesApi, pricingApi, shopQuotesApi } from "@/lib/api";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
     detectTaxIdKind,
@@ -51,27 +51,37 @@ import {
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-// ── Per-category tax rates by country (mirrors backend DEFAULT_TAX_RATES) ──
-const CATEGORY_TAX_RATES: Record<
+type TaxCategoryKey =
+  | "PRECIOUS_METAL"
+  | "MAKING_CHARGE"
+  | "GEMSTONE"
+  | "FINISH";
+
+interface CountryTaxConfig {
+  taxType: string;
+  taxName: string;
+  rates: Record<TaxCategoryKey, number>;
+  defaultRate: number;
+}
+
+interface TaxRuleResponse {
+  taxType?: string;
+  taxName?: string;
+  category?: string;
+  rate?: number;
+}
+
+// ── Fallback tax rates used while backend tax rules load ──
+const FALLBACK_CATEGORY_TAX_RATES: Record<
   string,
-  {
-    taxType: string;
-    taxName: string;
-    rates: {
-      PRECIOUS_METAL: number;
-      MAKING_CHARGE: number;
-      GEMSTONE: number;
-      FINISH: number;
-    };
-    defaultRate: number;
-  }
+  CountryTaxConfig
 > = {
   IN: {
     taxType: "GST",
     taxName: "GST",
     rates: {
       PRECIOUS_METAL: 0.03,
-      MAKING_CHARGE: 0.18,
+      MAKING_CHARGE: 0.05,
       GEMSTONE: 0.03,
       FINISH: 0.18,
     },
@@ -144,6 +154,69 @@ const CATEGORY_TAX_RATES: Record<
     defaultRate: 0.1,
   },
 };
+
+const PRICING_REGION_BY_INVOICE_COUNTRY: Record<string, string> = {
+  IN: "IN",
+  NP: "NP",
+  AE: "AE",
+  US: "US",
+  GB: "UK",
+  UK: "UK",
+  EU: "EU",
+};
+
+const TAX_CATEGORIES: TaxCategoryKey[] = [
+  "PRECIOUS_METAL",
+  "MAKING_CHARGE",
+  "GEMSTONE",
+  "FINISH",
+];
+
+function getFallbackCountryTax(countryCode: string): CountryTaxConfig {
+  return (
+    FALLBACK_CATEGORY_TAX_RATES[countryCode] ||
+    FALLBACK_CATEGORY_TAX_RATES["IN"]
+  );
+}
+
+function normalizeInvoiceCountryCode(countryCode: string): string {
+  return countryCode === "UK" ? "GB" : countryCode;
+}
+
+function buildCountryTaxConfig(
+  countryCode: string,
+  rules?: TaxRuleResponse[],
+): CountryTaxConfig {
+  const fallback = getFallbackCountryTax(countryCode);
+
+  if (!rules?.length) {
+    return fallback;
+  }
+
+  const rates = { ...fallback.rates };
+  let defaultRate = fallback.defaultRate;
+
+  for (const rule of rules) {
+    if (rule.category === "ALL" && typeof rule.rate === "number") {
+      defaultRate = rule.rate;
+      continue;
+    }
+
+    if (
+      TAX_CATEGORIES.includes(rule.category as TaxCategoryKey) &&
+      typeof rule.rate === "number"
+    ) {
+      rates[rule.category as TaxCategoryKey] = rule.rate;
+    }
+  }
+
+  return {
+    taxType: rules[0]?.taxType || fallback.taxType,
+    taxName: rules[0]?.taxName || fallback.taxName,
+    rates,
+    defaultRate,
+  };
+}
 
 const COUNTRIES = [
   { code: "IN", name: "India", phone: "+91", currency: "INR" },
@@ -358,9 +431,48 @@ export default function CreateInvoicePage() {
   }, [user?.shop, user?.shop?.isVerified]);
 
   // ── Country ──
-  const [invoiceCountry, setInvoiceCountry] = useState(shopCountry);
-  const countryTax =
-    CATEGORY_TAX_RATES[invoiceCountry] || CATEGORY_TAX_RATES["IN"];
+  const [invoiceCountry, setInvoiceCountry] = useState(
+    normalizeInvoiceCountryCode(shopCountry),
+  );
+  const [countryTax, setCountryTax] = useState<CountryTaxConfig>(() =>
+    getFallbackCountryTax(normalizeInvoiceCountryCode(shopCountry)),
+  );
+
+  useEffect(() => {
+    setInvoiceCountry(normalizeInvoiceCountryCode(shopCountry));
+  }, [shopCountry]);
+
+  useEffect(() => {
+    const fallback = getFallbackCountryTax(invoiceCountry);
+    const region = PRICING_REGION_BY_INVOICE_COUNTRY[invoiceCountry];
+    let isCancelled = false;
+
+    setCountryTax(fallback);
+
+    if (!region) {
+      return () => {
+        isCancelled = true;
+      };
+    }
+
+    pricingApi
+      .getTaxRules(region)
+      .then((response) => {
+        if (isCancelled) return;
+
+        setCountryTax(
+          buildCountryTaxConfig(invoiceCountry, response.data?.rules),
+        );
+      })
+      .catch(() => {
+        if (isCancelled) return;
+        setCountryTax(fallback);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [invoiceCountry]);
 
   // ── Tax filing fields (Sprint 1 universal) ──
   const [customerType, setCustomerType] = useState<"B2C" | "B2B">("B2C");
