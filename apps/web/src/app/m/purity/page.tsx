@@ -128,10 +128,10 @@ export default function PurityPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center justify-between">
         <div>
-          <h1 className="text-base font-bold text-gray-900"><T>Purity Calculator</T></h1>
+          <h1 className="text-base font-bold text-gray-900 dark:text-gray-100"><T>Purity Calculator</T></h1>
           <p className="text-xs text-gray-400">
             {rates
               ? `24K: ${currency} ${rates.rate24k.toLocaleString()}/g`
@@ -153,7 +153,7 @@ export default function PurityPage() {
           <button
             onClick={() => { haptic("light"); fetchRates(); }}
             disabled={loading}
-            className="h-8 w-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100"
+            className="h-8 w-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin text-amber-500" : ""}`} />
           </button>
@@ -162,13 +162,13 @@ export default function PurityPage() {
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {/* Mode toggle */}
-        <div className="flex bg-gray-100 rounded-2xl p-1">
+        <div className="flex bg-gray-100 dark:bg-gray-900 rounded-2xl p-1">
           {(["karat", "assay"] as Mode[]).map((m) => (
             <button
               key={m}
               onClick={() => { haptic("light"); setMode(m); }}
               className={`flex-1 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all ${
-                mode === m ? "bg-white text-amber-700 shadow-sm" : "text-gray-400"
+                mode === m ? "bg-white dark:bg-gray-800 text-amber-700 dark:text-amber-400 shadow-sm" : "text-gray-400 dark:text-gray-500"
               }`}
             >
               {m === "karat" ? <Layers className="h-4 w-4" /> : <FlaskConical className="h-4 w-4" />}
@@ -178,7 +178,7 @@ export default function PurityPage() {
         </div>
 
         {/* Input fields */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-4">
           {mode === "karat" ? (
             <div>
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-1.5"><T>Karat</T></label>
@@ -186,7 +186,7 @@ export default function PurityPage() {
                 <select
                   value={selectedKarat}
                   onChange={(e) => setSelectedKarat(e.target.value as KaratKey)}
-                  className="w-full appearance-none px-3 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl pr-8 focus:outline-none focus:ring-2 focus:ring-amber-400 font-medium"
+                  className="w-full appearance-none px-3 py-3 text-sm bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-850 rounded-xl pr-8 focus:outline-none focus:ring-2 focus:ring-amber-400 font-medium dark:text-gray-100"
                 >
                   {KARAT_OPTIONS.map((k) => (
                     <option key={k.karat} value={k.karat}>{k.label}</option>
@@ -209,9 +209,9 @@ export default function PurityPage() {
                   min={0}
                   max={100}
                   step={0.01}
-                  className="flex-1 px-3 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  className="flex-1 px-3 py-3 text-sm bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 dark:text-gray-100"
                 />
-                <span className="text-base font-semibold text-gray-500">%</span>
+                <span className="text-base font-semibold text-gray-500 dark:text-gray-400">%</span>
               </div>
               <p className="mt-1 text-xs text-gray-400">24K = 99.9% · 22K = 91.67% · 18K = 75%</p>
             </div>
@@ -226,7 +226,7 @@ export default function PurityPage() {
               onChange={(e) => setWeight(e.target.value)}
               placeholder="0.000"
               step={0.001}
-              className="w-full px-3 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full px-3 py-3 text-sm bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 dark:text-gray-100"
             />
           </div>
 
@@ -239,7 +239,7 @@ export default function PurityPage() {
               <select
                 value={deduction}
                 onChange={(e) => setDeduction(e.target.value)}
-                className="w-full appearance-none px-3 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl pr-8 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="w-full appearance-none px-3 py-3 text-sm bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-850 rounded-xl pr-8 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:text-gray-100"
               >
                 <option value="0">No deduction</option>
                 <option value="2">2% — minimal loss</option>
@@ -255,7 +255,7 @@ export default function PurityPage() {
 
         {/* Result */}
         {wt > 0 && purity > 0 && (
-          <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-3xl p-5 text-white space-y-3 shadow-lg shadow-amber-200">
+          <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-3xl p-5 text-white space-y-3 shadow-lg shadow-amber-200 dark:shadow-none">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium opacity-80 uppercase tracking-wide"><T>Result</T></p>
               <button
@@ -294,21 +294,21 @@ export default function PurityPage() {
         )}
 
         {/* Reference table */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3"><T>Karat Reference</T></p>
           <div className="space-y-1.5">
             {KARAT_OPTIONS.filter(k => !k.karat.includes("SILVER")).slice(0, 6).map((k) => (
               <div key={k.karat} className="flex items-center justify-between text-sm">
-                <span className="text-gray-700 font-medium">{k.karat}</span>
+                <span className="text-gray-700 dark:text-gray-300 font-medium">{k.karat}</span>
                 <div className="flex items-center gap-2">
-                  <div className="h-1.5 w-20 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-20 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                     <div className="h-full bg-amber-400 rounded-full" style={{ width: `${k.purity * 100}%` }} />
                   </div>
-                  <span className="text-gray-500 text-xs w-12 text-right">{(k.purity * 100).toFixed(2)}%</span>
+                  <span className="text-gray-500 dark:text-gray-400 text-xs w-12 text-right">{(k.purity * 100).toFixed(2)}%</span>
                   {rates && (
                     <>
                       <ArrowRight className="h-3 w-3 text-gray-300" />
-                      <span className="text-amber-700 font-semibold text-xs w-16 text-right">
+                      <span className="text-amber-700 dark:text-amber-400 font-semibold text-xs w-16 text-right">
                         {currency} {(rates.rate24k * k.purity).toFixed(0)}/g
                       </span>
                     </>

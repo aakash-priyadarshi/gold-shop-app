@@ -150,18 +150,18 @@ export default function MobileStoreSettingsPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center gap-3">
         <Link
           href="/m/pos"
-          className="p-2 -ml-2 rounded-lg hover:bg-gray-100"
+          className="p-2 -ml-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           aria-label="Back"
         >
-          <ArrowLeft className="h-5 w-5 text-gray-600" />
+          <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-base font-bold text-gray-900"><T>Store Settings</T></h1>
+          <h1 className="text-base font-bold text-gray-900 dark:text-gray-100"><T>Store Settings</T></h1>
           <p className="text-xs text-gray-400"><T>Country, currency, contact</T></p>
         </div>
         <MobileHelpButton
@@ -187,23 +187,23 @@ export default function MobileStoreSettingsPage() {
               const active = c.code === country;
               return (
                 <button
-                  key={c.code}
-                  type="button"
-                  onClick={() => setCountry(c.code)}
-                  className={`flex items-center justify-between px-4 py-3 rounded-2xl border transition-colors ${
-                    active
-                      ? "border-amber-500 bg-amber-50"
-                      : "border-gray-200 bg-white hover:bg-gray-50"
-                  }`}
+                   key={c.code}
+                   type="button"
+                   onClick={() => setCountry(c.code)}
+                   className={`flex items-center justify-between px-4 py-3 rounded-2xl border transition-colors ${
+                     active
+                       ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30"
+                       : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850"
+                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">{c.flag}</span>
                     <div className="text-left">
-                      <p className="text-sm font-semibold text-gray-900">{c.name}</p>
-                      <p className="text-xs text-gray-500">{c.currency}</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{c.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{c.currency}</p>
                     </div>
                   </div>
-                  {active && <Check className="h-5 w-5 text-amber-600" />}
+                  {active && <Check className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
                 </button>
               );
             })}
@@ -216,7 +216,7 @@ export default function MobileStoreSettingsPage() {
 
         {/* Shop Info */}
         <section className="space-y-3">
-          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
             <T>Shop Info</T>
           </label>
           <input
@@ -224,27 +224,27 @@ export default function MobileStoreSettingsPage() {
             placeholder="Shop Name"
             value={shopName}
             onChange={(e) => setShopName(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <textarea
             placeholder="Description (optional)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm resize-none"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
           />
           <input
             type="email"
             placeholder="Business email"
             value={contactEmail}
             onChange={(e) => setContactEmail(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </section>
 
         {/* Location */}
         <section className="space-y-3">
-          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
             <T>Location</T>
           </label>
           <input
@@ -252,34 +252,34 @@ export default function MobileStoreSettingsPage() {
             placeholder="State / Province"
             value={state}
             onChange={(e) => setState(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <input
             type="text"
             placeholder="City"
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <input
             type="text"
             placeholder="Pincode / ZIP"
             value={pincode}
             onChange={(e) => setPincode(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <input
             type="text"
             placeholder="Address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </section>
 
         {/* Contact */}
         <section className="space-y-3">
-          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
             <T>Contact Numbers</T>
           </label>
           <input
@@ -287,20 +287,20 @@ export default function MobileStoreSettingsPage() {
             placeholder="Contact phone"
             value={contactPhone}
             onChange={(e) => setContactPhone(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <input
             type="tel"
             placeholder="WhatsApp number"
             value={whatsappNumber}
             onChange={(e) => setWhatsappNumber(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </section>
 
         {/* Making charge */}
         <section>
-          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
             <T>Default Making Charge (%)</T>
           </label>
           <input
@@ -310,7 +310,7 @@ export default function MobileStoreSettingsPage() {
             step={0.5}
             value={makingChargePercent}
             onChange={(e) => setMakingChargePercent(Number(e.target.value))}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <p className="text-[11px] text-gray-400 mt-1">
             <T>Used as the default in POS and quotes. Can be overridden per bill.</T>
@@ -319,7 +319,7 @@ export default function MobileStoreSettingsPage() {
 
         {/* Business Settings */}
         <section className="space-y-3">
-          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
             <T>Business Settings</T>
           </label>
           {/* isActive toggle */}
@@ -327,12 +327,12 @@ export default function MobileStoreSettingsPage() {
             type="button"
             onClick={() => setIsActive((v) => !v)}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${
-              isActive ? "border-green-300 bg-green-50" : "border-gray-200 bg-white"
+              isActive ? "border-green-300 bg-green-50 dark:bg-green-950/20 dark:border-green-900" : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
             }`}
           >
             <div className="text-left">
-              <p className="text-sm font-semibold text-gray-900"><T>Shop Active</T></p>
-              <p className="text-xs text-gray-500"><T>Accept new orders from customers</T></p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100"><T>Shop Active</T></p>
+              <p className="text-xs text-gray-500 dark:text-gray-400"><T>Accept new orders from customers</T></p>
             </div>
             <div className={`h-6 w-11 rounded-full transition-colors relative ${isActive ? "bg-green-500" : "bg-gray-300"}`}>
               <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isActive ? "translate-x-5" : "translate-x-0.5"}`} />
@@ -343,12 +343,12 @@ export default function MobileStoreSettingsPage() {
             type="button"
             onClick={() => setCodEnabled((v) => !v)}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${
-              codEnabled ? "border-amber-300 bg-amber-50" : "border-gray-200 bg-white"
+              codEnabled ? "border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800" : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
             }`}
           >
             <div className="text-left">
-              <p className="text-sm font-semibold text-gray-900"><T>Cash on Delivery</T></p>
-              <p className="text-xs text-gray-500"><T>Allow COD orders</T></p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100"><T>Cash on Delivery</T></p>
+              <p className="text-xs text-gray-500 dark:text-gray-400"><T>Allow COD orders</T></p>
             </div>
             <div className={`h-6 w-11 rounded-full transition-colors relative ${codEnabled ? "bg-amber-500" : "bg-gray-300"}`}>
               <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${codEnabled ? "translate-x-5" : "translate-x-0.5"}`} />
@@ -356,38 +356,38 @@ export default function MobileStoreSettingsPage() {
           </button>
           {codEnabled && (
             <div className="space-y-2">
-              <label className="block text-xs text-gray-500"><T>Max COD Order Value</T></label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400"><T>Max COD Order Value</T></label>
               <input
                 type="number"
                 min={0}
                 value={codMaxValueNpr || ""}
                 onChange={(e) => setCodMaxValueNpr(Number(e.target.value))}
                 placeholder="0 = no limit"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
           )}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs text-gray-500 mb-1"><T>Min Order Value</T></label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1"><T>Min Order Value</T></label>
               <input
                 type="number"
                 min={0}
                 value={minOrderValueNpr || ""}
                 onChange={(e) => setMinOrderValueNpr(Number(e.target.value))}
                 placeholder="0"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1"><T>Max Order Value</T></label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1"><T>Max Order Value</T></label>
               <input
                 type="number"
                 min={0}
                 value={maxOrderValueNpr || ""}
                 onChange={(e) => setMaxOrderValueNpr(Number(e.target.value))}
                 placeholder="0 = no limit"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
           </div>
@@ -395,7 +395,7 @@ export default function MobileStoreSettingsPage() {
 
         {/* Bank Details */}
         <section className="space-y-3">
-          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
             <T>Bank Account Details</T>
           </label>
           <input
@@ -403,35 +403,35 @@ export default function MobileStoreSettingsPage() {
             placeholder="Bank name"
             value={bankName}
             onChange={(e) => setBankName(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <input
             type="text"
             placeholder="Branch name"
             value={branchName}
             onChange={(e) => setBranchName(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <input
             type="text"
             placeholder="Account holder name"
             value={accountName}
             onChange={(e) => setAccountName(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <input
             type="text"
             placeholder="Account number"
             value={accountNumber}
             onChange={(e) => setAccountNumber(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <input
             type="text"
             placeholder="SWIFT / IFSC code"
             value={swiftCode}
             onChange={(e) => setSwiftCode(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </section>
 
@@ -439,17 +439,17 @@ export default function MobileStoreSettingsPage() {
         <section>
           <Link
             href="/m/settings/hardware"
-            className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3"
+            className="flex items-center justify-between rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3"
           >
             <div>
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 <T>POS Hardware</T>
               </p>
-              <p className="text-[11px] text-gray-500">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
                 <T>Barcode scanner · Receipt printer · Cash drawer</T>
               </p>
             </div>
-            <span className="text-amber-600 text-sm">→</span>
+            <span className="text-amber-600 dark:text-amber-400 text-sm">→</span>
           </Link>
         </section>
 
@@ -460,7 +460,7 @@ export default function MobileStoreSettingsPage() {
         )}
 
         {/* Sticky Save */}
-        <div className="sticky bottom-0 -mx-4 px-4 pt-4 pb-4 bg-gradient-to-t from-white via-white to-transparent">
+        <div className="sticky bottom-0 -mx-4 px-4 pt-4 pb-4 bg-gradient-to-t from-white dark:from-gray-950 via-white dark:via-gray-950 to-transparent">
           <button
             type="button"
             onClick={handleSave}

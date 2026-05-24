@@ -236,6 +236,12 @@ const ALL_FEATURE_KEYS: {
     enforced: true,
   },
   {
+    key: "karigarSupplyChain",
+    label: "Karigar & Bullion Supply Chain Tracker",
+    category: "CRM & Business",
+    enforced: true,
+  },
+  {
     key: "purchasableAiCredits",
     label: "Purchasable AI credits",
     category: "AI & Intelligence",

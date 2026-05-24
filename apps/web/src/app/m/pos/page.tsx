@@ -181,13 +181,13 @@ function CartDrawer({
   const tax = Math.round(total * taxRate);
 
   return (
-    <div className="fixed inset-0 z-30 flex flex-col bg-white">
+    <div className="fixed inset-0 z-30 flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
         <h2 className="text-base font-semibold"><T>Bill Summary</T></h2>
         <button
           onClick={onClose}
-          className="p-2 rounded-full text-gray-400 hover:bg-gray-100"
+          className="p-2 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           <X className="h-5 w-5" />
         </button>
@@ -211,10 +211,10 @@ function CartDrawer({
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                 {c.item.nameEn}
               </p>
-              <p className="text-xs text-gray-500">{formatMoney(c.unitPrice, currency)} <T>each</T></p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{formatMoney(c.unitPrice, currency)} <T>each</T></p>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -349,7 +349,7 @@ function CartDrawer({
       </div>
 
       {/* Confirm button */}
-      <div className="p-4 border-t bg-white">
+      <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
         <button
           disabled={loading || cart.length === 0}
           onClick={async () => {
@@ -462,17 +462,17 @@ function ProductDetailSheet({
   const weight = item.totalWeightGrams ?? item.weightGrams;
 
   return (
-    <div className="fixed inset-0 z-30 bg-white flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
+    <div className="fixed inset-0 z-30 bg-white dark:bg-gray-950 flex flex-col text-gray-900 dark:text-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div>
           <p className="text-xs text-gray-400"><T>Product details</T></p>
-          <h2 className="text-base font-semibold text-gray-900 line-clamp-1">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
             {item.nameEn}
           </h2>
         </div>
         <button
           onClick={onClose}
-          className="p-2 rounded-full text-gray-400 hover:bg-gray-100"
+          className="p-2 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           aria-label="Close product details"
         >
           <X className="h-5 w-5" />
@@ -652,16 +652,16 @@ function AddProductSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-30 bg-white flex flex-col">
+    <div className="fixed inset-0 z-30 bg-white dark:bg-gray-950 flex flex-col text-gray-900 dark:text-gray-100">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div>
           <p className="text-xs text-gray-400"><T>New inventory item</T></p>
-          <h2 className="text-base font-semibold text-gray-900"><T>Add Product</T></h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100"><T>Add Product</T></h2>
         </div>
         <button
           onClick={onClose}
-          className="p-2 rounded-full text-gray-400 hover:bg-gray-100"
+          className="p-2 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           aria-label="Close"
         >
           <X className="h-5 w-5" />

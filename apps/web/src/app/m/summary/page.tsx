@@ -101,9 +101,9 @@ function HourlyBar({ hourly, currency }: { hourly: number[]; currency: string })
   const display = Array.from({ length: 16 }, (_, i) => i + 7);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold text-gray-900"><T>Sales by Hour</T></p>
+        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100"><T>Sales by Hour</T></p>
         <BarChart2 className="h-4 w-4 text-gray-300" />
       </div>
       <div className="flex items-end gap-1 h-16">
@@ -164,13 +164,13 @@ function StatCard({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3">
-      <div className={`h-10 w-10 rounded-xl ${bg[color]} flex items-center justify-center flex-shrink-0`}>
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 flex items-center gap-3">
+      <div className={`h-10 w-10 rounded-xl ${bg[color]} dark:bg-gray-800/80 flex items-center justify-center flex-shrink-0`}>
         <Icon className={`h-5 w-5 ${ico[color]}`} />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[11px] text-gray-400 font-medium"><T>{label}</T></p>
-        <p className="text-base font-bold text-gray-900 truncate">{value}</p>
+        <p className="text-base font-bold text-gray-900 dark:text-gray-100 truncate">{value}</p>
         {sub && <p className="text-[11px] text-gray-400">{sub}</p>}
       </div>
     </div>
@@ -243,11 +243,11 @@ export default function DailySummaryPage() {
       : null;
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center justify-between">
         <div>
-          <h1 className="text-base font-bold text-gray-900"><T>Daily Summary</T></h1>
+          <h1 className="text-base font-bold text-gray-900 dark:text-gray-100"><T>Daily Summary</T></h1>
           <p className="text-xs text-gray-400">
             {new Date().toLocaleDateString("en-IN", {
               weekday: "long",
@@ -270,7 +270,7 @@ export default function DailySummaryPage() {
           <button
             onClick={() => { haptic("light"); load(); }}
             disabled={loading}
-            className="h-8 w-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100"
+            className="h-8 w-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin text-amber-500" : ""}`} />
           </button>
@@ -288,7 +288,7 @@ export default function DailySummaryPage() {
         ) : summary ? (
           <>
             {/* Revenue hero */}
-            <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-3xl p-5 text-white shadow-lg shadow-amber-200">
+            <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-3xl p-5 text-white shadow-lg shadow-amber-200 dark:shadow-none">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium opacity-80 uppercase tracking-wide">
@@ -333,25 +333,25 @@ export default function DailySummaryPage() {
             </div>
 
             {/* Payment breakdown */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-              <p className="text-sm font-semibold text-gray-900"><T>By Payment Method</T></p>
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-3">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100"><T>By Payment Method</T></p>
               {[
                 { label: "Cash", value: summary.cash, icon: Wallet, color: "text-green-600", bg: "bg-green-50" },
                 { label: "Card", value: summary.card, icon: CreditCard, color: "text-blue-600", bg: "bg-blue-50" },
                 { label: "UPI / Digital", value: summary.upi, icon: Share2, color: "text-purple-600", bg: "bg-purple-50" },
               ].filter((m) => m.value > 0).map((m) => (
                 <div key={m.label} className="flex items-center gap-3">
-                  <div className={`h-8 w-8 rounded-lg ${m.bg} flex items-center justify-center flex-shrink-0`}>
+                  <div className={`h-8 w-8 rounded-lg ${m.bg} dark:bg-gray-800/80 flex items-center justify-center flex-shrink-0`}>
                     <m.icon className={`h-4 w-4 ${m.color}`} />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-gray-700"><T>{m.label}</T></span>
-                      <span className="text-xs font-bold text-gray-900">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300"><T>{m.label}</T></span>
+                      <span className="text-xs font-bold text-gray-900 dark:text-gray-100">
                         {summary.currency} {m.value.toLocaleString()}
                       </span>
                     </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-gray-100 dark:bg-gray-850 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${m.color.replace("text-", "bg-")}`}
                         style={{ width: `${summary.total > 0 ? Math.round((m.value / summary.total) * 100) : 0}%` }}
@@ -367,25 +367,25 @@ export default function DailySummaryPage() {
 
             {/* Yesterday comparison */}
             {summary.yesterdayTotal > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-4">
-                <p className="text-sm font-semibold text-gray-900 mb-2"><T>vs Yesterday</T></p>
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2"><T>vs Yesterday</T></p>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <p className="text-[11px] text-gray-400"><T>Today</T></p>
-                    <p className="text-base font-bold text-gray-900">
+                    <p className="text-base font-bold text-gray-900 dark:text-gray-100">
                       {summary.currency} {summary.total.toLocaleString()}
                     </p>
                   </div>
                   <div className="flex-1">
                     <p className="text-[11px] text-gray-400"><T>Yesterday</T></p>
-                    <p className="text-base font-bold text-gray-500">
+                    <p className="text-base font-bold text-gray-500 dark:text-gray-400">
                       {summary.currency} {summary.yesterdayTotal.toLocaleString()}
                     </p>
                   </div>
                   {pct !== null && (
                     <div
                       className={`h-10 w-16 rounded-xl flex items-center justify-center text-sm font-bold ${
-                        pct >= 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+                        pct >= 0 ? "bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400" : "bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400"
                       }`}
                     >
                       {pct >= 0 ? "+" : ""}{pct}%
@@ -407,7 +407,7 @@ export default function DailySummaryPage() {
 
       {/* Share button */}
       {summary && summary.count > 0 && (
-        <div className="bg-white border-t border-gray-100 px-4 py-3">
+        <div className="bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 px-4 py-3">
           <button
             onClick={shareOnWhatsApp}
             className="w-full h-12 rounded-2xl bg-green-500 text-white font-semibold text-sm flex items-center justify-center gap-2"

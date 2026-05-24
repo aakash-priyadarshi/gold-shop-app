@@ -108,6 +108,10 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
     label: "Multi-branch support",
     category: "CRM & Business Tools",
   },
+  karigarSupplyChain: {
+    label: "Karigar & Bullion Supply Chain Tracker",
+    category: "CRM & Business Tools",
+  },
 
   // AI & Intelligence
   purchasableAiCredits: {
@@ -460,6 +464,7 @@ function buildFeatureList(
     "invoicing",
     "inventoryManagement",
     "customerManagement",
+    "karigarSupplyChain",
     "basicAnalytics",
     "advancedAnalytics",
     "taxReports",

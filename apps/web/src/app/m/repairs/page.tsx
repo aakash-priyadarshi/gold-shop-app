@@ -91,10 +91,10 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
 
   return (
     <div className="fixed inset-0 z-40 bg-black/40 flex items-end">
-      <div className="bg-white rounded-t-2xl w-full max-h-[90dvh] flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h2 className="text-base font-semibold"><T>Log Repair Job</T></h2>
-          <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-100">
+      <div className="bg-white dark:bg-gray-900 rounded-t-2xl w-full max-h-[90dvh] flex flex-col border-t border-gray-100 dark:border-gray-850">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-850">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100"><T>Log Repair Job</T></h2>
+          <button onClick={onClose} className="p-2 rounded-full text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -105,7 +105,7 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
               value={form.customerName}
               onChange={(e) => setForm({ ...form, customerName: e.target.value })}
               placeholder="Customer name"
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 text-gray-900 dark:text-gray-100"
             />
           </Field>
           <Field label="Customer Phone">
@@ -114,7 +114,7 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
               value={form.customerPhone}
               onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
               placeholder="+977 98XXXXXXXX"
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 text-gray-900 dark:text-gray-100"
             />
           </Field>
           <Field label="Item Description *">
@@ -123,7 +123,7 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
               value={form.itemDescription}
               onChange={(e) => setForm({ ...form, itemDescription: e.target.value })}
               placeholder="e.g. Gold necklace 22K, broken clasp"
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 text-gray-900 dark:text-gray-100"
             />
           </Field>
           <Field label="Issue / Work Required *">
@@ -132,7 +132,7 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
               onChange={(e) => setForm({ ...form, issueDescription: e.target.value })}
               placeholder="Describe the repair work needed…"
               rows={3}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+              className="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none text-gray-900 dark:text-gray-100"
             />
           </Field>
           <div className="grid grid-cols-2 gap-3">
@@ -143,7 +143,7 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
                 value={form.estimatedCost}
                 onChange={(e) => setForm({ ...form, estimatedCost: e.target.value })}
                 placeholder="0"
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 text-gray-900 dark:text-gray-100"
               />
             </Field>
             <Field label="Ready By">
@@ -151,7 +151,7 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
                 type="date"
                 value={form.expectedReadyDate}
                 onChange={(e) => setForm({ ...form, expectedReadyDate: e.target.value })}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 text-gray-900 dark:text-gray-100"
               />
             </Field>
           </div>
@@ -161,11 +161,11 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="Any notes for your team…"
               rows={2}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+              className="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none text-gray-900 dark:text-gray-100"
             />
           </Field>
         </div>
-        <div className="p-4 border-t">
+        <div className="p-4 border-t border-gray-100 dark:border-gray-850">
           <button
             onClick={handleSubmit}
             disabled={saving}
@@ -240,17 +240,17 @@ function JobCard({ job, onStatusUpdate }: { job: RepairJob; onStatusUpdate: () =
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900">{job.customerName}</p>
-          <p className="text-xs text-gray-500">{job.itemDescription}</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{job.customerName}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{job.itemDescription}</p>
         </div>
-        <span className={`flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${s.bg} ${s.color}`}>
+        <span className={`flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${s.bg} dark:bg-gray-800/80 ${s.color} dark:text-amber-400`}>
           {s.label}
         </span>
       </div>
-      <p className="text-xs text-gray-600 bg-gray-50 rounded-xl px-3 py-2">
+      <p className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-950 rounded-xl px-3 py-2">
         {job.issueDescription}
       </p>
       <div className="flex items-center justify-between text-xs text-gray-400">
@@ -298,7 +298,7 @@ function JobCard({ job, onStatusUpdate }: { job: RepairJob; onStatusUpdate: () =
           </button>
         )}
         {job.status === "DELIVERED" && (
-          <div className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-500 text-xs font-medium flex items-center justify-center gap-1.5">
+          <div className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs font-medium flex items-center justify-center gap-1.5">
             <CheckCircle className="h-4 w-4" />
             <T>Done</T>
           </div>
@@ -342,12 +342,12 @@ export default function RepairsPage() {
 
   return (
     <MobileFeatureGate feature="mobileRepairs" featureName="Repair Tracker">
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
         {/* Header */}
-        <div className="bg-white border-b border-gray-100 px-4 py-4">
+        <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-base font-bold text-gray-900"><T>Repair Tracker</T></h1>
+              <h1 className="text-base font-bold text-gray-900 dark:text-gray-100"><T>Repair Tracker</T></h1>
               <p className="text-xs text-gray-400">
                 {displayJobs.length} {filter === "active" ? "active" : "total"} jobs
               </p>
@@ -380,7 +380,7 @@ export default function RepairsPage() {
                 className={`text-xs px-4 py-1.5 rounded-full font-medium ${
                   filter === f
                     ? "bg-amber-500 text-white"
-                    : "bg-gray-100 text-gray-600"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                 }`}
               >
                 {f === "active" ? <T>Active</T> : <T>All</T>}

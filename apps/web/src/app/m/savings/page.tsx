@@ -107,10 +107,10 @@ function EnrollForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
 
   return (
     <div className="fixed inset-0 z-40 bg-black/40 flex items-end">
-      <div className="bg-white rounded-t-2xl w-full max-h-[90dvh] flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h2 className="text-base font-semibold"><T>Enroll in Savings Scheme</T></h2>
-          <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-100">
+      <div className="bg-white dark:bg-gray-900 rounded-t-2xl w-full max-h-[90dvh] flex flex-col border-t border-gray-100 dark:border-gray-850">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-850">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100"><T>Enroll in Savings Scheme</T></h2>
+          <button onClick={onClose} className="p-2 rounded-full text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -142,7 +142,7 @@ function EnrollForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
                   className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors ${
                     form.schemeType === t
                       ? "bg-amber-500 text-white"
-                      : "bg-gray-100 text-gray-600"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {SCHEME_LABELS[t]}
@@ -191,24 +191,24 @@ function EnrollForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
 
           {/* Payout preview */}
           {installAmt > 0 && (
-            <div className="bg-amber-50 rounded-2xl p-4 space-y-1.5">
-              <p className="text-xs font-semibold text-amber-800"><T>Payout Preview</T></p>
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 rounded-2xl p-4 space-y-1.5">
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-400"><T>Payout Preview</T></p>
               <div className="flex justify-between text-xs">
-                <span className="text-gray-600">Paid ({totalInst} × NPR {installAmt.toLocaleString()})</span>
-                <span className="font-medium">NPR {totalSaved.toLocaleString()}</span>
+                <span className="text-gray-600 dark:text-gray-400">Paid ({totalInst} × NPR {installAmt.toLocaleString()})</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">NPR {totalSaved.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-gray-600">Bonus ({bonusInst} free)</span>
-                <span className="font-medium text-amber-700">+ NPR {bonusAmount.toLocaleString()}</span>
+                <span className="text-gray-600 dark:text-gray-400">Bonus ({bonusInst} free)</span>
+                <span className="font-medium text-amber-700 dark:text-amber-400">+ NPR {bonusAmount.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between text-sm font-bold border-t border-amber-200 pt-1.5">
+              <div className="flex justify-between text-sm font-bold border-t border-amber-200 dark:border-amber-900/60 pt-1.5">
                 <span><T>Total Payout</T></span>
-                <span className="text-amber-700">NPR {payoutTotal.toLocaleString()}</span>
+                <span className="text-amber-700 dark:text-amber-400">NPR {payoutTotal.toLocaleString()}</span>
               </div>
             </div>
           )}
         </div>
-        <div className="p-4 border-t">
+        <div className="p-4 border-t border-gray-100 dark:border-gray-850">
           <button
             onClick={handleSubmit}
             disabled={saving}
@@ -234,10 +234,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
           font-size: 0.875rem;
           border: 1px solid #e5e7eb;
           border-radius: 0.75rem;
+          background-color: white;
+          color: #111827;
         }
         :global(.input:focus) {
           outline: none;
           box-shadow: 0 0 0 2px #f59e0b;
+        }
+        :global(.dark .input) {
+          border-color: #374151;
+          background-color: #030712;
+          color: #f9fafb;
         }
       `}</style>
       {children}
@@ -269,16 +276,16 @@ function MemberCard({ member, onRecord }: { member: SavingsMember; onRecord: () 
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-3">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-semibold text-gray-900">{member.customerName}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{member.customerName}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             {SCHEME_LABELS[member.schemeType]} — {member.currency}{" "}
             {member.installmentAmount.toLocaleString()}/installment
           </p>
         </div>
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${s.bg} ${s.color}`}>
+        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${s.bg} dark:bg-gray-800/80 ${s.color} dark:text-amber-400`}>
           {s.label}
         </span>
       </div>
@@ -302,20 +309,20 @@ function MemberCard({ member, onRecord }: { member: SavingsMember; onRecord: () 
       {/* Amounts */}
       <div className="flex items-center justify-between text-xs">
         <div>
-          <p className="text-gray-500">Saved</p>
-          <p className="font-bold text-gray-800">
+          <p className="text-gray-500 dark:text-gray-400">Saved</p>
+          <p className="font-bold text-gray-805 dark:text-gray-200">
             {member.currency} {member.totalSaved.toLocaleString()}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-gray-500">Bonus</p>
-          <p className="font-bold text-amber-600">
+          <p className="text-gray-500 dark:text-gray-400">Bonus</p>
+          <p className="font-bold text-amber-600 dark:text-amber-400">
             +{member.currency} {member.bonusAmount.toLocaleString()}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-gray-500">Payout</p>
-          <p className="font-bold text-green-700">
+          <p className="text-gray-500 dark:text-gray-400">Payout</p>
+          <p className="font-bold text-green-700 dark:text-green-400">
             {member.currency} {member.payoutTotal.toLocaleString()}
           </p>
         </div>
@@ -387,12 +394,12 @@ export default function SavingsPage() {
 
   return (
     <MobileFeatureGate feature="mobileSavings" featureName="Gold Savings Scheme">
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
         {/* Header */}
-        <div className="bg-white border-b border-gray-100 px-4 py-4">
+        <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-850 px-4 py-4">
           <div data-tour="m-savings-header" className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-base font-bold text-gray-900"><T>Gold Savings</T></h1>
+              <h1 className="text-base font-bold text-gray-900 dark:text-gray-100"><T>Gold Savings</T></h1>
               <p className="text-xs text-gray-400">
                 {activeCount} active · NPR {totalPool.toLocaleString()} in pool
               </p>
@@ -424,7 +431,7 @@ export default function SavingsPage() {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`text-xs px-4 py-1.5 rounded-full font-medium ${
-                  filter === f ? "bg-amber-500 text-white" : "bg-gray-100 text-gray-600"
+                  filter === f ? "bg-amber-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                 }`}
               >
                 {f === "ACTIVE" ? <T>Active</T> : <T>All</T>}

@@ -251,7 +251,17 @@ const LOADER_CSS = `
 
 /* === RESET & FOUNDATION === */
 .loader-container {
-  position: fixed; inset: 0; z-index: 99999;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  z-index: 999999 !important;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   background: #050608;

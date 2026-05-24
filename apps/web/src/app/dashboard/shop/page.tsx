@@ -18,6 +18,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi, materialsApi, ordersApi, rfqApi, sellerSubscriptionsApi, shopsApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
@@ -45,6 +46,7 @@ import {
   Database,
   RefreshCw,
   Scale,
+  Crown,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -102,6 +104,7 @@ const statusColors: Record<string, string> = {
 
 export default function ShopDashboard() {
   const { user } = useAuth();
+  const { hasFeature, loading: featuresLoading } = useFeatures();
   const {
     currencyCode: shopCurrency,
     symbol: currencySymbol,
@@ -900,157 +903,195 @@ export default function ShopDashboard() {
             </div>
           )}
 
-          <Card className="border-amber-200 dark:border-amber-900/60 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
-            <CardHeader className="pb-3 bg-gradient-to-r from-amber-50/50 via-yellow-50/20 to-orange-50/20 dark:from-amber-950/20 dark:via-yellow-950/5 dark:to-orange-950/5 border-b border-amber-100/50 dark:border-amber-900/20">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-lg text-amber-950 dark:text-amber-100">
-                    <Hammer className="h-5 w-5 text-amber-600 dark:text-gold-400" />
-                    <T>Karigar &amp; Bullion Supply Chain Tracker</T>
-                  </CardTitle>
-                  <CardDescription>
-                    <T>Real-time workshop materials and artisan wastage balance sheets</T>
-                  </CardDescription>
+          {!featuresLoading && !hasFeature("karigarSupplyChain") ? (
+            <Card className="border-dashed border-2 border-amber-200/60 dark:border-amber-900/40 overflow-hidden shadow-sm relative group p-8 bg-gradient-to-br from-amber-50/20 via-white to-orange-50/10 dark:from-amber-950/5 dark:via-gray-900/50 dark:to-orange-950/5">
+              <div className="absolute top-4 right-4 bg-amber-100 dark:bg-amber-950 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-800 text-[10px] font-bold text-amber-800 dark:text-gold-400 flex items-center gap-1">
+                <Crown className="h-3 w-3" />
+                <T>Premium Feature</T>
+              </div>
+
+              <div className="max-w-2xl mx-auto text-center space-y-6 py-6">
+                <div className="mx-auto w-12 h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-gold-400 rounded-full flex items-center justify-center">
+                  <Hammer className="h-6 w-6" />
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800/60 dark:text-amber-400 dark:hover:bg-amber-950 flex items-center gap-1.5"
-                    onClick={() => {
-                      setAdjustGoldWeight(bullionGold.toString());
-                      setAdjustSilverWeight(bullionSilver.toString());
-                      setIsAdjustModalOpen(true);
-                    }}
-                  >
-                    <Database className="h-4 w-4" />
-                    <T>Adjust Bullion Reserves</T>
+                
+                <div className="space-y-2">
+                  <h3 className="text-xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                    <T>Karigar &amp; Bullion Supply Chain Tracker</T>
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                    <T>Take complete control of your workshop. Track raw 24K Gold and 999 Silver bullion reserves, manage artisan ledgers with custom wastage loss tolerances, and record multi-stage metal fabrication jobs securely in the cloud.</T>
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+                  <Button asChild className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg flex items-center gap-1">
+                    <Link href="/dashboard/shop/billing">
+                      <Zap className="h-4 w-4 fill-white" />
+                      <T>Upgrade to Pro / Enterprise</T>
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild className="border-gray-200 text-gray-600 dark:border-gray-800 dark:text-gray-300 font-semibold px-6 py-2.5 rounded-xl">
+                    <Link href="/pricing">
+                      <T>View Regional Pricing</T>
+                    </Link>
                   </Button>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* 1. Bullion Stock reserves */}
-                <div className="lg:col-span-1 space-y-4 border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-gray-800 pb-6 lg:pb-0 lg:pr-6">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-amber-800 dark:text-gold-400 flex items-center gap-2">
-                    <Coins className="h-4 w-4" />
-                    <T>Pure Bullion reserves</T>
-                  </h3>
-                  
-                  <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
-                    {/* Gold reserves card */}
-                    <div className="bg-gradient-to-b from-white to-amber-50/50 dark:from-gray-900 dark:to-amber-950/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/40 shadow-sm relative group">
-                      <div className="absolute top-2 right-2 bg-amber-100 dark:bg-amber-950 p-1.5 rounded-lg">
-                        <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-gold-400" />
-                      </div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider"><T>24K Pure Gold</T></p>
-                      <p className="text-2xl font-extrabold text-amber-950 dark:text-amber-50 mt-1 tabular-nums">
-                        {bullionGold.toFixed(2)} <span className="text-sm font-medium text-muted-foreground">g</span>
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
-                        <T>Valued at:</T> <span className="font-semibold">{currencySymbol} {Math.round(bullionGold * (goldRates?.rate24k || 7100)).toLocaleString()}</span>
-                      </p>
-                    </div>
-
-                    {/* Silver reserves card */}
-                    <div className="bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-950/40 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm relative group">
-                      <div className="absolute top-2 right-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-lg">
-                        <Scale className="h-3.5 w-3.5 text-gray-500" />
-                      </div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider"><T>Pure 999 Silver</T></p>
-                      <p className="text-2xl font-extrabold text-gray-950 dark:text-gray-100 mt-1 tabular-nums">
-                        {bullionSilver.toFixed(2)} <span className="text-sm font-medium text-muted-foreground">g</span>
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
-                        <T>Valued at:</T> <span className="font-semibold">{currencySymbol} {Math.round(bullionSilver * (goldRates?.silver || 82)).toLocaleString()}</span>
-                      </p>
-                    </div>
+            </Card>
+          ) : (
+            <Card className="border-amber-200 dark:border-amber-900/60 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+              <CardHeader className="pb-3 bg-gradient-to-r from-amber-50/50 via-yellow-50/20 to-orange-50/20 dark:from-amber-950/20 dark:via-yellow-950/5 dark:to-orange-950/5 border-b border-amber-100/50 dark:border-amber-900/20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-lg text-amber-950 dark:text-amber-100">
+                      <Hammer className="h-5 w-5 text-amber-600 dark:text-gold-400" />
+                      <T>Karigar &amp; Bullion Supply Chain Tracker</T>
+                    </CardTitle>
+                    <CardDescription>
+                      <T>Real-time workshop materials and artisan wastage balance sheets</T>
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800/60 dark:text-amber-400 dark:hover:bg-amber-950 flex items-center gap-1.5"
+                      onClick={() => {
+                        setAdjustGoldWeight(bullionGold.toString());
+                        setAdjustSilverWeight(bullionSilver.toString());
+                        setIsAdjustModalOpen(true);
+                      }}
+                    >
+                      <Database className="h-4 w-4" />
+                      <T>Adjust Bullion Reserves</T>
+                    </Button>
                   </div>
                 </div>
-
-                {/* 2. Karigar Accounts */}
-                <div className="lg:col-span-2 space-y-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <T>Karigar Ledger Accounts</T>
-                  </h3>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   
-                  <div className="space-y-4">
-                    {karigars.map((k, index) => (
-                      <div key={k.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-sm hover:shadow hover:border-amber-200/50 dark:hover:border-amber-800/40 transition-all gap-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-bold text-gray-900 dark:text-white text-base">{k.name}</p>
-                            <Badge variant="secondary" className="text-[10px] font-medium bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400">
-                              <T>Wastage limit:</T> {k.wastageLimit}%
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs pt-1">
-                            {k.goldOutstanding > 0 && (
-                              <p className="text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-1">
-                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                                <T>Gold Balance:</T> <span className="tabular-nums font-bold">{k.goldOutstanding.toFixed(2)} g</span>
-                              </p>
-                            )}
-                            {k.silverOutstanding > 0 && (
-                              <p className="text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-1">
-                                <span className="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
-                                <T>Silver Balance:</T> <span className="tabular-nums font-bold">{k.silverOutstanding.toFixed(2)} g</span>
-                              </p>
-                            )}
-                            {k.goldOutstanding === 0 && k.silverOutstanding === 0 && (
-                              <p className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
-                                <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-                                <T>No outstanding metal balance</T>
-                              </p>
-                            )}
-                          </div>
-                          
-                          <p className="text-xs text-muted-foreground pt-1 flex items-center gap-1">
-                            <span className="font-semibold text-gray-700 dark:text-gray-300"><T>Active Job:</T></span> {k.activeJob}
-                          </p>
+                  {/* 1. Bullion Stock reserves */}
+                  <div className="lg:col-span-1 space-y-4 border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-gray-800 pb-6 lg:pb-0 lg:pr-6">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-amber-800 dark:text-gold-400 flex items-center gap-2">
+                      <Coins className="h-4 w-4" />
+                      <T>Pure Bullion reserves</T>
+                    </h3>
+                    
+                    <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+                      {/* Gold reserves card */}
+                      <div className="bg-gradient-to-b from-white to-amber-50/50 dark:from-gray-900 dark:to-amber-950/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/40 shadow-sm relative group">
+                        <div className="absolute top-2 right-2 bg-amber-100 dark:bg-amber-950 p-1.5 rounded-lg">
+                          <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-gold-400" />
                         </div>
-
-                        <div className="flex gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="flex-1 sm:flex-none border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800/40 dark:text-amber-400 dark:hover:bg-amber-950 flex items-center justify-center gap-1.5 text-xs font-semibold"
-                            onClick={() => {
-                              setSelectedKarigarIndex(index);
-                              setIssueWeight("");
-                              setIssueJob(k.activeJob);
-                              setIssueMetalType(k.goldOutstanding > 0 || k.silverOutstanding === 0 ? "GOLD" : "SILVER");
-                              setIsIssueModalOpen(true);
-                            }}
-                          >
-                            <T>Issue Metal</T>
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            className="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center gap-1.5 text-xs font-semibold"
-                            onClick={() => {
-                              setSelectedKarigarIndex(index);
-                              setReceiveWeight("");
-                              setReceiveScrap("");
-                              setReceiveWastage("");
-                              setIsReceiveModalOpen(true);
-                            }}
-                          >
-                            <T>Receive Piece</T>
-                          </Button>
-                        </div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider"><T>24K Pure Gold</T></p>
+                        <p className="text-2xl font-extrabold text-amber-950 dark:text-amber-50 mt-1 tabular-nums">
+                          {bullionGold.toFixed(2)} <span className="text-sm font-medium text-muted-foreground">g</span>
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+                          <T>Valued at:</T> <span className="font-semibold">{currencySymbol} {Math.round(bullionGold * (goldRates?.rate24k || 7100)).toLocaleString()}</span>
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                </div>
 
-              </div>
-            </CardContent>
-          </Card>
+                      {/* Silver reserves card */}
+                      <div className="bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-950/40 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm relative group">
+                        <div className="absolute top-2 right-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-lg">
+                          <Scale className="h-3.5 w-3.5 text-gray-500" />
+                        </div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider"><T>Pure 999 Silver</T></p>
+                        <p className="text-2xl font-extrabold text-gray-950 dark:text-gray-100 mt-1 tabular-nums">
+                          {bullionSilver.toFixed(2)} <span className="text-sm font-medium text-muted-foreground">g</span>
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+                          <T>Valued at:</T> <span className="font-semibold">{currencySymbol} {Math.round(bullionSilver * (goldRates?.silver || 82)).toLocaleString()}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Karigar Accounts */}
+                  <div className="lg:col-span-2 space-y-4">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <T>Karigar Ledger Accounts</T>
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      {karigars.map((k, index) => (
+                        <div key={k.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-sm hover:shadow hover:border-amber-200/50 dark:hover:border-amber-800/40 transition-all gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-gray-900 dark:text-white text-base">{k.name}</p>
+                              <Badge variant="secondary" className="text-[10px] font-medium bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400">
+                                <T>Wastage limit:</T> {k.wastageLimit}%
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs pt-1">
+                              {k.goldOutstanding > 0 && (
+                                <p className="text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-1">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                  <T>Gold Balance:</T> <span className="tabular-nums font-bold">{k.goldOutstanding.toFixed(2)} g</span>
+                                </p>
+                              )}
+                              {k.silverOutstanding > 0 && (
+                                <p className="text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-1">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                  <T>Silver Balance:</T> <span className="tabular-nums font-bold">{k.silverOutstanding.toFixed(2)} g</span>
+                                </p>
+                              )}
+                              {k.goldOutstanding === 0 && k.silverOutstanding === 0 && (
+                                <p className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                                  <T>No outstanding metal balance</T>
+                                </p>
+                              )}
+                            </div>
+                            
+                            <p className="text-xs text-muted-foreground pt-1 flex items-center gap-1">
+                              <span className="font-semibold text-gray-700 dark:text-gray-300"><T>Active Job:</T></span> {k.activeJob}
+                            </p>
+                          </div>
+
+                          <div className="flex gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="flex-1 sm:flex-none border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800/40 dark:text-amber-400 dark:hover:bg-amber-950 flex items-center justify-center gap-1.5 text-xs font-semibold"
+                              onClick={() => {
+                                setSelectedKarigarIndex(index);
+                                setIssueWeight("");
+                                setIssueJob(k.activeJob);
+                                setIssueMetalType(k.goldOutstanding > 0 || k.silverOutstanding === 0 ? "GOLD" : "SILVER");
+                                setIsIssueModalOpen(true);
+                              }}
+                            >
+                              <T>Issue Metal</T>
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              className="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center gap-1.5 text-xs font-semibold"
+                              onClick={() => {
+                                setSelectedKarigarIndex(index);
+                                setReceiveWeight("");
+                                setReceiveScrap("");
+                                setReceiveWastage("");
+                                setIsReceiveModalOpen(true);
+                              }}
+                            >
+                              <T>Receive Piece</T>
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Modal 1: Issue Metal */}
           {isIssueModalOpen && selectedKarigarIndex !== null && (

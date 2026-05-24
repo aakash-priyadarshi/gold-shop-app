@@ -146,13 +146,13 @@ function StatCard({
   return (
     <div
       className={`rounded-2xl border p-4 flex flex-col gap-1 ${
-        highlight ? "bg-amber-50 border-amber-200" : "bg-white border-gray-100"
+        highlight ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800" : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800"
       }`}
     >
       <p className="text-xs text-gray-500">
         <T>{label}</T>
       </p>
-      <p className={`text-lg font-bold ${highlight ? "text-amber-700" : "text-gray-900"}`}>
+      <p className={`text-lg font-bold ${highlight ? "text-amber-700 dark:text-amber-400" : "text-gray-900 dark:text-gray-100"}`}>
         {value}
       </p>
       {sub && <p className="text-xs text-gray-400">{sub}</p>}
@@ -177,17 +177,17 @@ function DownloadRow({
     <button
       onClick={onPress}
       disabled={loading}
-      className="w-full flex items-center gap-3 px-4 py-3.5 bg-white rounded-2xl border border-gray-100 active:bg-gray-50 text-left disabled:opacity-50"
+      className="w-full flex items-center gap-3 px-4 py-3.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 active:bg-gray-50 dark:active:bg-gray-800 text-left disabled:opacity-50"
     >
-      <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+      <div className="h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center flex-shrink-0">
         {loading ? (
           <Loader2 className="h-5 w-5 text-amber-500 animate-spin" />
         ) : (
-          <Icon className="h-5 w-5 text-amber-600" />
+          <Icon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-900">
+        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
           <T>{label}</T>
         </p>
         <p className="text-xs text-gray-500">
@@ -202,14 +202,14 @@ function DownloadRow({
 function CountryNote({ config }: { config: CountryConfig }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="bg-blue-50 border border-blue-100 rounded-2xl overflow-hidden">
+    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl overflow-hidden">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => open ? setOpen(false) : setOpen(true)}
         className="w-full flex items-center gap-2 px-4 py-3 text-left"
       >
         <Info className="h-4 w-4 text-blue-500 flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-blue-700">
+          <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">
             {config.flag} {config.regime} · {config.rate} · {config.filingFreq}
           </p>
         </div>
@@ -218,13 +218,13 @@ function CountryNote({ config }: { config: CountryConfig }) {
         />
       </button>
       {open && (
-        <div className="px-4 pb-4 space-y-3 border-t border-blue-100">
-          <p className="text-xs text-blue-700 pt-2">{config.note}</p>
+        <div className="px-4 pb-4 space-y-3 border-t border-blue-100 dark:border-blue-900/35">
+          <p className="text-xs text-blue-700 dark:text-blue-300 pt-2">{config.note}</p>
           <a
             href={config.portalUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 underline underline-offset-2"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 underline underline-offset-2"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             {config.portalLabel}
@@ -364,7 +364,7 @@ export default function TaxAuditPage() {
         {/* Header */}
         <div className="flex items-start justify-between -mt-2 mb-1">
           <div>
-            <h1 className="text-base font-bold text-gray-900">
+            <h1 className="text-base font-bold text-gray-900 dark:text-gray-100">
               <T>Tax Audit</T>
             </h1>
             <p className="text-[11px] text-gray-400">
@@ -392,8 +392,8 @@ export default function TaxAuditPage() {
               onClick={() => { setCountry(c.code); setShareUrl(null); }}
               className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
                 country === c.code
-                  ? "bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-200"
-                  : "bg-white border-gray-200 text-gray-600"
+                  ? "bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-200 dark:shadow-none"
+                  : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400"
               }`}
             >
               <span>{c.flag}</span>
@@ -407,7 +407,7 @@ export default function TaxAuditPage() {
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="w-full appearance-none px-3 py-2.5 text-sm bg-white border border-gray-200 rounded-xl pr-8 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full appearance-none px-3 py-2.5 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl pr-8 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:text-gray-100"
           >
             {monthOptions.map((o) => (
               <option key={o.value} value={o.value}>
@@ -581,17 +581,17 @@ export default function TaxAuditPage() {
           <button
             onClick={shareWithAccountant}
             disabled={sharing}
-            className="w-full flex items-center gap-3 px-4 py-3.5 bg-white rounded-2xl border border-gray-100 active:bg-gray-50 disabled:opacity-50 text-left"
+            className="w-full flex items-center gap-3 px-4 py-3.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 active:bg-gray-50 dark:active:bg-gray-800 disabled:opacity-50 text-left"
           >
-            <div className="h-10 w-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-green-50 dark:bg-green-950/45 flex items-center justify-center flex-shrink-0">
               {sharing ? (
                 <Loader2 className="h-5 w-5 text-green-500 animate-spin" />
               ) : (
-                <Share2 className="h-5 w-5 text-green-600" />
+                <Share2 className="h-5 w-5 text-green-600 dark:text-green-400" />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 <T>Send to Accountant</T>
               </p>
               <p className="text-xs text-gray-500">
@@ -601,8 +601,8 @@ export default function TaxAuditPage() {
           </button>
 
           {shareUrl && (
-            <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-              <p className="text-xs text-green-700 font-medium mb-1">
+            <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-xl px-4 py-3">
+              <p className="text-xs text-green-700 dark:text-green-300 font-medium mb-1">
                 <T>Link created:</T>
               </p>
               <p className="text-xs text-green-800 break-all">{shareUrl}</p>
@@ -615,13 +615,13 @@ export default function TaxAuditPage() {
           href={config.portalUrl}
           target="_blank"
           rel="noreferrer"
-          className="w-full flex items-center gap-3 px-4 py-3.5 bg-white rounded-2xl border border-gray-100 active:bg-gray-50"
+          className="w-full flex items-center gap-3 px-4 py-3.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 active:bg-gray-50 dark:active:bg-gray-850"
         >
-          <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <ExternalLink className="h-5 w-5 text-blue-500" />
+          <div className="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-950/45 flex items-center justify-center flex-shrink-0">
+            <ExternalLink className="h-5 w-5 text-blue-500 dark:text-blue-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900">{config.portalLabel}</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{config.portalLabel}</p>
             <p className="text-xs text-gray-500">
               <T>Open filing portal in browser</T>
             </p>
