@@ -22,7 +22,7 @@ const COUNTRIES = [
 ];
 
 export default function MobileStoreSettingsPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -130,6 +130,7 @@ export default function MobileStoreSettingsPage() {
           swiftCode: swiftCode || undefined,
         } : undefined,
       });
+      await refreshUser();
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
       // Reload page after a short delay so currency/tax UI uses new country

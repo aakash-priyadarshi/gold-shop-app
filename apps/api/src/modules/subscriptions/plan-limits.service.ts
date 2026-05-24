@@ -309,6 +309,7 @@ export class PlanLimitsService {
     taxReports: "Multi-country tax reports (GSTR, VAT, MTD)",
     taxReportsDownload: "Tax report downloads (CSV, XML, Tally)",
     taxCaShare: "CA/accountant share link",
+    karigarSupplyChain: "Karigar & Bullion Supply Chain Tracker",
   };
 
   /**
@@ -356,6 +357,7 @@ export class PlanLimitsService {
       customBranding: "CRM & Business",
       staffAccounts: "CRM & Business",
       multiBranch: "CRM & Business",
+      karigarSupplyChain: "CRM & Business",
       purchasableAiCredits: "AI & Intelligence",
       aiDesignGeneration: "AI & Intelligence",
       aiDesignVariations: "AI & Intelligence",

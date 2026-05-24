@@ -71,6 +71,7 @@ import {
     FileText,
     FlaskConical,
     Gift,
+    Hammer,
     Globe,
     Heart,
     Home,
@@ -452,6 +453,18 @@ const navItems: NavItem[] = [
     label: "Inventory",
     href: "/dashboard/shop/inventory",
     icon: Package,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Actual Stock",
+    href: "/dashboard/shop/stock",
+    icon: ClipboardList,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Supply Chain",
+    href: "/dashboard/shop/supply-chain",
+    icon: Hammer,
     roles: ["SHOPKEEPER"],
   },
   {
