@@ -24,9 +24,10 @@ import {
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
-import { materialsApi } from "@/lib/api";
+import { inventoryApi, materialsApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
+import { Loader2 } from "lucide-react";
 import {
   ArrowRightLeft,
   Coins,
@@ -34,80 +35,20 @@ import {
   Plus,
   Search,
   Store,
-  TrendingUp,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Mock finished goods in physical vault and display showcases
-const INITIAL_STOCK = [
-  {
-    tag: "TAG-G-401",
-    huid: "HUID-9K2L4P",
-    name: "Classic 22K Solid Gold Rope Chain",
-    purity: "22K (916)",
-    grossWeight: 24.5,
-    netWeight: 24.5,
-    stoneWeight: 0,
-    location: "Showcase-A",
-    status: "ON_DISPLAY",
-  },
-  {
-    tag: "TAG-G-402",
-    huid: "HUID-3M1R7X",
-    name: "Bridal Antique Gold Jhumka Earrings",
-    purity: "22K (916)",
-    grossWeight: 32.1,
-    netWeight: 29.8,
-    stoneWeight: 2.3, // Gemstone/pearl weight
-    location: "Main-Safe",
-    status: "IN_VAULT",
-  },
-  {
-    tag: "TAG-D-201",
-    huid: "HUID-8F6G9W",
-    name: "18K Gold Diamond Halo Bangle",
-    purity: "18K (750)",
-    grossWeight: 18.2,
-    netWeight: 14.8,
-    stoneWeight: 3.4, // Diamond weight
-    location: "Showcase-B",
-    status: "ON_DISPLAY",
-  },
-  {
-    tag: "TAG-S-901",
-    huid: "HUID-4T2V9Z",
-    name: "Heritage Silver Filigree Casket",
-    purity: "92.5 Sterling",
-    grossWeight: 450.0,
-    netWeight: 450.0,
-    stoneWeight: 0,
-    location: "Main-Safe",
-    status: "IN_VAULT",
-  },
-  {
-    tag: "TAG-G-405",
-    huid: "HUID-5Y3U8N",
-    name: "24K Gold Minted Sovereign Coin",
-    purity: "24K (999)",
-    grossWeight: 10.0,
-    netWeight: 10.0,
-    stoneWeight: 0,
-    location: "Showcase-A",
-    status: "ON_DISPLAY",
-  },
-];
-
-export default function ActualStockLedgerPage() {
+export default function StockLedgerPage() {
   return (
     <ShopGuard>
       <DashboardLayout>
-        <ActualStockLedgerContent />
+        <StockLedgerContent />
       </DashboardLayout>
     </ShopGuard>
   );
 }
 
-function ActualStockLedgerContent() {
+function StockLedgerContent() {
   const { user } = useAuth();
   const { hasFeature, planName, loading: featuresLoading } = useFeatures();
   const t = useT();
@@ -124,8 +65,9 @@ function ActualStockLedgerContent() {
   });
   const ratesRef = useRef(false);
 
-  // Stock State
-  const [stock, setStock] = useState(INITIAL_STOCK);
+  // Stock State (Database backed)
+  const [stock, setStock] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("ALL");
 
@@ -136,7 +78,7 @@ function ActualStockLedgerContent() {
     newLocation: "Showcase-A",
   });
 
-  // Add Item Modal State (Simulated)
+  // Add Item Modal State
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addForm, setAddForm] = useState({
     tag: "",
@@ -192,6 +134,45 @@ function ActualStockLedgerContent() {
     }
   }, [user?.shop]);
 
+  const fetchStock = useCallback(async () => {
+    if (!user?.shop?.id) return;
+    setLoading(true);
+    try {
+      const res = await inventoryApi.getShopInventory(user.shop.id);
+      const items = res.data?.items || res.data || [];
+      const mapped = items.map((item: any) => {
+        const location = item.labels?.find((l: string) => l.includes("Showcase") || l.includes("Safe") || l.includes("Vault") || l.includes("Workbench")) || "Showcase-A";
+        const status = location.includes("Safe") || location.includes("Vault") ? "IN_VAULT" : "ON_DISPLAY";
+        
+        let purity = "22K (916)";
+        if (item.composition?.baseAlloy?.purity) {
+          purity = item.composition.baseAlloy.purity;
+        } else if (item.composition?.purity) {
+          purity = item.composition.purity;
+        }
+
+        return {
+          id: item.id,
+          tag: item.sku,
+          huid: item.hallmarkNumber || "HUID-UNTG-" + Math.floor(Math.random() * 9000 + 1000),
+          name: item.nameEn,
+          purity: purity,
+          grossWeight: item.totalWeightGrams,
+          netWeight: item.totalWeightGrams,
+          stoneWeight: 0,
+          location: location,
+          status: status,
+          rawItem: item
+        };
+      });
+      setStock(mapped);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.shop?.id]);
+
   useEffect(() => {
     fetchRates();
     const interval = setInterval(() => {
@@ -200,6 +181,10 @@ function ActualStockLedgerContent() {
     }, 60 * 1000);
     return () => clearInterval(interval);
   }, [fetchRates]);
+
+  useEffect(() => {
+    fetchStock();
+  }, [fetchStock]);
 
   const formatCurrency = (amount: number): string => {
     try {
@@ -215,16 +200,15 @@ function ActualStockLedgerContent() {
   };
 
   // Calculate physical valuation based on metal rates
-  const calculateItemValuation = (item: typeof INITIAL_STOCK[0]): number => {
+  const calculateItemValuation = (item: any): number => {
     let rate = goldRates.rate22k; // default
     if (item.purity.includes("24K")) rate = goldRates.rate24k;
     else if (item.purity.includes("18K")) rate = goldRates.rate18k;
     else if (item.purity.includes("Sterling") || item.purity.includes("Silver")) rate = goldRates.silver;
 
-    // Metal weight + rough craftsmanship value multiplier
     const metalVal = item.netWeight * rate;
     const craftVal = metalVal * 0.12; // 12% making charge estimation
-    const stoneVal = item.stoneWeight * (rate * 4.5); // stone valuation markup
+    const stoneVal = item.stoneWeight * (rate * 4.5); 
 
     return metalVal + craftVal + stoneVal;
   };
@@ -235,55 +219,68 @@ function ActualStockLedgerContent() {
   const showcaseItemsCount = stock.filter((s) => s.status === "ON_DISPLAY").length;
 
   // Location transfer handler
-  const handleTransfer = () => {
-    setStock((prev) =>
-      prev.map((s) => {
-        if (s.tag !== transferForm.tag) return s;
-        const status = transferForm.newLocation.includes("Safe") ? "IN_VAULT" : "ON_DISPLAY";
-        return {
-          ...s,
-          location: transferForm.newLocation,
-          status,
-        };
-      })
-    );
-    setTransferModalOpen(false);
+  const handleTransfer = async () => {
+    const targetItem = stock.find((s) => s.tag === transferForm.tag);
+    if (!targetItem || !user?.shop?.id) return;
+    
+    try {
+      // Remove other location labels
+      const otherLabels = targetItem.rawItem.labels?.filter((l: string) => !l.includes("Showcase") && !l.includes("Safe") && !l.includes("Vault") && !l.includes("Workbench")) || [];
+      const updatedLabels = [...otherLabels, transferForm.newLocation];
+      
+      await inventoryApi.update(targetItem.id, {
+        labels: updatedLabels
+      });
+      setTransferModalOpen(false);
+      await fetchStock();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update stock location!");
+    }
   };
 
   // Add Item handler
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     const gross = parseFloat(addForm.grossWeight);
     const net = parseFloat(addForm.netWeight);
     const stone = parseFloat(addForm.stoneWeight);
-    if (!addForm.tag || !addForm.name || isNaN(gross) || isNaN(net)) {
+    if (!addForm.tag || !addForm.name || isNaN(gross) || isNaN(net) || !user?.shop?.id) {
       alert("Please fill all required fields correctly!");
       return;
     }
 
-    const newItem = {
-      tag: addForm.tag.toUpperCase(),
-      huid: addForm.huid.toUpperCase() || "HUID-UNTG-" + Math.floor(Math.random() * 9000 + 1000),
-      name: addForm.name,
-      purity: addForm.purity,
-      grossWeight: gross,
-      netWeight: net,
-      stoneWeight: isNaN(stone) ? 0 : stone,
-      location: addForm.location,
-      status: addForm.location.includes("Safe") ? "IN_VAULT" : "ON_DISPLAY",
-    };
+    try {
+      await inventoryApi.create(user.shop.id, {
+        sku: addForm.tag.toUpperCase(),
+        nameEn: addForm.name,
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        composition: { baseAlloy: { metal: "GOLD", purity: addForm.purity } },
+        totalWeightGrams: gross,
+        metalValueNpr: 0,
+        makingChargeNpr: 0,
+        totalPriceNpr: 0,
+        labels: [addForm.location],
+        hallmarkNumber: addForm.huid.toUpperCase(),
+        status: "AVAILABLE"
+      });
 
-    setStock((prev) => [newItem, ...prev]);
-    setAddForm({
-      tag: "",
-      huid: "",
-      name: "",
-      purity: "22K (916)",
-      grossWeight: "",
-      netWeight: "",
-      stoneWeight: "0",
-      location: "Showcase-A",
-    });
-    setAddModalOpen(false);
+      setAddForm({
+        tag: "",
+        huid: "",
+        name: "",
+        purity: "22K (916)",
+        grossWeight: "",
+        netWeight: "",
+        stoneWeight: "0",
+        location: "Showcase-A",
+      });
+      setAddModalOpen(false);
+      await fetchStock();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to inward stock piece!");
+    }
   };
 
   const filteredStock = stock.filter((s) => {
@@ -344,17 +341,17 @@ function ActualStockLedgerContent() {
       {/* Header and Buttons */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <Package className="h-6 w-6 text-amber-500" />
-            <T>Actual Finished Stock Ledger</T>
+            <T>Stock Ledger</T>
           </h1>
           <p className="text-muted-foreground mt-0.5">
-            <T>Search and manage hallmarked finished jewelry tag assets across showcases and safe vaults.</T>
+            <T>Search and manage hallmarked finished jewelry assets across showcases and safe vaults.</T>
           </p>
         </div>
         <div className="flex gap-2">
           <Button
-            className="bg-amber-500 text-white hover:bg-amber-600"
+            className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
             onClick={() => setAddModalOpen(true)}
           >
             <Plus className="h-4 w-4 mr-1" />
@@ -365,166 +362,183 @@ function ActualStockLedgerContent() {
 
       <FeatureGate
         feature="karigarSupplyChain"
-        featureLabel="Actual Stock Ledger"
+        featureLabel="Stock Ledger"
         hasFeature={hasFeature}
         planName={planName}
         loading={featuresLoading}
       >
-        {/* Core Valuation Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card data-tour="stock-valuation" className="bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-gray-900 border-amber-200/50">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardDescription className="uppercase tracking-wider text-xs font-semibold text-amber-600 dark:text-amber-400">
-                  <T>Finished Stock Valuation</T>
-                </CardDescription>
-                <Coins className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              </div>
-              <CardTitle className="text-2xl font-bold text-amber-700 dark:text-amber-300">
-                {formatCurrency(grandValuation)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">
-                <T>Dynamic valuation of display and safe stock calculated with live market metal rates + craftsmanship markup.</T>
-              </p>
-            </CardContent>
-          </Card>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center p-12 space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+            <p className="text-xs text-muted-foreground"><T>Loading database inventory...</T></p>
+          </div>
+        ) : (
+          <>
+            {/* Core Valuation Cards */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card data-tour="stock-valuation" className="bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-gray-900 border-amber-200/50 dark:border-gray-800">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardDescription className="uppercase tracking-wider text-xs font-semibold text-amber-600 dark:text-amber-400">
+                      <T>Finished Stock Valuation</T>
+                    </CardDescription>
+                    <Coins className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                    {formatCurrency(grandValuation)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">
+                    <T>Dynamic valuation of display and safe stock calculated with live market metal rates + craftsmanship markup.</T>
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardDescription className="uppercase tracking-wider text-xs font-semibold">
-                  <T>Display Showcase Items</T>
-                </CardDescription>
-                <Store className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <CardTitle className="text-2xl font-bold">
-                {showcaseItemsCount} <span className="text-xs text-muted-foreground">items</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">
-                <T>Finished pieces placed on showcase counters for customer walk-in sales.</T>
-              </p>
-            </CardContent>
-          </Card>
+              <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardDescription className="uppercase tracking-wider text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      <T>Display Showcase Items</T>
+                    </CardDescription>
+                    <Store className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {showcaseItemsCount} <span className="text-xs text-muted-foreground">items</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">
+                    <T>Finished pieces placed on showcase counters for customer walk-in sales.</T>
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardDescription className="uppercase tracking-wider text-xs font-semibold">
-                  <T>Main Vault Reserves</T>
-                </CardDescription>
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <CardTitle className="text-2xl font-bold">
-                {vaultItemsCount} <span className="text-xs text-muted-foreground">items</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">
-                <T>High-value pieces and coins stored inside the strong-room safe vault.</T>
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Dynamic Ledger search and filtration */}
-        <Card data-tour="stock-table" className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
-          <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4 border-b pb-4">
-            <div>
-              <CardTitle className="text-base font-semibold"><T>Finished Vault Stock Ledger</T></CardTitle>
-              <CardDescription><T>Real-time physical asset logs. Scan barcodes or filter locations.</T></CardDescription>
+              <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardDescription className="uppercase tracking-wider text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      <T>Main Vault Reserves</T>
+                    </CardDescription>
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {vaultItemsCount} <span className="text-xs text-muted-foreground">items</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">
+                    <T>High-value pieces and coins stored inside the strong-room safe vault.</T>
+                  </p>
+                </CardContent>
+              </Card>
             </div>
-            
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="relative w-64">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder={t("Search by name, tag, or HUID...")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 text-xs h-9 rounded-lg"
-                />
-              </div>
 
-              <Select value={locationFilter} onValueChange={setLocationFilter}>
-                <SelectTrigger className="w-36 h-9 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All Items</SelectItem>
-                  <SelectItem value="SHOWCASE">Showcase Stock</SelectItem>
-                  <SelectItem value="VAULT">Vault Stock</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4 overflow-x-auto">
-            <table className="w-full text-sm border-collapse text-left">
-              <thead>
-                <tr className="border-b text-xs uppercase tracking-wider text-muted-foreground bg-gray-50 dark:bg-gray-850/50">
-                  <th className="py-2.5 px-3 font-semibold"><T>Item Details & Unique HUID</T></th>
-                  <th className="py-2.5 px-3 font-semibold"><T>Barcode Tag</T></th>
-                  <th className="py-2.5 px-3 font-semibold"><T>Purity / Weight</T></th>
-                  <th className="py-2.5 px-3 font-semibold"><T>Physical Location</T></th>
-                  <th className="py-2.5 px-3 font-semibold text-right"><T>Rate Valuation</T></th>
-                  <th className="py-2.5 px-3 font-semibold text-center"><T>Action</T></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filteredStock.map((item) => (
-                  <tr key={item.tag} className="hover:bg-gray-50/50 dark:hover:bg-gray-850/20">
-                    <td className="py-3.5 px-3">
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{item.name}</p>
-                      <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                        {item.huid}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-3 font-mono text-xs">{item.tag}</td>
-                    <td className="py-3.5 px-3">
-                      <p className="font-medium text-xs">{item.purity}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {item.grossWeight.toFixed(2)}g G / {item.netWeight.toFixed(2)}g N
-                        {item.stoneWeight > 0 && ` / ${item.stoneWeight.toFixed(1)}ct St`}
-                      </p>
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <Badge variant={item.status === "ON_DISPLAY" ? "outline" : "secondary"} className={item.status === "ON_DISPLAY" ? "border-sky-500/25 bg-sky-500/5 text-sky-600" : ""}>
-                        {item.location}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-3 font-bold text-right text-gray-900 dark:text-gray-100">
-                      {formatCurrency(calculateItemValuation(item))}
-                    </td>
-                    <td className="py-3.5 px-3 text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title={t("Transfer Location")}
-                        onClick={() => {
-                          setTransferForm({ tag: item.tag, newLocation: item.location });
-                          setTransferModalOpen(true);
-                        }}
-                        className="h-8 w-8 text-muted-foreground hover:text-amber-500 rounded-lg hover:bg-gray-100"
-                      >
-                        <ArrowRightLeft className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+            {/* Dynamic Ledger search and filtration */}
+            <Card data-tour="stock-table" className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+              <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4 border-b dark:border-gray-800 pb-4">
+                <div>
+                  <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100"><T>Finished Vault Stock Ledger</T></CardTitle>
+                  <CardDescription><T>Real-time physical asset logs. Scan barcodes or filter locations.</T></CardDescription>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="relative w-64">
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder={t("Search by name, tag, or HUID...")}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-8 text-xs h-9 rounded-lg border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+
+                  <Select value={locationFilter} onValueChange={setLocationFilter}>
+                    <SelectTrigger className="w-36 h-9 text-xs border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-850">
+                      <SelectItem value="ALL">All Items</SelectItem>
+                      <SelectItem value="SHOWCASE">Showcase Stock</SelectItem>
+                      <SelectItem value="VAULT">Vault Stock</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4 overflow-x-auto">
+                <table className="w-full text-sm border-collapse text-left">
+                  <thead>
+                    <tr className="border-b dark:border-gray-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-850/50">
+                      <th className="py-2.5 px-3 font-semibold"><T>Item Details & Unique HUID</T></th>
+                      <th className="py-2.5 px-3 font-semibold"><T>Barcode Tag</T></th>
+                      <th className="py-2.5 px-3 font-semibold"><T>Purity / Weight</T></th>
+                      <th className="py-2.5 px-3 font-semibold"><T>Physical Location</T></th>
+                      <th className="py-2.5 px-3 font-semibold text-right"><T>Rate Valuation</T></th>
+                      <th className="py-2.5 px-3 font-semibold text-center"><T>Action</T></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y dark:divide-gray-800">
+                    {filteredStock.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-xs text-muted-foreground">
+                          <T>No items in stock. Click Inward Finished Piece to register finished assets.</T>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredStock.map((item) => (
+                        <tr key={item.tag} className="hover:bg-gray-50/50 dark:hover:bg-gray-850/20 text-gray-700 dark:text-gray-300">
+                          <td className="py-3.5 px-3">
+                            <p className="font-semibold text-gray-900 dark:text-gray-100">{item.name}</p>
+                            <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-400/10 px-2 py-0.5 rounded border border-amber-500/20 dark:border-amber-400/20">
+                              {item.huid}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-3 font-mono text-xs">{item.tag}</td>
+                          <td className="py-3.5 px-3">
+                            <p className="font-medium text-xs text-gray-900 dark:text-gray-100">{item.purity}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {item.grossWeight.toFixed(2)}g G / {item.netWeight.toFixed(2)}g N
+                              {item.stoneWeight > 0 && ` / ${item.stoneWeight.toFixed(1)}ct St`}
+                            </p>
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <Badge variant={item.status === "ON_DISPLAY" ? "outline" : "secondary"} className={item.status === "ON_DISPLAY" ? "border-sky-500/25 bg-sky-500/5 text-sky-600 dark:text-sky-400" : ""}>
+                              {item.location}
+                            </Badge>
+                          </td>
+                          <td className="py-3.5 px-3 font-bold text-right text-gray-900 dark:text-gray-100">
+                            {formatCurrency(calculateItemValuation(item))}
+                          </td>
+                          <td className="py-3.5 px-3 text-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={t("Transfer Location")}
+                              onClick={() => {
+                                setTransferForm({ tag: item.tag, newLocation: item.location });
+                                setTransferModalOpen(true);
+                              }}
+                              className="h-8 w-8 text-muted-foreground hover:text-amber-500 dark:hover:text-amber-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                              <ArrowRightLeft className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </FeatureGate>
 
       {/* ─── MODALS ─── */}
       {/* 1. Location Transfer Modal */}
       {transferModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 border rounded-2xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100"><T>Transfer Finished Stock Location</T></h3>
             <p className="text-xs text-muted-foreground">
               <T>Safely transfer the finished piece between safe vaults and showcases.</T>
@@ -532,20 +546,20 @@ function ActualStockLedgerContent() {
 
             <div className="space-y-3 pt-2">
               <div className="space-y-1">
-                <Label><T>Target Item Tag</T></Label>
-                <Input value={transferForm.tag} disabled className="bg-gray-50 font-mono" />
+                <Label className="text-gray-700 dark:text-gray-300"><T>Target Item Tag</T></Label>
+                <Input value={transferForm.tag} disabled className="bg-gray-50 dark:bg-gray-950 font-mono text-gray-900 dark:text-gray-100" />
               </div>
 
               <div className="space-y-1">
-                <Label><T>New Physical Location</T></Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>New Physical Location</T></Label>
                 <Select
                   value={transferForm.newLocation}
                   onValueChange={(val) => setTransferForm((p) => ({ ...p, newLocation: val }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-250 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
                     <SelectItem value="Showcase-A">Showcase A (Counters)</SelectItem>
                     <SelectItem value="Showcase-B">Showcase B (Counters)</SelectItem>
                     <SelectItem value="Main-Safe">Main Vault Safe (Strongroom)</SelectItem>
@@ -556,8 +570,8 @@ function ActualStockLedgerContent() {
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" size="sm" onClick={() => setTransferModalOpen(false)}><T>Cancel</T></Button>
-              <Button className="bg-amber-500 text-white hover:bg-amber-600" size="sm" onClick={handleTransfer}><T>Confirm Transfer</T></Button>
+              <Button variant="ghost" size="sm" onClick={() => setTransferModalOpen(false)} className="text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
+              <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleTransfer}><T>Confirm Transfer</T></Button>
             </div>
           </div>
         </div>
@@ -566,7 +580,7 @@ function ActualStockLedgerContent() {
       {/* 2. Inward Item Modal */}
       {addModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 border rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100"><T>Inward Finished Jewelry Piece</T></h3>
             <p className="text-xs text-muted-foreground">
               <T>Register a fully completed manufacturing piece into active catalogued stock.</T>
@@ -574,42 +588,45 @@ function ActualStockLedgerContent() {
 
             <div className="grid gap-3 grid-cols-1 md:grid-cols-2 pt-2">
               <div className="space-y-1">
-                <Label><T>Unique Barcode Tag</T> *</Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Unique Barcode Tag</T> *</Label>
                 <Input
                   placeholder="e.g. TAG-G-406"
                   value={addForm.tag}
                   onChange={(e) => setAddForm((p) => ({ ...p, tag: e.target.value }))}
+                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label><T>Hallmarked HUID Code</T></Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Hallmarked HUID Code</T></Label>
                 <Input
                   placeholder="e.g. HUID-8X4W3P"
                   value={addForm.huid}
                   onChange={(e) => setAddForm((p) => ({ ...p, huid: e.target.value }))}
+                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
 
               <div className="space-y-1 md:col-span-2">
-                <Label><T>Product Display Name</T> *</Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Product Display Name</T> *</Label>
                 <Input
                   placeholder="e.g. 22K Solid Gold Bangle"
                   value={addForm.name}
                   onChange={(e) => setAddForm((p) => ({ ...p, name: e.target.value }))}
+                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label><T>Metal Purity Tier</T></Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Metal Purity Tier</T></Label>
                 <Select
                   value={addForm.purity}
                   onValueChange={(val) => setAddForm((p) => ({ ...p, purity: val }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
                     <SelectItem value="24K (999)">24K (999 Fine Gold)</SelectItem>
                     <SelectItem value="22K (916)">22K (916 Standard Gold)</SelectItem>
                     <SelectItem value="18K (750)">18K (750 Jewelry Gold)</SelectItem>
@@ -619,15 +636,15 @@ function ActualStockLedgerContent() {
               </div>
 
               <div className="space-y-1">
-                <Label><T>Physical Location</T></Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Physical Location</T></Label>
                 <Select
                   value={addForm.location}
                   onValueChange={(val) => setAddForm((p) => ({ ...p, location: val }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
                     <SelectItem value="Showcase-A">Showcase A</SelectItem>
                     <SelectItem value="Showcase-B">Showcase B</SelectItem>
                     <SelectItem value="Main-Safe">Main Vault Safe</SelectItem>
@@ -636,39 +653,42 @@ function ActualStockLedgerContent() {
               </div>
 
               <div className="space-y-1">
-                <Label><T>Gross Weight (grams)</T> *</Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Gross Weight (grams)</T> *</Label>
                 <Input
                   type="number"
                   placeholder="e.g. 15.5"
                   value={addForm.grossWeight}
                   onChange={(e) => setAddForm((p) => ({ ...p, grossWeight: e.target.value }))}
+                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label><T>Net Gold/Silver Weight (g)</T> *</Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Net Gold/Silver Weight (g)</T> *</Label>
                 <Input
                   type="number"
                   placeholder="e.g. 14.8"
                   value={addForm.netWeight}
                   onChange={(e) => setAddForm((p) => ({ ...p, netWeight: e.target.value }))}
+                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label><T>Stones/Diamond weight (carats)</T></Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Stones/Diamond weight (carats)</T></Label>
                 <Input
                   type="number"
                   placeholder="e.g. 1.2"
                   value={addForm.stoneWeight}
                   onChange={(e) => setAddForm((p) => ({ ...p, stoneWeight: e.target.value }))}
+                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" size="sm" onClick={() => setAddModalOpen(false)}><T>Cancel</T></Button>
-              <Button className="bg-amber-500 text-white hover:bg-amber-600" size="sm" onClick={handleAddItem}><T>Inward Piece</T></Button>
+              <Button variant="ghost" size="sm" onClick={() => setAddModalOpen(false)} className="text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
+              <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleAddItem}><T>Inward Piece</T></Button>
             </div>
           </div>
         </div>

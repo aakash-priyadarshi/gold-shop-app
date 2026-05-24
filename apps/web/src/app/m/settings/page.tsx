@@ -3,7 +3,7 @@
 import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
-import { shopsApi } from "@/lib/api";
+import api, { shopsApi } from "@/lib/api";
 import { ArrowLeft, Check, Loader2, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -46,12 +46,13 @@ export default function MobileStoreSettingsPage() {
   const [codMaxValueNpr, setCodMaxValueNpr] = useState<number>(0);
   const [minOrderValueNpr, setMinOrderValueNpr] = useState<number>(0);
   const [maxOrderValueNpr, setMaxOrderValueNpr] = useState<number>(0);
-  // Bank details
+  // Bank details & Karigar persistence
   const [bankName, setBankName] = useState<string>("");
   const [accountNumber, setAccountNumber] = useState<string>("");
   const [accountName, setAccountName] = useState<string>("");
   const [branchName, setBranchName] = useState<string>("");
   const [swiftCode, setSwiftCode] = useState<string>("");
+  const [karigarSupplyChain, setKarigarSupplyChain] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -83,6 +84,7 @@ export default function MobileStoreSettingsPage() {
         setAccountName(s.bankAccountDetails?.accountName || "");
         setBranchName(s.bankAccountDetails?.branchName || "");
         setSwiftCode(s.bankAccountDetails?.swiftCode || "");
+        setKarigarSupplyChain(s.bankAccountDetails?.karigarSupplyChain || null);
       } catch {
         // ignore, fall back to defaults from user.shop
         if (user?.shop) {
@@ -105,6 +107,9 @@ export default function MobileStoreSettingsPage() {
     setError(null);
     setSaved(false);
     try {
+      const defaultCurrency = COUNTRIES.find((c) => c.code === country)?.currency || "NPR";
+      
+      // Update shop settings
       await shopsApi.updateSettings({
         country,
         city: city || undefined,
@@ -122,14 +127,27 @@ export default function MobileStoreSettingsPage() {
         codMaxValueNpr: codMaxValueNpr || undefined,
         minOrderValueNpr: minOrderValueNpr || undefined,
         maxOrderValueNpr: maxOrderValueNpr || undefined,
-        bankAccountDetails: (bankName || accountNumber || accountName || branchName || swiftCode) ? {
+        bankAccountDetails: {
           bankName: bankName || undefined,
           accountNumber: accountNumber || undefined,
           accountName: accountName || undefined,
           branchName: branchName || undefined,
           swiftCode: swiftCode || undefined,
-        } : undefined,
+          karigarSupplyChain: karigarSupplyChain || undefined,
+        },
       });
+
+      // Synchronize the user preferences so they match the shop country and currency
+      try {
+        await api.patch("/users/me/preferences", {
+          preferredLanguage: user?.preferredLanguage || "en",
+          preferredCurrency: defaultCurrency,
+          preferredCountry: country,
+        });
+      } catch (prefErr) {
+        console.error("Failed to sync user preferences:", prefErr);
+      }
+
       await refreshUser();
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);

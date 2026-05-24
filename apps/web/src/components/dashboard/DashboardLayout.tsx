@@ -456,7 +456,7 @@ const navItems: NavItem[] = [
     roles: ["SHOPKEEPER"],
   },
   {
-    label: "Actual Stock",
+    label: "Stock",
     href: "/dashboard/shop/stock",
     icon: ClipboardList,
     roles: ["SHOPKEEPER"],

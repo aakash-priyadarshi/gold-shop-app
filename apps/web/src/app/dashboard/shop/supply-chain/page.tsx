@@ -24,28 +24,24 @@ import {
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
-import { materialsApi } from "@/lib/api";
+import { materialsApi, shopsApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
+import { Loader2 } from "lucide-react";
 import {
   Activity,
   ArrowDownLeft,
   ArrowUpRight,
   Coins,
   Hammer,
-  Layers,
   Plus,
-  RefreshCw,
   Search,
-  Settings,
-  Sparkles,
-  TrendingUp,
   Users,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Mock Workshops and Artisans data
-const INITIAL_WORKSHOPS = [
+// Mocks as fallback default seeds for new shops
+const DEFAULT_WORKSHOPS = [
   {
     id: "ws-1",
     name: "Patna Goldsmiths",
@@ -57,8 +53,8 @@ const INITIAL_WORKSHOPS = [
     wastagePercent: 0.95,
     wastageLimit: 1.0,
     wageRatePerGram: 180,
-    outstandingBalance: 4.8, // 350.0 - 345.2
-    wageDue: 62100, // 345.2 * 180
+    outstandingBalance: 4.8,
+    wageDue: 62100,
   },
   {
     id: "ws-2",
@@ -90,7 +86,7 @@ const INITIAL_WORKSHOPS = [
   },
 ];
 
-const INITIAL_JOBS = [
+const DEFAULT_JOBS = [
   {
     id: "job-101",
     product: "22K Traditional Bridal Choker",
@@ -138,6 +134,12 @@ const INITIAL_JOBS = [
   },
 ];
 
+const DEFAULT_RESERVES = {
+  goldGrains24k: 840.5,
+  goldBars24k: 400.0,
+  silverBullion999: 4500.0,
+};
+
 export default function KarigarSupplyChainPage() {
   return (
     <ShopGuard>
@@ -149,7 +151,7 @@ export default function KarigarSupplyChainPage() {
 }
 
 function KarigarSupplyChainContent() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { hasFeature, planName, loading: featuresLoading } = useFeatures();
   const t = useT();
 
@@ -165,16 +167,12 @@ function KarigarSupplyChainContent() {
   });
   const ratesRef = useRef(false);
 
-  // Vault Reserves State (Grams)
-  const [vaultReserves, setVaultReserves] = useState({
-    goldGrains24k: 840.5,
-    goldBars24k: 400.0,
-    silverBullion999: 4500.0,
-  });
-
-  // Workshops & Jobs State
-  const [workshops, setWorkshops] = useState(INITIAL_WORKSHOPS);
-  const [jobs, setJobs] = useState(INITIAL_JOBS);
+  // Database persistent states loaded from bankAccountDetails.karigarSupplyChain
+  const [vaultReserves, setVaultReserves] = useState(DEFAULT_RESERVES);
+  const [workshops, setWorkshops] = useState(DEFAULT_WORKSHOPS);
+  const [jobs, setJobs] = useState(DEFAULT_JOBS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [filterQuery, setFilterQuery] = useState("");
 
   // Action Modals/Forms State
@@ -234,16 +232,64 @@ function KarigarSupplyChainContent() {
     }
   }, [user?.shop]);
 
+  // Load supply chain settings from database
+  const loadDatabaseConfig = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await shopsApi.getSettings();
+      const s = res.data ?? res;
+      const dbConfig = s.bankAccountDetails?.karigarSupplyChain;
+      if (dbConfig) {
+        if (dbConfig.vaultReserves) setVaultReserves(dbConfig.vaultReserves);
+        if (dbConfig.workshops) setWorkshops(dbConfig.workshops);
+        if (dbConfig.jobs) setJobs(dbConfig.jobs);
+      }
+    } catch (err) {
+      console.error("Failed to load supply-chain configuration from database:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchRates();
+    loadDatabaseConfig();
     const interval = setInterval(() => {
       ratesRef.current = false;
       fetchRates();
     }, 60 * 1000);
     return () => clearInterval(interval);
-  }, [fetchRates]);
+  }, [fetchRates, loadDatabaseConfig]);
 
-  // Asset Value Math helper
+  // General persistence helper
+  const persistState = async (updatedReserves: typeof vaultReserves, updatedWorkshops: typeof workshops, updatedJobs: typeof jobs) => {
+    setSaving(true);
+    try {
+      const currentSettingsRes = await shopsApi.getSettings();
+      const currentSettings = currentSettingsRes.data ?? currentSettingsRes;
+      const bankDetails = currentSettings.bankAccountDetails || {};
+      
+      const updatedBankAccountDetails = {
+        ...bankDetails,
+        karigarSupplyChain: {
+          vaultReserves: updatedReserves,
+          workshops: updatedWorkshops,
+          jobs: updatedJobs,
+        }
+      };
+
+      await shopsApi.updateSettings({
+        bankAccountDetails: updatedBankAccountDetails
+      });
+      await refreshUser();
+    } catch (err) {
+      console.error("Failed to persist supply chain state to database:", err);
+      alert("Failed to save changes to database!");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const formatCurrency = (amount: number): string => {
     try {
       return new Intl.NumberFormat(goldRates.currency === "NPR" ? "ne-NP" : "en-IN", {
@@ -267,90 +313,85 @@ function KarigarSupplyChainContent() {
   const totalWagesDue = workshops.reduce((sum, w) => sum + w.wageDue, 0);
 
   // Allotment handler
-  const handleAllot = () => {
+  const handleAllot = async () => {
     const wt = parseFloat(allotForm.weight);
     if (isNaN(wt) || wt <= 0) return;
 
+    let updatedReserves = { ...vaultReserves };
     if (allotForm.metalType === "GOLD_24K") {
       if (vaultReserves.goldGrains24k < wt) {
         alert("Insufficient grains in vault!");
         return;
       }
-      setVaultReserves((prev) => ({
-        ...prev,
-        goldGrains24k: Number((prev.goldGrains24k - wt).toFixed(2)),
-      }));
+      updatedReserves.goldGrains24k = Number((vaultReserves.goldGrains24k - wt).toFixed(2));
     } else {
       if (vaultReserves.silverBullion999 < wt) {
         alert("Insufficient silver reserves in vault!");
         return;
       }
-      setVaultReserves((prev) => ({
-        ...prev,
-        silverBullion999: Number((prev.silverBullion999 - wt).toFixed(2)),
-      }));
+      updatedReserves.silverBullion999 = Number((vaultReserves.silverBullion999 - wt).toFixed(2));
     }
 
-    setWorkshops((prev) =>
-      prev.map((w) =>
-        w.id === allotForm.workshopId
-          ? {
-              ...w,
-              metalIssued: Number((w.metalIssued + wt).toFixed(2)),
-              outstandingBalance: Number((w.outstandingBalance + wt).toFixed(2)),
-            }
-          : w
-      )
+    const updatedWorkshops = workshops.map((w) =>
+      w.id === allotForm.workshopId
+        ? {
+            ...w,
+            metalIssued: Number((w.metalIssued + wt).toFixed(2)),
+            outstandingBalance: Number((w.outstandingBalance + wt).toFixed(2)),
+          }
+        : w
     );
 
+    setVaultReserves(updatedReserves);
+    setWorkshops(updatedWorkshops);
     setAllotForm((prev) => ({ ...prev, weight: "" }));
     setAllotModalOpen(false);
+
+    await persistState(updatedReserves, updatedWorkshops, jobs);
   };
 
   // Procure handler
-  const handleProcure = () => {
+  const handleProcure = async () => {
     const wt = parseFloat(procureForm.weight);
     if (isNaN(wt) || wt <= 0) return;
 
+    let updatedReserves = { ...vaultReserves };
     if (procureForm.metalType === "GOLD_24K") {
-      setVaultReserves((prev) => ({
-        ...prev,
-        goldGrains24k: Number((prev.goldGrains24k + wt).toFixed(2)),
-      }));
+      updatedReserves.goldGrains24k = Number((vaultReserves.goldGrains24k + wt).toFixed(2));
     } else {
-      setVaultReserves((prev) => ({
-        ...prev,
-        silverBullion999: Number((prev.silverBullion999 + wt).toFixed(2)),
-      }));
+      updatedReserves.silverBullion999 = Number((vaultReserves.silverBullion999 + wt).toFixed(2));
     }
 
+    setVaultReserves(updatedReserves);
     setProcureForm((prev) => ({ ...prev, weight: "" }));
     setProcureModalOpen(false);
+
+    await persistState(updatedReserves, workshops, jobs);
   };
 
   // Step click simulator
-  const toggleJobStep = (jobId: string, stepKey: string) => {
-    setJobs((prev) =>
-      prev.map((j) => {
-        if (j.id !== jobId) return j;
-        // @ts-ignore
-        const nextSteps = { ...j.steps, [stepKey]: !j.steps[stepKey] };
-        
-        // Derive Status
-        let status = "Casting";
-        if (nextSteps.hallmark) status = "Completed";
-        else if (nextSteps.polishing) status = "Polishing";
-        else if (nextSteps.setting) status = "Stone Setting";
-        else if (nextSteps.filing) status = "Filing & Assembly";
+  const toggleJobStep = async (jobId: string, stepKey: string) => {
+    const updatedJobs = jobs.map((j) => {
+      if (j.id !== jobId) return j;
+      // @ts-ignore
+      const nextSteps = { ...j.steps, [stepKey]: !j.steps[stepKey] };
+      
+      let status = "Casting";
+      if (nextSteps.hallmark) status = "Completed";
+      else if (nextSteps.polishing) status = "Polishing";
+      else if (nextSteps.setting) status = "Stone Setting";
+      else if (nextSteps.filing) status = "Filing & Assembly";
 
-        return {
-          ...j,
-          steps: nextSteps,
-          status,
-          updatedAt: "Just now",
-        };
-      })
-    );
+      return {
+        ...j,
+        steps: nextSteps,
+        status,
+        updatedAt: "Just now",
+      };
+    });
+
+    setJobs(updatedJobs);
+    await persistState(vaultReserves, workshops, updatedJobs);
   };
 
   const filteredWorkshops = workshops.filter((w) =>
@@ -402,17 +443,13 @@ function KarigarSupplyChainContent() {
               {formatCurrency(goldRates.silver)}/g
             </span>
           </div>
-          <Badge className="bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 flex items-center gap-1">
-            <ArrowUpRight className="h-3 w-3" />
-            +{goldRates.changePercent}%
-          </Badge>
         </div>
       </div>
 
       {/* Header and Quick stats */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <Hammer className="h-6 w-6 text-amber-500" />
             <T>Karigar & Bullion Supply Chain</T>
           </h1>
@@ -421,16 +458,22 @@ function KarigarSupplyChainContent() {
           </p>
         </div>
         <div className="flex gap-2">
+          {saving && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground pr-2">
+              <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+              <span><T>Saving changes...</T></span>
+            </div>
+          )}
           <Button
             variant="outline"
-            className="border-amber-500/30 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+            className="border-amber-500/30 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 bg-white dark:bg-gray-900"
             onClick={() => setProcureModalOpen(true)}
           >
             <Plus className="h-4 w-4 mr-1" />
             <T>Procure Bullion</T>
           </Button>
           <Button
-            className="bg-amber-500 text-white hover:bg-amber-600"
+            className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
             onClick={() => setAllotModalOpen(true)}
           >
             <ArrowUpRight className="h-4 w-4 mr-1" />
@@ -446,243 +489,252 @@ function KarigarSupplyChainContent() {
         planName={planName}
         loading={featuresLoading}
       >
-        {/* Core Bullion Vault Overview */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card data-tour="supply-vault" className="bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-950/20 dark:to-gray-900 border-yellow-200/50">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardDescription className="uppercase tracking-wider text-xs font-semibold text-yellow-600 dark:text-yellow-400">
-                  <T>Vault Bullion Valuation</T>
-                </CardDescription>
-                <Coins className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <CardTitle className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
-                {formatCurrency(grandVaultAssetValuation)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">
-                <T>Asset value of raw 24K gold and silver bullion current in vault.</T>
-              </p>
-            </CardContent>
-          </Card>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center p-12 space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+            <p className="text-xs text-muted-foreground"><T>Loading database supply-chain configurations...</T></p>
+          </div>
+        ) : (
+          <>
+            {/* Core Bullion Vault Overview */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card data-tour="supply-vault" className="bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-950/20 dark:to-gray-900 border-yellow-200/50 dark:border-gray-800">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardDescription className="uppercase tracking-wider text-xs font-semibold text-yellow-600 dark:text-yellow-400">
+                      <T>Vault Bullion Valuation</T>
+                    </CardDescription>
+                    <Coins className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
+                    {formatCurrency(grandVaultAssetValuation)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">
+                    <T>Asset value of raw 24K gold and silver bullion current in vault.</T>
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardDescription className="uppercase tracking-wider text-xs font-semibold">
-                  <T>Active Allotment Float</T>
-                </CardDescription>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <CardTitle className="text-2xl font-bold">
-                {totalOutstandingKarigarGrams.toFixed(1)} <span className="text-xs text-muted-foreground">grams</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">
-                <T>Raw precious metals issued to Karigars currently in active fabrication.</T>
-              </p>
-            </CardContent>
-          </Card>
+              <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardDescription className="uppercase tracking-wider text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      <T>Active Allotment Float</T>
+                    </CardDescription>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {totalOutstandingKarigarGrams.toFixed(1)} <span className="text-xs text-muted-foreground">grams</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">
+                    <T>Raw precious metals issued to Karigars currently in active fabrication.</T>
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardDescription className="uppercase tracking-wider text-xs font-semibold">
-                  <T>Outstanding Karigar Wages</T>
-                </CardDescription>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <CardTitle className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(totalWagesDue)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">
-                <T>Labor charges pending clearance upon receipt of hallmarked finished stock.</T>
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Vault Grains & Bars balances */}
-        <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">
-              <T>Vault Physical Reserve Inventory</T>
-            </CardTitle>
-            <CardDescription>
-              <T>Unfinished raw metal grains and bars currently available for workshop allotment.</T>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
-            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-850/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium"><T>24K Gold Grains</T></p>
-                <p className="text-lg font-bold mt-1 text-yellow-600 dark:text-yellow-400">{vaultReserves.goldGrains24k.toFixed(2)} g</p>
-              </div>
-              <Badge className="bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 text-xs">Purity: 99.9%</Badge>
+              <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardDescription className="uppercase tracking-wider text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      <T>Outstanding Karigar Wages</T>
+                    </CardDescription>
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(totalWagesDue)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">
+                    <T>Labor charges pending clearance upon receipt of hallmarked finished stock.</T>
+                  </p>
+                </CardContent>
+              </Card>
             </div>
 
-            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-850/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium"><T>24K Gold Cast Bars</T></p>
-                <p className="text-lg font-bold mt-1 text-yellow-600 dark:text-yellow-400">{vaultReserves.goldBars24k.toFixed(2)} g</p>
-              </div>
-              <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-xs">Hallmarked</Badge>
-            </div>
-
-            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-850/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium"><T>999 Silver Scrap/Grain</T></p>
-                <p className="text-lg font-bold mt-1 text-slate-400">{vaultReserves.silverBullion999.toFixed(2)} g</p>
-              </div>
-              <Badge className="bg-slate-500/10 text-slate-600 border border-slate-500/20 text-xs">Ag 99.9%</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Karigar Ledgers */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card data-tour="supply-ledger" className="lg:col-span-2 bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
-            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
-              <div>
-                <CardTitle className="text-base font-semibold"><T>Artisan (Karigar) Balances & Wastage</T></CardTitle>
+            {/* Vault Grains & Bars balances */}
+            <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                  <T>Vault Physical Reserve Inventory</T>
+                </CardTitle>
                 <CardDescription>
-                  <T>Tracks metal weight issued to workshops vs finished metal weights returned.</T>
+                  <T>Unfinished raw metal grains and bars currently available for workshop allotment.</T>
                 </CardDescription>
-              </div>
-              <div className="relative w-48">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder={t("Search artisans...")}
-                  value={filterQuery}
-                  onChange={(e) => setFilterQuery(e.target.value)}
-                  className="pl-8 text-xs h-8 rounded-lg"
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse text-left">
-                <thead>
-                  <tr className="border-b text-xs uppercase tracking-wider text-muted-foreground bg-gray-50 dark:bg-gray-850/50">
-                    <th className="py-2.5 px-3 font-semibold"><T>Karigar & Workshop</T></th>
-                    <th className="py-2.5 px-3 font-semibold"><T>Issued (g)</T></th>
-                    <th className="py-2.5 px-3 font-semibold"><T>Returned (g)</T></th>
-                    <th className="py-2.5 px-3 font-semibold"><T>Wastage %</T></th>
-                    <th className="py-2.5 px-3 font-semibold"><T>Float Bal (g)</T></th>
-                    <th className="py-2.5 px-3 font-semibold text-right"><T>Wage Due</T></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filteredWorkshops.map((w) => {
-                    const isExceeded = w.wastagePercent > w.wastageLimit;
-                    return (
-                      <tr key={w.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-850/20">
-                        <td className="py-3 px-3">
-                          <p className="font-semibold text-gray-900 dark:text-gray-100">{w.artisan}</p>
-                          <p className="text-xs text-muted-foreground">{w.name} &middot; {w.location}</p>
-                        </td>
-                        <td className="py-3 px-3 font-medium">{w.metalIssued.toFixed(1)}</td>
-                        <td className="py-3 px-3">{w.metalReturned.toFixed(1)}</td>
-                        <td className="py-3 px-3">
-                          <span className={`inline-flex items-center gap-1 font-semibold text-xs ${isExceeded ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                            {w.wastagePercent.toFixed(2)}%
-                            <span className="text-[10px] text-muted-foreground">({t("Limit")} {w.wastageLimit}%)</span>
-                          </span>
-                        </td>
-                        <td className="py-3 px-3">
-                          <Badge variant={w.outstandingBalance > 0 ? "outline" : "secondary"} className={w.outstandingBalance > 0 ? "border-amber-500/25 bg-amber-500/5 text-amber-600" : ""}>
-                            {w.outstandingBalance.toFixed(1)} g
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-3 font-bold text-right text-gray-900 dark:text-gray-100">
-                          {formatCurrency(w.wageDue)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-
-          {/* Jobs and Steps checklists */}
-          <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold"><T>Artisan Fabrication Pipeline</T></CardTitle>
-              <CardDescription>
-                <T>Active custom jobs on the workbench. Click checklist stages to record fabrication milestones.</T>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {jobs.map((j) => (
-                <div key={j.id} className="p-3 border rounded-xl bg-gray-50/50 dark:bg-gray-850/10 space-y-3">
-                  <div className="flex justify-between items-start flex-wrap gap-2">
-                    <div>
-                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{j.product}</p>
-                      <p className="text-xs text-muted-foreground">{j.artisan}</p>
-                    </div>
-                    <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/25 text-[10px]">
-                      {j.status}
-                    </Badge>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-3">
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-850/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium"><T>24K Gold Grains</T></p>
+                    <p className="text-lg font-bold mt-1 text-yellow-600 dark:text-yellow-400">{vaultReserves.goldGrains24k.toFixed(2)} g</p>
                   </div>
-
-                  {/* Horizontal steps checkboxes */}
-                  <div className="grid grid-cols-5 gap-1 text-[10px] text-center pt-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleJobStep(j.id, "casting")}
-                      className={`py-1.5 rounded-lg border font-medium ${j.steps.casting ? "bg-amber-500 border-amber-500 text-white" : "border-gray-200 dark:border-gray-800 hover:bg-gray-100"}`}
-                    >
-                      Cast
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleJobStep(j.id, "filing")}
-                      className={`py-1.5 rounded-lg border font-medium ${j.steps.filing ? "bg-amber-500 border-amber-500 text-white" : "border-gray-200 dark:border-gray-800 hover:bg-gray-100"}`}
-                    >
-                      File
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleJobStep(j.id, "setting")}
-                      className={`py-1.5 rounded-lg border font-medium ${j.steps.setting ? "bg-amber-500 border-amber-500 text-white" : "border-gray-200 dark:border-gray-800 hover:bg-gray-100"}`}
-                    >
-                      Set
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleJobStep(j.id, "polishing")}
-                      className={`py-1.5 rounded-lg border font-medium ${j.steps.polishing ? "bg-amber-500 border-amber-500 text-white" : "border-gray-200 dark:border-gray-800 hover:bg-gray-100"}`}
-                    >
-                      Polish
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleJobStep(j.id, "hallmark")}
-                      className={`py-1.5 rounded-lg border font-medium ${j.steps.hallmark ? "bg-emerald-500 border-emerald-500 text-white" : "border-gray-200 dark:border-gray-800 hover:bg-gray-100"}`}
-                    >
-                      HUID
-                    </button>
-                  </div>
-                  <div className="flex justify-between items-center text-[10px] text-muted-foreground pt-1">
-                    <span><T>Gross Weight</T>: {j.grossWeight} g</span>
-                    <span>{j.updatedAt}</span>
-                  </div>
+                  <Badge className="bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 text-xs">Purity: 99.9%</Badge>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-850/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium"><T>24K Gold Cast Bars</T></p>
+                    <p className="text-lg font-bold mt-1 text-yellow-600 dark:text-yellow-400">{vaultReserves.goldBars24k.toFixed(2)} g</p>
+                  </div>
+                  <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-xs">Hallmarked</Badge>
+                </div>
+
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-850/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium"><T>999 Silver Scrap/Grain</T></p>
+                    <p className="text-lg font-bold mt-1 text-slate-400">{vaultReserves.silverBullion999.toFixed(2)} g</p>
+                  </div>
+                  <Badge className="bg-slate-500/10 text-slate-600 border border-slate-500/20 text-xs">Ag 99.9%</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Karigar Ledgers */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              <Card data-tour="supply-ledger" className="lg:col-span-2 bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+                <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100"><T>Artisan (Karigar) Balances & Wastage</T></CardTitle>
+                    <CardDescription>
+                      <T>Tracks metal weight issued to workshops vs finished metal weights returned.</T>
+                    </CardDescription>
+                  </div>
+                  <div className="relative w-48">
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder={t("Search artisans...")}
+                      value={filterQuery}
+                      onChange={(e) => setFilterQuery(e.target.value)}
+                      className="pl-8 text-xs h-8 rounded-lg border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse text-left">
+                    <thead>
+                      <tr className="border-b dark:border-gray-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-850/50">
+                        <th className="py-2.5 px-3 font-semibold"><T>Karigar & Workshop</T></th>
+                        <th className="py-2.5 px-3 font-semibold"><T>Issued (g)</T></th>
+                        <th className="py-2.5 px-3 font-semibold"><T>Returned (g)</T></th>
+                        <th className="py-2.5 px-3 font-semibold"><T>Wastage %</T></th>
+                        <th className="py-2.5 px-3 font-semibold"><T>Float Bal (g)</T></th>
+                        <th className="py-2.5 px-3 font-semibold text-right"><T>Wage Due</T></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y dark:divide-gray-800">
+                      {filteredWorkshops.map((w) => {
+                        const isExceeded = w.wastagePercent > w.wastageLimit;
+                        return (
+                          <tr key={w.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-850/20 text-gray-700 dark:text-gray-300">
+                            <td className="py-3 px-3">
+                              <p className="font-semibold text-gray-900 dark:text-gray-100">{w.artisan}</p>
+                              <p className="text-xs text-muted-foreground">{w.name} &middot; {w.location}</p>
+                            </td>
+                            <td className="py-3 px-3 font-medium text-gray-900 dark:text-gray-100">{w.metalIssued.toFixed(1)}</td>
+                            <td className="py-3 px-3">{w.metalReturned.toFixed(1)}</td>
+                            <td className="py-3 px-3">
+                              <span className={`inline-flex items-center gap-1 font-semibold text-xs ${isExceeded ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                                {w.wastagePercent.toFixed(2)}%
+                                <span className="text-[10px] text-muted-foreground">({t("Limit")} {w.wastageLimit}%)</span>
+                              </span>
+                            </td>
+                            <td className="py-3 px-3">
+                              <Badge variant={w.outstandingBalance > 0 ? "outline" : "secondary"} className={w.outstandingBalance > 0 ? "border-amber-500/25 bg-amber-500/5 text-amber-600 dark:text-amber-400" : ""}>
+                                {w.outstandingBalance.toFixed(1)} g
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-3 font-bold text-right text-gray-900 dark:text-gray-100">
+                              {formatCurrency(w.wageDue)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+
+              {/* Jobs and Steps checklists */}
+              <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+                <CardHeader>
+                  <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100"><T>Artisan Fabrication Pipeline</T></CardTitle>
+                  <CardDescription>
+                    <T>Active custom jobs on the workbench. Click checklist stages to record fabrication milestones.</T>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {jobs.map((j) => (
+                    <div key={j.id} className="p-3 border dark:border-gray-850 rounded-xl bg-gray-50/50 dark:bg-gray-850/10 space-y-3">
+                      <div className="flex justify-between items-start flex-wrap gap-2">
+                        <div>
+                          <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{j.product}</p>
+                          <p className="text-xs text-muted-foreground">{j.artisan}</p>
+                        </div>
+                        <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/25 text-[10px]">
+                          {j.status}
+                        </Badge>
+                      </div>
+
+                      {/* Horizontal steps checkboxes */}
+                      <div className="grid grid-cols-5 gap-1 text-[10px] text-center pt-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleJobStep(j.id, "casting")}
+                          className={`py-1.5 rounded-lg border font-medium ${j.steps.casting ? "bg-amber-500 border-amber-500 text-white" : "border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"}`}
+                        >
+                          Cast
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleJobStep(j.id, "filing")}
+                          className={`py-1.5 rounded-lg border font-medium ${j.steps.filing ? "bg-amber-500 border-amber-500 text-white" : "border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"}`}
+                        >
+                          File
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleJobStep(j.id, "setting")}
+                          className={`py-1.5 rounded-lg border font-medium ${j.steps.setting ? "bg-amber-500 border-amber-500 text-white" : "border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"}`}
+                        >
+                          Set
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleJobStep(j.id, "polishing")}
+                          className={`py-1.5 rounded-lg border font-medium ${j.steps.polishing ? "bg-amber-500 border-amber-500 text-white" : "border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"}`}
+                        >
+                          Polish
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleJobStep(j.id, "hallmark")}
+                          className={`py-1.5 rounded-lg border font-medium ${j.steps.hallmark ? "bg-emerald-500 border-emerald-500 text-white animate-pulse" : "border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"}`}
+                        >
+                          HUID
+                        </button>
+                      </div>
+                      <div className="flex justify-between items-center text-[10px] text-muted-foreground pt-1">
+                        <span><T>Gross Weight</T>: {j.grossWeight} g</span>
+                        <span>{j.updatedAt}</span>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
       </FeatureGate>
 
       {/* ─── MODALS ─── */}
       {/* 1. Allot modal */}
       {allotModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 border rounded-2xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100"><T>Issue Bullion to Workshop</T></h3>
             <p className="text-xs text-muted-foreground">
               <T>Allot raw metal from vault directly into the artisan float ledger balance.</T>
@@ -690,15 +742,15 @@ function KarigarSupplyChainContent() {
             
             <div className="space-y-3 pt-2">
               <div className="space-y-1">
-                <Label><T>Select Workshop/Artisan</T></Label>
+                <Label className="text-gray-750 dark:text-gray-300"><T>Select Workshop/Artisan</T></Label>
                 <Select
                   value={allotForm.workshopId}
                   onValueChange={(val) => setAllotForm((p) => ({ ...p, workshopId: val }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-250 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
                     {workshops.map((w) => (
                       <SelectItem key={w.id} value={w.id}>
                         {w.artisan} ({w.name})
@@ -709,15 +761,15 @@ function KarigarSupplyChainContent() {
               </div>
 
               <div className="space-y-1">
-                <Label><T>Metal Material</T></Label>
+                <Label className="text-gray-750 dark:text-gray-300"><T>Metal Material</T></Label>
                 <Select
                   value={allotForm.metalType}
                   onValueChange={(val) => setAllotForm((p) => ({ ...p, metalType: val }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-255 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
                     <SelectItem value="GOLD_24K">Gold grains (24K)</SelectItem>
                     <SelectItem value="SILVER_999">Silver bullion (999)</SelectItem>
                   </SelectContent>
@@ -725,19 +777,20 @@ function KarigarSupplyChainContent() {
               </div>
 
               <div className="space-y-1">
-                <Label><T>Weight (grams)</T></Label>
+                <Label className="text-gray-750 dark:text-gray-300"><T>Weight (grams)</T></Label>
                 <Input
                   type="number"
                   placeholder="e.g. 50"
                   value={allotForm.weight}
                   onChange={(e) => setAllotForm((p) => ({ ...p, weight: e.target.value }))}
+                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" size="sm" onClick={() => setAllotModalOpen(false)}><T>Cancel</T></Button>
-              <Button className="bg-amber-500 text-white hover:bg-amber-600" size="sm" onClick={handleAllot}><T>Issue Metal</T></Button>
+              <Button variant="ghost" size="sm" onClick={() => setAllotModalOpen(false)} className="text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
+              <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleAllot}><T>Issue Metal</T></Button>
             </div>
           </div>
         </div>
@@ -746,7 +799,7 @@ function KarigarSupplyChainContent() {
       {/* 2. Procure modal */}
       {procureModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 border rounded-2xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100"><T>Procure Raw Bullion</T></h3>
             <p className="text-xs text-muted-foreground">
               <T>Log wholesale bullion grains purchase, adding raw materials balance to the safe vault reserves.</T>
@@ -754,15 +807,15 @@ function KarigarSupplyChainContent() {
 
             <div className="space-y-3 pt-2">
               <div className="space-y-1">
-                <Label><T>Metal Material</T></Label>
+                <Label className="text-gray-750 dark:text-gray-300"><T>Metal Material</T></Label>
                 <Select
                   value={procureForm.metalType}
                   onValueChange={(val) => setProcureForm((p) => ({ ...p, metalType: val }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-255 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
                     <SelectItem value="GOLD_24K">Gold grains (24K)</SelectItem>
                     <SelectItem value="SILVER_999">Silver bullion (999)</SelectItem>
                   </SelectContent>
@@ -770,19 +823,20 @@ function KarigarSupplyChainContent() {
               </div>
 
               <div className="space-y-1">
-                <Label><T>Weight (grams)</T></Label>
+                <Label className="text-gray-750 dark:text-gray-300"><T>Weight (grams)</T></Label>
                 <Input
                   type="number"
                   placeholder="e.g. 100"
                   value={procureForm.weight}
                   onChange={(e) => setProcureForm((p) => ({ ...p, weight: e.target.value }))}
+                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" size="sm" onClick={() => setProcureModalOpen(false)}><T>Cancel</T></Button>
-              <Button className="bg-amber-500 text-white hover:bg-amber-600" size="sm" onClick={handleProcure}><T>Add to Vault</T></Button>
+              <Button variant="ghost" size="sm" onClick={() => setProcureModalOpen(false)} className="text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
+              <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleProcure}><T>Add to Vault</T></Button>
             </div>
           </div>
         </div>

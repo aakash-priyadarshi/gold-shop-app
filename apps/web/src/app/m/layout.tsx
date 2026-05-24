@@ -18,6 +18,7 @@ import {
     Calculator,
     ChevronDown,
     ChevronRight,
+    ClipboardList,
     FileText,
     FlaskConical,
     Gem,
@@ -58,7 +59,7 @@ const TutorialButton = dynamic(
   { ssr: false },
 );
 // NOTE: <SupportBot /> is provided by app/layout.tsx so we do not import or
-// render it here \u2014 having two instances would render two overlapping chat
+// render it here — having two instances would render two overlapping chat
 // bubbles that become visible as soon as the user drags one of them.
 
 interface GoldRate {
@@ -159,6 +160,7 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
         { href: "/m/exchange", icon: Scale, label: "Old Gold Exchange" },
         { href: "/m/pending", icon: Wallet, label: "Pending Payments" },
         { href: "/m/repairs", icon: Wrench, label: "Repairs" },
+        { href: "/m/stock", icon: ClipboardList, label: "Stock Ledger" },
       ]
     },
     {

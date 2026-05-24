@@ -28,7 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
+import api, { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import { getCitiesForCountry, getStatesForCountry } from "@gold-shop/shared";
 import {
@@ -331,6 +331,28 @@ export default function ShopSettingsPage() {
         maxOrderValueNpr: shopData.maxOrderValueNpr,
         bankAccountDetails: shopData.bankAccountDetails,
       });
+
+      // Synchronize the user preferences so they match the shop country and currency
+      try {
+        const countryToCurrency: Record<string, string> = {
+          NP: "NPR",
+          IN: "INR",
+          US: "USD",
+          GB: "GBP",
+          UK: "GBP",
+          AE: "AED",
+          EU: "EUR",
+        };
+        const defaultCurrency = countryToCurrency[shopData.country.toUpperCase()] || "USD";
+        await api.patch("/users/me/preferences", {
+          preferredLanguage: user?.preferredLanguage || "en",
+          preferredCurrency: defaultCurrency,
+          preferredCountry: shopData.country,
+        });
+      } catch (prefErr) {
+        console.error("Failed to sync user preferences:", prefErr);
+      }
+
       toast({
         title: "Settings Saved",
         description: "Your shop settings have been updated successfully",
