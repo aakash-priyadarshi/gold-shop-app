@@ -37,6 +37,55 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
+  "/dashboard/shop/stock": [
+    {
+      element: "[data-tour='stock-valuation']",
+      popover: {
+        title: "Finished Stock Valuation",
+        description: "View the live dynamic valuation of your finished display and safe stock, calculated dynamically using live gold and silver rates with craft markup.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='stock-table']",
+      popover: {
+        title: "Finished Stock Ledger",
+        description: "Real-time records of finished jewelry. Search by tag or HUID code, view weights, and manage display showcase vs strong-room vault locations.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
+  "/dashboard/shop/supply-chain": [
+    {
+      element: "[data-tour='supply-ticker']",
+      popover: {
+        title: "Live Bullion Ticker",
+        description: "Real-time feed of raw materials (gold grains 24K, 22K, 18K, silver) dynamically synced from international commodities markets.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='supply-vault']",
+      popover: {
+        title: "Bullion Safe Vault Reserves",
+        description: "Track the total raw materials physical stock (gold cast bars, silver scrap, grains) currently locked inside your strong-room vault.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='supply-ledger']",
+      popover: {
+        title: "Artisan Balance Ledger",
+        description: "Manage precious metal float allotted to Karigars (goldsmiths), compute exact wastage margins against targets, and track unpaid wages.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
   "/dashboard/shop/inventory": [
     {
       element: "[data-tour='inventory-add']",

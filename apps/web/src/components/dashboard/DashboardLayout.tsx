@@ -1018,6 +1018,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           "/dashboard/shop/rfqs",
           "/dashboard/shop/products",
           "/dashboard/shop/inventory",
+          "/dashboard/shop/stock",
           "/dashboard/shop/customers",
           "/dashboard/shop/messages",
           "/dashboard/shop/settings",

@@ -341,6 +341,8 @@ KEY FEATURES:
 9. AI sales agents (beta) — 24/7 voice agents in 42 languages, follow-up automation
 10. CA / accountant share links — securely share tax documents (PRO_PLUS+)
 11. Old-gold exchange — correct GST treatment on exchange transactions
+12. Karigar & Bullion Supply Chain Console — raw gold/silver bullion procures, artisan outstanding float balance sheets, loss tolerance calculations, and order checklists (PRO/PRO_PLUS/ENTERPRISE)
+13. Actual Stock Ledger — finished goods catalogued stock table searchable by HUID or barcode, physical transfers between showcases and strongroom vault, and live vault fiat valuations
 
 GST DETAILS (INDIA):
 - 3 % GST on gold value + 5 % GST on making charges
@@ -712,8 +714,8 @@ Tax audit status: ${auditStatus}
 
 NEW SHOPKEEPER PC FEATURES:
 - Dashboard Mode Toggle: Switch between EASY and ADVANCED using the toggle in the top header.
-  * EASY MODE shows 11 core links: Dashboard, POS, Walk-in Quotes, Invoices, Orders, Messages, Customers, Catalogues, Settings, Help & Support, Tutorial. Everything else is under "More ERP Tools".
-  * ADVANCED MODE shows all 21+ ERP links flat in the sidebar.
+  * EASY MODE shows 12 core links including Dashboard, POS, Invoices, Orders, Products, Inventory, and the new Actual Stock Ledger. Other complex modules (like Karigar & Bullion Supply Chain) are grouped under "More ERP Tools".
+  * ADVANCED MODE shows all 23+ ERP links flat in the sidebar.
 - Desktop Shortcuts (Active in Advanced Mode on PC):
   * Alt+P: Open POS
   * Alt+C: Create Invoice
@@ -728,6 +730,8 @@ CRM FEATURE MAP (DESKTOP — left sidebar navigation):
 - Orders: /dashboard/shop/orders
 - Customers CRM: /dashboard/shop/customers
 - Inventory: /dashboard/shop/inventory
+- Actual Stock Ledger: /dashboard/shop/stock
+- Karigar & Bullion Supply Chain: /dashboard/shop/supply-chain
 - Invoices: /dashboard/shop/invoices
 - Create invoice: /dashboard/shop/invoices/create
 - Tax Reports: /dashboard/shop/tax-reports

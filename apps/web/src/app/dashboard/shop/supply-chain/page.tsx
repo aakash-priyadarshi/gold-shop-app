@@ -361,7 +361,7 @@ function KarigarSupplyChainContent() {
   return (
     <div className="space-y-6">
       {/* Premium Rate Ticker */}
-      <div className="bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/20 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-4 backdrop-blur-md">
+      <div data-tour="supply-ticker" className="bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/20 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-4 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -448,7 +448,7 @@ function KarigarSupplyChainContent() {
       >
         {/* Core Bullion Vault Overview */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-950/20 dark:to-gray-900 border-yellow-200/50">
+          <Card data-tour="supply-vault" className="bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-950/20 dark:to-gray-900 border-yellow-200/50">
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
                 <CardDescription className="uppercase tracking-wider text-xs font-semibold text-yellow-600 dark:text-yellow-400">
@@ -545,7 +545,7 @@ function KarigarSupplyChainContent() {
 
         {/* Karigar Ledgers */}
         <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2 bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+          <Card data-tour="supply-ledger" className="lg:col-span-2 bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
               <div>
                 <CardTitle className="text-base font-semibold"><T>Artisan (Karigar) Balances & Wastage</T></CardTitle>

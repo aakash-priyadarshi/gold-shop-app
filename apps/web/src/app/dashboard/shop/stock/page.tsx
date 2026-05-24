@@ -372,7 +372,7 @@ function ActualStockLedgerContent() {
       >
         {/* Core Valuation Cards */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-gray-900 border-amber-200/50">
+          <Card data-tour="stock-valuation" className="bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-gray-900 border-amber-200/50">
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
                 <CardDescription className="uppercase tracking-wider text-xs font-semibold text-amber-600 dark:text-amber-400">
@@ -431,7 +431,7 @@ function ActualStockLedgerContent() {
         </div>
 
         {/* Dynamic Ledger search and filtration */}
-        <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+        <Card data-tour="stock-table" className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4 border-b pb-4">
             <div>
               <CardTitle className="text-base font-semibold"><T>Finished Vault Stock Ledger</T></CardTitle>
