@@ -867,8 +867,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='dashboard-mode-toggle']",
       popover: {
-        title: "Workspace Mode",
-        description: "Switch between Easy Mode (POS, Quotes, Invoices, Orders + 7 more core links) and Advanced Mode (full 21+ ERP tools). Your preference is saved.",
+        title: "Workspace Mode Toggle",
+        description: "Located at the top-right of your sidebar header. Switch between Easy Mode (simplifies the navigation down to 10 core daily POS & invoicing links) and Advanced Mode (expands the sidebar to expose all 21+ advanced enterprise ERP tools). Your layout preference is automatically remembered.",
         side: "bottom",
         align: "center",
       },
@@ -877,7 +877,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='quick-estimator']",
       popover: {
         title: "Quick Gold Estimator",
-        description: "Need to quote a price quickly? Use this floating calculator to get an instant estimate using live gold rates. Tip: Press Alt+E to toggle it quickly.",
+        description: "A floating gold bar button at the bottom-right corner of the window. Click it (or press Alt+E) to toggle a real-time price calculator. Select gold purity (24K, 22K, 18K, 14K), type the weight in grams, enter optional making charges, and get an instant cost estimate dynamically synced with the live spot market rate.",
         side: "right",
         align: "end",
       },
@@ -885,8 +885,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='dash-live-rates']",
       popover: {
-        title: "Live Market Pulse",
-        description: "See the latest market rates and AI-generated insights on when to restock.",
+        title: "Live Market Pulse Card",
+        description: "Displays live spot market rates for 24K, 22K, 18K gold and silver per gram, synced every 10 minutes. It includes a daily percentage change index badge and a real-time AI advisory insight recommending whether to restock or hedge based on active commodities price momentum.",
         side: "left",
         align: "start",
       },
@@ -894,8 +894,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='dash-quests']",
       popover: {
-        title: "Setup Quests",
-        description: "Complete these steps to fully configure your store and get verified.",
+        title: "Setup Quests Roadmap",
+        description: "A gamified progress card tracking your setup milestones, including shop profiling, inventory seed uploads, and KYC compliance. Each quest displays the premium reward earned on completion, along with an action button that redirects you directly to the relevant settings page.",
         side: "bottom",
         align: "start",
       },
@@ -903,8 +903,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='dash-stats']",
       popover: {
-        title: "Today's Overview",
-        description: "At a glance: revenue, orders, and top-selling items for today.",
+        title: "Today's Key Metrics Overview",
+        description: "At-a-glance KPI cards tracking today's total sales revenue, active order counts, pending custom marketplace requests (RFQs), and your shop's average customer review score. Clicking any card takes you instantly to its complete ledger details.",
         side: "bottom",
         align: "start",
       },
@@ -912,8 +912,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='dash-quick-actions']",
       popover: {
-        title: "Quick Actions",
-        description: "Jump to POS, add a product, or create a quote from here.",
+        title: "Quick Actions Console",
+        description: "Jump instantly into key modules. Launch the Quick Bill POS screen, open the Add Product inventory form, or create a walk-in Quote with single-click shortcut buttons designed to speed up customer checkout flows.",
         side: "left",
         align: "start",
       },
@@ -921,8 +921,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='dash-orders']",
       popover: {
-        title: "Recent Orders",
-        description: "Your latest orders — click any row to manage it.",
+        title: "Recent Orders Monitor",
+        description: "Tracks active customer transactions in real-time, showing order ID, fulfillment status, and final amount. Click any transaction row to open details or print invoices.",
         side: "top",
         align: "center",
       },
@@ -930,8 +930,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='dash-rfqs']",
       popover: {
-        title: "RFQ Requests",
-        description: "New custom requests from customers. Respond to them quickly to win the deal.",
+        title: "Custom RFQ Request Inbox",
+        description: "Displays custom design requests sent by marketplace shoppers. View their target budget, deadline, and jewelry type specifications. Tap 'Respond' to submit a customized price quote and lock in the deal.",
         side: "top",
         align: "center",
       },
@@ -939,8 +939,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='dash-low-stock']",
       popover: {
-        title: "Low Stock Alerts",
-        description: "Items that have dropped below your min-stock threshold. Restock them here.",
+        title: "Low Stock Inventory Alerts",
+        description: "Flags items that have dropped below your specified safety threshold. Restock directly from this ledger card to avoid running out of display items.",
         side: "top",
         align: "center",
       },
@@ -948,10 +948,16 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='support-bot']",
       popover: {
-        title: "AI Support Assistant",
-        description: "Need help? Click the amber chat button anytime to ask your shop-aware AI assistant. As a seller it knows your live sales, unpaid invoices, and customer count — ask things like \"How many invoices are unpaid?\" or \"What were my sales this month?\"",
+        title: "AI Support & Shop Intelligence Assistant",
+        description: "Click the amber chat bubble anytime in the bottom-right corner to talk with your context-aware AI. Since it has access to your shop data, you can ask questions like 'How many invoices are unpaid?' or 'What were my sales this month?' to get instant answers.",
         side: "left",
         align: "end",
+      },
+    },
+    {
+      popover: {
+        title: "💡 Need Help Anytime?",
+        description: "You can click the floating '?' Help Button in the bottom-right corner of the screen at any point to restart this guide or get in-context assistance on any page you visit!",
       },
     },
   ],
@@ -962,7 +968,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-gold-ticker']",
       popover: {
         title: "Live Gold Price Ticker",
-        description: "Today's 24K, 22K, 18K and silver rates — updated every 10 minutes from market data.",
+        description: "A header banner displaying live spot market prices for 24K, 22K, 18K gold and silver per gram. Automatically synced every 10 minutes to guarantee accurate walk-in pricing on the retail floor.",
         side: "bottom",
         align: "start",
       },
@@ -970,8 +976,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='m-pos-search']",
       popover: {
-        title: "Search Products",
-        description: "Type a product name to filter your inventory. Tap any card to add it to the bill.",
+        title: "Intelligent Search & Filter",
+        description: "Type here to perform an instant search by product name, SKU, or category to filter your store catalogue dynamically. Tap to select or clear.",
         side: "bottom",
         align: "start",
       },
@@ -979,8 +985,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='m-pos-grid']",
       popover: {
-        title: "Product Grid",
-        description: "Tap a product to add it to the bill. The badge shows the quantity in cart. Tap again to increase quantity.",
+        title: "Product Grid & Detail Sheets",
+        description: "Displays your catalog cards. Tapping any card opens a modal sheet showing weight in grams, metal purity, base value, and making charges. Tapping the orange '+' button instantly adds the item to your active bill, updating the badge count in real-time.",
         side: "top",
         align: "center",
       },
@@ -988,8 +994,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='m-pos-bill-btn']",
       popover: {
-        title: "View Bill",
-        description: "Once you have items in cart, tap here to open the bill summary, select payment method, and checkout.",
+        title: "View Bill & Finalize Checkout",
+        description: "Visible when items are in your cart. Displays the total bill amount and cart count. Tapping this launches the Cart Drawer, where you can enter customer CRM details (phone/name) for invoice linking, view VAT/GST tax splits, select standard payment methods, and finalize checkout.",
         side: "top",
         align: "center",
       },
@@ -997,8 +1003,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='m-bottom-nav']",
       popover: {
-        title: "Mobile Navigation",
-        description: "Switch between Bill, Quotes, Orders, Customers, and More from the bottom bar. Tap '⋯ More' for Rate Card, Tax Reports, Repairs, and Savings.",
+        title: "Bottom Navigation bar",
+        description: "Switch seamlessly between POS billing, Walk-in Quotes, Orders list, and your CRM Customers list. Tapping '⋯ More' unlocks advanced tools like live Rate Card templates, Tax reports, Repairs logs, and Savings Schemes.",
         side: "top",
         align: "center",
       },
@@ -1006,10 +1012,16 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='support-bot']",
       popover: {
-        title: "AI Assistant",
-        description: "Ask the Orivraa bot about mobile features — billing, WhatsApp share, gold rates, repairs, savings schemes — anytime.",
+        title: "AI Assistant Chat",
+        description: "A floating helper button to ask the AI assistant about mobile-specific features, billing calculations, gold savings installment logs, or WhatsApp message sharing rules.",
         side: "left",
         align: "end",
+      },
+    },
+    {
+      popover: {
+        title: "💡 Need Help on Mobile?",
+        description: "You can tap the floating '?' Help Button in the bottom-right corner of the screen at any point to restart this guide or get in-context assistance on any mobile page you visit!",
       },
     },
   ],

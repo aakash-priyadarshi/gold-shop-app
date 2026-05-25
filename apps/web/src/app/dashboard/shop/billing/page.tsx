@@ -28,6 +28,7 @@ import {
     CheckCircle,
     CreditCard,
     Crown,
+    Loader2,
     Package,
     Receipt,
     Sparkles,
@@ -198,6 +199,7 @@ function CurrentPlanTab() {
     }[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activatingTrial, setActivatingTrial] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -218,6 +220,26 @@ function CurrentPlanTab() {
       setLoading(false);
     }
   }, []);
+
+  const handleActivateTrial = async () => {
+    try {
+      setActivatingTrial(true);
+      await sellerSubscriptionsApi.activateTrial();
+      toast({
+        title: t("Premium Trial Activated!"),
+        description: t("Welcome to PRO! Enjoy 60 days of premium CRM and POS features completely free."),
+      });
+      fetchData();
+    } catch (err: any) {
+      toast({
+        title: t("Trial Activation Failed"),
+        description: err?.response?.data?.message || t("Could not activate trial. Please contact support."),
+        variant: "destructive",
+      });
+    } finally {
+      setActivatingTrial(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -255,8 +277,53 @@ function CurrentPlanTab() {
     );
   }
 
+  const isFreePlan = !sub || sub.plan.name === "FREE" || sub.status === "FREE";
+
   return (
     <div className="space-y-4">
+      {isFreePlan && (
+        <Card className="border-amber-400 bg-gradient-to-br from-amber-50 via-yellow-50/50 to-orange-100/30 dark:from-amber-950/20 dark:via-yellow-900/10 dark:to-orange-950/20 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 relative group">
+          <div className="absolute top-0 right-0 p-32 bg-amber-400/5 blur-3xl rounded-full pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
+          <CardHeader className="pb-3 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-200 to-yellow-400 dark:from-amber-700 dark:to-yellow-600 flex items-center justify-center shadow-inner">
+                <Crown className="h-5 w-5 text-amber-950 dark:text-amber-100" />
+              </div>
+              <div>
+                <CardTitle className="text-lg text-amber-950 dark:text-amber-100 flex items-center gap-2">
+                  <T>Unlock 60 Days of Premium Free Trial!</T>
+                </CardTitle>
+                <CardDescription className="text-xs text-amber-800/80 dark:text-amber-400/80">
+                  <T>Supercharge your business with premium PRO features securely</T>
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="relative z-10 space-y-4">
+            <p className="text-sm text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
+              <T>Get full access to all premium mobile POS capabilities—including walk-in Quotes, karigar Repairs tracking, customer CRM directories, and gold Savings Schemes—completely free for 60 days with absolutely no credit card required.</T>
+            </p>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg flex items-center gap-2 w-full sm:w-auto"
+              disabled={activatingTrial}
+              onClick={handleActivateTrial}
+            >
+              {activatingTrial ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin animate-infinite" />
+                  <T>Activating Premium Trial...</T>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 fill-white" />
+                  <T>Start 60-Day Premium Free Trial</T>
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {sub ? (
         <Card>
           <CardHeader>

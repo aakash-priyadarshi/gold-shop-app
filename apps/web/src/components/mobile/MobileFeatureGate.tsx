@@ -1,8 +1,12 @@
 "use client";
 
 import { useFeatures } from "@/hooks/useFeatures";
-import { Loader2, Lock, Smartphone } from "lucide-react";
+import { Loader2, Lock, Smartphone, Sparkles, Crown } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
+import { sellerSubscriptionsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 
 /**
  * Maps a mobile-only feature key to the backend feature key that the admin can
@@ -66,7 +70,31 @@ export function MobileFeatureGate({
   featureName,
   children,
 }: MobileFeatureGateProps) {
+  const t = useT();
   const { hasFeature, loading, planName } = useFeatures();
+  const [activating, setActivating] = useState(false);
+
+  const handleActivateTrial = async () => {
+    try {
+      setActivating(true);
+      await sellerSubscriptionsApi.activateTrial();
+      toast({
+        title: t("Premium Trial Activated!"),
+        description: t("Welcome to PRO! Enjoy 60 days of premium CRM and POS features completely free."),
+      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      toast({
+        title: t("Trial Activation Failed"),
+        description: err?.response?.data?.message || t("Could not activate trial. Please contact support."),
+        variant: "destructive",
+      });
+    } finally {
+      setActivating(false);
+    }
+  };
 
   // Resolve mobile key → backend key (null = free / always allow).
   const mapped = MOBILE_TO_BACKEND_FEATURE[feature];
@@ -91,45 +119,80 @@ export function MobileFeatureGate({
   }
 
   if (!hasFeature(effectiveKey)) {
+    const isFree = planName?.toUpperCase() === "FREE";
+
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-8 py-16 gap-5 text-center">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 gap-6 text-center bg-gray-50 dark:bg-gray-900 min-h-[80vh]">
         {/* Icon */}
         <div className="relative">
-          <div className="w-20 h-20 rounded-3xl bg-amber-50 flex items-center justify-center">
-            <Smartphone className="h-10 w-10 text-amber-400" />
+          <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center shadow-inner">
+            <Smartphone className="h-8 w-8 text-amber-500" />
           </div>
-          <div className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center">
-            <Lock className="h-4 w-4 text-gray-500" />
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white dark:bg-gray-800 border-2 border-white dark:border-gray-800 flex items-center justify-center shadow">
+            <Lock className="h-3 w-3 text-gray-500 dark:text-gray-400" />
           </div>
         </div>
 
-        {/* Copy */}
-        <div className="space-y-1.5">
-          <p className="text-base font-bold text-gray-900">{featureName}</p>
-          <p className="text-sm text-gray-400 leading-relaxed">
+        {/* Title */}
+        <div className="space-y-1.5 max-w-[280px]">
+          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{featureName}</h2>
+          <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
             {planName ? (
               <>
                 Your{" "}
-                <span className="font-semibold text-amber-600">{planName}</span>{" "}
-                doesn&apos;t include this feature yet.
+                <span className="font-semibold text-amber-600 dark:text-amber-400">{planName}</span>{" "}
+                plan doesn&apos;t include this feature yet.
               </>
             ) : (
-              <>This feature requires a higher plan.</>
+              <>This feature requires a premium plan.</>
             )}
           </p>
         </div>
 
-        {/* Upgrade CTA */}
-        <Link
-          href="/dashboard/shop/billing?tab=plans"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-500 text-white text-sm font-semibold shadow-sm hover:bg-amber-600 transition-colors"
-        >
-          View plans
-        </Link>
-
-        <p className="text-xs text-gray-300">
-          No contracts · Cancel anytime
-        </p>
+        {/* 60-Day Premium Trial Offer (rendered for FREE users) */}
+        {isFree ? (
+          <div className="w-full max-w-[320px] rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-gradient-to-b from-amber-50/50 to-orange-50/20 dark:from-amber-950/20 dark:to-orange-950/10 p-4 shadow-sm space-y-4">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">
+              <Crown className="h-3.5 w-3.5 text-amber-500" />
+              <span>{t("Limited Time Offer")}</span>
+            </div>
+            <p className="text-xs text-amber-900/80 dark:text-amber-300/80 leading-relaxed">
+              {t("Claim a 60-Day Free Trial of our Premium PRO plan right now! Unlock walk-in Quotes, karigar Repairs tracking, customer CRM databases, gold Savings Schemes, and WhatsApp sharing immediately.")}
+            </p>
+            <button
+              onClick={handleActivateTrial}
+              disabled={activating}
+              className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition-all duration-300 active:scale-95"
+            >
+              {activating ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>{t("Unlocking...")}</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5 fill-white" />
+                  <span>{t("Activate 60-Day Pro Trial")}</span>
+                </>
+              )}
+            </button>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500">
+              {t("No credit card required · Claim once per account")}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 w-full max-w-[280px]">
+            <Link
+              href="/dashboard/shop/billing?tab=plans"
+              className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow transition-colors text-center"
+            >
+              {t("View Plans")}
+            </Link>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500">
+              {t("Upgrade to enjoy higher resource limits")}
+            </p>
+          </div>
+        )}
       </div>
     );
   }

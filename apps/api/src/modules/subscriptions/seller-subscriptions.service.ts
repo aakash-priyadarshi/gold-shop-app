@@ -983,26 +983,65 @@ export class SellerSubscriptionsService {
     };
   }
 
-  // ─── Auto-activate FREE plan ──────────────────────
+  // ─── Auto-activate plan ──────────────────────────
 
   /**
-   * Auto-activate the FREE plan for a newly created shop.
+   * Auto-activate a 60-day PRO trial plan (or FREE fallback) for a newly created shop.
    * Called automatically when a shop is created.
-   * Silently fails if no FREE plan exists for the country.
+   * Silently fails if no plans exist for the country.
    */
   async autoActivateFreePlan(shopId: string, country: string): Promise<void> {
     try {
-      const freePlan = await this.prisma.subscriptionPlan.findFirst({
+      // 1. Retrieve the shop and check owner's userId to ensure they get only one trial ever!
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { userId: true },
+      });
+
+      if (!shop) {
+        this.logger.warn(`autoActivateFreePlan: Shop ${shopId} not found`);
+        return;
+      }
+
+      // Check if this owner has ever claimed a trial on any of their shops
+      const existingTrial = await this.prisma.sellerSubscription.findFirst({
         where: {
-          name: "FREE",
-          country: country as any,
-          isActive: true,
+          shop: { userId: shop.userId },
+          status: "TRIALING",
         },
       });
 
-      if (!freePlan) {
+      let planToActivate = null;
+      let isTrial = false;
+
+      if (!existingTrial) {
+        // Try to activate the PRO plan for 60 days
+        planToActivate = await this.prisma.subscriptionPlan.findFirst({
+          where: {
+            name: "PRO",
+            country: country as any,
+            isActive: true,
+          },
+        });
+        if (planToActivate) {
+          isTrial = true;
+        }
+      }
+
+      if (!planToActivate) {
+        // Fallback to FREE plan
+        planToActivate = await this.prisma.subscriptionPlan.findFirst({
+          where: {
+            name: "FREE",
+            country: country as any,
+            isActive: true,
+          },
+        });
+      }
+
+      if (!planToActivate) {
         this.logger.warn(
-          `No active FREE plan found for country ${country}. Shop ${shopId} has no auto-subscription.`,
+          `No active plan found for country ${country}. Shop ${shopId} has no auto-subscription.`,
         );
         return;
       }
@@ -1024,30 +1063,122 @@ export class SellerSubscriptionsService {
 
       const now = new Date();
       const periodEnd = new Date(now);
-      periodEnd.setFullYear(periodEnd.getFullYear() + 100); // Free plan never expires
+      if (isTrial) {
+        periodEnd.setDate(periodEnd.getDate() + 60);
+      } else {
+        periodEnd.setFullYear(periodEnd.getFullYear() + 100); // Free plan never expires
+      }
 
       await this.prisma.sellerSubscription.create({
         data: {
           shopId,
-          planId: freePlan.id,
-          status: "ACTIVE",
+          planId: planToActivate.id,
+          status: isTrial ? "TRIALING" : "ACTIVE",
           country: country as any,
           startedAt: now,
           currentPeriodStart: now,
           currentPeriodEnd: periodEnd,
-          autoRenew: true,
+          autoRenew: !isTrial,
         },
       });
 
       this.logger.log(
-        `Auto-activated FREE plan for shop ${shopId} (country: ${country})`,
+        isTrial
+          ? `Auto-activated 60-Day Premium PRO trial for shop ${shopId} (country: ${country})`
+          : `Auto-activated FREE plan fallback for shop ${shopId} (country: ${country})`,
       );
     } catch (error) {
       this.logger.error(
-        `Failed to auto-activate FREE plan for shop ${shopId}: ${error.message}`,
+        `Failed to auto-activate plan for shop ${shopId}: ${error.message}`,
       );
       // Don't throw — shop creation should still succeed
     }
+  }
+
+  /**
+   * Manually activate a 60-day PRO plan free trial for an existing shop on the FREE plan.
+   * Can only be claimed once per user account across all of their shops.
+   */
+  async activate60DayTrial(shopId: string) {
+    // 1. Get the shop's owner and country
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { userId: true, country: true },
+    });
+    if (!shop) {
+      throw new NotFoundException("Shop not found");
+    }
+
+    // 2. Check if the user has ever claimed a trial on any of their shops
+    const existingTrial = await this.prisma.sellerSubscription.findFirst({
+      where: {
+        shop: { userId: shop.userId },
+        status: "TRIALING",
+      },
+    });
+    if (existingTrial) {
+      throw new BadRequestException("You have already claimed your 60-day premium free trial offer!");
+    }
+
+    // 3. Find the shop's current active subscription (if any)
+    const activeSub = await this.prisma.sellerSubscription.findFirst({
+      where: {
+        shopId,
+        status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] },
+      },
+      include: { plan: true },
+    });
+
+    if (activeSub && activeSub.plan.name !== "FREE") {
+      throw new BadRequestException("You are already on an active premium plan or trial!");
+    }
+
+    // 4. Find the PRO plan for the shop's country
+    const proPlan = await this.prisma.subscriptionPlan.findFirst({
+      where: {
+        name: "PRO",
+        country: shop.country as any,
+        isActive: true,
+      },
+    });
+
+    if (!proPlan) {
+      throw new NotFoundException(`Premium Pro plan is not configured for country ${shop.country as any}`);
+    }
+
+    // 5. Deactivate their existing FREE plan if present
+    if (activeSub) {
+      await this.prisma.sellerSubscription.update({
+        where: { id: activeSub.id },
+        data: {
+          status: "CANCELLED",
+          cancelledAt: new Date(),
+          cancelReason: "Upgraded to 60-day PRO Trial",
+        },
+      });
+    }
+
+    // 6. Create the 60-day TRIALING subscription
+    const now = new Date();
+    const periodEnd = new Date(now);
+    periodEnd.setDate(periodEnd.getDate() + 60);
+
+    const subscription = await this.prisma.sellerSubscription.create({
+      data: {
+        shopId,
+        planId: proPlan.id,
+        status: "TRIALING",
+        country: shop.country as any,
+        startedAt: now,
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+        autoRenew: false,
+      },
+      include: { plan: true },
+    });
+
+    this.logger.log(`Shop ${shopId} upgraded to 60-day PRO free trial!`);
+    return subscription;
   }
 
   // ─── Plan Migration Response ──────────────────────

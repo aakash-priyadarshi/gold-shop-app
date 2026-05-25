@@ -1355,6 +1355,7 @@ export const sellerSubscriptionsApi = {
   }) => api.post("/seller-subscriptions/subscribe", data),
   cancel: (id: string, data?: { reason?: string; immediate?: boolean }) =>
     api.post(`/seller-subscriptions/${id}/cancel`, data || {}),
+  activateTrial: () => api.post("/seller-subscriptions/activate-trial"),
   getMySubscription: () => api.get("/seller-subscriptions/my-subscription"),
   getMyHistory: () => api.get("/seller-subscriptions/my-history"),
   getMyUsage: () => api.get("/seller-subscriptions/my-usage"),

@@ -123,6 +123,34 @@ export class SellerSubscriptionsController {
     return result;
   }
 
+  @Post("activate-trial")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Activate 60-day premium PRO plan free trial" })
+  async activateTrial(
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") shopId: string,
+  ) {
+    const result = await this.subscriptionService.activate60DayTrial(shopId);
+
+    await this.auditService.log({
+      userId,
+      actorType: "SHOPKEEPER",
+      action: "ACTIVATE_TRIAL",
+      resourceType: "SellerSubscription",
+      resourceId: result.id,
+      newValue: {
+        planId: result.planId,
+        planName: (result as any).plan?.name,
+        status: result.status,
+        currentPeriodEnd: result.currentPeriodEnd,
+      },
+    });
+
+    return result;
+  }
+
   @Get("my-subscription")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)

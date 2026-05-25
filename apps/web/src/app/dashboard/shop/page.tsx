@@ -20,6 +20,7 @@ import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { toast } from "@/hooks/use-toast";
 import { inventoryApi, materialsApi, ordersApi, rfqApi, sellerSubscriptionsApi, shopsApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
@@ -571,30 +572,40 @@ export default function ShopDashboard() {
 
                     {/* Free Pro Trial */}
                     {(!currentSubscription || currentSubscription.status === "FREE") && (
-                      <Card className="border-purple-200 dark:border-purple-800/40 bg-gradient-to-br from-purple-50/50 to-fuchsia-50/30 dark:from-purple-950/20 dark:to-fuchsia-950/10 hover:shadow-md transition-all group overflow-hidden relative">
+                      <Card className="border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/50 to-orange-50/30 dark:from-amber-950/20 dark:to-orange-950/10 hover:shadow-md transition-all group overflow-hidden relative">
                         <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                          <Star className="h-32 w-32 text-purple-600" />
+                          <Crown className="h-32 w-32 text-amber-600" />
                         </div>
                         <CardHeader className="pb-3 relative z-10">
-                          <CardTitle className="text-base flex items-center gap-2 text-purple-800 dark:text-purple-300">
-                            <Star className="h-4 w-4" /> <T>14-Day Free Pro Trial</T>
+                          <CardTitle className="text-base flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                            <Crown className="h-4 w-4" /> <T>60-Day Premium Pro Trial</T>
                           </CardTitle>
-                          <CardDescription className="text-xs text-purple-600/70 dark:text-purple-400/70">
-                            <T>Unlock all premium features including AI generation for 14 days. No credit card required.</T>
+                          <CardDescription className="text-xs text-amber-600/70 dark:text-amber-400/70">
+                            <T>Unlock all premium POS features: walk-in Quotes, karigar Repairs tracking, gold Savings Schemes, and WhatsApp sharing for 60 days. No credit card required.</T>
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="relative z-10">
                           <Button 
-                            className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow transition-all group-hover:shadow-md"
+                            className="w-full bg-amber-600 hover:bg-amber-700 text-white shadow transition-all group-hover:shadow-md"
                             onClick={async (e) => {
                               const btn = e.currentTarget;
                               btn.disabled = true;
                               btn.innerHTML = `<span class="animate-spin mr-2">⌛</span> Activating...`;
                               try {
-                                window.location.href = "/dashboard/shop/billing";
-                              } catch (err) {
+                                await sellerSubscriptionsApi.activateTrial();
+                                toast({
+                                  title: t("Premium Trial Activated!"),
+                                  description: t("Welcome to PRO! Enjoy 60 days of premium CRM and POS features completely free."),
+                                });
+                                setTimeout(() => window.location.reload(), 1500);
+                              } catch (err: any) {
                                 btn.disabled = false;
-                                btn.innerHTML = `Try Again`;
+                                btn.innerHTML = t("Try Again");
+                                toast({
+                                  title: t("Trial Activation Failed"),
+                                  description: err?.response?.data?.message || t("Could not activate trial. Please contact support."),
+                                  variant: "destructive",
+                                });
                               }
                             }}
                           >
