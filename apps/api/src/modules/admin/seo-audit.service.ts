@@ -54,6 +54,7 @@ const FALLBACK_ROUTES = [
   "/about",
   "/about/ne",
   "/about/fr",
+  "/blog",
   "/pricing",
   "/contact",
   "/demo",
@@ -319,14 +320,35 @@ export class SeoAuditService implements OnModuleInit {
     }
   }
 
+  private findFrontendFilePath(relativePathFromWeb: string): string | null {
+    const cwd = process.cwd();
+    const candidates = [
+      // If process.cwd() is apps/api
+      path.join(cwd, "..", relativePathFromWeb),
+      // If process.cwd() is workspace root (gold-shop-app)
+      path.join(cwd, "apps", relativePathFromWeb),
+      // Relative to __dirname in development
+      path.join(__dirname, "../../../../", relativePathFromWeb),
+      // Relative to __dirname in dist
+      path.join(__dirname, "../../../../../apps", relativePathFromWeb),
+    ];
+
+    for (const candidate of candidates) {
+      const normalized = path.normalize(candidate);
+      if (fs.existsSync(normalized)) {
+        return normalized;
+      }
+    }
+    return null;
+  }
+
   private async resolvePathsToScan(): Promise<string[]> {
     const pathsSet = new Set<string>();
 
     // 1. Load routes from web generated list
     try {
-      // Path maps within standard workspace directory
-      const generatedRoutesPath = path.join(process.cwd(), "../web/src/data/generated-routes.json");
-      if (fs.existsSync(generatedRoutesPath)) {
+      const generatedRoutesPath = this.findFrontendFilePath("web/src/data/generated-routes.json");
+      if (generatedRoutesPath) {
         const routes: string[] = JSON.parse(fs.readFileSync(generatedRoutesPath, "utf8"));
         routes.forEach((r) => {
           // Exclude dashboard, pos, and internal/auth setup pages
@@ -334,6 +356,8 @@ export class SeoAuditService implements OnModuleInit {
             pathsSet.add(r);
           }
         });
+      } else {
+        this.logger.warn("Could not find generated-routes.json path, using fallback.");
       }
     } catch (err) {
       this.logger.warn("Could not read frontend generated routes list, using fallback.", err);
@@ -356,16 +380,23 @@ export class SeoAuditService implements OnModuleInit {
       this.logger.warn("Could not fetch shops database for SEO audit", e);
     }
 
-    // 3. Add dynamic blog pages (take 5 blog post slugs)
+    // 3. Add dynamic blog pages from static blog posts file
     try {
-      const blogs = await this.prisma.blogPost.findMany({
-        where: { isPublished: true },
-        select: { slug: true },
-        take: 5,
-      });
-      blogs.forEach((b) => pathsSet.add(`/blog/${b.slug}`));
-    } catch (e) {
-      // No blogPosts in prisma yet (e.g. they are in static data BLOG_POSTS in the frontend)
+      const blogPostsPath = this.findFrontendFilePath("web/src/data/blog-posts.ts");
+      if (blogPostsPath) {
+        const fileContent = fs.readFileSync(blogPostsPath, "utf8");
+        const slugRegex = /slug:\s*["']([^"']+)["']/g;
+        let match;
+        let count = 0;
+        while ((match = slugRegex.exec(fileContent)) !== null && count < 25) {
+          pathsSet.add(`/blog/${match[1]}`);
+          count++;
+        }
+      } else {
+        this.logger.warn("Could not find blog-posts.ts path for SEO audit.");
+      }
+    } catch (err) {
+      this.logger.warn("Could not read static blog posts for SEO audit", err);
     }
 
     return Array.from(pathsSet);
