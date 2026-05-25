@@ -427,13 +427,13 @@ function KarigarSupplyChainContent() {
           </div>
           <div className="text-right">
             <span className="text-xs text-muted-foreground">Gold 22K: </span>
-            <span className="font-bold text-sm text-yellow-600/80">
+            <span className="font-bold text-sm text-yellow-600/80 dark:text-yellow-400/80">
               {formatCurrency(goldRates.rate22k)}/g
             </span>
           </div>
           <div className="text-right">
             <span className="text-xs text-muted-foreground">Gold 18K: </span>
-            <span className="font-bold text-sm text-yellow-700/70">
+            <span className="font-bold text-sm text-yellow-700/70 dark:text-yellow-400/70">
               {formatCurrency(goldRates.rate18k)}/g
             </span>
           </div>
@@ -517,7 +517,7 @@ function KarigarSupplyChainContent() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
                     <CardDescription className="uppercase tracking-wider text-xs font-semibold text-gray-500 dark:text-gray-400">
@@ -536,7 +536,7 @@ function KarigarSupplyChainContent() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
                     <CardDescription className="uppercase tracking-wider text-xs font-semibold text-gray-500 dark:text-gray-400">
@@ -557,7 +557,7 @@ function KarigarSupplyChainContent() {
             </div>
 
             {/* Vault Grains & Bars balances */}
-            <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+            <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
               <CardHeader>
                 <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">
                   <T>Vault Physical Reserve Inventory</T>
@@ -567,7 +567,7 @@ function KarigarSupplyChainContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-3">
-                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-850/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300">
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium"><T>24K Gold Grains</T></p>
                     <p className="text-lg font-bold mt-1 text-yellow-600 dark:text-yellow-400">{vaultReserves.goldGrains24k.toFixed(2)} g</p>
@@ -575,7 +575,7 @@ function KarigarSupplyChainContent() {
                   <Badge className="bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 text-xs">Purity: 99.9%</Badge>
                 </div>
 
-                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-850/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300">
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium"><T>24K Gold Cast Bars</T></p>
                     <p className="text-lg font-bold mt-1 text-yellow-600 dark:text-yellow-400">{vaultReserves.goldBars24k.toFixed(2)} g</p>
@@ -583,7 +583,7 @@ function KarigarSupplyChainContent() {
                   <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-xs">Hallmarked</Badge>
                 </div>
 
-                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-850/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300">
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium"><T>999 Silver Scrap/Grain</T></p>
                     <p className="text-lg font-bold mt-1 text-slate-400">{vaultReserves.silverBullion999.toFixed(2)} g</p>
@@ -595,7 +595,7 @@ function KarigarSupplyChainContent() {
 
             {/* Karigar Ledgers */}
             <div className="grid gap-6 lg:grid-cols-3">
-              <Card data-tour="supply-ledger" className="lg:col-span-2 bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+              <Card data-tour="supply-ledger" className="lg:col-span-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                 <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
                   <div>
                     <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100"><T>Artisan (Karigar) Balances & Wastage</T></CardTitle>
@@ -616,7 +616,7 @@ function KarigarSupplyChainContent() {
                 <CardContent className="overflow-x-auto">
                   <table className="w-full text-sm border-collapse text-left">
                     <thead>
-                      <tr className="border-b dark:border-gray-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-850/50">
+                      <tr className="border-b dark:border-gray-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50">
                         <th className="py-2.5 px-3 font-semibold"><T>Karigar & Workshop</T></th>
                         <th className="py-2.5 px-3 font-semibold"><T>Issued (g)</T></th>
                         <th className="py-2.5 px-3 font-semibold"><T>Returned (g)</T></th>
@@ -629,7 +629,7 @@ function KarigarSupplyChainContent() {
                       {filteredWorkshops.map((w) => {
                         const isExceeded = w.wastagePercent > w.wastageLimit;
                         return (
-                          <tr key={w.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-850/20 text-gray-700 dark:text-gray-300">
+                          <tr key={w.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
                             <td className="py-3 px-3">
                               <p className="font-semibold text-gray-900 dark:text-gray-100">{w.artisan}</p>
                               <p className="text-xs text-muted-foreground">{w.name} &middot; {w.location}</p>
@@ -659,7 +659,7 @@ function KarigarSupplyChainContent() {
               </Card>
 
               {/* Jobs and Steps checklists */}
-              <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                 <CardHeader>
                   <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100"><T>Artisan Fabrication Pipeline</T></CardTitle>
                   <CardDescription>
@@ -668,7 +668,7 @@ function KarigarSupplyChainContent() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {jobs.map((j) => (
-                    <div key={j.id} className="p-3 border dark:border-gray-850 rounded-xl bg-gray-50/50 dark:bg-gray-850/10 space-y-3">
+                    <div key={j.id} className="p-3 border dark:border-gray-800 rounded-xl bg-gray-50/50 dark:bg-gray-800/20 space-y-3">
                       <div className="flex justify-between items-start flex-wrap gap-2">
                         <div>
                           <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{j.product}</p>
@@ -742,15 +742,15 @@ function KarigarSupplyChainContent() {
             
             <div className="space-y-3 pt-2">
               <div className="space-y-1">
-                <Label className="text-gray-750 dark:text-gray-300"><T>Select Workshop/Artisan</T></Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Select Workshop/Artisan</T></Label>
                 <Select
                   value={allotForm.workshopId}
                   onValueChange={(val) => setAllotForm((p) => ({ ...p, workshopId: val }))}
                 >
-                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-250 dark:border-gray-800 text-gray-900 dark:text-gray-100">
+                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                     {workshops.map((w) => (
                       <SelectItem key={w.id} value={w.id}>
                         {w.artisan} ({w.name})
@@ -761,15 +761,15 @@ function KarigarSupplyChainContent() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-gray-750 dark:text-gray-300"><T>Metal Material</T></Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Metal Material</T></Label>
                 <Select
                   value={allotForm.metalType}
                   onValueChange={(val) => setAllotForm((p) => ({ ...p, metalType: val }))}
                 >
-                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-255 dark:border-gray-800 text-gray-900 dark:text-gray-100">
+                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                     <SelectItem value="GOLD_24K">Gold grains (24K)</SelectItem>
                     <SelectItem value="SILVER_999">Silver bullion (999)</SelectItem>
                   </SelectContent>
@@ -777,7 +777,7 @@ function KarigarSupplyChainContent() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-gray-750 dark:text-gray-300"><T>Weight (grams)</T></Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Weight (grams)</T></Label>
                 <Input
                   type="number"
                   placeholder="e.g. 50"
@@ -789,7 +789,7 @@ function KarigarSupplyChainContent() {
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" size="sm" onClick={() => setAllotModalOpen(false)} className="text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
+              <Button variant="ghost" size="sm" onClick={() => setAllotModalOpen(false)} className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
               <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleAllot}><T>Issue Metal</T></Button>
             </div>
           </div>
@@ -807,15 +807,15 @@ function KarigarSupplyChainContent() {
 
             <div className="space-y-3 pt-2">
               <div className="space-y-1">
-                <Label className="text-gray-750 dark:text-gray-300"><T>Metal Material</T></Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Metal Material</T></Label>
                 <Select
                   value={procureForm.metalType}
                   onValueChange={(val) => setProcureForm((p) => ({ ...p, metalType: val }))}
                 >
-                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-255 dark:border-gray-800 text-gray-900 dark:text-gray-100">
+                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                     <SelectItem value="GOLD_24K">Gold grains (24K)</SelectItem>
                     <SelectItem value="SILVER_999">Silver bullion (999)</SelectItem>
                   </SelectContent>
@@ -823,7 +823,7 @@ function KarigarSupplyChainContent() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-gray-750 dark:text-gray-300"><T>Weight (grams)</T></Label>
+                <Label className="text-gray-700 dark:text-gray-300"><T>Weight (grams)</T></Label>
                 <Input
                   type="number"
                   placeholder="e.g. 100"
@@ -835,7 +835,7 @@ function KarigarSupplyChainContent() {
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" size="sm" onClick={() => setProcureModalOpen(false)} className="text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
+              <Button variant="ghost" size="sm" onClick={() => setProcureModalOpen(false)} className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
               <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleProcure}><T>Add to Vault</T></Button>
             </div>
           </div>

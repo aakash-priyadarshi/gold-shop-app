@@ -373,6 +373,12 @@ const navItems: NavItem[] = [
         roles: ["ADMIN"],
       },
       {
+        label: "SEO Auditor Bot",
+        href: "/dashboard/admin/seo-auditor",
+        icon: Globe,
+        roles: ["ADMIN"],
+      },
+      {
         label: "Notification Tests",
         href: "/dashboard/admin/testing/notifications",
         icon: Bell,

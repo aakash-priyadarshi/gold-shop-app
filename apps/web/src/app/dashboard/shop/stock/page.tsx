@@ -325,7 +325,7 @@ function StockLedgerContent() {
           </div>
           <div className="text-right text-xs">
             <span className="text-muted-foreground">Gold 18K: </span>
-            <span className="font-bold text-yellow-600/80">
+            <span className="font-bold text-yellow-600/80 dark:text-yellow-400/80">
               {formatCurrency(goldRates.rate18k)}
             </span>
           </div>
@@ -395,7 +395,7 @@ function StockLedgerContent() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
                     <CardDescription className="uppercase tracking-wider text-xs font-semibold text-gray-500 dark:text-gray-400">
@@ -414,7 +414,7 @@ function StockLedgerContent() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
                     <CardDescription className="uppercase tracking-wider text-xs font-semibold text-gray-500 dark:text-gray-400">
@@ -435,7 +435,7 @@ function StockLedgerContent() {
             </div>
 
             {/* Dynamic Ledger search and filtration */}
-            <Card data-tour="stock-table" className="bg-white dark:bg-gray-900 border-gray-150 dark:border-gray-800">
+            <Card data-tour="stock-table" className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
               <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4 border-b dark:border-gray-800 pb-4">
                 <div>
                   <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100"><T>Finished Vault Stock Ledger</T></CardTitle>
@@ -457,7 +457,7 @@ function StockLedgerContent() {
                     <SelectTrigger className="w-36 h-9 text-xs border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-850">
+                    <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                       <SelectItem value="ALL">All Items</SelectItem>
                       <SelectItem value="SHOWCASE">Showcase Stock</SelectItem>
                       <SelectItem value="VAULT">Vault Stock</SelectItem>
@@ -468,7 +468,7 @@ function StockLedgerContent() {
               <CardContent className="pt-4 overflow-x-auto">
                 <table className="w-full text-sm border-collapse text-left">
                   <thead>
-                    <tr className="border-b dark:border-gray-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-850/50">
+                    <tr className="border-b dark:border-gray-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50">
                       <th className="py-2.5 px-3 font-semibold"><T>Item Details & Unique HUID</T></th>
                       <th className="py-2.5 px-3 font-semibold"><T>Barcode Tag</T></th>
                       <th className="py-2.5 px-3 font-semibold"><T>Purity / Weight</T></th>
@@ -486,7 +486,7 @@ function StockLedgerContent() {
                       </tr>
                     ) : (
                       filteredStock.map((item) => (
-                        <tr key={item.tag} className="hover:bg-gray-50/50 dark:hover:bg-gray-850/20 text-gray-700 dark:text-gray-300">
+                        <tr key={item.tag} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
                           <td className="py-3.5 px-3">
                             <p className="font-semibold text-gray-900 dark:text-gray-100">{item.name}</p>
                             <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-400/10 px-2 py-0.5 rounded border border-amber-500/20 dark:border-amber-400/20">
@@ -556,10 +556,10 @@ function StockLedgerContent() {
                   value={transferForm.newLocation}
                   onValueChange={(val) => setTransferForm((p) => ({ ...p, newLocation: val }))}
                 >
-                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-250 dark:border-gray-800 text-gray-900 dark:text-gray-100">
+                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                     <SelectItem value="Showcase-A">Showcase A (Counters)</SelectItem>
                     <SelectItem value="Showcase-B">Showcase B (Counters)</SelectItem>
                     <SelectItem value="Main-Safe">Main Vault Safe (Strongroom)</SelectItem>
@@ -570,7 +570,7 @@ function StockLedgerContent() {
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" size="sm" onClick={() => setTransferModalOpen(false)} className="text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
+              <Button variant="ghost" size="sm" onClick={() => setTransferModalOpen(false)} className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
               <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleTransfer}><T>Confirm Transfer</T></Button>
             </div>
           </div>
@@ -626,7 +626,7 @@ function StockLedgerContent() {
                   <SelectTrigger className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                     <SelectItem value="24K (999)">24K (999 Fine Gold)</SelectItem>
                     <SelectItem value="22K (916)">22K (916 Standard Gold)</SelectItem>
                     <SelectItem value="18K (750)">18K (750 Jewelry Gold)</SelectItem>
@@ -644,7 +644,7 @@ function StockLedgerContent() {
                   <SelectTrigger className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-805">
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                     <SelectItem value="Showcase-A">Showcase A</SelectItem>
                     <SelectItem value="Showcase-B">Showcase B</SelectItem>
                     <SelectItem value="Main-Safe">Main Vault Safe</SelectItem>
@@ -687,7 +687,7 @@ function StockLedgerContent() {
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" size="sm" onClick={() => setAddModalOpen(false)} className="text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
+              <Button variant="ghost" size="sm" onClick={() => setAddModalOpen(false)} className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
               <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleAddItem}><T>Inward Piece</T></Button>
             </div>
           </div>

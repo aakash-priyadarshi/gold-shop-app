@@ -180,6 +180,7 @@ export default function ShopDashboard() {
     currency: string; updatedAt: string; changePercent: number;
   } | null>(null);
   const ratesRef = useRef(false);
+  const supplyChainRef = useRef<any>({ workshops: [], vaultReserves: {}, jobs: [] });
 
   const readMetalRate = (data: any, codes: string[]): number => {
     const metals = data?.metals;
@@ -225,6 +226,34 @@ export default function ShopDashboard() {
     const interval = setInterval(() => { ratesRef.current = false; fetchGoldRates(); }, 10 * 60 * 1000);
     return () => clearInterval(interval);
   }, [fetchGoldRates]);
+
+  // ── Load Karigar & Bullion from DB ──
+  useEffect(() => {
+    if (!user?.shop?.id) return;
+    shopsApi.getSettings().then((res) => {
+      const sc = res.data?.bankAccountDetails?.karigarSupplyChain;
+      if (!sc) return;
+      supplyChainRef.current = sc;
+      const vr = sc.vaultReserves || {};
+      setBullionGold((vr.goldGrains24k || 0) + (vr.goldBars24k || 0));
+      setBullionSilver(vr.silverBullion999 || 0);
+      if (Array.isArray(sc.workshops) && sc.workshops.length > 0) {
+        setKarigars(sc.workshops.map((w: any) => {
+          const activeJob =
+            (sc.jobs || []).find((j: any) => j.artisan?.includes(w.artisan || w.name))?.product ||
+            w.activeJob ||
+            "No active job";
+          return {
+            name: w.artisan || w.name,
+            goldOutstanding: w.outstandingBalance || 0,
+            silverOutstanding: 0,
+            wastageLimit: w.wastageLimit || 1.0,
+            activeJob,
+          };
+        }));
+      }
+    }).catch(() => { /* silent fallback to defaults */ });
+  }, [user?.shop?.id]);
 
   useEffect(() => {
     if (!user?.shop?.id) return;
@@ -351,6 +380,33 @@ export default function ShopDashboard() {
         setIsLoading(false);
       });
   }, [user, shopCurrency, t]);
+
+  // ── Persist Karigar & Bullion updates to DB ──
+  const persistDashboardKarigar = async (
+    newGold: number,
+    newSilver: number,
+    newKarigars: typeof karigars,
+  ) => {
+    try {
+      const sc = supplyChainRef.current;
+      const updatedWorkshops = (sc.workshops || []).map((w: any, i: number) => {
+        const k = newKarigars[i];
+        if (!k) return w;
+        return { ...w, outstandingBalance: +(k.goldOutstanding + k.silverOutstanding).toFixed(3) };
+      });
+      const currentSettings = await shopsApi.getSettings();
+      const bankDetails = currentSettings.data?.bankAccountDetails || {};
+      const updatedSc = {
+        ...sc,
+        vaultReserves: { ...(sc.vaultReserves || {}), goldGrains24k: newGold, goldBars24k: 0, silverBullion999: newSilver },
+        workshops: updatedWorkshops,
+      };
+      await shopsApi.updateSettings({
+        bankAccountDetails: { ...bankDetails, karigarSupplyChain: updatedSc },
+      });
+      supplyChainRef.current = updatedSc;
+    } catch { /* silent */ }
+  };
 
   return (
     <ShopkeeperGuard>
@@ -1164,17 +1220,24 @@ export default function ShopDashboard() {
                       onClick={() => {
                         const wt = parseFloat(issueWeight);
                         if (isNaN(wt) || wt <= 0) return triggerToast(t("Please enter a valid weight to issue"), "error");
+                        let newGold = bullionGold;
+                        let newSilver = bullionSilver;
+                        let newKarigars = karigars;
                         if (issueMetalType === "GOLD") {
                           if (wt > bullionGold) return triggerToast(t("Insufficient gold reserves in bullion stock"), "error");
-                          setBullionGold(prev => prev - wt);
-                          setKarigars(prev => prev.map((k, idx) => idx === selectedKarigarIndex ? { ...k, goldOutstanding: k.goldOutstanding + wt, activeJob: issueJob || k.activeJob } : k));
+                          newGold = bullionGold - wt;
+                          newKarigars = karigars.map((k, idx) => idx === selectedKarigarIndex ? { ...k, goldOutstanding: k.goldOutstanding + wt, activeJob: issueJob || k.activeJob } : k);
                         } else {
                           if (wt > bullionSilver) return triggerToast(t("Insufficient silver reserves in bullion stock"), "error");
-                          setBullionSilver(prev => prev - wt);
-                          setKarigars(prev => prev.map((k, idx) => idx === selectedKarigarIndex ? { ...k, silverOutstanding: k.silverOutstanding + wt, activeJob: issueJob || k.activeJob } : k));
+                          newSilver = bullionSilver - wt;
+                          newKarigars = karigars.map((k, idx) => idx === selectedKarigarIndex ? { ...k, silverOutstanding: k.silverOutstanding + wt, activeJob: issueJob || k.activeJob } : k);
                         }
+                        setBullionGold(newGold);
+                        setBullionSilver(newSilver);
+                        setKarigars(newKarigars);
                         setIsIssueModalOpen(false);
-                        triggerToast(t(`Successfully issued ${wt} grams to ${karigars[selectedKarigarIndex].name}`));
+                        triggerToast(t(`Successfully issued ${wt} grams to ${karigars[selectedKarigarIndex!].name}`));
+                        persistDashboardKarigar(newGold, newSilver, newKarigars);
                       }}
                     >
                       <T>Confirm Issue</T>
@@ -1258,37 +1321,40 @@ export default function ShopDashboard() {
                         if (isNaN(wt) || wt <= 0) return triggerToast(t("Please enter a valid returned weight"), "error");
                         
                         const totalDeducted = wt + scrap + waste;
-                        const isGold = karigars[selectedKarigarIndex].goldOutstanding > 0;
-                        
+                        const isGold = karigars[selectedKarigarIndex!].goldOutstanding > 0;
+                        let newGold = bullionGold;
+                        let newSilver = bullionSilver;
+                        let newKarigars = karigars;
+
                         if (isGold) {
-                          const outstanding = karigars[selectedKarigarIndex].goldOutstanding;
+                          const outstanding = karigars[selectedKarigarIndex!].goldOutstanding;
                           if (totalDeducted > outstanding + 0.1) {
                             return triggerToast(t("Returned gold weight exceeds outstanding gold!"), "error");
                           }
-                          // Return scrap gold to bullion reserves
-                          if (scrap > 0) setBullionGold(prev => prev + scrap);
-                          
-                          setKarigars(prev => prev.map((k, idx) => idx === selectedKarigarIndex ? { 
-                            ...k, 
-                            goldOutstanding: Math.max(0, k.goldOutstanding - totalDeducted),
-                            activeJob: Math.max(0, k.goldOutstanding - totalDeducted) === 0 ? t("No outstanding jobs") : k.activeJob
-                          } : k));
+                          newGold = bullionGold + (scrap > 0 ? scrap : 0);
+                          newKarigars = karigars.map((k, idx) => {
+                            if (idx !== selectedKarigarIndex) return k;
+                            const newBalance = Math.max(0, k.goldOutstanding - totalDeducted);
+                            return { ...k, goldOutstanding: newBalance, activeJob: newBalance === 0 ? t("No outstanding jobs") : k.activeJob };
+                          });
                         } else {
-                          const outstanding = karigars[selectedKarigarIndex].silverOutstanding;
+                          const outstanding = karigars[selectedKarigarIndex!].silverOutstanding;
                           if (totalDeducted > outstanding + 0.1) {
                             return triggerToast(t("Returned silver weight exceeds outstanding silver!"), "error");
                           }
-                          // Return scrap silver to bullion reserves
-                          if (scrap > 0) setBullionSilver(prev => prev + scrap);
-                          
-                          setKarigars(prev => prev.map((k, idx) => idx === selectedKarigarIndex ? { 
-                            ...k, 
-                            silverOutstanding: Math.max(0, k.silverOutstanding - totalDeducted),
-                            activeJob: Math.max(0, k.silverOutstanding - totalDeducted) === 0 ? t("No outstanding jobs") : k.activeJob
-                          } : k));
+                          newSilver = bullionSilver + (scrap > 0 ? scrap : 0);
+                          newKarigars = karigars.map((k, idx) => {
+                            if (idx !== selectedKarigarIndex) return k;
+                            const newBalance = Math.max(0, k.silverOutstanding - totalDeducted);
+                            return { ...k, silverOutstanding: newBalance, activeJob: newBalance === 0 ? t("No outstanding jobs") : k.activeJob };
+                          });
                         }
+                        setBullionGold(newGold);
+                        setBullionSilver(newSilver);
+                        setKarigars(newKarigars);
                         setIsReceiveModalOpen(false);
-                        triggerToast(t(`Received finished piece (${wt}g) successfully from ${karigars[selectedKarigarIndex].name}.`));
+                        triggerToast(t(`Received finished piece (${wt}g) successfully from ${karigars[selectedKarigarIndex!].name}.`));
+                        persistDashboardKarigar(newGold, newSilver, newKarigars);
                       }}
                     >
                       <T>Confirm Receive</T>
@@ -1351,6 +1417,7 @@ export default function ShopDashboard() {
                         setBullionSilver(silver);
                         setIsAdjustModalOpen(false);
                         triggerToast(t("Successfully adjusted bullion inventory stock reserves."));
+                        persistDashboardKarigar(gold, silver, karigars);
                       }}
                     >
                       <T>Save Changes</T>
