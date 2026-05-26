@@ -931,7 +931,51 @@ SELLER RESPONSE RULES:
 
     if (/(karigar|artisan|workshop|goldsmith|fabrication job|bullion reserves|custom metal|custom material|scrap returned|process wastage)/.test(normalized)) {
       return {
-        reply: `You can manage your precious metals and workshop operations in the Karigar & Bullion Supply Chain Tracker at /dashboard/shop/supply-chain. It supports full CRUD (Add/Edit/Delete) for Karigars (with phone & email contact fields) and fabrication jobs (with a 5-step checklist: Cast → File → Set → Polish → HUID). You can also adjust gold/silver reserves or add custom material types (like Platinum 950 or Rose Gold 14K) dynamically to your strong-room vault!`,
+        reply: `The Karigar & Bullion Supply Chain Console helps you manage your raw gold and silver bullion procurement, track artisan outstanding float balance sheets, calculate loss tolerance, and maintain order checklists. It's a comprehensive module designed to streamline your manufacturing and supply chain operations.`,
+        shouldEscalate: false,
+        confidence: 0.96,
+      };
+    }
+
+    if (/vault value|value of.*vault|vault valuation|valuation of.*vault/.test(normalized)) {
+      return {
+        reply: `Your live vault fiat valuation is available in the Stock Ledger. This feature allows you to see the real-time value of the items in your strongroom vault. You can access the Stock Ledger from the left sidebar navigation.`,
+        shouldEscalate: false,
+        confidence: 0.96,
+      };
+    }
+
+    if (/how many sales.*have|how many sales do.*have|what is my sales count|how many invoices/.test(normalized)) {
+      const salesFormatted = this.formatCurrency(snapshot.monthlySales, snapshot.currency);
+      const ytdSalesFormatted = this.formatCurrency(snapshot.yearlySales, snapshot.currency);
+      return {
+        reply: `You have made ${snapshot.monthlyInvoiceCount} invoice${snapshot.monthlyInvoiceCount === 1 ? "" : "s"} this month, with total sales amounting to ${salesFormatted}. Your year-to-date sales are also ${ytdSalesFormatted}.`,
+        shouldEscalate: false,
+        confidence: 0.96,
+      };
+    }
+
+    if (/last sale.*value|value of.*last sale|latest sale.*value/.test(normalized)) {
+      const salesFormatted = this.formatCurrency(snapshot.monthlySales, snapshot.currency);
+      return {
+        reply: `I don't have information on the value of your *last* individual sale, but your total sales this month are ${salesFormatted} across ${snapshot.monthlyInvoiceCount} invoice${snapshot.monthlyInvoiceCount === 1 ? "" : "s"}.`,
+        shouldEscalate: false,
+        confidence: 0.96,
+      };
+    }
+
+    if (/how many tax|how much tax|tax.*have to pay|tax obligation|calculate.*tax/.test(normalized)) {
+      const countryLabel = this.getCountryLabel(snapshot.country);
+      const taxReportsPath = snapshot.country === "IN" ? "GSTR-1 and GSTR-3B reports" : 
+                            snapshot.country === "NP" ? "VAT and Luxury Tax returns" :
+                            snapshot.country === "AE" ? "VAT 201 filing report" : "tax returns";
+      
+      const tabName = snapshot.country === "IN" ? "India" : 
+                      snapshot.country === "NP" ? "Nepal" : 
+                      snapshot.country === "AE" ? "UAE" : countryLabel;
+
+      return {
+        reply: `I can't calculate your exact tax liability for you, but you can find all the necessary tax reports in your Orivraa dashboard. Just open **Tax Reports** from the left sidebar, then navigate to the **${tabName}** tab. There you'll find your ${taxReportsPath}, which detail your tax obligations based on your sales.`,
         shouldEscalate: false,
         confidence: 0.96,
       };
