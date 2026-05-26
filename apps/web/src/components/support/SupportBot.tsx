@@ -238,6 +238,45 @@ export function SupportBot() {
   const { isChatDismissed, dismissChat, isChatShaking } = useHelpUIStore();
   const dashboardMode = usePreferencesStore((s) => s.dashboardMode);
   const [bubbleVisible, setBubbleVisible] = useState(false);
+  const [isWaving, setIsWaving] = useState(false);
+  const [isExcited, setIsExcited] = useState(false);
+
+  // Periodic waving & excitement timer
+  useEffect(() => {
+    if (isChatDismissed) return;
+
+    // Initial wave and excitement after 2.5s
+    const initialTimer = setTimeout(() => {
+      setIsWaving(true);
+      setIsExcited(true);
+      setBubbleVisible(true);
+      
+      // Stop waving and excitement after 4.5s
+      setTimeout(() => {
+        setIsWaving(false);
+        setIsExcited(false);
+        setBubbleVisible(false);
+      }, 4500);
+    }, 2500);
+
+    // Periodic waves every 25 seconds
+    const interval = setInterval(() => {
+      setIsWaving(true);
+      setIsExcited(true);
+      setBubbleVisible(true);
+      
+      setTimeout(() => {
+        setIsWaving(false);
+        setIsExcited(false);
+        setBubbleVisible(false);
+      }, 4500);
+    }, 25000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [isChatDismissed]);
 
   // Track session count to keep tooltip visible for new users
   const [isNewUser, setIsNewUser] = useState(false);
@@ -539,22 +578,40 @@ export function SupportBot() {
           }}
           className={`flex flex-col items-end gap-1.5 ${isChatShaking ? "animate-shake" : ""}`}
         >
-          {isChatShaking && (
-            <style dangerouslySetInnerHTML={{__html: `
-              @keyframes chat-shake {
-                0%, 100% { transform: translate(0, 0) rotate(0deg); }
-                10%, 30%, 50%, 70%, 90% { transform: translate(-4px, 0) rotate(-3deg); }
-                20%, 40%, 60%, 80% { transform: translate(4px, 0) rotate(3deg); }
-              }
-              .animate-shake {
-                animation: chat-shake 0.5s ease-in-out infinite;
-              }
-            `}} />
-          )}
+          {/* Custom style block containing beautiful robot keyframes */}
+          <style dangerouslySetInnerHTML={{__html: `
+            @keyframes chat-shake {
+              0%, 100% { transform: translate(0, 0) rotate(0deg); }
+              10%, 30%, 50%, 70%, 90% { transform: translate(-4px, 0) rotate(-3deg); }
+              20%, 40%, 60%, 80% { transform: translate(4px, 0) rotate(3deg); }
+            }
+            .animate-shake {
+              animation: chat-shake 0.5s ease-in-out;
+            }
+            @keyframes eye-blink {
+              0%, 90%, 100% { transform: scaleY(1); }
+              95% { transform: scaleY(0.15); }
+            }
+            @keyframes arm-wave {
+              0%, 100% { transform: rotate(0deg); }
+              25% { transform: rotate(-40deg); }
+              75% { transform: rotate(20deg); }
+            }
+            .animate-blink {
+              animation: eye-blink 3s ease-in-out infinite;
+            }
+            .animate-wave {
+              animation: arm-wave 0.75s ease-in-out infinite;
+            }
+          `}} />
 
           {bubbleVisible && !isDragging && (
-            <div className="bg-amber-500 text-white text-[11px] px-2.5 py-1 rounded-xl shadow-md whitespace-nowrap animate-bounce relative mb-1 shrink-0 font-medium">
-              <T>Need help? Ask AI!</T>
+            <div className="bg-amber-500 text-white text-[11px] px-2.5 py-1.5 rounded-xl shadow-md whitespace-nowrap animate-bounce relative mb-1 shrink-0 font-medium z-[61] border border-amber-400/30">
+              {isWaving ? (
+                <T>HI 👋! If you need any help, ask me!</T>
+              ) : (
+                <T>Need help? Ask AI!</T>
+              )}
               <span className="absolute -bottom-1 right-4 h-0 w-0 border-l-[6px] border-r-[0px] border-t-[6px] border-l-transparent border-t-amber-500" />
             </div>
           )}
@@ -576,10 +633,116 @@ export function SupportBot() {
               className={`rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 transition-all flex items-center justify-center cursor-grab active:cursor-grabbing shrink-0 ${
                 isDragging ? "scale-90" : "hover:scale-105 active:scale-95"
               }`}
-              onMouseEnter={() => setBubbleVisible(true)}
-              onMouseLeave={() => setBubbleVisible(false)}
+              onMouseEnter={() => {
+                setBubbleVisible(true);
+                setIsExcited(true);
+              }}
+              onMouseLeave={() => {
+                setBubbleVisible(false);
+                setIsExcited(false);
+              }}
             >
-              <MessageCircle className={isMobile ? "h-5 w-5" : "h-6 w-6"} />
+              {/* Cute Waving & Animated Welcoming Robot Face */}
+              <div className="relative flex items-center justify-center w-full h-full p-1 select-none">
+                <svg
+                  viewBox="0 0 100 100"
+                  className={`w-full h-full transition-transform duration-300 ${isExcited ? "scale-110 -translate-y-0.5" : ""}`}
+                >
+                  <defs>
+                    {/* Glowing Friendly LED Eyes */}
+                    <radialGradient id="eyeGlow" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="#22d3ee" />
+                      <stop offset="100%" stopColor="#0891b2" />
+                    </radialGradient>
+                    
+                    {/* Soft Welcoming Gold / Champagne Head Gradient */}
+                    <linearGradient id="goldMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#FFF8E7" />
+                      <stop offset="35%" stopColor="#FFE082" />
+                      <stop offset="70%" stopColor="#D4AF37" />
+                      <stop offset="100%" stopColor="#B58F1A" />
+                    </linearGradient>
+
+                    {/* Cute Cheek Blush Gradient */}
+                    <radialGradient id="blushGlow" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="#fda4af" stopOpacity="0.8" />
+                      <stop offset="100%" stopColor="#f43f5e" stopOpacity="0" />
+                    </radialGradient>
+                  </defs>
+
+                  {/* Antenna */}
+                  <rect x="47" y="12" width="6" height="15" fill="#B58F1A" rx="2" />
+                  {/* Glowing Antenna Tip */}
+                  <circle
+                    cx="50"
+                    cy="10"
+                    r="5.5"
+                    className="fill-amber-300 animate-pulse"
+                    style={{ animationDuration: "1s" }}
+                  />
+
+                  {/* Ears / Side Bolts */}
+                  <rect x="16" y="44" width="6" height="14" fill="#B58F1A" rx="2" />
+                  <rect x="78" y="44" width="6" height="14" fill="#B58F1A" rx="2" />
+
+                  {/* Robot Head */}
+                  <rect x="20" y="24" width="60" height="52" fill="url(#goldMetal)" rx="18" stroke="#fff" strokeWidth="2.5" />
+                  
+                  {/* Visor Screen */}
+                  <rect x="26" y="31" width="48" height="38" fill="#1e293b" rx="12" />
+
+                  {/* Cute Cheek Blush */}
+                  <circle cx="34" cy="56" r="6.5" fill="url(#blushGlow)" />
+                  <circle cx="66" cy="56" r="6.5" fill="url(#blushGlow)" />
+
+                  {/* Eyes */}
+                  <ellipse
+                    cx="38"
+                    cy="45"
+                    rx={isExcited ? "7.5" : "5.5"}
+                    ry={isExcited ? "7.5" : "5.5"}
+                    fill="url(#eyeGlow)"
+                    className="origin-center animate-blink"
+                    style={{ transformOrigin: "38px 45px" }}
+                  />
+                  <ellipse
+                    cx="62"
+                    cy="45"
+                    rx={isExcited ? "7.5" : "5.5"}
+                    ry={isExcited ? "7.5" : "5.5"}
+                    fill="url(#eyeGlow)"
+                    className="origin-center animate-blink"
+                    style={{ transformOrigin: "62px 45px" }}
+                  />
+
+                  {/* Welcoming Mouth */}
+                  {isExcited ? (
+                    // Waving/Excited open happy mouth!
+                    <path d="M44 58 C 44 65, 56 65, 56 58" fill="#fda4af" stroke="#fff" strokeWidth="1.5" />
+                  ) : (
+                    // Cute simple smile
+                    <path d="M44 57 Q50 61 56 57" stroke="#22d3ee" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                  )}
+                </svg>
+
+                {/* Overlaid Waving Robot Arm */}
+                {isWaving && (
+                  <div
+                    className="absolute -right-1 -top-1 w-[22px] h-[26px] origin-bottom-left animate-wave pointer-events-none"
+                    style={{
+                      transformOrigin: "bottom left",
+                    }}
+                  >
+                    <svg viewBox="0 0 20 25" className="w-full h-full">
+                      {/* Arm segment */}
+                      <path d="M2 20 C 6 13, 11 10, 15 4" stroke="#FFE082" strokeWidth="4.5" strokeLinecap="round" fill="none" strokeLinejoin="round" />
+                      {/* Hand */}
+                      <circle cx="15" cy="4" r="3.5" fill="#FFF8E7" stroke="#D4AF37" strokeWidth="1.5" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+
               {!isDragging && (
                 <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
