@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useAuth } from "@/hooks/useAuth";
 import { invoicesApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -49,7 +50,7 @@ import {
   X,
 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface LineItem {
   label: string;
@@ -89,6 +90,8 @@ interface InvoiceDetail {
   notes?: string;
   terms?: string;
   createdAt: string;
+  customerTaxId?: string;
+  taxBreakdown?: any;
 }
 
 const statusColors: Record<string, string> = {
@@ -106,12 +109,19 @@ export default function InvoiceDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { symbol: currencySymbol } = useShopCurrency();
+  const { user } = useAuth();
   const t = useT();
   const invoiceId = params.id as string;
   const justCreated = searchParams.get("created") === "true";
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const shouldShowWatermark = useMemo(() => {
+    if (!user || !user.shop || user.shop.isVerified) return false;
+    if (invoice?.customerTaxId && invoice.customerTaxId.trim().length > 0) return false;
+    return true;
+  }, [user, invoice]);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "other">("cash");
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
@@ -133,7 +143,7 @@ export default function InvoiceDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [invoiceId]);
+  }, [invoiceId, t]);
 
   useEffect(() => {
     if (invoiceId) loadInvoice();
@@ -351,8 +361,57 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
 
+          {/* Sandbox warning banner */}
+          {!user?.shop?.isVerified && (
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
+              <div className="flex items-start gap-2.5">
+                <span className="text-base">⚠️</span>
+                <div>
+                  <p className="font-semibold text-xs text-amber-800 dark:text-amber-300">
+                    KYC Sandbox Mode Demo Receipt
+                  </p>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+                    This receipt will print with a repeated diagonal <span className="font-mono font-bold text-red-600">DEMO BILL - NOT FOR COMMERCIAL SALE</span> watermark. Submit business details in KYC or add the business's GSTIN/VAT/PAN tax number on the invoice to print standard water-free receipts.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-300 text-amber-800 dark:text-amber-300 hover:bg-amber-100/50 h-7 text-[10px] font-bold self-start sm:self-center shrink-0"
+                onClick={() => router.push("/dashboard/shop/kyc")}
+              >
+                Verify KYC
+              </Button>
+            </div>
+          )}
+
           {/* Invoice Card (printable) */}
-          <Card className="print:shadow-none print:border-0">
+          <Card className={`print:shadow-none print:border-0 ${shouldShowWatermark ? "sandbox-watermark-container" : ""}`}>
+            {shouldShowWatermark && (
+              <>
+                <style dangerouslySetInnerHTML={{ __html: `
+                  @media print {
+                    .sandbox-watermark-container {
+                      position: relative;
+                    }
+                    .sandbox-watermark-overlay {
+                      position: absolute;
+                      top: 0;
+                      left: 0;
+                      right: 0;
+                      bottom: 0;
+                      pointer-events: none;
+                      z-index: 9999;
+                      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250' viewBox='0 0 250 250'><text fill='rgba(220, 38, 38, 0.12)' font-family='sans-serif' font-weight='bold' font-size='14' x='20' y='180' transform='rotate(-45 100 100)'>DEMO BILL - NOT FOR COMMERCIAL SALE</text></svg>");
+                      background-repeat: repeat;
+                      mix-blend-mode: multiply;
+                    }
+                  }
+                ` }} />
+                <div className="sandbox-watermark-overlay hidden print:block" />
+              </>
+            )}
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
@@ -503,6 +562,29 @@ export default function InvoiceDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Orivraa Partners Mock Insurance Shield */}
+              {invoice.taxBreakdown?.isMockInsured && (
+                <>
+                  <Separator />
+                  <div className="p-4 border border-emerald-200 dark:border-emerald-900 bg-emerald-50/40 dark:bg-emerald-950/20 rounded-xl flex items-center gap-4 text-emerald-800 dark:text-emerald-300">
+                    <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center text-xl shadow-sm flex-shrink-0">
+                      🛡️
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm tracking-wide flex items-center gap-1.5 uppercase">
+                        Insured by Orivraa Partners
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 animate-pulse">
+                          SECURE
+                        </span>
+                      </h4>
+                      <p className="text-xs text-emerald-600/90 dark:text-emerald-400/90 leading-normal mt-0.5">
+                        This jewelry purchase is covered against accidental damage, burglary, and theft for 12 months. Certificate Reference: <span className="font-mono">{invoice.invoiceNumber}-INS</span>.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Notes & Terms */}
               {(invoice.notes || invoice.terms) && (

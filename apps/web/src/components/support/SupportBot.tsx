@@ -94,6 +94,28 @@ function makeMobileWelcome(shopName?: string): Message {
   };
 }
 
+function makeUnverifiedWelcome(shopName?: string, daysLeft?: number, isWithinSandbox?: boolean): Message {
+  if (isWithinSandbox) {
+    return {
+      id: "welcome",
+      from: "bot",
+      text: `Hi ${shopName ? shopName + " 👋" : "👋"} Orivraa is running in KYC Sandbox Mode. You have ${daysLeft} ${daysLeft === 1 ? "day" : "days"} left to test POS billing and invoice creation. During this trial, printed invoices will carry a repeated diagonal watermark "DEMO BILL - NOT FOR COMMERCIAL SALE". Get verified now to enable production-ready billing, or enter a valid business Tax ID on POS forms to bypass the watermark!`,
+      cta: [
+        { label: "Verify KYC Now", href: "/dashboard/shop/kyc" },
+      ],
+    };
+  } else {
+    return {
+      id: "welcome",
+      from: "bot",
+      text: `Hi ${shopName ? shopName + " 👋" : "👋"} Your KYC Sandbox period has expired and invoicing is locked. Complete your KYC business verification immediately to resume POS counter checkouts!`,
+      cta: [
+        { label: "Verify KYC Now", href: "/dashboard/shop/kyc" },
+      ],
+    };
+  }
+}
+
 const STORAGE_MSGS = "orivraa_chat_messages";
 const STORAGE_OPEN = "orivraa_chat_open";
 const STORAGE_SESSION_ID = "orivraa_chat_session_id";
@@ -140,12 +162,70 @@ function parseTextWithT(text: string) {
   return parts.length > 0 ? parts : text;
 }
 
+function renderMessageContent(text: string) {
+  const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    const label = match[1];
+    const href = match[2];
+    const isExternal = /^https?:/.test(href);
+
+    parts.push(
+      <a
+        key={match.index}
+        href={href}
+        target={isExternal ? "_blank" : undefined}
+        rel={isExternal ? "noopener noreferrer" : undefined}
+        className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 underline font-semibold transition-colors"
+      >
+        {label}
+      </a>
+    );
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.map((part, idx) => {
+    if (typeof part === "string") {
+      return parseTextWithT(part);
+    }
+    return part;
+  });
+}
+
 export function SupportBot() {
   const pathname = usePathname();
   const { user } = useAuth();
   const isSellerLoggedIn = user?.role === "SHOPKEEPER";
   const isMobile = pathname.startsWith("/m/") || pathname === "/m";
   const shopName = user?.shop?.shopName ?? (user as { shopName?: string } | null)?.shopName;
+  const isVerified = user?.shop?.isVerified ?? false;
+
+  const registrationAgeDays = useMemo(() => {
+    if (!user) return 0;
+    const createdDate = new Date(user.createdAt).getTime();
+    return (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
+  }, [user]);
+
+  const daysLeft = useMemo(() => {
+    if (!user) return 0;
+    const createdDate = new Date(user.createdAt).getTime();
+    const diffDays = 7 - (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
+    return Math.max(0, Math.ceil(diffDays));
+  }, [user]);
+
+  const isWithinSandbox = useMemo(() => {
+    return registrationAgeDays <= 7;
+  }, [registrationAgeDays]);
 
   const [open, setOpen] = useState<boolean>(() => readSession(STORAGE_OPEN, false));
   const [input, setInput] = useState("");
@@ -231,11 +311,14 @@ export function SupportBot() {
     if (!isSellerLoggedIn) return;
     setMessages((prev) => {
       if (prev.length === 1 && prev[0].id === "welcome") {
+        if (!isVerified) {
+          return [makeUnverifiedWelcome(shopName, daysLeft, isWithinSandbox)];
+        }
         return [isMobile ? makeMobileWelcome(shopName) : makeSellerWelcome(shopName)];
       }
       return prev;
     });
-  }, [isSellerLoggedIn, shopName, isMobile]);
+  }, [isSellerLoggedIn, shopName, isMobile, isVerified, daysLeft, isWithinSandbox]);
 
   // Persist conversation and open state across navigations / open-close
   useEffect(() => {
@@ -583,7 +666,7 @@ export function SupportBot() {
                       : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-sm"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{parseTextWithT(m.text)}</p>
+                  <p className="whitespace-pre-wrap">{renderMessageContent(m.text)}</p>
                   {m.cta && m.cta.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {m.cta.map((c) => {

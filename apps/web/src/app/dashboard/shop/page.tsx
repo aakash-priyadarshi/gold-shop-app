@@ -121,11 +121,12 @@ export default function ShopDashboard() {
   const t = useT();
 
   // ── Karigar & Bullion States ──
-  const [bullionGold, setBullionGold] = useState(185.50);
-  const [bullionSilver, setBullionSilver] = useState(1450.00);
+  const [bullionGold, setBullionGold] = useState(1240.50); // 840.5 + 400
+  const [bullionSilver, setBullionSilver] = useState(4500.00);
   const [karigars, setKarigars] = useState([
-    { name: "Ramesh Karigar", goldOutstanding: 12.45, silverOutstanding: 0.00, wastageLimit: 1.2, activeJob: "Bridal Gold Choker (22K)" },
-    { name: "Suna Benchwork", goldOutstanding: 0.00, silverOutstanding: 48.20, wastageLimit: 0.8, activeJob: "Filigree Silver Bangles (92.5)" }
+    { name: "Rakesh Kumar", goldOutstanding: 4.8, silverOutstanding: 0.0, wastageLimit: 1.0, activeJob: "22K Traditional Bridal Choker" },
+    { name: "Sanjay Shakya", goldOutstanding: 5.5, silverOutstanding: 0.0, wastageLimit: 1.2, activeJob: "999 Silver Heritage Filigree Jug" },
+    { name: "Amit Shah", goldOutstanding: 0.9, silverOutstanding: 0.0, wastageLimit: 0.8, activeJob: "18K Diamond Solitaire Engagement Ring" }
   ]);
 
   // Modal toggles & inputs

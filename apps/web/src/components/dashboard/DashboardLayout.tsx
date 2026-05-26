@@ -99,6 +99,7 @@ import {
     Briefcase,
     Users,
     Wrench,
+    Coins,
 } from "lucide-react";
 import { useDesktopShortcuts } from "@/hooks/useDesktopShortcuts";
 import dynamic from "next/dynamic";
@@ -543,6 +544,12 @@ const navItems: NavItem[] = [
     label: "Billing",
     href: "/dashboard/shop/billing",
     icon: CreditCard,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Money Lending (Girvi)",
+    href: "/dashboard/shop/lending",
+    icon: Coins,
     roles: ["SHOPKEEPER"],
   },
   {
@@ -1025,6 +1032,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           "/dashboard/shop/products",
           "/dashboard/shop/inventory",
           "/dashboard/shop/stock",
+          "/dashboard/shop/lending",
           "/dashboard/shop/customers",
           "/dashboard/shop/messages",
           "/dashboard/shop/settings",

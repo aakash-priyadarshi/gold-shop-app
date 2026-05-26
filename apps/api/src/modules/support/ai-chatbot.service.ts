@@ -33,6 +33,8 @@ interface SellerSnapshot {
   yearlySales: number;
   nepalAuditRequired: boolean;
   nepalAuditThresholdUsedPct: number;
+  isVerified?: boolean;
+  userCreatedAt?: string;
 }
 
 @Injectable()
@@ -438,6 +440,13 @@ DEMO & TUTORIAL VIDEOS (recommend these proactively when users ask "how do I…"
 - When a user asks "how do I do X", reply briefly AND link the tutorial chapter, e.g. "POS is shown at 5:45 in our tutorial — https://orivraa.com/tutorial".
 - Prefer the 30-second demo for first-time visitors who say "show me what it looks like" or "give me an overview"; prefer the full tutorial for "how do I…" or feature-specific questions.
 
+7-DAY KYC SANDBOX & PRINT-ONLY WATERMARK RULES:
+1. Unverified shops enjoy a 7-day sandbox grace period from account creation (userCreatedAt) to test POS and invoice checkout fully.
+2. During the 7-day sandbox, printed receipts carry a repeated diagonal "DEMO BILL - NOT FOR COMMERCIAL SALE" watermark to prevent commercial misuse.
+3. TAX ID BYPASS: Shopkeepers can bypass the print watermark immediately by filling a valid business tax ID (GSTIN, VAT, PAN, or TRN) on the POS invoice before checkout.
+4. Beyond 7 days, POS checkout blocks completely until KYC details are submitted.
+5. In pre-sales or support chats, encourage unverified/sandboxed shops to [Complete KYC Verification](/dashboard/shop/kyc) to remove watermarks and enable production billing!
+
 ADMIN FEATURES (For Admin Users Only):
 - Admin users have access to /dashboard/admin/users for user management.
 - The Admin Users page features: Live Activity Stats (Online Now, Avg Session), User Directory with Risk Score badges, and Bulk Actions (Suspend, Export, Message).
@@ -691,6 +700,15 @@ AVAILABLE TOOLS:
         : `IRD audit is not currently required. Threshold usage is ${snapshot.nepalAuditThresholdUsedPct}% of the NPR 1 crore limit.`
       : "Nepal IRD audit is not applicable for this shop country.";
 
+    const createdTime = snapshot.userCreatedAt ? new Date(snapshot.userCreatedAt).getTime() : Date.now();
+    const diffDays = (Date.now() - createdTime) / (1000 * 60 * 60 * 24);
+    const sandboxDaysLeft = Math.max(0, Math.ceil(7 - diffDays));
+    const kycStatus = snapshot.isVerified
+      ? "Fully Verified and Approved."
+      : diffDays <= 7
+      ? `Sandbox Grace Period Mode. Active unverified. ${sandboxDaysLeft} days left to test before block.`
+      : "Sandbox Grace Period Expired. Invoicing blocks until KYC completed.";
+
     return `
 SELLER PRIVATE CONTEXT (FOR THIS LOGGED-IN SELLER ONLY):
 Seller name: ${snapshot.sellerName}
@@ -711,6 +729,7 @@ Walk-in customer count: ${snapshot.walkInCustomerCount}
 Recent orders: ${recentOrders}
 Year-to-date sales: ${this.formatCurrency(snapshot.yearlySales, snapshot.currency)}
 Tax audit status: ${auditStatus}
+Shop KYC Verification Status: ${kycStatus}
 
 NEW SHOPKEEPER PC FEATURES:
 - Dashboard Mode Toggle: Switch between EASY and ADVANCED using the toggle in the top header.
@@ -940,11 +959,12 @@ SELLER RESPONSE RULES:
           lastName: true,
           email: true,
           preferredLanguage: true,
+          createdAt: true,
         },
       }),
       this.prisma.shop.findUnique({
         where: { id: shopId },
-        select: { shopName: true, country: true },
+        select: { shopName: true, country: true, isVerified: true },
       }),
       this.prisma.invoice.aggregate({
         where: {
@@ -1035,6 +1055,8 @@ SELLER RESPONSE RULES:
       nepalAuditRequired,
       nepalAuditThresholdUsedPct,
       dashboardMode,
+      isVerified: shop?.isVerified ?? false,
+      userCreatedAt: user?.createdAt ? user.createdAt.toISOString() : undefined,
     };
   }
 

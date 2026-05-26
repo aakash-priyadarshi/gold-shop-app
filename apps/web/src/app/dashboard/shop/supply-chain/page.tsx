@@ -189,6 +189,52 @@ function KarigarSupplyChainContent() {
     weight: "",
   });
 
+  const [addKarigarModalOpen, setAddKarigarModalOpen] = useState(false);
+  const [karigarForm, setKarigarForm] = useState({
+    artisan: "",
+    name: "",
+    location: "",
+    wastageLimit: "1.0",
+    wageRatePerGram: "200",
+  });
+
+  const handleAddKarigar = async () => {
+    if (!karigarForm.artisan.trim() || !karigarForm.name.trim()) {
+      alert("Please fill in the artisan and workshop names!");
+      return;
+    }
+    const limit = parseFloat(karigarForm.wastageLimit) || 1.0;
+    const wage = parseFloat(karigarForm.wageRatePerGram) || 200;
+
+    const newKarigar = {
+      id: "ws-" + Date.now(),
+      name: karigarForm.name,
+      artisan: karigarForm.artisan,
+      location: karigarForm.location || "Local",
+      rating: 5.0,
+      metalIssued: 0,
+      metalReturned: 0,
+      wastagePercent: 0,
+      wastageLimit: limit,
+      wageRatePerGram: wage,
+      outstandingBalance: 0,
+      wageDue: 0,
+    };
+
+    const updatedWorkshops = [...workshops, newKarigar];
+    setWorkshops(updatedWorkshops);
+    setAddKarigarModalOpen(false);
+    setKarigarForm({
+      artisan: "",
+      name: "",
+      location: "",
+      wastageLimit: "1.0",
+      wageRatePerGram: "200",
+    });
+
+    await persistState(vaultReserves, updatedWorkshops, jobs);
+  };
+
   // Read metal rate function
   const readMetalRate = (data: any, codes: string[]): number => {
     const metals = data?.metals;
@@ -471,6 +517,14 @@ function KarigarSupplyChainContent() {
           >
             <Plus className="h-4 w-4 mr-1" />
             <T>Procure Bullion</T>
+          </Button>
+          <Button
+            variant="outline"
+            className="border-amber-500/30 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 bg-white dark:bg-gray-900"
+            onClick={() => setAddKarigarModalOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            <T>Add Karigar</T>
           </Button>
           <Button
             className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
@@ -837,6 +891,82 @@ function KarigarSupplyChainContent() {
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="ghost" size="sm" onClick={() => setProcureModalOpen(false)} className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
               <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleProcure}><T>Add to Vault</T></Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Add Karigar modal */}
+      {addKarigarModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100"><T>Add New Artisan (Karigar)</T></h3>
+            <p className="text-xs text-muted-foreground">
+              <T>Register a new artisan ledger to start tracking issued raw metals and labor charges.</T>
+            </p>
+
+            <div className="space-y-3 pt-2">
+              <div className="space-y-1">
+                <Label className="text-gray-700 dark:text-gray-300"><T>Artisan Name *</T></Label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Shyam Verma"
+                  value={karigarForm.artisan}
+                  onChange={(e) => setKarigarForm((p) => ({ ...p, artisan: e.target.value }))}
+                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-gray-700 dark:text-gray-300"><T>Workshop Name *</T></Label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Verma Filigree Lab"
+                  value={karigarForm.name}
+                  onChange={(e) => setKarigarForm((p) => ({ ...p, name: e.target.value }))}
+                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-gray-700 dark:text-gray-300"><T>Location</T></Label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Varanasi, UP"
+                  value={karigarForm.location}
+                  onChange={(e) => setKarigarForm((p) => ({ ...p, location: e.target.value }))}
+                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-gray-700 dark:text-gray-300"><T>Wastage Limit (%)</T></Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="1.0"
+                    value={karigarForm.wastageLimit}
+                    onChange={(e) => setKarigarForm((p) => ({ ...p, wastageLimit: e.target.value }))}
+                    className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-700 dark:text-gray-300"><T>Labor Rate (/g)</T></Label>
+                  <Input
+                    type="number"
+                    placeholder="200"
+                    value={karigarForm.wageRatePerGram}
+                    onChange={(e) => setKarigarForm((p) => ({ ...p, wageRatePerGram: e.target.value }))}
+                    className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="ghost" size="sm" onClick={() => setAddKarigarModalOpen(false)} className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
+              <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleAddKarigar}><T>Register Karigar</T></Button>
             </div>
           </div>
         </div>

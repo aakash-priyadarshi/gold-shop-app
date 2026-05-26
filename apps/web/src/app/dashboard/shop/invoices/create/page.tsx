@@ -417,18 +417,44 @@ export default function CreateInvoicePage() {
   const { symbol: currencySymbol, country: shopCountry } = useShopCurrency();
   const [loading, setLoading] = useState(false);
   const [showKycModal, setShowKycModal] = useState(false);
+  const [isMockInsured, setIsMockInsured] = useState(false);
 
   // Refresh user data on mount to get the latest KYC approval status from the server.
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
 
+  const isSandboxMode = useMemo(() => {
+    if (!user || !user.shop || user.shop.isVerified) return false;
+    const createdDate = new Date(user.createdAt).getTime();
+    const diffDays = (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
+    return diffDays <= 7;
+  }, [user]);
+
+  const daysLeft = useMemo(() => {
+    if (!user) return 0;
+    const createdDate = new Date(user.createdAt).getTime();
+    const diffDays = 7 - (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
+    return Math.max(0, Math.ceil(diffDays));
+  }, [user]);
+
+  // Handle Nepalese / standard days left calculation variable cleanly
+  const daysLeftVal = useMemo(() => {
+    if (!user) return 0;
+    const createdDate = new Date(user.createdAt).getTime();
+    const diffDays = 7 - (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
+    return Math.max(0, Math.ceil(diffDays));
+  }, [user]);
+
   // Show or hide the KYC modal based on the current verified status.
   useEffect(() => {
     if (user?.shop) {
-      setShowKycModal(!user.shop.isVerified);
+      const createdDate = new Date(user.createdAt).getTime();
+      const diffDays = (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
+      const isWithinSandbox = diffDays <= 7;
+      setShowKycModal(!user.shop.isVerified && !isWithinSandbox);
     }
-  }, [user?.shop, user?.shop?.isVerified]);
+  }, [user?.shop, user?.shop?.isVerified, user?.createdAt]);
 
   // ── Country ──
   const [invoiceCountry, setInvoiceCountry] = useState(
@@ -944,6 +970,7 @@ export default function CreateInvoicePage() {
           makingTax: isTaxExempt ? 0 : taxBreakdown.makingTax,
           totalTax: isTaxExempt ? 0 : taxBreakdown.totalTax,
           country: invoiceCountry,
+          isMockInsured,
         },
         // Tax filing
         isTaxExempt,
@@ -1018,6 +1045,36 @@ export default function CreateInvoicePage() {
               Import from Quote
             </Button>
           </div>
+
+          {/* Sandbox warning banner */}
+          {isSandboxMode && (
+            <div className="p-4 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-300/40 dark:border-amber-700/30 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="text-xl">⚠️</span>
+                <div>
+                  <h4 className="font-bold text-sm text-amber-800 dark:text-amber-300">
+                    KYC Sandbox Mode — {daysLeftVal} {daysLeftVal === 1 ? 'day' : 'days'} left
+                  </h4>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+                    You are in the 7-day trial sandbox. Generated bills will print with a bold watermark <span className="font-semibold text-red-500">DEMO BILL - NOT FOR COMMERCIAL SALE</span> until your shop's business verification is completed.
+                    <span className="block mt-1 font-medium text-amber-900 dark:text-amber-200">
+                      💡 Tax ID Bypass: Providing a valid Customer Tax ID (GST/VAT/PAN) below will automatically suppress the watermark on prints.
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-400 text-amber-800 dark:text-amber-300 hover:bg-amber-100/40 h-8 text-xs font-semibold whitespace-nowrap"
+                  onClick={() => router.push("/dashboard/shop/kyc")}
+                >
+                  Complete KYC Now
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Quote Import Modal */}
           {showQuoteImport && (
@@ -2102,6 +2159,37 @@ export default function CreateInvoicePage() {
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Mock Jewelry Insurance Toggle */}
+          <Card className="border-emerald-200 dark:border-emerald-900 bg-emerald-50/20 dark:bg-emerald-950/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                🛡️ Orivraa Protection
+              </CardTitle>
+              <CardDescription className="text-emerald-600/80 dark:text-emerald-400/80">
+                Enable complementary third-party jewelry insurance and safe custody certification.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-start gap-3 p-3 bg-white dark:bg-[#161B22] border rounded-lg hover:border-emerald-400 transition-colors">
+                <input
+                  type="checkbox"
+                  id="mock-insurance"
+                  checked={isMockInsured}
+                  onChange={(e) => setIsMockInsured(e.target.checked)}
+                  className="mt-1 accent-emerald-600"
+                />
+                <div className="flex-1">
+                  <label htmlFor="mock-insurance" className="text-sm font-semibold text-gray-800 dark:text-gray-200 cursor-pointer block">
+                    Add Orivraa Jewelry Insurance
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Complementary gold &amp; diamond damage, burglary and theft protection underwritten by premium Orivraa bank partners. Activates a green-gold certified security shield on the receipt.
+                  </p>
                 </div>
               </div>
             </CardContent>
