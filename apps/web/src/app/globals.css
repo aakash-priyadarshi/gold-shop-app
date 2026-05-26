@@ -112,17 +112,17 @@
 }
 
 @layer components {
-/* Gold gradient utilities - Upgraded to luxury champagne gold */
+/* Gold gradient utilities */
   .gold-gradient {
-    @apply bg-gradient-to-r from-champagne-300 via-gold-500 to-champagne-400 !important;
+    @apply bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600 !important;
   }
   
   .gold-gradient-subtle {
-    @apply bg-gradient-to-r from-champagne-50 via-champagne-100 to-champagne-50 !important;
+    @apply bg-gradient-to-r from-gold-50 via-gold-100 to-gold-50 !important;
   }
   
   .gold-text-gradient {
-    @apply bg-gradient-to-r from-champagne-300 via-gold-500 to-champagne-400 bg-clip-text text-transparent !important;
+    @apply bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600 bg-clip-text text-transparent !important;
   }
   
   /* Card hover effects */
@@ -522,12 +522,12 @@
 .gold-river-light {
   background: linear-gradient(
     90deg,
-    #faf6f0, /* glowing champagne-50 */
-    #f4efe7, /* ivory highlight-100 */
-    #ecc5a2, /* champagne-300 */
-    #dfd1c5, /* champagne-200 */
-    #ecc5a2, /* champagne-300 */
-    #faf6f0  /* champagne loop */
+    #FFF8E7, /* warm gold tint */
+    #FCEFC7, /* soft gold highlight */
+    #D4AF37, /* rich satin gold */
+    #F0D48A, /* gold outline */
+    #D4AF37, /* rich satin gold */
+    #FFF8E7  /* warm gold loop */
   );
   background-size: 200% 100%;
   animation: gold-river-flow 10s linear infinite;
@@ -539,7 +539,7 @@
     #070e15, /* navy-950 dark */
     #0b1420, /* navy-900 light */
     #111b2b, /* navy-850 medium */
-    #ecc5a2, /* champagne gold accent shimmer */
+    #D4AF37, /* rich gold accent shimmer */
     #111b2b, /* navy-850 medium */
     #070e15  /* navy-950 dark loop */
   );
@@ -556,7 +556,7 @@
 }
 
 .gold-glow-hover:hover {
-  @apply border-champagne-300 dark:border-champagne-400 scale-[1.015] shadow-[0_0_24px_rgba(236,197,162,0.22)] !important;
+  @apply border-gold-500 dark:border-gold-400 scale-[1.015] shadow-[0_0_24px_rgba(212,175,55,0.22)] !important;
 }
 
 .bg-space-navy {
@@ -564,7 +564,7 @@
 }
 
 .champagne-gradient {
-  background: linear-gradient(135deg, #ecc5a2 0%, #d3ad8a 100%) !important;
+  background: linear-gradient(135deg, #D4AF37 0%, #B8941F 100%) !important;
 }
 
 

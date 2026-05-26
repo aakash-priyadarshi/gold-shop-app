@@ -137,8 +137,8 @@ export function BuyerSections() {
                 <div
                   className={`premium-card p-6 lg:p-8 gold-glow-hover border-gray-150 dark:border-gray-850 h-full ${i === 2 ? "sm:col-span-2 lg:col-span-1" : ""}`}
                 >
-                  <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-champagne-100 to-gold-200/40 dark:from-navy-900/30 dark:to-navy-950/20 rounded-xl flex items-center justify-center mb-4 lg:mb-6 shadow-inner animate-pulse border border-champagne-200/20">
-                    <f.icon className="h-6 w-6 lg:h-7 lg:w-7 text-champagne-300 dark:text-champagne-300" />
+                  <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gold-100 to-gold-200/40 dark:from-navy-900/30 dark:to-navy-950/20 rounded-xl flex items-center justify-center mb-4 lg:mb-6 shadow-inner animate-pulse border border-gold-200/20">
+                    <f.icon className="h-6 w-6 lg:h-7 lg:w-7 text-gold-500 dark:text-gold-400" />
                   </div>
                   <h3 className="text-lg lg:text-xl font-bold text-gray-900 dark:text-white mb-2 lg:mb-3">
                     {t(f.title)}
@@ -172,7 +172,7 @@ export function BuyerSections() {
             {steps.map((item, idx) => (
               <ScrollReveal key={item.step} direction="up" delay={idx * 0.08}>
                 <div className="text-center">
-                  <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-champagne-300 to-gold-500 text-white rounded-full flex items-center justify-center text-lg lg:text-2xl font-bold mx-auto mb-3 lg:mb-4 shadow-lg shadow-champagne-300/30 animate-pulse">
+                  <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-gold-400 to-gold-500 text-white rounded-full flex items-center justify-center text-lg lg:text-2xl font-bold mx-auto mb-3 lg:mb-4 shadow-lg shadow-gold-500/30 animate-pulse">
                     {item.step}
                   </div>
                   <h3 className="text-sm lg:text-lg font-bold text-gray-900 dark:text-white mb-1 lg:mb-2">
@@ -196,18 +196,18 @@ export function SellerFeaturesSection() {
   return (    <section className="py-12 lg:py-24 bg-white dark:bg-gray-950">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-10 lg:mb-16">
-          <ScrollReveal direction="up" delay={0.05}>
+          <ScrollReveal direction="assemble" delay={0.05} spring>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold-50 dark:bg-gold-950/30 text-gold-800 dark:text-gold-300 text-sm font-semibold mb-4 border border-gold-200/50 dark:border-gold-850/40">
               <Store className="h-4 w-4 text-gold-500 animate-pulse" />
               <T>For Jewellery Shop Owners</T>
             </div>
           </ScrollReveal>
-          <ScrollReveal direction="up" delay={0.12}>
+          <ScrollReveal direction="assemble" delay={0.12} spring>
             <h2 className="text-2xl lg:text-4xl font-black text-gray-990 dark:text-white mb-3 lg:mb-4 tracking-tight">
               <T>Your Complete Shop Management Platform</T>
             </h2>
           </ScrollReveal>
-          <ScrollReveal direction="up" delay={0.2}>
+          <ScrollReveal direction="up" delay={0.2} spring>
             <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-lg leading-relaxed">
               <T>
                 Take your jewellery business online with powerful CMS. Manage
@@ -219,7 +219,7 @@ export function SellerFeaturesSection() {
           <ScrollReveal direction="up" delay={0.25}>
             <Link
               href="/jewellery-shop-software"
-              className="inline-flex items-center gap-1 mt-3 text-sm text-champagne-300 dark:text-champagne-300 font-bold hover:underline"
+              className="inline-flex items-center gap-1 mt-3 text-sm text-gold-500 dark:text-gold-400 font-bold hover:underline"
             >
               <T>See all features</T>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -227,29 +227,29 @@ export function SellerFeaturesSection() {
           </ScrollReveal>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-10 lg:mb-14">
+        <ScrollReveal direction="up" staggerChildren={0.1} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-10 lg:mb-14">
           {shopFeatures.map((feature, idx) => {
-            // Curated Unsplash goldsmith workshop & jewellery assets
+            // Curated goldsmith workshop & jewellery assets
             const featureImages: Record<string, string> = {
-              "Smart Dashboard": "https://images.unsplash.com/photo-1516652695352-6118f7cc1a07?auto=format&fit=crop&q=80&w=600",
-              "Inventory & Catalogue": "https://images.unsplash.com/photo-1624588057318-5f1b2eb81012?auto=format&fit=crop&q=80&w=600",
-              "Mobile POS — Sell Anywhere": "https://images.unsplash.com/photo-1715374033196-0ff662284a7e?auto=format&fit=crop&q=80&w=600",
+              "Smart Dashboard": "/hasan-mrad-9Foi-h8zmIU-unsplash.jpg",
+              "Inventory & Catalogue": "/amy-vann-85-6iMn5L8g-unsplash (1).jpg",
+              "Mobile POS — Sell Anywhere": "/amy-vann-85-6iMn5L8g-unsplash (1).jpg",
             };
             const bgImage = featureImages[feature.title];
 
             return (
-              <ScrollReveal key={feature.title} direction="up" delay={idx * 0.08}>
                 <div
+                  key={feature.title}
                   className="group relative p-5 lg:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 gold-glow-hover overflow-hidden h-full min-h-[200px]"
                 >
                   {bgImage && (
                     <div 
-                      className="absolute inset-0 bg-cover bg-center opacity-[0.03] dark:opacity-[0.05] -z-10 mix-blend-luminosity group-hover:scale-105 transition-transform duration-500"
+                      className="absolute inset-0 bg-cover bg-center opacity-[0.04] dark:opacity-[0.06] -z-10 mix-blend-luminosity group-hover:scale-105 transition-transform duration-500"
                       style={{ backgroundImage: `url('${bgImage}')` }}
                     />
                   )}
-                  <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-champagne-100 to-gold-200/40 dark:from-navy-900/30 dark:to-navy-950/20 rounded-xl flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform shadow-inner shadow-gold-500/5 relative z-10 border border-champagne-200/20">
-                    <feature.icon className="h-5 w-5 lg:h-6 lg:w-6 text-champagne-300 dark:text-champagne-300" />
+                  <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-gold-100 to-gold-200/40 dark:from-navy-900/30 dark:to-navy-950/20 rounded-xl flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform shadow-inner shadow-gold-500/5 relative z-10 border border-gold-200/20">
+                    <feature.icon className="h-5 w-5 lg:h-6 lg:w-6 text-gold-500 dark:text-gold-400" />
                   </div>
                   <h3 className="text-base lg:text-lg font-bold text-gray-900 dark:text-white mb-1.5 relative z-10">
                     {t(feature.title)}
@@ -258,10 +258,9 @@ export function SellerFeaturesSection() {
                     {t(feature.desc)}
                   </p>
                 </div>
-              </ScrollReveal>
             );
           })}
-        </div>
+        </ScrollReveal>
 
         {/* Seller CTA */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 lg:gap-4">
@@ -584,7 +583,7 @@ export function SellerCtaSection() {
             <Link href="/auth/register" className="w-full sm:w-auto">
               <Button
                 size="lg"
-                className="w-full h-12 px-8 rounded-xl text-base bg-champagne-100 text-navy-950 hover:bg-champagne-200 font-extrabold border-none shadow-lg active:scale-95 transition-all"
+                className="w-full h-12 px-8 rounded-xl text-base bg-gold-100 text-navy-950 hover:bg-gold-200 font-extrabold border-none shadow-lg active:scale-95 transition-all"
               >
                 <T>Start free trial</T>
               </Button>
@@ -621,8 +620,8 @@ export function MobilePosSpotlight() {
           {/* Left: copy */}
           <div className="space-y-6" data-tour="m-pos-features">
             <ScrollReveal direction="up" delay={0.05}>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-champagne-300/10 text-champagne-300 text-xs font-semibold uppercase tracking-wide border border-champagne-300/20">
-                <Zap className="h-3.5 w-3.5 text-champagne-300 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-500/10 text-gold-400 text-xs font-semibold uppercase tracking-wide border border-gold-500/20">
+                <Zap className="h-3.5 w-3.5 text-gold-400 animate-pulse" />
                 <T>New feature</T>
               </div>
             </ScrollReveal>
@@ -644,7 +643,7 @@ export function MobilePosSpotlight() {
               <ul className="space-y-3">
                 {mobilePosPoints.map((point) => (
                   <li key={point} className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-champagne-300 flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className="h-5 w-5 text-gold-400 flex-shrink-0 mt-0.5" />
                     <span className="text-sm lg:text-base text-gray-700 dark:text-gray-300">{t(point)}</span>
                   </li>
                 ))}
@@ -653,7 +652,7 @@ export function MobilePosSpotlight() {
             <ScrollReveal direction="up" delay={0.3}>
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Link href="/auth/register">
-                  <Button size="lg" className="bg-champagne-300 hover:bg-champagne-400 text-navy-950 h-11 px-7 rounded-xl text-sm font-bold shadow-md active:scale-95 transition-all border-none">
+                  <Button size="lg" className="bg-gold-500 hover:bg-gold-600 text-navy-950 h-11 px-7 rounded-xl text-sm font-bold shadow-md active:scale-95 transition-all border-none">
                     <T>Try Mobile POS free</T>
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -667,7 +666,7 @@ export function MobilePosSpotlight() {
             <ScrollReveal direction="right" delay={0.15}>
               <div className="relative">
                 {/* Glow */}
-                <div className="absolute inset-0 bg-champagne-300/10 blur-3xl rounded-full scale-110" />
+                <div className="absolute inset-0 bg-gold-500/10 blur-3xl rounded-full scale-110" />
                 {/* Phone frame with smooth floating animation */}
                 <div className="relative w-64 lg:w-72 bg-[#0B0C10] rounded-[2.5rem] p-3.5 shadow-2xl border-4 border-gray-900 ring-1 ring-white/20 animate-float">
                   {/* Notch */}
@@ -680,7 +679,7 @@ export function MobilePosSpotlight() {
                         <p className="text-white text-[11px] font-black tracking-tight"><T>Mobile POS</T></p>
                         <p className="text-gray-400 text-[9px] font-medium"><T>Orivraa Terminal</T></p>
                       </div>
-                      <span className="bg-champagne-300/15 border border-champagne-300/25 text-champagne-300 text-[8px] font-black uppercase px-2 py-0.5 rounded-full"><T>New Sale</T></span>
+                      <span className="bg-gold-500/15 border border-gold-500/25 text-gold-400 text-[8px] font-black uppercase px-2 py-0.5 rounded-full"><T>New Sale</T></span>
                     </div>
                     {/* Item rows */}
                     <div className="p-3.5 space-y-2.5">
@@ -693,15 +692,15 @@ export function MobilePosSpotlight() {
                             <p className="text-[11px] font-bold text-white">{item.name}</p>
                             <p className="text-[9px] text-gray-400 font-medium">{item.weight}</p>
                           </div>
-                          <p className="text-[11px] font-black text-champagne-300">{item.price}</p>
+                          <p className="text-[11px] font-black text-gold-400">{item.price}</p>
                         </div>
                       ))}
                     </div>
                     {/* Total + checkout */}
-                    <div className="mx-3.5 mb-3.5 mt-1.5 bg-gradient-to-br from-[#111b2b] to-[#0b1420] border border-champagne-300/20 rounded-xl px-4 py-3.5 text-center shadow-md">
+                    <div className="mx-3.5 mb-3.5 mt-1.5 bg-gradient-to-br from-[#111b2b] to-[#0b1420] border border-gold-500/20 rounded-xl px-4 py-3.5 text-center shadow-md">
                       <p className="text-gray-400 text-[9px] font-medium"><T>Total Amount</T></p>
                       <p className="text-white font-black text-base">NPR 50,400</p>
-                      <p className="text-champagne-300 text-[10px] font-black mt-1.5 animate-pulse flex items-center justify-center gap-1">
+                      <p className="text-gold-400 text-[10px] font-black mt-1.5 animate-pulse flex items-center justify-center gap-1">
                         <T>Tap to issue receipt</T> ›
                       </p>
                     </div>

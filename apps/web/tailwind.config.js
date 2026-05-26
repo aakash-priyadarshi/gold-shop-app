@@ -75,12 +75,12 @@ module.exports = {
           900: "#1A1A1A",
         },
         champagne: {
-          50: "#FAF6F0",
-          100: "#F4efe7", // Ivory Highlight
-          200: "#dfd1c5", // Stroke / Outline
-          300: "#ecc5a2", // Main champagne gold
-          400: "#d3ad8a", // Shading gold
-          500: "#beab9a", // Linen gray-beige
+          50: "#FFF8E7",   // Warm gold tint
+          100: "#FCEFC7",  // Soft gold highlight
+          200: "#F0D48A",  // Gold outline / stroke
+          300: "#D4AF37",  // Rich satin gold — matches gold-500
+          400: "#B8941F",  // Deep burnished gold
+          500: "#9A7B15",  // Dark antique gold
         },
         navy: {
           850: "#111b2b",

@@ -614,15 +614,17 @@ export default function JewelleryPosSoftwarePage() {
               ].map((faq) => (
                 <details
                   key={faq.q}
-                  className="group bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+                  className="group bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300"
                 >
-                  <summary className="flex items-center justify-between px-6 py-4 cursor-pointer font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-750">
+                  <summary className="flex items-center justify-between px-6 py-4 cursor-pointer font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
                     <T>{faq.q}</T>
-                    <ArrowRight className="h-4 w-4 text-gray-400 group-open:rotate-90 transition-transform shrink-0 ml-4" />
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-open:rotate-90 transition-transform duration-300 shrink-0 ml-4" />
                   </summary>
-                  <p className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    <T>{faq.a}</T>
-                  </p>
+                  <div className="px-6 pb-4 animate-slideUp">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                      <T>{faq.a}</T>
+                    </p>
+                  </div>
                 </details>
               ))}
             </div>

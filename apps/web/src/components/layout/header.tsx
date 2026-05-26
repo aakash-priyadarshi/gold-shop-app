@@ -88,6 +88,7 @@ import { HelpCircle, MessageCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 // Role-specific quick action icons configuration
 const getRoleQuickActions = (role: UserRole | undefined) => {
@@ -725,7 +726,7 @@ export function Header() {
             </Link>
           ))}
 
-          {/* For Sellers Dropdown */}
+          {/* For Sellers Mega-Menu */}
           <div
             className="relative"
             onMouseEnter={() => setSellerDropdownOpen(true)}
@@ -737,7 +738,7 @@ export function Header() {
             >
               <T>For Sellers</T>
               <svg
-                className={`h-3.5 w-3.5 transition-transform ${sellerDropdownOpen ? "rotate-180" : ""}`}
+                className={`h-3.5 w-3.5 transition-transform duration-200 ${sellerDropdownOpen ? "rotate-180" : ""}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={2}
@@ -750,39 +751,73 @@ export function Header() {
                 />
               </svg>
             </Link>
-            {sellerDropdownOpen && (
-              <>
-                {/* Invisible bridge to prevent gap hover loss */}
-                <div className="absolute top-full left-0 h-2 w-full" />
-                <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-2 z-50">
-                  {sellerNavItems.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={`flex items-start gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                        item.featured
-                          ? "bg-gold-50/80 dark:bg-gold-950/30 border border-gold-200/50 dark:border-gold-800/40 hover:bg-gold-100/55 dark:hover:bg-gold-950/50 mb-1.5"
-                          : "hover:bg-gray-50 dark:hover:bg-gray-800"
-                      }`}
-                      onClick={() => setSellerDropdownOpen(false)}
-                    >
-                      <item.icon className={`h-5 w-5 mt-0.5 shrink-0 ${item.featured ? "text-gold-600 dark:text-gold-400" : "text-gold-550"}`} />
-                      <div>
-                        <div className={`text-sm font-bold ${item.featured ? "text-gold-850 dark:text-gold-400" : "text-gray-900 dark:text-white"}`}>
-                          <T>{item.name}</T>
+            <AnimatePresence>
+              {sellerDropdownOpen && (
+                <>
+                  {/* Invisible bridge */}
+                  <div className="absolute top-full left-0 h-3 w-full" />
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                    transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    className="absolute top-full -left-20 mt-3 w-[640px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/80 dark:border-gray-700/60 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 p-5 z-50"
+                  >
+                    <div className="grid grid-cols-5 gap-5">
+                      {/* Left: Featured Card with workshop image (2 cols) */}
+                      <Link
+                        href="/for-sellers"
+                        onClick={() => setSellerDropdownOpen(false)}
+                        className="col-span-2 group relative rounded-xl overflow-hidden border border-gold-200/40 dark:border-gold-800/30 hover:border-gold-400/60 dark:hover:border-gold-600/40 transition-all"
+                      >
+                        <div
+                          className="absolute inset-0 bg-cover bg-center"
+                          style={{ backgroundImage: `url('/hasan-mrad-9Foi-h8zmIU-unsplash.jpg')` }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-gray-950/90 via-gray-950/50 to-gray-950/20" />
+                        <div className="relative p-5 flex flex-col justify-end min-h-[240px]">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold-500/20 text-gold-300 text-[10px] font-bold uppercase tracking-wider w-fit mb-2 border border-gold-500/20">
+                            <SparklesIcon className="h-3 w-3" />
+                            Featured
+                          </div>
+                          <h3 className="text-lg font-bold text-white mb-1 group-hover:text-gold-300 transition-colors">
+                            <T>Start Selling Free</T>
+                          </h3>
+                          <p className="text-xs text-gray-300 leading-relaxed">
+                            <T>See how Orivraa works for jewellers — free setup, no credit card</T>
+                          </p>
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          <T>{item.desc}</T>
-                        </div>
+                      </Link>
+
+                      {/* Right: Link Grid (3 cols) */}
+                      <div className="col-span-3 grid grid-cols-1 gap-0.5">
+                        {sellerNavItems.filter(item => !item.featured).map((item) => (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors group/link"
+                            onClick={() => setSellerDropdownOpen(false)}
+                          >
+                            <item.icon className="h-5 w-5 mt-0.5 shrink-0 text-gold-500 group-hover/link:text-gold-600 dark:group-hover/link:text-gold-400 transition-colors" />
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900 dark:text-white group-hover/link:text-gold-700 dark:group-hover/link:text-gold-300 transition-colors">
+                                <T>{item.name}</T>
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                <T>{item.desc}</T>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
                       </div>
-                    </Link>
-                  ))}
-                </div>
-              </>
-            )}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Learn dropdown */}
+          {/* Learn Mega-Menu */}
           <div
             className="relative"
             onMouseEnter={() => setCompanyDropdownOpen(true)}
@@ -794,7 +829,7 @@ export function Header() {
             >
               <T>Learn</T>
               <svg
-                className={`h-3.5 w-3.5 transition-transform ${companyDropdownOpen ? "rotate-180" : ""}`}
+                className={`h-3.5 w-3.5 transition-transform duration-200 ${companyDropdownOpen ? "rotate-180" : ""}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={2}
@@ -807,31 +842,63 @@ export function Header() {
                 />
               </svg>
             </button>
-            {companyDropdownOpen && (
-              <>
-                <div className="absolute top-full left-0 h-2 w-full" />
-                <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-2 z-50">
-                  {moreNavItems.map((item) => (
+            <AnimatePresence>
+              {companyDropdownOpen && (
+                <>
+                  <div className="absolute top-full left-0 h-3 w-full" />
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                    transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    className="absolute top-full right-0 mt-3 w-[380px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/80 dark:border-gray-700/60 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 overflow-hidden z-50"
+                  >
+                    {/* Featured image header */}
                     <Link
-                      key={item.name}
-                      href={item.href}
-                      className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      href="/demo"
                       onClick={() => setCompanyDropdownOpen(false)}
+                      className="block relative group"
                     >
-                      <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0" />
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          <T>{item.name}</T>
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          <T>{item.desc}</T>
-                        </div>
+                      <div
+                        className="h-36 bg-cover bg-center"
+                        style={{ backgroundImage: `url('/amy-vann-85-6iMn5L8g-unsplash (1).jpg')` }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-gray-950/30 to-transparent" />
+                      <div className="absolute bottom-3 left-4 right-4">
+                        <p className="text-white font-bold text-sm group-hover:text-gold-300 transition-colors">
+                          <T>Watch the 30-second demo</T>
+                        </p>
+                        <p className="text-gray-300 text-xs">
+                          <T>See Orivraa in action — inventory, POS & billing</T>
+                        </p>
                       </div>
                     </Link>
-                  ))}
-                </div>
-              </>
-            )}
+
+                    {/* Link list */}
+                    <div className="p-3">
+                      {moreNavItems.map((item) => (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors group/link"
+                          onClick={() => setCompanyDropdownOpen(false)}
+                        >
+                          <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0 group-hover/link:text-gold-600 dark:group-hover/link:text-gold-400 transition-colors" />
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900 dark:text-white group-hover/link:text-gold-700 dark:group-hover/link:text-gold-300 transition-colors">
+                              <T>{item.name}</T>
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              <T>{item.desc}</T>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 

@@ -320,7 +320,7 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
       <div className="container mx-auto px-4 relative">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div className="space-y-6 lg:space-y-8 text-center lg:text-left">
-            <ScrollReveal direction="up" delay={0.05}>
+            <ScrollReveal direction="assemble" delay={0.05} spring>
               <div
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
                   videoSrc
@@ -333,7 +333,7 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
               </div>
             </ScrollReveal>
 
-            <ScrollReveal direction="up" delay={0.15}>
+            <ScrollReveal direction="assemble" delay={0.12} spring>
               <h1
                 className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight tracking-tight ${
                   videoSrc ? "text-white drop-shadow-lg" : "text-gray-955 dark:text-white"
@@ -343,20 +343,20 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
               </h1>
             </ScrollReveal>
 
-            <ScrollReveal direction="up" delay={0.25}>
+            <ScrollReveal direction="up" delay={0.22} spring>
               <p
                 className={`text-base lg:text-lg max-w-xl mx-auto lg:mx-0 ${
                   videoSrc ? "text-gray-200" : "text-gray-650 dark:text-gray-300"
                 }`}
               >
                 <span>{t(currentCopy.subheadline)}</span>
-                <span className="block mt-2 font-semibold text-champagne-300 dark:text-champagne-300">
+                <span className="block mt-2 font-semibold text-gold-500 dark:text-gold-400">
                   <T>Free 30-day trial. No credit card required. Setup in under 10 minutes.</T>
                 </span>
               </p>
             </ScrollReveal>
 
-            <ScrollReveal direction="up" delay={0.35}>
+            <ScrollReveal direction="assemble" delay={0.32} spring>
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                 <Link href="/auth/register">
                   <Button
@@ -385,14 +385,14 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
               />
             </ScrollReveal>
 
-            <ScrollReveal direction="up" delay={0.5}>
+            <ScrollReveal direction="up" delay={0.48}>
               <p
                 className={`text-sm mt-2 ${videoSrc ? "text-gray-300" : "text-gray-500"}`}
               >
                 <T>Already have an account?</T>{" "}
                 <Link
                   href="/auth/login"
-                  className={`font-semibold underline underline-offset-2 hover:no-underline text-champagne-300 dark:text-champagne-300`}
+                  className={`font-semibold underline underline-offset-2 hover:no-underline text-gold-500 dark:text-gold-400`}
                 >
                   <T>Sign in to your shop</T>
                 </Link>
@@ -402,8 +402,8 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
 
           {/* Stats / feature grid for sellers */}
           <div className="relative mt-8 lg:mt-0">
-            <div className="aspect-square bg-gradient-to-br from-champagne-300 to-gold-500/40 rounded-full opacity-20 absolute -top-10 -right-10 w-72 h-72 blur-3xl animate-pulse" />
-            <ScrollReveal direction="left" delay={0.3}>
+            <div className="aspect-square bg-gradient-to-br from-gold-400 to-gold-500/40 rounded-full opacity-20 absolute -top-10 -right-10 w-72 h-72 blur-3xl animate-pulse" />
+            <ScrollReveal direction="left" delay={0.25} spring>
               <div
                 className={`relative rounded-2xl lg:rounded-3xl shadow-2xl p-6 lg:p-8 overflow-hidden ${
                   videoSrc
@@ -411,14 +411,14 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
                     : "bg-white dark:bg-navy-900/60 border border-gray-150 dark:border-navy-850 shadow-gold-500/5 dark:shadow-gold-950/20"
                 }`}
               >
-                {/* Custom Watermarked Goldsmith Image Background */}
+                {/* Goldsmith Workshop Image Background Watermark */}
                 {!videoSrc && (
                   <div
-                    className="absolute inset-0 bg-cover bg-center opacity-[0.05] dark:opacity-[0.07] -z-10 mix-blend-luminosity scale-105"
-                    style={{ backgroundImage: `url('https://images.unsplash.com/photo-1598724168411-9ba1e003a7fe?auto=format&fit=crop&q=80&w=800')` }}
+                    className="absolute inset-0 bg-cover bg-center opacity-[0.06] dark:opacity-[0.08] -z-10 mix-blend-luminosity scale-105"
+                    style={{ backgroundImage: `url('/hasan-mrad-9Foi-h8zmIU-unsplash.jpg')` }}
                   />
                 )}
-                <div className="grid grid-cols-2 gap-3 lg:gap-4 relative z-10">
+                <ScrollReveal direction="up" staggerChildren={0.08} className="grid grid-cols-2 gap-3 lg:gap-4 relative z-10">
                   {[
                     { icon: Store, label: "Live gold & silver rates", value: "Auto Rate Cards" },
                     { icon: Package, label: "Karigar & Bullion ledgers", value: "Unified ERP" },
@@ -432,11 +432,11 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
                         className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
                           videoSrc
                             ? "bg-white/10 backdrop-blur-sm"
-                            : "bg-gradient-to-br from-white/70 to-champagne-50/20 dark:from-[#0b1420]/90 dark:to-navy-950/40 border border-gray-150/40 dark:border-navy-850/50 backdrop-blur-sm shadow-sm gold-glow-hover"
+                            : "bg-gradient-to-br from-white/70 to-gold-50/20 dark:from-[#0b1420]/90 dark:to-navy-950/40 border border-gray-150/40 dark:border-navy-850/50 backdrop-blur-sm shadow-sm gold-glow-hover"
                         }`}
                       >
                         <Icon
-                          className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-champagne-300 dark:text-champagne-300"}`}
+                          className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-gold-500 dark:text-gold-400"}`}
                         />
                         <p
                           className={`text-sm lg:text-base font-extrabold ${videoSrc ? "text-white" : "text-gray-955 dark:text-white"}`}
@@ -451,12 +451,14 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
                       </div>
                     );
                   })}
-                </div>
-                <p
-                  className={`text-xs mt-4 text-center font-medium relative z-10 ${videoSrc ? "text-gray-300" : "text-gray-500 dark:text-gray-400"}`}
-                >
-                  <span>{t(currentCopy.trustFooter)}</span>
-                </p>
+                </ScrollReveal>
+                <ScrollReveal direction="up" delay={0.5}>
+                  <p
+                    className={`text-xs mt-4 text-center font-medium relative z-10 ${videoSrc ? "text-gray-300" : "text-gray-500 dark:text-gray-400"}`}
+                  >
+                    <span>{t(currentCopy.trustFooter)}</span>
+                  </p>
+                </ScrollReveal>
               </div>
             </ScrollReveal>
           </div>
