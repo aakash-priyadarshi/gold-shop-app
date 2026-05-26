@@ -106,7 +106,17 @@ export function middleware(request: NextRequest) {
     // crawler uses a mobile UA (Android/iPhone) but should index the canonical www version.
     const isCrawlerBot = /bot|crawl|spider|slurp|ia_archiver|prerender/i.test(userAgent);
 
-    if (isMobileUserAgent && !forceDesktop && !isCrawlerBot) {
+    const isDashboardPath = pathname.startsWith("/dashboard");
+    const isMobilePath = pathname === "/m" || pathname.startsWith("/m/");
+    const firstSegment = pathname.split("/")[1];
+    const hasMobileEquivalent = MOBILE_TOP_SEGMENTS.has(firstSegment);
+
+    if (
+      isMobileUserAgent &&
+      !forceDesktop &&
+      !isCrawlerBot &&
+      (isDashboardPath || isMobilePath || hasMobileEquivalent)
+    ) {
       const mobileUrl = new URL(request.url);
       const host = hostname;
       if (host === "orivraa.com") {
@@ -133,8 +143,26 @@ export function middleware(request: NextRequest) {
     );
   }
 
+  const isMobilePath = pathname === "/m" || pathname.startsWith("/m/");
+  const isDashboardPath = pathname.startsWith("/dashboard");
+  const firstSegment = pathname.split("/")[1];
+  const hasMobileEquivalent = MOBILE_TOP_SEGMENTS.has(firstSegment);
+
+  // If we are on the mobile subdomain but the pathname does not represent a mobile app page or a dashboard page,
+  // we redirect them back to the main domain so they can browse the landing page normally.
+  if (pathname !== "/" && !isMobilePath && !isDashboardPath && !hasMobileEquivalent) {
+    const desktopUrl = new URL(request.url);
+    const host = hostname;
+    if (host.startsWith("m.")) {
+      desktopUrl.hostname = host.substring(2);
+    } else if (host === "m") {
+      desktopUrl.hostname = "localhost"; // fallback
+    }
+    return withGeoCookies(request, NextResponse.redirect(desktopUrl, 302));
+  }
+
   // Already on /m/* path — don't double-rewrite
-  if (pathname === "/m" || pathname.startsWith("/m/")) {
+  if (isMobilePath) {
     return withGeoCookies(
       request,
       NextResponse.next({
@@ -158,7 +186,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Dashboard paths have no mobile equivalent — send shopkeepers to the POS
-  if (pathname.startsWith("/dashboard")) {
+  if (isDashboardPath) {
     return withGeoCookies(
       request,
       NextResponse.redirect(new URL("/m/pos", request.url)),
@@ -166,10 +194,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Only rewrite paths whose first segment has a mobile equivalent.
-  // Everything else (auth, dashboard, pricing, settings, …) is served by the
-  // regular desktop page on the same deployment.
-  const firstSegment = pathname.split("/")[1];
-  if (MOBILE_TOP_SEGMENTS.has(firstSegment)) {
+  if (hasMobileEquivalent) {
     return withGeoCookies(
       request,
       NextResponse.rewrite(new URL(`/m${pathname}`, request.url), {
