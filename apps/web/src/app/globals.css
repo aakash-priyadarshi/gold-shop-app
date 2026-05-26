@@ -500,6 +500,67 @@
   }
 }
 
+/* Molten Gold River Flow Animations & Custom Micro-Effects */
+@keyframes gold-river-flow {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+@keyframes float-mockup {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.gold-river-light {
+  background: linear-gradient(
+    90deg,
+    #fffdf5, /* glowing champagne */
+    #fffbeb, /* amber-50 fallback */
+    #fef3c7, /* amber-100 */
+    #fde68a, /* amber-200 */
+    #fef3c7, /* amber-100 */
+    #fffdf5  /* champagne loop */
+  );
+  background-size: 200% 100%;
+  animation: gold-river-flow 10s linear infinite;
+}
+
+.gold-river-dark {
+  background: linear-gradient(
+    90deg,
+    #060402, /* pitch black gold */
+    #170e05, /* deep molten bronze */
+    #301e0a, /* liquid warm bronze */
+    #4a320f, /* shimming dark gold */
+    #170e05, /* deep molten bronze */
+    #060402  /* pitch black gold loop */
+  );
+  background-size: 200% 100%;
+  animation: gold-river-flow 12s linear infinite;
+}
+
+.animate-float {
+  animation: float-mockup 4s ease-in-out infinite;
+}
+
+.gold-glow-hover {
+  @apply transition-all duration-300;
+}
+
+.gold-glow-hover:hover {
+  @apply border-gold-300 dark:border-gold-700 scale-[1.01] shadow-[0_0_20px_rgba(212,175,55,0.18)] !important;
+}
+
+
+
 /* Driver.js Designer Popover */
 .orivraa-tour-popover {
   @apply bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xl rounded-2xl !important;

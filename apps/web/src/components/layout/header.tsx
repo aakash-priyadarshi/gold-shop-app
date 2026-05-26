@@ -534,12 +534,12 @@ export function Header() {
                       href={item.href}
                       className={`flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-colors touch-target ${
                         item.featured
-                          ? "bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-800/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/60 mb-1"
+                          ? "bg-gold-50/80 dark:bg-gold-950/30 border border-gold-200/50 dark:border-gold-800/40 text-gold-800 dark:text-gold-300 hover:bg-gold-100/55 dark:hover:bg-gold-950/50 mb-1"
                           : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                       }`}
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      <item.icon className={`h-5 w-5 ${item.featured ? "text-amber-500" : "text-gold-500"}`} />
+                      <item.icon className={`h-5 w-5 ${item.featured ? "text-gold-600 dark:text-gold-400" : "text-gold-550"}`} />
                       <T>{item.name}</T>
                     </Link>
                   ))}
@@ -761,14 +761,14 @@ export function Header() {
                       href={item.href}
                       className={`flex items-start gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                         item.featured
-                          ? "bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-800/40 hover:bg-amber-100 dark:hover:bg-amber-950/60 mb-1.5"
+                          ? "bg-gold-50/80 dark:bg-gold-950/30 border border-gold-200/50 dark:border-gold-800/40 hover:bg-gold-100/55 dark:hover:bg-gold-950/50 mb-1.5"
                           : "hover:bg-gray-50 dark:hover:bg-gray-800"
                       }`}
                       onClick={() => setSellerDropdownOpen(false)}
                     >
-                      <item.icon className={`h-5 w-5 mt-0.5 shrink-0 ${item.featured ? "text-amber-500" : "text-gold-500"}`} />
+                      <item.icon className={`h-5 w-5 mt-0.5 shrink-0 ${item.featured ? "text-gold-600 dark:text-gold-400" : "text-gold-550"}`} />
                       <div>
-                        <div className={`text-sm font-medium ${item.featured ? "text-amber-700 dark:text-amber-400" : "text-gray-900 dark:text-white"}`}>
+                        <div className={`text-sm font-bold ${item.featured ? "text-gold-850 dark:text-gold-400" : "text-gray-900 dark:text-white"}`}>
                           <T>{item.name}</T>
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">

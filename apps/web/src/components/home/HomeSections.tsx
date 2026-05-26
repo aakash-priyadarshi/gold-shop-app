@@ -130,15 +130,15 @@ export function BuyerSections() {
             {features.map((f, i) => (
               <div
                 key={i}
-                className={`premium-card p-6 lg:p-8 ${i === 2 ? "sm:col-span-2 lg:col-span-1" : ""}`}
+                className={`premium-card p-6 lg:p-8 gold-glow-hover border-gray-150 dark:border-gray-850 ${i === 2 ? "sm:col-span-2 lg:col-span-1" : ""}`}
               >
-                <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gold-100 to-amber-100 rounded-xl flex items-center justify-center mb-4 lg:mb-6">
-                  <f.icon className="h-6 w-6 lg:h-7 lg:w-7 text-gold-600" />
+                <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gold-100 to-gold-200/40 dark:from-gold-900/30 dark:to-gold-950/20 rounded-xl flex items-center justify-center mb-4 lg:mb-6 shadow-inner animate-pulse">
+                  <f.icon className="h-6 w-6 lg:h-7 lg:w-7 text-gold-600 dark:text-gold-455" />
                 </div>
-                <h3 className="text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2 lg:mb-3">
+                <h3 className="text-lg lg:text-xl font-bold text-gray-900 dark:text-white mb-2 lg:mb-3">
                   {t(f.title)}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-base">
+                <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-base leading-relaxed">
                   {t(f.desc)}
                 </p>
               </div>
@@ -212,9 +212,9 @@ export function SellerFeaturesSection() {
           {shopFeatures.map((feature) => (
             <div
               key={feature.title}
-              className="group p-5 lg:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-gold-300 dark:hover:border-gold-700 hover:shadow-lg hover:shadow-gold-500/5 transition-all"
+              className="group p-5 lg:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 gold-glow-hover"
             >
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-gold-100 to-amber-50 dark:from-gold-900/30 dark:to-amber-900/20 rounded-xl flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-gold-100 to-gold-200/40 dark:from-gold-900/30 dark:to-gold-950/20 rounded-xl flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform shadow-inner shadow-gold-500/5">
                 <feature.icon className="h-5 w-5 lg:h-6 lg:w-6 text-gold-600 dark:text-gold-400" />
               </div>
               <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white mb-1.5">
@@ -528,32 +528,30 @@ export function BlogSection() {
 export function SellerCtaSection() {
   const t = useT();
   return (
-    <section className="py-12 lg:py-20 gold-gradient relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('/patterns/luxury-pattern.svg')] opacity-10" />
-      <div className="container mx-auto px-4 text-center relative">
-        <h2 className="text-2xl lg:text-4xl font-bold text-white mb-3 lg:mb-4">
+    <section className="py-16 lg:py-24 gold-river-dark relative overflow-hidden border-t border-b border-gold-900/60">
+      <div className="absolute inset-0 bg-[url('/patterns/luxury-pattern.svg')] opacity-[0.03] dark:opacity-[0.05]" />
+      <div className="container mx-auto px-4 text-center relative z-10">
+        <h2 className="text-3xl lg:text-5xl font-black text-white mb-4 tracking-tight">
           <T>Grow Your Jewellery Business Online</T>
         </h2>
-        <p className="text-gold-100 mb-6 lg:mb-8 max-w-xl mx-auto text-sm lg:text-base">
+        <p className="text-gold-100/90 mb-8 lg:mb-10 max-w-xl mx-auto text-sm lg:text-base font-medium leading-relaxed">
           {t(
             `Join hundreds of verified jewellers across Nepal, India, Dubai, USA & UK who are selling on ${BRAND.name}. List your shop for free and start receiving orders today.`,
           )}
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/auth/register">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+          <Link href="/auth/register" className="w-full sm:w-auto">
             <Button
               size="lg"
-              variant="secondary"
-              className="w-full sm:w-auto h-12 px-8 rounded-xl text-base text-gold-700 font-semibold"
+              className="w-full h-12 px-8 rounded-xl text-base bg-white hover:bg-gold-100 text-gold-950 font-extrabold border-none shadow-lg active:scale-95 transition-all"
             >
               <T>Start free trial</T>
             </Button>
           </Link>
-          <Link href="/support">
+          <Link href="/support" className="w-full sm:w-auto">
             <Button
               size="lg"
-              variant="outline"
-              className="w-full sm:w-auto h-12 px-8 rounded-xl text-base bg-transparent text-white border-white hover:bg-white dark:bg-gray-900 hover:text-gold-600"
+              className="w-full h-12 px-8 rounded-xl text-base bg-transparent text-white border border-white/40 hover:bg-white/10 active:scale-95 transition-all"
             >
               <T>Get onboarding help</T>
             </Button>
@@ -575,19 +573,19 @@ const mobilePosPoints = [
 export function MobilePosSpotlight() {
   const t = useT();
   return (
-    <section id="mobile-pos" data-tour="m-pos-spotlight" className="py-12 lg:py-20 bg-gradient-to-br from-amber-50 via-orange-50/30 to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 overflow-hidden">
+    <section id="mobile-pos" data-tour="m-pos-spotlight" className="py-12 lg:py-20 bg-gradient-to-br from-gold-50/30 via-gold-100/10 to-white dark:from-gray-950 dark:via-gold-950/20 dark:to-gray-950 overflow-hidden border-b border-gray-150 dark:border-gray-900/60">
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: copy */}
           <div className="space-y-6" data-tour="m-pos-features">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold uppercase tracking-wide">
-              <Zap className="h-3.5 w-3.5" />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-100 dark:bg-gold-950/40 text-gold-800 dark:text-gold-300 text-xs font-semibold uppercase tracking-wide border border-gold-200/50 dark:border-gold-850/40">
+              <Zap className="h-3.5 w-3.5 text-gold-500 animate-pulse" />
               <T>New feature</T>
             </div>
             <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white">
               <T>Mobile POS for every jewellery counter</T>
             </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-base max-w-md">
+            <p className="text-gray-650 dark:text-gray-300 text-sm lg:text-base max-w-md">
               <T>
                 Turn any smartphone into a jewellery POS. Serve walk-in
                 customers, check live metal trends, issue tax-ready receipts,
@@ -597,14 +595,14 @@ export function MobilePosSpotlight() {
             <ul className="space-y-3">
               {mobilePosPoints.map((point) => (
                 <li key={point} className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="h-5 w-5 text-gold-550 flex-shrink-0 mt-0.5" />
                   <span className="text-sm lg:text-base text-gray-700 dark:text-gray-300">{t(point)}</span>
                 </li>
               ))}
             </ul>
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Link href="/auth/register">
-                <Button size="lg" className="gold-gradient text-white h-11 px-7 rounded-xl text-sm">
+                <Button size="lg" className="gold-gradient text-white h-11 px-7 rounded-xl text-sm font-bold shadow-md hover:shadow-gold-500/20 active:scale-95 transition-all">
                   <T>Try Mobile POS free</T>
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -616,17 +614,17 @@ export function MobilePosSpotlight() {
           <div className="flex justify-center lg:justify-end">
             <div className="relative">
               {/* Glow */}
-              <div className="absolute inset-0 bg-amber-400/20 blur-3xl rounded-full scale-110" />
-              {/* Phone frame */}
-              <div className="relative w-64 lg:w-72 bg-gray-900 rounded-[2.5rem] p-3 shadow-2xl border-4 border-gray-800 ring-1 ring-white/10">
+              <div className="absolute inset-0 bg-gold-500/15 blur-3xl rounded-full scale-110" />
+              {/* Phone frame with smooth floating animation */}
+              <div className="relative w-64 lg:w-72 bg-gray-900 rounded-[2.5rem] p-3 shadow-2xl border-4 border-gray-800 ring-1 ring-white/10 animate-float">
                 {/* Notch */}
                 <div className="w-20 h-5 bg-gray-800 rounded-full mx-auto mb-3" />
                 {/* Screen */}
-                <div className="bg-white dark:bg-gray-100 rounded-[1.75rem] overflow-hidden">
+                <div className="bg-white dark:bg-gray-100 rounded-[1.75rem] overflow-hidden border border-gray-800/20">
                   {/* Status bar */}
-                  <div className="bg-amber-600 px-4 py-3">
-                    <p className="text-white text-xs font-semibold"><T>Mobile POS</T></p>
-                    <p className="text-amber-100 text-[10px]"><T>New Sale</T></p>
+                  <div className="gold-gradient px-4 py-3 shadow-sm">
+                    <p className="text-white text-xs font-black tracking-tight"><T>Mobile POS</T></p>
+                    <p className="text-gold-100 text-[10px] font-semibold"><T>New Sale</T></p>
                   </div>
                   {/* Item rows */}
                   <div className="p-3 space-y-2">
@@ -634,20 +632,20 @@ export function MobilePosSpotlight() {
                       { name: "22K Gold Ring", weight: "4.2g", price: "NPR 42,000" },
                       { name: "Silver Chain", weight: "12g", price: "NPR 8,400" },
                     ].map((item) => (
-                      <div key={item.name} className="flex items-center justify-between bg-amber-50 rounded-lg px-3 py-2">
+                      <div key={item.name} className="flex items-center justify-between bg-gold-50/40 rounded-lg px-3 py-2 border border-gold-100/20">
                         <div>
-                          <p className="text-[11px] font-semibold text-gray-800">{item.name}</p>
-                          <p className="text-[10px] text-gray-500">{item.weight}</p>
+                          <p className="text-[11px] font-bold text-gray-800">{item.name}</p>
+                          <p className="text-[10px] text-gray-505 font-medium">{item.weight}</p>
                         </div>
-                        <p className="text-[11px] font-bold text-amber-700">{item.price}</p>
+                        <p className="text-[11px] font-extrabold text-gold-700">{item.price}</p>
                       </div>
                     ))}
                   </div>
                   {/* Total + checkout */}
-                  <div className="mx-3 mb-3 mt-1 bg-amber-600 rounded-xl px-4 py-3 text-center">
-                    <p className="text-amber-100 text-[10px]"><T>Total</T></p>
-                    <p className="text-white font-bold text-sm">NPR 50,400</p>
-                    <p className="text-amber-200 text-[10px] mt-1"><T>Tap to issue receipt ›</T></p>
+                  <div className="mx-3 mb-3 mt-1 bg-gradient-to-r from-gold-650 to-gold-750 rounded-xl px-4 py-3 text-center shadow-inner shadow-black/10">
+                    <p className="text-gold-100 text-[10px] font-medium"><T>Total</T></p>
+                    <p className="text-white font-black text-sm">NPR 50,400</p>
+                    <p className="text-gold-250 text-[10px] font-semibold mt-1 animate-pulse"><T>Tap to issue receipt ›</T></p>
                   </div>
                 </div>
                 {/* Home bar */}
