@@ -76,7 +76,7 @@ const ESCALATION_CTA: { label: string; href: string }[] = [
 const WELCOME_MSG_PUBLIC: Message = {
   id: "welcome",
   from: "bot",
-  text: "Hi \uD83D\uDC4B I'm the Orivraa AI assistant. Ask me about pricing, features, GST, offline POS, hallmarking \u2014 or just say 'talk to a human' and I'll connect you to our founder.",
+  text: "Hi 👋 <T>I'm the Orivraa AI assistant. Ask me about pricing, features, GST, offline POS, hallmarking \u2014 or just say 'talk to a human' and I'll connect you to our founder.</T>",
 };
 
 function makeSellerWelcome(shopName?: string, firstName?: string): Message {
@@ -90,7 +90,7 @@ function makeSellerWelcome(shopName?: string, firstName?: string): Message {
   return {
     id: "welcome",
     from: "bot",
-    text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} I can see your shop\u2019s live data \u2014 ask me about this month\u2019s sales, pending invoices, tax audit status, or how to use any feature.`,
+    text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} <T>I can see your shop\u2019s live data \u2014 ask me about this month\u2019s sales, pending invoices, tax audit status, or how to use any feature.</T>`,
   };
 }
 
@@ -105,7 +105,7 @@ function makeMobileWelcome(shopName?: string, firstName?: string): Message {
   return {
     id: "welcome",
     from: "bot",
-    text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} I\u2019m your mobile POS assistant. Ask me how to bill a customer, share a quote on WhatsApp, download your tax report, log a repair, or manage savings schemes.`,
+    text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} <T>I\u2019m your mobile POS assistant. Ask me how to bill a customer, share a quote on WhatsApp, download your tax report, log a repair, or manage savings schemes.</T>`,
   };
 }
 
@@ -121,7 +121,7 @@ function makeUnverifiedWelcome(shopName?: string, daysLeft?: number, isWithinSan
     return {
       id: "welcome",
       from: "bot",
-      text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} Orivraa is running in KYC Sandbox Mode. You have ${daysLeft} ${daysLeft === 1 ? "day" : "days"} left to test POS billing and invoice creation. During this trial, printed invoices will carry a repeated diagonal watermark "DEMO BILL - NOT FOR COMMERCIAL SALE". Get verified now to enable production-ready billing, or enter a valid business Tax ID on POS forms to bypass the watermark!`,
+      text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} <T>Orivraa is running in KYC Sandbox Mode. You have ${daysLeft} ${daysLeft === 1 ? "day" : "days"} left to test POS billing and invoice creation. During this trial, printed invoices will carry a repeated diagonal watermark "DEMO BILL - NOT FOR COMMERCIAL SALE". Get verified now to enable production-ready billing, or enter a valid business Tax ID on POS forms to bypass the watermark!</T>`,
       cta: [
         { label: "Verify KYC Now", href: "/dashboard/shop/kyc" },
       ],
@@ -130,7 +130,7 @@ function makeUnverifiedWelcome(shopName?: string, daysLeft?: number, isWithinSan
     return {
       id: "welcome",
       from: "bot",
-      text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} Your KYC Sandbox period has expired and invoicing is locked. Complete your KYC business verification immediately to resume POS counter checkouts!`,
+      text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} <T>Your KYC Sandbox period has expired and invoicing is locked. Complete your KYC business verification immediately to resume POS counter checkouts!</T>`,
       cta: [
         { label: "Verify KYC Now", href: "/dashboard/shop/kyc" },
       ],
@@ -1153,7 +1153,7 @@ export function SupportBot() {
                             {c.label.toLowerCase().includes("call") && (
                               <Phone className="h-3 w-3" />
                             )}
-                            {c.label}
+                            <T>{c.label}</T>
                           </a>
                         );
                       })}
