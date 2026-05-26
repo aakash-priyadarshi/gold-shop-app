@@ -30,61 +30,66 @@ const DynamicFooter = dynamic(
 export default function SecurityTrustPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-[#0B0C10] text-gray-900 dark:text-gray-100 flex flex-col">
-      {/* Dynamic Gemini Fluid Background Animation Styles */}
+      {/* Dynamic Molten Gold River Flow Animation Styles */}
       <style jsx global>{`
-        @keyframes gemini-flow-light {
+        @keyframes gold-river-flow {
           0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
+            background-position: 200% 0;
           }
           100% {
-            background-position: 0% 50%;
+            background-position: 0% 0;
           }
         }
-        @keyframes gemini-flow-dark {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-          100% {
-            background-position: 0% 50%;
-          }
+        .gold-river-light {
+          background: linear-gradient(
+            90deg,
+            #fffdf5, /* glowing champagne */
+            #fef3c7, /* amber-100 */
+            #fde68a, /* amber-200 */
+            #fcd34d, /* amber-300 */
+            #fde68a, /* amber-200 */
+            #fffdf5  /* champagne loop */
+          );
+          background-size: 200% 100%;
+          animation: gold-river-flow 10s linear infinite;
         }
-        .gemini-bg-light {
-          background: linear-gradient(-45deg, #eef2ff, #e0e7ff, #f3e8ff, #fae8ff, #e0f2fe);
-          background-size: 400% 400%;
-          animation: gemini-flow-light 12s ease infinite;
-        }
-        .gemini-bg-dark {
-          background: linear-gradient(-45deg, #070913, #0b1129, #14112e, #1a0b36, #091322);
-          background-size: 400% 400%;
-          animation: gemini-flow-dark 15s ease infinite;
+        .gold-river-dark {
+          background: linear-gradient(
+            90deg,
+            #060402, /* pitch black gold */
+            #170e05, /* deep molten bronze */
+            #301e0a, /* liquid warm bronze */
+            #4a320f, /* shimming dark gold */
+            #170e05, /* deep molten bronze */
+            #060402  /* pitch black gold loop */
+          );
+          background-size: 200% 100%;
+          animation: gold-river-flow 12s linear infinite;
         }
       `}</style>
 
       {/* Consistent Global Navigation Header */}
       <Header />
 
-      {/* World-Class Animated Hero Section */}
-      <header className="relative overflow-hidden py-24 md:py-32 border-b border-gray-100 dark:border-gray-900/60 gemini-bg-light dark:gemini-bg-dark transition-all duration-500">
-        {/* Soft decorative background blurs */}
-        <div className="absolute top-1/4 left-1/10 w-72 h-72 rounded-full bg-blue-400/10 dark:bg-blue-500/5 blur-3xl -z-10" />
-        <div className="absolute bottom-1/4 right-1/10 w-96 h-96 rounded-full bg-purple-400/10 dark:bg-purple-500/5 blur-3xl -z-10" />
+      {/* World-Class Molten Gold River Animated Hero Section */}
+      <header className="relative overflow-hidden py-24 md:py-32 border-b border-gray-100 dark:border-gray-900/60 gold-river-light dark:gold-river-dark transition-all duration-500">
+        {/* Soft decorative background gold blurs */}
+        <div className="absolute top-1/4 left-1/10 w-72 h-72 rounded-full bg-amber-400/10 dark:bg-amber-500/5 blur-3xl -z-10 animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/10 w-96 h-96 rounded-full bg-yellow-400/10 dark:bg-yellow-500/5 blur-3xl -z-10 animate-pulse" />
 
-        <div className="max-w-4xl mx-auto px-4 text-center space-y-6">
-          <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider mx-auto backdrop-blur-sm">
-            <T>🔒 Bank-Grade Security &amp; Trust</T>
-          </Badge>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight text-gray-900 dark:text-white">
-            <T>How Orivraa Establishes</T> <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent"><T>Elite Safety</T></span> <T>for Modern Jewelers</T>
-          </h1>
-          <p className="text-base md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed font-medium">
-            <T>Precious commodities demand uncompromising cybersecurity. Orivraa integrates cloud architecture, hardware scanning protocols, and real-time ledger protection to keep your shop secure.</T>
-          </p>
+        <div className="max-w-4xl mx-auto px-4">
+          {/* Frosted Glassmorphic Hero Container */}
+          <div className="backdrop-blur-xl bg-white/40 dark:bg-black/45 border border-white/20 dark:border-white/5 rounded-3xl p-8 md:p-12 shadow-xl text-center space-y-6">
+            <Badge className="bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20 px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider mx-auto backdrop-blur-sm">
+              <T>🔒 Bank-Grade Security &amp; Trust</T>
+            </Badge>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight text-gray-900 dark:text-white">
+              <T>How Orivraa Establishes</T> <span className="bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 dark:from-amber-400 dark:via-yellow-400 dark:to-amber-400 bg-clip-text text-transparent"><T>Elite Safety</T></span> <T>for Modern Jewelers</T>
+            </h1>
+            <p className="text-base md:text-xl text-gray-700 dark:text-gray-200 max-w-2xl mx-auto leading-relaxed font-medium">
+              <T>Precious commodities demand uncompromising cybersecurity. Orivraa integrates cloud architecture, hardware scanning protocols, and real-time ledger protection to keep your shop secure.</T>
+            </p>
+          </div>
         </div>
       </header>
 
