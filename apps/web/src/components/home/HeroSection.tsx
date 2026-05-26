@@ -80,171 +80,186 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
       <div className="container mx-auto px-4 relative">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div className="space-y-6 lg:space-y-8 text-center lg:text-left">
-            <div
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-                videoSrc
-                  ? "bg-white/20 backdrop-blur-sm text-white border border-white/30"
-                  : "bg-gold-50/80 text-gold-800 border border-gold-200/50 dark:bg-gold-950/40 dark:text-gold-300 dark:border-gold-800/40"
-              }`}
-            >
-              <Sparkles className="h-4 w-4 text-gold-500 animate-spin" />
-              {t(badgeText)}
-            </div>
-            <h1
-              className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight ${
-                videoSrc ? "text-white drop-shadow-lg" : "text-gray-900 dark:text-white"
-              }`}
-            >
-              {t(headline)}
-            </h1>
-            <p
-              className={`text-base lg:text-lg max-w-lg mx-auto lg:mx-0 ${
-                videoSrc ? "text-gray-200" : "text-gray-650 dark:text-gray-300"
-              }`}
-            >
-              {t(subheadline)}
-              <span className="block mt-2 font-medium text-gold-700 dark:text-gold-400">
-                <T>Connect securely, request custom designs, and track your orders seamlessly.</T>
-              </span>
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-              <Link href="/shop">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto gold-gradient text-white h-12 px-8 rounded-xl text-base font-bold shadow-md hover:shadow-gold-500/20 active:scale-95 transition-all"
-                >
-                  <T>Browse Collection</T>
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="/rfq/create">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className={`w-full sm:w-auto h-12 px-8 rounded-xl text-base font-semibold ${
-                    videoSrc
-                      ? "bg-transparent text-white border-white/50 hover:bg-white/10"
-                      : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm rounded-xl"
-                  }`}
-                >
-                  <T>Custom Order</T>
-                </Button>
-              </Link>
-            </div>
-
-            {/* Seller nudge */}
-            <p className={`text-sm mt-4 ${videoSrc ? "text-gray-300" : "text-gray-500"}`}>
-              <T>Are you a jeweller?</T>{" "}
-              <Link
-                href="/for-sellers"
-                className={`font-semibold underline underline-offset-2 hover:no-underline ${
+            <ScrollReveal direction="assemble" delay={0.05} spring>
+              <div
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
                   videoSrc
-                    ? "text-gold-300 hover:text-gold-250"
-                    : "text-gold-650 hover:text-gold-750 dark:text-gold-400 dark:hover:text-gold-300"
+                    ? "bg-white/20 backdrop-blur-sm text-white border border-white/30"
+                    : "bg-gold-50/80 text-gold-800 border border-gold-200/50 dark:bg-gold-950/40 dark:text-gold-300 dark:border-gold-800/40"
                 }`}
               >
-                <T>Get your free shop profile →</T>
-              </Link>
-            </p>
+                <Sparkles className="h-4 w-4 text-gold-500 animate-spin" />
+                {t(badgeText)}
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="assemble" delay={0.12} spring>
+              <h1
+                className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight ${
+                  videoSrc ? "text-white drop-shadow-lg" : "text-gray-900 dark:text-white"
+                }`}
+              >
+                {t(headline)}
+              </h1>
+            </ScrollReveal>
+
+            <ScrollReveal direction="up" delay={0.2} spring>
+              <p
+                className={`text-base lg:text-lg max-w-lg mx-auto lg:mx-0 ${
+                  videoSrc ? "text-gray-200" : "text-gray-650 dark:text-gray-300"
+                }`}
+              >
+                {t(subheadline)}
+                <span className="block mt-2 font-medium text-gold-700 dark:text-gold-400">
+                  <T>Connect securely, request custom designs, and track your orders seamlessly.</T>
+                </span>
+              </p>
+            </ScrollReveal>
+
+            <ScrollReveal direction="assemble" delay={0.28} spring>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+                <Link href="/shop">
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto gold-gradient text-white h-12 px-8 rounded-xl text-base font-bold shadow-md hover:shadow-gold-500/20 active:scale-95 transition-all"
+                  >
+                    <T>Browse Collection</T>
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                <Link href="/rfq/create">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className={`w-full sm:w-auto h-12 px-8 rounded-xl text-base font-semibold ${
+                      videoSrc
+                        ? "bg-transparent text-white border-white/50 hover:bg-white/10"
+                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm rounded-xl"
+                    }`}
+                  >
+                    <T>Custom Order</T>
+                  </Button>
+                </Link>
+              </div>
+            </ScrollReveal>
+
+            {/* Seller nudge */}
+            <ScrollReveal direction="up" delay={0.38}>
+              <p className={`text-sm mt-4 ${videoSrc ? "text-gray-300" : "text-gray-500"}`}>
+                <T>Are you a jeweller?</T>{" "}
+                <Link
+                  href="/for-sellers"
+                  className={`font-semibold underline underline-offset-2 hover:no-underline ${
+                    videoSrc
+                      ? "text-gold-300 hover:text-gold-250"
+                      : "text-gold-650 hover:text-gold-750 dark:text-gold-400 dark:hover:text-gold-300"
+                  }`}
+                >
+                  <T>Get your free shop profile →</T>
+                </Link>
+              </p>
+            </ScrollReveal>
           </div>
 
           {/* Stats Card */}
           <div className="relative mt-8 lg:mt-0">
             <div className="aspect-square bg-gradient-to-br from-gold-200 to-gold-400 rounded-full opacity-20 absolute -top-10 -right-10 w-72 h-72 blur-3xl" />
-            <div
-              className={`relative rounded-2xl lg:rounded-3xl shadow-2xl p-6 lg:p-8 ${
-                videoSrc
-                  ? "bg-white/10 backdrop-blur-md border border-white/20 shadow-black/20"
-                  : "bg-white shadow-gold-500/10"
-              }`}
-            >
-              <div className="grid grid-cols-2 gap-3 lg:gap-4">
-                <div
-                  className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
-                    videoSrc
-                      ? "bg-white/10 backdrop-blur-sm"
-                      : "bg-gradient-to-br from-white/70 to-gold-50/50 dark:from-gray-900/80 dark:to-gold-950/30 border border-gray-100/50 dark:border-gray-850/50 backdrop-blur-sm shadow-sm gold-glow-hover"
-                  }`}
-                >
-                  <Gem
-                    className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-gold-600"}`}
-                  />
-                  <p
-                    className={`text-xl lg:text-2xl font-bold ${videoSrc ? "text-white" : "text-gray-900"}`}
+            <ScrollReveal direction="scale" delay={0.15} spring>
+              <div
+                className={`relative rounded-2xl lg:rounded-3xl shadow-2xl p-6 lg:p-8 ${
+                  videoSrc
+                    ? "bg-white/10 backdrop-blur-md border border-white/20 shadow-black/20"
+                    : "bg-white dark:bg-navy-900/60 border border-gray-150 dark:border-navy-850 shadow-gold-500/10"
+                }`}
+              >
+                <ScrollReveal direction="up" staggerChildren={0.08} className="grid grid-cols-2 gap-3 lg:gap-4">
+                  <div
+                    className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
+                      videoSrc
+                        ? "bg-white/10 backdrop-blur-sm"
+                        : "bg-gradient-to-br from-white/70 to-gold-50/50 dark:from-gray-900/80 dark:to-gold-950/30 border border-gray-100/50 dark:border-gray-850/50 backdrop-blur-sm shadow-sm gold-glow-hover"
+                    }`}
                   >
-                    500+
-                  </p>
-                  <p
-                    className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600"}`}
+                    <Gem
+                      className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-gold-600 dark:text-gold-400"}`}
+                    />
+                    <p
+                      className={`text-xl lg:text-2xl font-bold ${videoSrc ? "text-white" : "text-gray-900 dark:text-white"}`}
+                    >
+                      500+
+                    </p>
+                    <p
+                      className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600 dark:text-gray-400"}`}
+                    >
+                      <T>Unique Designs</T>
+                    </p>
+                  </div>
+                  <div
+                    className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
+                      videoSrc
+                        ? "bg-white/10 backdrop-blur-sm"
+                        : "bg-gradient-to-br from-white/70 to-gold-50/50 dark:from-gray-900/80 dark:to-gold-950/30 border border-gray-100/50 dark:border-gray-850/50 backdrop-blur-sm shadow-sm gold-glow-hover"
+                    }`}
                   >
-                    <T>Unique Designs</T>
-                  </p>
-                </div>
-                <div
-                  className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
-                    videoSrc
-                      ? "bg-white/10 backdrop-blur-sm"
-                      : "bg-gradient-to-br from-white/70 to-gold-50/50 dark:from-gray-900/80 dark:to-gold-950/30 border border-gray-100/50 dark:border-gray-850/50 backdrop-blur-sm shadow-sm gold-glow-hover"
-                  }`}
-                >
-                  <ShieldCheck
-                    className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-gold-600"}`}
-                  />
-                  <p
-                    className={`text-xl lg:text-2xl font-bold ${videoSrc ? "text-white" : "text-gray-900"}`}
+                    <ShieldCheck
+                      className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-gold-600 dark:text-gold-400"}`}
+                    />
+                    <p
+                      className={`text-xl lg:text-2xl font-bold ${videoSrc ? "text-white" : "text-gray-900 dark:text-white"}`}
+                    >
+                      100%
+                    </p>
+                    <p
+                      className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600 dark:text-gray-400"}`}
+                    >
+                      <T>Certified Pure</T>
+                    </p>
+                  </div>
+                  <div
+                    className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
+                      videoSrc
+                        ? "bg-white/10 backdrop-blur-sm"
+                        : "bg-gradient-to-br from-white/70 to-gold-50/50 dark:from-gray-900/80 dark:to-gold-950/30 border border-gray-100/50 dark:border-gray-850/50 backdrop-blur-sm shadow-sm gold-glow-hover"
+                    }`}
                   >
-                    100%
-                  </p>
-                  <p
-                    className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600"}`}
+                    <HeartHandshake
+                      className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-gold-600 dark:text-gold-400"}`}
+                    />
+                    <p
+                      className={`text-xl lg:text-2xl font-bold ${videoSrc ? "text-white" : "text-gray-900 dark:text-white"}`}
+                    >
+                      50+
+                    </p>
+                    <p
+                      className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600 dark:text-gray-400"}`}
+                    >
+                      <T>Trusted Sellers</T>
+                    </p>
+                  </div>
+                  <div
+                    className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
+                      videoSrc
+                        ? "bg-white/10 backdrop-blur-sm"
+                        : "bg-gradient-to-br from-white/70 to-gold-50/50 dark:from-gray-900/80 dark:to-gold-950/30 border border-gray-100/50 dark:border-gray-850/50 backdrop-blur-sm shadow-sm gold-glow-hover"
+                    }`}
                   >
-                    <T>Certified Pure</T>
-                  </p>
-                </div>
-                <div
-                  className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
-                    videoSrc
-                      ? "bg-white/10 backdrop-blur-sm"
-                      : "bg-gradient-to-br from-white/70 to-gold-50/50 dark:from-gray-900/80 dark:to-gold-950/30 border border-gray-100/50 dark:border-gray-850/50 backdrop-blur-sm shadow-sm gold-glow-hover"
-                  }`}
-                >
-                  <HeartHandshake
-                    className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-gold-600"}`}
-                  />
-                  <p
-                    className={`text-xl lg:text-2xl font-bold ${videoSrc ? "text-white" : "text-gray-900"}`}
-                  >
-                    50+
-                  </p>
-                  <p
-                    className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600"}`}
-                  >
-                    <T>Trusted Sellers</T>
-                  </p>
-                </div>
-                <div
-                  className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
-                    videoSrc
-                      ? "bg-white/10 backdrop-blur-sm"
-                      : "bg-gradient-to-br from-white/70 to-gold-50/50 dark:from-gray-900/80 dark:to-gold-950/30 border border-gray-100/50 dark:border-gray-850/50 backdrop-blur-sm shadow-sm gold-glow-hover"
-                  }`}
-                >
-                  <Star
-                    className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-gold-600"}`}
-                  />
-                  <p
-                    className={`text-xl lg:text-2xl font-bold ${videoSrc ? "text-white" : "text-gray-900"}`}
-                  >
-                    4.9
-                  </p>
-                  <p
-                    className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600"}`}
-                  >
-                    <T>Avg. Rating</T>
-                  </p>
-                </div>
+                    <Star
+                      className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-gold-600 dark:text-gold-400"}`}
+                    />
+                    <p
+                      className={`text-xl lg:text-2xl font-bold ${videoSrc ? "text-white" : "text-gray-900 dark:text-white"}`}
+                    >
+                      4.9
+                    </p>
+                    <p
+                      className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600 dark:text-gray-400"}`}
+                    >
+                      <T>Avg. Rating</T>
+                    </p>
+                  </div>
+                </ScrollReveal>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
         </div>
       </div>

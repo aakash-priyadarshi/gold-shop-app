@@ -131,25 +131,24 @@ export function BuyerSections() {
               </p>
             </ScrollReveal>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
+          <ScrollReveal direction="up" staggerChildren={0.08} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
             {features.map((f, i) => (
-              <ScrollReveal key={i} direction="up" delay={i * 0.08}>
-                <div
-                  className={`premium-card p-6 lg:p-8 gold-glow-hover border-gray-150 dark:border-gray-850 h-full ${i === 2 ? "sm:col-span-2 lg:col-span-1" : ""}`}
-                >
-                  <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gold-100 to-gold-200/40 dark:from-navy-900/30 dark:to-navy-950/20 rounded-xl flex items-center justify-center mb-4 lg:mb-6 shadow-inner animate-pulse border border-gold-200/20">
-                    <f.icon className="h-6 w-6 lg:h-7 lg:w-7 text-gold-500 dark:text-gold-400" />
-                  </div>
-                  <h3 className="text-lg lg:text-xl font-bold text-gray-900 dark:text-white mb-2 lg:mb-3">
-                    {t(f.title)}
-                  </h3>
-                  <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-base leading-relaxed">
-                    {t(f.desc)}
-                  </p>
+              <div
+                key={i}
+                className={`premium-card p-6 lg:p-8 gold-glow-hover border-gray-150 dark:border-gray-850 h-full ${i === 2 ? "sm:col-span-2 lg:col-span-1" : ""}`}
+              >
+                <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gold-100 to-gold-200/40 dark:from-navy-900/30 dark:to-navy-950/20 rounded-xl flex items-center justify-center mb-4 lg:mb-6 shadow-inner animate-pulse border border-gold-200/20">
+                  <f.icon className="h-6 w-6 lg:h-7 lg:w-7 text-gold-500 dark:text-gold-400" />
                 </div>
-              </ScrollReveal>
+                <h3 className="text-lg lg:text-xl font-bold text-gray-900 dark:text-white mb-2 lg:mb-3">
+                  {t(f.title)}
+                </h3>
+                <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-base leading-relaxed">
+                  {t(f.desc)}
+                </p>
+              </div>
             ))}
-          </div>
+          </ScrollReveal>
         </div>
       </section>
 
@@ -168,23 +167,21 @@ export function BuyerSections() {
               </p>
             </ScrollReveal>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
-            {steps.map((item, idx) => (
-              <ScrollReveal key={item.step} direction="up" delay={idx * 0.08}>
-                <div className="text-center">
-                  <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-gold-400 to-gold-500 text-white rounded-full flex items-center justify-center text-lg lg:text-2xl font-bold mx-auto mb-3 lg:mb-4 shadow-lg shadow-gold-500/30 animate-pulse">
-                    {item.step}
-                  </div>
-                  <h3 className="text-sm lg:text-lg font-bold text-gray-900 dark:text-white mb-1 lg:mb-2">
-                    {t(item.title)}
-                  </h3>
-                  <p className="text-gray-655 dark:text-gray-400 text-xs lg:text-sm">
-                    {t(item.desc)}
-                  </p>
+          <ScrollReveal direction="up" staggerChildren={0.08} className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
+            {steps.map((item) => (
+              <div key={item.step} className="text-center">
+                <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-gold-400 to-gold-500 text-white rounded-full flex items-center justify-center text-lg lg:text-2xl font-bold mx-auto mb-3 lg:mb-4 shadow-lg shadow-gold-500/30 animate-pulse">
+                  {item.step}
                 </div>
-              </ScrollReveal>
+                <h3 className="text-sm lg:text-lg font-bold text-gray-900 dark:text-white mb-1 lg:mb-2">
+                  {t(item.title)}
+                </h3>
+                <p className="text-gray-655 dark:text-gray-400 text-xs lg:text-sm">
+                  {t(item.desc)}
+                </p>
+              </div>
             ))}
-          </div>
+          </ScrollReveal>
         </div>
       </section>
     </>
@@ -263,26 +260,28 @@ export function SellerFeaturesSection() {
         </ScrollReveal>
 
         {/* Seller CTA */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 lg:gap-4">
-          <Link href="/auth/register">
-            <Button
-              size="lg"
-              className="h-12 px-8 rounded-xl text-base gold-gradient text-white"
-            >
-              <T>Start free trial</T>
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-          <Link href="/seller-guide">
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-12 px-8 rounded-xl text-base"
-            >
-              <T>See How It Works</T>
-            </Button>
-          </Link>
-        </div>
+        <ScrollReveal direction="assemble" delay={0.1} spring>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 lg:gap-4">
+            <Link href="/auth/register">
+              <Button
+                size="lg"
+                className="h-12 px-8 rounded-xl text-base gold-gradient text-white shadow-md hover:shadow-gold-500/10 active:scale-95 transition-all"
+              >
+                <T>Start free trial</T>
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/seller-guide">
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 px-8 rounded-xl text-base active:scale-95 transition-all"
+              >
+                <T>See How It Works</T>
+              </Button>
+            </Link>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );
@@ -378,7 +377,7 @@ export function SellerResourceHubSection() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
+        <ScrollReveal direction="scale" staggerChildren={0.06} className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
           {resourceCards.map((card) => (
             <Link
               key={card.href}
@@ -400,16 +399,53 @@ export function SellerResourceHubSection() {
               </span>
             </Link>
           ))}
-        </div>
+        </ScrollReveal>
 
-        <div className="mt-8 lg:mt-10 rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 lg:p-8 shadow-sm">
-          <div className="grid lg:grid-cols-[1.35fr_0.65fr] gap-8">
-            <div>
+        <ScrollReveal direction="up" delay={0.1}>
+          <div className="mt-8 lg:mt-10 rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 lg:p-8 shadow-sm">
+            <div className="grid lg:grid-cols-[1.35fr_0.65fr] gap-8">
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                  <T>Software pages worth visiting</T>
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  {softwareLinks.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:border-gold-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
+                    >
+                      {t(item.label)}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                  <T>Popular comparison pages</T>
+                </p>
+                <div className="space-y-2">
+                  {comparisonLinks.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="flex items-center justify-between rounded-2xl border border-gray-200 dark:border-gray-800 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:border-gold-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
+                    >
+                      <span>{t(item.label)}</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
               <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                <T>Software pages worth visiting</T>
+                <T>Country compliance guides</T>
               </p>
               <div className="flex flex-wrap gap-2.5">
-                {softwareLinks.map((item) => (
+                {countryGuideLinks.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
@@ -421,59 +457,24 @@ export function SellerResourceHubSection() {
               </div>
             </div>
 
-            <div>
+            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
               <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                <T>Popular comparison pages</T>
+                <T>Country-specific software pages</T>
               </p>
-              <div className="space-y-2">
-                {comparisonLinks.map((item) => (
+              <div className="flex flex-wrap gap-2.5">
+                {countryHubLinks.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center justify-between rounded-2xl border border-gray-200 dark:border-gray-800 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:border-gold-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
+                    className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:border-gold-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
                   >
-                    <span>{t(item.label)}</span>
-                    <ArrowRight className="h-4 w-4" />
+                    {t(item.label)}
                   </Link>
                 ))}
               </div>
             </div>
           </div>
-
-          <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              <T>Country compliance guides</T>
-            </p>
-            <div className="flex flex-wrap gap-2.5">
-              {countryGuideLinks.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:border-gold-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
-                >
-                  {t(item.label)}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              <T>Country-specific software pages</T>
-            </p>
-            <div className="flex flex-wrap gap-2.5">
-              {countryHubLinks.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:border-gold-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
-                >
-                  {t(item.label)}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
+        </ScrollReveal>
       </div>
     </section>
   );
@@ -499,7 +500,7 @@ export function BlogSection() {
             </T>
           </p>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
+        <ScrollReveal direction="up" staggerChildren={0.08} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
           {BLOG_POSTS.slice(0, 3).map((post) => (
             <Link
               key={post.slug}
@@ -546,7 +547,7 @@ export function BlogSection() {
               </div>
             </Link>
           ))}
-        </div>
+        </ScrollReveal>
         <div className="text-center mt-8">
           <Link href="/blog">
             <Button variant="outline" className="rounded-xl h-11 px-6">
@@ -619,18 +620,18 @@ export function MobilePosSpotlight() {
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: copy */}
           <div className="space-y-6" data-tour="m-pos-features">
-            <ScrollReveal direction="up" delay={0.05}>
+            <ScrollReveal direction="assemble" delay={0.05} spring>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-500/10 text-gold-400 text-xs font-semibold uppercase tracking-wide border border-gold-500/20">
                 <Zap className="h-3.5 w-3.5 text-gold-400 animate-pulse" />
                 <T>New feature</T>
               </div>
             </ScrollReveal>
-            <ScrollReveal direction="up" delay={0.12}>
+            <ScrollReveal direction="assemble" delay={0.12} spring>
               <h2 className="text-2xl lg:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
                 <T>Mobile POS for every jewellery counter</T>
               </h2>
             </ScrollReveal>
-            <ScrollReveal direction="up" delay={0.18}>
+            <ScrollReveal direction="up" delay={0.18} spring>
               <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-base max-w-md leading-relaxed">
                 <T>
                   Turn any smartphone into a jewellery POS. Serve walk-in
@@ -639,17 +640,15 @@ export function MobilePosSpotlight() {
                 </T>
               </p>
             </ScrollReveal>
-            <ScrollReveal direction="up" delay={0.24}>
-              <ul className="space-y-3">
-                {mobilePosPoints.map((point) => (
-                  <li key={point} className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-gold-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm lg:text-base text-gray-700 dark:text-gray-300">{t(point)}</span>
-                  </li>
-                ))}
-              </ul>
+            <ScrollReveal direction="up" staggerChildren={0.06} className="space-y-3" delay={0.24}>
+              {mobilePosPoints.map((point) => (
+                <div key={point} className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-gold-400 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm lg:text-base text-gray-700 dark:text-gray-300">{t(point)}</span>
+                </div>
+              ))}
             </ScrollReveal>
-            <ScrollReveal direction="up" delay={0.3}>
+            <ScrollReveal direction="assemble" delay={0.32} spring>
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Link href="/auth/register">
                   <Button size="lg" className="bg-gold-500 hover:bg-gold-600 text-navy-950 h-11 px-7 rounded-xl text-sm font-bold shadow-md active:scale-95 transition-all border-none">

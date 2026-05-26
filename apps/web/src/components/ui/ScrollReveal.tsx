@@ -5,26 +5,35 @@ import { motion, type Variants } from "framer-motion";
 
 interface ScrollRevealProps {
   children: React.ReactNode;
-  direction?: "up" | "down" | "left" | "right" | "none" | "scale" | "assemble";
+  direction?: "up" | "down" | "left" | "right" | "none" | "scale" | "assemble" | "fade";
   delay?: number;
   duration?: number;
   className?: string;
   distance?: number;
-  /** Use spring physics for a more organic, bouncy feel. */
+  /** Use spring physics for a more organic, bouncy feel. Default is true. */
   spring?: boolean;
   /** When true, each direct child is staggered automatically. */
   staggerChildren?: number;
+  /** Whether the animation should trigger only once. Default is false (bidirectional). */
+  once?: boolean;
+  /** Viewport margin to trigger the animation, e.g. "-10% 0px -10% 0px" */
+  margin?: string;
+  /** Amount of element that needs to be inside the viewport to trigger. Default is 0.1 */
+  amount?: number | "some" | "all";
 }
 
 /**
- * High-performance scroll-triggered reveal wrapper using Framer Motion.
+ * World-class scroll-triggered reveal wrapper using Framer Motion.
  *
- * Supports:
- * - Standard directions: up / down / left / right / none
- * - `scale` — element grows from 0.85→1.0 with fade
- * - `assemble` — elements translate from a larger offset (50px) with scale + spring
- * - `staggerChildren` — auto-stagger direct children
- * - `spring` — organic spring physics instead of tween easing
+ * Supports bidirectional transitions:
+ * - Dynamic spring entrance animations (e.g. stiffness 120, damping 20) when scrolling into view.
+ * - Fast, smooth, lag-free exit transitions (tween, 0.25s) when scrolling out of view.
+ *
+ * Variants:
+ * - `up` / `down` / `left` / `right` — Standard directional reveals.
+ * - `scale` — Scales from 0.85 to 1.0 with a soft fade-in.
+ * - `assemble` — Helix-style kinetic transition (rotation, scale shift, and larger slide).
+ * - `fade` — Clean opacity-only fade-in.
  */
 export function ScrollReveal({
   children,
@@ -33,8 +42,11 @@ export function ScrollReveal({
   duration = 0.6,
   className = "",
   distance = 30,
-  spring = false,
+  spring = true,
   staggerChildren,
+  once = false,
+  margin = "-12% 0px -12% 0px",
+  amount = 0.1,
 }: ScrollRevealProps) {
 
   // ── Container Variant (for stagger orchestration) ──
@@ -50,8 +62,8 @@ export function ScrollReveal({
 
   // ── Item Variant (for individual element animation) ──
   const getItemVariants = (): Variants => {
-    const hidden: Record<string, number> = { opacity: 0, x: 0, y: 0 };
-    const visible: Record<string, number> = { opacity: 1, x: 0, y: 0 };
+    const hidden: Record<string, any> = { opacity: 0, x: 0, y: 0 };
+    const visible: Record<string, any> = { opacity: 1, x: 0, y: 0 };
 
     switch (direction) {
       case "up":
@@ -68,30 +80,45 @@ export function ScrollReveal({
         break;
       case "scale":
         hidden.y = 15;
-        (hidden as any).scale = 0.85;
-        (visible as any).scale = 1;
+        hidden.scale = 0.85;
+        visible.scale = 1;
         break;
       case "assemble":
-        hidden.y = 50;
-        (hidden as any).scale = 0.9;
-        (hidden as any).rotate = -1;
-        (visible as any).scale = 1;
-        (visible as any).rotate = 0;
+        hidden.y = 65;
+        hidden.scale = 0.92;
+        hidden.rotate = -2.5;
+        visible.scale = 1;
+        visible.rotate = 0;
         break;
+      case "fade":
       case "none":
       default:
         break;
     }
 
-    const transition = spring
-      ? { type: "spring" as const, damping: 25, stiffness: 200, delay: staggerChildren ? 0 : delay }
+    // High-fidelity bouncy spring physics for entry
+    const enterTransition = spring
+      ? { type: "spring" as const, damping: 20, stiffness: 120, delay: staggerChildren ? 0 : delay }
       : { duration, delay: staggerChildren ? 0 : delay, ease: [0.21, 1.02, 0.43, 1.01] as any };
+
+    // Fast, clean, lag-free tween transition for scroll-away resets
+    const exitTransition = {
+      type: "tween" as const,
+      duration: 0.25,
+      ease: "easeOut",
+    };
+
+    hidden.transition = exitTransition;
+    visible.transition = enterTransition;
 
     return {
       hidden,
-      visible: { ...visible, transition },
+      visible,
     };
   };
+
+  // Viewport configuration
+  const viewportConfig = { once, margin, amount };
 
   // ── Stagger mode: wrap children individually ──
   if (staggerChildren && staggerChildren > 0) {
@@ -100,7 +127,7 @@ export function ScrollReveal({
       <motion.div
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: "-8% 0px -8% 0px" }}
+        viewport={viewportConfig}
         variants={containerVariants}
         className={className}
       >
@@ -117,7 +144,7 @@ export function ScrollReveal({
     <motion.div
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: "-10% 0px -10% 0px" }}
+      viewport={viewportConfig}
       variants={variants}
       className={className}
     >
@@ -125,3 +152,4 @@ export function ScrollReveal({
     </motion.div>
   );
 }
+
