@@ -300,11 +300,19 @@ export function SupportBot() {
         const isFreePlan = !planName || currentPlan.includes("free") || currentPlan.includes("trial");
 
         if (isFreePlan) {
-          // 50% chance to remind about upgrading to Pro
+          // 50% chance to remind about upgrading to Pro with different high-value feature callouts
           if (Math.random() > 0.5) {
-            text = "<T>You are on the Free Plan! Upgrade to Pro to download tax reports without watermarking! 🚀</T>";
-            state = "crown";
-            animation = "excited";
+            const upsells = [
+              { state: "crown" as const, text: "<T>You are on the Free Plan! Upgrade to Pro to download tax reports without watermarking! 🚀</T>", animation: "excited" as const },
+              { state: "gold_bar" as const, text: "<T>Running slow internet? Upgrade to Pro to unlock continuous offline POS database sync! ⚡</T>", animation: "spin" as const },
+              { state: "diamond" as const, text: "<T>Want deeper RAG analysis? Upgrade to Pro to get 10x more AI Sales forecasting credits monthly! 📈</T>", animation: "bounce" as const },
+              { state: "ring" as const, text: "<T>Impress your clients! Upgrade to Pro to connect your custom domain and remove invoice branding! 🏷️</T>", animation: "spin" as const },
+              { state: "crown" as const, text: "<T>Automate your sales! Upgrade to Pro to enable instant automated WhatsApp invoice sharing! 💬</T>", animation: "excited" as const },
+            ];
+            const action = upsells[Math.floor(Math.random() * upsells.length)];
+            text = action.text;
+            state = action.state;
+            animation = action.animation;
           } else {
             // General dashboard cheer
             const dashboardActions = [
