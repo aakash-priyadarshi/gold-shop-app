@@ -430,7 +430,7 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
                 {!videoSrc && (
                   <div
                     className="absolute inset-0 bg-cover bg-center opacity-[0.06] dark:opacity-[0.08] -z-10 mix-blend-luminosity scale-105"
-                    style={{ backgroundImage: `url('/hasan-mrad-9Foi-h8zmIU-unsplash.jpg')` }}
+                    style={{ backgroundImage: `url('https://images.orivraa.com/images/public/hasan-mrad-9Foi-h8zmIU-unsplash.jpg')` }}
                   />
                 )}
                 <ScrollReveal direction="up" staggerChildren={0.08} className="grid grid-cols-2 gap-3 lg:gap-4 relative z-10">

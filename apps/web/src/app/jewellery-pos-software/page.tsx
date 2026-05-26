@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import {
     RegionalPricingSnapshot,
 } from "@/components/marketing/RegionalPricingSnapshot";
+import { FaqSection } from "@/components/ui/FaqSection";
 import { T } from "@/components/ui/T";
 import {
     ArrowRight,
@@ -586,47 +587,34 @@ export default function JewelleryPosSoftwarePage() {
               <T>Frequently Asked Questions</T>
             </h2>
             <div className="space-y-4">
-              {[
-                {
-                  q: "What makes jewellery POS different from regular POS?",
-                  a: "Jewellery POS handles weight-based pricing, purity calculations, making charges per gram, old gold exchange, and jewellery-specific tax rules (e.g., 3% GST on gold in India). Regular POS systems only support fixed-price billing.",
-                },
-                {
-                  q: "Can I use Orivraa POS on a tablet at the counter?",
-                  a: "Yes. Orivraa is fully responsive and works on tablets, laptops, and desktops. The POS interface is optimised for touch screens as well as mouse/keyboard.",
-                },
-                {
-                  q: "Does it handle HUID number tracking?",
-                  a: "Yes. You can store HUID (Hallmark Unique Identification) numbers for each product and scan them during billing for instant product lookup and compliance tracking.",
-                },
-                {
-                  q: "Can I accept multiple payment methods in one transaction?",
-                  a: "Absolutely. Split a bill between cash, card, UPI, bank transfer, and old gold exchange — all in a single transaction.",
-                },
-                {
-                  q: "Is there an offline mode?",
-                  a: "The Orivraa desktop app (Windows/macOS) supports local caching for essential POS functionality. However, full features require internet connectivity for real-time sync.",
-                },
-                {
-                  q: "How do I handle returns and exchanges?",
-                  a: "Orivraa POS supports full return processing with weight verification, exchange calculations, and refund tracking. Returns are linked to the original invoice for audit trails.",
-                },
-              ].map((faq) => (
-                <details
-                  key={faq.q}
-                  className="group bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300"
-                >
-                  <summary className="flex items-center justify-between px-6 py-4 cursor-pointer font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
-                    <T>{faq.q}</T>
-                    <ArrowRight className="h-4 w-4 text-gray-400 group-open:rotate-90 transition-transform duration-300 shrink-0 ml-4" />
-                  </summary>
-                  <div className="px-6 pb-4 animate-slideUp">
-                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                      <T>{faq.a}</T>
-                    </p>
-                  </div>
-                </details>
-              ))}
+              <FaqSection
+                faqs={[
+                  {
+                    q: "What makes jewellery POS different from regular POS?",
+                    a: "Jewellery POS handles weight-based pricing, purity calculations, making charges per gram, old gold exchange, and jewellery-specific tax rules (e.g., 3% GST on gold in India). Regular POS systems only support fixed-price billing.",
+                  },
+                  {
+                    q: "Can I use Orivraa POS on a tablet at the counter?",
+                    a: "Yes. Orivraa is fully responsive and works on tablets, laptops, and desktops. The POS interface is optimised for touch screens as well as mouse/keyboard.",
+                  },
+                  {
+                    q: "Does it handle HUID number tracking?",
+                    a: "Yes. You can store HUID (Hallmark Unique Identification) numbers for each product and scan them during billing for instant product lookup and compliance tracking.",
+                  },
+                  {
+                    q: "Can I accept multiple payment methods in one transaction?",
+                    a: "Absolutely. Split a bill between cash, card, UPI, bank transfer, and old gold exchange — all in a single transaction.",
+                  },
+                  {
+                    q: "Is there an offline mode?",
+                    a: "The Orivraa desktop app (Windows/macOS) supports local caching for essential POS functionality. However, full features require internet connectivity for real-time sync.",
+                  },
+                  {
+                    q: "How do I handle returns and exchanges?",
+                    a: "Orivraa POS supports full return processing with weight verification, exchange calculations, and refund tracking. Returns are linked to the original invoice for audit trails.",
+                  },
+                ]}
+              />
             </div>
           </div>
         </section>

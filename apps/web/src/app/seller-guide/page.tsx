@@ -3,6 +3,7 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
+import { FaqSection } from "@/components/ui/FaqSection";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import {
@@ -336,22 +337,7 @@ export default function SellerGuidePage() {
             </h2>
           </div>
           <div className="space-y-3">
-            {FAQS.map((faq, i) => (
-              <details
-                key={i}
-                className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden"
-              >
-                <summary className="flex items-center justify-between cursor-pointer px-6 py-4 font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors list-none [&::-webkit-details-marker]:hidden">
-                  <T>{faq.q}</T>
-                  <span className="ml-4 text-gray-400 group-open:rotate-180 transition-transform">
-                    ▾
-                  </span>
-                </summary>
-                <div className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  <T>{faq.a}</T>
-                </div>
-              </details>
-            ))}
+            <FaqSection faqs={FAQS} />
           </div>
         </section>
 

@@ -1,6 +1,7 @@
 "use client";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { FaqSection } from "@/components/ui/FaqSection";
 import {
     BUYER_COUNTRY_COUNT,
     RegionalPricingSnapshot,
@@ -496,45 +497,34 @@ export default function JewelleryEcommerceSoftwarePage() {
               <T>Frequently Asked Questions</T>
             </h2>
             <div className="space-y-4">
-              {[
-                {
-                  q: "Do I need to build my own website?",
-                  a: "No. Orivraa gives you a dedicated shop profile on our marketplace. Buyers discover your products through search, categories, and location filters. You can share your shop link on social media and WhatsApp.",
-                },
-                {
-                  q: "What commission does Orivraa charge on sales?",
-                  a: "Orivraa charges a minimal 1% platform fee on completed transactions. There are no listing fees, no hidden charges, and no monthly minimums on the Free plan.",
-                },
-                {
-                  q: "Can I sell internationally?",
-                  a: "Yes. Your products are visible to buyers in Nepal, India, UAE, USA, UK, and Europe. Prices are automatically shown in the buyer's local currency.",
-                },
-                {
-                  q: "How do I handle shipping for jewellery?",
-                  a: "You manage shipping through your preferred courier. Orivraa provides order details and buyer addresses. For high-value items, we recommend insured courier services.",
-                },
-                {
-                  q: "Can I create a digital catalogue to share on WhatsApp?",
-                  a: "Yes! Create and customise digital catalogues from your product collection. Share the catalogue link on WhatsApp, Instagram, Facebook, or via email.",
-                },
-                {
-                  q: "What if I already have a website?",
-                  a: "You can use Orivraa as an additional sales channel alongside your existing website. The marketplace gives you extra visibility and access to Orivraa's buyer base.",
-                },
-              ].map((faq) => (
-                <details
-                  key={faq.q}
-                  className="group bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-                >
-                  <summary className="flex items-center justify-between px-6 py-4 cursor-pointer font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
-                    <T>{faq.q}</T>
-                    <ArrowRight className="h-4 w-4 text-gray-400 group-open:rotate-90 transition-transform shrink-0 ml-4" />
-                  </summary>
-                  <p className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    <T>{faq.a}</T>
-                  </p>
-                </details>
-              ))}
+              <FaqSection
+                faqs={[
+                  {
+                    q: "Do I need to build my own website?",
+                    a: "No. Orivraa gives you a dedicated shop profile on our marketplace. Buyers discover your products through search, categories, and location filters. You can share your shop link on social media and WhatsApp.",
+                  },
+                  {
+                    q: "What commission does Orivraa charge on sales?",
+                    a: "Orivraa charges a minimal 1% platform fee on completed transactions. There are no listing fees, no hidden charges, and no monthly minimums on the Free plan.",
+                  },
+                  {
+                    q: "Can I sell internationally?",
+                    a: "Yes. Your products are visible to buyers in Nepal, India, UAE, USA, UK, and Europe. Prices are automatically shown in the buyer's local currency.",
+                  },
+                  {
+                    q: "How do I handle shipping for jewellery?",
+                    a: "You manage shipping through your preferred courier. Orivraa provides order details and buyer addresses. For high-value items, we recommend insured courier services.",
+                  },
+                  {
+                    q: "Can I create a digital catalogue to share on WhatsApp?",
+                    a: "Yes! Create and customise digital catalogues from your product collection. Share the catalogue link on WhatsApp, Instagram, Facebook, or via email.",
+                  },
+                  {
+                    q: "What if I already have a website?",
+                    a: "You can use Orivraa as an additional sales channel alongside your existing website. The marketplace gives you extra visibility and access to Orivraa's buyer base.",
+                  },
+                ]}
+              />
             </div>
           </div>
         </section>

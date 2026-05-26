@@ -228,9 +228,9 @@ export function SellerFeaturesSection() {
           {shopFeatures.map((feature, idx) => {
             // Curated goldsmith workshop & jewellery assets
             const featureImages: Record<string, string> = {
-              "Smart Dashboard": "/hasan-mrad-9Foi-h8zmIU-unsplash.jpg",
-              "Inventory & Catalogue": "/amy-vann-85-6iMn5L8g-unsplash (1).jpg",
-              "Mobile POS — Sell Anywhere": "/amy-vann-85-6iMn5L8g-unsplash (1).jpg",
+              "Smart Dashboard": "https://images.orivraa.com/images/public/hasan-mrad-9Foi-h8zmIU-unsplash.jpg",
+              "Inventory & Catalogue": "https://images.orivraa.com/images/public/carlos-esteves-1MWbwTaeJIA-unsplash.jpg",
+              "Mobile POS — Sell Anywhere": "https://images.orivraa.com/images/public/sayan-bhaskar-U0nWBqGsTMk-unsplash.jpg",
             };
             const bgImage = featureImages[feature.title];
 
@@ -615,7 +615,11 @@ const mobilePosPoints = [
 export function MobilePosSpotlight() {
   const t = useT();
   return (
-    <section id="mobile-pos" data-tour="m-pos-spotlight" className="py-12 lg:py-20 bg-gradient-to-br from-[#faf6f0] via-white to-[#faf6f0] dark:from-[#070e15] dark:via-[#0b1420] dark:to-[#070e15] overflow-hidden border-b border-gray-150 dark:border-gray-900/60">
+    <section id="mobile-pos" data-tour="m-pos-spotlight" className="relative py-12 lg:py-20 bg-gradient-to-br from-[#faf6f0] via-white to-[#faf6f0] dark:from-[#070e15] dark:via-[#0b1420] dark:to-[#070e15] overflow-hidden border-b border-gray-150 dark:border-gray-900/60 z-10">
+      <div 
+        className="absolute inset-0 bg-cover bg-center opacity-[0.03] dark:opacity-[0.05] -z-10 mix-blend-luminosity scale-105 animate-pulse"
+        style={{ backgroundImage: `url('https://images.orivraa.com/images/public/nexaro-studio-vbsN7MUXyT4-unsplash.jpg')` }}
+      />
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: copy */}

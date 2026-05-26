@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { FaqSection } from "@/components/ui/FaqSection";
 import { T } from "@/components/ui/T";
 import {
   ArrowRight,
@@ -534,20 +535,7 @@ export default function USJewelryStoreSoftwarePage() {
               <T>Frequently Asked Questions</T>
             </h2>
             <div className="space-y-4">
-              {FAQS.map((faq) => (
-                <details
-                  key={faq.q}
-                  className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-                >
-                  <summary className="flex items-center justify-between px-6 py-4 cursor-pointer font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                    <T>{faq.q}</T>
-                    <ArrowRight className="h-4 w-4 text-gray-400 group-open:rotate-90 transition-transform shrink-0 ml-4" />
-                  </summary>
-                  <p className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    <T>{faq.a}</T>
-                  </p>
-                </details>
-              ))}
+              <FaqSection faqs={FAQS} />
             </div>
           </div>
         </section>

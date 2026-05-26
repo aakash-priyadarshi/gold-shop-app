@@ -772,7 +772,7 @@ export function Header() {
                       >
                         <div
                           className="absolute inset-0 bg-cover bg-center"
-                          style={{ backgroundImage: `url('/hasan-mrad-9Foi-h8zmIU-unsplash.jpg')` }}
+                          style={{ backgroundImage: `url('https://images.orivraa.com/images/public/hasan-mrad-9Foi-h8zmIU-unsplash.jpg')` }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-gray-950/90 via-gray-950/50 to-gray-950/20" />
                         <div className="relative p-5 flex flex-col justify-end min-h-[240px]">
@@ -861,7 +861,7 @@ export function Header() {
                     >
                       <div
                         className="h-36 bg-cover bg-center"
-                        style={{ backgroundImage: `url('/amy-vann-85-6iMn5L8g-unsplash (1).jpg')` }}
+                        style={{ backgroundImage: `url('https://images.orivraa.com/images/public/amy-vann-85-6iMn5L8g-unsplash (1).jpg')` }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-gray-950/30 to-transparent" />
                       <div className="absolute bottom-3 left-4 right-4">
