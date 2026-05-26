@@ -79,28 +79,49 @@ const WELCOME_MSG_PUBLIC: Message = {
   text: "Hi \uD83D\uDC4B I'm the Orivraa AI assistant. Ask me about pricing, features, GST, offline POS, hallmarking \u2014 or just say 'talk to a human' and I'll connect you to our founder.",
 };
 
-function makeSellerWelcome(shopName?: string): Message {
+function makeSellerWelcome(shopName?: string, firstName?: string): Message {
+  const nameStr = firstName && shopName 
+    ? `${firstName} from ${shopName}` 
+    : firstName 
+    ? firstName 
+    : shopName 
+    ? shopName 
+    : "";
   return {
     id: "welcome",
     from: "bot",
-    text: `Hi ${shopName ? shopName + " \uD83D\uDC4B" : "\uD83D\uDC4B"} I can see your shop\u2019s live data \u2014 ask me about this month\u2019s sales, pending invoices, tax audit status, or how to use any feature.`,
+    text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} I can see your shop\u2019s live data \u2014 ask me about this month\u2019s sales, pending invoices, tax audit status, or how to use any feature.`,
   };
 }
 
-function makeMobileWelcome(shopName?: string): Message {
+function makeMobileWelcome(shopName?: string, firstName?: string): Message {
+  const nameStr = firstName && shopName 
+    ? `${firstName} from ${shopName}` 
+    : firstName 
+    ? firstName 
+    : shopName 
+    ? shopName 
+    : "";
   return {
     id: "welcome",
     from: "bot",
-    text: `Hi ${shopName ? shopName + " \uD83D\uDC4B" : "\uD83D\uDC4B"} I\u2019m your mobile POS assistant. Ask me how to bill a customer, share a quote on WhatsApp, download your tax report, log a repair, or manage savings schemes.`,
+    text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} I\u2019m your mobile POS assistant. Ask me how to bill a customer, share a quote on WhatsApp, download your tax report, log a repair, or manage savings schemes.`,
   };
 }
 
-function makeUnverifiedWelcome(shopName?: string, daysLeft?: number, isWithinSandbox?: boolean): Message {
+function makeUnverifiedWelcome(shopName?: string, daysLeft?: number, isWithinSandbox?: boolean, firstName?: string): Message {
+  const nameStr = firstName && shopName 
+    ? `${firstName} from ${shopName}` 
+    : firstName 
+    ? firstName 
+    : shopName 
+    ? shopName 
+    : "";
   if (isWithinSandbox) {
     return {
       id: "welcome",
       from: "bot",
-      text: `Hi ${shopName ? shopName + " 👋" : "👋"} Orivraa is running in KYC Sandbox Mode. You have ${daysLeft} ${daysLeft === 1 ? "day" : "days"} left to test POS billing and invoice creation. During this trial, printed invoices will carry a repeated diagonal watermark "DEMO BILL - NOT FOR COMMERCIAL SALE". Get verified now to enable production-ready billing, or enter a valid business Tax ID on POS forms to bypass the watermark!`,
+      text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} Orivraa is running in KYC Sandbox Mode. You have ${daysLeft} ${daysLeft === 1 ? "day" : "days"} left to test POS billing and invoice creation. During this trial, printed invoices will carry a repeated diagonal watermark "DEMO BILL - NOT FOR COMMERCIAL SALE". Get verified now to enable production-ready billing, or enter a valid business Tax ID on POS forms to bypass the watermark!`,
       cta: [
         { label: "Verify KYC Now", href: "/dashboard/shop/kyc" },
       ],
@@ -109,7 +130,7 @@ function makeUnverifiedWelcome(shopName?: string, daysLeft?: number, isWithinSan
     return {
       id: "welcome",
       from: "bot",
-      text: `Hi ${shopName ? shopName + " 👋" : "👋"} Your KYC Sandbox period has expired and invoicing is locked. Complete your KYC business verification immediately to resume POS counter checkouts!`,
+      text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} Your KYC Sandbox period has expired and invoicing is locked. Complete your KYC business verification immediately to resume POS counter checkouts!`,
       cta: [
         { label: "Verify KYC Now", href: "/dashboard/shop/kyc" },
       ],
@@ -450,13 +471,13 @@ export function SupportBot() {
     setMessages((prev) => {
       if (prev.length === 1 && prev[0].id === "welcome") {
         if (!isVerified) {
-          return [makeUnverifiedWelcome(shopName, daysLeft, isWithinSandbox)];
+          return [makeUnverifiedWelcome(shopName, daysLeft, isWithinSandbox, user?.firstName)];
         }
-        return [isMobile ? makeMobileWelcome(shopName) : makeSellerWelcome(shopName)];
+        return [isMobile ? makeMobileWelcome(shopName, user?.firstName) : makeSellerWelcome(shopName, user?.firstName)];
       }
       return prev;
     });
-  }, [isSellerLoggedIn, shopName, isMobile, isVerified, daysLeft, isWithinSandbox]);
+  }, [isSellerLoggedIn, shopName, isMobile, isVerified, daysLeft, isWithinSandbox, user?.firstName]);
 
   // Persist conversation and open state across navigations / open-close
   useEffect(() => {
@@ -492,7 +513,26 @@ export function SupportBot() {
       const endpoint = isSellerLoggedIn ? "/tickets/seller-chat" : "/tickets/ai-chat";
       const res = await api.post<{ reply: string; shouldEscalate: boolean; confidence: number }>(
         endpoint,
-        { message: text, history, sessionId: getOrCreateSessionId(), currentPath: pathname, dashboardMode },
+        { 
+          message: text, 
+          history, 
+          sessionId: getOrCreateSessionId(), 
+          currentPath: pathname, 
+          dashboardMode,
+          // Enrich chatbot request with comprehensive live user and plan context:
+          userContext: {
+            isSellerLoggedIn,
+            role: user?.role,
+            firstName: user?.firstName,
+            lastName: user?.lastName,
+            email: user?.email,
+            shopName: shopName,
+            planName: planName,
+            isVerified: isVerified,
+            daysLeft: daysLeft,
+            isWithinSandbox: isWithinSandbox
+          }
+        },
       );
 
       const botMsg: Message = {
