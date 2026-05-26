@@ -168,7 +168,7 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
 
   // Support & Integration
   freeAiChatbot: {
-    label: "Orivraa AI Support Bot (Free on all plans)",
+    label: "Orivraa AI Assistant",
     category: "Support & Integration",
   },
   prioritySupport: {
@@ -383,8 +383,8 @@ const FAQ_ITEMS = [
     a: "Yes! The Free plan lets you list products on the marketplace at no cost, forever. Upgrade only when you need CRM features or more listings.",
   },
   {
-    q: "Is the Orivraa AI Chatbot really free on all plans?",
-    a: "Yes! The Orivraa AI Support Bot is included for free on every single plan, including the Free plan. It serves as your personal 24/7 jewelry store advisor to help you calculate vault values from the Stock Ledger, track Karigar wastage limits, parse supply chain floats, and manage sales invoices instantly.",
+    q: "Is the Orivraa AI Assistant really free on all plans?",
+    a: "Yes! The Orivraa AI Assistant is included for free on every single plan, including the Free plan. It serves as your personal 24/7 jewellery business co-pilot to help you calculate live vault values, track Karigar gold outstanding float sheets, manage bullion wastage limits, and access deep business sales analytics instantly. It is free forever, with no hidden costs.",
   },
   {
     q: "What's the difference between Pro and Pro+?",
@@ -933,7 +933,7 @@ export default function PricingPage() {
                     {/* Features */}
                     <div className="mt-6 space-y-3">
                       {features.map((f, i) => {
-                        const isAiBot = f.text.includes("AI Support Bot");
+                        const isAiBot = f.text.includes("AI Assistant");
                         return (
                           <div key={i} className={`flex items-start gap-3 p-1.5 rounded-lg transition-all ${
                             isAiBot 
@@ -948,7 +948,7 @@ export default function PricingPage() {
                             <span
                               className={`text-sm ${
                                 isAiBot
-                                  ? "text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5"
+                                  ? "text-amber-700 dark:text-amber-400 font-bold flex flex-wrap items-center gap-1.5"
                                   : f.included
                                     ? "text-gray-700 dark:text-gray-300"
                                     : "text-gray-400 dark:text-gray-600"
@@ -956,8 +956,8 @@ export default function PricingPage() {
                             >
                               <T>{f.text}</T>
                               {isAiBot && (
-                                <span className="text-[10px] uppercase tracking-wider bg-amber-500 text-white font-extrabold px-1.5 py-0.5 rounded-md shrink-0">
-                                  <T>USP</T>
+                                <span className="text-[10px] uppercase tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 text-white font-extrabold px-1.5 py-0.5 rounded-md shrink-0 shadow-sm">
+                                  <T>Free Forever</T>
                                 </span>
                               )}
                             </span>
