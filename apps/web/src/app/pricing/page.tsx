@@ -932,24 +932,38 @@ export default function PricingPage() {
 
                     {/* Features */}
                     <div className="mt-6 space-y-3">
-                      {features.map((f, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          {f.included ? (
-                            <Check className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" />
-                          ) : (
-                            <X className="h-4 w-4 mt-0.5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
-                          )}
-                          <span
-                            className={`text-sm ${
-                              f.included
-                                ? "text-gray-700 dark:text-gray-300"
-                                : "text-gray-400 dark:text-gray-600"
-                            }`}
-                          >
-                            <T>{f.text}</T>
-                          </span>
-                        </div>
-                      ))}
+                      {features.map((f, i) => {
+                        const isAiBot = f.text.includes("AI Support Bot");
+                        return (
+                          <div key={i} className={`flex items-start gap-3 p-1.5 rounded-lg transition-all ${
+                            isAiBot 
+                              ? "bg-amber-500/10 border border-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.05)]" 
+                              : ""
+                          }`}>
+                            {f.included ? (
+                              <Check className={`h-4 w-4 mt-0.5 flex-shrink-0 ${isAiBot ? "text-amber-500" : "text-green-500"}`} />
+                            ) : (
+                              <X className="h-4 w-4 mt-0.5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                            )}
+                            <span
+                              className={`text-sm ${
+                                isAiBot
+                                  ? "text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5"
+                                  : f.included
+                                    ? "text-gray-700 dark:text-gray-300"
+                                    : "text-gray-400 dark:text-gray-600"
+                              }`}
+                            >
+                              <T>{f.text}</T>
+                              {isAiBot && (
+                                <span className="text-[10px] uppercase tracking-wider bg-amber-500 text-white font-extrabold px-1.5 py-0.5 rounded-md shrink-0">
+                                  <T>USP</T>
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1013,31 +1027,43 @@ export default function PricingPage() {
                           <T>{cat.category}</T>
                         </td>
                       </tr>
-                      {cat.features.map((f) => (
-                        <tr
-                          key={f.key}
-                          className="border-t border-gray-100 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
-                        >
-                          <td className="px-6 py-3 text-gray-700 dark:text-gray-300">
-                            <T>{f.label}</T>
-                          </td>
-                          {f.values.map((val, i) => (
-                            <td key={i} className="text-center px-4 py-3">
-                              {typeof val === "boolean" ? (
-                                val ? (
-                                  <Check className="h-4 w-4 text-green-500 mx-auto" />
-                                ) : (
-                                  <X className="h-4 w-4 text-gray-300 dark:text-gray-600 mx-auto" />
-                                )
-                              ) : (
-                                <span className="font-medium text-gray-900 dark:text-white">
-                                  <T>{val}</T>
-                                </span>
+                      {cat.features.map((f) => {
+                        const isAiBotRow = f.key === "freeAiChatbot";
+                        return (
+                          <tr
+                            key={f.key}
+                            className={`border-t border-gray-100 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-all ${
+                              isAiBotRow 
+                                ? "bg-amber-500/5 dark:bg-amber-500/10 border-y border-amber-300/30 dark:border-amber-500/20 font-bold" 
+                                : ""
+                            }`}
+                          >
+                            <td className={`px-6 py-3 ${isAiBotRow ? "text-amber-700 dark:text-amber-400 font-extrabold flex items-center gap-2" : "text-gray-700 dark:text-gray-300"}`}>
+                              <T>{f.label}</T>
+                              {isAiBotRow && (
+                                <Badge className="bg-amber-500 text-white border-0 text-[10px] font-extrabold px-2 py-0.5 animate-pulse rounded-md">
+                                  <T>FREE FOREVER</T>
+                                </Badge>
                               )}
                             </td>
-                          ))}
-                        </tr>
-                      ))}
+                            {f.values.map((val, i) => (
+                              <td key={i} className="text-center px-4 py-3">
+                                {typeof val === "boolean" ? (
+                                  val ? (
+                                    <Check className={`h-4 w-4 mx-auto ${isAiBotRow ? "text-amber-500" : "text-green-500"}`} />
+                                  ) : (
+                                    <X className="h-4 w-4 text-gray-300 dark:text-gray-600 mx-auto" />
+                                  )
+                                ) : (
+                                  <span className={`font-semibold ${isAiBotRow ? "text-amber-600 dark:text-amber-400" : "text-gray-900 dark:text-white"}`}>
+                                    <T>{val}</T>
+                                  </span>
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
                     </>
                   ))}
                 </tbody>
