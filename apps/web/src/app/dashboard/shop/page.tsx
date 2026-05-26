@@ -120,14 +120,12 @@ export default function ShopDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const t = useT();
 
-  // ── Karigar & Bullion States ──
-  const [bullionGold, setBullionGold] = useState(1240.50); // 840.5 + 400
-  const [bullionSilver, setBullionSilver] = useState(4500.00);
-  const [karigars, setKarigars] = useState([
-    { name: "Rakesh Kumar", goldOutstanding: 4.8, silverOutstanding: 0.0, wastageLimit: 1.0, activeJob: "22K Traditional Bridal Choker" },
-    { name: "Sanjay Shakya", goldOutstanding: 5.5, silverOutstanding: 0.0, wastageLimit: 1.2, activeJob: "999 Silver Heritage Filigree Jug" },
-    { name: "Amit Shah", goldOutstanding: 0.9, silverOutstanding: 0.0, wastageLimit: 0.8, activeJob: "18K Diamond Solitaire Engagement Ring" }
-  ]);
+  // ── Karigar & Bullion States (loaded exclusively from DB) ──
+  const [bullionGold, setBullionGold] = useState(0);
+  const [bullionSilver, setBullionSilver] = useState(0);
+  const [karigars, setKarigars] = useState<
+    { name: string; goldOutstanding: number; silverOutstanding: number; wastageLimit: number; activeJob: string }[]
+  >([]);
 
   // Modal toggles & inputs
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
@@ -1086,7 +1084,28 @@ export default function ShopDashboard() {
                     </h3>
                     
                     <div className="space-y-4">
-                      {karigars.map((k, index) => (
+                      {karigars.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+                          <div className="h-12 w-12 rounded-full bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center">
+                            <Users className="h-6 w-6 text-amber-400" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-700 dark:text-gray-300 text-sm">
+                              <T>No artisans registered yet</T>
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                              <T>Head to the Supply Chain Tracker to register your first Karigar and start tracking workshop metal flows.</T>
+                            </p>
+                          </div>
+                          <Button size="sm" variant="outline" className="border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800/40 dark:text-amber-400" asChild>
+                            <Link href="/dashboard/shop/supply-chain">
+                              <Plus className="h-3.5 w-3.5 mr-1.5" />
+                              <T>Register First Karigar</T>
+                            </Link>
+                          </Button>
+                        </div>
+                      ) : (
+                        karigars.map((k, index) => (
                         <div key={k.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-sm hover:shadow hover:border-amber-200/50 dark:hover:border-amber-800/40 transition-all gap-4">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
@@ -1152,7 +1171,8 @@ export default function ShopDashboard() {
                             </Button>
                           </div>
                         </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
 
