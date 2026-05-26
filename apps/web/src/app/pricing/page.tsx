@@ -167,6 +167,10 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
   },
 
   // Support & Integration
+  freeAiChatbot: {
+    label: "Orivraa AI Support Bot (Free on all plans)",
+    category: "Support & Integration",
+  },
   prioritySupport: {
     label: "Priority support",
     category: "Support & Integration",
@@ -379,6 +383,10 @@ const FAQ_ITEMS = [
     a: "Yes! The Free plan lets you list products on the marketplace at no cost, forever. Upgrade only when you need CRM features or more listings.",
   },
   {
+    q: "Is the Orivraa AI Chatbot really free on all plans?",
+    a: "Yes! The Orivraa AI Support Bot is included for free on every single plan, including the Free plan. It serves as your personal 24/7 jewelry store advisor to help you calculate vault values from the Stock Ledger, track Karigar wastage limits, parse supply chain floats, and manage sales invoices instantly.",
+  },
+  {
     q: "What's the difference between Pro and Pro+?",
     a: "Pro gives you a full CRM — inventory, invoicing, customer management, and analytics. Pro+ adds AI-powered tools: design generation, smart recommendations, price optimization, and monthly AI credits. With Pro, you can still purchase AI credits separately.",
   },
@@ -471,6 +479,7 @@ function buildFeatureList(
     "taxReportsDownload",
     "taxCaShare",
     "customBranding",
+    "freeAiChatbot",
     "prioritySupport",
   ];
   if (customerFlowEnabled) {
@@ -480,7 +489,7 @@ function buildFeatureList(
   for (const key of featureKeys) {
     const display = FEATURE_DISPLAY[key];
     if (!display) continue;
-    const val = plan.features?.[key];
+    const val = key === "freeAiChatbot" ? true : plan.features?.[key];
     items.push({ text: display.label, included: !!val });
   }
 
@@ -560,6 +569,7 @@ function buildComparisonTable(plans: PlanFromAPI[], customerFlowEnabled: boolean
   for (const p of plans) {
     if (p.features) Object.keys(p.features).forEach((k) => allKeys.add(k));
   }
+  allKeys.add("freeAiChatbot");
 
   const actualCategoryOrder = customerFlowEnabled 
     ? CATEGORY_ORDER 
@@ -620,6 +630,7 @@ function buildComparisonTable(plans: PlanFromAPI[], customerFlowEnabled: boolean
     if (!cat) continue;
 
     const values = plans.map((p) => {
+      if (key === "freeAiChatbot") return true;
       const val = p.features?.[key];
       if (typeof val === "boolean") return val;
       if (typeof val === "string") return val;

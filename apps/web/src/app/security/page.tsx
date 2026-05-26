@@ -63,7 +63,7 @@ export default function SecurityTrustPage() {
       </header>
 
       {/* Trust Pillars */}
-      <section className="max-w-6xl mx-auto px-4 py-20 grid gap-8 md:grid-cols-3">
+      <section className="max-w-6xl mx-auto px-4 py-20 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
         <ScrollReveal direction="up" delay={0.05} className="h-full">
           <Card className="border border-gray-100 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 shadow-md backdrop-blur-md hover:-translate-y-1 transition-all duration-300 h-full gold-glow-hover">
             <CardContent className="pt-6 space-y-4">
@@ -100,7 +100,21 @@ export default function SecurityTrustPage() {
               </div>
               <h3 className="font-bold text-lg"><T>Regional Data Sovereignty</T></h3>
               <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                <T>Your data is stored in isolated, state-of-the-art datacenters located within your home country (India, UAE, UK, or EU) to comply with local financial laws.</T>
+                <T>Your data is stored in isolated, state-of-the-art datacenters located within your home country (Nepal, India, UAE, UK, or EU) to comply with local financial laws.</T>
+              </p>
+            </CardContent>
+          </Card>
+        </ScrollReveal>
+
+        <ScrollReveal direction="up" delay={0.25} className="h-full">
+          <Card className="border border-gray-100 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 shadow-md backdrop-blur-md hover:-translate-y-1 transition-all duration-300 h-full gold-glow-hover">
+            <CardContent className="pt-6 space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-sm border border-amber-500/20">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-lg"><T>Self-Defending AI &amp; Edge Guards</T></h3>
+              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                <T>Active Edge validation blocks open redirect phishing attacks at the routing boundary. Hardened LLM jailbreak defense layers prevent support chat prompt injections, keeping store insights fully isolated.</T>
               </p>
             </CardContent>
           </Card>
@@ -157,6 +171,14 @@ export default function SecurityTrustPage() {
                   <div className="flex items-center justify-between text-xs border-b dark:border-gray-850 pb-1.5">
                     <span className="text-gray-500 dark:text-gray-400"><T>TLS 1.3 In-Transit</T></span>
                     <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[9px] px-1.5 py-0 font-bold"><T>Elite</T></Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs border-b dark:border-gray-850 pb-1.5">
+                    <span className="text-gray-500 dark:text-gray-400"><T>AI Jailbreak Defense</T></span>
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[9px] px-1.5 py-0 font-bold"><T>Hardened</T></Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs border-b dark:border-gray-850 pb-1.5">
+                    <span className="text-gray-500 dark:text-gray-400"><T>Edge Redirect Allowlist</T></span>
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[9px] px-1.5 py-0 font-bold"><T>Active</T></Badge>
                   </div>
                   <div className="flex items-center justify-between text-xs border-b dark:border-gray-850 pb-1.5">
                     <span className="text-gray-500 dark:text-gray-400"><T>ISO 27001 Ready</T></span>

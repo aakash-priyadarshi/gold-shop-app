@@ -33,12 +33,12 @@ export function AISalesteamPromo({
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                <T>Ask Orivraa AI right now</T>
+                <T>Ask Orivraa AI Assistant (Free on Every Plan)</T>
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
                 <T>
-                  Get instant answers about pricing, setup, GST, onboarding, or
-                  product fit in Hindi, Nepali, or English.
+                  Get instant answers about pricing, GST, Karigar wastage ledgers, 
+                  live Strongroom vault values, or supply chain tracking in Hindi, Nepali, or English.
                 </T>
               </p>
               <div className="flex flex-wrap gap-2">
@@ -94,9 +94,7 @@ export function AISalesteamPromo({
           <ScrollReveal direction="up" delay={0.18} spring>
             <p className="text-lg text-white/90 mb-8 leading-relaxed">
               <T>
-                Ask Orivraa AI about pricing, demo paths, onboarding, GST, or
-                product fit. If you still need a human, the support center will
-                take you to ticketing and direct contact options.
+                Our AI Support Assistant is 100% free across all plans! Ask Orivraa AI about your live Strongroom vault values, total sales analytics, Karigar ledger wastage balance sheets, and raw gold/silver procurement logistics instantly.
               </T>
             </p>
           </ScrollReveal>
