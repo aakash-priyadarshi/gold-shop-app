@@ -566,6 +566,85 @@ export function SupportBot() {
 
   return (
     <>
+      {/* Custom style block containing beautiful robot, jewelry, and panel transitions */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes chat-shake {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          10%, 30%, 50%, 70%, 90% { transform: translate(-4px, 0) rotate(-3deg); }
+          20%, 40%, 60%, 80% { transform: translate(4px, 0) rotate(3deg); }
+        }
+        .animate-shake {
+          animation: chat-shake 0.5s ease-in-out;
+        }
+        @keyframes eye-blink {
+          0%, 90%, 100% { transform: scaleY(1); }
+          95% { transform: scaleY(0.15); }
+        }
+        @keyframes arm-wave {
+          0%, 100% { transform: rotate(0deg); }
+          25% { transform: rotate(-40deg); }
+          75% { transform: rotate(20deg); }
+        }
+        .animate-blink {
+          animation: eye-blink 3s ease-in-out infinite;
+        }
+        .animate-wave {
+          animation: arm-wave 0.75s ease-in-out infinite;
+        }
+        @keyframes bot-spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes bot-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+        .animate-bot-spin {
+          animation: bot-spin 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .animate-bot-bounce {
+          animation: bot-bounce 0.8s ease-in-out infinite;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(217,119,6,0.3);
+          border-radius: 99px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(217,119,6,0.5);
+        }
+        @keyframes panel-appear {
+          from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .animate-panel-appear {
+          animation: panel-appear 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        @keyframes panel-appear-mobile {
+          from {
+            opacity: 0;
+            transform: translateY(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-panel-appear-mobile {
+          animation: panel-appear-mobile 0.32s cubic-bezier(0.32, 0.94, 0.6, 1) forwards;
+        }
+      `}} />
       {/* Mobile drag-to-dismiss zone — appears when dragging the launcher */}
       {isDragging && isMobile && (
         <div className="fixed inset-0 z-[59] pointer-events-none">
@@ -607,60 +686,6 @@ export function SupportBot() {
           }}
           className={`flex flex-col items-end gap-1.5 ${isChatShaking ? "animate-shake" : ""}`}
         >
-          {/* Custom style block containing beautiful robot and jewelry keyframes */}
-          <style dangerouslySetInnerHTML={{__html: `
-            @keyframes chat-shake {
-              0%, 100% { transform: translate(0, 0) rotate(0deg); }
-              10%, 30%, 50%, 70%, 90% { transform: translate(-4px, 0) rotate(-3deg); }
-              20%, 40%, 60%, 80% { transform: translate(4px, 0) rotate(3deg); }
-            }
-            .animate-shake {
-              animation: chat-shake 0.5s ease-in-out;
-            }
-            @keyframes eye-blink {
-              0%, 90%, 100% { transform: scaleY(1); }
-              95% { transform: scaleY(0.15); }
-            }
-            @keyframes arm-wave {
-              0%, 100% { transform: rotate(0deg); }
-              25% { transform: rotate(-40deg); }
-              75% { transform: rotate(20deg); }
-            }
-            .animate-blink {
-              animation: eye-blink 3s ease-in-out infinite;
-            }
-            .animate-wave {
-              animation: arm-wave 0.75s ease-in-out infinite;
-            }
-            @keyframes bot-spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-            @keyframes bot-bounce {
-              0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(-8px); }
-            }
-            .animate-bot-spin {
-              animation: bot-spin 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            .animate-bot-bounce {
-              animation: bot-bounce 0.8s ease-in-out infinite;
-            }
-            .custom-scrollbar::-webkit-scrollbar {
-              width: 5px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-track {
-              background: transparent;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb {
-              background: rgba(217,119,6,0.3);
-              border-radius: 99px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: rgba(217,119,6,0.5);
-            }
-          `}} />
-
           {bubbleVisible && !isDragging && (
             <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[11px] px-3 py-1.5 rounded-xl shadow-md whitespace-nowrap animate-bounce relative mb-1 shrink-0 font-semibold z-[61] border border-amber-400/30">
               {parseTextWithT(bubbleText)}
@@ -923,8 +948,8 @@ export function SupportBot() {
         <div
           style={isMobile ? undefined : { right: `${currentRight}px`, bottom: `${currentBottom}px` }}
           className={isMobile
-            ? "fixed inset-0 z-[60] bg-gradient-to-b from-amber-50/10 via-white to-amber-50/5 dark:from-amber-950/5 dark:via-gray-900 dark:to-gray-950 flex flex-col"
-            : `fixed z-[60] w-[380px] bg-white dark:bg-gray-900 border border-amber-200/65 dark:border-amber-900/45 rounded-2xl shadow-[0_15px_60px_rgba(212,175,55,0.18)] dark:shadow-[0_15px_60px_rgba(212,175,55,0.06)] flex flex-col overflow-hidden h-[560px] max-h-[calc(100vh-3rem)]`
+            ? "fixed inset-0 z-[60] bg-gradient-to-b from-amber-50/10 via-white to-amber-50/5 dark:from-amber-950/5 dark:via-gray-900 dark:to-gray-950 flex flex-col animate-panel-appear-mobile"
+            : `fixed z-[60] w-[380px] bg-white dark:bg-gray-900 border border-amber-200/65 dark:border-amber-900/45 rounded-2xl shadow-[0_15px_60px_rgba(212,175,55,0.18)] dark:shadow-[0_15px_60px_rgba(212,175,55,0.06)] flex flex-col overflow-hidden h-[560px] max-h-[calc(100vh-3rem)] origin-bottom-right animate-panel-appear`
           }
         >
           {/* Header */}
