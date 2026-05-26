@@ -970,7 +970,7 @@ export default function ShopDashboard() {
           )}
 
           {!featuresLoading && !hasFeature("karigarSupplyChain") ? (
-            <Card className="border-dashed border-2 border-amber-200/60 dark:border-amber-900/40 overflow-hidden shadow-sm relative group p-8 bg-gradient-to-br from-amber-50/20 via-white to-orange-50/10 dark:from-amber-950/5 dark:via-gray-900/50 dark:to-orange-950/5">
+            <Card data-tour="dash-supply-chain" className="border-dashed border-2 border-amber-200/60 dark:border-amber-900/40 overflow-hidden shadow-sm relative group p-8 bg-gradient-to-br from-amber-50/20 via-white to-orange-50/10 dark:from-amber-950/5 dark:via-gray-900/50 dark:to-orange-950/5">
               <div className="absolute top-4 right-4 bg-amber-100 dark:bg-amber-950 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-800 text-[10px] font-bold text-amber-800 dark:text-gold-400 flex items-center gap-1">
                 <Crown className="h-3 w-3" />
                 <T>Premium Feature</T>
@@ -1006,7 +1006,7 @@ export default function ShopDashboard() {
               </div>
             </Card>
           ) : (
-            <Card className="border-amber-200 dark:border-amber-900/60 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+            <Card data-tour="dash-supply-chain" className="border-amber-200 dark:border-amber-900/60 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
               <CardHeader className="pb-3 bg-gradient-to-r from-amber-50/50 via-yellow-50/20 to-orange-50/20 dark:from-amber-950/20 dark:via-yellow-950/5 dark:to-orange-950/5 border-b border-amber-100/50 dark:border-amber-900/20">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>

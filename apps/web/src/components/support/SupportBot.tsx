@@ -278,7 +278,11 @@ export function SupportBot() {
     let animation: "none" | "spin" | "wave" | "bounce" | "excited" = "none";
 
     if (isDashboard) {
-      if (pathname.includes("tax") || pathname.includes("vat") || pathname.includes("gst")) {
+      if (pathname.includes("supply-chain")) {
+        text = "<T>Track your gold reserves, add custom metals, and check Karigar wastages with me! 🛠️</T>";
+        state = "gold_bar";
+        animation = "spin";
+      } else if (pathname.includes("tax") || pathname.includes("vat") || pathname.includes("gst")) {
         text = "<T>If you need any help in filing tax ask me, okay?</T>";
         state = "gold_bar";
         animation = "spin";

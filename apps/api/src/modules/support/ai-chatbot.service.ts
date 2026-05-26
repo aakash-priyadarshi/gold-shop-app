@@ -343,7 +343,7 @@ KEY FEATURES:
 9. AI sales agents (beta) — 24/7 voice agents in 42 languages, follow-up automation
 10. CA / accountant share links — securely share tax documents (PRO_PLUS+)
 11. Old-gold exchange — correct GST treatment on exchange transactions
-12. Karigar & Bullion Supply Chain Console — raw gold/silver bullion procures, artisan outstanding float balance sheets, loss tolerance calculations, and order checklists (PRO/PRO_PLUS/ENTERPRISE)
+12. Karigar & Bullion Supply Chain Console — raw gold/silver bullion procures, artisan outstanding float balance sheets, loss tolerance calculations, and order checklists (PRO/PRO_PLUS/ENTERPRISE). Features full CRUD (create, read, update, delete) for Karigars (with name, workshop name, location, phone number with country code, email, wastage limit %, labor rate) and fabrication jobs (with product, artisan, metal weight, and a 5-step checklist: Cast -> File -> Set -> Polish -> HUID). Also supports custom material types (like Platinum 950 or Rose Gold 14K) in the vault and procurement modules.
 13. Stock Ledger — finished goods catalogued stock table searchable by HUID or barcode, physical transfers between showcases and strongroom vault, and live vault fiat valuations
 
 GST DETAILS (INDIA):
@@ -926,6 +926,14 @@ SELLER RESPONSE RULES:
         reply: `Your customer CRM is under Customers in the left sidebar at ${customersRoute}. That is the place to review customer records, notes, and history for your own shop.`,
         shouldEscalate: false,
         confidence: 0.9,
+      };
+    }
+
+    if (/(karigar|artisan|workshop|goldsmith|fabrication job|bullion reserves|custom metal|custom material|scrap returned|process wastage)/.test(normalized)) {
+      return {
+        reply: `You can manage your precious metals and workshop operations in the Karigar & Bullion Supply Chain Tracker at /dashboard/shop/supply-chain. It supports full CRUD (Add/Edit/Delete) for Karigars (with phone & email contact fields) and fabrication jobs (with a 5-step checklist: Cast → File → Set → Polish → HUID). You can also adjust gold/silver reserves or add custom material types (like Platinum 950 or Rose Gold 14K) dynamically to your strong-room vault!`,
+        shouldEscalate: false,
+        confidence: 0.96,
       };
     }
 

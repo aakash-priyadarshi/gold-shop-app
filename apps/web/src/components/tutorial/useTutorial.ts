@@ -62,7 +62,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='supply-ticker']",
       popover: {
         title: "Live Bullion Ticker",
-        description: "Real-time feed of raw materials (gold grains 24K, 22K, 18K, silver) dynamically synced from international commodities markets.",
+        description: "Real-time feed of raw materials (gold grains 24K, 22K, 18K, silver) dynamically synced from international commodities markets for accurate valuation.",
         side: "bottom",
         align: "start",
       },
@@ -77,11 +77,47 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='supply-add-material']",
+      popover: {
+        title: "Add Custom Material Types",
+        description: "Click here to add custom metal types (such as Platinum 950, Rose Gold 14K, or Palladium) dynamically to your strong-room vault grid. Once added, they will be available across all procurement and allotment modules!",
+        side: "bottom",
+        align: "end",
+      },
+    },
+    {
       element: "[data-tour='supply-ledger']",
       popover: {
         title: "Artisan Balance Ledger",
-        description: "Manage precious metal float allotted to Karigars (goldsmiths), compute exact wastage margins against targets, and track unpaid wages.",
+        description: "Complete CRUD dashboard for registered Karigars. View their name, contact phone, email, wastage limit (%), float balances (gold/silver), and total pending wages. You can also edit details or delete records securely.",
         side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='supply-add-karigar']",
+      popover: {
+        title: "Register New Karigar",
+        description: "Click here to register a new goldsmith or artisan. Save their name, workshop name, location, phone (with country code), email, wastage target limit, and basic labor rates directly to the cloud.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='supply-pipeline']",
+      popover: {
+        title: "Artisan Fabrication Pipeline",
+        description: "Track active custom jobs through their fabrication lifecycle on the workbench! Click the interactive stages checklist (Cast → File → Set → Polish → HUID) to record milestones in real-time as your Karigars complete each step.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='supply-add-job']",
+      popover: {
+        title: "Create Fabrication Job",
+        description: "Launch a new custom job order for any product. Select from your registered Karigars, specify the product description, and enter the gross weight of precious metal to initialize the tracking card.",
+        side: "bottom",
         align: "center",
       },
     },
@@ -941,6 +977,15 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Low Stock Inventory Alerts",
         description: "Flags items that have dropped below your specified safety threshold. Restock directly from this ledger card to avoid running out of display items.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='dash-supply-chain']",
+      popover: {
+        title: "Karigar & Bullion Supply Chain Tracker",
+        description: "Your unified manufacturing workspace! Monitor live raw gold/silver bullion reserves in your safe vault, track outstanding float balances allotted to Karigars (artisans), record process wastages, and issue metal or receive finished pieces with direct cloud-persisted ledgers.",
         side: "top",
         align: "center",
       },

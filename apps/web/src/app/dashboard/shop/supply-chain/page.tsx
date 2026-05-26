@@ -646,6 +646,7 @@ function KarigarSupplyChainContent() {
             <T>Procure Bullion</T>
           </Button>
           <Button
+            data-tour="supply-add-karigar"
             variant="outline"
             className="border-amber-500/30 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 bg-white dark:bg-gray-900"
             onClick={() => setAddKarigarModalOpen(true)}
@@ -654,6 +655,7 @@ function KarigarSupplyChainContent() {
             <T>Add Karigar</T>
           </Button>
           <Button
+            data-tour="supply-add-job"
             variant="outline"
             className="border-blue-500/30 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 bg-white dark:bg-gray-900"
             onClick={() => setAddJobModalOpen(true)}
@@ -766,6 +768,7 @@ function KarigarSupplyChainContent() {
                   </CardDescription>
                 </div>
                 <Button
+                  data-tour="supply-add-material"
                   size="sm"
                   variant="outline"
                   className="border-amber-500/30 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20"
@@ -1024,7 +1027,7 @@ function KarigarSupplyChainContent() {
               </Card>
 
               {/* Jobs and Steps checklists */}
-              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+              <Card data-tour="supply-pipeline" className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                 <CardHeader>
                   <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">
                     <T>Artisan Fabrication Pipeline</T>
