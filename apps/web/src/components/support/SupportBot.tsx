@@ -16,6 +16,7 @@
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatures } from "@/hooks/useFeatures";
 import { api } from "@/lib/api";
 import { OPEN_SUPPORT_CHAT_EVENT, useHelpUIStore } from "@/store/help-ui";
 import { usePreferencesStore } from "@/store/preferences";
@@ -205,6 +206,7 @@ function renderMessageContent(text: string) {
 export function SupportBot() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { planName } = useFeatures();
   const isSellerLoggedIn = user?.role === "SHOPKEEPER";
   const isMobile = pathname.startsWith("/m/") || pathname === "/m";
   const shopName = user?.shop?.shopName ?? (user as { shopName?: string } | null)?.shopName;
@@ -250,33 +252,100 @@ export function SupportBot() {
 
     const isDashboard = pathname.includes("dashboard") || pathname.startsWith("/m") || isSellerLoggedIn;
     
-    const dashboardActions = [
-      { state: "default" as const, text: "<T>You're doing great! Let's close some deals! 🚀</T>", animation: "excited" as const },
-      { state: "ring" as const, text: "<T>Sales are looking golden today! 💰</T>", animation: "spin" as const },
-      { state: "diamond" as const, text: "<T>Look at that beautiful dashboard shine! ✨</T>", animation: "bounce" as const },
-      { state: "crown" as const, text: "<T>Keep up the amazing work, superstar! 🌟</T>", animation: "excited" as const },
-      { state: "gold_bar" as const, text: "<T>Gold-standard performance right there! 🏆</T>", animation: "spin" as const },
-    ];
+    let text = "";
+    let state: "default" | "ring" | "diamond" | "crown" | "gold_bar" = "default";
+    let animation: "none" | "spin" | "wave" | "bounce" | "excited" = "none";
 
-    const publicActions = [
-      { state: "default" as const, text: "<T>HI, if you have any question ask me</T>", animation: "wave" as const },
-      { state: "ring" as const, text: "<T>See my ring? It's pure gold! 💍</T>", animation: "spin" as const },
-      { state: "diamond" as const, text: "<T>Shine bright like a diamond! 💎</T>", animation: "bounce" as const },
-      { state: "crown" as const, text: "<T>Only the royal gold standard for you! 👑</T>", animation: "excited" as const },
-      { state: "gold_bar" as const, text: "<T>Solid gold support, 24/7! 🪙</T>", animation: "spin" as const },
-    ];
+    if (isDashboard) {
+      if (pathname.includes("tax") || pathname.includes("vat") || pathname.includes("gst")) {
+        text = "<T>If you need any help in filing tax ask me, okay?</T>";
+        state = "gold_bar";
+        animation = "spin";
+      } else if (pathname.includes("inventory") || pathname.includes("stock") || pathname.includes("catalogue")) {
+        text = "<T>Let's organize your luxurious inventory today! 💎</T>";
+        state = "diamond";
+        animation = "bounce";
+      } else if (pathname.includes("sales") || pathname.includes("analytics") || pathname.includes("report")) {
+        text = "<T>Look at those sales grow! Gold-standard numbers! 📈</T>";
+        state = "crown";
+        animation = "excited";
+      } else if (pathname.includes("pos") || pathname.includes("bill") || pathname.includes("checkout")) {
+        text = "<T>Let's check out some gold billing tickets! 🧾</T>";
+        state = "ring";
+        animation = "spin";
+      } else {
+        // General dashboard pages: check subscription status
+        const currentPlan = planName?.toLowerCase() || "";
+        const isFreePlan = !planName || currentPlan.includes("free") || currentPlan.includes("trial");
 
-    const actions = isDashboard ? dashboardActions : publicActions;
-    const idx = Math.floor(Math.random() * actions.length);
-    const action = actions[idx];
+        if (isFreePlan) {
+          // 50% chance to remind about upgrading to Pro
+          if (Math.random() > 0.5) {
+            text = "<T>You are on the Free Plan! Upgrade to Pro to download tax reports without watermarking! 🚀</T>";
+            state = "crown";
+            animation = "excited";
+          } else {
+            // General dashboard cheer
+            const dashboardActions = [
+              { state: "default" as const, text: "<T>You're doing great! Let's close some deals! 🚀</T>", animation: "excited" as const },
+              { state: "ring" as const, text: "<T>Sales are looking golden today! 💰</T>", animation: "spin" as const },
+              { state: "diamond" as const, text: "<T>Look at that beautiful dashboard shine! ✨</T>", animation: "bounce" as const },
+              { state: "crown" as const, text: "<T>Keep up the amazing work, superstar! 🌟</T>", animation: "excited" as const },
+              { state: "gold_bar" as const, text: "<T>Gold-standard performance right there! 🏆</T>", animation: "spin" as const },
+            ];
+            const action = dashboardActions[Math.floor(Math.random() * dashboardActions.length)];
+            text = action.text;
+            state = action.state;
+            animation = action.animation;
+          }
+        } else {
+          // Pro user dashboard cheer
+          const proDashboardActions = [
+            { state: "default" as const, text: "<T>Welcome back, Pro member! Let's scale today! 🚀</T>", animation: "excited" as const },
+            { state: "ring" as const, text: "<T>Exclusive Pro-tier performance activated! 💎</T>", animation: "spin" as const },
+            { state: "diamond" as const, text: "<T>Your shop looks brilliant today! ✨</T>", animation: "bounce" as const },
+            { state: "crown" as const, text: "<T>Leading the gold industry standard! 👑</T>", animation: "excited" as const },
+            { state: "gold_bar" as const, text: "<T>High-end security and backup enabled! 🔒</T>", animation: "spin" as const },
+          ];
+          const action = proDashboardActions[Math.floor(Math.random() * proDashboardActions.length)];
+          text = action.text;
+          state = action.state;
+          animation = action.animation;
+        }
+      }
+    } else {
+      // Public pages
+      if (pathname.includes("pricing")) {
+        text = "<T>I assure you we have the cheapest software! 💰</T>";
+        state = "gold_bar";
+        animation = "spin";
+      } else if (pathname.includes("security")) {
+        text = "<T>We are so secure! 🔒</T>";
+        state = "crown";
+        animation = "excited";
+      } else {
+        // General public routes
+        const publicActions = [
+          { state: "default" as const, text: "<T>HI, if you have any question ask me</T>", animation: "wave" as const },
+          { state: "ring" as const, text: "<T>See my ring? It's pure gold! 💍</T>", animation: "spin" as const },
+          { state: "diamond" as const, text: "<T>Shine bright like a diamond! 💎</T>", animation: "bounce" as const },
+          { state: "crown" as const, text: "<T>Only the royal gold standard for you! 👑</T>", animation: "excited" as const },
+          { state: "gold_bar" as const, text: "<T>Solid gold support, 24/7! 🪙</T>", animation: "spin" as const },
+        ];
+        const action = publicActions[Math.floor(Math.random() * publicActions.length)];
+        text = action.text;
+        state = action.state;
+        animation = action.animation;
+      }
+    }
 
-    setBotState(action.state);
-    setBubbleText(action.text);
+    setBotState(state);
+    setBubbleText(text);
     setBubbleVisible(true);
     
-    if (action.animation === "wave") setIsWaving(true);
-    if (action.animation === "excited") setIsExcited(true);
-    setCurrentAnimation(action.animation);
+    if (animation === "wave") setIsWaving(true);
+    if (animation === "excited") setIsExcited(true);
+    setCurrentAnimation(animation);
 
     // After 6.5 seconds, return to normal default
     setTimeout(() => {
@@ -286,7 +355,7 @@ export function SupportBot() {
       setIsExcited(false);
       setCurrentAnimation("none");
     }, 6500);
-  }, [open, isDragging, pathname, isSellerLoggedIn]);
+  }, [open, isDragging, pathname, isSellerLoggedIn, planName]);
 
   // Periodic Clippy-like interactions timer
   useEffect(() => {
