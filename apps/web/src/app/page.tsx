@@ -75,6 +75,14 @@ export default function HomePage() {
           <section className="py-10 lg:py-14 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-900">
             <div className="container mx-auto px-4">
               <TrustSignals variant="grid" />
+              <div className="mt-8 text-center">
+                <Link
+                  href="/security"
+                  className="inline-flex items-center gap-1.5 text-sm font-bold text-amber-600 hover:text-amber-700 hover:underline"
+                >
+                  <T>Verify Orivraa's Bank-Grade Security &amp; Compliance Proof</T> →
+                </Link>
+              </div>
             </div>
           </section>
 

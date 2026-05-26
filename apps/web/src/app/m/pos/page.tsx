@@ -32,8 +32,8 @@ import {
     X,
 } from "lucide-react";
 import Image from "next/image";
-  import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface InventoryItem {
   id: string;
@@ -850,6 +850,30 @@ function AddProductSheet({
 export default function MobilePOSPage() {
   const { user } = useAuth();
   const t = useT();
+
+  const isVerified = user?.shop?.isVerified ?? false;
+
+  const registrationAgeDays = useMemo(() => {
+    if (!user) return 0;
+    const createdDate = new Date(user.createdAt).getTime();
+    return (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
+  }, [user]);
+
+  const daysLeft = useMemo(() => {
+    if (!user) return 0;
+    const createdDate = new Date(user.createdAt).getTime();
+    const diffDays = 7 - (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
+    return Math.max(0, Math.ceil(diffDays));
+  }, [user]);
+
+  const isWithinSandbox = useMemo(() => {
+    return registrationAgeDays <= 7;
+  }, [registrationAgeDays]);
+
+  const isLocked = useMemo(() => {
+    if (!user || !user.shop) return false;
+    return !isVerified && !isWithinSandbox;
+  }, [user, isVerified, isWithinSandbox]);
   const haptic = useHaptics();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [search, setSearch] = useState("");
@@ -1119,9 +1143,73 @@ export default function MobilePOSPage() {
     );
   }
 
+  if (isLocked) {
+    return (
+      <MobileFeatureGate feature="mobilePOS" featureName="Mobile POS">
+        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
+          <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center gap-3">
+            <div className="flex-1">
+              <h1 className="text-base font-bold text-gray-900 dark:text-gray-100"><T>Store Settings</T></h1>
+              <p className="text-xs text-gray-400"><T>Business verification required</T></p>
+            </div>
+            <Link
+              href="/m/settings"
+              className="text-xs font-semibold text-amber-600"
+            >
+              Settings
+            </Link>
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 gap-6 text-center min-h-[70vh]">
+            <div className="w-16 h-16 rounded-3xl bg-amber-500/10 dark:bg-amber-500/20 flex items-center justify-center shadow-inner animate-pulse">
+              <span className="text-3xl">⚠️</span>
+            </div>
+            <div className="space-y-2 max-w-[300px]">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">KYC Verification Required</h2>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Your 7-day KYC Sandbox period has expired. Invoice creation and mobile POS checkouts are locked until business details are submitted for verification.
+              </p>
+            </div>
+            <Link
+              href="/m/settings/kyc"
+              className="w-full max-w-[280px] py-3.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-md transition-all active:scale-95 text-center"
+            >
+              Submit KYC Verification
+            </Link>
+            <Link
+              href="/m/settings"
+              className="text-xs text-amber-600 font-semibold underline underline-offset-2"
+            >
+              Back to Store Settings
+            </Link>
+          </div>
+        </div>
+      </MobileFeatureGate>
+    );
+  }
+
   return (
     <MobileFeatureGate feature="mobilePOS" featureName="Mobile POS">
       <div className="flex flex-col h-full">
+        {/* Sandbox warning banner */}
+        {!isVerified && isWithinSandbox && (
+          <div className="px-4 py-2.5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-b border-amber-200/50 flex items-start gap-2.5 print:hidden">
+            <span className="text-sm">⚠️</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                Sandbox Mode ({daysLeft} {daysLeft === 1 ? 'day' : 'days'} left)
+              </p>
+              <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-normal mt-0.5">
+                Bills will print with a watermark unless you enter a Customer Tax ID or complete KYC.
+              </p>
+            </div>
+            <Link
+              href="/m/settings/kyc"
+              className="text-[10px] font-bold text-amber-600 dark:text-amber-400 underline whitespace-nowrap align-middle self-center ml-2"
+            >
+              Verify KYC
+            </Link>
+          </div>
+        )}
         {/* Page header with help */}
         <div className="flex items-center justify-between px-4 pt-3 pb-1 bg-white">
           <div>

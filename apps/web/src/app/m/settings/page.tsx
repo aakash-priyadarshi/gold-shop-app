@@ -233,6 +233,42 @@ export default function MobileStoreSettingsPage() {
           </p>
         </section>
 
+        {/* KYC Verification Status Settings Card */}
+        <section className="space-y-2">
+          <label className="block text-xs font-semibold text-gray-655 dark:text-gray-400 uppercase tracking-wide">
+            <T>Verification Status</T>
+          </label>
+          <div className={`p-4 rounded-2xl border ${
+            user?.shop?.isVerified
+              ? "border-green-200 bg-green-50/40 dark:bg-green-950/10 text-green-800 dark:text-green-300"
+              : "border-amber-200 bg-amber-50/40 dark:bg-amber-950/10 text-amber-850 dark:text-amber-300"
+          } space-y-3`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-start gap-2.5">
+                <span className="text-lg mt-0.5">{user?.shop?.isVerified ? "✅" : "⚠️"}</span>
+                <div>
+                  <h4 className="font-bold text-xs">
+                    {user?.shop?.isVerified ? "Verified Shopkeeper" : "Unverified (Sandbox Mode)"}
+                  </h4>
+                  <p className="text-[10px] opacity-80 mt-0.5 leading-relaxed">
+                    {user?.shop?.isVerified
+                      ? "Your account is fully approved for unlimited retail counter POS billing."
+                      : "Account has limited sandbox access. Prints will include diagonal watermarks unless you enter a Customer Tax ID on the POS receipt."}
+                  </p>
+                </div>
+              </div>
+            </div>
+            {!user?.shop?.isVerified && (
+              <Link
+                href="/m/settings/kyc"
+                className="block text-center py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition-all"
+              >
+                Submit KYC Verification Documents
+              </Link>
+            )}
+          </div>
+        </section>
+
         {/* Shop Info */}
         <section className="space-y-3">
           <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">

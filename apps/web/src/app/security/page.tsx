@@ -156,8 +156,53 @@ export default function SecurityTrustPage() {
         </div>
       </section>
 
+      {/* Infrastructure Verification Section */}
+      <section className="max-w-4xl mx-auto px-4 py-16 space-y-8 border-t dark:border-gray-800/60">
+        <div className="text-center space-y-3">
+          <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold rounded-full uppercase tracking-wider">
+            🛡️ Verified Infrastructure &amp; Audits
+          </Badge>
+          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Verifiable Security Credentials</h2>
+          <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
+            Orivraa is built on industry-standard security foundations. We rely on certified partner infrastructure to guarantee absolute safety:
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          <Card className="border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50">
+            <CardContent className="pt-6 space-y-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-500">Cloud Storage</span>
+              <h4 className="font-bold text-sm">AWS Shield &amp; KMS</h4>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                All client inventory databases are hosted inside highly secure, multi-zone virtual clouds. Data at rest is encrypted via hardware security modules aligned with <a href="https://aws.amazon.com/security/" target="_blank" rel="noopener noreferrer" className="text-amber-500 underline font-semibold">AWS Cryptographic Security</a>.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50">
+            <CardContent className="pt-6 space-y-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-500">Network Shield</span>
+              <h4 className="font-bold text-sm">Cloudflare DDoS Gate</h4>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                We mitigate bots and potential network threads at the DNS boundary. Our API endpoints are protected under enterprise-grade web shield protocols, verified by <a href="https://www.cloudflare.com/web-application-security/" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline font-semibold">Cloudflare Web Security</a>.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50">
+            <CardContent className="pt-6 space-y-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-purple-500">Government Sync</span>
+              <h4 className="font-bold text-sm">BIS Hallmark HUID APIs</h4>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                Counterfeit commodities are blocked at entry. Orivraa queries government HUID registration APIs in real-time, matching transaction lines directly with official hallmark records for total trade legitimacy.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {/* Compliance Section */}
-      <section className="max-w-4xl mx-auto px-4 py-24 text-center space-y-8">
+      <section className="max-w-4xl mx-auto px-4 pb-24 text-center space-y-8">
         <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Compliance &amp; Reliability</h2>
         <div className="grid gap-6 md:grid-cols-2">
           <div className="p-5 rounded-2xl border dark:border-gray-800 bg-white/40 text-left space-y-2">

@@ -258,6 +258,12 @@ export function DynamicFooter() {
           </p>
           <div className="flex flex-wrap justify-center gap-4 md:gap-6 text-sm">
             <Link
+              href="/security"
+              className="text-gray-400 hover:text-gold-400 transition-colors font-medium text-amber-500"
+            >
+              <T>Security &amp; Trust</T>
+            </Link>
+            <Link
               href="/privacy"
               className="text-gray-400 hover:text-gold-400 transition-colors"
             >

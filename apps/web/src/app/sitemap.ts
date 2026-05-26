@@ -171,6 +171,11 @@ const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
     changeFrequency: "monthly",
     priority: 0.5,
   },
+  "/security": {
+    changeFrequency: "weekly",
+    priority: 0.9,
+    lastModified: new Date(),
+  },
   "/compare/orivraa-vs-jewel360": {
     changeFrequency: "monthly",
     priority: 0.8,
