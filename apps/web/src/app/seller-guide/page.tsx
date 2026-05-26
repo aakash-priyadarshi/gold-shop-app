@@ -25,6 +25,7 @@ import {
     Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 /* ────────────────────────────────────────────────────────────── */
 /*  DATA                                                          */
@@ -228,6 +229,74 @@ export default function SellerGuidePage() {
                 </div>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ── Luxury Jewelry Spotlight Banner ────────────────── */}
+        <section className="bg-gradient-to-br from-[#070e15] via-[#0b1420] to-[#070e15] text-white border-y border-gold-900/40 relative overflow-hidden py-16 lg:py-24">
+          {/* Background R2 CDN Image */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-[0.06] dark:opacity-[0.09] -z-10 mix-blend-luminosity scale-105 animate-pulse"
+            style={{ backgroundImage: `url('https://images.orivraa.com/images/public/luxury-gold-ring-box.png')` }}
+          />
+          <div className="max-w-6xl mx-auto px-4 relative z-10">
+            <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-12 items-center">
+              <div className="space-y-6">
+                <ScrollReveal direction="assemble" delay={0.05} spring>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-500/10 text-gold-400 text-xs font-semibold uppercase tracking-wide border border-gold-500/20">
+                    <Sparkles className="h-3.5 w-3.5 text-gold-400 animate-pulse" />
+                    <T>Craftsmanship Meets Commerce</T>
+                  </div>
+                </ScrollReveal>
+                <ScrollReveal direction="assemble" delay={0.12} spring>
+                  <h2 className="text-3xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                    <T>Showcase Your Masterpieces to the World</T>
+                  </h2>
+                </ScrollReveal>
+                <ScrollReveal direction="up" delay={0.18} spring>
+                  <p className="text-gray-300 text-base lg:text-lg max-w-xl leading-relaxed font-medium">
+                    <T>
+                      Do not let generic software commoditize your custom designs. Orivraa honors your craftsmanship with ultra-premium digital catalogues, high-fidelity imagery displays, and an aesthetic that reflects the quality of your gold and diamonds.
+                    </T>
+                  </p>
+                </ScrollReveal>
+                <ScrollReveal direction="up" delay={0.24}>
+                  <div className="flex flex-wrap gap-4 pt-2">
+                    <Link
+                      href="/auth/register"
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-gold-500 hover:bg-gold-600 text-navy-950 rounded-xl font-bold transition-all shadow-lg active:scale-95 border-none"
+                    >
+                      <T>Join Verified Sellers</T>
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </ScrollReveal>
+              </div>
+
+              {/* R2 CDN Premium Image Showcase Card */}
+              <ScrollReveal direction="right" delay={0.15}>
+                <div className="relative group">
+                  {/* Subtle golden halo glow */}
+                  <div className="absolute inset-0 bg-gold-500/20 blur-3xl rounded-full scale-95 opacity-50 group-hover:scale-105 transition-transform duration-700" />
+                  <div className="relative rounded-3xl overflow-hidden border border-gold-500/30 shadow-2xl bg-navy-950/60 backdrop-blur-md p-4 transition-transform duration-500 hover:-translate-y-1.5 hover:shadow-gold-500/5">
+                    <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-navy-950 relative">
+                      {/* Premium AI Image */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img 
+                        src="https://images.orivraa.com/images/public/luxury-gold-ring-box.png" 
+                        alt="Luxury Diamond & Gold Ring" 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.2s] ease-out"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <span className="text-[10px] uppercase tracking-widest font-black text-gold-400 bg-gold-500/10 border border-gold-500/20 px-2 py-0.5 rounded-full w-fit"><T>Masterpiece Showcase</T></span>
+                        <h4 className="text-white font-bold text-base mt-1.5"><T>Signature Gold & Diamond Ring</T></h4>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ScrollReveal>
+            </div>
           </div>
         </section>
 

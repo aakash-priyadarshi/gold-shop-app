@@ -861,7 +861,7 @@ export function Header() {
                     >
                       <div
                         className="h-36 bg-cover bg-center"
-                        style={{ backgroundImage: `url('https://images.orivraa.com/images/public/amy-vann-85-6iMn5L8g-unsplash (1).jpg')` }}
+                        style={{ backgroundImage: `url('https://images.orivraa.com/images/public/amy-vann-85-6iMn5L8g-unsplash%20(1).jpg')` }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-gray-950/30 to-transparent" />
                       <div className="absolute bottom-3 left-4 right-4">

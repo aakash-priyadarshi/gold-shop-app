@@ -230,6 +230,9 @@ export function SellerFeaturesSection() {
             const featureImages: Record<string, string> = {
               "Smart Dashboard": "https://images.orivraa.com/images/public/hasan-mrad-9Foi-h8zmIU-unsplash.jpg",
               "Inventory & Catalogue": "https://images.orivraa.com/images/public/carlos-esteves-1MWbwTaeJIA-unsplash.jpg",
+              "Built-in Chat & RFQ": "https://images.orivraa.com/images/public/subham-hait-fVeujn3i5ZE-unsplash.jpg",
+              "International Reach": "https://images.orivraa.com/images/public/luxury-gold-globe.png",
+              "Sales Analytics": "https://images.orivraa.com/images/public/vaibhav-nagare-G3Hrl6WzQYQ-unsplash.jpg",
               "Mobile POS — Sell Anywhere": "https://images.orivraa.com/images/public/sayan-bhaskar-U0nWBqGsTMk-unsplash.jpg",
             };
             const bgImage = featureImages[feature.title];

@@ -168,14 +168,14 @@ export default {
 
       // Delete endpoint
       if (path.startsWith("/delete/") && request.method === "DELETE") {
-        const key = path.replace("/delete/", "");
+        const key = decodeURIComponent(path.replace("/delete/", ""));
         return handleDelete(key, env, corsHeaders);
       }
 
       // Serve images (for non-public buckets)
       // Support both /images/key and /key formats
       if (path.startsWith("/images/")) {
-        const key = path.replace("/images/", "");
+        const key = decodeURIComponent(path.replace("/images/", ""));
         return handleServe(key, env, corsHeaders, request);
       }
 
@@ -209,7 +209,7 @@ export default {
 
       // Serve videos from /vid/ path (hero videos, etc.)
       if (path.startsWith("/vid/")) {
-        const key = path.substring(1); // Remove leading slash → "vid/filename.mp4"
+        const key = decodeURIComponent(path.substring(1)); // Remove leading slash → "vid/filename.mp4"
         return handleServe(key, env, corsHeaders, request);
       }
 
@@ -222,7 +222,7 @@ export default {
         path.startsWith("/kyc/") ||
         path.startsWith("/chat/")
       ) {
-        const key = path.substring(1); // Remove leading slash
+        const key = decodeURIComponent(path.substring(1)); // Remove leading slash
         return handleServe(key, env, corsHeaders, request);
       }
 
