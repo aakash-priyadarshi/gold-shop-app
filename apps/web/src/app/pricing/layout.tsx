@@ -9,50 +9,6 @@ import { headers } from "next/headers";
 
 export async function generateMetadata(): Promise<Metadata> {
   const seo = getRegionalPricingSeo(headers().get("cf-ipcountry"));
-
-  return {
-    title: seo.title,
-    description: seo.description,
-  keywords: [
-    "orivraa pricing",
-    "jewellery software pricing",
-    "jewellery shop software price",
-    "gold shop software cost",
-    "free jewellery software",
-    "jewellery ERP pricing",
-    "jewellery POS pricing",
-    "mobile jewellery POS pricing",
-    "live gold rate software pricing",
-    "orivraa plans",
-    "jewellery software free plan",
-    "best jewellery software price comparison",
-    "orivraa free plan",
-    "orivraa pro plan",
-    "jewellery inventory software pricing",
-    "jewellery billing software price",
-    "gstin invoice software",
-    "jewellery software india price",
-  ],
-    alternates: { canonical: "/pricing" },
-    openGraph: {
-      title: seo.openGraphTitle,
-      description: seo.openGraphDescription,
-      url: "https://www.orivraa.com/pricing",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: seo.twitterTitle,
-      description: seo.twitterDescription,
-    },
-  };
-}
-
-export default function PricingLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const seo = getRegionalPricingSeo(headers().get("cf-ipcountry"));
   const pricingJsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -231,13 +187,50 @@ export default function PricingLayout({
     ],
   };
 
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(pricingJsonLd) }}
-      />
-      {children}
-    </>
-  );
+  return {
+    title: seo.title,
+    description: seo.description,
+    keywords: [
+      "orivraa pricing",
+      "jewellery software pricing",
+      "jewellery shop software price",
+      "gold shop software cost",
+      "free jewellery software",
+      "jewellery ERP pricing",
+      "jewellery POS pricing",
+      "mobile jewellery POS pricing",
+      "live gold rate software pricing",
+      "orivraa plans",
+      "jewellery software free plan",
+      "best jewellery software price comparison",
+      "orivraa free plan",
+      "orivraa pro plan",
+      "jewellery inventory software pricing",
+      "jewellery billing software price",
+      "gstin invoice software",
+      "jewellery software india price",
+    ],
+    alternates: { canonical: "/pricing" },
+    openGraph: {
+      title: seo.openGraphTitle,
+      description: seo.openGraphDescription,
+      url: "https://www.orivraa.com/pricing",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: seo.twitterTitle,
+      description: seo.twitterDescription,
+    },
+    other: {
+      "script:ld+json": JSON.stringify(pricingJsonLd),
+    },
+  };
+}
+
+export default function PricingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <>{children}</>;
 }
