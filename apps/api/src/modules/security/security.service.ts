@@ -157,8 +157,9 @@ export class SecurityService {
       return { blocked: true, threats: [] };
     }
 
-    // 2. Detect injection in body/query
-    if (req.body) {
+    // 2. Detect injection in body/query (skipped for chatbot routes to prevent false positive blocks of legitimate sellers discussing database concepts)
+    const isChatbotRoute = req.route?.includes("/tickets/seller-chat") || req.route?.includes("/tickets/ai-chat");
+    if (req.body && !isChatbotRoute) {
       const injectionResult = this.detectInjection(req.body);
       if (injectionResult) {
         const event: ThreatEvent = {
