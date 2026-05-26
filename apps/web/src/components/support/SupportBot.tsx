@@ -240,43 +240,73 @@ export function SupportBot() {
   const [bubbleVisible, setBubbleVisible] = useState(false);
   const [isWaving, setIsWaving] = useState(false);
   const [isExcited, setIsExcited] = useState(false);
+  const [botState, setBotState] = useState<"default" | "ring" | "diamond" | "crown" | "gold_bar">("default");
+  const [bubbleText, setBubbleText] = useState<string>("<T>Need help? Ask AI!</T>");
+  const [currentAnimation, setCurrentAnimation] = useState<"none" | "spin" | "wave" | "bounce" | "excited">("none");
+  const [isDragging, setIsDragging] = useState(false);
 
-  // Periodic waving & excitement timer
+  const triggerRandomAction = useCallback(() => {
+    if (open || isDragging) return;
+
+    const isDashboard = pathname.includes("dashboard") || pathname.startsWith("/m") || isSellerLoggedIn;
+    
+    const dashboardActions = [
+      { state: "default" as const, text: "<T>You're doing great! Let's close some deals! 🚀</T>", animation: "excited" as const },
+      { state: "ring" as const, text: "<T>Sales are looking golden today! 💰</T>", animation: "spin" as const },
+      { state: "diamond" as const, text: "<T>Look at that beautiful dashboard shine! ✨</T>", animation: "bounce" as const },
+      { state: "crown" as const, text: "<T>Keep up the amazing work, superstar! 🌟</T>", animation: "excited" as const },
+      { state: "gold_bar" as const, text: "<T>Gold-standard performance right there! 🏆</T>", animation: "spin" as const },
+    ];
+
+    const publicActions = [
+      { state: "default" as const, text: "<T>HI, if you have any question ask me</T>", animation: "wave" as const },
+      { state: "ring" as const, text: "<T>See my ring? It's pure gold! 💍</T>", animation: "spin" as const },
+      { state: "diamond" as const, text: "<T>Shine bright like a diamond! 💎</T>", animation: "bounce" as const },
+      { state: "crown" as const, text: "<T>Only the royal gold standard for you! 👑</T>", animation: "excited" as const },
+      { state: "gold_bar" as const, text: "<T>Solid gold support, 24/7! 🪙</T>", animation: "spin" as const },
+    ];
+
+    const actions = isDashboard ? dashboardActions : publicActions;
+    const idx = Math.floor(Math.random() * actions.length);
+    const action = actions[idx];
+
+    setBotState(action.state);
+    setBubbleText(action.text);
+    setBubbleVisible(true);
+    
+    if (action.animation === "wave") setIsWaving(true);
+    if (action.animation === "excited") setIsExcited(true);
+    setCurrentAnimation(action.animation);
+
+    // After 6.5 seconds, return to normal default
+    setTimeout(() => {
+      setBotState("default");
+      setBubbleVisible(false);
+      setIsWaving(false);
+      setIsExcited(false);
+      setCurrentAnimation("none");
+    }, 6500);
+  }, [open, isDragging, pathname, isSellerLoggedIn]);
+
+  // Periodic Clippy-like interactions timer
   useEffect(() => {
     if (isChatDismissed) return;
 
-    // Initial wave and excitement after 2.5s
+    // Initial action after 3s
     const initialTimer = setTimeout(() => {
-      setIsWaving(true);
-      setIsExcited(true);
-      setBubbleVisible(true);
-      
-      // Stop waving and excitement after 4.5s
-      setTimeout(() => {
-        setIsWaving(false);
-        setIsExcited(false);
-        setBubbleVisible(false);
-      }, 4500);
-    }, 2500);
+      triggerRandomAction();
+    }, 3000);
 
-    // Periodic waves every 25 seconds
+    // Periodic actions every 25 seconds
     const interval = setInterval(() => {
-      setIsWaving(true);
-      setIsExcited(true);
-      setBubbleVisible(true);
-      
-      setTimeout(() => {
-        setIsWaving(false);
-        setIsExcited(false);
-        setBubbleVisible(false);
-      }, 4500);
+      triggerRandomAction();
     }, 25000);
 
     return () => {
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
-  }, [isChatDismissed]);
+  }, [isChatDismissed, triggerRandomAction]);
 
   // Track session count to keep tooltip visible for new users
   const [isNewUser, setIsNewUser] = useState(false);
@@ -434,7 +464,6 @@ export function SupportBot() {
   const [pos, setPos] = useState<LauncherPos | null>(() =>
     readSession<LauncherPos | null>(STORAGE_LAUNCHER_POS, null),
   );
-  const [isDragging, setIsDragging] = useState(false);
   const [isOverDismissZone, setIsOverDismissZone] = useState(false);
   const dragInfo = useRef<{
     startX: number;
@@ -578,7 +607,7 @@ export function SupportBot() {
           }}
           className={`flex flex-col items-end gap-1.5 ${isChatShaking ? "animate-shake" : ""}`}
         >
-          {/* Custom style block containing beautiful robot keyframes */}
+          {/* Custom style block containing beautiful robot and jewelry keyframes */}
           <style dangerouslySetInnerHTML={{__html: `
             @keyframes chat-shake {
               0%, 100% { transform: translate(0, 0) rotate(0deg); }
@@ -603,15 +632,38 @@ export function SupportBot() {
             .animate-wave {
               animation: arm-wave 0.75s ease-in-out infinite;
             }
+            @keyframes bot-spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            @keyframes bot-bounce {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-8px); }
+            }
+            .animate-bot-spin {
+              animation: bot-spin 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .animate-bot-bounce {
+              animation: bot-bounce 0.8s ease-in-out infinite;
+            }
+            .custom-scrollbar::-webkit-scrollbar {
+              width: 5px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+              background: rgba(217,119,6,0.3);
+              border-radius: 99px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: rgba(217,119,6,0.5);
+            }
           `}} />
 
           {bubbleVisible && !isDragging && (
-            <div className="bg-amber-500 text-white text-[11px] px-2.5 py-1.5 rounded-xl shadow-md whitespace-nowrap animate-bounce relative mb-1 shrink-0 font-medium z-[61] border border-amber-400/30">
-              {isWaving ? (
-                <T>HI 👋! If you need any help, ask me!</T>
-              ) : (
-                <T>Need help? Ask AI!</T>
-              )}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[11px] px-3 py-1.5 rounded-xl shadow-md whitespace-nowrap animate-bounce relative mb-1 shrink-0 font-semibold z-[61] border border-amber-400/30">
+              {parseTextWithT(bubbleText)}
               <span className="absolute -bottom-1 right-4 h-0 w-0 border-l-[6px] border-r-[0px] border-t-[6px] border-l-transparent border-t-amber-500" />
             </div>
           )}
@@ -642,11 +694,17 @@ export function SupportBot() {
                 setIsExcited(false);
               }}
             >
-              {/* Cute Waving & Animated Welcoming Robot Face */}
+              {/* Cute Waving & Animated Welcoming Robot / Jewelry Face */}
               <div className="relative flex items-center justify-center w-full h-full p-1 select-none">
                 <svg
                   viewBox="0 0 100 100"
-                  className={`w-full h-full transition-transform duration-300 ${isExcited ? "scale-110 -translate-y-0.5" : ""}`}
+                  className={`w-full h-full transition-transform duration-300 ${
+                    isExcited ? "scale-110 -translate-y-0.5" : ""
+                  } ${
+                    currentAnimation === "spin" ? "animate-bot-spin" : ""
+                  } ${
+                    currentAnimation === "bounce" ? "animate-bot-bounce" : ""
+                  }`}
                 >
                   <defs>
                     {/* Glowing Friendly LED Eyes */}
@@ -670,59 +728,150 @@ export function SupportBot() {
                     </radialGradient>
                   </defs>
 
-                  {/* Antenna */}
-                  <rect x="47" y="12" width="6" height="15" fill="#B58F1A" rx="2" />
-                  {/* Glowing Antenna Tip */}
-                  <circle
-                    cx="50"
-                    cy="10"
-                    r="5.5"
-                    className="fill-amber-300 animate-pulse"
-                    style={{ animationDuration: "1s" }}
-                  />
+                  {/* 1. Default Robot Head */}
+                  {botState === "default" && (
+                    <>
+                      {/* Antenna */}
+                      <rect x="47" y="12" width="6" height="15" fill="#B58F1A" rx="2" />
+                      {/* Glowing Antenna Tip */}
+                      <circle
+                        cx="50"
+                        cy="10"
+                        r="5.5"
+                        className="fill-amber-300 animate-pulse"
+                        style={{ animationDuration: "1s" }}
+                      />
 
-                  {/* Ears / Side Bolts */}
-                  <rect x="16" y="44" width="6" height="14" fill="#B58F1A" rx="2" />
-                  <rect x="78" y="44" width="6" height="14" fill="#B58F1A" rx="2" />
+                      {/* Ears / Side Bolts */}
+                      <rect x="16" y="44" width="6" height="14" fill="#B58F1A" rx="2" />
+                      <rect x="78" y="44" width="6" height="14" fill="#B58F1A" rx="2" />
 
-                  {/* Robot Head */}
-                  <rect x="20" y="24" width="60" height="52" fill="url(#goldMetal)" rx="18" stroke="#fff" strokeWidth="2.5" />
-                  
-                  {/* Visor Screen */}
-                  <rect x="26" y="31" width="48" height="38" fill="#1e293b" rx="12" />
-
-                  {/* Cute Cheek Blush */}
-                  <circle cx="34" cy="56" r="6.5" fill="url(#blushGlow)" />
-                  <circle cx="66" cy="56" r="6.5" fill="url(#blushGlow)" />
-
-                  {/* Eyes */}
-                  <ellipse
-                    cx="38"
-                    cy="45"
-                    rx={isExcited ? "7.5" : "5.5"}
-                    ry={isExcited ? "7.5" : "5.5"}
-                    fill="url(#eyeGlow)"
-                    className="origin-center animate-blink"
-                    style={{ transformOrigin: "38px 45px" }}
-                  />
-                  <ellipse
-                    cx="62"
-                    cy="45"
-                    rx={isExcited ? "7.5" : "5.5"}
-                    ry={isExcited ? "7.5" : "5.5"}
-                    fill="url(#eyeGlow)"
-                    className="origin-center animate-blink"
-                    style={{ transformOrigin: "62px 45px" }}
-                  />
-
-                  {/* Welcoming Mouth */}
-                  {isExcited ? (
-                    // Waving/Excited open happy mouth!
-                    <path d="M44 58 C 44 65, 56 65, 56 58" fill="#fda4af" stroke="#fff" strokeWidth="1.5" />
-                  ) : (
-                    // Cute simple smile
-                    <path d="M44 57 Q50 61 56 57" stroke="#22d3ee" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                      {/* Robot Head */}
+                      <rect x="20" y="24" width="60" height="52" fill="url(#goldMetal)" rx="18" stroke="#fff" strokeWidth="2.5" />
+                      
+                      {/* Visor Screen */}
+                      <rect x="26" y="31" width="48" height="38" fill="#1e293b" rx="12" />
+                    </>
                   )}
+
+                  {/* 2. Gold Ring */}
+                  {botState === "ring" && (
+                    <>
+                      {/* Hoop of the Ring */}
+                      <circle cx="50" cy="62" r="23" fill="none" stroke="url(#goldMetal)" strokeWidth="8" />
+                      {/* Signet Face Plate */}
+                      <circle cx="50" cy="46" r="23" fill="url(#goldMetal)" stroke="#fff" strokeWidth="2" />
+                      {/* Diamond gem on top of ring */}
+                      <polygon points="50,11 40,23 60,23" fill="#22d3ee" stroke="#fff" strokeWidth="1" />
+                      <polygon points="50,11 45,23 55,23" fill="#e0f7fa" opacity="0.8" />
+                      {/* Dark Visor screen on Signet Plate */}
+                      <circle cx="50" cy="46" r="18" fill="#1e293b" />
+                    </>
+                  )}
+
+                  {/* 3. Luxury Diamond */}
+                  {botState === "diamond" && (
+                    <>
+                      {/* Outer Diamond Shape */}
+                      <polygon points="50,15 80,35 68,78 32,78 20,35" fill="url(#goldMetal)" stroke="#fff" strokeWidth="2" />
+                      {/* Diamond Facet lines for reflections */}
+                      <line x1="50" y1="15" x2="50" y2="30" stroke="#fff" strokeWidth="1" opacity="0.6" />
+                      <line x1="80" y1="35" x2="68" y2="40" stroke="#fff" strokeWidth="1" opacity="0.6" />
+                      <line x1="20" y1="35" x2="32" y2="40" stroke="#fff" strokeWidth="1" opacity="0.6" />
+                      <line x1="68" y1="78" x2="60" y2="70" stroke="#fff" strokeWidth="1" opacity="0.6" />
+                      <line x1="32" y1="78" x2="40" y2="70" stroke="#fff" strokeWidth="1" opacity="0.6" />
+                      {/* Diamond Visor screen */}
+                      <polygon points="50,30 70,40 60,70 40,70 30,40" fill="#1e293b" />
+                    </>
+                  )}
+
+                  {/* 4. Royal Crown */}
+                  {botState === "crown" && (
+                    <>
+                      {/* Gold Crown */}
+                      <path d="M15,72 L10,36 L35,52 L50,26 L65,52 L90,36 L85,72 Z" fill="url(#goldMetal)" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+                      {/* Royal gems on peak tips */}
+                      <circle cx="10" cy="36" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="0.8" />
+                      <circle cx="50" cy="26" r="5" fill="#22d3ee" stroke="#fff" strokeWidth="0.8" />
+                      <circle cx="90" cy="36" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="0.8" />
+                      {/* Crown Visor screen */}
+                      <rect x="25" y="49" width="50" height="20" fill="#1e293b" rx="6" />
+                    </>
+                  )}
+
+                  {/* 5. Gold Bar */}
+                  {botState === "gold_bar" && (
+                    <>
+                      {/* Gold Bullion Shape */}
+                      <polygon points="20,18 80,18 90,78 10,78" fill="url(#goldMetal)" stroke="#fff" strokeWidth="2" />
+                      {/* Bevel lines */}
+                      <polygon points="25,23 75,23 82,73 18,73" fill="none" stroke="#FFE082" strokeWidth="1.5" opacity="0.6" />
+                      {/* Gold Bar Stamp */}
+                      <text x="50" y="30" fill="#FFF8E7" fontSize="6.5" fontWeight="bold" textAnchor="middle" letterSpacing="0.5">ORIVRAA 99.9%</text>
+                      {/* Visor Screen */}
+                      <rect x="24" y="36" width="52" height="34" fill="#1e293b" rx="8" />
+                    </>
+                  )}
+
+                  {/* Dynamic Face Elements Overlay */}
+                  {(() => {
+                    const isCrown = botState === "crown";
+                    const isRing = botState === "ring";
+                    const eyeY = isCrown ? 55 : isRing ? 42 : 45;
+                    const cheekY = isCrown ? 62 : isRing ? 51 : 56;
+                    const cheekXOffset = isRing ? 6 : 0;
+                    
+                    // Render mouth path
+                    let mouthPath = "";
+                    if (isExcited) {
+                      mouthPath = isCrown 
+                        ? "M44 61 C 44 66, 56 66, 56 61" 
+                        : isRing 
+                        ? "M45 49 C 45 53, 55 53, 55 49" 
+                        : "M44 58 C 44 65, 56 65, 56 58";
+                    } else {
+                      mouthPath = isCrown 
+                        ? "M44 60 Q50 63 56 60" 
+                        : isRing 
+                        ? "M45 49 Q50 51 55 49" 
+                        : "M44 57 Q50 61 56 57";
+                    }
+
+                    return (
+                      <>
+                        {/* Blush cheeks */}
+                        <circle cx={34 + cheekXOffset} cy={cheekY} r="5" fill="url(#blushGlow)" />
+                        <circle cx={66 - cheekXOffset} cy={cheekY} r="5" fill="url(#blushGlow)" />
+
+                        {/* Blinking Glowing Eyes */}
+                        <ellipse
+                          cx={38 + (isRing ? 3 : 0)}
+                          cy={eyeY}
+                          rx={isExcited ? (isRing ? 5.5 : 7.5) : (isRing ? 4 : 5.5)}
+                          ry={isExcited ? (isRing ? 5.5 : 7.5) : (isRing ? 4 : 5.5)}
+                          fill="url(#eyeGlow)"
+                          className="origin-center animate-blink"
+                          style={{ transformOrigin: `${38 + (isRing ? 3 : 0)}px ${eyeY}px` }}
+                        />
+                        <ellipse
+                          cx={62 - (isRing ? 3 : 0)}
+                          cy={eyeY}
+                          rx={isExcited ? (isRing ? 5.5 : 7.5) : (isRing ? 4 : 5.5)}
+                          ry={isExcited ? (isRing ? 5.5 : 7.5) : (isRing ? 4 : 5.5)}
+                          fill="url(#eyeGlow)"
+                          className="origin-center animate-blink"
+                          style={{ transformOrigin: `${62 - (isRing ? 3 : 0)}px ${eyeY}px` }}
+                        />
+
+                        {/* Cute Mouth */}
+                        {isExcited ? (
+                          <path d={mouthPath} fill="#fda4af" stroke="#fff" strokeWidth="1" />
+                        ) : (
+                          <path d={mouthPath} stroke="#22d3ee" strokeWidth="2" fill="none" strokeLinecap="round" />
+                        )}
+                      </>
+                    );
+                  })()}
                 </svg>
 
                 {/* Overlaid Waving Robot Arm */}
@@ -774,14 +923,32 @@ export function SupportBot() {
         <div
           style={isMobile ? undefined : { right: `${currentRight}px`, bottom: `${currentBottom}px` }}
           className={isMobile
-            ? "fixed inset-0 z-[60] bg-white dark:bg-gray-900 flex flex-col"
-            : `fixed z-[60] w-[380px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden h-[560px] max-h-[calc(100vh-3rem)]`
+            ? "fixed inset-0 z-[60] bg-gradient-to-b from-amber-50/10 via-white to-amber-50/5 dark:from-amber-950/5 dark:via-gray-900 dark:to-gray-950 flex flex-col"
+            : `fixed z-[60] w-[380px] bg-white dark:bg-gray-900 border border-amber-200/65 dark:border-amber-900/45 rounded-2xl shadow-[0_15px_60px_rgba(212,175,55,0.18)] dark:shadow-[0_15px_60px_rgba(212,175,55,0.06)] flex flex-col overflow-hidden h-[560px] max-h-[calc(100vh-3rem)]`
           }
         >
           {/* Header */}
           <div className={`flex items-center gap-3 px-4 bg-gradient-to-br from-amber-500 to-orange-600 text-white ${isMobile ? "py-3 pt-[max(0.75rem,env(safe-area-inset-top))]" : "py-3"}`}>
-            <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="h-5 w-5" />
+            <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 p-1">
+              {/* Cute Waving Mini Mascot in the Header */}
+              <svg viewBox="0 0 100 100" className="w-full h-full select-none">
+                <defs>
+                  <radialGradient id="eyeGlowHeader" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#22d3ee" />
+                    <stop offset="100%" stopColor="#0891b2" />
+                  </radialGradient>
+                  <linearGradient id="goldMetalHeader" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FFF8E7" />
+                    <stop offset="50%" stopColor="#FFE082" />
+                    <stop offset="100%" stopColor="#D4AF37" />
+                  </linearGradient>
+                </defs>
+                <rect x="20" y="24" width="60" height="52" fill="url(#goldMetalHeader)" rx="18" stroke="#fff" strokeWidth="2.5" />
+                <rect x="26" y="31" width="48" height="38" fill="#1e293b" rx="12" />
+                <ellipse cx="38" cy="45" rx="5.5" ry="5.5" fill="url(#eyeGlowHeader)" className="animate-blink" style={{ transformOrigin: "38px 45px" }} />
+                <ellipse cx="62" cy="45" rx="5.5" ry="5.5" fill="url(#eyeGlowHeader)" className="animate-blink" style={{ transformOrigin: "62px 45px" }} />
+                <path d="M44 57 Q50 61 56 57" stroke="#22d3ee" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              </svg>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold leading-tight">
@@ -816,17 +983,17 @@ export function SupportBot() {
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-gray-50 dark:bg-gray-950">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-gradient-to-b from-amber-50/15 via-white to-amber-50/10 dark:from-amber-950/5 dark:via-gray-950 dark:to-amber-950/5 custom-scrollbar">
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                  className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed transition-all ${
                     m.from === "user"
-                      ? "bg-amber-500 text-white rounded-br-sm"
-                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-sm"
+                      ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-br-sm shadow-md shadow-amber-500/10"
+                      : "bg-white/95 dark:bg-gray-800/95 text-gray-800 dark:text-gray-100 border border-amber-100/50 dark:border-amber-950/30 rounded-bl-sm shadow-[0_2px_8px_rgba(0,0,0,0.02)] backdrop-blur-sm"
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{renderMessageContent(m.text)}</p>
@@ -841,7 +1008,7 @@ export function SupportBot() {
                             {...(external
                               ? { target: "_blank", rel: "noopener noreferrer" }
                               : {})}
-                            className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30 transition-colors"
+                            className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30 transition-colors shadow-sm"
                           >
                             {c.label.toLowerCase().includes("whatsapp") && (
                               <Phone className="h-3 w-3" />
@@ -865,18 +1032,18 @@ export function SupportBot() {
             {/* Typing indicator */}
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
-                  <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
-                  <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
+                <div className="bg-white/95 dark:bg-gray-800/95 border border-amber-100/50 dark:border-amber-950/30 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5 shadow-sm">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-bounce [animation-delay:0ms]" />
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-bounce [animation-delay:150ms]" />
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-bounce [animation-delay:300ms]" />
                 </div>
               </div>
             )}
 
             {showQuickAsks && !isTyping && (
               <div className="pt-1">
-                <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5 px-1">
-                  Try asking
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600/80 dark:text-amber-400/80 mb-2 px-1">
+                  <T>Try asking</T>
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {QUICK_ASKS.map((q) => (
@@ -884,7 +1051,7 @@ export function SupportBot() {
                       key={q}
                       type="button"
                       onClick={() => void send(q)}
-                      className="text-xs px-2.5 py-1 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-amber-300 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+                      className="text-xs px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 border border-amber-100/60 dark:border-amber-950/40 text-gray-700 dark:text-gray-200 hover:border-amber-500 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-950/15 transition-all shadow-[0_2px_4px_rgba(0,0,0,0.01)] active:scale-95"
                     >
                       {q}
                     </button>
@@ -897,14 +1064,14 @@ export function SupportBot() {
           {/* Composer */}
           <form
             onSubmit={handleSubmit}
-            className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2.5 flex items-center gap-2"
+            className="border-t border-amber-100/50 dark:border-amber-950/40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md px-3 py-2.5 flex items-center gap-2"
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask anything about Orivraa..."
-              className="flex-1 text-sm bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-amber-400 text-gray-900 dark:text-gray-100 placeholder:text-gray-500"
+              className="flex-1 text-sm bg-amber-50/20 dark:bg-amber-950/10 border border-amber-100/30 dark:border-amber-950/20 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 rounded-full px-4 py-2 outline-none text-gray-900 dark:text-gray-100 placeholder:text-gray-500"
               maxLength={500}
               disabled={isTyping}
             />
@@ -912,7 +1079,7 @@ export function SupportBot() {
               type="submit"
               size="icon"
               disabled={!input.trim() || isTyping}
-              className="h-9 w-9 rounded-full gold-gradient text-white disabled:opacity-40"
+              className="h-9 w-9 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white disabled:opacity-40 shadow-md shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all"
               aria-label="Send"
             >
               <Send className="h-4 w-4" />

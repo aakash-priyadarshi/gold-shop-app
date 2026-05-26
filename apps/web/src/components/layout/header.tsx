@@ -2006,6 +2006,21 @@ export function Header() {
 
         {/* Mobile Auth Icons */}
         <div className="flex lg:hidden items-center gap-1">
+          {mounted && isChatDismissed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative touch-target text-amber-600 dark:text-amber-400 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/20 mr-1 active:scale-95"
+              onClick={() => recallChat()}
+              aria-label="Restore AI Chat"
+            >
+              <MessageCircle className="h-5 w-5" />
+              <span className="absolute top-1 right-1 flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500" />
+              </span>
+            </Button>
+          )}
           {mounted && !authLoading && isAuthenticated && user && (
             <>
               {/* First quick action for mobile */}
