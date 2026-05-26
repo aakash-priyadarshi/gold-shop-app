@@ -74,6 +74,19 @@ module.exports = {
           800: "#333333",
           900: "#1A1A1A",
         },
+        champagne: {
+          50: "#FAF6F0",
+          100: "#F4efe7", // Ivory Highlight
+          200: "#dfd1c5", // Stroke / Outline
+          300: "#ecc5a2", // Main champagne gold
+          400: "#d3ad8a", // Shading gold
+          500: "#beab9a", // Linen gray-beige
+        },
+        navy: {
+          850: "#111b2b",
+          900: "#0b1420", // Deep space navy light
+          950: "#070e15", // Deep space navy dark
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

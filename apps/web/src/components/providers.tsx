@@ -16,6 +16,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import * as React from "react";
+import { SmoothScrollProvider } from "@/components/providers/SmoothScrollProvider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -182,7 +183,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     <TranslationProvider>
                       <DirectionSync>
                         <MarketPreferencesSync>
-                          {children}
+                          <SmoothScrollProvider>
+                            {children}
+                          </SmoothScrollProvider>
                         </MarketPreferencesSync>
                       </DirectionSync>
                     </TranslationProvider>

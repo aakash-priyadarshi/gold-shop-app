@@ -683,6 +683,9 @@ importers:
       html2canvas:
         specifier: ^1.4.1
         version: 1.4.1
+      lenis:
+        specifier: ^1.3.23
+        version: 1.3.23(react@18.3.1)
       lucide-react:
         specifier: ^0.316.0
         version: 0.316.0(react@18.3.1)
@@ -8697,6 +8700,23 @@ packages:
       }
     engines: { node: ">=0.10.0" }
 
+  lenis@1.3.23:
+    resolution:
+      {
+        integrity: sha512-YxYq3TJqj9sJNv0V9SkyQHejt14xwyIwgDaaMK89Uf9SxQfIszu+gTQSSphh6BWlLTNVKvvXAGkg+Zf+oFIevg==,
+      }
+    peerDependencies:
+      "@nuxt/kit": ">=3.0.0"
+      react: ">=17.0.0"
+      vue: ">=3.0.0"
+    peerDependenciesMeta:
+      "@nuxt/kit":
+        optional: true
+      react:
+        optional: true
+      vue:
+        optional: true
+
   leven@3.1.0:
     resolution:
       {
@@ -10359,6 +10379,7 @@ packages:
         integrity: sha512-UT/q6fwS3c1dHbXv2uFgYJ9BMFHu3fwnd7AYZaEQhXuYQ4hgsxLvsUXzGdKeZrW5xopzDCvuA2N41WJ88I7zIw==,
       }
     engines: { node: ">=14" }
+    deprecated: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
     peerDependencies:
       react: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -18214,6 +18235,10 @@ snapshots:
   lazy-cache@0.2.7: {}
 
   lazy-cache@1.0.4: {}
+
+  lenis@1.3.23(react@18.3.1):
+    optionalDependencies:
+      react: 18.3.1
 
   leven@3.1.0: {}
 

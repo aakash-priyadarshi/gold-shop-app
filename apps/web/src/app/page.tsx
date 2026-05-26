@@ -78,8 +78,8 @@ export default function HomePage() {
               <TrustSignals variant="grid" />
               
               {/* Premium World-Class Security Summary Box */}
-              <div className="mt-12 max-w-3xl mx-auto rounded-3xl border border-gold-200/50 dark:border-gold-800/30 bg-gradient-to-r from-gold-500/5 via-gold-500/[0.02] to-transparent p-6 md:p-8 shadow-sm flex flex-col md:flex-row items-center gap-6 text-left hover:shadow-[0_0_20px_rgba(212,175,55,0.1)] transition-all duration-350">
-                <div className="w-12 h-12 rounded-2xl bg-gold-500/10 text-gold-600 dark:text-gold-400 flex items-center justify-center shrink-0 shadow-inner animate-pulse">
+              <div className="mt-12 max-w-3xl mx-auto rounded-3xl border border-champagne-300/30 dark:border-champagne-300/15 bg-gradient-to-r from-champagne-300/[0.04] via-champagne-300/[0.01] to-transparent p-6 md:p-8 shadow-sm flex flex-col md:flex-row items-center gap-6 text-left hover:shadow-[0_0_24px_rgba(236,197,162,0.15)] transition-all duration-350">
+                <div className="w-12 h-12 rounded-2xl bg-champagne-300/10 text-champagne-300 border border-champagne-300/20 flex items-center justify-center shrink-0 shadow-inner animate-pulse">
                   <ShieldCheck className="h-6 w-6" />
                 </div>
                 <div className="flex-1 space-y-1.5">
@@ -91,7 +91,7 @@ export default function HomePage() {
                   </p>
                 </div>
                 <Link href="/security">
-                  <button className="px-5 py-2.5 bg-gray-900 dark:bg-gold-500 text-white dark:text-gray-950 hover:bg-gray-800 dark:hover:bg-gold-400 font-bold text-xs md:text-sm rounded-xl shadow-md active:scale-95 transition-all whitespace-nowrap">
+                  <button className="px-5 py-2.5 bg-gray-900 text-white hover:bg-gray-800 dark:bg-champagne-300 dark:text-[#0b1420] dark:hover:bg-champagne-400 font-bold text-xs md:text-sm rounded-xl shadow-md active:scale-95 transition-all whitespace-nowrap">
                     <T>Know More</T>
                   </button>
                 </Link>

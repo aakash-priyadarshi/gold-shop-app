@@ -26,6 +26,7 @@ import {
     Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 const features = [
   {
@@ -112,36 +113,41 @@ export function BuyerSections() {
   return (
     <>
       {/* Features Section */}
-      <section className="py-12 lg:py-20 bg-white dark:bg-gray-900">
+      <section className="py-12 lg:py-20 bg-white dark:bg-gray-900 border-b border-gray-150 dark:border-gray-900/60">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto mb-10 lg:mb-16">
-            <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 lg:mb-4">
-              {t(`Why Choose ${BRAND.name}?`)}
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-base">
-              <T>
-                We connect you with verified jewellers across Nepal, India,
-                Dubai, USA & UK who craft authentic, high-quality pieces with
-                complete transparency.
-              </T>
-            </p>
+            <ScrollReveal direction="up" delay={0.05}>
+              <h2 className="text-2xl lg:text-4xl font-black text-gray-900 dark:text-white mb-3 lg:mb-4 tracking-tight">
+                {t(`Why Choose ${BRAND.name}?`)}
+              </h2>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.12}>
+              <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-base leading-relaxed">
+                <T>
+                  We connect you with verified jewellers across Nepal, India,
+                  Dubai, USA & UK who craft authentic, high-quality pieces with
+                  complete transparency.
+                </T>
+              </p>
+            </ScrollReveal>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
             {features.map((f, i) => (
-              <div
-                key={i}
-                className={`premium-card p-6 lg:p-8 gold-glow-hover border-gray-150 dark:border-gray-850 ${i === 2 ? "sm:col-span-2 lg:col-span-1" : ""}`}
-              >
-                <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gold-100 to-gold-200/40 dark:from-gold-900/30 dark:to-gold-950/20 rounded-xl flex items-center justify-center mb-4 lg:mb-6 shadow-inner animate-pulse">
-                  <f.icon className="h-6 w-6 lg:h-7 lg:w-7 text-gold-600 dark:text-gold-455" />
+              <ScrollReveal key={i} direction="up" delay={i * 0.08}>
+                <div
+                  className={`premium-card p-6 lg:p-8 gold-glow-hover border-gray-150 dark:border-gray-850 h-full ${i === 2 ? "sm:col-span-2 lg:col-span-1" : ""}`}
+                >
+                  <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-champagne-100 to-gold-200/40 dark:from-navy-900/30 dark:to-navy-950/20 rounded-xl flex items-center justify-center mb-4 lg:mb-6 shadow-inner animate-pulse border border-champagne-200/20">
+                    <f.icon className="h-6 w-6 lg:h-7 lg:w-7 text-champagne-300 dark:text-champagne-300" />
+                  </div>
+                  <h3 className="text-lg lg:text-xl font-bold text-gray-900 dark:text-white mb-2 lg:mb-3">
+                    {t(f.title)}
+                  </h3>
+                  <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-base leading-relaxed">
+                    {t(f.desc)}
+                  </p>
                 </div>
-                <h3 className="text-lg lg:text-xl font-bold text-gray-900 dark:text-white mb-2 lg:mb-3">
-                  {t(f.title)}
-                </h3>
-                <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-base leading-relaxed">
-                  {t(f.desc)}
-                </p>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -151,26 +157,32 @@ export function BuyerSections() {
       <section className="py-12 lg:py-20 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto mb-10 lg:mb-16">
-            <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 lg:mb-4">
-              <T>How Custom Orders Work</T>
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-base">
-              <T>From design to delivery, we make custom jewellery simple.</T>
-            </p>
+            <ScrollReveal direction="up" delay={0.05}>
+              <h2 className="text-2xl lg:text-4xl font-black text-gray-900 dark:text-white mb-3 lg:mb-4 tracking-tight">
+                <T>How Custom Orders Work</T>
+              </h2>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.12}>
+              <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-base leading-relaxed">
+                <T>From design to delivery, we make custom jewellery simple.</T>
+              </p>
+            </ScrollReveal>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
-            {steps.map((item) => (
-              <div key={item.step} className="text-center">
-                <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-gold-500 to-gold-600 text-white rounded-full flex items-center justify-center text-lg lg:text-2xl font-bold mx-auto mb-3 lg:mb-4 shadow-lg shadow-gold-500/30">
-                  {item.step}
+            {steps.map((item, idx) => (
+              <ScrollReveal key={item.step} direction="up" delay={idx * 0.08}>
+                <div className="text-center">
+                  <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-champagne-300 to-gold-500 text-white rounded-full flex items-center justify-center text-lg lg:text-2xl font-bold mx-auto mb-3 lg:mb-4 shadow-lg shadow-champagne-300/30 animate-pulse">
+                    {item.step}
+                  </div>
+                  <h3 className="text-sm lg:text-lg font-bold text-gray-900 dark:text-white mb-1 lg:mb-2">
+                    {t(item.title)}
+                  </h3>
+                  <p className="text-gray-655 dark:text-gray-400 text-xs lg:text-sm">
+                    {t(item.desc)}
+                  </p>
                 </div>
-                <h3 className="text-sm lg:text-lg font-semibold text-gray-900 dark:text-white mb-1 lg:mb-2">
-                  {t(item.title)}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300 text-xs lg:text-sm">
-                  {t(item.desc)}
-                </p>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -181,50 +193,74 @@ export function BuyerSections() {
 
 export function SellerFeaturesSection() {
   const t = useT();
-  return (
-    <section className="py-12 lg:py-24 bg-white dark:bg-gray-950">
+  return (    <section className="py-12 lg:py-24 bg-white dark:bg-gray-950">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-10 lg:mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold-100 dark:bg-gold-900/30 text-gold-700 dark:text-gold-400 text-sm font-medium mb-4">
-            <Store className="h-4 w-4" />
-            <T>For Jewellery Shop Owners</T>
-          </div>
-          <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 lg:mb-4">
-            <T>Your Complete Shop Management Platform</T>
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-lg">
-            <T>
-              Take your jewellery business online with powerful CMS. Manage
-              inventory, accept orders, and reach buyers across Nepal, India,
-              Dubai, USA & UK — all from one dashboard.
-            </T>
-          </p>
-          <Link
-            href="/jewellery-shop-software"
-            className="inline-flex items-center gap-1 mt-3 text-sm text-gold-600 dark:text-gold-400 font-medium hover:underline"
-          >
-            <T>See all features</T>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+          <ScrollReveal direction="up" delay={0.05}>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold-50 dark:bg-gold-950/30 text-gold-800 dark:text-gold-300 text-sm font-semibold mb-4 border border-gold-200/50 dark:border-gold-850/40">
+              <Store className="h-4 w-4 text-gold-500 animate-pulse" />
+              <T>For Jewellery Shop Owners</T>
+            </div>
+          </ScrollReveal>
+          <ScrollReveal direction="up" delay={0.12}>
+            <h2 className="text-2xl lg:text-4xl font-black text-gray-990 dark:text-white mb-3 lg:mb-4 tracking-tight">
+              <T>Your Complete Shop Management Platform</T>
+            </h2>
+          </ScrollReveal>
+          <ScrollReveal direction="up" delay={0.2}>
+            <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-lg leading-relaxed">
+              <T>
+                Take your jewellery business online with powerful CMS. Manage
+                inventory, accept orders, and reach buyers across Nepal, India,
+                Dubai, USA & UK — all from one dashboard.
+              </T>
+            </p>
+          </ScrollReveal>
+          <ScrollReveal direction="up" delay={0.25}>
+            <Link
+              href="/jewellery-shop-software"
+              className="inline-flex items-center gap-1 mt-3 text-sm text-champagne-300 dark:text-champagne-300 font-bold hover:underline"
+            >
+              <T>See all features</T>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </ScrollReveal>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-10 lg:mb-14">
-          {shopFeatures.map((feature) => (
-            <div
-              key={feature.title}
-              className="group p-5 lg:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 gold-glow-hover"
-            >
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-gold-100 to-gold-200/40 dark:from-gold-900/30 dark:to-gold-950/20 rounded-xl flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform shadow-inner shadow-gold-500/5">
-                <feature.icon className="h-5 w-5 lg:h-6 lg:w-6 text-gold-600 dark:text-gold-400" />
-              </div>
-              <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white mb-1.5">
-                {t(feature.title)}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                {t(feature.desc)}
-              </p>
-            </div>
-          ))}
+          {shopFeatures.map((feature, idx) => {
+            // Curated Unsplash goldsmith workshop & jewellery assets
+            const featureImages: Record<string, string> = {
+              "Smart Dashboard": "https://images.unsplash.com/photo-1516652695352-6118f7cc1a07?auto=format&fit=crop&q=80&w=600",
+              "Inventory & Catalogue": "https://images.unsplash.com/photo-1624588057318-5f1b2eb81012?auto=format&fit=crop&q=80&w=600",
+              "Mobile POS — Sell Anywhere": "https://images.unsplash.com/photo-1715374033196-0ff662284a7e?auto=format&fit=crop&q=80&w=600",
+            };
+            const bgImage = featureImages[feature.title];
+
+            return (
+              <ScrollReveal key={feature.title} direction="up" delay={idx * 0.08}>
+                <div
+                  className="group relative p-5 lg:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 gold-glow-hover overflow-hidden h-full min-h-[200px]"
+                >
+                  {bgImage && (
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center opacity-[0.03] dark:opacity-[0.05] -z-10 mix-blend-luminosity group-hover:scale-105 transition-transform duration-500"
+                      style={{ backgroundImage: `url('${bgImage}')` }}
+                    />
+                  )}
+                  <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-champagne-100 to-gold-200/40 dark:from-navy-900/30 dark:to-navy-950/20 rounded-xl flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform shadow-inner shadow-gold-500/5 relative z-10 border border-champagne-200/20">
+                    <feature.icon className="h-5 w-5 lg:h-6 lg:w-6 text-champagne-300 dark:text-champagne-300" />
+                  </div>
+                  <h3 className="text-base lg:text-lg font-bold text-gray-900 dark:text-white mb-1.5 relative z-10">
+                    {t(feature.title)}
+                  </h3>
+                  <p className="text-gray-655 dark:text-gray-400 text-sm leading-relaxed relative z-10">
+                    {t(feature.desc)}
+                  </p>
+                </div>
+              </ScrollReveal>
+            );
+          })}
         </div>
 
         {/* Seller CTA */}
@@ -531,32 +567,38 @@ export function SellerCtaSection() {
     <section className="py-16 lg:py-24 gold-river-dark relative overflow-hidden border-t border-b border-gold-900/60">
       <div className="absolute inset-0 bg-[url('/patterns/luxury-pattern.svg')] opacity-[0.03] dark:opacity-[0.05]" />
       <div className="container mx-auto px-4 text-center relative z-10">
-        <h2 className="text-3xl lg:text-5xl font-black text-white mb-4 tracking-tight">
-          <T>Grow Your Jewellery Business Online</T>
-        </h2>
-        <p className="text-gold-100/90 mb-8 lg:mb-10 max-w-xl mx-auto text-sm lg:text-base font-medium leading-relaxed">
-          {t(
-            `Join hundreds of verified jewellers across Nepal, India, Dubai, USA & UK who are selling on ${BRAND.name}. List your shop for free and start receiving orders today.`,
-          )}
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-          <Link href="/auth/register" className="w-full sm:w-auto">
-            <Button
-              size="lg"
-              className="w-full h-12 px-8 rounded-xl text-base bg-white hover:bg-gold-100 text-gold-950 font-extrabold border-none shadow-lg active:scale-95 transition-all"
-            >
-              <T>Start free trial</T>
-            </Button>
-          </Link>
-          <Link href="/support" className="w-full sm:w-auto">
-            <Button
-              size="lg"
-              className="w-full h-12 px-8 rounded-xl text-base bg-transparent text-white border border-white/40 hover:bg-white/10 active:scale-95 transition-all"
-            >
-              <T>Get onboarding help</T>
-            </Button>
-          </Link>
-        </div>
+        <ScrollReveal direction="up" delay={0.05}>
+          <h2 className="text-3xl lg:text-5xl font-black text-white mb-4 tracking-tight">
+            <T>Grow Your Jewellery Business Online</T>
+          </h2>
+        </ScrollReveal>
+        <ScrollReveal direction="up" delay={0.12}>
+          <p className="text-gold-100/90 mb-8 lg:mb-10 max-w-xl mx-auto text-sm lg:text-base font-medium leading-relaxed">
+            {t(
+              `Join hundreds of verified jewellers across Nepal, India, Dubai, USA & UK who are selling on ${BRAND.name}. List your shop for free and start receiving orders today.`,
+            )}
+          </p>
+        </ScrollReveal>
+        <ScrollReveal direction="up" delay={0.2}>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+            <Link href="/auth/register" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                className="w-full h-12 px-8 rounded-xl text-base bg-champagne-100 text-navy-950 hover:bg-champagne-200 font-extrabold border-none shadow-lg active:scale-95 transition-all"
+              >
+                <T>Start free trial</T>
+              </Button>
+            </Link>
+            <Link href="/support" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                className="w-full h-12 px-8 rounded-xl text-base bg-transparent text-white border border-white/50 hover:bg-white/10 active:scale-95 transition-all"
+              >
+                <T>Get onboarding help</T>
+              </Button>
+            </Link>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );
@@ -573,85 +615,102 @@ const mobilePosPoints = [
 export function MobilePosSpotlight() {
   const t = useT();
   return (
-    <section id="mobile-pos" data-tour="m-pos-spotlight" className="py-12 lg:py-20 bg-gradient-to-br from-gold-50/30 via-gold-100/10 to-white dark:from-gray-950 dark:via-gold-950/20 dark:to-gray-950 overflow-hidden border-b border-gray-150 dark:border-gray-900/60">
+    <section id="mobile-pos" data-tour="m-pos-spotlight" className="py-12 lg:py-20 bg-gradient-to-br from-[#faf6f0] via-white to-[#faf6f0] dark:from-[#070e15] dark:via-[#0b1420] dark:to-[#070e15] overflow-hidden border-b border-gray-150 dark:border-gray-900/60">
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: copy */}
           <div className="space-y-6" data-tour="m-pos-features">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-100 dark:bg-gold-950/40 text-gold-800 dark:text-gold-300 text-xs font-semibold uppercase tracking-wide border border-gold-200/50 dark:border-gold-850/40">
-              <Zap className="h-3.5 w-3.5 text-gold-500 animate-pulse" />
-              <T>New feature</T>
-            </div>
-            <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white">
-              <T>Mobile POS for every jewellery counter</T>
-            </h2>
-            <p className="text-gray-650 dark:text-gray-300 text-sm lg:text-base max-w-md">
-              <T>
-                Turn any smartphone into a jewellery POS. Serve walk-in
-                customers, check live metal trends, issue tax-ready receipts,
-                and update inventory without a dedicated terminal.
-              </T>
-            </p>
-            <ul className="space-y-3">
-              {mobilePosPoints.map((point) => (
-                <li key={point} className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-gold-550 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm lg:text-base text-gray-700 dark:text-gray-300">{t(point)}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <Link href="/auth/register">
-                <Button size="lg" className="gold-gradient text-white h-11 px-7 rounded-xl text-sm font-bold shadow-md hover:shadow-gold-500/20 active:scale-95 transition-all">
-                  <T>Try Mobile POS free</T>
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
+            <ScrollReveal direction="up" delay={0.05}>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-champagne-300/10 text-champagne-300 text-xs font-semibold uppercase tracking-wide border border-champagne-300/20">
+                <Zap className="h-3.5 w-3.5 text-champagne-300 animate-pulse" />
+                <T>New feature</T>
+              </div>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.12}>
+              <h2 className="text-2xl lg:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
+                <T>Mobile POS for every jewellery counter</T>
+              </h2>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.18}>
+              <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-base max-w-md leading-relaxed">
+                <T>
+                  Turn any smartphone into a jewellery POS. Serve walk-in
+                  customers, check live metal trends, issue tax-ready receipts,
+                  and update inventory without a dedicated terminal.
+                </T>
+              </p>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.24}>
+              <ul className="space-y-3">
+                {mobilePosPoints.map((point) => (
+                  <li key={point} className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-champagne-300 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm lg:text-base text-gray-700 dark:text-gray-300">{t(point)}</span>
+                  </li>
+                ))}
+              </ul>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.3}>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <Link href="/auth/register">
+                  <Button size="lg" className="bg-champagne-300 hover:bg-champagne-400 text-navy-950 h-11 px-7 rounded-xl text-sm font-bold shadow-md active:scale-95 transition-all border-none">
+                    <T>Try Mobile POS free</T>
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </ScrollReveal>
           </div>
 
           {/* Right: CSS phone mockup */}
           <div className="flex justify-center lg:justify-end">
-            <div className="relative">
-              {/* Glow */}
-              <div className="absolute inset-0 bg-gold-500/15 blur-3xl rounded-full scale-110" />
-              {/* Phone frame with smooth floating animation */}
-              <div className="relative w-64 lg:w-72 bg-gray-900 rounded-[2.5rem] p-3 shadow-2xl border-4 border-gray-800 ring-1 ring-white/10 animate-float">
-                {/* Notch */}
-                <div className="w-20 h-5 bg-gray-800 rounded-full mx-auto mb-3" />
-                {/* Screen */}
-                <div className="bg-white dark:bg-gray-100 rounded-[1.75rem] overflow-hidden border border-gray-800/20">
-                  {/* Status bar */}
-                  <div className="gold-gradient px-4 py-3 shadow-sm">
-                    <p className="text-white text-xs font-black tracking-tight"><T>Mobile POS</T></p>
-                    <p className="text-gold-100 text-[10px] font-semibold"><T>New Sale</T></p>
-                  </div>
-                  {/* Item rows */}
-                  <div className="p-3 space-y-2">
-                    {[
-                      { name: "22K Gold Ring", weight: "4.2g", price: "NPR 42,000" },
-                      { name: "Silver Chain", weight: "12g", price: "NPR 8,400" },
-                    ].map((item) => (
-                      <div key={item.name} className="flex items-center justify-between bg-gold-50/40 rounded-lg px-3 py-2 border border-gold-100/20">
-                        <div>
-                          <p className="text-[11px] font-bold text-gray-800">{item.name}</p>
-                          <p className="text-[10px] text-gray-505 font-medium">{item.weight}</p>
-                        </div>
-                        <p className="text-[11px] font-extrabold text-gold-700">{item.price}</p>
+            <ScrollReveal direction="right" delay={0.15}>
+              <div className="relative">
+                {/* Glow */}
+                <div className="absolute inset-0 bg-champagne-300/10 blur-3xl rounded-full scale-110" />
+                {/* Phone frame with smooth floating animation */}
+                <div className="relative w-64 lg:w-72 bg-[#0B0C10] rounded-[2.5rem] p-3.5 shadow-2xl border-4 border-gray-900 ring-1 ring-white/20 animate-float">
+                  {/* Notch */}
+                  <div className="w-24 h-5 bg-gray-950 rounded-full mx-auto mb-3" />
+                  {/* Screen */}
+                  <div className="bg-[#070e15] rounded-[1.75rem] overflow-hidden border border-white/5">
+                    {/* Status bar */}
+                    <div className="bg-[#0b1420] border-b border-white/5 px-4 py-3.5 flex justify-between items-center">
+                      <div>
+                        <p className="text-white text-[11px] font-black tracking-tight"><T>Mobile POS</T></p>
+                        <p className="text-gray-400 text-[9px] font-medium"><T>Orivraa Terminal</T></p>
                       </div>
-                    ))}
+                      <span className="bg-champagne-300/15 border border-champagne-300/25 text-champagne-300 text-[8px] font-black uppercase px-2 py-0.5 rounded-full"><T>New Sale</T></span>
+                    </div>
+                    {/* Item rows */}
+                    <div className="p-3.5 space-y-2.5">
+                      {[
+                        { name: "22K Gold Ring", weight: "4.2g", price: "NPR 42,000" },
+                        { name: "Silver Chain", weight: "12g", price: "NPR 8,400" },
+                      ].map((item) => (
+                        <div key={item.name} className="flex items-center justify-between bg-[#0b1420]/60 rounded-lg px-3 py-2.5 border border-white/[0.04] gold-glow-hover">
+                          <div>
+                            <p className="text-[11px] font-bold text-white">{item.name}</p>
+                            <p className="text-[9px] text-gray-400 font-medium">{item.weight}</p>
+                          </div>
+                          <p className="text-[11px] font-black text-champagne-300">{item.price}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Total + checkout */}
+                    <div className="mx-3.5 mb-3.5 mt-1.5 bg-gradient-to-br from-[#111b2b] to-[#0b1420] border border-champagne-300/20 rounded-xl px-4 py-3.5 text-center shadow-md">
+                      <p className="text-gray-400 text-[9px] font-medium"><T>Total Amount</T></p>
+                      <p className="text-white font-black text-base">NPR 50,400</p>
+                      <p className="text-champagne-300 text-[10px] font-black mt-1.5 animate-pulse flex items-center justify-center gap-1">
+                        <T>Tap to issue receipt</T> ›
+                      </p>
+                    </div>
                   </div>
-                  {/* Total + checkout */}
-                  <div className="mx-3 mb-3 mt-1 bg-gradient-to-r from-gold-650 to-gold-750 rounded-xl px-4 py-3 text-center shadow-inner shadow-black/10">
-                    <p className="text-gold-100 text-[10px] font-medium"><T>Total</T></p>
-                    <p className="text-white font-black text-sm">NPR 50,400</p>
-                    <p className="text-gold-250 text-[10px] font-semibold mt-1 animate-pulse"><T>Tap to issue receipt ›</T></p>
-                  </div>
+                  {/* Home bar */}
+                  <div className="w-24 h-1 bg-gray-800 rounded-full mx-auto mt-3.5" />
                 </div>
-                {/* Home bar */}
-                <div className="w-24 h-1 bg-gray-700 rounded-full mx-auto mt-3" />
               </div>
-            </div>
+            </ScrollReveal>
           </div>
         </div>
       </div>

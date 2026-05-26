@@ -22,6 +22,7 @@ import {
     Zap
 } from "lucide-react";
 import Link from "next/link";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 interface HeroSectionProps {
   /** CDN URL to the geo-resolved hero video (passed from server component). */
@@ -316,131 +317,148 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
       ) : (
         <div className="absolute inset-0 gold-river-light dark:gold-river-dark opacity-80" />
       )}
-      {!videoSrc && (
-        <>
-          <div className="absolute top-20 left-10 w-32 h-32 bg-gold-200 rounded-full blur-3xl opacity-30 animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-48 h-48 bg-gold-400 rounded-full blur-3xl opacity-20 animate-pulse" />
-        </>
-      )}
-
       <div className="container mx-auto px-4 relative">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div className="space-y-6 lg:space-y-8 text-center lg:text-left">
-            <div
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-                videoSrc
-                  ? "bg-white/20 backdrop-blur-sm text-white border border-white/30"
-                  : "bg-gold-50/80 text-gold-800 border border-gold-200/50 dark:bg-gold-950/40 dark:text-gold-300 dark:border-gold-800/40"
-              }`}
-            >
-              <Sparkles className="h-4 w-4 text-gold-500 animate-spin" />
-              <span>{t(currentCopy.badge)}</span>
-            </div>
-            <h1
-              className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight ${
-                videoSrc ? "text-white drop-shadow-lg" : "text-gray-900 dark:text-white"
-              }`}
-            >
-              <span>{t(currentCopy.headline)}</span>
-            </h1>
-            <p
-              className={`text-base lg:text-lg max-w-xl mx-auto lg:mx-0 ${
-                videoSrc ? "text-gray-200" : "text-gray-650 dark:text-gray-300"
-              }`}
-            >
-              <span>{t(currentCopy.subheadline)}</span>
-              <span className="block mt-2 font-medium text-gold-700 dark:text-gold-400">
-                <T>Free 30-day trial. No credit card required. Setup in under 10 minutes.</T>
-              </span>
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-              <Link href="/auth/register">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto gold-gradient text-white h-12 px-8 rounded-xl text-base font-bold shadow-md hover:shadow-gold-500/20 active:scale-95 transition-all"
-                >
-                  <T>Start free trial</T>
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <DemoModal
-                label="Watch Demo"
-                buttonClassName={
+            <ScrollReveal direction="up" delay={0.05}>
+              <div
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
                   videoSrc
-                    ? "bg-transparent text-white border-white/50 hover:bg-white/10"
-                    : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm rounded-xl"
-                }
-              />
-            </div>
-
-            <TrustSignals
-              variant="compact"
-              className={`pt-2 ${videoSrc ? "text-white" : ""}`}
-            />
-
-            <p
-              className={`text-sm mt-2 ${videoSrc ? "text-gray-300" : "text-gray-500"}`}
-            >
-              <T>Already have an account?</T>{" "}
-              <Link
-                href="/auth/login"
-                className={`font-semibold underline underline-offset-2 hover:no-underline text-gold-600 hover:text-gold-700 dark:text-gold-400 dark:hover:text-gold-300`}
+                    ? "bg-white/20 backdrop-blur-sm text-white border border-white/30"
+                    : "bg-gold-50/80 text-gold-800 border border-gold-200/50 dark:bg-gold-950/40 dark:text-gold-300 dark:border-gold-800/40"
+                }`}
               >
-                <T>Sign in to your shop</T>
-              </Link>
-            </p>
+                <Sparkles className="h-4 w-4 text-gold-500 animate-spin" />
+                <span>{t(currentCopy.badge)}</span>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="up" delay={0.15}>
+              <h1
+                className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight tracking-tight ${
+                  videoSrc ? "text-white drop-shadow-lg" : "text-gray-955 dark:text-white"
+                }`}
+              >
+                <span>{t(currentCopy.headline)}</span>
+              </h1>
+            </ScrollReveal>
+
+            <ScrollReveal direction="up" delay={0.25}>
+              <p
+                className={`text-base lg:text-lg max-w-xl mx-auto lg:mx-0 ${
+                  videoSrc ? "text-gray-200" : "text-gray-650 dark:text-gray-300"
+                }`}
+              >
+                <span>{t(currentCopy.subheadline)}</span>
+                <span className="block mt-2 font-semibold text-champagne-300 dark:text-champagne-300">
+                  <T>Free 30-day trial. No credit card required. Setup in under 10 minutes.</T>
+                </span>
+              </p>
+            </ScrollReveal>
+
+            <ScrollReveal direction="up" delay={0.35}>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+                <Link href="/auth/register">
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto gold-gradient text-white h-12 px-8 rounded-xl text-base font-bold shadow-md hover:shadow-gold-500/20 active:scale-95 transition-all"
+                  >
+                    <T>Start free trial</T>
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                <DemoModal
+                  label="Watch Demo"
+                  buttonClassName={
+                    videoSrc
+                      ? "bg-transparent text-white border-white/50 hover:bg-white/10"
+                      : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm rounded-xl"
+                  }
+                />
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="up" delay={0.45}>
+              <TrustSignals
+                variant="compact"
+                className={`pt-2 ${videoSrc ? "text-white" : ""}`}
+              />
+            </ScrollReveal>
+
+            <ScrollReveal direction="up" delay={0.5}>
+              <p
+                className={`text-sm mt-2 ${videoSrc ? "text-gray-300" : "text-gray-500"}`}
+              >
+                <T>Already have an account?</T>{" "}
+                <Link
+                  href="/auth/login"
+                  className={`font-semibold underline underline-offset-2 hover:no-underline text-champagne-300 dark:text-champagne-300`}
+                >
+                  <T>Sign in to your shop</T>
+                </Link>
+              </p>
+            </ScrollReveal>
           </div>
 
           {/* Stats / feature grid for sellers */}
           <div className="relative mt-8 lg:mt-0">
-            <div className="aspect-square bg-gradient-to-br from-gold-300 to-gold-500/40 rounded-full opacity-20 absolute -top-10 -right-10 w-72 h-72 blur-3xl animate-pulse" />
-            <div
-              className={`relative rounded-2xl lg:rounded-3xl shadow-2xl p-6 lg:p-8 ${
-                videoSrc
-                  ? "bg-white/10 backdrop-blur-md border border-white/20 shadow-black/20"
-                  : "bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 shadow-gold-500/5 dark:shadow-gold-950/20"
-              }`}
-            >
-              <div className="grid grid-cols-2 gap-3 lg:gap-4">
-                {[
-                  { icon: Store, label: "Live gold & silver rates", value: "Auto Rate Cards" },
-                  { icon: Package, label: "Karigar & Bullion ledgers", value: "Unified ERP" },
-                  { icon: Smartphone, label: "Mobile Counter POS", value: "Any Smartphone" },
-                  { icon: Zap, label: "Fast setup time", value: "< 10 Minutes" },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div
-                      key={item.label}
-                      className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
-                        videoSrc
-                          ? "bg-white/10 backdrop-blur-sm"
-                          : "bg-gradient-to-br from-white/70 to-gold-50/50 dark:from-gray-900/80 dark:to-gold-950/30 border border-gray-100/50 dark:border-gray-800/50 backdrop-blur-sm shadow-sm gold-glow-hover"
-                      }`}
-                    >
-                      <Icon
-                        className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-gold-600 dark:text-gold-400"}`}
-                      />
-                      <p
-                        className={`text-sm lg:text-base font-extrabold ${videoSrc ? "text-white" : "text-gray-950 dark:text-white"}`}
-                      >
-                        <T>{item.value}</T>
-                      </p>
-                      <p
-                        className={`text-[10px] lg:text-xs font-medium mt-0.5 ${videoSrc ? "text-gray-300" : "text-gray-500 dark:text-gray-400"}`}
-                      >
-                        <T>{item.label}</T>
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-              <p
-                className={`text-xs mt-4 text-center font-medium ${videoSrc ? "text-gray-300" : "text-gray-500 dark:text-gray-400"}`}
+            <div className="aspect-square bg-gradient-to-br from-champagne-300 to-gold-500/40 rounded-full opacity-20 absolute -top-10 -right-10 w-72 h-72 blur-3xl animate-pulse" />
+            <ScrollReveal direction="left" delay={0.3}>
+              <div
+                className={`relative rounded-2xl lg:rounded-3xl shadow-2xl p-6 lg:p-8 overflow-hidden ${
+                  videoSrc
+                    ? "bg-white/10 backdrop-blur-md border border-white/20 shadow-black/20"
+                    : "bg-white dark:bg-navy-900/60 border border-gray-150 dark:border-navy-850 shadow-gold-500/5 dark:shadow-gold-950/20"
+                }`}
               >
-                <span>{t(currentCopy.trustFooter)}</span>
-              </p>
-            </div>
+                {/* Custom Watermarked Goldsmith Image Background */}
+                {!videoSrc && (
+                  <div
+                    className="absolute inset-0 bg-cover bg-center opacity-[0.05] dark:opacity-[0.07] -z-10 mix-blend-luminosity scale-105"
+                    style={{ backgroundImage: `url('https://images.unsplash.com/photo-1598724168411-9ba1e003a7fe?auto=format&fit=crop&q=80&w=800')` }}
+                  />
+                )}
+                <div className="grid grid-cols-2 gap-3 lg:gap-4 relative z-10">
+                  {[
+                    { icon: Store, label: "Live gold & silver rates", value: "Auto Rate Cards" },
+                    { icon: Package, label: "Karigar & Bullion ledgers", value: "Unified ERP" },
+                    { icon: Smartphone, label: "Mobile Counter POS", value: "Any Smartphone" },
+                    { icon: Zap, label: "Fast setup time", value: "< 10 Minutes" },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div
+                        key={item.label}
+                        className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
+                          videoSrc
+                            ? "bg-white/10 backdrop-blur-sm"
+                            : "bg-gradient-to-br from-white/70 to-champagne-50/20 dark:from-[#0b1420]/90 dark:to-navy-950/40 border border-gray-150/40 dark:border-navy-850/50 backdrop-blur-sm shadow-sm gold-glow-hover"
+                        }`}
+                      >
+                        <Icon
+                          className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? "text-gold-300" : "text-champagne-300 dark:text-champagne-300"}`}
+                        />
+                        <p
+                          className={`text-sm lg:text-base font-extrabold ${videoSrc ? "text-white" : "text-gray-955 dark:text-white"}`}
+                        >
+                          <T>{item.value}</T>
+                        </p>
+                        <p
+                          className={`text-[10px] lg:text-xs font-medium mt-0.5 ${videoSrc ? "text-gray-300" : "text-gray-500 dark:text-gray-400"}`}
+                        >
+                          <T>{item.label}</T>
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p
+                  className={`text-xs mt-4 text-center font-medium relative z-10 ${videoSrc ? "text-gray-300" : "text-gray-500 dark:text-gray-400"}`}
+                >
+                  <span>{t(currentCopy.trustFooter)}</span>
+                </p>
+              </div>
+            </ScrollReveal>
           </div>
         </div>
       </div>

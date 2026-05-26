@@ -112,17 +112,17 @@
 }
 
 @layer components {
-  /* Gold gradient utilities */
+/* Gold gradient utilities - Upgraded to luxury champagne gold */
   .gold-gradient {
-    @apply bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600;
+    @apply bg-gradient-to-r from-champagne-300 via-gold-500 to-champagne-400 !important;
   }
   
   .gold-gradient-subtle {
-    @apply bg-gradient-to-r from-gold-50 via-gold-100 to-gold-50;
+    @apply bg-gradient-to-r from-champagne-50 via-champagne-100 to-champagne-50 !important;
   }
   
   .gold-text-gradient {
-    @apply bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-champagne-300 via-gold-500 to-champagne-400 bg-clip-text text-transparent !important;
   }
   
   /* Card hover effects */
@@ -522,12 +522,12 @@
 .gold-river-light {
   background: linear-gradient(
     90deg,
-    #fffdf5, /* glowing champagne */
-    #fffbeb, /* amber-50 fallback */
-    #fef3c7, /* amber-100 */
-    #fde68a, /* amber-200 */
-    #fef3c7, /* amber-100 */
-    #fffdf5  /* champagne loop */
+    #faf6f0, /* glowing champagne-50 */
+    #f4efe7, /* ivory highlight-100 */
+    #ecc5a2, /* champagne-300 */
+    #dfd1c5, /* champagne-200 */
+    #ecc5a2, /* champagne-300 */
+    #faf6f0  /* champagne loop */
   );
   background-size: 200% 100%;
   animation: gold-river-flow 10s linear infinite;
@@ -536,12 +536,12 @@
 .gold-river-dark {
   background: linear-gradient(
     90deg,
-    #060402, /* pitch black gold */
-    #170e05, /* deep molten bronze */
-    #301e0a, /* liquid warm bronze */
-    #4a320f, /* shimming dark gold */
-    #170e05, /* deep molten bronze */
-    #060402  /* pitch black gold loop */
+    #070e15, /* navy-950 dark */
+    #0b1420, /* navy-900 light */
+    #111b2b, /* navy-850 medium */
+    #ecc5a2, /* champagne gold accent shimmer */
+    #111b2b, /* navy-850 medium */
+    #070e15  /* navy-950 dark loop */
   );
   background-size: 200% 100%;
   animation: gold-river-flow 12s linear infinite;
@@ -556,7 +556,15 @@
 }
 
 .gold-glow-hover:hover {
-  @apply border-gold-300 dark:border-gold-700 scale-[1.01] shadow-[0_0_20px_rgba(212,175,55,0.18)] !important;
+  @apply border-champagne-300 dark:border-champagne-400 scale-[1.015] shadow-[0_0_24px_rgba(236,197,162,0.22)] !important;
+}
+
+.bg-space-navy {
+  background: linear-gradient(135deg, #0b1420 0%, #070e15 100%) !important;
+}
+
+.champagne-gradient {
+  background: linear-gradient(135deg, #ecc5a2 0%, #d3ad8a 100%) !important;
 }
 
 
