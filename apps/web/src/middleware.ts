@@ -344,6 +344,34 @@ export function middleware(request: NextRequest) {
   // Detect mobile subdomain: m.orivraa.com or m.localhost
   const isMobileSubdomain = hostname === "m" || hostname.startsWith("m.");
 
+  // Role cookie to gate mobile subdomain redirection.
+  // Only SHOPKEEPER and SALES roles (or guests/logged-out users) should be on the mobile subdomain.
+  // CUSTOMER, ADMIN, and SUPPORT roles should always stay on the responsive desktop domain.
+  const userRole = request.cookies.get("orivraa_user_role")?.value;
+  const isRoleEligibleForMobile = !userRole || userRole === "SHOPKEEPER" || userRole === "SALES";
+
+  // If a non-eligible user (customer, admin, support) lands on the mobile subdomain,
+  // redirect them back to the desktop domain immediately.
+  if (isMobileSubdomain && !isRoleEligibleForMobile) {
+    const desktopUrl = new URL(request.url);
+    const host = hostname;
+    if (host.startsWith("m.")) {
+      desktopUrl.hostname = host.substring(2);
+    } else if (host === "m") {
+      desktopUrl.hostname = "localhost"; // fallback
+    }
+
+    if (!isApprovedDomain(desktopUrl.hostname)) {
+      const html = generateRedirectWarningHtml(desktopUrl.toString(), desktopUrl.hostname);
+      const warningResponse = new NextResponse(html, {
+        headers: { "Content-Type": "text/html" },
+      });
+      return withGeoCookies(request, warningResponse);
+    }
+
+    return withGeoCookies(request, NextResponse.redirect(desktopUrl, 302));
+  }
+
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-url", request.url);
   requestHeaders.set("x-pathname", pathname);
@@ -365,6 +393,7 @@ export function middleware(request: NextRequest) {
       isMobileUserAgent &&
       !forceDesktop &&
       !isCrawlerBot &&
+      isRoleEligibleForMobile &&
       (isDashboardPath || isMobilePath || hasMobileEquivalent)
     ) {
       const mobileUrl = new URL(request.url);

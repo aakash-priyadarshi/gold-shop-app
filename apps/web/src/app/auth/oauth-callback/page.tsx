@@ -189,6 +189,12 @@ function OAuthCallbackHandler() {
         const response = await api.get("/auth/me");
         const user = response.data;
 
+        // Set user role cookie for Edge Middleware routing
+        const raw = sessionStorage.getItem("orivraa_oauth_remember_me");
+        const rememberMe = raw !== "0"; // default true when absent
+        const maxAge = rememberMe ? REMEMBERED_TOKEN_MAX_AGE : undefined;
+        setAuthCookieOAuth("orivraa_user_role", user.role, maxAge);
+
         // Check if shop setup is required (SHOPKEEPER via Google OAuth)
         // Check both shopId (flat) and shop.id (nested) for compatibility
         const hasShop = user.shopId || user.shop?.id;

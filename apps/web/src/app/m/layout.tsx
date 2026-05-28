@@ -305,7 +305,24 @@ function MoreMenu({ onClose }: { onClose: () => void }) {
           </Link>
           <Link
             href="/dashboard/shop"
-            onClick={onClose}
+            onClick={(e) => {
+              e.preventDefault();
+              onClose();
+              const domain = window.location.hostname.endsWith("orivraa.com") ? "; domain=.orivraa.com" : "";
+              const secure = window.location.protocol === "https:" ? "; Secure" : "";
+              document.cookie = `orivraa_force_desktop=true; path=/${domain}; SameSite=Lax${secure}; max-age=604800`;
+              
+              const host = window.location.hostname;
+              let desktopUrl = `https://orivraa.com/dashboard/shop`;
+              if (host.startsWith("m.")) {
+                desktopUrl = `https://${host.substring(2)}/dashboard/shop`;
+              } else if (host === "m") {
+                desktopUrl = `https://orivraa.com/dashboard/shop`;
+              } else if (host === "localhost" || host.endsWith(".localhost")) {
+                desktopUrl = `http://${host.replace("m.", "")}/dashboard/shop`;
+              }
+              window.location.href = desktopUrl;
+            }}
             className="flex items-center gap-3 px-4 py-4 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 active:bg-gray-50 dark:bg-gray-950"
           >
             <ComputerDesktopIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />

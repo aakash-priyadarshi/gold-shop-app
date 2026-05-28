@@ -255,6 +255,7 @@ const clearTokens = () => {
   sessionStorage.removeItem("orivraa_oauth_remember_me");
   clearAuthCookie(TOKEN_KEY);
   clearAuthCookie(REFRESH_TOKEN_KEY);
+  clearAuthCookie("orivraa_user_role");
 };
 
 // Dashboard routes by role
@@ -345,6 +346,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: null,
       });
 
+      // Set user role cookie for Edge Middleware routing
+      const hadRememberMe = localStorage.getItem("orivraa_remember_me") === "1";
+      const maxAge = hadRememberMe ? REMEMBERED_TOKEN_MAX_AGE : undefined;
+      setAuthCookie("orivraa_user_role", user.role, maxAge);
+
       // Shop's country/currency is the overriding factor for sellers.
       // Apply it now so geo-detection (which runs earlier) doesn't win.
       if (user.role === "SHOPKEEPER" && user.shop?.country) {
@@ -405,6 +411,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isLoading: false,
           error: null,
         });
+
+        // Set user role cookie for Edge Middleware routing
+        const hadRememberMe = rememberMe ?? false;
+        const maxAge = hadRememberMe ? REMEMBERED_TOKEN_MAX_AGE : undefined;
+        setAuthCookie("orivraa_user_role", fullUser.role, maxAge);
 
         // Redirect to appropriate dashboard
         // Check if shopkeeper needs to complete shop setup first
@@ -499,6 +510,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isLoading: false,
           error: null,
         });
+
+        // Set user role cookie for Edge Middleware routing
+        setAuthCookie("orivraa_user_role", fullUser.role);
 
         // Redirect to appropriate dashboard
         // Check if shopkeeper needs to complete shop setup first
