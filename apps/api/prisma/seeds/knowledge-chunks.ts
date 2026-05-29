@@ -103,6 +103,26 @@ const CHUNKS: { topic: string; content: string }[] = [
     content:
       "To speak with a human, contact Aakash (founder) directly. Email: aakashm301@gmail.com. WhatsApp or call: +91 62039 65557. Replies personally within a few hours.",
   },
+  {
+    topic: "repairs",
+    content:
+      "Orivraa has a built-in repair and service job tracker on both the mobile app and desktop. Log repair jobs (resizing, polishing, soldering, stone setting, rhodium plating), capture before/after photos, set estimated charges and delivery dates, track job status, and notify customers on WhatsApp when ready. Repairs tracking is available on PRO and higher plans in all countries including India and Nepal.",
+  },
+  {
+    topic: "savings",
+    content:
+      "Orivraa supports gold savings and instalment schemes (also called gold saving plans, committee, chitti, or monthly deposit schemes popular with jewellers in India and Nepal). Track each customer's monthly deposits, accrued gold/value, maturity date, and redemption against a future purchase. Sends WhatsApp reminders for due instalments. Available on PRO and higher plans in all countries.",
+  },
+  {
+    topic: "lending",
+    content:
+      "Orivraa includes gold loan / girvi (pledged-gold lending) management. Record pledged items with weight, purity and photos, set principal, interest rate and tenure, auto-calculate interest accrued, log repayments, and track due/overdue loans. Helps jewellers in India and Nepal run their lending desk alongside retail. Available on PRO and higher plans.",
+  },
+  {
+    topic: "karigar",
+    content:
+      "Orivraa has a karigar (goldsmith/artisan) supply-chain module to issue metal to karigars, track work-in-progress orders, record metal given vs returned and wastage, and settle making charges. Keeps your karigar accounts transparent. Available on PRO and higher plans across India, Nepal and other regions.",
+  },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

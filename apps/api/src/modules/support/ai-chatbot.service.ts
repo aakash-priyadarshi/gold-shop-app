@@ -31,6 +31,13 @@ interface SellerSnapshot {
   openOrderCount: number;
   recentOrders: Array<{ orderNumber: string; status: string }>;
   yearlySales: number;
+  monthlyTaxCollected: number;
+  yearlyTaxCollected: number;
+  lastMonthSales: number;
+  lastSale?: { invoiceNumber: string; customerName: string; totalAmount: number; issuedAt?: string } | null;
+  topCustomer?: { name: string; total: number } | null;
+  productCount: number;
+  lowStockCount: number;
   nepalAuditRequired: boolean;
   nepalAuditThresholdUsedPct: number;
   isVerified?: boolean;
@@ -351,6 +358,9 @@ KEY FEATURES:
 11. Old-gold exchange — correct GST treatment on exchange transactions
 12. Karigar & Bullion Supply Chain Console — raw gold/silver bullion procures, artisan outstanding float balance sheets, loss tolerance calculations, and order checklists (PRO/PRO_PLUS/ENTERPRISE). Features full CRUD (create, read, update, delete) for Karigars (with name, workshop name, location, phone number with country code, email, wastage limit %, labor rate) and fabrication jobs (with product, artisan, metal weight, and a 5-step checklist: Cast -> File -> Set -> Polish -> HUID). Also supports custom material types (like Platinum 950 or Rose Gold 14K) in the vault and procurement modules.
 13. Stock Ledger — finished goods catalogued stock table searchable by HUID or barcode, physical transfers between showcases and strongroom vault, and live vault fiat valuations
+14. Repairs & service tracking — log repair/service jobs (resizing, polishing, soldering, stone setting, plating), photos, charges, status, and WhatsApp ready-notifications (PRO+ in all countries incl. India & Nepal)
+15. Gold savings & instalment schemes — track customer monthly deposits / committee / chitti plans, accrued gold/value, maturity and redemption, with WhatsApp due reminders (PRO+ in all countries incl. India & Nepal)
+16. Gold loan / girvi lending — record pledged items, principal, interest rate, tenure, auto-calculated interest, repayments and overdue tracking (PRO+ incl. India & Nepal)
 
 GST DETAILS (INDIA):
 - 3 % GST on gold value + 5 % GST on making charges
@@ -632,6 +642,76 @@ AVAILABLE TOOLS:
     return `${currency} ${amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
   }
 
+  private formatShortDate(iso?: string): string {
+    if (!iso) return "an earlier date";
+    try {
+      return new Intl.DateTimeFormat("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(new Date(iso));
+    } catch {
+      return "an earlier date";
+    }
+  }
+
+  /**
+   * Country-specific jewellery tax regime, used to label and explain the
+   * output tax the seller has collected on their invoices.
+   */
+  private getTaxRegimeNote(country?: string | null): { taxName: string; detail: string; tab: string } {
+    switch (country) {
+      case "IN":
+        return {
+          taxName: "GST",
+          detail: "Indian jewellery GST is 3% on gold value plus 5% on making charges (HSN 7113).",
+          tab: "India",
+        };
+      case "NP":
+        return {
+          taxName: "VAT",
+          detail: "Nepal charges 13% VAT on jewellery, plus any applicable luxury tax.",
+          tab: "Nepal",
+        };
+      case "AE":
+        return {
+          taxName: "VAT",
+          detail: "UAE VAT is 5% (investment-grade gold can be zero-rated).",
+          tab: "UAE",
+        };
+      case "GB":
+        return {
+          taxName: "VAT",
+          detail: "UK VAT is 20%, often on the margin/making portion under the second-hand margin scheme.",
+          tab: "UK",
+        };
+      case "EU":
+      case "DE":
+      case "FR":
+      case "IT":
+      case "ES":
+      case "NL":
+        return {
+          taxName: "VAT",
+          detail: "EU VAT rates vary by member state and are reported via OSS where applicable.",
+          tab: "EU",
+        };
+      case "US":
+        return {
+          taxName: "sales tax",
+          detail: "US sales tax varies by state and county.",
+          tab: "US",
+        };
+      default:
+        return {
+          taxName: "tax",
+          detail: "Tax rates vary by jurisdiction.",
+          tab: this.getCountryLabel(country),
+        };
+    }
+  }
+
   private pickSettledValue<T>(
     result: PromiseSettledResult<T>,
     label: string,
@@ -734,6 +814,14 @@ Open order count: ${snapshot.openOrderCount}
 Walk-in customer count: ${snapshot.walkInCustomerCount}
 Recent orders: ${recentOrders}
 Year-to-date sales: ${this.formatCurrency(snapshot.yearlySales, snapshot.currency)}
+Last month sales: ${this.formatCurrency(snapshot.lastMonthSales, snapshot.currency)}
+Tax collected this month (output ${this.getTaxRegimeNote(snapshot.country).taxName}): ${this.formatCurrency(snapshot.monthlyTaxCollected, snapshot.currency)}
+Tax collected year-to-date (output ${this.getTaxRegimeNote(snapshot.country).taxName}): ${this.formatCurrency(snapshot.yearlyTaxCollected, snapshot.currency)}
+Tax regime note: ${this.getTaxRegimeNote(snapshot.country).detail}
+Last sale: ${snapshot.lastSale ? `invoice ${snapshot.lastSale.invoiceNumber} for ${this.formatCurrency(snapshot.lastSale.totalAmount, snapshot.currency)}${snapshot.lastSale.issuedAt ? ` on ${this.formatShortDate(snapshot.lastSale.issuedAt)}` : ""}${snapshot.lastSale.customerName && !/walk[- ]?in/i.test(snapshot.lastSale.customerName) ? ` to ${snapshot.lastSale.customerName}` : ""}` : "No issued invoices yet."}
+Top customer year-to-date: ${snapshot.topCustomer && snapshot.topCustomer.total > 0 ? `${snapshot.topCustomer.name} (${this.formatCurrency(snapshot.topCustomer.total, snapshot.currency)})` : "Not enough data yet."}
+Products in catalogue: ${snapshot.productCount}
+Items running low (<=1 in stock): ${snapshot.lowStockCount}
 Tax audit status: ${auditStatus}
 Shop KYC Verification Status: ${kycStatus}
 
@@ -789,9 +877,13 @@ ${this.getSellerTaxGuidance(snapshot)}
 
 SELLER RESPONSE RULES:
 - Answer with this seller's data only. Never mention or infer another seller's data.
+- You CAN and SHOULD use the live numbers above to answer data questions directly — e.g. last sale, this/last month sales, tax collected this year, top customer, pending payments, product/stock counts. Do not say "I can't calculate" when the figure is available above; state it.
+- When you quote tax, make clear it is the output ${this.getTaxRegimeNote(snapshot.country).taxName} collected on invoices, and that the exact payable depends on input credit/exemptions — point them to Tax Reports for the final figure.
+- Be warm and encouraging: briefly celebrate good momentum (rising sales, a big sale, milestones) and gently flag risks (overdue payments, low stock). Keep it genuine, never pushy.
+- Where useful, add ONE short proactive next-step suggestion (e.g. "chase pending payments", "restock low items"). Keep total replies to 2-4 sentences unless giving a summary.
 - If the seller is currently on a mobile path (starts with /m/), guide them using the MOBILE FEATURE MAP and mobile UI language ("tap the More tab", "open Tax Audit from the More menu"). Do NOT mention the desktop left sidebar.
 - If the seller is on a desktop path (/dashboard/), guide them using the DESKTOP CRM FEATURE MAP and desktop UI language ("open Tax Reports from the left sidebar").
-- If a requested metric is unavailable, say it is unavailable instead of inventing it.
+- If a requested metric is genuinely unavailable in the context above, say it is unavailable instead of inventing it.
 - Prefer direct, operational instructions for CRM navigation and tax-report workflows.`;
   }
 
@@ -961,29 +1053,105 @@ SELLER RESPONSE RULES:
       };
     }
 
-    if (/last sale.*value|value of.*last sale|latest sale.*value/.test(normalized)) {
-      const salesFormatted = this.formatCurrency(snapshot.monthlySales, snapshot.currency);
+    if (/last sale|latest sale|last invoice|most recent sale|recent sale|last bill|my last order value/.test(normalized)) {
+      if (snapshot.lastSale) {
+        const { invoiceNumber, customerName, totalAmount, issuedAt } = snapshot.lastSale;
+        const when = issuedAt ? ` on ${this.formatShortDate(issuedAt)}` : "";
+        const who = customerName && !/walk[- ]?in/i.test(customerName) ? ` to ${customerName}` : "";
+        return {
+          reply: `Your most recent sale was invoice ${invoiceNumber}${who} for ${this.formatCurrency(totalAmount, snapshot.currency)}${when}. Open Invoices in the left sidebar (${invoiceRoute}) to see the full bill.`,
+          shouldEscalate: false,
+          confidence: 0.96,
+        };
+      }
       return {
-        reply: `I don't have information on the value of your *last* individual sale, but your total sales this month are ${salesFormatted} across ${snapshot.monthlyInvoiceCount} invoice${snapshot.monthlyInvoiceCount === 1 ? "" : "s"}.`,
+        reply: `I couldn't find any issued invoices for ${snapshot.shopName} yet. Once you bill your first sale from POS or Invoices (${createInvoiceRoute}), I'll be able to pull it up for you here.`,
         shouldEscalate: false,
-        confidence: 0.96,
+        confidence: 0.9,
       };
     }
 
-    if (/how many tax|how much tax|tax.*have to pay|tax obligation|calculate.*tax/.test(normalized)) {
-      const countryLabel = this.getCountryLabel(snapshot.country);
-      const taxReportsPath = snapshot.country === "IN" ? "GSTR-1 and GSTR-3B reports" : 
-                            snapshot.country === "NP" ? "VAT and Luxury Tax returns" :
-                            snapshot.country === "AE" ? "VAT 201 filing report" : "tax returns";
-      
-      const tabName = snapshot.country === "IN" ? "India" : 
-                      snapshot.country === "NP" ? "Nepal" : 
-                      snapshot.country === "AE" ? "UAE" : countryLabel;
-
+    if (/how much.*sales.*last month|last month.*sales|sales.*last month|previous month.*sales/.test(normalized)) {
+      const thisMonth = snapshot.monthlySales;
+      const lastMonth = snapshot.lastMonthSales;
+      let trend = "";
+      if (lastMonth > 0) {
+        const pct = Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
+        trend = pct >= 0
+          ? ` You're up ${pct}% versus last month so far — nice momentum!`
+          : ` You're ${Math.abs(pct)}% behind last month so far, so there's room to push.`;
+      }
       return {
-        reply: `I can't calculate your exact tax liability for you, but you can find all the necessary tax reports in your Orivraa dashboard. Just open **Tax Reports** from the left sidebar, then navigate to the **${tabName}** tab. There you'll find your ${taxReportsPath}, which detail your tax obligations based on your sales.`,
+        reply: `Last month you sold ${this.formatCurrency(lastMonth, snapshot.currency)}, and this month you're at ${this.formatCurrency(thisMonth, snapshot.currency)}.${trend}`,
         shouldEscalate: false,
-        confidence: 0.96,
+        confidence: 0.94,
+      };
+    }
+
+    if (/top customer|best customer|biggest customer|highest spending|who spends the most|top buyer/.test(normalized)) {
+      if (snapshot.topCustomer && snapshot.topCustomer.total > 0) {
+        return {
+          reply: `Your top customer this year is ${snapshot.topCustomer.name}, with ${this.formatCurrency(snapshot.topCustomer.total, snapshot.currency)} in purchases. A quick thank-you message or a small offer could be a great way to keep them coming back. You can see their full history under Customers in the left sidebar (${customersRoute}).`,
+          shouldEscalate: false,
+          confidence: 0.93,
+        };
+      }
+      return {
+        reply: `I don't have enough sales data yet to rank your top customer. Once you've billed a few invoices, ask me again and I'll tell you who your biggest buyer is. You can always review customers under Customers in the left sidebar (${customersRoute}).`,
+        shouldEscalate: false,
+        confidence: 0.88,
+      };
+    }
+
+    if (/how many products|how many items|inventory count|stock count|low stock|out of stock|running low|items in stock/.test(normalized)) {
+      const lowStockNote = snapshot.lowStockCount > 0
+        ? ` ${snapshot.lowStockCount} item${snapshot.lowStockCount === 1 ? " is" : "s are"} running low (1 or fewer in stock) — you may want to restock soon.`
+        : " Stock levels look healthy.";
+      return {
+        reply: `You have ${snapshot.productCount} product${snapshot.productCount === 1 ? "" : "s"} in your catalogue.${lowStockNote} Manage them under Inventory in the left sidebar (/dashboard/shop/inventory).`,
+        shouldEscalate: false,
+        confidence: 0.92,
+      };
+    }
+
+    if (/how('?s| is| are).*(my )?(business|shop|store)( doing| going)?|business summary|shop summary|how am i doing|overview of my (business|shop)/.test(normalized)) {
+      const parts = [
+        `Here's a quick snapshot of ${snapshot.shopName}:`,
+        `• Sales this month: ${this.formatCurrency(snapshot.monthlySales, snapshot.currency)} across ${snapshot.monthlyInvoiceCount} invoice${snapshot.monthlyInvoiceCount === 1 ? "" : "s"}.`,
+        `• Year-to-date sales: ${this.formatCurrency(snapshot.yearlySales, snapshot.currency)}.`,
+        `• Pending payments: ${this.formatCurrency(snapshot.pendingInvoiceAmount, snapshot.currency)} across ${snapshot.pendingInvoiceCount} invoice${snapshot.pendingInvoiceCount === 1 ? "" : "s"}.`,
+        `• Open orders: ${snapshot.openOrderCount}.`,
+      ];
+      if (snapshot.topCustomer && snapshot.topCustomer.total > 0) {
+        parts.push(`• Top customer this year: ${snapshot.topCustomer.name} (${this.formatCurrency(snapshot.topCustomer.total, snapshot.currency)}).`);
+      }
+      if (snapshot.pendingInvoiceAmount > 0) {
+        parts.push(`A good next step: chase those pending payments from Invoices (${invoiceRoute}).`);
+      }
+      return {
+        reply: parts.join("\n"),
+        shouldEscalate: false,
+        confidence: 0.92,
+      };
+    }
+
+    if (/how many tax|how much tax|tax.*have to pay|tax.*do i (owe|pay)|tax obligation|tax liability|calculate.*tax|my tax this year|tax this year|tax i (owe|paid|collected)/.test(normalized)) {
+      const regime = this.getTaxRegimeNote(snapshot.country);
+      const yearTax = this.formatCurrency(snapshot.yearlyTaxCollected, snapshot.currency);
+      const monthTax = this.formatCurrency(snapshot.monthlyTaxCollected, snapshot.currency);
+      const yearSales = this.formatCurrency(snapshot.yearlySales, snapshot.currency);
+
+      if (snapshot.yearlyTaxCollected > 0 || snapshot.yearlySales > 0) {
+        return {
+          reply: `Based on your invoices, you've collected ${yearTax} in ${regime.taxName} so far this year (on ${yearSales} of sales), including ${monthTax} this month. ${regime.detail} That figure is your output ${regime.taxName} — the exact amount payable also depends on input credit and exemptions, so confirm the final numbers in Tax Reports → ${regime.tab} tab (${taxRoute}).`,
+          shouldEscalate: false,
+          confidence: 0.95,
+        };
+      }
+      return {
+        reply: `I don't see any taxed invoices for ${snapshot.shopName} yet this year, so your collected ${regime.taxName} is currently ${yearTax}. ${regime.detail} Once you start billing, your running ${regime.taxName} total will appear in Tax Reports → ${regime.tab} tab (${taxRoute}).`,
+        shouldEscalate: false,
+        confidence: 0.9,
       };
     }
 
@@ -998,6 +1166,7 @@ SELLER RESPONSE RULES:
   ): Promise<SellerSnapshot> {
     const now = new Date();
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
     const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
 
     const [
@@ -1009,6 +1178,11 @@ SELLER RESPONSE RULES:
       openOrdersResult,
       recentOrdersResult,
       yearlyInvoicesResult,
+      lastSaleResult,
+      lastMonthInvoicesResult,
+      topCustomerResult,
+      productCountResult,
+      lowStockResult,
     ] = await Promise.allSettled([
       this.prisma.user.findUnique({
         where: { id: userId },
@@ -1031,7 +1205,7 @@ SELLER RESPONSE RULES:
           status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID"] },
         },
         _count: { id: true },
-        _sum: { totalAmount: true },
+        _sum: { totalAmount: true, taxAmount: true },
       }),
       this.prisma.invoice.aggregate({
         where: {
@@ -1061,7 +1235,39 @@ SELLER RESPONSE RULES:
           issuedAt: { gte: yearStart },
           status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID"] },
         },
+        _sum: { totalAmount: true, taxAmount: true },
+      }),
+      this.prisma.invoice.findFirst({
+        where: {
+          shopId,
+          issuedAt: { not: null },
+          status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID"] },
+        },
+        orderBy: { issuedAt: "desc" },
+        select: { invoiceNumber: true, customerName: true, totalAmount: true, issuedAt: true },
+      }),
+      this.prisma.invoice.aggregate({
+        where: {
+          shopId,
+          issuedAt: { gte: lastMonthStart, lt: monthStart },
+          status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID"] },
+        },
         _sum: { totalAmount: true },
+      }),
+      this.prisma.invoice.groupBy({
+        by: ["customerName"],
+        where: {
+          shopId,
+          issuedAt: { gte: yearStart },
+          status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID"] },
+        },
+        _sum: { totalAmount: true },
+        orderBy: { _sum: { totalAmount: "desc" } },
+        take: 1,
+      }),
+      this.prisma.inventoryItem.count({ where: { shopId } }),
+      this.prisma.inventoryItem.count({
+        where: { shopId, status: "AVAILABLE", stockQuantity: { lte: 1 } },
       }),
     ]);
 
@@ -1073,15 +1279,35 @@ SELLER RESPONSE RULES:
     const openOrderCount = this.pickSettledValue(openOrdersResult, "open orders") ?? 0;
     const recentOrders = this.pickSettledValue(recentOrdersResult, "recent orders") ?? [];
     const yearlyInvoices = this.pickSettledValue(yearlyInvoicesResult, "yearly invoices");
+    const lastSaleRow = this.pickSettledValue(lastSaleResult, "last sale");
+    const lastMonthInvoices = this.pickSettledValue(lastMonthInvoicesResult, "last month invoices");
+    const topCustomerRows = this.pickSettledValue(topCustomerResult, "top customer") ?? [];
+    const productCount = this.pickSettledValue(productCountResult, "product count") ?? 0;
+    const lowStockCount = this.pickSettledValue(lowStockResult, "low stock count") ?? 0;
 
     const sellerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Seller";
     const country = shop?.country ?? "IN";
     const currency = this.getCurrencyCode(country);
     const monthlySales = monthlyInvoices?._sum.totalAmount ?? 0;
     const monthlyInvoiceCount = monthlyInvoices?._count.id ?? 0;
+    const monthlyTaxCollected = monthlyInvoices?._sum.taxAmount ?? 0;
     const pendingInvoiceAmount = pendingInvoices?._sum.balanceDue ?? 0;
     const pendingInvoiceCount = pendingInvoices?._count.id ?? 0;
     const yearlySales = yearlyInvoices?._sum.totalAmount ?? 0;
+    const yearlyTaxCollected = yearlyInvoices?._sum.taxAmount ?? 0;
+    const lastMonthSales = lastMonthInvoices?._sum.totalAmount ?? 0;
+    const lastSale = lastSaleRow
+      ? {
+          invoiceNumber: lastSaleRow.invoiceNumber,
+          customerName: lastSaleRow.customerName,
+          totalAmount: lastSaleRow.totalAmount,
+          issuedAt: lastSaleRow.issuedAt ? lastSaleRow.issuedAt.toISOString() : undefined,
+        }
+      : null;
+    const topCustomerRow = topCustomerRows[0];
+    const topCustomer = topCustomerRow && topCustomerRow.customerName
+      ? { name: topCustomerRow.customerName, total: topCustomerRow._sum?.totalAmount ?? 0 }
+      : null;
     const nepalThreshold = 10_000_000;
     const nepalAuditRequired = country === "NP" && yearlySales >= nepalThreshold;
     const nepalAuditThresholdUsedPct = country === "NP"
@@ -1110,6 +1336,13 @@ SELLER RESPONSE RULES:
       openOrderCount,
       recentOrders,
       yearlySales,
+      monthlyTaxCollected,
+      yearlyTaxCollected,
+      lastMonthSales,
+      lastSale,
+      topCustomer,
+      productCount,
+      lowStockCount,
       nepalAuditRequired,
       nepalAuditThresholdUsedPct,
       dashboardMode,
