@@ -338,7 +338,7 @@ export default function JewelleryManufacturingSoftwarePage() {
             <p className="text-lg text-amber-100 mb-8">
               <T>
                 Ditch archaic Windows servers and un-reconciled ledgers. Get complete
-                metal and labor balance visibility. Free 30-day trial.
+                metal and labor balance visibility. Free 60-day trial.
               </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

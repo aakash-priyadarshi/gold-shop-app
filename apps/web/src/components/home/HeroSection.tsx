@@ -366,7 +366,7 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
               >
                 <span>{t(currentCopy.subheadline)}</span>
                 <span className="block mt-2 font-semibold text-gold-500 dark:text-gold-400">
-                  <T>Free 30-day trial. No credit card required. Setup in under 10 minutes.</T>
+                  <T>Free 60-day trial. No credit card required. Setup in under 10 minutes.</T>
                 </span>
               </p>
             </ScrollReveal>

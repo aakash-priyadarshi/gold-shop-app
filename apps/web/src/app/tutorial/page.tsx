@@ -123,7 +123,7 @@ const TRUST_POINTS = [
   "Live metal price feeds — gold & silver update every minute",
   "Supports India (GST), Nepal, UAE (VAT), UK, and USA out of the box",
   "Free plan available — no credit card required",
-  "30-day free trial on Pro plans",
+  "60-day free trial on Pro plans",
   "ISO-standard security, data encrypted at rest and in transit",
   "WhatsApp notifications for invoices and order updates",
 ];
@@ -282,7 +282,7 @@ export default function TutorialPage() {
           </h2>
           <p className="text-gray-400 mb-8">
             Free plan, no credit card required. Pro plans start at ₹299/month for
-            India. Full-featured 30-day trial on all paid plans.
+            India. Full-featured 60-day trial on all paid plans.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link

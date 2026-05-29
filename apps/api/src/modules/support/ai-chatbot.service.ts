@@ -332,7 +332,7 @@ ABOUT ORIVRAA:
 Orivraa is a purpose-built CRM, POS and ERP for jewellery shops. It handles billing, inventory, GST/VAT tax compliance, customer management, WhatsApp catalogues, and AI-powered sales agents. Used by jewellers across India, Nepal, UAE, UK and Europe.
 
 PRICING & PLANS:
-- Free 30-day trial — full features, no credit card
+- Free 60-day trial — full features, no credit card
 - Plans: FREE (trial), PRO (single shop), PRO_PLUS (multi-country tax + CA share links), ENTERPRISE (multi-branch)
 - Exact prices shown in local currency at /pricing
 - Cancel anytime, no lock-in, data export always free

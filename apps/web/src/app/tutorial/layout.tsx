@@ -3,7 +3,7 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Orivraa Tutorial 2026 | Complete Jewellery Shop Software Walkthrough",
   description:
-    "Watch the complete 24-minute Orivraa tutorial. See how jewellery shop owners manage inventory by weight & purity, generate GST/VAT invoices, run a POS, publish digital catalogues, track karigars, and get AI business insights — all in one app. Free 30-day trial.",
+    "Watch the complete 24-minute Orivraa tutorial. See how jewellery shop owners manage inventory by weight & purity, generate GST/VAT invoices, run a POS, publish digital catalogues, track karigars, and get AI business insights — all in one app. Free 60-day trial.",
   keywords: [
     "jewellery shop software tutorial",
     "jewellery software tutorial video",

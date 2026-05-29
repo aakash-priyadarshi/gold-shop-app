@@ -225,7 +225,7 @@ export default function OrivraaVsTallyPage() {
           <div className="container mx-auto px-4 max-w-3xl text-center text-white">
             <ShieldCheck className="h-12 w-12 mx-auto mb-4 opacity-90" />
             <h2 className="text-3xl font-bold mb-4">
-              <T>Try Orivraa free for 30 days</T>
+              <T>Try Orivraa free for 60 days</T>
             </h2>
             <p className="text-lg text-white/90 mb-8">
               <T>

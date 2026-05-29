@@ -44,7 +44,7 @@ export function TrustSignals({
     },
     {
       icon: Sparkles,
-      title: "Free 30-day trial",
+      title: "Free 60-day trial",
       desc: "No credit card required. Cancel any time.",
     },
     {
