@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentStatus, OrderStatus } from '@prisma/client';
@@ -22,6 +22,8 @@ interface PaymentGatewayOrder {
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
@@ -369,16 +371,29 @@ export class PaymentsService {
   }
 
   // Process refund
-  async processRefund(dto: RefundDto) {
+  async processRefund(
+    dto: RefundDto,
+    requesterId?: string,
+    requesterRole?: string,
+  ) {
     const order = await this.prisma.order.findUnique({
       where: { id: dto.orderId },
       include: {
         customer: true,
+        shop: { select: { userId: true } },
       },
     });
 
     if (!order) {
       throw new NotFoundException('Order not found');
+    }
+
+    // Tenant isolation: a shopkeeper may only refund orders belonging to
+    // their own shop. Admins may refund any order.
+    if (requesterRole !== 'ADMIN') {
+      if (!requesterId || order.shop?.userId !== requesterId) {
+        throw new ForbiddenException('You can only refund your own shop orders');
+      }
     }
 
     const paidAmount = order.bookingFeePaidNpr || 0;
@@ -432,7 +447,30 @@ export class PaymentsService {
   }
 
   // Get payment history for order
-  async getOrderPayments(orderId: string) {
+  async getOrderPayments(
+    orderId: string,
+    requesterId?: string,
+    requesterRole?: string,
+  ) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { customerId: true, shop: { select: { userId: true } } },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Tenant isolation: only the buying customer, the selling shop owner,
+    // or an admin may read an order's payment history.
+    if (requesterRole !== 'ADMIN') {
+      const isCustomer = order.customerId === requesterId;
+      const isShopOwner = order.shop?.userId === requesterId;
+      if (!requesterId || (!isCustomer && !isShopOwner)) {
+        throw new ForbiddenException('You cannot view payments for this order');
+      }
+    }
+
     return this.prisma.payment.findMany({
       where: { orderId },
       orderBy: { createdAt: 'desc' },
@@ -510,7 +548,7 @@ export class PaymentsService {
     paymentId: string, 
     amount: number, 
     currency: string,
-    customerEmail?: string,
+    _customerEmail?: string,
   ): Promise<PaymentGatewayOrder> {
     // Note: In production, use the stripe SDK:
     // import Stripe from 'stripe';
@@ -536,22 +574,22 @@ export class PaymentsService {
 
   // Verify Stripe webhook signature and payment
   private async verifyStripePayment(
-    paymentIntentId: string,
-    signature?: string,
+    _paymentIntentId: string,
+    _signature?: string,
   ): Promise<boolean> {
     // In production:
     // import Stripe from 'stripe';
     // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     // const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
     // return paymentIntent.status === 'succeeded';
-    
-    return true; // Stub for development
+
+    return this.stubVerifyResult('Stripe');
   }
 
   private async verifyRazorpayPayment(
-    orderId: string,
-    paymentId: string,
-    signature: string,
+    _orderId: string,
+    _paymentId: string,
+    _signature: string,
   ): Promise<boolean> {
     // TODO: Implement Razorpay signature verification
     // const crypto = require('crypto');
@@ -559,17 +597,34 @@ export class PaymentsService {
     //   .update(orderId + '|' + paymentId)
     //   .digest('hex');
     // return generated_signature === signature;
-    
-    return true; // Stub for development
+
+    return this.stubVerifyResult('Razorpay');
   }
 
-  private async verifyEsewaPayment(paymentId: string): Promise<boolean> {
+  private async verifyEsewaPayment(_paymentId: string): Promise<boolean> {
     // TODO: Implement eSewa verification
-    return true; // Stub for development
+    return this.stubVerifyResult('eSewa');
   }
 
-  private async verifyKhaltiPayment(paymentId: string): Promise<boolean> {
+  private async verifyKhaltiPayment(_paymentId: string): Promise<boolean> {
     // TODO: Implement Khalti verification
-    return true; // Stub for development
+    return this.stubVerifyResult('Khalti');
+  }
+
+  /**
+   * Stub gateway verification result. These verifiers are not yet wired to the
+   * real gateway SDKs. To avoid accepting forged payments, they FAIL CLOSED in
+   * production (return false) and only return true in non-production so the
+   * local/dev checkout flow keeps working. The production payment path is the
+   * dedicated payment-gateway module, which performs real signature checks.
+   */
+  private stubVerifyResult(gateway: string): boolean {
+    if (process.env.NODE_ENV === 'production') {
+      this.logger.error(
+        `[${gateway}] payment verification is not implemented; refusing to confirm payment in production`,
+      );
+      return false;
+    }
+    return true;
   }
 }

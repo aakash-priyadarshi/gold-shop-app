@@ -59,14 +59,22 @@ export class PaymentsController {
   @Roles('ADMIN', 'SHOPKEEPER')
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Process refund' })
-  async processRefund(@Body() dto: RefundDto) {
-    return this.paymentsService.processRefund(dto);
+  async processRefund(
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') role: string,
+    @Body() dto: RefundDto,
+  ) {
+    return this.paymentsService.processRefund(dto, userId, role);
   }
 
   @Get('order/:orderId')
   @ApiOperation({ summary: 'Get payments for order' })
-  async getOrderPayments(@Param('orderId') orderId: string) {
-    return this.paymentsService.getOrderPayments(orderId);
+  async getOrderPayments(
+    @Param('orderId') orderId: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') role: string,
+  ) {
+    return this.paymentsService.getOrderPayments(orderId, userId, role);
   }
 
   @Get('my-payments')
