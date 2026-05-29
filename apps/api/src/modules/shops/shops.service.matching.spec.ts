@@ -23,6 +23,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { ContentModerationService } from "./content-moderation.service";
+import { SellerSubscriptionsService } from "../subscriptions/seller-subscriptions.service";
 import { ShopsService } from "./shops.service";
 
 // ═══════════════════════════════════════════
@@ -55,7 +56,11 @@ function makeShop(overrides: Partial<any> = {}) {
     metalRates: overrides.metalRates || [],
     finishPricing: [],
     ratings: overrides.ratings || [],
-    user: { id: "user-1", firstName: "Test", lastName: "User" },
+    user: overrides.user || {
+      id: `user-${overrides.id || "shop-1"}`,
+      firstName: "Test",
+      lastName: "User",
+    },
     _count: { ratings: overrides.ratings?.length || 0 },
     badges: [],
     performance: null,
@@ -82,6 +87,7 @@ const mockPrisma: Record<string, any> = {
   shopFinishPricing: { createMany: jest.fn(), deleteMany: jest.fn() },
   shopBadge: { findMany: jest.fn() },
   shopPerformance: { findUnique: jest.fn() },
+  marketRate: { findFirst: jest.fn() },
   auditLog: { create: jest.fn() },
   $transaction: jest.fn((fn: (prisma: any) => any) => fn(mockPrisma)),
 };
@@ -92,6 +98,9 @@ const mockConfigService = { getConfig: jest.fn() };
 const mockModerationService = {
   moderateText: jest.fn(),
   moderateImage: jest.fn(),
+};
+const mockSellerSubscriptionsService = {
+  autoActivateFreePlan: jest.fn(),
 };
 
 // ═══════════════════════════════════════════
@@ -109,6 +118,10 @@ describe("ShopsService - Seller Matching", () => {
         ShopsService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: AuditService, useValue: mockAuditService },
+        {
+          provide: SellerSubscriptionsService,
+          useValue: mockSellerSubscriptionsService,
+        },
         { provide: RedisService, useValue: mockRedisService },
         { provide: PlatformConfigService, useValue: mockConfigService },
         { provide: ContentModerationService, useValue: mockModerationService },
@@ -1023,6 +1036,9 @@ describe("ShopsService - Seller Matching", () => {
       });
 
       mockPrismaShop.findMany.mockResolvedValue([shop]);
+      // Market rate drives material cost; shop's ratePerGramNpr is the flat
+      // making charge per gram (it does NOT replace the market metal rate).
+      mockPrisma.marketRate.findFirst.mockResolvedValue({ ratePerGram: 8500 });
 
       const result = await service.findMatchingSellers({
         jewelleryType: "RING",
@@ -1033,12 +1049,12 @@ describe("ShopsService - Seller Matching", () => {
       });
 
       const seller = result.sellers[0];
-      // materialCost = 10000 * 5 = 50000
-      // makingCharge = 50000 * 0.12 = 6000
-      // total = 56000
-      expect(seller.materialCost).toBe(50000);
-      expect(seller.makingCharge).toBe(6000);
-      expect(seller.estimatedPrice).toBe(56000);
+      // materialCost = market rate 8500 * 5 = 42500
+      // makingCharge = shop flat rate 10000 * 5 = 50000 (percent ignored)
+      // total = 92500
+      expect(seller.materialCost).toBe(42500);
+      expect(seller.makingCharge).toBe(50000);
+      expect(seller.estimatedPrice).toBe(92500);
       expect(seller.hasCustomRate).toBe(true);
     });
 
@@ -1242,6 +1258,9 @@ describe("ShopsService - Seller Matching", () => {
       });
 
       mockPrismaShop.findMany.mockResolvedValue([cheapShop, expensiveShop]);
+      // Low market rate so the shop-specific flat making charge dominates the
+      // total and the maxPrice filter is exercised meaningfully.
+      mockPrisma.marketRate.findFirst.mockResolvedValue({ ratePerGram: 100 });
 
       const result = await service.findMatchingSellers({
         jewelleryType: "RING",
@@ -1252,6 +1271,8 @@ describe("ShopsService - Seller Matching", () => {
         maxPrice: 1000,
       });
 
+      // cheap: material 100*5=500 + making 100*5=500 = 1000 (<= 1000) ✓
+      // expensive: material 500 + making 50000*5=250000 = 250500 (filtered)
       expect(result.sellers).toHaveLength(1);
       expect(result.sellers[0].id).toBe("cheap");
     });
@@ -1321,6 +1342,7 @@ describe("ShopsService - Seller Matching", () => {
       ];
 
       mockPrismaShop.findMany.mockResolvedValue(shops);
+      mockPrisma.marketRate.findFirst.mockResolvedValue({ ratePerGram: 8500 });
 
       const result = await service.findMatchingSellers({
         jewelleryType: "RING",
@@ -1330,11 +1352,12 @@ describe("ShopsService - Seller Matching", () => {
         customerCountry: "IN",
       });
 
-      // s1: 10000*5 + 10000*5*0.10 = 55000
-      // s2: 12000*5 + 12000*5*0.15 = 69000
-      expect(result.stats.minPrice).toBe(55000);
-      expect(result.stats.maxPrice).toBe(69000);
-      expect(result.stats.avgPrice).toBe(62000); // (55000+69000)/2
+      // material = market 8500*5 = 42500 (same for both)
+      // s1: 42500 + flat making 10000*5=50000 = 92500
+      // s2: 42500 + flat making 12000*5=60000 = 102500
+      expect(result.stats.minPrice).toBe(92500);
+      expect(result.stats.maxPrice).toBe(102500);
+      expect(result.stats.avgPrice).toBe(97500); // (92500+102500)/2
     });
 
     it("should handle shops missing supportedAlloys field gracefully", async () => {

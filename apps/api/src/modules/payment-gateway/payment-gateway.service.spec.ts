@@ -4,6 +4,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import {
     DEFAULT_GATEWAY_CONFIGS,
 } from "./default-gateway-configs";
+import { MarketConfigService } from "../market-config/market-config.service";
 import { PaymentGatewayService } from "./payment-gateway.service";
 
 const mockPrisma = {
@@ -20,6 +21,10 @@ const mockConfig: Partial<ConfigService> = {
   get: jest.fn().mockReturnValue(undefined),
 };
 
+const mockMarketConfig = {
+  mapToSupportedMarket: jest.fn((country: string) => country),
+};
+
 describe("PaymentGatewayService", () => {
   let service: PaymentGatewayService;
 
@@ -33,6 +38,7 @@ describe("PaymentGatewayService", () => {
           provide: ConfigService,
           useValue: configOverride || mockConfig,
         },
+        { provide: MarketConfigService, useValue: mockMarketConfig },
       ],
     }).compile();
 

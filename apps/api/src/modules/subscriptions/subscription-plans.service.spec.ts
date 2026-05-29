@@ -16,6 +16,8 @@ const mockPrisma = {
   },
   sellerSubscription: {
     findFirst: jest.fn(),
+    findMany: jest.fn().mockResolvedValue([]),
+    count: jest.fn().mockResolvedValue(0),
   },
   shop: {
     findUnique: jest.fn(),
@@ -49,6 +51,11 @@ describe("SubscriptionPlansService", () => {
   // ═══════════════════════════════════════════════════════════
 
   describe("getActiveShopPlan()", () => {
+    beforeEach(() => {
+      // Reset stateful resolved values so they don't leak between tests
+      mockPrisma.sellerSubscription.findMany.mockResolvedValue([]);
+    });
+
     it("should return subscription plan when shop has ACTIVE subscription", async () => {
       const plan = {
         id: "plan-pro",
@@ -57,11 +64,14 @@ describe("SubscriptionPlansService", () => {
         features: { crm: true, invoicing: true },
         extraCreditPrice: 5.0,
       };
-      mockPrisma.sellerSubscription.findFirst.mockResolvedValue({
-        id: "sub-1",
-        status: "ACTIVE",
-        plan,
-      });
+      mockPrisma.sellerSubscription.findMany.mockResolvedValue([
+        {
+          id: "sub-1",
+          status: "ACTIVE",
+          autoRenew: true,
+          plan,
+        },
+      ]);
 
       const result = await service.getActiveShopPlan("shop1");
       expect(result).toEqual(plan);
@@ -77,11 +87,14 @@ describe("SubscriptionPlansService", () => {
         displayName: "Enterprise",
         features: { apiAccess: true, multiBranch: true },
       };
-      mockPrisma.sellerSubscription.findFirst.mockResolvedValue({
-        id: "sub-2",
-        status: "TRIALING",
-        plan,
-      });
+      mockPrisma.sellerSubscription.findMany.mockResolvedValue([
+        {
+          id: "sub-2",
+          status: "TRIALING",
+          autoRenew: true,
+          plan,
+        },
+      ]);
 
       const result = await service.getActiveShopPlan("shop1");
       expect(result!.name).toBe("ENTERPRISE");
@@ -127,26 +140,36 @@ describe("SubscriptionPlansService", () => {
     });
 
     it("should prefer most recent subscription when multiple exist", async () => {
-      // The query has `orderBy: { createdAt: 'desc' }` so findFirst returns newest
+      // The query has `orderBy: { createdAt: 'desc' }` so the newest is first;
+      // the service picks the first live candidate.
       const latestPlan = {
         id: "plan-proplus",
         name: "PRO_PLUS",
         displayName: "Pro Plus",
         features: { crm: true, invoicing: true, apiAccess: true },
       };
-      mockPrisma.sellerSubscription.findFirst.mockResolvedValue({
-        id: "sub-latest",
-        status: "ACTIVE",
-        plan: latestPlan,
-      });
+      mockPrisma.sellerSubscription.findMany.mockResolvedValue([
+        {
+          id: "sub-latest",
+          status: "ACTIVE",
+          autoRenew: true,
+          plan: latestPlan,
+        },
+        {
+          id: "sub-old",
+          status: "ACTIVE",
+          autoRenew: true,
+          plan: { id: "plan-pro", name: "PRO" },
+        },
+      ]);
 
       const result = await service.getActiveShopPlan("shop1");
       expect(result!.name).toBe("PRO_PLUS");
     });
 
     it("should NOT return CANCELED or EXPIRED subscriptions", async () => {
-      // findFirst filters by status: { in: ['ACTIVE', 'TRIALING'] }
-      mockPrisma.sellerSubscription.findFirst.mockResolvedValue(null);
+      // findMany filters by status: { in: ['ACTIVE', 'TRIALING', 'PAST_DUE'] }
+      mockPrisma.sellerSubscription.findMany.mockResolvedValue([]);
       mockPrisma.shop.findUnique.mockResolvedValue({ country: "IN" });
       mockPrisma.subscriptionPlan.findFirst.mockResolvedValue({
         id: "plan-free-in",
@@ -155,10 +178,10 @@ describe("SubscriptionPlansService", () => {
       });
 
       await service.getActiveShopPlan("shop1");
-      expect(mockPrisma.sellerSubscription.findFirst).toHaveBeenCalledWith(
+      expect(mockPrisma.sellerSubscription.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            status: { in: ["ACTIVE", "TRIALING"] },
+            status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] },
           }),
         }),
       );
@@ -206,10 +229,14 @@ describe("SubscriptionPlansService", () => {
         name: "PRO",
         features: { crm: true, invoicing: true, apiAccess: true },
       };
-      mockPrisma.sellerSubscription.findFirst.mockResolvedValue({
-        id: "sub-1",
-        plan,
-      });
+      mockPrisma.sellerSubscription.findMany.mockResolvedValue([
+        {
+          id: "sub-1",
+          status: "ACTIVE",
+          autoRenew: true,
+          plan,
+        },
+      ]);
 
       await service.getActiveShopPlan("shop1");
 
@@ -232,10 +259,14 @@ describe("SubscriptionPlansService", () => {
         features: { purchasableAiCredits: true },
         extraCreditPrice: 10.0,
       };
-      mockPrisma.sellerSubscription.findFirst.mockResolvedValue({
-        id: "sub-1",
-        plan,
-      });
+      mockPrisma.sellerSubscription.findMany.mockResolvedValue([
+        {
+          id: "sub-1",
+          status: "ACTIVE",
+          autoRenew: true,
+          plan,
+        },
+      ]);
 
       const result = await service.getActiveShopPlan("shop1");
       expect(result!.extraCreditPrice).toBe(10.0);

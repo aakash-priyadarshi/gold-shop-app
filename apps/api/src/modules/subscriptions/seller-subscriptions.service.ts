@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -400,7 +401,7 @@ export class SellerSubscriptionsService {
 
     // Verify shop ownership if shopId is provided
     if (opts.shopId && sub.shopId !== opts.shopId) {
-      throw new BadRequestException(
+      throw new ForbiddenException(
         "You can only cancel subscriptions for your own shop",
       );
     }
@@ -423,7 +424,14 @@ export class SellerSubscriptionsService {
         }
       } catch (err) {
         this.logger.error(`Stripe cancel failed: ${err.message}`);
-        // Still proceed with local cancellation
+        // If the subscription is already gone on Stripe's side, proceed with
+        // local cancellation. Otherwise abort to avoid local/Stripe drift
+        // (e.g. marking cancelled locally while still billing in Stripe).
+        if (err?.code !== "resource_missing") {
+          throw new BadRequestException(
+            "Failed to cancel subscription with the payment provider. Please try again.",
+          );
+        }
       }
     }
 

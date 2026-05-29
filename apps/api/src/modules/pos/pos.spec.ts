@@ -6,7 +6,7 @@ import { InvoicesService } from "../invoices/invoices.service";
 import { PosService } from "./pos.service";
 
 // Mock Prisma
-const mockPrisma = {
+const mockPrisma: any = {
   wishlistItem: { findMany: jest.fn() },
   posSession: {
     create: jest.fn(),
@@ -34,18 +34,25 @@ const mockPrisma = {
     findUnique: jest.fn(),
     findFirst: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
   },
   productVariant: {
     findFirst: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
   },
   conversation: { findFirst: jest.fn() },
   order: { findFirst: jest.fn() },
+  $transaction: jest.fn((fn: (prisma: any) => any) => fn(mockPrisma)),
 };
 
 const mockAudit = { log: jest.fn() };
-const mockInvoices = { create: jest.fn() };
+const mockInvoices = {
+  create: jest.fn(),
+  recordPayment: jest.fn(),
+  voidInvoice: jest.fn(),
+};
 
 describe("PosService", () => {
   let service: PosService;
@@ -133,6 +140,10 @@ describe("PosService", () => {
         id: "item-1",
         shopId: "shop-1",
         totalPriceNpr: 50000,
+        stockQuantity: 1,
+      });
+      mockPrisma.inventoryItem.findUnique.mockResolvedValue({
+        id: "item-1",
         stockQuantity: 1,
       });
       // Existing reservations already used all stock
@@ -232,6 +243,7 @@ describe("PosService", () => {
         totalAmount: 50000,
       });
       mockPrisma.inventoryItem.update.mockResolvedValue({});
+      mockPrisma.inventoryItem.updateMany.mockResolvedValue({ count: 1 });
       mockPrisma.stockReservation.deleteMany.mockResolvedValue({ count: 1 });
       mockPrisma.posSession.update.mockResolvedValue({
         id: "sess-1",
@@ -243,7 +255,7 @@ describe("PosService", () => {
       });
 
       expect(result.invoice.id).toBe("inv-1");
-      expect(mockPrisma.inventoryItem.update).toHaveBeenCalledWith(
+      expect(mockPrisma.inventoryItem.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: { stockQuantity: { decrement: 1 } },
         }),

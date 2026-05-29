@@ -281,6 +281,98 @@ export class TestingService {
         baseUrl,
       ),
     );
+    results.push(
+      await this.testEndpoint(
+        "Public Shops Listing",
+        "public",
+        "/api/shops/public",
+        [200, 304],
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
+    results.push(
+      await this.testEndpoint(
+        "Subscription Plans (Available)",
+        "public",
+        "/api/subscription-plans/available?country=NP",
+        [200, 304],
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
+    results.push(
+      await this.testEndpoint(
+        "Blog - Published Posts",
+        "public",
+        "/api/blog",
+        [200, 304],
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
+    results.push(
+      await this.testEndpoint(
+        "Inventory - Public Search",
+        "public",
+        "/api/inventory",
+        [200, 304],
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
+
+    // Category: Feature Routes (protected — must be registered AND guarded)
+    // A 401 here confirms the route is wired up behind the auth guard. A 404
+    // would mean the feature route regressed / was unregistered.
+    results.push(
+      await this.testEndpoint(
+        "Invoices - Auth Guard",
+        "features",
+        "/api/invoices",
+        401,
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
+    results.push(
+      await this.testEndpoint(
+        "Savings Schemes - Auth Guard",
+        "features",
+        "/api/savings-schemes",
+        401,
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
+    results.push(
+      await this.testEndpoint(
+        "RFQ - Auth Guard",
+        "features",
+        "/api/rfq/my-requests",
+        401,
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
+    results.push(
+      await this.testEndpoint(
+        "Orders - Auth Guard",
+        "features",
+        "/api/orders/my-orders",
+        401,
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
 
     // Category: Error Handling
     results.push(
