@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { NotificationType, UserRole, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsGateway } from './notifications.gateway';
+import { MailService } from '../mail/mail.service';
+import { SmsService } from './sms.service';
 
 export interface CreateNotificationDto {
   userId: string;
@@ -151,6 +153,8 @@ export class NotificationsService {
   constructor(
     private prisma: PrismaService,
     private gateway: NotificationsGateway,
+    private mailService: MailService,
+    private smsService: SmsService,
   ) {}
 
   getTestScenarios() {
@@ -179,11 +183,9 @@ export class NotificationsService {
       },
     });
 
-    // TODO: Integrate with actual notification providers
-    // - Email: SendGrid, AWS SES, etc.
-    // - SMS: Twilio, local SMS gateway
-    // - Push: Firebase Cloud Messaging
-    // - WhatsApp: WhatsApp Business API
+    // Out-of-app delivery (EMAIL, SMS) is handled by dispatchOutOfAppChannels
+    // below. PUSH and WhatsApp are not yet implemented and are ignored if
+    // present in `channels`.
 
     // For now, just log (debug-level so user metadata is not emitted in prod).
     this.logger.debug(
@@ -194,7 +196,166 @@ export class NotificationsService {
     // bell updates instantly instead of waiting for the polling interval.
     this.gateway.emitToUser(dto.userId, notification);
 
+    // Out-of-app fan-out (email / SMS). IN_APP is considered delivered as
+    // soon as the record exists + is emitted. Errors here never block the
+    // in-app notification — they only affect deliveredVia bookkeeping.
+    void this.dispatchOutOfAppChannels(notification.id, dto);
+
     return notification;
+  }
+
+  /**
+   * Deliver a notification through its out-of-app channels (EMAIL, SMS) and
+   * record which channels actually succeeded in `deliveredVia`. PUSH/WhatsApp
+   * remain unimplemented and are skipped.
+   */
+  private async dispatchOutOfAppChannels(
+    notificationId: string,
+    dto: CreateNotificationDto,
+  ): Promise<void> {
+    const channels = dto.channels || [];
+    const wantsEmail = channels.includes('EMAIL');
+    const wantsSms = channels.includes('SMS');
+
+    // IN_APP is always delivered at this point.
+    const delivered: string[] = channels.includes('IN_APP') ? ['IN_APP'] : [];
+
+    if (!wantsEmail && !wantsSms) {
+      if (delivered.length) {
+        await this.recordDelivered(notificationId, delivered);
+      }
+      return;
+    }
+
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: dto.userId },
+        select: { email: true, phone: true, firstName: true },
+      });
+
+      if (!user) {
+        await this.recordDelivered(notificationId, delivered);
+        return;
+      }
+
+      const { title, body } = this.renderNotificationText(dto);
+
+      const tasks: Promise<void>[] = [];
+
+      if (wantsEmail && user.email) {
+        tasks.push(
+          this.mailService
+            .sendHtml({
+              to: user.email,
+              subject: title,
+              html: this.buildEmailHtml(user.firstName, title, body),
+            })
+            .then((res) => {
+              if (res.success) delivered.push('EMAIL');
+            })
+            .catch((err) =>
+              this.logger.error(`Notification email failed: ${err?.message || err}`),
+            ),
+        );
+      }
+
+      if (wantsSms && user.phone) {
+        const smsBody = body ? `${title} — ${body}` : title;
+        tasks.push(
+          this.smsService
+            .send(user.phone, smsBody.slice(0, 320))
+            .then((res) => {
+              if (res.success) delivered.push('SMS');
+            })
+            .catch((err) =>
+              this.logger.error(`Notification SMS failed: ${err?.message || err}`),
+            ),
+        );
+      }
+
+      await Promise.allSettled(tasks);
+      await this.recordDelivered(notificationId, delivered);
+    } catch (err: any) {
+      this.logger.error(
+        `Out-of-app notification dispatch failed: ${err?.message || err}`,
+      );
+    }
+  }
+
+  private async recordDelivered(notificationId: string, delivered: string[]) {
+    if (!delivered.length) return;
+    try {
+      await this.prisma.notification.update({
+        where: { id: notificationId },
+        data: { deliveredVia: Array.from(new Set(delivered)) },
+      });
+    } catch (err: any) {
+      this.logger.error(
+        `Failed to record notification delivery channels: ${err?.message || err}`,
+      );
+    }
+  }
+
+  /**
+   * Build a human-readable {title, body} from a notification's i18n keys and
+   * params. Mirrors the frontend fallback logic so email/SMS read sensibly
+   * without requiring a full server-side translation catalogue.
+   */
+  private renderNotificationText(dto: CreateNotificationDto): {
+    title: string;
+    body: string;
+  } {
+    const titleParams = (dto.titleParams || {}) as Record<string, unknown>;
+    const bodyParams = (dto.bodyParams || {}) as Record<string, unknown>;
+    const all = { ...titleParams, ...bodyParams } as Record<string, unknown>;
+
+    const title =
+      this.firstString(all.title, all.orderNumber && `Order #${all.orderNumber}`) ||
+      this.humanizeKey(dto.titleKey) ||
+      this.humanizeKey(dto.type);
+
+    const body =
+      this.firstString(all.message, all.reason, all.preview) ||
+      this.humanizeKey(dto.bodyKey) ||
+      '';
+
+    return { title, body };
+  }
+
+  private firstString(...values: unknown[]): string | undefined {
+    for (const v of values) {
+      if (typeof v === 'string' && v.trim()) return v.trim();
+    }
+    return undefined;
+  }
+
+  private humanizeKey(key?: string): string {
+    if (!key) return '';
+    return key
+      .replace(/^notification\./i, '')
+      .replace(/\.(title|body)$/i, '')
+      .replace(/[_.]+/g, ' ')
+      .trim()
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private buildEmailHtml(firstName: string, title: string, body: string): string {
+    const safe = (s: string) =>
+      String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+        <h2 style="color: #111827; margin-bottom: 8px;">${safe(title)}</h2>
+        <p style="margin: 0 0 12px;">Hi ${safe(firstName) || 'there'},</p>
+        ${body ? `<p style="margin: 0 0 16px; line-height: 1.5;">${safe(body)}</p>` : ''}
+        <p style="margin: 24px 0 0; font-size: 12px; color: #6b7280;">
+          You received this email because of activity on your Orivraa account.
+        </p>
+      </div>
+    `;
   }
 
   async findAllForUser(userId: string, unreadOnly = false) {

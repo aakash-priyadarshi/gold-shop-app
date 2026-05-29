@@ -8,6 +8,7 @@ import {
   MaxLength,
   Min,
 } from "class-validator";
+import { CurrencyCode } from "@prisma/client";
 
 export enum SavingsSchemeTypeDto {
   DAILY = "DAILY",
@@ -55,9 +56,8 @@ export class EnrollSavingsMemberDto {
   bonusInstallments?: number;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(8)
-  currency?: string;
+  @IsEnum(CurrencyCode)
+  currency?: CurrencyCode;
 
   @IsOptional()
   @IsISO8601()

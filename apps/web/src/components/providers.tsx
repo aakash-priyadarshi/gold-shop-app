@@ -27,11 +27,13 @@ const queryClient = new QueryClient({
   },
 });
 
-// Bridge component to sync MarketContext with Zustand preferences store
+// Bridge component: seeds the preferences store from useMarket's geo detection.
+// Currency/country display state lives entirely in the preferences store now
+// (useMarket derives from it), so this only feeds the geo-detected country/
+// currency into preferences for first-time guests who haven't chosen yet.
 function MarketPreferencesSync({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
-  const { selectedCountry, selectedCurrency, isLoading, detectedCountry } =
-    useMarket();
+  const { isLoading, detectedCountry } = useMarket();
   const syncCountryFromGeo = usePreferencesStore(
     (state) => state.syncCountryFromGeo,
   );

@@ -9,6 +9,11 @@ import React, {
   ReactNode,
 } from 'react';
 import { api } from '@/lib/api';
+import {
+  usePreferencesStore,
+  type CurrencyCode as PrefCurrencyCode,
+  type CountryCode as PrefCountryCode,
+} from '@/store/preferences';
 
 // Types matching backend MarketConfig
 export type MarketRegion = 'NP' | 'IN' | 'US' | 'UK' | 'EU' | 'AE';
@@ -56,22 +61,11 @@ export interface MarketContextType extends MarketState {
   refreshConfig: () => Promise<void>;
 }
 
-const defaultMarketState: MarketState = {
-  config: null,
-  detectedCountry: 'US',
-  selectedCountry: 'US',
-  selectedCurrency: 'USD',
-  selectedWeightUnit: 'GRAM',
-  isLoading: true,
-  error: null,
-};
-
 const MarketContext = createContext<MarketContextType | undefined>(undefined);
 
-// Local storage keys
+// Local storage key (weight unit only — currency/country live in the
+// preferences store now).
 const STORAGE_KEYS = {
-  COUNTRY: 'orivraa_market_country',
-  CURRENCY: 'orivraa_market_currency',
   WEIGHT_UNIT: 'orivraa_market_weight_unit',
 };
 
@@ -111,28 +105,41 @@ interface MarketProviderProps {
 }
 
 export function MarketProvider({ children, initialCountry }: MarketProviderProps) {
-  const [state, setState] = useState<MarketState>({
-    ...defaultMarketState,
-    selectedCountry: initialCountry || 'US',
+  // Currency and country are owned by the global preferences store (the single
+  // source of truth, shared with checkout/cart/API headers). useMarket only
+  // owns market config, weight unit, and the geo-detected country hint that
+  // seeds preferences for guests. This removes the old duplicate currency state
+  // that could drift out of sync with the preferences store.
+  const prefsCurrency = usePreferencesStore((s) => s.currency);
+  const prefsCountry = usePreferencesStore((s) => s.country);
+  const prefsSetCurrency = usePreferencesStore((s) => s.setCurrency);
+  const prefsSetCountry = usePreferencesStore((s) => s.setCountry);
+
+  const [state, setState] = useState<{
+    config: MarketConfig | null;
+    detectedCountry: MarketRegion;
+    selectedWeightUnit: WeightUnit;
+    isLoading: boolean;
+    error: string | null;
+  }>({
+    config: null,
     detectedCountry: initialCountry || 'US',
+    selectedWeightUnit: 'GRAM',
+    isLoading: true,
+    error: null,
   });
-  
-  // Track if user has explicitly set currency (from localStorage)
-  const [hasSavedCurrency, setHasSavedCurrency] = useState(false);
 
   // Fetch market config from API
-  const fetchConfig = useCallback(async (countryCode: MarketRegion, useSavedCurrency: boolean = false) => {
+  const fetchConfig = useCallback(async (countryCode: MarketRegion) => {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
-      
+
       const response = await api.get(`/market/config?country=${countryCode}`);
       const config = response.data;
 
       setState(prev => ({
         ...prev,
         config,
-        // Only use prev.selectedCurrency if user has explicitly saved a preference
-        selectedCurrency: useSavedCurrency ? prev.selectedCurrency : config.defaultCurrency,
         selectedWeightUnit: prev.selectedWeightUnit || config.defaultWeightUnit,
         isLoading: false,
       }));
@@ -153,34 +160,26 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
     return match ? match[2] : null;
   };
 
-  // Detect country on mount
+  // Detect country on mount and load the matching market config
   useEffect(() => {
     const detectAndLoadConfig = async () => {
       // Check URL params for override (useful for testing)
       const urlParams = new URLSearchParams(window.location.search);
       const countryParam = urlParams.get('country') as MarketRegion | null;
 
-      // Check localStorage for saved preferences
-      const savedCountry = localStorage.getItem(STORAGE_KEYS.COUNTRY) as MarketRegion | null;
-      const savedCurrency = localStorage.getItem(STORAGE_KEYS.CURRENCY) as CurrencyCode | null;
+      // Weight unit still persists locally (not part of preferences store)
       const savedWeightUnit = localStorage.getItem(STORAGE_KEYS.WEIGHT_UNIT) as WeightUnit | null;
-      
-      // Track if user has explicitly saved a currency preference
-      const hasSavedCurrencyPref = savedCurrency !== null;
-      setHasSavedCurrency(hasSavedCurrencyPref);
 
       let detectedCountry: MarketRegion = 'US';
 
       if (countryParam && ['NP', 'IN', 'US', 'UK', 'EU', 'AE'].includes(countryParam)) {
         detectedCountry = countryParam;
-      } else if (savedCountry) {
-        detectedCountry = savedCountry;
       } else if (initialCountry) {
         detectedCountry = initialCountry;
       } else {
         // Priority 1: Read from middleware-set cookie (fastest - already set by edge middleware)
         const cookieCountry = getCookie('orivraa_geo_country') as MarketRegion | null;
-        
+
         if (cookieCountry && ['NP', 'IN', 'US', 'UK', 'EU', 'AE'].includes(cookieCountry)) {
           detectedCountry = cookieCountry;
         } else {
@@ -193,65 +192,56 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
             }
           } catch (e) {
             console.error('Failed to detect country from geo API:', e);
-            // Fallback to US
             detectedCountry = 'US';
           }
         }
       }
 
-      // Set the state with saved currency if available
-      if (hasSavedCurrencyPref && savedCurrency) {
-        setState(prev => ({
-          ...prev,
-          detectedCountry,
-          selectedCountry: savedCountry || detectedCountry,
-          selectedCurrency: savedCurrency,
-          selectedWeightUnit: savedWeightUnit || prev.selectedWeightUnit,
-        }));
-      } else {
-        setState(prev => ({
-          ...prev,
-          detectedCountry,
-          selectedCountry: savedCountry || detectedCountry,
-          selectedWeightUnit: savedWeightUnit || prev.selectedWeightUnit,
-        }));
-      }
+      setState(prev => ({
+        ...prev,
+        detectedCountry,
+        selectedWeightUnit: savedWeightUnit || prev.selectedWeightUnit,
+      }));
 
-      // Pass flag to indicate if user has a saved currency preference
-      await fetchConfig(savedCountry || detectedCountry, hasSavedCurrencyPref);
+      // Load config for the user's current country preference, falling back to
+      // the geo-detected country for first-time guests.
+      await fetchConfig((prefsCountry as MarketRegion) || detectedCountry);
     };
 
     detectAndLoadConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialCountry, fetchConfig]);
 
-  // Set country preference
+  // Set country preference (delegates to the preferences store) and refresh config
   const setCountry = useCallback((country: MarketRegion) => {
-    localStorage.setItem(STORAGE_KEYS.COUNTRY, country);
-    setState(prev => ({ ...prev, selectedCountry: country }));
-    // When changing country, use saved currency preference if it exists
-    fetchConfig(country, hasSavedCurrency);
-  }, [fetchConfig, hasSavedCurrency]);
+    prefsSetCountry(country as PrefCountryCode);
+    fetchConfig(country);
+  }, [fetchConfig, prefsSetCountry]);
 
-  // Set currency preference
+  // Set currency preference (delegates to the preferences store)
   const setCurrency = useCallback((currency: CurrencyCode) => {
-    localStorage.setItem(STORAGE_KEYS.CURRENCY, currency);
-    setHasSavedCurrency(true);
-    setState(prev => ({ ...prev, selectedCurrency: currency }));
-  }, []);
+    prefsSetCurrency(currency as PrefCurrencyCode);
+  }, [prefsSetCurrency]);
 
-  // Set weight unit preference
+  // Set weight unit preference (still local to useMarket)
   const setWeightUnit = useCallback((unit: WeightUnit) => {
     localStorage.setItem(STORAGE_KEYS.WEIGHT_UNIT, unit);
     setState(prev => ({ ...prev, selectedWeightUnit: unit }));
   }, []);
 
-  // Refresh config
+  // Refresh config for the current country preference
   const refreshConfig = useCallback(async () => {
-    await fetchConfig(state.selectedCountry, hasSavedCurrency);
-  }, [fetchConfig, state.selectedCountry, hasSavedCurrency]);
+    await fetchConfig(prefsCountry as MarketRegion);
+  }, [fetchConfig, prefsCountry]);
 
   const contextValue: MarketContextType = {
-    ...state,
+    config: state.config,
+    detectedCountry: state.detectedCountry,
+    selectedCountry: prefsCountry as MarketRegion,
+    selectedCurrency: prefsCurrency as CurrencyCode,
+    selectedWeightUnit: state.selectedWeightUnit,
+    isLoading: state.isLoading,
+    error: state.error,
     setCountry,
     setCurrency,
     setWeightUnit,

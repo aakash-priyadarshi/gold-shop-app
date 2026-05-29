@@ -10,6 +10,7 @@ import {
   ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
+import { CurrencyCode } from "@prisma/client";
 
 export enum GoldLoanStatusDto {
   ACTIVE = "ACTIVE",
@@ -85,9 +86,8 @@ export class CreateGoldLoanDto {
   pawnedItems: PawnedItemDto[];
 
   @IsOptional()
-  @IsString()
-  @MaxLength(8)
-  currency?: string;
+  @IsEnum(CurrencyCode)
+  currency?: CurrencyCode;
 
   @IsOptional()
   @IsISO8601()

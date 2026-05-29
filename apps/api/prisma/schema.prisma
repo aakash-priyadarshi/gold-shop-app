@@ -921,7 +921,7 @@ model Payment {
   id               String        @id @default(uuid())
   orderId          String
   amountNpr        Float
-  currency         String        @default("NPR")
+  currency         CurrencyCode  @default(NPR)
   paymentGateway   String
   gatewayPaymentId String?
   gatewayOrderId   String?
@@ -1165,7 +1165,7 @@ model MaterialRate {
   materialCode     String
   ratePerGramUsd   Float
   ratePerGramLocal Float
-  currency         String
+  currency         CurrencyCode
   source           String   @default("seed")
   isRestricted     Boolean  @default(false)
   note             String?
@@ -1180,7 +1180,7 @@ model FinishPrice {
   finishType String
   tier       String
   flatFee    Float
-  currency   String
+  currency   CurrencyCode
   source     String   @default("seed")
   note       String?
   updatedAt  DateTime @default(now())
@@ -1198,7 +1198,7 @@ model GemstoneCatalog {
   sizeMax       Float
   qualityTier   String
   pricePerStone Float
-  currency      String
+  currency      CurrencyCode
   source        String   @default("seed")
   note          String?
   updatedAt     DateTime @default(now())
@@ -1211,7 +1211,7 @@ model SettingPrice {
   id              String   @id @default(uuid())
   settingType     String
   flatFeePerStone Float
-  currency        String
+  currency        CurrencyCode
   source          String   @default("seed")
   note            String?
   updatedAt       DateTime @default(now())
@@ -3397,7 +3397,7 @@ model SavingsMember {
   installmentsPaid  Int                 @default(0)
   totalInstallments Int
   bonusInstallments Int                 @default(0)
-  currency          String              @default("NPR")
+  currency          CurrencyCode        @default(NPR)
   startDate         DateTime
   maturityDate      DateTime
   status            SavingsMemberStatus @default(ACTIVE)
@@ -3442,7 +3442,7 @@ model GoldLoan {
   interestType      String         @default("SIMPLE") // SIMPLE | COMPOUND
   compoundFrequency String? // MONTHLY | QUARTERLY | ANNUALLY
   pawnedItems       Json // [{ name, purity, grossWeight, netWeight }]
-  currency          String         @default("NPR")
+  currency          CurrencyCode   @default(NPR)
   status            GoldLoanStatus @default(ACTIVE)
   loanDate          DateTime
   redeemedDate      DateTime?
