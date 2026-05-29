@@ -12,6 +12,7 @@
     "seo:get-refresh-token": "tsx scripts/generate-search-console-refresh-token.ts",
     "seo:submit-sitemap": "tsx scripts/submit-sitemap-to-google.ts",
     "seo:submit-urls": "tsx scripts/submit-urls-to-google.ts",
+    "seo:submit-indexnow": "tsx scripts/submit-urls-to-indexnow.ts",
     "db:generate": "cd apps/api && npx prisma generate",
     "db:migrate": "cd apps/api && npx prisma migrate dev",
     "db:seed": "cd apps/api && npx prisma db seed",

@@ -17,12 +17,18 @@
  *   pnpm seo:submit-urls                         # uses URLS list below
  *   pnpm seo:submit-urls --url=https://...       # submit one URL
  *   pnpm seo:submit-urls --from-sitemap          # fetch URLs from sitemap.xml
+ *   pnpm seo:submit-urls --diff                  # submit only URLs new since last run
+ *   pnpm seo:submit-urls --diff --limit=200      # cap submissions (Google quota = 200/day)
+ *   pnpm seo:submit-urls --diff --state=path.json# where to persist seen URLs
  *   pnpm seo:submit-urls --dry-run               # show what would be sent
  */
 
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { google } from "googleapis";
 
 const DEFAULT_SITEMAP_URL = "https://www.orivraa.com/sitemap.xml";
+const DEFAULT_STATE_FILE = ".seo-submitted-urls.json";
+const DEFAULT_DIFF_LIMIT = 200; // Google Indexing API default quota per day.
 const INDEXING_SCOPE = "https://www.googleapis.com/auth/indexing";
 const INDEXING_ENDPOINT =
   "https://indexing.googleapis.com/v3/urlNotifications:publish";
@@ -166,6 +172,22 @@ async function resolveUrls(): Promise<string[]> {
   const singleUrl = getArgValue("--url=");
   if (singleUrl) return [singleUrl];
 
+  if (process.argv.includes("--diff")) {
+    const sitemap =
+      process.env.SEARCH_CONSOLE_SITEMAP_URL?.trim() || DEFAULT_SITEMAP_URL;
+    const sitemapUrls = await fetchUrlsFromSitemap(sitemap);
+    const seen = readSeenUrls();
+    const newUrls = sitemapUrls.filter((u) => !seen.has(u));
+
+    const limit = Number(getArgValue("--limit=") ?? DEFAULT_DIFF_LIMIT);
+    const capped = Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_DIFF_LIMIT;
+
+    console.log(
+      `Diff mode: ${sitemapUrls.length} sitemap URLs, ${seen.size} previously seen, ${newUrls.length} new (submitting up to ${capped}).`,
+    );
+    return newUrls.slice(0, capped);
+  }
+
   if (process.argv.includes("--from-sitemap")) {
     const sitemap =
       process.env.SEARCH_CONSOLE_SITEMAP_URL?.trim() || DEFAULT_SITEMAP_URL;
@@ -173,6 +195,40 @@ async function resolveUrls(): Promise<string[]> {
   }
 
   return PRIORITY_URLS;
+}
+
+function getStateFilePath(): string {
+  return getArgValue("--state=") ?? DEFAULT_STATE_FILE;
+}
+
+function readSeenUrls(): Set<string> {
+  const file = getStateFilePath();
+  if (!existsSync(file)) return new Set();
+  try {
+    const parsed = JSON.parse(readFileSync(file, "utf8"));
+    if (Array.isArray(parsed)) return new Set(parsed as string[]);
+    if (Array.isArray(parsed?.urls)) return new Set(parsed.urls as string[]);
+  } catch (err) {
+    console.warn(`Could not read state file ${file}:`, err);
+  }
+  return new Set();
+}
+
+function writeSeenUrls(urls: Set<string>) {
+  const file = getStateFilePath();
+  try {
+    writeFileSync(
+      file,
+      JSON.stringify(
+        { updatedAt: new Date().toISOString(), urls: [...urls].sort() },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+  } catch (err) {
+    console.warn(`Could not write state file ${file}:`, err);
+  }
 }
 
 async function main() {
@@ -208,6 +264,16 @@ async function main() {
   }
 
   console.log(`\nDone. Success: ${successCount}, Failed: ${failCount}`);
+
+  // In diff mode, record everything we attempted so we don't resubmit it
+  // tomorrow. (Attempted, not just succeeded — a permanent failure shouldn't
+  // jam the quota every day.)
+  if (process.argv.includes("--diff") && urls.length > 0) {
+    const seen = readSeenUrls();
+    urls.forEach((u) => seen.add(u));
+    writeSeenUrls(seen);
+    console.log(`State updated: ${seen.size} URLs marked as seen.`);
+  }
 
   if (failCount > 0 && successCount === 0) {
     process.exit(1);

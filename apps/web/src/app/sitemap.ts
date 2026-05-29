@@ -1,11 +1,14 @@
 import { BLOG_POSTS } from "@/data/blog-posts";
 import generatedRoutes from "@/data/generated-routes.json";
+import { SITE_URL } from "@/config/site";
 import { MetadataRoute } from "next";
 
-const BASE_URL = "https://www.orivraa.com";
+const BASE_URL = SITE_URL;
 const DEFAULT_PUBLIC_API_BASE = "https://api.orivraa.com/api";
 const SHOP_SITEMAP_PAGE_SIZE = 200;
-const SHOP_SITEMAP_MAX_PAGES = 10;
+// Google allows up to 50,000 URLs per sitemap file. 250 pages × 200 = 50k.
+const SHOP_SITEMAP_MAX_PAGES = 250;
+const SHOP_FETCH_RETRIES = 3;
 
 const ABOUT_LANGUAGES = ["fr", "de", "hi", "es", "ar", "ne"] as const;
 
@@ -255,6 +258,34 @@ function resolvePublicApiBaseUrl() {
     : `${configuredUrl}/api`;
 }
 
+async function fetchWithRetry(
+  url: string,
+  init?: RequestInit & { next?: { revalidate?: number } },
+  retries = SHOP_FETCH_RETRIES,
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch(url, init);
+      if (response.ok) return response;
+      // Retry on transient server errors; fail fast on 4xx.
+      if (response.status < 500) {
+        throw new Error(`${response.status} ${response.statusText}`);
+      }
+      lastError = new Error(`${response.status} ${response.statusText}`);
+    } catch (err) {
+      lastError = err;
+    }
+    if (attempt < retries) {
+      const backoffMs = 250 * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(String(lastError ?? "fetch failed"));
+}
+
 async function getShopPagesForSitemap() {
   const apiBaseUrl = resolvePublicApiBaseUrl();
   const shopPages: MetadataRoute.Sitemap = [];
@@ -265,14 +296,20 @@ async function getShopPagesForSitemap() {
       pageSize: `${SHOP_SITEMAP_PAGE_SIZE}`,
     });
 
-    const response = await fetch(`${apiBaseUrl}/shops/public?${query.toString()}`, {
-      next: { revalidate: 3600 },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Public shops endpoint returned ${response.status} ${response.statusText}`,
+    let response: Response;
+    try {
+      response = await fetchWithRetry(
+        `${apiBaseUrl}/shops/public?${query.toString()}`,
+        { next: { revalidate: 3600 } },
       );
+    } catch (error) {
+      // Don't drop the entire shop list because one page failed — keep what
+      // we've collected so far rather than emitting an empty/partial sitemap.
+      console.error(
+        `Failed to fetch shops page ${page} after retries; returning ${shopPages.length} shops collected so far:`,
+        error,
+      );
+      break;
     }
 
     const data = await response.json();
@@ -322,9 +359,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let customerFlowEnabled = false;
   try {
     const apiBaseUrl = resolvePublicApiBaseUrl();
-    const configResponse = await fetch(`${apiBaseUrl}/platform-config/public`, {
-      next: { revalidate: 3600 },
-    });
+    const configResponse = await fetchWithRetry(
+      `${apiBaseUrl}/platform-config/public`,
+      { next: { revalidate: 3600 } },
+    );
     if (configResponse.ok) {
       const configJson = await configResponse.json();
       const features = configJson?.data?.features || configJson?.features || {};

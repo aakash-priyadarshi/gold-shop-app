@@ -2,6 +2,9 @@
 deployment-notes.txt
 *.prompt-checklist.txt
 
+# SEO indexing state (persisted via CI cache, not committed)
+.seo-submitted-urls.json
+
 # ============================================
 # 🚨 CRITICAL - API KEYS & SECRETS
 # ============================================

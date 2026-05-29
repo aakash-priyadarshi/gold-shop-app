@@ -16,7 +16,6 @@ import {
     CreditCard,
     Gem,
     Globe,
-    LayoutDashboard,
     MessageSquare,
     Package,
     ShieldCheck,
@@ -71,34 +70,49 @@ const steps = [
 
 const shopFeatures = [
   {
-    icon: LayoutDashboard,
-    title: "Smart Dashboard",
-    desc: "Real-time analytics, sales tracking, and inventory management in one clean interface.",
+    icon: Zap,
+    title: "Live Gold & Silver Rates",
+    desc: "Today's 24K/22K/18K rates flow straight into every bill — no manual updates, no underselling when prices move mid-day.",
+  },
+  {
+    icon: CreditCard,
+    title: "Weight Billing + Making Charges",
+    desc: "Bill by gram or tola with making charges, wastage, stone value, and GST/VAT added automatically. A flawless invoice in seconds.",
+  },
+  {
+    icon: Gem,
+    title: "Karigar & Wastage Ledger",
+    desc: "Track metal issued to each karigar, wastage returned, and labour due — so not a single gram silently leaks from your shop.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Old Gold Exchange & Buy-Back",
+    desc: "Calculate purity, deduct old-gold value, and settle the difference instantly. Every exchange recorded and audit-ready.",
+  },
+  {
+    icon: Calendar,
+    title: "Savings & Committee Schemes",
+    desc: "Run monthly gold-savings and committee (chit) plans, auto-track instalments, and remind customers — loyalty that brings them back.",
   },
   {
     icon: Package,
-    title: "Inventory & Catalogue",
-    desc: "Upload products with photos, set pricing by weight, manage stock with barcode/SKU support.",
-  },
-  {
-    icon: MessageSquare,
-    title: "Built-in Chat & RFQ",
-    desc: "Receive custom order requests, chat with buyers in real-time, and send quotes instantly.",
-  },
-  {
-    icon: Globe,
-    title: "International Reach",
-    desc: "Your shop is visible to buyers in 5+ countries. Multi-currency pricing handled automatically.",
-  },
-  {
-    icon: BarChart3,
-    title: "Sales Analytics",
-    desc: "Track revenue, popular products, customer demographics, and conversion rates.",
+    title: "Inventory, Barcode & HUID",
+    desc: "Photos, weight-based pricing, barcode/SKU and HUID/hallmark tracking — know exactly what's in your showcase at all times.",
   },
   {
     icon: Smartphone,
     title: "Mobile POS — Sell Anywhere",
-    desc: "Create counter bills, share receipts, scan barcodes, and keep inventory synced from any smartphone.",
+    desc: "Bill from any phone at the counter, at an exhibition, or at home. Scan, share the receipt on WhatsApp, and stay synced.",
+  },
+  {
+    icon: BarChart3,
+    title: "Dashboard & Sales Analytics",
+    desc: "See today's sales, best-selling designs, dead stock, and profit at a glance — run your shop on numbers, not guesswork.",
+  },
+  {
+    icon: Globe,
+    title: "Sell to the World",
+    desc: "Reach buyers across India, Nepal, Dubai, UK & USA with multi-currency pricing handled for you. Your shop, global.",
   },
 ];
 
@@ -201,15 +215,16 @@ export function SellerFeaturesSection() {
           </ScrollReveal>
           <ScrollReveal direction="assemble" delay={0.12} spring>
             <h2 className="text-2xl lg:text-4xl font-black text-gray-990 dark:text-white mb-3 lg:mb-4 tracking-tight">
-              <T>Your Complete Shop Management Platform</T>
+              <T>Everything Your Jewellery Shop Needs — In One Place</T>
             </h2>
           </ScrollReveal>
           <ScrollReveal direction="up" delay={0.2} spring>
             <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-lg leading-relaxed">
               <T>
-                Take your jewellery business online with powerful CMS. Manage
-                inventory, accept orders, and reach buyers across Nepal, India,
-                Dubai, USA & UK — all from one dashboard.
+                Live rates, weight-based billing, karigar wastage ledgers,
+                old-gold exchange, savings schemes, GST/VAT invoices and a
+                mobile POS — the tools big chains pay lakhs for, built for your
+                shop across India, Nepal, Dubai, USA & UK. Start free.
               </T>
             </p>
           </ScrollReveal>
@@ -228,12 +243,15 @@ export function SellerFeaturesSection() {
           {shopFeatures.map((feature, idx) => {
             // Curated goldsmith workshop & jewellery assets
             const featureImages: Record<string, string> = {
-              "Smart Dashboard": "https://images.orivraa.com/images/public/hasan-mrad-9Foi-h8zmIU-unsplash.jpg",
-              "Inventory & Catalogue": "https://images.orivraa.com/images/public/carlos-esteves-1MWbwTaeJIA-unsplash.jpg",
-              "Built-in Chat & RFQ": "https://images.orivraa.com/images/public/subham-hait-fVeujn3i5ZE-unsplash.jpg",
-              "International Reach": "https://images.orivraa.com/images/public/luxury-gold-globe.png",
-              "Sales Analytics": "https://images.orivraa.com/images/public/vaibhav-nagare-G3Hrl6WzQYQ-unsplash.jpg",
+              "Live Gold & Silver Rates": "https://images.orivraa.com/images/public/vaibhav-nagare-G3Hrl6WzQYQ-unsplash.jpg",
+              "Weight Billing + Making Charges": "https://images.orivraa.com/images/public/carlos-esteves-1MWbwTaeJIA-unsplash.jpg",
+              "Karigar & Wastage Ledger": "https://images.orivraa.com/images/public/subham-hait-fVeujn3i5ZE-unsplash.jpg",
+              "Old Gold Exchange & Buy-Back": "https://images.orivraa.com/images/public/hasan-mrad-9Foi-h8zmIU-unsplash.jpg",
+              "Savings & Committee Schemes": "https://images.orivraa.com/images/public/luxury-gold-globe.png",
+              "Inventory, Barcode & HUID": "https://images.orivraa.com/images/public/carlos-esteves-1MWbwTaeJIA-unsplash.jpg",
               "Mobile POS — Sell Anywhere": "https://images.orivraa.com/images/public/sayan-bhaskar-U0nWBqGsTMk-unsplash.jpg",
+              "Dashboard & Sales Analytics": "https://images.orivraa.com/images/public/vaibhav-nagare-G3Hrl6WzQYQ-unsplash.jpg",
+              "Sell to the World": "https://images.orivraa.com/images/public/luxury-gold-globe.png",
             };
             const bgImage = featureImages[feature.title];
 

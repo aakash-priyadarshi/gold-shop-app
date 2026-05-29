@@ -6,6 +6,7 @@ import { SupportBot } from "@/components/support/SupportBot";
 import InitialLoadScreen from "@/components/ui/InitialLoadScreen";
 import { Toaster } from "@/components/ui/toaster";
 import { BRAND } from "@/config/brand";
+import { SITE_URL, MOBILE_SITE_URL } from "@/config/site";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
@@ -21,7 +22,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.orivraa.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: BRAND.seo.title,
     template: BRAND.seo.titleTemplate,
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
       "ar_AE",
       "ne_NP",
     ],
-    url: "https://www.orivraa.com",
+    url: SITE_URL,
     siteName: BRAND.name,
     title: BRAND.seo.title,
     description: BRAND.seo.defaultDescription,
@@ -117,8 +118,8 @@ export default function RootLayout({
   const isMobileDomain = host.startsWith("m.");
 
   // Build absolute URLs
-  const canonicalUrl = `https://www.orivraa.com${pathname || "/"}`;
-  const alternateUrl = `https://m.orivraa.com${pathname || "/"}`;
+  const canonicalUrl = `${SITE_URL}${pathname || "/"}`;
+  const alternateUrl = `${MOBILE_SITE_URL}${pathname || "/"}`;
   const languages = ["en", "fr", "de", "hi", "es", "ar", "ne"];
 
   return (
@@ -139,13 +140,13 @@ export default function RootLayout({
             key={lang}
             rel="alternate"
             hrefLang={lang}
-            href={`https://www.orivraa.com${lang === "en" ? "" : `/${lang}`}${pathname}`}
+            href={`${SITE_URL}${lang === "en" ? "" : `/${lang}`}${pathname}`}
           />
         ))}
         <link
           rel="alternate"
           hrefLang="x-default"
-          href={`https://www.orivraa.com${pathname}`}
+          href={`${SITE_URL}${pathname}`}
         />
         <script
           type="application/ld+json"
@@ -155,12 +156,12 @@ export default function RootLayout({
               "@graph": [
                 {
                   "@type": "Organization",
-                  "@id": "https://www.orivraa.com/#organization",
+                  "@id": `${SITE_URL}/#organization`,
                   name: BRAND.name,
-                  url: "https://www.orivraa.com",
+                  url: SITE_URL,
                   logo: {
                     "@type": "ImageObject",
-                    url: "https://www.orivraa.com/brand/orivraa-icon.svg",
+                    url: `${SITE_URL}/brand/orivraa-icon.svg`,
                   },
                   description: BRAND.seo.defaultDescription,
                   address: {
@@ -229,12 +230,12 @@ export default function RootLayout({
                 },
                 {
                   "@type": "WebSite",
-                  "@id": "https://www.orivraa.com/#website",
-                  url: "https://www.orivraa.com",
+                  "@id": `${SITE_URL}/#website`,
+                  url: SITE_URL,
                   name: BRAND.name,
                   description: BRAND.seo.defaultDescription,
                   publisher: {
-                    "@id": "https://www.orivraa.com/#organization",
+                    "@id": `${SITE_URL}/#organization`,
                   },
                   inLanguage: ["en", "fr", "de", "hi", "es", "ar", "ne"],
                   potentialAction: {
@@ -242,7 +243,7 @@ export default function RootLayout({
                     target: {
                       "@type": "EntryPoint",
                       urlTemplate:
-                        "https://www.orivraa.com/shops?search={search_term_string}",
+                        `${SITE_URL}/shops?search={search_term_string}`,
                     },
                     "query-input": "required name=search_term_string",
                   },

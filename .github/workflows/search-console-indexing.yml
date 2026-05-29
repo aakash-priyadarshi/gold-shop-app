@@ -26,6 +26,11 @@ on:
         required: false
         default: false
         type: boolean
+      diff:
+        description: "Submit only URLs that are new since the last run (sitemap diff)"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -85,6 +90,15 @@ jobs:
           echo "Push trigger detected, waiting 6 minutes for production deploy"
           sleep 360
 
+      - name: Restore submitted-URL state
+        if: steps.config.outputs.ready == 'true'
+        uses: actions/cache@v4
+        with:
+          path: .seo-submitted-urls.json
+          key: seo-submitted-urls-${{ github.run_id }}
+          restore-keys: |
+            seo-submitted-urls-
+
       - name: Submit URLs to Google Indexing API
         if: steps.config.outputs.ready == 'true'
         env:
@@ -99,8 +113,24 @@ jobs:
           fi
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.from_sitemap }}" == "true" ]]; then
             ARGS="$ARGS --from-sitemap"
+          # Scheduled runs default to diff mode (only new URLs); manual diff also supported.
+          elif [[ "${{ github.event_name }}" == "schedule" || ( "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.diff }}" == "true" ) ]]; then
+            ARGS="$ARGS --diff"
           fi
           pnpm seo:submit-urls $ARGS
+
+      - name: Submit URLs to IndexNow (Bing, Yandex, …)
+        if: steps.config.outputs.ready == 'true'
+        env:
+          INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+          SEO_SITE_URL: ${{ vars.SEO_SITE_URL }}
+        shell: bash
+        run: |
+          ARGS=""
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" == "true" ]]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          pnpm seo:submit-indexnow $ARGS
 
       - name: Workflow summary
         if: always() && steps.config.outputs.ready == 'true'
