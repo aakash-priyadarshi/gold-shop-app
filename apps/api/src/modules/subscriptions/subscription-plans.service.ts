@@ -13,6 +13,12 @@ import { CreatePlanDto, UpdatePlanDto } from "./dto";
 export class SubscriptionPlansService {
   private readonly logger = new Logger(SubscriptionPlansService.name);
 
+  /**
+   * Days a PAST_DUE subscription continues to grant paid access while Stripe
+   * dunning retries the charge. After this window the shop falls back to FREE.
+   */
+  static readonly PAST_DUE_GRACE_DAYS = 7;
+
   private readonly supportedRegions = ["NP", "IN", "AE", "UK", "US", "EU"] as const;
 
   private readonly currencyMap: Record<string, string> = {
@@ -187,17 +193,43 @@ export class SubscriptionPlansService {
    * Returns the shop's SellerSubscription → SubscriptionPlan, or the FREE fallback.
    */
   async getActiveShopPlan(shopId: string) {
-    // 1. Check for active seller subscription
-    const subscription = await this.prisma.sellerSubscription.findFirst({
+    // 1. Look for any subscription that could still grant paid access:
+    //    ACTIVE / TRIALING, or PAST_DUE within the dunning grace window.
+    //    PAST_DUE is included so a single transient charge failure (which
+    //    Stripe Smart Retries usually recovers within a few days) does not
+    //    instantly strip the shop to free-tier limits mid-cycle.
+    const candidates = await this.prisma.sellerSubscription.findMany({
       where: {
         shopId,
-        status: { in: ["ACTIVE", "TRIALING"] },
+        status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] },
       },
       include: { plan: true },
       orderBy: { createdAt: "desc" },
     });
 
-    if (subscription) return subscription.plan;
+    const now = Date.now();
+    const graceMs =
+      SubscriptionPlansService.PAST_DUE_GRACE_DAYS * 24 * 60 * 60 * 1000;
+
+    const live = candidates.find((sub) => {
+      const periodEnd = sub.currentPeriodEnd?.getTime() ?? 0;
+
+      if (sub.status === "PAST_DUE") {
+        // Honor a past-due subscription only inside the grace window.
+        return periodEnd + graceMs >= now;
+      }
+
+      // ACTIVE/TRIALING that won't renew must not outlive its paid period —
+      // this is a defensive guard in case the expiry cron lags. Auto-renewing
+      // subscriptions are trusted (Stripe is the source of truth and will flip
+      // them to PAST_DUE/CANCELLED if payment lapses).
+      if (!sub.autoRenew) {
+        return periodEnd >= now;
+      }
+      return true;
+    });
+
+    if (live) return live.plan;
 
     // 2. Fallback: get the FREE plan for the shop's country
     const shop = await this.prisma.shop.findUnique({

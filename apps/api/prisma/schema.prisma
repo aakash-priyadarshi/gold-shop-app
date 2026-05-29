@@ -430,6 +430,14 @@ model Shop {
   demandForecasts         DemandForecast[]
   repricingRules          RepricingRule[]
 
+  // Mobile shopkeeper tools (offline-first capable)
+  repairJobs              RepairJob[]
+  savingsMembers          SavingsMember[]
+  goldLoans               GoldLoan[]
+  karigarWorkshops        KarigarWorkshop[]
+  karigarJobs             KarigarJob[]
+  karigarVaultReserves    KarigarVaultReserve[]
+
   // AI Credit Auto-Recharge
   autoRechargeEnabled     Boolean               @default(false)
   autoRechargeThreshold   Int                   @default(5)   // trigger when balance drops below this
@@ -2133,6 +2141,11 @@ model Invoice {
   orderId         String?
   shopQuoteId     String?
 
+  // Idempotency key for offline-replayed POS sales (client-generated UUID).
+  // A replayed sale with the same key returns the existing invoice instead of
+  // creating a duplicate. NULL for non-POS / online back-office invoices.
+  posClientId     String?  @unique
+
   // Customer details (denormalized for PDF generation)
   customerName    String
   customerPhone   String?
@@ -3265,6 +3278,182 @@ model CronJobConfig {
   category        String   @default("general") // "scheduling", "monitoring", "cache", "cleanup"
   updatedAt       DateTime @updatedAt
   createdAt       DateTime @default(now())
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Mobile shopkeeper tools (offline-first capable)
+//
+// Both models carry an optional `clientId` (a client-generated UUID) so the
+// mobile PWA — and the future native mobile app — can create records while
+// offline, queue them, and replay them on reconnect without creating
+// duplicates. The server upserts on `clientId`, making every write idempotent.
+// ──────────────────────────────────────────────────────────────────────────
+
+enum RepairStatus {
+  RECEIVED
+  DIAGNOSING
+  IN_REPAIR
+  READY
+  DELIVERED
+}
+
+model RepairJob {
+  id                String       @id @default(uuid())
+  shopId            String
+  clientId          String?      @unique // client-generated UUID for offline idempotency
+  customerName      String
+  customerPhone     String?
+  itemDescription   String
+  issueDescription  String
+  status            RepairStatus @default(RECEIVED)
+  estimatedCost     Float?
+  finalCost         Float?
+  expectedReadyDate DateTime?
+  notes             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  shop              Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@index([shopId, status])
+  @@index([shopId, createdAt])
+}
+
+enum SavingsSchemeType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum SavingsMemberStatus {
+  ACTIVE
+  MATURED
+  REDEEMED
+  CANCELLED
+}
+
+model SavingsMember {
+  id                String              @id @default(uuid())
+  shopId            String
+  clientId          String?             @unique // client-generated UUID for offline idempotency
+  customerName      String
+  customerPhone     String?
+  schemeType        SavingsSchemeType   @default(MONTHLY)
+  installmentAmount Float
+  installmentsPaid  Int                 @default(0)
+  totalInstallments Int
+  bonusInstallments Int                 @default(0)
+  currency          String              @default("NPR")
+  startDate         DateTime
+  maturityDate      DateTime
+  status            SavingsMemberStatus @default(ACTIVE)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  shop              Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  payments          SavingsPayment[]
+
+  @@index([shopId])
+  @@index([shopId, status])
+  @@index([shopId, createdAt])
+}
+
+model SavingsPayment {
+  id        String        @id @default(uuid())
+  memberId  String
+  clientId  String?       @unique // client-generated UUID for offline idempotency
+  amount    Float
+  paidAt    DateTime      @default(now())
+  member    SavingsMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+// ─── Girvi / Gold Loan (pawn lending) ───────────────────────
+enum GoldLoanStatus {
+  ACTIVE
+  REDEEMED
+  DEFAULTED
+}
+
+model GoldLoan {
+  id                String         @id @default(uuid())
+  shopId            String
+  clientId          String?        @unique // client-generated UUID for offline idempotency
+  loanNumber        String
+  customerName      String
+  customerPhone     String?
+  principal         Float
+  interestRate      Float // percentage
+  rateType          String         @default("MONTHLY") // MONTHLY | ANNUAL
+  interestType      String         @default("SIMPLE") // SIMPLE | COMPOUND
+  compoundFrequency String? // MONTHLY | QUARTERLY | ANNUALLY
+  pawnedItems       Json // [{ name, purity, grossWeight, netWeight }]
+  currency          String         @default("NPR")
+  status            GoldLoanStatus @default(ACTIVE)
+  loanDate          DateTime
+  redeemedDate      DateTime?
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  shop              Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@index([shopId, status])
+  @@index([shopId, createdAt])
+}
+
+// ─── Karigar / Workshop supply chain ──────────────────────
+model KarigarWorkshop {
+  id                 String   @id // client-generated id (e.g. ws-...)
+  shopId             String
+  name               String
+  artisan            String
+  location           String   @default("Local")
+  phone              String?
+  email              String?
+  rating             Float    @default(5)
+  metalIssued        Float    @default(0)
+  metalReturned      Float    @default(0)
+  wastagePercent     Float    @default(0)
+  wastageLimit       Float    @default(1)
+  wageRatePerGram    Float    @default(0)
+  outstandingBalance Float    @default(0)
+  wageDue            Float    @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  shop               Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+}
+
+model KarigarJob {
+  id          String   @id // client-generated id (e.g. job-...)
+  shopId      String
+  product     String
+  artisan     String
+  grossWeight Float    @default(0)
+  status      String   @default("PENDING")
+  steps       Json? // { casting, filing, setting, polishing, hallmark }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+}
+
+model KarigarVaultReserve {
+  id          String   @id @default(uuid())
+  shopId      String
+  materialKey String // vault key, e.g. goldGrains24k or a custom key
+  label       String   @default("")
+  customKey   String? // present for custom materials (the material `key`)
+  quantity    Float    @default(0)
+  isCustom    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, materialKey])
+  @@index([shopId])
 }
 
 // ─── Security Shield ───────────────────────────────────────

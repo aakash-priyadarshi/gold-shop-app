@@ -45,7 +45,11 @@ import { PricingModule } from "./modules/pricing/pricing.module";
 import { ProductVariantsModule } from "./modules/product-variants/product-variants.module";
 import { RefundsModule } from "./modules/refunds/refunds.module";
 import { ReleasesModule } from "./modules/releases/releases.module";
+import { RepairsModule } from "./modules/repairs/repairs.module";
+import { GoldLoansModule } from "./modules/gold-loans/gold-loans.module";
+import { KarigarModule } from "./modules/karigar/karigar.module";
 import { RfqModule } from "./modules/rfq/rfq.module";
+import { SavingsModule } from "./modules/savings/savings.module";
 import { SecurityModule } from "./modules/security/security.module";
 import { SellerPerformanceModule } from "./modules/seller-performance/seller-performance.module";
 import { ShopQuotesModule } from "./modules/shop-quotes/shop-quotes.module";
@@ -156,6 +160,10 @@ import { PrismaModule } from "./prisma/prisma.module";
     CrashReportsModule,
     RefundsModule,
     ReleasesModule,
+    RepairsModule,
+    SavingsModule,
+    GoldLoansModule,
+    KarigarModule,
     SupportModule,
     ProductVariantsModule,
     PosModule,

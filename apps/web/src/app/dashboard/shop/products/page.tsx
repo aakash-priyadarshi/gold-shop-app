@@ -166,6 +166,23 @@ const gemstoneCuts = [
   "Other",
 ];
 
+// GIA/IGI-style colour grades (D best → Z) plus fancy.
+const gemstoneColors = [
+  "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+  "Fancy",
+];
+
+// Standard clarity grades.
+const gemstoneClarities = [
+  "FL", "IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1", "I2", "I3",
+];
+
+// Cut/polish/symmetry grades.
+const gemstoneCutGrades = ["Excellent", "Very Good", "Good", "Fair", "Poor"];
+
+// Grading laboratories.
+const gemstoneLabs = ["GIA", "IGI", "AGS", "SGL", "GII", "Other"];
+
 // Weight unit conversion
 const TOLA_TO_GRAM = 11.6638;
 
@@ -175,6 +192,11 @@ interface GemstoneData {
   caratWeight: number;
   color?: string;
   clarity?: string;
+  cutGrade?: string;
+  lab?: string; // GIA, IGI, AGS, ...
+  certNumber?: string; // e.g. "GIA-2141438171"
+  reportUrl?: string; // link to the digital report / verification
+  reportDate?: string; // YYYY-MM-DD
   valueNpr: number;
 }
 
@@ -291,6 +313,7 @@ export default function ShopProductsPage() {
     if (user?.shop?.id) {
       loadProducts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.shop?.id, statusFilter]);
 
   const loadProducts = async () => {
@@ -346,7 +369,21 @@ export default function ShopProductsPage() {
       gemstoneValueNpr: product.gemstoneValueNpr.toString(),
       stockQuantity: product.stockQuantity.toString(),
       images: product.images || [],
-      gemstones: [],
+      gemstones: Array.isArray(comp.gemstones)
+        ? comp.gemstones.map((g: any) => ({
+            type: g.type || "",
+            cut: g.cut || "",
+            caratWeight: Number(g.caratWeight) || 0,
+            color: g.color || undefined,
+            clarity: g.clarity || undefined,
+            cutGrade: g.cutGrade || undefined,
+            lab: g.lab || undefined,
+            certNumber: g.certNumber || undefined,
+            reportUrl: g.reportUrl || undefined,
+            reportDate: g.reportDate || undefined,
+            valueNpr: Number(g.valueNpr) || 0,
+          }))
+        : [],
     });
     setIsDialogOpen(true);
   };
@@ -666,6 +703,7 @@ export default function ShopProductsPage() {
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center">
                               {product.images?.[0] ? (
+                                // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                   src={getImageUrl(
                                     product.images[0],
@@ -1079,6 +1117,104 @@ export default function ShopProductsPage() {
                             }
                           />
                         </div>
+
+                        {/* 4Cs grading + lab certificate */}
+                        <div className="grid grid-cols-3 gap-3">
+                          <Select
+                            value={gem.color || ""}
+                            onValueChange={(v) =>
+                              updateGemstone(idx, "color", v)
+                            }
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Colour" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {gemstoneColors.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {c}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={gem.clarity || ""}
+                            onValueChange={(v) =>
+                              updateGemstone(idx, "clarity", v)
+                            }
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Clarity" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {gemstoneClarities.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {c}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={gem.cutGrade || ""}
+                            onValueChange={(v) =>
+                              updateGemstone(idx, "cutGrade", v)
+                            }
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Cut grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {gemstoneCutGrades.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {c}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <Select
+                            value={gem.lab || ""}
+                            onValueChange={(v) => updateGemstone(idx, "lab", v)}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Lab" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {gemstoneLabs.map((l) => (
+                                <SelectItem key={l} value={l}>
+                                  {l}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            placeholder="Certificate no."
+                            className="h-9"
+                            value={gem.certNumber || ""}
+                            onChange={(e) =>
+                              updateGemstone(idx, "certNumber", e.target.value)
+                            }
+                          />
+                          <Input
+                            placeholder="Report URL"
+                            className="h-9"
+                            value={gem.reportUrl || ""}
+                            onChange={(e) =>
+                              updateGemstone(idx, "reportUrl", e.target.value)
+                            }
+                          />
+                          <Input
+                            type="date"
+                            placeholder="Report date"
+                            className="h-9"
+                            value={gem.reportDate || ""}
+                            onChange={(e) =>
+                              updateGemstone(idx, "reportDate", e.target.value)
+                            }
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1273,6 +1409,7 @@ export default function ShopProductsPage() {
                               Primary
                             </div>
                           )}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={getImageUrl(url, "thumbnail")}
                             alt={`Product ${idx + 1}`}

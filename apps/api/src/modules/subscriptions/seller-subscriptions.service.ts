@@ -511,36 +511,41 @@ export class SellerSubscriptionsService {
           break;
         }
 
-        // Cancel any existing active subscription for this shop
-        const existing = await this.prisma.sellerSubscription.findFirst({
-          where: { shopId, status: { in: ["ACTIVE", "TRIALING"] } },
-        });
-        if (existing) {
-          // Cancel old Stripe subscription if different
-          if (
-            existing.stripeSubscriptionId &&
-            existing.stripeSubscriptionId !== stripeSubscriptionId &&
-            this.stripe
-          ) {
-            try {
-              await this.stripe.subscriptions.cancel(
-                existing.stripeSubscriptionId,
-              );
-            } catch (e) {
-              this.logger.warn(`Failed to cancel old Stripe sub: ${e.message}`);
-            }
-          }
-          await this.prisma.sellerSubscription.update({
-            where: { id: existing.id },
-            data: {
-              status: "CANCELLED",
-              cancelledAt: new Date(),
-              cancelReason: "Replaced by new subscription",
-            },
+        // ── Idempotency guard ──────────────────────────────────────────
+        // Stripe delivers webhooks at-least-once and retries on any non-2xx
+        // response. SellerSubscription.stripeSubscriptionId is @unique, so it
+        // doubles as our idempotency key. Without this guard a retried
+        // delivery would re-run the cancel+create below: it would CANCEL the
+        // subscription we just created and then fail the unique create —
+        // permanently locking out a shop that has actually paid.
+        const alreadyProvisioned =
+          await this.prisma.sellerSubscription.findUnique({
+            where: { stripeSubscriptionId },
           });
+        if (alreadyProvisioned) {
+          if (alreadyProvisioned.status !== "ACTIVE") {
+            await this.prisma.sellerSubscription.update({
+              where: { id: alreadyProvisioned.id },
+              data: { status: "ACTIVE" },
+            });
+          }
+          this.logger.log(
+            `checkout.session.completed replay ignored for ${stripeSubscriptionId} (idempotent)`,
+          );
+          break;
         }
 
-        // Retrieve the Stripe Subscription to get period dates
+        // Find any OTHER active subscription this checkout replaces.
+        const existing = await this.prisma.sellerSubscription.findFirst({
+          where: {
+            shopId,
+            status: { in: ["ACTIVE", "TRIALING"] },
+            stripeSubscriptionId: { not: stripeSubscriptionId },
+          },
+        });
+
+        // Retrieve the Stripe Subscription to get period dates. External call,
+        // deliberately kept OUTSIDE the DB transaction below.
         let periodStart = new Date();
         let periodEnd = new Date();
         if (this.stripe) {
@@ -558,20 +563,62 @@ export class SellerSubscriptionsService {
           }
         }
 
-        await this.prisma.sellerSubscription.create({
-          data: {
-            shopId,
-            planId,
-            status: "ACTIVE",
-            country: (country || "US") as any,
-            startedAt: new Date(),
-            currentPeriodStart: periodStart,
-            currentPeriodEnd: periodEnd,
-            stripeSubscriptionId,
-            stripeCustomerId,
-            autoRenew: true,
-          },
-        });
+        // Atomically retire the replaced subscription and provision the new
+        // one. The unique constraint on stripeSubscriptionId is the final
+        // idempotency backstop: a concurrent duplicate delivery fails the
+        // create here and the whole transaction rolls back, leaving the
+        // existing active subscription untouched.
+        try {
+          await this.prisma.$transaction(async (tx) => {
+            if (existing) {
+              await tx.sellerSubscription.update({
+                where: { id: existing.id },
+                data: {
+                  status: "CANCELLED",
+                  cancelledAt: new Date(),
+                  cancelReason: "Replaced by new subscription",
+                },
+              });
+            }
+
+            await tx.sellerSubscription.create({
+              data: {
+                shopId,
+                planId,
+                status: "ACTIVE",
+                country: (country || "US") as any,
+                startedAt: new Date(),
+                currentPeriodStart: periodStart,
+                currentPeriodEnd: periodEnd,
+                stripeSubscriptionId,
+                stripeCustomerId,
+                autoRenew: true,
+              },
+            });
+          });
+        } catch (e: any) {
+          // P2002 = unique violation → a concurrent delivery already
+          // provisioned this subscription. Safe to treat as success.
+          if (e?.code === "P2002") {
+            this.logger.log(
+              `Concurrent checkout.session.completed for ${stripeSubscriptionId} — already provisioned`,
+            );
+            break;
+          }
+          throw e;
+        }
+
+        // Cancel the replaced subscription in Stripe AFTER local state is
+        // committed (external side-effect, best-effort).
+        if (existing?.stripeSubscriptionId && this.stripe) {
+          try {
+            await this.stripe.subscriptions.cancel(
+              existing.stripeSubscriptionId,
+            );
+          } catch (e) {
+            this.logger.warn(`Failed to cancel old Stripe sub: ${e.message}`);
+          }
+        }
 
         this.logger.log(
           `Subscription created for shop ${shopId} via Stripe Checkout (${stripeSubscriptionId})`,
@@ -616,20 +663,35 @@ export class SellerSubscriptionsService {
           });
         }
 
-        // Record the payment
-        await this.prisma.subscriptionPayment.create({
-          data: {
-            subscriptionId: sub.id,
-            amount: (invoice.amount_paid || 0) / 100,
-            currency: (sub.plan.currency || "USD") as any,
-            gateway: "stripe",
-            gatewayPaymentId: invoice.payment_intent as string,
-            status: "COMPLETED",
-            periodStart: sub.currentPeriodStart,
-            periodEnd: sub.currentPeriodEnd,
-            invoiceUrl: invoice.hosted_invoice_url || undefined,
-          },
-        });
+        // Record the payment (idempotent: a retried invoice.paid delivery must
+        // not create duplicate payment ledger rows for the same Stripe
+        // payment_intent).
+        const gatewayPaymentId = invoice.payment_intent as string | undefined;
+        const existingPayment = gatewayPaymentId
+          ? await this.prisma.subscriptionPayment.findFirst({
+              where: {
+                subscriptionId: sub.id,
+                gatewayPaymentId,
+                status: "COMPLETED",
+              },
+            })
+          : null;
+
+        if (!existingPayment) {
+          await this.prisma.subscriptionPayment.create({
+            data: {
+              subscriptionId: sub.id,
+              amount: (invoice.amount_paid || 0) / 100,
+              currency: (sub.plan.currency || "USD") as any,
+              gateway: "stripe",
+              gatewayPaymentId,
+              status: "COMPLETED",
+              periodStart: sub.currentPeriodStart,
+              periodEnd: sub.currentPeriodEnd,
+              invoiceUrl: invoice.hosted_invoice_url || undefined,
+            },
+          });
+        }
 
         this.logger.log(
           `Invoice paid for subscription ${sub.id} (${invoice.id})`,

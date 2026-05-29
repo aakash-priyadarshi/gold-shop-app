@@ -80,6 +80,22 @@ export class PlanLimitsService {
   }
 
   /**
+   * Resolve the product cap for a shop's active plan.
+   * Returns `max: null` when the plan grants unlimited products.
+   * Used by callers that need to enforce the cap atomically inside their own
+   * transaction (preventing a TOCTOU overshoot from concurrent creates).
+   */
+  async getProductLimit(
+    shopId: string,
+  ): Promise<{ max: number | null; planName: string }> {
+    const plan = await this.plansService.getActiveShopPlan(shopId);
+    if (!plan || plan.maxProducts === null || plan.maxProducts === undefined) {
+      return { max: null, planName: plan?.displayName ?? "your" };
+    }
+    return { max: plan.maxProducts, planName: plan.displayName };
+  }
+
+  /**
    * Check if the shop can create another invoice this month.
    * Uses calendar month (1st to last day).
    */

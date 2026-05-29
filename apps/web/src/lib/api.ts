@@ -339,6 +339,47 @@ export const inventoryApi = {
     api.patch(`/catalogues/inventory/${itemId}/visibility`, { visibility }),
 };
 
+// Girvi / Gold Loan (pawn lending) API
+export const goldLoansApi = {
+  list: (limit?: number) =>
+    api.get("/gold-loans", { params: limit ? { limit } : undefined }),
+  create: (data: {
+    clientId?: string;
+    loanNumber?: string;
+    customerName: string;
+    customerPhone?: string;
+    principal: number;
+    interestRate: number;
+    rateType?: string;
+    interestType?: string;
+    compoundFrequency?: string;
+    pawnedItems: Array<{
+      name: string;
+      purity: string;
+      grossWeight: number;
+      netWeight: number;
+    }>;
+    currency?: string;
+    loanDate?: string;
+    notes?: string;
+  }) => api.post("/gold-loans", data),
+  updateStatus: (
+    id: string,
+    data: { status: string; redeemedDate?: string },
+  ) => api.patch(`/gold-loans/${id}/status`, data),
+};
+
+// Karigar / supply-chain API (full-state snapshot)
+export const karigarApi = {
+  getSnapshot: () => api.get("/karigar/snapshot"),
+  saveSnapshot: (data: {
+    vaultReserves: Record<string, number>;
+    workshops: any[];
+    jobs: any[];
+    customMaterials?: Array<{ key: string; label: string; vaultKey: string }>;
+  }) => api.put("/karigar/snapshot", data),
+};
+
 // RFQ API
 export const rfqApi = {
   create: (data: any) => api.post("/rfq", data),
@@ -771,6 +812,18 @@ export const marketConfigApi = {
   update: (countryCode: string, data: Record<string, any>) =>
     api.patch(`/market/admin/${countryCode}`, data),
   seed: () => api.get("/market/admin/seed"),
+};
+
+// Payment Gateway API
+export const paymentGatewayApi = {
+  /**
+   * Resolve the preferred payment gateway for the visitor's/shop's country,
+   * plus any alternatives. `country` is an optional override.
+   */
+  getPreferredGateway: (country?: string) =>
+    api.get("/payment-gateway/preferred-gateway", {
+      params: country ? { country } : undefined,
+    }),
 };
 
 // Static Pages CMS API
@@ -1312,7 +1365,31 @@ export const posApi = {
   ) => api.post(`/pos/session/${sessionId}/checkout`, data),
   cancelSession: (sessionId: string) => api.delete(`/pos/session/${sessionId}`),
   getSession: (sessionId: string) => api.get(`/pos/session/${sessionId}`),
+  // Single-shot, offline-capable, idempotent sale (replaces the 3-call flow).
+  createSale: (data: PosSalePayload) => api.post("/pos/sale", data),
 };
+
+export interface PosSalePayload {
+  clientId?: string;
+  items: Array<{
+    inventoryItemId: string;
+    variantId?: string;
+    qty: number;
+    unitPrice?: number;
+  }>;
+  customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  customerId?: string;
+  taxRate?: number;
+  discountAmount?: number;
+  paymentMethod?: string;
+  makingChargeRate?: number;
+  makingChargesNpr?: number;
+  notes?: string;
+  occurredOffline?: boolean;
+  soldAt?: string;
+}
 
 // ─── Subscription Plans API ───
 export const subscriptionPlansApi = {

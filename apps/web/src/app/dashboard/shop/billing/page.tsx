@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import {
     aiCreditsApi,
+    paymentGatewayApi,
     sellerSubscriptionsApi,
     subscriptionPlansApi,
 } from "@/lib/api";
@@ -62,6 +63,22 @@ interface Plan {
   features?: Record<string, unknown>;
   isActive: boolean;
   sortOrder: number;
+}
+
+interface GatewayOption {
+  gatewayName: string;
+  displayName: string;
+  supportedMethods: string[];
+  commissionInfo: string | null;
+  isConfigured: boolean;
+}
+
+interface PreferredGateways {
+  resolvedCountry: string;
+  preferred: GatewayOption | null;
+  alternatives: GatewayOption[];
+  fallbackUsed: boolean;
+  countrySource: "override" | "shop" | "geo" | "default";
 }
 
 interface Subscription {
@@ -1085,6 +1102,8 @@ function AvailablePlansTab() {
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [gateways, setGateways] = useState<PreferredGateways | null>(null);
+  const [showAltGateways, setShowAltGateways] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -1114,8 +1133,22 @@ function AvailablePlansTab() {
     }
   };
 
+  // Resolve the preferred payment gateway for this shop's country.
+  const fetchGateways = async () => {
+    try {
+      const res = await paymentGatewayApi.getPreferredGateway(
+        shopCountry || undefined,
+      );
+      setGateways(res.data ?? null);
+    } catch {
+      // Non-critical: checkout still works via server-side gateway routing.
+      setGateways(null);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchGateways();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopCountry]);
 
@@ -1166,6 +1199,65 @@ function AvailablePlansTab() {
       <p className="text-sm text-muted-foreground">
         <T>Pick a plan that suits your business. Upgrade anytime.</T>
       </p>
+
+      {/* ── Preferred payment method for this region ───────── */}
+      {gateways?.preferred && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex flex-col gap-2 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-primary" />
+                <span className="text-sm">
+                  <T>Preferred payment method</T>:{" "}
+                  <span className="font-semibold">
+                    {gateways.preferred.displayName}
+                  </span>
+                </span>
+                <Badge variant="secondary" className="text-[10px]">
+                  {gateways.resolvedCountry}
+                </Badge>
+              </div>
+              {gateways.alternatives.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setShowAltGateways((v) => !v)}
+                >
+                  {showAltGateways ? (
+                    <T>Hide other methods</T>
+                  ) : (
+                    <T>Show other methods</T>
+                  )}
+                </Button>
+              )}
+            </div>
+
+            {gateways.fallbackUsed && (
+              <p className="text-xs text-muted-foreground">
+                <T>
+                  No local gateway is configured for your region — a global
+                  provider will be used.
+                </T>
+              </p>
+            )}
+
+            {showAltGateways && gateways.alternatives.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {gateways.alternatives.map((g) => (
+                  <Badge
+                    key={g.gatewayName}
+                    variant="outline"
+                    className="font-normal"
+                  >
+                    {g.displayName}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {plans.length === 0 ? (
         <Card>

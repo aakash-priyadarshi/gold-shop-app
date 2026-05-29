@@ -24,7 +24,7 @@ import {
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
-import { materialsApi, shopsApi } from "@/lib/api";
+import { materialsApi, karigarApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import { Loader2 } from "lucide-react";
@@ -104,7 +104,7 @@ export default function KarigarSupplyChainPage() {
 }
 
 function KarigarSupplyChainContent() {
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const { hasFeature, planName, loading: featuresLoading } = useFeatures();
   const t = useT();
 
@@ -245,9 +245,8 @@ function KarigarSupplyChainContent() {
   const loadDatabaseConfig = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await shopsApi.getSettings();
-      const s = res.data ?? res;
-      const dbConfig = s.bankAccountDetails?.karigarSupplyChain;
+      const res = await karigarApi.getSnapshot();
+      const dbConfig = res.data ?? res;
       if (dbConfig) {
         if (dbConfig.vaultReserves) setVaultReserves(dbConfig.vaultReserves);
         if (dbConfig.workshops) setWorkshops(dbConfig.workshops);
@@ -280,24 +279,12 @@ function KarigarSupplyChainContent() {
   ) => {
     setSaving(true);
     try {
-      const currentSettingsRes = await shopsApi.getSettings();
-      const currentSettings = currentSettingsRes.data ?? currentSettingsRes;
-      const bankDetails = currentSettings.bankAccountDetails || {};
-
-      const updatedBankAccountDetails = {
-        ...bankDetails,
-        karigarSupplyChain: {
-          vaultReserves: updatedReserves,
-          workshops: updatedWorkshops,
-          jobs: updatedJobs,
-          customMaterials: updatedCustomMaterials ?? customMaterials,
-        },
-      };
-
-      await shopsApi.updateSettings({
-        bankAccountDetails: updatedBankAccountDetails,
+      await karigarApi.saveSnapshot({
+        vaultReserves: updatedReserves,
+        workshops: updatedWorkshops,
+        jobs: updatedJobs,
+        customMaterials: updatedCustomMaterials ?? customMaterials,
       });
-      await refreshUser();
     } catch (err) {
       console.error("Failed to persist supply chain state to database:", err);
       showToast(t("Failed to save changes to database!"), "error");

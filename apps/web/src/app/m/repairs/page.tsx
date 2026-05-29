@@ -6,7 +6,13 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { api } from "@/lib/api";
+import { getDB } from "@/lib/offline/db";
+import {
+  createRepair,
+  refreshRepairs,
+  updateRepairStatus,
+} from "@/lib/offline/repairs";
+import { useLiveQuery } from "dexie-react-hooks";
 import {
     Check,
     CheckCircle,
@@ -64,8 +70,7 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
     }
     setSaving(true);
     try {
-      await api.post("/repairs", {
-        shopId: user?.shop?.id,
+      await createRepair(user?.shop?.id ?? "", {
         customerName: form.customerName,
         customerPhone: form.customerPhone || undefined,
         itemDescription: form.itemDescription,
@@ -73,7 +78,6 @@ function LogForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
         estimatedCost: form.estimatedCost ? parseFloat(form.estimatedCost) : undefined,
         expectedReadyDate: form.expectedReadyDate || undefined,
         notes: form.notes || undefined,
-        status: "RECEIVED",
       });
       toast({ title: "Repair job logged!" });
       onSaved();
@@ -207,7 +211,7 @@ function JobCard({ job, onStatusUpdate }: { job: RepairJob; onStatusUpdate: () =
     haptic("medium");
     setUpdating(true);
     try {
-      await api.patch(`/repairs/${job.id}/status`, { status: nextStatus });
+      await updateRepairStatus(job.id, nextStatus);
       haptic("success");
       toast({ title: `Status updated to ${STATUS_CONFIG[nextStatus].label}` });
       onStatusUpdate();
@@ -310,26 +314,34 @@ function JobCard({ job, onStatusUpdate }: { job: RepairJob; onStatusUpdate: () =
 
 export default function RepairsPage() {
   const { user } = useAuth();
-  const [jobs, setJobs] = useState<RepairJob[]>([]);
+  const shopId = user?.shop?.id;
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<"active" | "all">("active");
 
+  // Local-first: read straight from IndexedDB so the list is instant & offline-safe.
+  const jobs = (useLiveQuery(
+    () =>
+      shopId
+        ? getDB()
+            .repairs.where("shopId")
+            .equals(shopId)
+            .reverse()
+            .sortBy("createdAt")
+        : Promise.resolve([]),
+    [shopId],
+  ) ?? []) as RepairJob[];
+
   const load = useCallback(async () => {
-    const shopId = user?.shop?.id;
     if (!shopId) return;
-    setLoading(true);
     try {
-      const res = await api.get("/repairs", {
-        params: { shopId, limit: 50 },
-      });
-      setJobs(res.data?.items ?? res.data ?? []);
+      await refreshRepairs(shopId);
     } catch {
-      setJobs([]);
+      // Offline or server error — keep showing the local cache.
     } finally {
       setLoading(false);
     }
-  }, [user?.shop?.id]);
+  }, [shopId]);
 
   useEffect(() => {
     load();
@@ -391,7 +403,7 @@ export default function RepairsPage() {
 
         {/* List */}
         <div data-tour="m-repairs-list" className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-          {loading ? (
+          {loading && displayJobs.length === 0 ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-amber-400" />
             </div>

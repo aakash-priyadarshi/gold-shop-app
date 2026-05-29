@@ -4,9 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { InventoryStatus, JewelleryType } from "@prisma/client";
+import { InventoryStatus, JewelleryType, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
-import { PlanLimitsService } from "../subscriptions/plan-limits.service";
+import {
+  PlanLimitExceededException,
+  PlanLimitsService,
+} from "../subscriptions/plan-limits.service";
 import {
   CreateInventoryItemDto,
   InventoryFilterDto,
@@ -31,7 +34,7 @@ export class InventoryService {
       throw new ForbiddenException("You do not own this shop");
     }
 
-    // ── Plan limit check ──────────────────────────────────────────────
+    // ── Plan limit check (fast pre-check for a friendly error) ─────────
     await this.planLimitsService.checkProductLimit(shopId);
 
     // Check SKU uniqueness within shop
@@ -50,10 +53,34 @@ export class InventoryService {
     const tax = dto.taxNpr || 0;
     const totalPrice = metalValue + makingCharge + gemstoneValue + tax;
 
-    const item = await this.prisma.inventoryItem.create({
-      data: {
-        shopId,
-        nameEn: dto.nameEn,
+    // Resolve the authoritative cap once, then enforce it INSIDE the same
+    // serializable transaction as the create. Two concurrent creates can no
+    // longer both pass the count check and overshoot maxProducts — Postgres
+    // SSI aborts one of them with a serialization error on the conflicting
+    // count predicate.
+    const { max: maxProducts, planName } =
+      await this.planLimitsService.getProductLimit(shopId);
+
+    const item = await this.prisma.$transaction(
+      async (tx) => {
+        if (maxProducts !== null) {
+          const currentCount = await tx.inventoryItem.count({
+            where: { shopId },
+          });
+          if (currentCount >= maxProducts) {
+            throw new PlanLimitExceededException(
+              "products",
+              currentCount,
+              maxProducts,
+              planName,
+            );
+          }
+        }
+
+        return tx.inventoryItem.create({
+          data: {
+            shopId,
+            nameEn: dto.nameEn,
         nameNe: dto.nameNe,
         nameHi: dto.nameHi,
         descriptionEn: dto.descriptionEn,
@@ -83,7 +110,10 @@ export class InventoryService {
       include: {
         shop: { select: { id: true, shopName: true } },
       },
-    });
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     return item;
   }

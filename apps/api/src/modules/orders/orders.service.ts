@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -116,6 +117,35 @@ export class OrdersService {
 
     // Create order
     const order = await this.prisma.$transaction(async (tx) => {
+      // Atomically reserve stock FIRST using a guarded conditional update.
+      // The `where` clause re-checks availability inside the transaction, so a
+      // concurrent order cannot oversell the same unit (the read-check above is
+      // only an early, friendly rejection — this is the authoritative gate).
+      const stockUpdate = await tx.inventoryItem.updateMany({
+        where: {
+          id: item.id,
+          status: "AVAILABLE",
+          stockQuantity: { gte: dto.quantity },
+        },
+        data: {
+          stockQuantity: { decrement: dto.quantity },
+        },
+      });
+
+      if (stockUpdate.count === 0) {
+        // Another transaction grabbed the stock between our read and this write.
+        throw new ConflictException(
+          "Item is no longer available in the requested quantity",
+        );
+      }
+
+      // Flip to RESERVED only when the unit is now depleted. Done as a guarded
+      // update so we never resurrect a status based on a stale in-memory value.
+      await tx.inventoryItem.updateMany({
+        where: { id: item.id, stockQuantity: { lte: 0 } },
+        data: { status: "RESERVED" },
+      });
+
       // Create the order
       const newOrder = await tx.order.create({
         data: {
@@ -150,16 +180,6 @@ export class OrdersService {
         include: {
           shop: { select: { id: true, shopName: true } },
           customer: { select: { id: true, firstName: true, lastName: true } },
-        },
-      });
-
-      // Update inventory quantity
-      await tx.inventoryItem.update({
-        where: { id: item.id },
-        data: {
-          stockQuantity: { decrement: dto.quantity },
-          status:
-            item.stockQuantity - dto.quantity <= 0 ? "RESERVED" : "AVAILABLE",
         },
       });
 
@@ -548,11 +568,23 @@ export class OrdersService {
       );
     }
 
-    const updatedOrder = await this.prisma.order.update({
+    // Compare-and-set: the update only applies if the order is STILL in the
+    // exact status we validated against. This is optimistic concurrency control
+    // that prevents a lost update / illegal regression when a webhook, admin,
+    // or another shopkeeper request mutates the same order concurrently.
+    const transition = await this.prisma.order.updateMany({
+      where: { id, status: order.status },
+      data: { status: dto.status as OrderStatus },
+    });
+
+    if (transition.count === 0) {
+      throw new ConflictException(
+        "Order status changed concurrently. Please reload and retry.",
+      );
+    }
+
+    const updatedOrder = await this.prisma.order.findUniqueOrThrow({
       where: { id },
-      data: {
-        status: dto.status as OrderStatus,
-      },
     });
 
     // Update customer purchase stats when order is delivered
@@ -727,23 +759,40 @@ export class OrdersService {
       throw new BadRequestException("Order cannot be cancelled at this stage");
     }
 
-    const updatedOrder = await this.prisma.order.update({
-      where: { id },
-      data: {
-        status: OrderStatus.CANCELLED,
-      },
-    });
+    // Restore the actual ordered quantity, not a hardcoded 1. Multi-unit
+    // inventory orders persist their quantity in the product snapshot.
+    const snapshot = order.productSnapshot as { quantity?: number } | null;
+    const restoreQty =
+      snapshot?.quantity && snapshot.quantity > 0 ? snapshot.quantity : 1;
 
-    // Restore inventory if applicable
-    if (order.inventoryItemId) {
-      await this.prisma.inventoryItem.update({
-        where: { id: order.inventoryItemId },
-        data: {
-          stockQuantity: { increment: 1 },
-          status: "AVAILABLE",
-        },
+    // Status flip + inventory restock must be atomic. Previously these were two
+    // independent writes: a crash between them cancelled the order but lost the
+    // stock permanently. The guarded `updateMany` also prevents a double-cancel
+    // (and double-restock) race from two concurrent cancellation requests.
+    const updatedOrder = await this.prisma.$transaction(async (tx) => {
+      const cancelResult = await tx.order.updateMany({
+        where: { id, status: { in: cancellableStatuses as OrderStatus[] } },
+        data: { status: OrderStatus.CANCELLED },
       });
-    }
+
+      if (cancelResult.count === 0) {
+        throw new ConflictException(
+          "Order can no longer be cancelled (it changed state concurrently).",
+        );
+      }
+
+      if (order.inventoryItemId) {
+        await tx.inventoryItem.update({
+          where: { id: order.inventoryItemId },
+          data: {
+            stockQuantity: { increment: restoreQty },
+            status: "AVAILABLE",
+          },
+        });
+      }
+
+      return tx.order.findUniqueOrThrow({ where: { id } });
+    });
 
     // Notify shop
     await this.notificationsService.create({
@@ -1032,8 +1081,6 @@ export class OrdersService {
     if (!order) {
       throw new NotFoundException("Order not found");
     }
-
-    const previousDelivery = order.estimatedDelivery;
 
     const updatedOrder = await this.prisma.order.update({
       where: { id: orderId },

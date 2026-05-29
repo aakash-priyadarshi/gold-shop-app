@@ -24,7 +24,7 @@ import {
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
-import { materialsApi, shopsApi } from "@/lib/api";
+import { materialsApi, goldLoansApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import { Loader2, Coins, Plus, Scale, Trash2, CheckCircle2, AlertTriangle, Calendar, Search } from "lucide-react";
@@ -53,39 +53,24 @@ interface GoldLoan {
   redeemedDate?: string;
 }
 
-const DEFAULT_LOANS: GoldLoan[] = [
-  {
-    id: "loan-1",
-    loanNumber: "GV-2026-001",
-    customerName: "Rajesh Prasad",
-    customerPhone: "+91 98765 43210",
-    principal: 25000,
-    interestRate: 1.5,
-    rateType: "MONTHLY",
-    interestType: "SIMPLE",
-    pawnedItems: [
-      { name: "22K Gold Mens Signet Ring", purity: "22K", grossWeight: 8.5, netWeight: 8.0 }
-    ],
-    status: "ACTIVE",
-    loanDate: "2026-02-26" // 3 months ago relative to May 26
-  },
-  {
-    id: "loan-2",
-    loanNumber: "GV-2026-002",
-    customerName: "Gita Shrestha",
-    customerPhone: "+977 98412 34567",
-    principal: 70000,
-    interestRate: 2.0,
-    rateType: "MONTHLY",
-    interestType: "COMPOUND",
-    compoundFrequency: "MONTHLY",
-    pawnedItems: [
-      { name: "22K Gold Wedding Bangles (Pair)", purity: "22K", grossWeight: 22.4, netWeight: 22.0 }
-    ],
-    status: "ACTIVE",
-    loanDate: "2026-04-26" // 1 month ago relative to May 26
-  }
-];
+// Map a server gold-loan record to the UI shape.
+function mapLoan(r: any): GoldLoan {
+  return {
+    id: r.id,
+    loanNumber: r.loanNumber,
+    customerName: r.customerName,
+    customerPhone: r.customerPhone ?? "",
+    principal: r.principal,
+    interestRate: r.interestRate,
+    rateType: r.rateType,
+    interestType: r.interestType,
+    compoundFrequency: r.compoundFrequency ?? undefined,
+    pawnedItems: Array.isArray(r.pawnedItems) ? r.pawnedItems : [],
+    status: r.status,
+    loanDate: (r.loanDate || "").slice(0, 10),
+    redeemedDate: r.redeemedDate ? String(r.redeemedDate).slice(0, 10) : undefined,
+  };
+}
 
 export default function GirviLendingPage() {
   return (
@@ -98,7 +83,7 @@ export default function GirviLendingPage() {
 }
 
 function GirviLendingContent() {
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const { hasFeature, planName, loading: featuresLoading } = useFeatures();
   const t = useT();
 
@@ -114,7 +99,7 @@ function GirviLendingContent() {
   const ratesRef = useRef(false);
 
   // Core Ledger States
-  const [loans, setLoans] = useState<GoldLoan[]>(DEFAULT_LOANS);
+  const [loans, setLoans] = useState<GoldLoan[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -191,12 +176,9 @@ function GirviLendingContent() {
   const loadDatabaseConfig = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await shopsApi.getSettings();
-      const s = res.data ?? res;
-      const dbConfig = s.bankAccountDetails?.girviLending;
-      if (dbConfig && Array.isArray(dbConfig.loans)) {
-        setLoans(dbConfig.loans);
-      }
+      const res = await goldLoansApi.list();
+      const items = res.data?.items ?? [];
+      setLoans(items.map(mapLoan));
     } catch (err) {
       console.error("Failed to load Girvi lending records from database:", err);
     } finally {
@@ -208,33 +190,6 @@ function GirviLendingContent() {
     fetchRates();
     loadDatabaseConfig();
   }, [fetchRates, loadDatabaseConfig]);
-
-  // Persist State
-  const persistLoans = async (updatedLoans: GoldLoan[]) => {
-    setSaving(true);
-    try {
-      const currentSettingsRes = await shopsApi.getSettings();
-      const currentSettings = currentSettingsRes.data ?? currentSettingsRes;
-      const bankDetails = currentSettings.bankAccountDetails || {};
-      
-      const updatedBankAccountDetails = {
-        ...bankDetails,
-        girviLending: {
-          loans: updatedLoans,
-        }
-      };
-
-      await shopsApi.updateSettings({
-        bankAccountDetails: updatedBankAccountDetails
-      });
-      await refreshUser();
-    } catch (err) {
-      console.error("Failed to persist lending ledger:", err);
-      alert("Failed to save loan ledger!");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // Melt Value Calculator (Live spot rate evaluation)
   const calculateMeltValue = useCallback((item: PawnedItem) => {
@@ -365,66 +320,75 @@ function GirviLendingContent() {
     if (isNaN(principalVal) || principalVal <= 0) return alert("Please enter a valid principal loan amount!");
     if (pawnedItems.some(item => !item.name.trim() || item.netWeight <= 0)) return alert("Please fill in all pawned item names and weights!");
 
-    const loanId = "ln-" + Date.now();
-    const loanNum = `GV-${new Date().getFullYear()}-${String(loans.length + 1).padStart(3, "0")}`;
+    setSaving(true);
+    try {
+      const res = await goldLoansApi.create({
+        customerName: newLoan.customerName,
+        customerPhone: newLoan.customerPhone || undefined,
+        principal: principalVal,
+        interestRate: parseFloat(newLoan.interestRate) || 1.5,
+        rateType: newLoan.rateType,
+        interestType: newLoan.interestType,
+        compoundFrequency:
+          newLoan.interestType === "COMPOUND" ? newLoan.compoundFrequency : undefined,
+        pawnedItems,
+        currency: goldRates.currency,
+        loanDate: newLoan.loanDate,
+      });
+      const created = mapLoan(res.data);
+      setLoans((prev) => [created, ...prev]);
+      setAddModalOpen(false);
 
-    const createdLoan: GoldLoan = {
-      id: loanId,
-      loanNumber: loanNum,
-      customerName: newLoan.customerName,
-      customerPhone: newLoan.customerPhone,
-      principal: principalVal,
-      interestRate: parseFloat(newLoan.interestRate) || 1.5,
-      rateType: newLoan.rateType,
-      interestType: newLoan.interestType,
-      compoundFrequency: newLoan.interestType === "COMPOUND" ? newLoan.compoundFrequency : undefined,
-      pawnedItems: pawnedItems,
-      status: "ACTIVE",
-      loanDate: newLoan.loanDate
-    };
-
-    const updatedLoans = [createdLoan, ...loans];
-    setLoans(updatedLoans);
-    setAddModalOpen(false);
-    
-    // reset form
-    setNewLoan({
-      customerName: "",
-      customerPhone: "",
-      principal: "",
-      interestRate: "1.5",
-      rateType: "MONTHLY",
-      interestType: "SIMPLE",
-      compoundFrequency: "MONTHLY",
-      loanDate: new Date().toISOString().split("T")[0],
-    });
-    setPawnedItems([{ name: "", purity: "22K", grossWeight: 0, netWeight: 0 }]);
-
-    await persistLoans(updatedLoans);
+      // reset form
+      setNewLoan({
+        customerName: "",
+        customerPhone: "",
+        principal: "",
+        interestRate: "1.5",
+        rateType: "MONTHLY",
+        interestType: "SIMPLE",
+        compoundFrequency: "MONTHLY",
+        loanDate: new Date().toISOString().split("T")[0],
+      });
+      setPawnedItems([{ name: "", purity: "22K", grossWeight: 0, netWeight: 0 }]);
+    } catch (err) {
+      console.error("Failed to create gold loan:", err);
+      alert("Failed to save loan ledger!");
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Redeem Loan
   const handleRedeemLoan = async (loanId: string) => {
     if (!confirm(t("Are you sure you want to record repayment and release pawned gold collateral?"))) return;
-    const updatedLoans = loans.map((l) =>
-      l.id === loanId
-        ? { ...l, status: "REDEEMED" as const, redeemedDate: new Date().toISOString().split("T")[0] }
-        : l
-    );
-    setLoans(updatedLoans);
-    await persistLoans(updatedLoans);
+    setSaving(true);
+    try {
+      const res = await goldLoansApi.updateStatus(loanId, { status: "REDEEMED" });
+      const updated = mapLoan(res.data);
+      setLoans((prev) => prev.map((l) => (l.id === loanId ? updated : l)));
+    } catch (err) {
+      console.error("Failed to redeem loan:", err);
+      alert("Failed to update loan!");
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Forfeit/Default Loan
   const handleDefaultForfeit = async (loanId: string) => {
     if (!confirm(t("Are you sure you want to declare DEFAULT? This will forfeit pawned collateral gold and transfer items directly to your store stock vault."))) return;
-    const updatedLoans = loans.map((l) =>
-      l.id === loanId
-        ? { ...l, status: "DEFAULTED" as const, redeemedDate: new Date().toISOString().split("T")[0] }
-        : l
-    );
-    setLoans(updatedLoans);
-    await persistLoans(updatedLoans);
+    setSaving(true);
+    try {
+      const res = await goldLoansApi.updateStatus(loanId, { status: "DEFAULTED" });
+      const updated = mapLoan(res.data);
+      setLoans((prev) => prev.map((l) => (l.id === loanId ? updated : l)));
+    } catch (err) {
+      console.error("Failed to default loan:", err);
+      alert("Failed to update loan!");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const filteredLoans = loans.filter((l) => {

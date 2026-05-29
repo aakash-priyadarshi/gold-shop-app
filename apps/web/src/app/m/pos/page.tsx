@@ -14,7 +14,8 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { inventoryApi, posApi, shopQuotesApi } from "@/lib/api";
+import { inventoryApi, shopQuotesApi } from "@/lib/api";
+import { createSale as createOfflineSale } from "@/lib/offline/pos";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -1040,51 +1041,45 @@ export default function MobilePOSPage() {
   ) => {
     if (!cart.length) return;
     try {
-      // The desktop billing flow is a 3-step process exposed by posApi:
-      //   1. POST /pos/session             → create a draft session
-      //   2. POST /pos/session/:id/items   → attach inventory line items
-      //   3. POST /pos/session/:id/checkout → finalise + create invoice
-      // The earlier implementation tried to POST to shopQuotesApi.create which
-      // does NOT accept an `items` field, so class-validator rejected the body
-      // with "property item should not exist". Mirroring the PC flow fixes it.
-      const sessionRes = await posApi.createSession({
-        customerId: extras?.customerId,
-      });
-      const sessionId =
-        sessionRes.data?.id ?? sessionRes.data?.sessionId;
-      if (!sessionId) throw new Error("Could not start POS session");
+      // Single-shot, offline-capable sale. The whole cart + customer + payment
+      // goes out as ONE idempotent request (POST /pos/sale) queued through the
+      // offline outbox. If the device is offline it's saved locally and synced
+      // automatically on reconnect; the backend dedupes on the clientId so a
+      // replay never double-sells.
+      const taxRate = extras?.taxRate ?? 3;
+      const makingPct = extras?.makingPct || 0;
+      const makingCharges = makingPct
+        ? Math.round(cartTotal * (makingPct / 100))
+        : 0;
+      const taxAmount = Math.round((cartTotal + makingCharges) * (taxRate / 100));
+      const total = cartTotal + makingCharges + taxAmount;
 
-      await posApi.addItems(
-        sessionId,
-        cart.map((c) => ({
+      const { clientId, queuedOffline } = await createOfflineSale({
+        items: cart.map((c) => ({
           inventoryItemId: c.item.id,
           qty: c.qty,
+          unitPrice: c.unitPrice,
         })),
-      );
-
-      const taxRate = extras?.taxRate ?? 3;
-      const checkoutRes = await posApi.checkout(sessionId, {
         customerName,
         customerPhone: customerPhone || undefined,
+        customerId: extras?.customerId,
         taxRate,
         paymentMethod: method,
-        makingChargeRate: extras?.makingPct || undefined,
-        notes: undefined,
+        makingChargeRate: makingPct || undefined,
       });
 
-      const data = checkoutRes.data ?? {};
-      const billId =
-        data.invoiceId ?? data.orderId ?? data.id ?? data.sessionId;
-      const total =
-        data.totalAmount ??
-        data.total ??
-        cartTotal + Math.round(cartTotal * (taxRate / 100));
+      const billId = clientId;
 
       setShowCart(false);
       setBillResult({ quoteId: billId, total, customerPhone });
       setCart([]);
       haptic("success");
-      toast({ title: "Bill created", description: `${formatMoney(total, shopCurrency)}` });
+      toast({
+        title: queuedOffline ? "Bill saved offline" : "Bill created",
+        description: queuedOffline
+          ? `${formatMoney(total, shopCurrency)} — will sync when online`
+          : `${formatMoney(total, shopCurrency)}`,
+      });
 
       // Auto-print receipt if a printer is configured
       const hw = loadHardwareConfig();

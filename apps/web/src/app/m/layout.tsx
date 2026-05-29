@@ -5,6 +5,7 @@
 // server-side wrapper if needed). The manifest-pos.json is already in /public/.
 
 import { MobileLayoutLoader } from "@/components/mobile/MobileSkeleton";
+import { OfflineProvider } from "@/components/offline/OfflineProvider";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -477,6 +478,7 @@ export default function MobileLayout({
   const currentShopId = user?.shop?.id;
 
   return (
+    <OfflineProvider>
     <div className="flex flex-col h-dvh bg-gray-50 dark:bg-gray-950 overflow-hidden">
       {/* Top bar */}
       <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
@@ -684,5 +686,6 @@ export default function MobileLayout({
           add another instance here — doing so causes two overlapping chat
           bubbles after the user drags one of them. */}
     </div>
+    </OfflineProvider>
   );
 }

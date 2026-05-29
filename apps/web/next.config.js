@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 
+const withPWA = require('@ducanh2912/next-pwa').default;
+
 // When building for Tauri desktop, export static HTML (no Node server)
 const isTauriBuild = process.env.TAURI_BUILD === '1';
 
@@ -117,4 +119,54 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Wrap with PWA support. Disabled in development and for Tauri desktop builds
+// (Tauri ships its own static bundle from a custom:// scheme where a service
+// worker is unnecessary and can interfere). The service worker is generated at
+// build time into /public/sw.js and precaches the app shell so the mobile
+// PWA (and the future native app's webview) opens and works offline.
+const withPWAConfigured = withPWA({
+  dest: 'public',
+  disable: isTauriBuild || process.env.NODE_ENV === 'development',
+  register: true,
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  workboxOptions: {
+    runtimeCaching: [
+      {
+        // API GET reads — serve cached data instantly, revalidate in background.
+        urlPattern: ({ url, request }) =>
+          request.method === 'GET' && /\/api\//.test(url.pathname),
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'api-reads',
+          networkTimeoutSeconds: 5,
+          expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+      {
+        // Images from the CDN.
+        urlPattern: ({ url }) =>
+          /images\.orivraa\.com|res\.cloudinary\.com/.test(url.hostname),
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'cdn-images',
+          expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 30 },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+      {
+        // Next.js static assets and fonts.
+        urlPattern: ({ url }) => /\/_next\/static\//.test(url.pathname),
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'next-static',
+          expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+        },
+      },
+    ],
+  },
+});
+
+module.exports = withPWAConfigured(nextConfig);

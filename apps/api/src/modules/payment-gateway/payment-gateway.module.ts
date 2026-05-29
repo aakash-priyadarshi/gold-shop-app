@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { AiCreditsModule } from "../ai-credits/ai-credits.module";
 import { AuditModule } from "../audit/audit.module";
+import { MarketConfigModule } from "../market-config/market-config.module";
 import { OrdersModule } from "../orders/orders.module";
 import { PaymentGatewayController } from "./payment-gateway.controller";
 import { PaymentGatewayService } from "./payment-gateway.service";
@@ -12,6 +13,7 @@ import { PaymentGatewayService } from "./payment-gateway.service";
     ConfigModule,
     PrismaModule,
     AuditModule,
+    MarketConfigModule,
     forwardRef(() => OrdersModule),
     forwardRef(() => AiCreditsModule),
   ],

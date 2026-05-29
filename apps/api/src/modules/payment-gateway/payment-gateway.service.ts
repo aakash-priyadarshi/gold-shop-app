@@ -8,6 +8,7 @@ import {
 import { ConfigService } from "@nestjs/config";
 import * as crypto from "crypto";
 import { PrismaService } from "../../prisma/prisma.service";
+import { MarketConfigService } from "../market-config/market-config.service";
 import { upsertDefaultGatewayConfigs } from "./default-gateway-configs";
 
 /**
@@ -52,6 +53,27 @@ export interface PaymentResult {
   requiresAction: boolean;
 }
 
+/** A single gateway option surfaced to the checkout UI. */
+export interface GatewayOption {
+  gatewayName: string;
+  displayName: string;
+  supportedMethods: string[];
+  commissionInfo: string | null;
+  /** True when this gateway's env credentials are actually set on the server. */
+  isConfigured: boolean;
+}
+
+/** Result of resolving which gateways to offer for a country. */
+export interface AvailableGateways {
+  resolvedCountry: string;
+  /** The gateway the UI should pre-select / show on top. Null = none available. */
+  preferred: GatewayOption | null;
+  /** Other configured gateways for the same country (UI may hide behind "more"). */
+  alternatives: GatewayOption[];
+  /** True when no country-specific gateway was available and the default was used. */
+  fallbackUsed: boolean;
+}
+
 @Injectable()
 export class PaymentGatewayService {
   private readonly logger = new Logger(PaymentGatewayService.name);
@@ -59,6 +81,7 @@ export class PaymentGatewayService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly marketConfig: MarketConfigService,
   ) {}
 
   private async ensureGatewayConfigsSeeded() {
@@ -146,6 +169,144 @@ export class PaymentGatewayService {
       `No configured payment gateway for country: ${country}. Falling back to manual/COD.`,
     );
     return "manual";
+  }
+
+  /**
+   * Resolve which country's gateways to show, with provenance.
+   *
+   * Precedence (most → least authoritative):
+   *   1. Explicit `override` (admin testing / manual selector).
+   *   2. The authenticated shop's configured country (most reliable for the
+   *      SaaS subscription checkout — the shopkeeper's billing region).
+   *   3. Visitor geolocation from edge headers (cf-ipcountry / vercel).
+   *   4. Platform default ("US").
+   *
+   * Raw 2-letter geo codes are normalized to a supported market via
+   * MarketConfigService (e.g. FR → EU, SA → AE).
+   */
+  async resolveCountry(opts: {
+    override?: string;
+    shopId?: string;
+    headers?: Record<string, string>;
+  }): Promise<{ country: string; source: "override" | "shop" | "geo" | "default" }> {
+    if (opts.override) {
+      return {
+        country: this.marketConfig.mapToSupportedMarket(
+          opts.override.toUpperCase(),
+        ),
+        source: "override",
+      };
+    }
+
+    if (opts.shopId) {
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: opts.shopId },
+        select: { country: true },
+      });
+      if (shop?.country) {
+        return {
+          country: this.marketConfig.mapToSupportedMarket(
+            shop.country.toUpperCase(),
+          ),
+          source: "shop",
+        };
+      }
+    }
+
+    if (opts.headers) {
+      const geo =
+        opts.headers["x-vercel-ip-country"] || opts.headers["cf-ipcountry"];
+      if (geo) {
+        return {
+          country: this.marketConfig.mapToSupportedMarket(geo.toUpperCase()),
+          source: "geo",
+        };
+      }
+    }
+
+    return { country: "US", source: "default" };
+  }
+
+  /**
+   * Resolve which gateways to OFFER for a country.
+   *
+   * Strategy (mirrors selectGateway but returns the full picture for the UI):
+   *   1. Country-specific enabled+configured gateways, highest priority first.
+   *      The top one is `preferred`; the rest are `alternatives`.
+   *   2. If none are configured for the country, fall back to the platform
+   *      default gateway (e.g. Stripe) and mark `fallbackUsed = true`.
+   *   3. If nothing is configured at all, `preferred` is null (UI shows
+   *      manual/contact-support).
+   *
+   * Note: only gateways whose env credentials are actually set are offered —
+   * we never present a gateway the server cannot complete a charge with.
+   */
+  async getAvailableGatewaysForCountry(
+    country: string,
+  ): Promise<AvailableGateways> {
+    await this.ensureGatewayConfigsSeeded();
+
+    const toOption = (config: {
+      gatewayName: string;
+      displayName: string;
+      supportedMethods: unknown[];
+      commissionInfo: string | null;
+    }): GatewayOption => ({
+      gatewayName: config.gatewayName,
+      displayName: config.displayName,
+      supportedMethods: (config.supportedMethods as string[]) ?? [],
+      commissionInfo: config.commissionInfo ?? null,
+      isConfigured: true,
+    });
+
+    // 1. Country-specific, enabled, configured — priority order.
+    const countryConfigs = await this.prisma.paymentGatewayConfig.findMany({
+      where: {
+        isEnabled: true,
+        supportedCountries: { has: country as any },
+      },
+      orderBy: { priority: "desc" },
+    });
+
+    const configuredForCountry = countryConfigs
+      .filter((c) => this.isGatewayKeysConfigured(c.gatewayName))
+      .map(toOption);
+
+    if (configuredForCountry.length > 0) {
+      const [preferred, ...alternatives] = configuredForCountry;
+      return {
+        resolvedCountry: country,
+        preferred,
+        alternatives,
+        fallbackUsed: false,
+      };
+    }
+
+    // 2. Fallback: the platform default gateway (if configured).
+    const defaultGw = await this.prisma.paymentGatewayConfig.findFirst({
+      where: { isEnabled: true, isDefault: true },
+      orderBy: { priority: "desc" },
+    });
+
+    if (defaultGw && this.isGatewayKeysConfigured(defaultGw.gatewayName)) {
+      return {
+        resolvedCountry: country,
+        preferred: toOption(defaultGw),
+        alternatives: [],
+        fallbackUsed: true,
+      };
+    }
+
+    // 3. Nothing available.
+    this.logger.warn(
+      `No configured payment gateway available for country: ${country}`,
+    );
+    return {
+      resolvedCountry: country,
+      preferred: null,
+      alternatives: [],
+      fallbackUsed: true,
+    };
   }
 
   // ═══════════════════════════════════════════════════
@@ -423,20 +584,55 @@ export class PaymentGatewayService {
     }
   }
 
-  async verifyPhonePeWebhook(payload: any): Promise<{
+  async verifyPhonePeWebhook(
+    payload: any,
+    xVerifyHeader?: string,
+  ): Promise<{
     transactionId: string;
     status: string;
     amount: number;
     metadata: Record<string, string>;
   }> {
     const saltKey = this.configService.get<string>("PHONEPE_SALT_KEY");
+    const saltIndex =
+      this.configService.get<string>("PHONEPE_SALT_INDEX") || "1";
 
     if (!saltKey) {
       throw new BadRequestException("PhonePe webhook not configured");
     }
 
+    const base64Response = payload?.response;
+    if (!base64Response || typeof base64Response !== "string") {
+      throw new BadRequestException("Invalid PhonePe webhook payload");
+    }
+
+    // ── Verify the X-VERIFY checksum BEFORE trusting any field ──────────
+    // PhonePe signs callbacks as sha256(base64Response + saltKey) + "###" +
+    // saltIndex. Without this check an attacker could POST a forged base64
+    // payload with code=PAYMENT_SUCCESS and fraudulently unlock a paid plan.
+    const expectedChecksum =
+      crypto
+        .createHash("sha256")
+        .update(base64Response + saltKey)
+        .digest("hex") + `###${saltIndex}`;
+
+    const signatureValid =
+      !!xVerifyHeader &&
+      xVerifyHeader.length === expectedChecksum.length &&
+      crypto.timingSafeEqual(
+        Buffer.from(xVerifyHeader),
+        Buffer.from(expectedChecksum),
+      );
+
+    if (!signatureValid) {
+      this.logger.warn(
+        "PhonePe webhook rejected: X-VERIFY signature mismatch",
+      );
+      throw new BadRequestException("Invalid PhonePe webhook signature");
+    }
+
     const decodedData = JSON.parse(
-      Buffer.from(payload.response, "base64").toString("utf-8"),
+      Buffer.from(base64Response, "base64").toString("utf-8"),
     );
 
     // PhonePe merchantTransactionId encodes our metadata as: type_resourceId

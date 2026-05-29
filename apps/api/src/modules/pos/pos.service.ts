@@ -1,15 +1,18 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { InvoicesService } from "../invoices/invoices.service";
 import { AddItemsDto } from "./dto/add-items.dto";
 import { CheckoutDto, UpdateItemDto } from "./dto/checkout.dto";
 import { CreatePosSessionDto } from "./dto/create-session.dto";
+import { PosSaleDto } from "./dto/pos-sale.dto";
 
 const POS_SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -105,7 +108,7 @@ export class PosService {
     userId: string,
     dto: AddItemsDto,
   ) {
-    const session = await this.getActiveSession(shopId, sessionId);
+    await this.getActiveSession(shopId, sessionId);
 
     const results = [];
 
@@ -209,7 +212,7 @@ export class PosService {
     itemId: string,
     dto: UpdateItemDto,
   ) {
-    const session = await this.getActiveSession(shopId, sessionId);
+    await this.getActiveSession(shopId, sessionId);
 
     const sessionItem = await this.prisma.posSessionItem.findFirst({
       where: { id: itemId, posSessionId: sessionId },
@@ -347,11 +350,69 @@ export class PosService {
       makingChargesAmt: makingChargesAmt || undefined,
     });
 
+    // Commit stock, release reservations and close the session as ONE atomic
+    // unit. Previously these were a loop of independent writes: a failure
+    // partway through left some items decremented and others not, with the
+    // reservations and session state out of sync. Each decrement is guarded
+    // (`stockQuantity >= qty`) so concurrent sessions can never oversell.
+    // We commit stock BEFORE recording payment so that, on failure, the
+    // invoice is still unpaid and can be cleanly voided (a PAID invoice cannot
+    // be voided), leaving no orphaned paid ledger entry for undeducted goods.
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        for (const item of session.items) {
+          if (item.variantId) {
+            const variantUpdate = await tx.productVariant.updateMany({
+              where: { id: item.variantId, stock: { gte: item.qty } },
+              data: { stock: { decrement: item.qty } },
+            });
+            if (variantUpdate.count === 0) {
+              throw new ConflictException(
+                `Insufficient stock for ${item.inventoryItem.nameEn}`,
+              );
+            }
+          }
+
+          const stockUpdate = await tx.inventoryItem.updateMany({
+            where: {
+              id: item.inventoryItemId,
+              stockQuantity: { gte: item.qty },
+            },
+            data: { stockQuantity: { decrement: item.qty } },
+          });
+          if (stockUpdate.count === 0) {
+            throw new ConflictException(
+              `Insufficient stock for ${item.inventoryItem.nameEn}`,
+            );
+          }
+        }
+
+        // Release all reservations (stock is now decremented)
+        await tx.stockReservation.deleteMany({
+          where: { posSessionId: sessionId },
+        });
+
+        // Mark session checked out
+        await tx.posSession.update({
+          where: { id: sessionId },
+          data: { status: "CHECKED_OUT" },
+        });
+      });
+    } catch (err) {
+      // Stock could not be committed — void the (still unpaid) invoice so we
+      // never leave an invoice for goods that were not deducted.
+      await this.invoicesService
+        .voidInvoice(invoice.id, shopId)
+        .catch(() => undefined);
+      throw err;
+    }
+
     // ── Auto-mark POS counter invoices as PAID ──────────────────
     // Walk-in POS transactions are paid on the spot. We automatically
     // record full payment so the invoice ledger is immediately accurate.
     // Traditional back-office invoices (created via /invoices/create)
     // are NOT affected — they still follow standard credit terms.
+    // Done AFTER the stock commit so a stock failure leaves a voidable invoice.
     if (invoice.totalAmount > 0) {
       await this.invoicesService.recordPayment(invoice.id, shopId, {
         amount: invoice.totalAmount,
@@ -359,31 +420,6 @@ export class PosService {
         notes: "Auto-paid at POS counter checkout",
       });
     }
-
-    // Decrement actual stock for each item
-    for (const item of session.items) {
-      if (item.variantId) {
-        await this.prisma.productVariant.update({
-          where: { id: item.variantId },
-          data: { stock: { decrement: item.qty } },
-        });
-      }
-      await this.prisma.inventoryItem.update({
-        where: { id: item.inventoryItemId },
-        data: { stockQuantity: { decrement: item.qty } },
-      });
-    }
-
-    // Release all reservations (stock is now decremented)
-    await this.prisma.stockReservation.deleteMany({
-      where: { posSessionId: sessionId },
-    });
-
-    // Mark session checked out
-    await this.prisma.posSession.update({
-      where: { id: sessionId },
-      data: { status: "CHECKED_OUT" },
-    });
 
     await this.auditService.log({
       userId,
@@ -403,10 +439,248 @@ export class PosService {
     return { session: { id: sessionId, status: "CHECKED_OUT" }, invoice };
   }
 
+  // ─── Single-shot, idempotent POS sale (offline-capable) ───
+  //
+  // Collapses createSession → addItems → checkout into ONE request so the
+  // mobile PWA can queue a sale offline and replay it on reconnect. Keyed by
+  // `clientId`: a replay returns the existing invoice instead of double-selling.
+  async sale(shopId: string, userId: string, dto: PosSaleDto) {
+    // 1. Idempotency: a replayed offline sale must not create a second invoice.
+    if (dto.clientId) {
+      const existing = await this.prisma.invoice.findUnique({
+        where: { posClientId: dto.clientId },
+      });
+      if (existing) {
+        if (existing.shopId !== shopId) {
+          throw new ForbiddenException("Sale belongs to a different shop");
+        }
+        return {
+          invoice: existing,
+          idempotentReplay: true,
+        };
+      }
+    }
+
+    // 2. Resolve line items + prices. Prefer the price the client actually
+    //    charged (dto unitPrice) so an offline sale bills the agreed amount;
+    //    fall back to the current server price when omitted.
+    const resolved: Array<{
+      inventoryItemId: string;
+      variantId: string | null;
+      qty: number;
+      unitPrice: number;
+      label: string;
+      sku?: string;
+    }> = [];
+
+    for (const item of dto.items) {
+      const inventoryItem = await this.prisma.inventoryItem.findFirst({
+        where: { id: item.inventoryItemId, shopId },
+      });
+      if (!inventoryItem) {
+        throw new NotFoundException(
+          `Inventory item ${item.inventoryItemId} not found in your shop`,
+        );
+      }
+
+      let variantPrice: number | null = null;
+      let variantLabel = "";
+      let variantSku: string | undefined;
+      if (item.variantId) {
+        const variant = await this.prisma.productVariant.findFirst({
+          where: {
+            id: item.variantId,
+            inventoryItemId: item.inventoryItemId,
+          },
+        });
+        if (!variant) {
+          throw new NotFoundException(
+            `Variant ${item.variantId} not found for this item`,
+          );
+        }
+        variantPrice = variant.priceOverride;
+        variantLabel = variant.sizeLabel ? ` (${variant.sizeLabel})` : "";
+        variantSku = variant.sku ?? undefined;
+      }
+
+      const unitPrice =
+        item.unitPrice ?? variantPrice ?? inventoryItem.totalPriceNpr;
+
+      resolved.push({
+        inventoryItemId: item.inventoryItemId,
+        variantId: item.variantId || null,
+        qty: item.qty,
+        unitPrice,
+        label: inventoryItem.nameEn + variantLabel,
+        sku: variantSku ?? inventoryItem.sku ?? undefined,
+      });
+    }
+
+    // 3. Build invoice line items (mirror of checkout()).
+    const lineItems: Array<{
+      label: string;
+      category: string;
+      quantity: number;
+      unitPrice: number;
+      amount: number;
+      details?: string;
+    }> = resolved.map((r) => ({
+      label: r.label,
+      category: "PRODUCT",
+      quantity: r.qty,
+      unitPrice: r.unitPrice,
+      amount: r.unitPrice * r.qty,
+      details: r.sku,
+    }));
+
+    const productSubtotal = lineItems.reduce((s, li) => s + li.amount, 0);
+    let makingChargesAmt = 0;
+    const makingChargeRate = dto.makingChargeRate ?? 0;
+    if (dto.makingChargesNpr && dto.makingChargesNpr > 0) {
+      makingChargesAmt = dto.makingChargesNpr;
+    } else if (makingChargeRate > 0) {
+      makingChargesAmt = Math.round(productSubtotal * (makingChargeRate / 100));
+    }
+    if (makingChargesAmt > 0) {
+      lineItems.push({
+        label: `Making Charges (${makingChargeRate}%)`,
+        category: "MAKING",
+        quantity: 1,
+        unitPrice: makingChargesAmt,
+        amount: makingChargesAmt,
+      });
+    }
+
+    // 4. Create the invoice (still unpaid, so it can be cleanly voided if the
+    //    stock commit fails). On the rare race where a concurrent replay
+    //    created the invoice between our idempotency check and here, the unique
+    //    posClientId index throws — we recover the winner.
+    let invoice;
+    try {
+      invoice = await this.invoicesService.create(shopId, {
+        customerName: dto.customerName,
+        customerPhone: dto.customerPhone,
+        customerEmail: dto.customerEmail,
+        lineItems,
+        taxRate: dto.taxRate || 0,
+        discountAmount: dto.discountAmount || 0,
+        notes: dto.notes || "POS sale",
+        currency: "NPR",
+        paymentMethod: dto.paymentMethod || undefined,
+        makingChargeRate: makingChargeRate || undefined,
+        makingChargesAmt: makingChargesAmt || undefined,
+      });
+
+      if (dto.clientId) {
+        await this.prisma.invoice.update({
+          where: { id: invoice.id },
+          data: { posClientId: dto.clientId },
+        });
+      }
+    } catch (err: any) {
+      if (dto.clientId && err?.code === "P2002") {
+        const winner = await this.prisma.invoice.findUnique({
+          where: { posClientId: dto.clientId },
+        });
+        if (winner) return { invoice: winner, idempotentReplay: true };
+      }
+      throw err;
+    }
+
+    // 5. Commit stock as one atomic unit. For an offline replay the goods
+    //    already physically left the shop, so we never reject — we clamp stock
+    //    at 0 and flag the discrepancy for later reconciliation. The online
+    //    path keeps the guarded behaviour (reject oversell) and voids the
+    //    still-unpaid invoice on failure so no orphaned bill remains.
+    const shortfalls: string[] = [];
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        for (const r of resolved) {
+          if (r.variantId) {
+            const variantUpdate = await tx.productVariant.updateMany({
+              where: { id: r.variantId, stock: { gte: r.qty } },
+              data: { stock: { decrement: r.qty } },
+            });
+            if (variantUpdate.count === 0) {
+              if (!dto.occurredOffline) {
+                throw new ConflictException(
+                  `Insufficient stock for ${r.label}`,
+                );
+              }
+              shortfalls.push(r.label);
+              await tx.productVariant.updateMany({
+                where: { id: r.variantId },
+                data: { stock: 0 },
+              });
+            }
+          }
+
+          const stockUpdate = await tx.inventoryItem.updateMany({
+            where: { id: r.inventoryItemId, stockQuantity: { gte: r.qty } },
+            data: { stockQuantity: { decrement: r.qty } },
+          });
+          if (stockUpdate.count === 0) {
+            if (!dto.occurredOffline) {
+              throw new ConflictException(`Insufficient stock for ${r.label}`);
+            }
+            if (!shortfalls.includes(r.label)) shortfalls.push(r.label);
+            await tx.inventoryItem.updateMany({
+              where: { id: r.inventoryItemId },
+              data: { stockQuantity: 0 },
+            });
+          }
+        }
+      });
+    } catch (err) {
+      await this.invoicesService
+        .voidInvoice(invoice.id, shopId)
+        .catch(() => undefined);
+      throw err;
+    }
+
+    // Flag offline oversell on the invoice so the shopkeeper can reconcile.
+    if (shortfalls.length > 0) {
+      await this.prisma.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          notes:
+            (invoice.notes ? `${invoice.notes} ` : "") +
+            `[STOCK RECONCILE: sold offline while out of stock — ${shortfalls.join(", ")}]`,
+        },
+      });
+    }
+
+    // 6. Auto-record full payment (walk-in POS sales are paid on the spot).
+    if (invoice.totalAmount > 0) {
+      await this.invoicesService.recordPayment(invoice.id, shopId, {
+        amount: invoice.totalAmount,
+        paymentMethod: dto.paymentMethod || "CASH",
+        notes: "Auto-paid at POS counter checkout",
+      });
+    }
+
+    await this.auditService.log({
+      userId,
+      action: "POS_SALE",
+      resourceType: "Invoice",
+      resourceId: invoice.id,
+      metadata: {
+        shopId,
+        total: invoice.totalAmount,
+        paymentMethod: dto.paymentMethod || "CASH",
+        occurredOffline: !!dto.occurredOffline,
+        soldAt: dto.soldAt,
+        stockShortfalls: shortfalls,
+      },
+    });
+
+    return { invoice, stockShortfalls: shortfalls };
+  }
+
   // ─── Cancel Session ───
 
   async cancelSession(shopId: string, sessionId: string, userId: string) {
-    const session = await this.getActiveSession(shopId, sessionId);
+    await this.getActiveSession(shopId, sessionId);
 
     // Release all reservations
     await this.prisma.stockReservation.deleteMany({
@@ -583,77 +857,87 @@ export class PosService {
     variantId: string | null,
     qty: number,
   ) {
-    // Get current stock
-    const item = await this.prisma.inventoryItem.findUnique({
-      where: { id: inventoryItemId },
-    });
-    if (!item) throw new NotFoundException("Inventory item not found");
+    // The whole "read availability → sum reservations → write reservation"
+    // sequence must be atomic, otherwise two concurrent sessions can both read
+    // the same availability and each reserve the last unit (over-reservation,
+    // which later surfaces as oversell at checkout). Serializable isolation
+    // makes the aggregate reads + write behave as one conflict-detected unit.
+    await this.prisma.$transaction(
+      async (tx) => {
+        // Get current stock
+        const item = await tx.inventoryItem.findUnique({
+          where: { id: inventoryItemId },
+        });
+        if (!item) throw new NotFoundException("Inventory item not found");
 
-    let availableStock = item.stockQuantity;
+        let availableStock = item.stockQuantity;
 
-    if (variantId) {
-      const variant = await this.prisma.productVariant.findUnique({
-        where: { id: variantId },
-      });
-      if (variant) availableStock = variant.stock;
-    }
+        if (variantId) {
+          const variant = await tx.productVariant.findUnique({
+            where: { id: variantId },
+          });
+          if (variant) availableStock = variant.stock;
+        }
 
-    // Sum existing reservations for this item (excluding this session)
-    const existingReservations = await this.prisma.stockReservation.aggregate({
-      where: {
-        inventoryItemId,
-        variantId: variantId || null,
-        posSessionId: { not: sessionId },
+        // Sum existing reservations for this item (excluding this session)
+        const existingReservations = await tx.stockReservation.aggregate({
+          where: {
+            inventoryItemId,
+            variantId: variantId || null,
+            posSessionId: { not: sessionId },
+          },
+          _sum: { qty: true },
+        });
+
+        const reserved = existingReservations._sum.qty || 0;
+        const effective = availableStock - reserved;
+
+        // Also sum this session's existing reservations for this item
+        const sessionReservations = await tx.stockReservation.aggregate({
+          where: {
+            inventoryItemId,
+            variantId: variantId || null,
+            posSessionId: sessionId,
+          },
+          _sum: { qty: true },
+        });
+        const alreadyReserved = sessionReservations._sum.qty || 0;
+
+        if (effective - alreadyReserved < qty) {
+          throw new BadRequestException(
+            `Insufficient stock for item. Available: ${effective - alreadyReserved}, Requested: ${qty}`,
+          );
+        }
+
+        // Upsert reservation
+        const existingRes = await tx.stockReservation.findFirst({
+          where: {
+            posSessionId: sessionId,
+            inventoryItemId,
+            variantId: variantId || null,
+          },
+        });
+
+        if (existingRes) {
+          await tx.stockReservation.update({
+            where: { id: existingRes.id },
+            data: { qty: existingRes.qty + qty },
+          });
+        } else {
+          await tx.stockReservation.create({
+            data: {
+              shopId,
+              posSessionId: sessionId,
+              inventoryItemId,
+              variantId,
+              qty,
+              expiresAt: new Date(Date.now() + POS_SESSION_DURATION_MS),
+            },
+          });
+        }
       },
-      _sum: { qty: true },
-    });
-
-    const reserved = existingReservations._sum.qty || 0;
-    const effective = availableStock - reserved;
-
-    // Also sum this session's existing reservations for this item
-    const sessionReservations = await this.prisma.stockReservation.aggregate({
-      where: {
-        inventoryItemId,
-        variantId: variantId || null,
-        posSessionId: sessionId,
-      },
-      _sum: { qty: true },
-    });
-    const alreadyReserved = sessionReservations._sum.qty || 0;
-
-    if (effective - alreadyReserved < qty) {
-      throw new BadRequestException(
-        `Insufficient stock for item. Available: ${effective - alreadyReserved}, Requested: ${qty}`,
-      );
-    }
-
-    // Upsert reservation
-    const existingRes = await this.prisma.stockReservation.findFirst({
-      where: {
-        posSessionId: sessionId,
-        inventoryItemId,
-        variantId: variantId || null,
-      },
-    });
-
-    if (existingRes) {
-      await this.prisma.stockReservation.update({
-        where: { id: existingRes.id },
-        data: { qty: existingRes.qty + qty },
-      });
-    } else {
-      await this.prisma.stockReservation.create({
-        data: {
-          shopId,
-          posSessionId: sessionId,
-          inventoryItemId,
-          variantId,
-          qty,
-          expiresAt: new Date(Date.now() + POS_SESSION_DURATION_MS),
-        },
-      });
-    }
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   private async releasePartialReservation(

@@ -16,6 +16,7 @@ import { RolesGuard } from "../auth/guards/roles.guard";
 import { AddItemsDto } from "./dto/add-items.dto";
 import { CheckoutDto, UpdateItemDto } from "./dto/checkout.dto";
 import { CreatePosSessionDto } from "./dto/create-session.dto";
+import { PosSaleDto } from "./dto/pos-sale.dto";
 import { PosService } from "./pos.service";
 
 @ApiTags("pos")
@@ -103,6 +104,22 @@ export class PosController {
     @Body() dto: CheckoutDto,
   ) {
     return this.posService.checkout(shopId, sessionId, userId, dto);
+  }
+
+  // ─── Single-shot Offline-capable Sale ───
+
+  @Post("sale")
+  @Roles("SHOPKEEPER")
+  @ApiOperation({
+    summary:
+      "Create a complete POS sale in one request (offline-capable, idempotent by clientId)",
+  })
+  async sale(
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Body() dto: PosSaleDto,
+  ) {
+    return this.posService.sale(shopId, userId, dto);
   }
 
   // ─── Cancel Session ───

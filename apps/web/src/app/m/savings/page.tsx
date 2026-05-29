@@ -6,7 +6,13 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { api } from "@/lib/api";
+import { getDB } from "@/lib/offline/db";
+import {
+  enrollMember,
+  recordPayment as recordPaymentOffline,
+  refreshSavings,
+} from "@/lib/offline/savings";
+import { useLiveQuery } from "dexie-react-hooks";
 import {
     Check,
     Loader2,
@@ -79,8 +85,7 @@ function EnrollForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
     }
     setSaving(true);
     try {
-      await api.post("/savings-schemes", {
-        shopId: user?.shop?.id,
+      await enrollMember(user?.shop?.id ?? "", {
         customerName: form.customerName,
         customerPhone: form.customerPhone || undefined,
         schemeType: form.schemeType,
@@ -352,26 +357,35 @@ function MemberCard({ member, onRecord }: { member: SavingsMember; onRecord: () 
 
 export default function SavingsPage() {
   const { user } = useAuth();
-  const [members, setMembers] = useState<SavingsMember[]>([]);
+  const shopId = user?.shop?.id;
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<"ACTIVE" | "ALL">("ACTIVE");
 
+  // Local-first: read from IndexedDB so the list is instant & offline-safe.
+  const allMembers = (useLiveQuery(
+    () =>
+      shopId
+        ? getDB().savingsMembers.where("shopId").equals(shopId).reverse().sortBy("id")
+        : Promise.resolve([]),
+    [shopId],
+  ) ?? []) as SavingsMember[];
+
+  const members =
+    filter === "ALL"
+      ? allMembers
+      : allMembers.filter((m) => m.status === "ACTIVE");
+
   const load = useCallback(async () => {
-    const shopId = user?.shop?.id;
     if (!shopId) return;
-    setLoading(true);
     try {
-      const res = await api.get("/savings-schemes", {
-        params: { shopId, limit: 50, status: filter === "ALL" ? undefined : "ACTIVE" },
-      });
-      setMembers(res.data?.members ?? res.data?.items ?? res.data ?? []);
+      await refreshSavings(shopId, filter === "ALL" ? undefined : "ACTIVE");
     } catch {
-      setMembers([]);
+      // Offline or server error — keep showing the local cache.
     } finally {
       setLoading(false);
     }
-  }, [user?.shop?.id, filter]);
+  }, [shopId, filter]);
 
   useEffect(() => {
     load();
@@ -379,9 +393,8 @@ export default function SavingsPage() {
 
   const recordPayment = async (memberId: string) => {
     try {
-      await api.post(`/savings-schemes/${memberId}/payment`);
+      await recordPaymentOffline(memberId);
       toast({ title: "Payment recorded!" });
-      load();
     } catch {
       toast({ title: "Failed to record payment", variant: "destructive" });
     }
@@ -441,7 +454,7 @@ export default function SavingsPage() {
         </div>
 
         <div data-tour="m-savings-list" className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-          {loading ? (
+          {loading && members.length === 0 ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-amber-400" />
             </div>

@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   RawBodyRequest,
   Req,
   UseGuards,
@@ -253,6 +254,35 @@ export class PaymentGatewayController {
     return this.gatewayService.getAvailableGateways(req.query.country);
   }
 
+  @Get("preferred-gateway")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      "Resolve the preferred gateway for the visitor's/shop's country, plus alternatives",
+  })
+  async getPreferredGateway(
+    @CurrentUser("shopId") shopId: string | undefined,
+    @Query("country") country: string | undefined,
+    @Headers("cf-ipcountry") cfCountry: string | undefined,
+    @Headers("x-vercel-ip-country") vercelCountry: string | undefined,
+  ) {
+    const { country: resolvedCountry, source } =
+      await this.gatewayService.resolveCountry({
+        override: country,
+        shopId,
+        headers: {
+          "cf-ipcountry": cfCountry ?? "",
+          "x-vercel-ip-country": vercelCountry ?? "",
+        },
+      });
+
+    const result =
+      await this.gatewayService.getAvailableGatewaysForCountry(resolvedCountry);
+
+    return { ...result, countrySource: source };
+  }
+
   @Post("initiate")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -320,8 +350,14 @@ export class PaymentGatewayController {
 
   @Post("webhooks/phonepe")
   @ApiOperation({ summary: "PhonePe webhook handler" })
-  async phonePeWebhook(@Body() body: any) {
-    const result = await this.gatewayService.verifyPhonePeWebhook(body);
+  async phonePeWebhook(
+    @Body() body: any,
+    @Headers("x-verify") xVerify: string,
+  ) {
+    const result = await this.gatewayService.verifyPhonePeWebhook(
+      body,
+      xVerify,
+    );
 
     if (result.status === "succeeded") {
       await this.handlePaymentSuccess(
