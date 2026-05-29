@@ -5,6 +5,7 @@ import {
     NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
+import { roundMoney, sumMoney } from "../../common/utils/money";
 import { PlanLimitsService } from "../subscriptions/plan-limits.service";
 import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
 
@@ -46,14 +47,14 @@ export class InvoicesService {
 
     // Calculate totals from line items
     const lineItems = dto.lineItems || [];
-    const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+    const subtotal = sumMoney(lineItems.map((item) => item.amount));
 
     // Tax-exempt sales force tax to zero regardless of submitted rate
     const isTaxExempt = !!dto.isTaxExempt;
     const taxRate = isTaxExempt ? 0 : dto.taxRate || 0;
-    const taxAmount = isTaxExempt ? 0 : subtotal * taxRate;
-    const discountAmount = dto.discountAmount || 0;
-    const totalAmount = subtotal + taxAmount - discountAmount;
+    const taxAmount = isTaxExempt ? 0 : roundMoney(subtotal * taxRate);
+    const discountAmount = roundMoney(dto.discountAmount || 0);
+    const totalAmount = roundMoney(subtotal + taxAmount - discountAmount);
 
     const invoice = await this.prisma.invoice.create({
       data: {
@@ -164,8 +165,8 @@ export class InvoicesService {
       );
     }
 
-    const newPaidAmount = invoice.paidAmount + dto.amount;
-    const newBalanceDue = invoice.totalAmount - newPaidAmount;
+    const newPaidAmount = roundMoney(invoice.paidAmount + dto.amount);
+    const newBalanceDue = roundMoney(invoice.totalAmount - newPaidAmount);
 
     let newStatus = invoice.status;
     let newPaymentStatus = invoice.paymentStatus;

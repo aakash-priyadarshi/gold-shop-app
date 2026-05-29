@@ -15,6 +15,7 @@ import {
     ApiQuery,
     ApiTags,
 } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { ShopQuoteStatus, UserRole } from "@prisma/client";
 import { Request } from "express";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -56,6 +57,8 @@ export class ShopQuotesController {
 
   @Post("lookup-customer")
   @Roles(UserRole.SHOPKEEPER)
+  // Throttle to curb walk-in-customer phone-number enumeration by a shopkeeper.
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({
     summary: "Lookup walk-in customer by phone number",
     description:
@@ -74,6 +77,8 @@ export class ShopQuotesController {
 
   @Post("search-customers")
   @Roles(UserRole.SHOPKEEPER)
+  // Tighter cap: partial-phone search is the easiest enumeration vector.
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({
     summary: "Search walk-in customers by partial phone number",
     description:

@@ -1,6 +1,7 @@
 import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
+import { AuditService } from "../audit/audit.service";
 import { AuthService } from "../auth/auth.service";
 import { HealthService } from "../health/health.service";
 import { SupportService } from "./support.service";
@@ -96,7 +97,8 @@ export class AiChatbotService {
     @Inject(forwardRef(() => TicketsService))
     private ticketsService: TicketsService,
     private supportService: SupportService,
-    private healthService: HealthService
+    private healthService: HealthService,
+    private auditService: AuditService
   ) {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
   }
@@ -1809,6 +1811,7 @@ ADMIN RESPONSE RULES:
     functionCall: any,
     ipAddress?: string,
     sessionId?: string,
+    adminId?: string,
   ): Promise<AiChatResponse> {
     try {
       const { name, args } = functionCall;
@@ -1837,6 +1840,18 @@ ADMIN RESPONSE RULES:
             shops: { select: { shopName: true, isVerified: true, isOnHold: true }, take: 3 },
             _count: { select: { auditLogs: true } },
           },
+        });
+
+        // Audit the lookup: an admin reading a specific user's profile/PII via
+        // the bot is a sensitive action and should be traceable.
+        await this.auditService.log({
+          userId: adminId,
+          actorType: "ADMIN",
+          action: "ADMIN_BOT_USER_LOOKUP",
+          resourceType: "USER",
+          resourceId: user?.id,
+          metadata: { identifier, found: Boolean(user), via: "support-bot", sessionId },
+          ipAddress,
         });
 
         if (!user) {
@@ -1942,7 +1957,7 @@ ADMIN RESPONSE RULES:
       const { functionCall, text } = this.extractGeminiResponseParts(data);
 
       if (functionCall) {
-        return this.handleAdminFunctionCall(functionCall, ipAddress, sessionId);
+        return this.handleAdminFunctionCall(functionCall, ipAddress, sessionId, userId);
       }
 
       const parsed = this.parseAiResponse(text);
