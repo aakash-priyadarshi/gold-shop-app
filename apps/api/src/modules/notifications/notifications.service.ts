@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { NotificationType, UserRole, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsGateway } from './notifications.gateway';
 
 export interface CreateNotificationDto {
   userId: string;
@@ -147,7 +148,10 @@ const TEST_SCENARIOS: Record<
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private gateway: NotificationsGateway,
+  ) {}
 
   getTestScenarios() {
     return Object.entries(TEST_SCENARIOS).map(([id, scenario]) => ({
@@ -185,6 +189,10 @@ export class NotificationsService {
     this.logger.debug(
       `Notification created: ${dto.type} for user ${dto.userId} (channels: ${dto.channels.join(', ')})`,
     );
+
+    // Real-time in-app delivery: push to the recipient's socket room so the
+    // bell updates instantly instead of waiting for the polling interval.
+    this.gateway.emitToUser(dto.userId, notification);
 
     return notification;
   }

@@ -38,6 +38,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { io, type Socket } from "socket.io-client";
+
+const WS_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+).replace(/\/api$/, "");
 
 interface Notification {
   id: string;
@@ -528,6 +533,38 @@ export function NotificationDropdown() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Real-time delivery: subscribe to the /notifications socket namespace so
+  // new notifications appear instantly (polling above is the fallback).
+  useEffect(() => {
+    if (!user || typeof window === "undefined") return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const socket: Socket = io(`${WS_BASE}/notifications`, {
+      auth: { token },
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+    });
+
+    socket.on("notification", (notification: Notification) => {
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === notification.id)) return prev;
+        return [notification, ...prev];
+      });
+      if (!notification.isRead) {
+        setUnreadCount((prev) => prev + 1);
+      }
+    });
+
+    return () => {
+      socket.off("notification");
+      socket.disconnect();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   const handleMarkAsRead = async (id: string) => {
     try {
       await notificationsApi.markAsRead(id);
@@ -581,8 +618,11 @@ export function NotificationDropdown() {
     if (!notification.referenceType || !notification.referenceId) return null;
 
     const isShopkeeper = user?.role === "SHOPKEEPER";
+    // Backend emits referenceType in mixed casing (e.g. "ORDER", "Conversation").
+    // Normalize so routing is resilient regardless of the producing service.
+    const refType = notification.referenceType.toUpperCase();
 
-    switch (notification.referenceType) {
+    switch (refType) {
       case "ORDER":
         return isShopkeeper
           ? `/dashboard/shop/orders/${notification.referenceId}`
@@ -591,15 +631,25 @@ export function NotificationDropdown() {
         return isShopkeeper
           ? `/dashboard/shop/rfq/${notification.referenceId}`
           : `/dashboard/customer/rfqs/${notification.referenceId}`;
+      case "PAYMENT":
+        return isShopkeeper
+          ? `/dashboard/shop/orders/${notification.referenceId}`
+          : `/dashboard/customer/orders/${notification.referenceId}`;
       case "SHOP":
         return `/dashboard/shop`;
-      case "Conversation":
+      case "CONVERSATION":
         return isShopkeeper
           ? `/dashboard/shop/messages`
           : user?.role === "ADMIN"
             ? `/dashboard/admin/chat-monitoring`
             : `/dashboard/customer/messages`;
-      case "User":
+      case "TICKET":
+        return user?.role === "ADMIN"
+          ? `/dashboard/admin/support`
+          : isShopkeeper
+            ? `/dashboard/shop/support`
+            : `/dashboard/customer/support`;
+      case "USER":
         return user?.role === "ADMIN"
           ? `/dashboard/admin/users?id=${notification.referenceId}`
           : null;

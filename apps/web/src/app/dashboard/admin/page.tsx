@@ -47,7 +47,7 @@ interface Stat {
   title: string;
   value: string | number;
   change: string;
-  changeType: "positive" | "negative";
+  changeType: "positive" | "negative" | "neutral";
   icon: any;
   description: string;
 }
@@ -93,6 +93,32 @@ interface DownloadStats {
   byPlatform: Record<string, { total: number; latest: number; version: string }>;
 }
 
+// Shape of GET /admin/dashboard (real totals + trends + per-country revenue).
+interface AdminDashboardResponse {
+  range: string;
+  totals: {
+    users: { value: number; periodNew: number; changePct: number; changeType: "positive" | "negative" | "neutral" };
+    shops: { value: number; periodNew: number; changePct: number; changeType: "positive" | "negative" | "neutral" };
+    orders: { value: number; periodNew: number; changePct: number; changeType: "positive" | "negative" | "neutral" };
+    pendingShops: { value: number };
+    revenueNpr: { value: number; changePct: number; changeType: "positive" | "negative" | "neutral" };
+  };
+  countries: {
+    country: string;
+    users: number;
+    shops: number;
+    orders: number;
+    revenueNpr: number;
+  }[];
+}
+
+// Format a signed percentage for trend badges, e.g. 12.5 -> "+12.5%".
+function formatChangePct(pct: number): string {
+  const rounded = Math.round(pct * 10) / 10;
+  const sign = rounded > 0 ? "+" : "";
+  return `${sign}${rounded}%`;
+}
+
 // Country info mapping
 const COUNTRY_INFO: Record<string, { name: string; currency: string }> = {
   NP: { name: "Nepal", currency: "NPR" },
@@ -134,110 +160,59 @@ export default function AdminDashboard() {
         }
       };
       try {
-        // Fetch stats (users, shops, orders, revenue)
-        const usersRes = await safeGet("/users?page=1&pageSize=1");
-        const shopsRes = await safeGet("/shops?page=1&pageSize=1");
-        const ordersRes = await safeGet("/orders/admin/all?page=1&limit=1");
+        // Single comprehensive call: real totals, period-over-period trends,
+        // and per-country breakdown (incl. revenue) for the selected range.
+        const dashRes = await safeGet(`/admin/dashboard?range=${dateRange}`);
+        const dash = dashRes?.data as AdminDashboardResponse | undefined;
 
-        // Get all shops to compute country data
-        const allShopsRes = await safeGet("/shops?pageSize=1000");
-        const allShops = allShopsRes?.data?.shops || allShopsRes?.data || [];
-
-        // Get all users to compute country data
-        const allUsersRes = await safeGet("/users?pageSize=1000");
-        const allUsers = allUsersRes?.data?.users || allUsersRes?.data || [];
-
-        setStats([
-          {
-            title: "Total Users",
-            value: usersRes?.data?.meta?.totalCount ?? allUsers.length ?? "—",
-            change: "+0%",
-            changeType: "positive",
-            icon: Users,
-            description: "Active users this month",
-          },
-          {
-            title: "Active Shops",
-            value: shopsRes?.data?.meta?.totalCount ?? allShops.length ?? "—",
-            change: "+0%",
-            changeType: "positive",
-            icon: Store,
-            description: "Verified shops",
-          },
-          {
-            title: "Total Orders",
-            value: ordersRes?.data?.meta?.totalCount ?? "—",
-            change: "+0%",
-            changeType: "positive",
-            icon: ShoppingCart,
-            description: "Orders this month",
-          },
-          {
-            title: "Pending Shops",
-            value: allShops.filter((s: any) => !s.isVerified).length,
-            change: "",
-            changeType: "positive",
-            icon: AlertCircle,
-            description: "Awaiting verification",
-          },
-        ]);
-
-        // Compute country-wise statistics
-        const countryMap = new Map<string, CountryData>();
-
-        // Initialize countries
-        for (const country of Object.keys(COUNTRY_INFO)) {
-          countryMap.set(country, {
-            country,
-            countryName: COUNTRY_INFO[country].name,
-            users: 0,
-            shops: 0,
-            orders: 0,
-            revenue: 0,
-            currency: COUNTRY_INFO[country].currency,
-          });
+        if (dash?.totals) {
+          const t = dash.totals;
+          setStats([
+            {
+              title: "Total Users",
+              value: t.users.value,
+              change: formatChangePct(t.users.changePct),
+              changeType: t.users.changeType,
+              icon: Users,
+              description: `${t.users.periodNew} new this period`,
+            },
+            {
+              title: "Active Shops",
+              value: t.shops.value,
+              change: formatChangePct(t.shops.changePct),
+              changeType: t.shops.changeType,
+              icon: Store,
+              description: `${t.shops.periodNew} new this period`,
+            },
+            {
+              title: "Total Orders",
+              value: t.orders.value,
+              change: formatChangePct(t.orders.changePct),
+              changeType: t.orders.changeType,
+              icon: ShoppingCart,
+              description: `${t.orders.periodNew} new this period`,
+            },
+            {
+              title: "Pending Shops",
+              value: t.pendingShops.value,
+              change: "",
+              changeType: "neutral",
+              icon: AlertCircle,
+              description: "Awaiting verification",
+            },
+          ]);
         }
 
-        // Count shops by country
-        for (const shop of allShops) {
-          const country = shop.country || "NP";
-          if (!countryMap.has(country)) {
-            countryMap.set(country, {
-              country,
-              countryName: country,
-              users: 0,
-              shops: 0,
-              orders: 0,
-              revenue: 0,
-              currency: "USD",
-            });
-          }
-          const data = countryMap.get(country)!;
-          data.shops++;
-          // Add order count and revenue if available
-          if (shop._count?.orders) {
-            data.orders += shop._count.orders;
-          }
-        }
-
-        // Count users by shop location (approximate)
-        for (const user of allUsers) {
-          if (user.shop?.country) {
-            const country = user.shop.country;
-            if (countryMap.has(country)) {
-              countryMap.get(country)!.users++;
-            }
-          } else if (user.role === "CUSTOMER") {
-            // Default customers to NP if no shop
-            countryMap.get("NP")!.users++;
-          }
-        }
-
-        // Convert to array and sort by shops count
-        const countryData = Array.from(countryMap.values())
-          .filter((c) => c.shops > 0 || c.users > 0)
-          .sort((a, b) => b.shops - a.shops);
-
+        // Per-country breakdown with real revenue.
+        const countryData: CountryData[] = (dash?.countries || []).map((c) => ({
+          country: c.country,
+          countryName: COUNTRY_INFO[c.country]?.name || c.country,
+          users: c.users,
+          shops: c.shops,
+          orders: c.orders,
+          revenue: c.revenueNpr,
+          currency: COUNTRY_INFO[c.country]?.currency || "NPR",
+        }));
         setCountryStats(countryData);
 
         // Fetch pending verifications
@@ -332,33 +307,41 @@ export default function AdminDashboard() {
                       className={`p-2 lg:p-3 rounded-xl shrink-0 ${
                         stat.changeType === "positive"
                           ? "bg-green-100"
-                          : "bg-red-100"
+                          : stat.changeType === "negative"
+                            ? "bg-red-100"
+                            : "bg-gray-100 dark:bg-gray-800"
                       }`}
                     >
                       <stat.icon
                         className={`h-4 w-4 lg:h-5 lg:w-5 ${
                           stat.changeType === "positive"
                             ? "text-green-600"
-                            : "text-red-600"
+                            : stat.changeType === "negative"
+                              ? "text-red-600"
+                              : "text-gray-500"
                         }`}
                       />
                     </div>
                   </div>
                   <div className="flex items-center mt-2 text-xs lg:text-sm">
-                    <span
-                      className={`flex items-center ${
-                        stat.changeType === "positive"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {stat.changeType === "positive" ? (
-                        <ArrowUpRight className="h-3 w-3 lg:h-4 lg:w-4 mr-0.5" />
-                      ) : (
-                        <ArrowDownRight className="h-3 w-3 lg:h-4 lg:w-4 mr-0.5" />
-                      )}
-                      {stat.change}
-                    </span>
+                    {stat.change ? (
+                      <span
+                        className={`flex items-center ${
+                          stat.changeType === "positive"
+                            ? "text-green-600"
+                            : stat.changeType === "negative"
+                              ? "text-red-600"
+                              : "text-gray-500"
+                        }`}
+                      >
+                        {stat.changeType === "negative" ? (
+                          <ArrowDownRight className="h-3 w-3 lg:h-4 lg:w-4 mr-0.5" />
+                        ) : stat.changeType === "positive" ? (
+                          <ArrowUpRight className="h-3 w-3 lg:h-4 lg:w-4 mr-0.5" />
+                        ) : null}
+                        {stat.change}
+                      </span>
+                    ) : null}
                     <span className="text-gray-500 dark:text-gray-400 ml-1 lg:ml-2 truncate hidden sm:inline">
                       {stat.description}
                     </span>

@@ -666,6 +666,186 @@ export class AdminController {
     };
   }
 
+  @Get("dashboard")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary:
+      "Comprehensive admin dashboard data: totals with period-over-period trends, revenue, and per-country breakdown",
+  })
+  async getDashboard(@Query("range") range?: string) {
+    const validRange = (["today", "week", "month", "year"] as const).includes(
+      range as "today" | "week" | "month" | "year",
+    )
+      ? (range as "today" | "week" | "month" | "year")
+      : "month";
+
+    // Rolling windows so the current period can be compared against the
+    // immediately-preceding period of the same length (true trend %).
+    const windowDays: Record<typeof validRange, number> = {
+      today: 1,
+      week: 7,
+      month: 30,
+      year: 365,
+    };
+    const windowMs = windowDays[validRange] * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const currentStart = new Date(now - windowMs);
+    const previousStart = new Date(now - 2 * windowMs);
+
+    // Orders that should NOT count as realised revenue.
+    const nonRevenueStatuses = ["CANCELLED", "REFUNDED", "EXPIRED"] as const;
+
+    const [
+      totalUsers,
+      totalShops,
+      totalOrders,
+      pendingShops,
+      usersCurrent,
+      usersPrevious,
+      shopsCurrent,
+      shopsPrevious,
+      ordersCurrent,
+      ordersPrevious,
+      revenueCurrentAgg,
+      revenuePreviousAgg,
+      shopsByCountry,
+      ordersByCountry,
+      usersByCountry,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.shop.count(),
+      this.prisma.order.count(),
+      this.prisma.shop.count({ where: { isVerified: false } }),
+      this.prisma.user.count({ where: { createdAt: { gte: currentStart } } }),
+      this.prisma.user.count({
+        where: { createdAt: { gte: previousStart, lt: currentStart } },
+      }),
+      this.prisma.shop.count({ where: { createdAt: { gte: currentStart } } }),
+      this.prisma.shop.count({
+        where: { createdAt: { gte: previousStart, lt: currentStart } },
+      }),
+      this.prisma.order.count({ where: { createdAt: { gte: currentStart } } }),
+      this.prisma.order.count({
+        where: { createdAt: { gte: previousStart, lt: currentStart } },
+      }),
+      this.prisma.order.aggregate({
+        _sum: { totalNpr: true },
+        where: {
+          createdAt: { gte: currentStart },
+          status: { notIn: [...nonRevenueStatuses] },
+        },
+      }),
+      this.prisma.order.aggregate({
+        _sum: { totalNpr: true },
+        where: {
+          createdAt: { gte: previousStart, lt: currentStart },
+          status: { notIn: [...nonRevenueStatuses] },
+        },
+      }),
+      this.prisma.shop.groupBy({ by: ["country"], _count: { _all: true } }),
+      this.prisma.order.groupBy({
+        by: ["marketCountry"],
+        _count: { _all: true },
+        _sum: { totalNpr: true },
+        where: { status: { notIn: [...nonRevenueStatuses] } },
+      }),
+      this.prisma.user.groupBy({
+        by: ["preferredCountry"],
+        _count: { _all: true },
+      }),
+    ]);
+
+    const revenueCurrent = revenueCurrentAgg._sum.totalNpr ?? 0;
+    const revenuePrevious = revenuePreviousAgg._sum.totalNpr ?? 0;
+
+    // Period-over-period trend. When there is no prior baseline, treat any
+    // positive current value as +100% growth and zero as neutral.
+    const trend = (current: number, previous: number) => {
+      if (previous <= 0) {
+        return {
+          changePct: current > 0 ? 100 : 0,
+          changeType: (current > 0 ? "positive" : "neutral") as
+            | "positive"
+            | "negative"
+            | "neutral",
+        };
+      }
+      const pct = ((current - previous) / previous) * 100;
+      return {
+        changePct: Math.round(pct * 10) / 10,
+        changeType: (pct > 0 ? "positive" : pct < 0 ? "negative" : "neutral") as
+          | "positive"
+          | "negative"
+          | "neutral",
+      };
+    };
+
+    // Merge the three group-by results into a single per-country breakdown.
+    type CountryRow = {
+      country: string;
+      users: number;
+      shops: number;
+      orders: number;
+      revenueNpr: number;
+    };
+    const countryMap = new Map<string, CountryRow>();
+    const ensure = (code: string): CountryRow => {
+      const key = (code || "NP").toUpperCase();
+      let row = countryMap.get(key);
+      if (!row) {
+        row = { country: key, users: 0, shops: 0, orders: 0, revenueNpr: 0 };
+        countryMap.set(key, row);
+      }
+      return row;
+    };
+
+    for (const s of shopsByCountry) {
+      ensure(s.country).shops += s._count._all;
+    }
+    for (const o of ordersByCountry) {
+      const row = ensure(o.marketCountry);
+      row.orders += o._count._all;
+      row.revenueNpr += o._sum.totalNpr ?? 0;
+    }
+    for (const u of usersByCountry) {
+      ensure(u.preferredCountry).users += u._count._all;
+    }
+
+    const countries = Array.from(countryMap.values())
+      .filter((c) => c.shops > 0 || c.users > 0 || c.orders > 0)
+      .sort((a, b) => b.revenueNpr - a.revenueNpr || b.shops - a.shops);
+
+    return {
+      range: validRange,
+      totals: {
+        users: {
+          value: totalUsers,
+          periodNew: usersCurrent,
+          ...trend(usersCurrent, usersPrevious),
+        },
+        shops: {
+          value: totalShops,
+          periodNew: shopsCurrent,
+          ...trend(shopsCurrent, shopsPrevious),
+        },
+        orders: {
+          value: totalOrders,
+          periodNew: ordersCurrent,
+          ...trend(ordersCurrent, ordersPrevious),
+        },
+        pendingShops: {
+          value: pendingShops,
+        },
+        revenueNpr: {
+          value: revenueCurrent,
+          ...trend(revenueCurrent, revenuePrevious),
+        },
+      },
+      countries,
+    };
+  }
+
+
   // ═══════════════════════════════════════
   // USER SEARCH (for compose / messaging)
   // ═══════════════════════════════════════
