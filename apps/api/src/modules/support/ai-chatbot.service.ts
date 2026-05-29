@@ -2,6 +2,7 @@ import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
+import { HealthService } from "../health/health.service";
 import { SupportService } from "./support.service";
 import { TicketsService } from "./tickets.service";
 
@@ -44,6 +45,41 @@ interface SellerSnapshot {
   userCreatedAt?: string;
 }
 
+interface AdminSnapshot {
+  adminName: string;
+  currentPath?: string;
+  generatedAt: string;
+  health: {
+    status: string;
+    database: string;
+    databaseLatencyMs?: number;
+    marketRates?: string;
+    uptimeSec: number;
+  };
+  users: {
+    total: number;
+    admins: number;
+    shopkeepers: number;
+    customers: number;
+    onlineNow: number;
+    newToday: number;
+    new7d: number;
+    suspended: number;
+    pendingVerification: number;
+  };
+  shops: { total: number; verified: number; onHold: number };
+  verificationQueue: number;
+  tickets: { open: number; urgent: number };
+  emails: { outboundToday: number; outbound24h: number; inbound24h: number };
+  bot: { sessions24h: number; escalated24h: number };
+  recentAdminActions: Array<{
+    action: string;
+    resourceType: string;
+    at: string;
+    actor: string;
+  }>;
+}
+
 @Injectable()
 export class AiChatbotService {
   private readonly logger = new Logger(AiChatbotService.name);
@@ -59,7 +95,8 @@ export class AiChatbotService {
     private authService: AuthService,
     @Inject(forwardRef(() => TicketsService))
     private ticketsService: TicketsService,
-    private supportService: SupportService
+    private supportService: SupportService,
+    private healthService: HealthService
   ) {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
   }
@@ -1538,6 +1575,382 @@ SELLER RESPONSE RULES:
     } catch (error) {
       this.logger.error("sellerChat error:", error);
       return snapshot ? this.fallbackSellerResponse(snapshot) : this.fallbackResponse(message);
+    }
+  }
+
+  // ─── Admin operations co-pilot ───────────────────────────────
+
+  /**
+   * Gathers a read-only platform telemetry snapshot for the admin co-pilot.
+   * Every query is wrapped in Promise.allSettled so a single failure never
+   * breaks the chat. Returns null only on a catastrophic failure.
+   */
+  private async buildAdminSnapshot(
+    userId: string,
+    currentPath?: string,
+  ): Promise<AdminSnapshot> {
+    const now = new Date();
+    const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const last7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      adminResult,
+      healthResult,
+      totalUsersResult,
+      roleGroupResult,
+      onlineNowResult,
+      newTodayResult,
+      new7dResult,
+      suspendedResult,
+      pendingVerifyUsersResult,
+      shopsTotalResult,
+      shopsVerifiedResult,
+      shopsOnHoldResult,
+      verificationQueueResult,
+      openTicketsResult,
+      urgentTicketsResult,
+      emailOutTodayResult,
+      emailOut24hResult,
+      emailIn24hResult,
+      botSessions24hResult,
+      botEscalated24hResult,
+      recentAuditResult,
+    ] = await Promise.allSettled([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true },
+      }),
+      this.healthService.getHealth(),
+      this.prisma.user.count(),
+      this.prisma.user.groupBy({ by: ["role"], _count: { id: true } }),
+      this.prisma.webSession.count({
+        where: { userId: { not: null }, lastActive: { gte: fiveMinAgo }, endedAt: null },
+      }),
+      this.prisma.user.count({ where: { createdAt: { gte: dayStart } } }),
+      this.prisma.user.count({ where: { createdAt: { gte: last7d } } }),
+      this.prisma.user.count({ where: { status: "SUSPENDED" } }),
+      this.prisma.user.count({ where: { status: "PENDING_VERIFICATION" } }),
+      this.prisma.shop.count(),
+      this.prisma.shop.count({ where: { isVerified: true } }),
+      this.prisma.shop.count({ where: { isOnHold: true } }),
+      this.prisma.verificationRequest.count({ where: { status: "PENDING" } }),
+      this.prisma.supportTicket.count({ where: { status: { in: ["OPEN", "CLAIMED", "IN_PROGRESS", "WAITING_USER"] } } }),
+      this.prisma.supportTicket.count({
+        where: { status: { in: ["OPEN", "CLAIMED", "IN_PROGRESS", "WAITING_USER"] }, priority: "URGENT" },
+      }),
+      this.prisma.emailLog.count({ where: { direction: "OUTBOUND", createdAt: { gte: dayStart } } }),
+      this.prisma.emailLog.count({ where: { direction: "OUTBOUND", createdAt: { gte: last24h } } }),
+      this.prisma.emailLog.count({ where: { direction: "INBOUND", createdAt: { gte: last24h } } }),
+      this.prisma.botSession.count({ where: { startedAt: { gte: last24h } } }),
+      this.prisma.botSession.count({ where: { startedAt: { gte: last24h }, escalated: true } }),
+      this.prisma.auditLog.findMany({
+        where: { actorType: { in: ["ADMIN", "USER"] } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: {
+          action: true,
+          resourceType: true,
+          createdAt: true,
+          user: { select: { firstName: true, lastName: true, email: true } },
+        },
+      }),
+    ]);
+
+    const admin = this.pickSettledValue(adminResult, "admin user");
+    const health = this.pickSettledValue(healthResult, "health status");
+    const roleGroups = (this.pickSettledValue(roleGroupResult, "user role groups") ?? []) as Array<{
+      role: string;
+      _count: { id: number };
+    }>;
+    const roleCount = (r: string) => roleGroups.find((g) => g.role === r)?._count.id ?? 0;
+    const recentAudit = (this.pickSettledValue(recentAuditResult, "recent audit log") ?? []) as Array<{
+      action: string;
+      resourceType: string;
+      createdAt: Date;
+      user: { firstName: string; lastName: string; email: string } | null;
+    }>;
+
+    return {
+      adminName: admin ? `${admin.firstName} ${admin.lastName}`.trim() : "Admin",
+      currentPath,
+      generatedAt: now.toISOString(),
+      health: {
+        status: health?.status ?? "unknown",
+        database: health?.checks?.database?.status ?? "unknown",
+        databaseLatencyMs: health?.checks?.database?.latency,
+        marketRates: health?.checks?.marketRates?.status,
+        uptimeSec: health?.uptime ?? 0,
+      },
+      users: {
+        total: this.pickSettledValue(totalUsersResult, "total users") ?? 0,
+        admins: roleCount("ADMIN"),
+        shopkeepers: roleCount("SHOPKEEPER"),
+        customers: roleCount("CUSTOMER"),
+        onlineNow: this.pickSettledValue(onlineNowResult, "online now") ?? 0,
+        newToday: this.pickSettledValue(newTodayResult, "new today") ?? 0,
+        new7d: this.pickSettledValue(new7dResult, "new 7d") ?? 0,
+        suspended: this.pickSettledValue(suspendedResult, "suspended") ?? 0,
+        pendingVerification: this.pickSettledValue(pendingVerifyUsersResult, "pending verification") ?? 0,
+      },
+      shops: {
+        total: this.pickSettledValue(shopsTotalResult, "shops total") ?? 0,
+        verified: this.pickSettledValue(shopsVerifiedResult, "shops verified") ?? 0,
+        onHold: this.pickSettledValue(shopsOnHoldResult, "shops on hold") ?? 0,
+      },
+      verificationQueue: this.pickSettledValue(verificationQueueResult, "verification queue") ?? 0,
+      tickets: {
+        open: this.pickSettledValue(openTicketsResult, "open tickets") ?? 0,
+        urgent: this.pickSettledValue(urgentTicketsResult, "urgent tickets") ?? 0,
+      },
+      emails: {
+        outboundToday: this.pickSettledValue(emailOutTodayResult, "emails out today") ?? 0,
+        outbound24h: this.pickSettledValue(emailOut24hResult, "emails out 24h") ?? 0,
+        inbound24h: this.pickSettledValue(emailIn24hResult, "emails in 24h") ?? 0,
+      },
+      bot: {
+        sessions24h: this.pickSettledValue(botSessions24hResult, "bot sessions 24h") ?? 0,
+        escalated24h: this.pickSettledValue(botEscalated24hResult, "bot escalated 24h") ?? 0,
+      },
+      recentAdminActions: recentAudit.map((a) => ({
+        action: a.action,
+        resourceType: a.resourceType,
+        at: a.createdAt.toISOString(),
+        actor: a.user ? `${a.user.firstName} ${a.user.lastName}`.trim() || a.user.email : "system",
+      })),
+    };
+  }
+
+  private formatUptime(seconds: number): string {
+    if (seconds < 60) return `${seconds}s`;
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return [d ? `${d}d` : "", h ? `${h}h` : "", m ? `${m}m` : ""].filter(Boolean).join(" ") || "0m";
+  }
+
+  private buildAdminContext(snapshot: AdminSnapshot): string {
+    const recentActions = snapshot.recentAdminActions.length > 0
+      ? snapshot.recentAdminActions
+          .map((a) => `${a.action} (${a.resourceType}) by ${a.actor} at ${this.formatShortDate(a.at)}`)
+          .join("; ")
+      : "No recent admin actions recorded.";
+
+    return `
+PLATFORM TELEMETRY SNAPSHOT (LIVE, READ-ONLY — generated ${this.formatShortDate(snapshot.generatedAt)}; for the authenticated ADMIN only):
+Admin name: ${snapshot.adminName}
+Current admin route: ${snapshot.currentPath ?? "Unavailable"}
+
+SYSTEM HEALTH:
+- Overall status: ${snapshot.health.status}
+- Database: ${snapshot.health.database}${snapshot.health.databaseLatencyMs != null ? ` (${snapshot.health.databaseLatencyMs}ms)` : ""}
+- Market rates feed: ${snapshot.health.marketRates ?? "unknown"}
+- API uptime: ${this.formatUptime(snapshot.health.uptimeSec)}
+
+USERS:
+- Total users: ${snapshot.users.total} (Admins ${snapshot.users.admins}, Shopkeepers ${snapshot.users.shopkeepers}, Customers ${snapshot.users.customers})
+- Online now (active in last 5 min): ${snapshot.users.onlineNow}
+- New signups today: ${snapshot.users.newToday}; last 7 days: ${snapshot.users.new7d}
+- Suspended accounts: ${snapshot.users.suspended}
+- Users pending verification: ${snapshot.users.pendingVerification}
+
+SHOPS / SELLERS:
+- Total shops: ${snapshot.shops.total} (Verified ${snapshot.shops.verified}, On hold ${snapshot.shops.onHold})
+- Pending verification requests in queue: ${snapshot.verificationQueue}
+
+SUPPORT:
+- Open tickets: ${snapshot.tickets.open} (Urgent: ${snapshot.tickets.urgent})
+
+EMAIL (system traffic):
+- Sent today: ${snapshot.emails.outboundToday}; sent last 24h: ${snapshot.emails.outbound24h}; received last 24h: ${snapshot.emails.inbound24h}
+
+SUPPORT BOT:
+- Chat sessions last 24h: ${snapshot.bot.sessions24h} (Escalated: ${snapshot.bot.escalated24h})
+
+RECENT SENSITIVE ADMIN ACTIONS (from audit log):
+${recentActions}
+
+ADMIN NAVIGATION MAP:
+- User management & moderation: /dashboard/admin/users (online-now stats, risk scores, suspend/activate, role change, per-user audit log, active sessions + token revoke, direct messaging)
+- Seller verification / KYC queue & seller CRM: /dashboard/admin (verification + sellers tabs)
+- Customer CRM: /dashboard/admin/customers
+- Email management (templates, triggers, SMTP test, sent log): /dashboard/admin/emails
+- System health & monitoring: /dashboard/admin/health
+- Finance ops (refunds, commissions, AI credits): /dashboard/admin
+- Platform settings & market/feature config: /dashboard/admin/settings
+- Bot analytics (sessions, intents): /dashboard/admin (bot analytics)
+
+ADMIN RESPONSE RULES:
+- You are an internal OPERATIONS CO-PILOT for the platform admin/founder. NEVER upsell, never pitch plans, never ask for contact details.
+- You MAY state the live telemetry numbers above directly when asked (e.g. "how many users online?", "is the system healthy?", "how many emails sent today?"). Quote the exact figures from this snapshot.
+- For details about a SPECIFIC user (status, role, last login, recent activity, emails), call the lookupUser tool with their email or user id — do NOT guess. Only use it when the admin names a specific person/email.
+- If a metric is not in this snapshot and no tool can fetch it, say it is not available in this chat yet and point to the exact admin page that shows it.
+- Be concise, factual, and operational. Skip marketing tone entirely.
+- Never fabricate numbers. If a value above shows 0 or "unknown", report it honestly.`;
+  }
+
+  private fallbackAdminResponse(snapshot: AdminSnapshot | null): AiChatResponse {
+    return {
+      reply: snapshot
+        ? `I couldn't generate a full AI reply right now, but here's a quick read: ${snapshot.users.onlineNow} user(s) online now, system status "${snapshot.health.status}", ${snapshot.tickets.open} open ticket(s), and ${snapshot.verificationQueue} verification request(s) in queue. You can also check /dashboard/admin/health and /dashboard/admin/users directly.`
+        : "I couldn't reach the platform telemetry right now. Please check /dashboard/admin/health directly.",
+      shouldEscalate: false,
+      confidence: 0.5,
+    };
+  }
+
+  /**
+   * Read-only lookup tools for the admin co-pilot. The caller is always an
+   * authenticated ADMIN (enforced by the controller guard), so returning user
+   * details here is authorised. All queries are strictly read-only.
+   */
+  private async handleAdminFunctionCall(
+    functionCall: any,
+    ipAddress?: string,
+    sessionId?: string,
+  ): Promise<AiChatResponse> {
+    try {
+      const { name, args } = functionCall;
+
+      if (name === "lookupUser") {
+        const identifier = String(args?.identifier ?? "").trim();
+        if (!identifier) {
+          return { reply: "Please tell me the user's email address or ID to look them up.", shouldEscalate: false, confidence: 0.6 };
+        }
+        const isEmail = identifier.includes("@");
+        const user = await this.prisma.user.findFirst({
+          where: isEmail
+            ? { email: { equals: identifier, mode: "insensitive" } }
+            : { id: identifier },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            status: true,
+            emailVerified: true,
+            phoneVerifiedAt: true,
+            createdAt: true,
+            lastLoginAt: true,
+            shops: { select: { shopName: true, isVerified: true, isOnHold: true }, take: 3 },
+            _count: { select: { auditLogs: true } },
+          },
+        });
+
+        if (!user) {
+          const reply = `I couldn't find any user matching "${identifier}".`;
+          await this.supportService.logAiChat(sessionId ?? null, "assistant", reply, "lookupUser", 1.0, ipAddress);
+          return { reply, shouldEscalate: false, confidence: 0.9 };
+        }
+
+        const shopLine = user.shops.length
+          ? user.shops.map((s) => `${s.shopName} (${s.isVerified ? "verified" : "unverified"}${s.isOnHold ? ", on hold" : ""})`).join(", ")
+          : "no shops";
+        const reply = [
+          `${user.firstName} ${user.lastName} — ${user.email}`,
+          `Role: ${user.role}, Status: ${user.status}`,
+          `Email verified: ${user.emailVerified ? "yes" : "no"}, Phone verified: ${user.phoneVerifiedAt ? "yes" : "no"}`,
+          `Joined: ${this.formatShortDate(user.createdAt.toISOString())}, Last login: ${user.lastLoginAt ? this.formatShortDate(user.lastLoginAt.toISOString()) : "never"}`,
+          `Shops: ${shopLine}`,
+          `Audit log entries: ${user._count.auditLogs}`,
+          `Open their full profile at /dashboard/admin/users (search "${user.email}").`,
+        ].join("\n");
+        await this.supportService.logAiChat(sessionId ?? null, "assistant", reply, "lookupUser", 1.0, ipAddress);
+        return { reply, shouldEscalate: false, confidence: 1.0 };
+      }
+
+      return { reply: "That admin action isn't available.", shouldEscalate: false, confidence: 0.5 };
+    } catch (err: any) {
+      this.logger.error("Admin function call error", err);
+      return {
+        reply: "I hit an error fetching that. You can check /dashboard/admin/users directly.",
+        shouldEscalate: false,
+        confidence: 0.5,
+      };
+    }
+  }
+
+  async adminChat(
+    userId: string,
+    message: string,
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
+    ipAddress?: string,
+    sessionId?: string,
+    userAgent?: string,
+    currentPath?: string,
+    botName?: string,
+  ): Promise<AiChatResponse> {
+    let snapshot: AdminSnapshot | null = null;
+
+    try {
+      if (sessionId) {
+        await this.supportService.upsertBotSession(sessionId, {
+          ipAddress,
+          userAgent,
+          newIntents: this.detectLeadIntents(message),
+        });
+      }
+      await this.supportService.logAiChat(sessionId ?? null, "user", message, undefined, undefined, ipAddress);
+
+      snapshot = await this.buildAdminSnapshot(userId, currentPath);
+
+      if (!this.apiKey) {
+        this.logger.error("adminChat: GEMINI_API_KEY is not set — returning admin fallback");
+        return this.fallbackAdminResponse(snapshot);
+      }
+
+      const knowledgeContext = await this.searchKnowledge(message);
+      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: snapshot.adminName }, "ADMIN")}\n\n${this.buildAdminContext(snapshot)}`;
+      const contents = this.buildContents(systemPrompt, conversationHistory, message);
+
+      const tools = [
+        {
+          functionDeclarations: [
+            {
+              name: "lookupUser",
+              description: "Look up a specific platform user by their email address or user ID to see their role, account status, verification, last login, shops, and audit-log count. Use ONLY when the admin names a specific person or email — never for aggregate questions.",
+              parameters: {
+                type: "OBJECT",
+                properties: {
+                  identifier: { type: "STRING", description: "The user's email address or user ID exactly as provided by the admin." },
+                },
+                required: ["identifier"],
+              },
+            },
+          ],
+        },
+      ];
+
+      const response = await fetch(`${this.GEMINI_API_URL}?key=${this.apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents,
+          tools,
+          generationConfig: { temperature: 0.2, maxOutputTokens: 600, topP: 0.8 },
+        }),
+      });
+
+      if (!response.ok) {
+        this.logger.warn(`Gemini API error (adminChat): ${response.status}`);
+        return this.fallbackAdminResponse(snapshot);
+      }
+
+      const data = await response.json();
+      const { functionCall, text } = this.extractGeminiResponseParts(data);
+
+      if (functionCall) {
+        return this.handleAdminFunctionCall(functionCall, ipAddress, sessionId);
+      }
+
+      const parsed = this.parseAiResponse(text);
+      await this.supportService.logAiChat(sessionId ?? null, "assistant", parsed.reply, undefined, parsed.confidence, ipAddress);
+      return parsed;
+    } catch (error) {
+      this.logger.error("adminChat error:", error);
+      return this.fallbackAdminResponse(snapshot);
     }
   }
 }

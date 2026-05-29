@@ -687,6 +687,8 @@ export function SupportBot() {
     try {
       const endpoint = isSellerLoggedIn
         ? "/tickets/seller-chat"
+        : isAdmin
+        ? "/tickets/admin-chat"
         : user
         ? "/tickets/assistant-chat"
         : "/tickets/ai-chat";

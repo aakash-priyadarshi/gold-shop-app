@@ -10,12 +10,14 @@ import { TicketsController } from "./tickets.controller";
 import { TicketsGateway } from "./tickets.gateway";
 import { TicketsService } from "./tickets.service";
 import { AuthModule } from "../auth/auth.module";
+import { HealthModule } from "../health/health.module";
 
 @Module({
   imports: [
     NotificationsModule,
     SubscriptionPlansModule,
     AuthModule,
+    HealthModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

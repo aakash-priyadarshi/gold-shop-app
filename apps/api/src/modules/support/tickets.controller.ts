@@ -139,6 +139,40 @@ export class TicketsController {
     );
   }
 
+  // ─── Admin: Operations co-pilot AI chatbot ───
+  // Live platform telemetry + read-only user lookup tools. Role is enforced
+  // from the verified JWT.
+  @Post("admin-chat")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Admin ops co-pilot — live platform telemetry + user lookup",
+  })
+  async adminChat(
+    @Req() req: any,
+    @CurrentUser("id") userId: string,
+    @Body()
+    body: {
+      message: string;
+      sessionId?: string;
+      currentPath?: string;
+      history?: Array<{ role: "user" | "assistant"; content: string }>;
+      botName?: string;
+    },
+  ) {
+    return this.aiChatbot.adminChat(
+      userId,
+      body.message,
+      body.history || [],
+      req.ip,
+      body.sessionId,
+      req.headers?.["user-agent"] as string | undefined,
+      body.currentPath,
+      body.botName,
+    );
+  }
+
   // ─── Admin: Bot conversation sessions list ───
   @Get("ai-chat/sessions")
   @UseGuards(JwtAuthGuard, RolesGuard)
