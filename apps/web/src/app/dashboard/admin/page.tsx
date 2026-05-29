@@ -22,6 +22,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import api from "@/lib/api";
+import { useCurrencyConversion } from "@/hooks/useCurrencyConversion";
+import { useMarket, CURRENCY_SYMBOLS, type CurrencyCode } from "@/hooks/useMarket";
 import {
     Activity,
     AlertCircle,
@@ -114,27 +116,41 @@ export default function AdminDashboard() {
     "today" | "week" | "month" | "year"
   >("month");
 
+  // Admin-selectable display currency (persisted globally via useMarket).
+  // Monetary values stored in NPR are converted to this currency for display.
+  const { selectedCurrency, setCurrency } = useMarket();
+  const { formatWithConversion } = useCurrencyConversion();
+
   useEffect(() => {
     async function fetchDashboardData() {
       setLoading(true);
+      // Resilient fetch: a single failing endpoint must not blank the whole dashboard.
+      const safeGet = async (url: string) => {
+        try {
+          return await api.get(url);
+        } catch (err) {
+          console.error(`Dashboard fetch failed for ${url}:`, err);
+          return null;
+        }
+      };
       try {
         // Fetch stats (users, shops, orders, revenue)
-        const usersRes = await api.get("/users?page=1&pageSize=1");
-        const shopsRes = await api.get("/shops?page=1&pageSize=1");
-        const ordersRes = await api.get("/orders?page=1&pageSize=1");
+        const usersRes = await safeGet("/users?page=1&pageSize=1");
+        const shopsRes = await safeGet("/shops?page=1&pageSize=1");
+        const ordersRes = await safeGet("/orders/admin/all?page=1&limit=1");
 
         // Get all shops to compute country data
-        const allShopsRes = await api.get("/shops?pageSize=1000");
-        const allShops = allShopsRes.data?.shops || allShopsRes.data || [];
+        const allShopsRes = await safeGet("/shops?pageSize=1000");
+        const allShops = allShopsRes?.data?.shops || allShopsRes?.data || [];
 
         // Get all users to compute country data
-        const allUsersRes = await api.get("/users?pageSize=1000");
-        const allUsers = allUsersRes.data?.users || allUsersRes.data || [];
+        const allUsersRes = await safeGet("/users?pageSize=1000");
+        const allUsers = allUsersRes?.data?.users || allUsersRes?.data || [];
 
         setStats([
           {
             title: "Total Users",
-            value: usersRes.data?.meta?.totalCount ?? allUsers.length ?? "—",
+            value: usersRes?.data?.meta?.totalCount ?? allUsers.length ?? "—",
             change: "+0%",
             changeType: "positive",
             icon: Users,
@@ -142,7 +158,7 @@ export default function AdminDashboard() {
           },
           {
             title: "Active Shops",
-            value: shopsRes.data?.meta?.totalCount ?? allShops.length ?? "—",
+            value: shopsRes?.data?.meta?.totalCount ?? allShops.length ?? "—",
             change: "+0%",
             changeType: "positive",
             icon: Store,
@@ -150,7 +166,7 @@ export default function AdminDashboard() {
           },
           {
             title: "Total Orders",
-            value: ordersRes.data?.meta?.totalCount ?? "—",
+            value: ordersRes?.data?.meta?.totalCount ?? "—",
             change: "+0%",
             changeType: "positive",
             icon: ShoppingCart,
@@ -225,17 +241,17 @@ export default function AdminDashboard() {
         setCountryStats(countryData);
 
         // Fetch pending verifications
-        const verificationsRes = await api.get("/admin/verifications");
+        const verificationsRes = await safeGet("/admin/verifications");
         setPendingVerifications(
-          (verificationsRes.data?.requests || []).filter(
+          (verificationsRes?.data?.requests || []).filter(
             (v: any) => v.status === "PENDING",
           ),
         );
 
         // Fetch recent activity (use reports for now)
-        const reportsRes = await api.get("/admin/reports");
+        const reportsRes = await safeGet("/admin/reports");
         setRecentActivity(
-          (reportsRes.data?.reports || []).map((r: any) => ({
+          (reportsRes?.data?.reports || []).map((r: any) => ({
             id: r.id,
             type: r.type,
             message: r.reason,
@@ -269,11 +285,33 @@ export default function AdminDashboard() {
       <DashboardLayout>
         <div className="space-y-4 lg:space-y-6">
           {/* Page header */}
-          <div>
-            <h1 className="text-xl lg:text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-sm lg:text-base text-gray-500 dark:text-gray-400">
-              Welcome back! Here&apos;s what&apos;s happening on the platform.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h1 className="text-xl lg:text-2xl font-bold">Admin Dashboard</h1>
+              <p className="text-sm lg:text-base text-gray-500 dark:text-gray-400">
+                Welcome back! Here&apos;s what&apos;s happening on the platform.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
+                Display currency
+              </span>
+              <Select
+                value={selectedCurrency}
+                onValueChange={(v) => setCurrency(v as CurrencyCode)}
+              >
+                <SelectTrigger className="w-[120px]" aria-label="Display currency">
+                  <SelectValue placeholder="Currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(CURRENCY_SYMBOLS) as CurrencyCode[]).map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {CURRENCY_SYMBOLS[c]} {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Stats grid - Mobile: 2 cols, Desktop: 4 cols */}
@@ -405,7 +443,10 @@ export default function AdminDashboard() {
                         <div className="hidden sm:block">
                           <p className="text-lg font-bold text-purple-600">
                             {country.revenue > 0
-                              ? country.revenue.toLocaleString()
+                              ? formatWithConversion(country.revenue, {
+                                  fromCurrency: "NPR",
+                                  decimals: 0,
+                                })
                               : "—"}
                           </p>
                           <p className="text-xs text-muted-foreground">

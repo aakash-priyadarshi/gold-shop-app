@@ -260,14 +260,23 @@ export default function ShopDashboard() {
     const shopId = user.shop.id;
 
     setIsLoading(true);
-    Promise.all([
+    Promise.allSettled([
       shopsApi.getDashboard(),
       ordersApi.getShopOrders(shopId, { page: 1, pageSize: 3 }),
       rfqApi.getShopRequests({ page: 1, pageSize: 3 }),
       inventoryApi.getShopInventory(shopId, { lowStock: true, limit: 3 }),
       sellerSubscriptionsApi.getMySubscription().catch(() => ({ data: null })),
     ])
-      .then(([dashboardRes, ordersRes, rfqRes, lowStockRes, subscriptionRes]) => {
+      .then((results) => {
+        const [
+          dashboardRes,
+          ordersRes,
+          rfqRes,
+          lowStockRes,
+          subscriptionRes,
+        ] = results.map((r) =>
+          r.status === "fulfilled" ? r.value : { data: null },
+        ) as any[];
         const dash = dashboardRes.data?.stats || dashboardRes.data || {};
         setStats([
             {

@@ -9,6 +9,21 @@ import { roundMoney, sumMoney } from "../../common/utils/money";
 import { PlanLimitsService } from "../subscriptions/plan-limits.service";
 import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
 
+// Map a shop's registered country to its default display/billing currency.
+// Used so invoices are not blindly defaulted to NPR when no currency is supplied.
+const COUNTRY_TO_CURRENCY: Record<string, string> = {
+  NP: "NPR",
+  IN: "INR",
+  AE: "AED",
+  US: "USD",
+  GB: "GBP",
+  UK: "GBP",
+  EU: "EUR",
+  DE: "EUR",
+  FR: "EUR",
+  IT: "EUR",
+};
+
 @Injectable()
 export class InvoicesService {
   constructor(
@@ -56,6 +71,16 @@ export class InvoicesService {
     const discountAmount = roundMoney(dto.discountAmount || 0);
     const totalAmount = roundMoney(subtotal + taxAmount - discountAmount);
 
+    // Resolve currency: explicit DTO value → shop's country default → NPR (home market).
+    let currency = dto.currency;
+    if (!currency) {
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { country: true },
+      });
+      currency = COUNTRY_TO_CURRENCY[shop?.country || ""] || "NPR";
+    }
+
     const invoice = await this.prisma.invoice.create({
       data: {
         invoiceNumber,
@@ -75,7 +100,7 @@ export class InvoicesService {
         totalAmount,
         paidAmount: 0,
         balanceDue: totalAmount,
-        currency: dto.currency || "NPR",
+        currency,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
         notes: dto.notes || null,
         terms: dto.terms || null,
