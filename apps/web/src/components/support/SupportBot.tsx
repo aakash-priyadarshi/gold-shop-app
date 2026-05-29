@@ -20,7 +20,7 @@ import { useFeatures } from "@/hooks/useFeatures";
 import { api } from "@/lib/api";
 import { OPEN_SUPPORT_CHAT_EVENT, useHelpUIStore } from "@/store/help-ui";
 import { usePreferencesStore } from "@/store/preferences";
-import { Mail, MessageCircle, Phone, Send, Sparkles, X } from "lucide-react";
+import { Mail, MessageCircle, Pencil, Phone, Send, Sparkles, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -79,22 +79,27 @@ const WELCOME_MSG_PUBLIC: Message = {
   text: "Hi 👋 <T>I'm the Orivraa AI assistant. Ask me about pricing, features, GST, offline POS, hallmarking \u2014 or just say 'talk to a human' and I'll connect you to our founder.</T>",
 };
 
-function makeSellerWelcome(shopName?: string, firstName?: string): Message {
-  const nameStr = firstName && shopName 
-    ? `${firstName} from ${shopName}` 
-    : firstName 
-    ? firstName 
-    : shopName 
-    ? shopName 
-    : "";
+/** Default display name shown before the user gives the assistant a custom name. */
+const DEFAULT_BOT_NAME_DESKTOP = "Orivraa AI Assistant";
+const DEFAULT_BOT_NAME_MOBILE = "Orivraa Mobile Assistant";
+
+function makePublicWelcome(botName?: string, userName?: string): Message {
+  const who = userName ? `, ${userName}` : "";
+  const intro = botName
+    ? `I'm ${botName}, your Orivraa AI assistant.`
+    : "I'm the Orivraa AI assistant.";
   return {
     id: "welcome",
     from: "bot",
-    text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} <T>I can see your shop\u2019s live data \u2014 ask me about this month\u2019s sales, pending invoices, tax audit status, or how to use any feature.</T>`,
+    text: `Hi${who} 👋 <T>${intro} Ask me about pricing, features, GST, offline POS, hallmarking \u2014 or just say 'talk to a human' and I'll connect you to our founder.</T>`,
   };
 }
 
-function makeMobileWelcome(shopName?: string, firstName?: string): Message {
+function botIntro(botName?: string, fallback = "I"): string {
+  return botName ? `I'm ${botName} and I` : fallback;
+}
+
+function makeSellerWelcome(shopName?: string, firstName?: string, botName?: string): Message {
   const nameStr = firstName && shopName 
     ? `${firstName} from ${shopName}` 
     : firstName 
@@ -105,7 +110,23 @@ function makeMobileWelcome(shopName?: string, firstName?: string): Message {
   return {
     id: "welcome",
     from: "bot",
-    text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} <T>I\u2019m your mobile POS assistant. Ask me how to bill a customer, share a quote on WhatsApp, download your tax report, log a repair, or manage savings schemes.</T>`,
+    text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} <T>${botIntro(botName)} can see your shop\u2019s live data \u2014 ask me about this month\u2019s sales, your last sale, tax you\u2019ve collected this year, pending invoices, or how to use any feature.</T>`,
+  };
+}
+
+function makeMobileWelcome(shopName?: string, firstName?: string, botName?: string): Message {
+  const nameStr = firstName && shopName 
+    ? `${firstName} from ${shopName}` 
+    : firstName 
+    ? firstName 
+    : shopName 
+    ? shopName 
+    : "";
+  const intro = botName ? `I\u2019m ${botName}, your mobile POS assistant.` : "I\u2019m your mobile POS assistant.";
+  return {
+    id: "welcome",
+    from: "bot",
+    text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} <T>${intro} Ask me how to bill a customer, share a quote on WhatsApp, download your tax report, log a repair, or manage savings schemes.</T>`,
   };
 }
 
@@ -142,6 +163,9 @@ const STORAGE_MSGS = "orivraa_chat_messages";
 const STORAGE_OPEN = "orivraa_chat_open";
 const STORAGE_SESSION_ID = "orivraa_chat_session_id";
 const STORAGE_LAUNCHER_POS = "orivraa_chat_launcher_pos";
+// Persisted across sessions (localStorage) so the assistant "remembers" them.
+const STORAGE_BOT_NAME = "orivraa_bot_name";
+const STORAGE_USER_NAME = "orivraa_user_name";
 
 function readSession<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -150,6 +174,26 @@ function readSession<T>(key: string, fallback: T): T {
     return raw !== null ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
+  }
+}
+
+/** Read a plain string from localStorage (persists across browser sessions). */
+function readLocalString(key: string, fallback = ""): string {
+  if (typeof window === "undefined") return fallback;
+  try {
+    return localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeLocalString(key: string, value: string) {
+  if (typeof window === "undefined") return;
+  try {
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } catch {
+    /* ignore quota / privacy mode */
   }
 }
 
@@ -257,6 +301,15 @@ export function SupportBot() {
   );
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // User-chosen assistant name + how the user likes to be addressed (persisted).
+  const [botName, setBotName] = useState<string>(() => readLocalString(STORAGE_BOT_NAME));
+  const [guestName, setGuestName] = useState<string>(() => readLocalString(STORAGE_USER_NAME));
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameDraft, setRenameDraft] = useState("");
+  // For logged-in sellers we already know their name; guests use the saved one.
+  const userDisplayName = user?.firstName || guestName || undefined;
+  const headerTitle = botName || (isMobile ? DEFAULT_BOT_NAME_MOBILE : DEFAULT_BOT_NAME_DESKTOP);
   
   const { isChatDismissed, dismissChat, isChatShaking } = useHelpUIStore();
   const dashboardMode = usePreferencesStore((s) => s.dashboardMode);
@@ -485,11 +538,41 @@ export function SupportBot() {
         if (!isVerified) {
           return [makeUnverifiedWelcome(shopName, daysLeft, isWithinSandbox, user?.firstName)];
         }
-        return [isMobile ? makeMobileWelcome(shopName, user?.firstName) : makeSellerWelcome(shopName, user?.firstName)];
+        return [isMobile ? makeMobileWelcome(shopName, user?.firstName, botName) : makeSellerWelcome(shopName, user?.firstName, botName)];
       }
       return prev;
     });
-  }, [isSellerLoggedIn, shopName, isMobile, isVerified, daysLeft, isWithinSandbox, user?.firstName]);
+  }, [isSellerLoggedIn, shopName, isMobile, isVerified, daysLeft, isWithinSandbox, user?.firstName, botName]);
+
+  // Personalise the public welcome with the assistant's chosen name + visitor name
+  useEffect(() => {
+    if (isSellerLoggedIn) return;
+    if (!botName && !guestName) return;
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].id === "welcome") {
+        return [makePublicWelcome(botName, guestName)];
+      }
+      return prev;
+    });
+  }, [isSellerLoggedIn, botName, guestName]);
+
+  /** Persist the assistant's new name and confirm it warmly in-chat. */
+  const commitRename = useCallback(() => {
+    const next = renameDraft.trim().slice(0, 40);
+    setIsRenaming(false);
+    if (!next || next === botName) return;
+    setBotName(next);
+    writeLocalString(STORAGE_BOT_NAME, next);
+    setMessages((m) => [
+      ...m,
+      {
+        id: `${Date.now()}-b`,
+        from: "bot",
+        text: `Love it \u2014 you can call me ${next} from now on! 💛 How can I help?`,
+      },
+    ]);
+  }, [renameDraft, botName]);
+
 
   // Persist conversation and open state across navigations / open-close
   useEffect(() => {
@@ -513,6 +596,19 @@ export function SupportBot() {
     setInput("");
     setIsTyping(true);
 
+    // Remember a guest's name if they introduce themselves ("my name is X",
+    // "I'm X", "call me X"). Logged-in sellers already have a known name.
+    let effectiveUserName = userDisplayName;
+    if (!isSellerLoggedIn) {
+      const nameMatch = text.match(/\b(?:my name is|i am|i'm|im|call me)\s+([a-z][a-z .'-]{1,38})/i);
+      const captured = nameMatch?.[1]?.trim().replace(/[.'\s-]+$/, "");
+      if (captured && captured.toLowerCase() !== (guestName || "").toLowerCase()) {
+        setGuestName(captured);
+        writeLocalString(STORAGE_USER_NAME, captured);
+        effectiveUserName = captured;
+      }
+    }
+
     // Build history from current messages (exclude welcome, map to API shape)
     const history = messages
       .filter((m) => m.id !== "welcome")
@@ -531,6 +627,8 @@ export function SupportBot() {
           sessionId: getOrCreateSessionId(), 
           currentPath: pathname, 
           dashboardMode,
+          botName: botName || undefined,
+          userName: effectiveUserName || undefined,
           // Enrich chatbot request with comprehensive live user and plan context:
           userContext: {
             isSellerLoggedIn,
@@ -1097,9 +1195,42 @@ export function SupportBot() {
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight">
-                {isMobile ? "Orivraa Mobile Assistant" : "Orivraa AI Assistant"}
-              </p>
+              {isRenaming ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    autoFocus
+                    value={renameDraft}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitRename();
+                      if (e.key === "Escape") setIsRenaming(false);
+                    }}
+                    onBlur={commitRename}
+                    maxLength={40}
+                    placeholder="Name your assistant…"
+                    aria-label="Assistant name"
+                    className="w-full bg-white/20 placeholder-white/70 text-white text-sm font-semibold rounded px-2 py-0.5 outline-none focus:bg-white/30"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-semibold leading-tight truncate">
+                    {headerTitle}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRenameDraft(botName);
+                      setIsRenaming(true);
+                    }}
+                    title="Name your assistant"
+                    aria-label="Name your assistant"
+                    className="opacity-70 hover:opacity-100 transition-opacity flex-shrink-0"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
               <p className="text-[11px] opacity-90 leading-tight">
                 {isMobile
                   ? "POS · Quotes · Repairs · Savings"

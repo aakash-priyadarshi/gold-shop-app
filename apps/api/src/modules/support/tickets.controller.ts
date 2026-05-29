@@ -55,6 +55,8 @@ export class TicketsController {
       message: string;
       sessionId?: string;
       history?: Array<{ role: "user" | "assistant"; content: string }>;
+      botName?: string;
+      userName?: string;
     },
   ) {
     const userAgent = req.headers?.["user-agent"] as string | undefined;
@@ -64,6 +66,7 @@ export class TicketsController {
       req.ip,
       body.sessionId,
       userAgent,
+      { botName: body.botName, userName: body.userName },
     );
   }
 
@@ -84,6 +87,7 @@ export class TicketsController {
       currentPath?: string;
       dashboardMode?: string;
       history?: Array<{ role: "user" | "assistant"; content: string }>;
+      botName?: string;
     },
   ) {
     return this.aiChatbot.sellerChat(
@@ -96,6 +100,7 @@ export class TicketsController {
       req.headers?.["user-agent"] as string | undefined,
       body.currentPath,
       body.dashboardMode,
+      body.botName,
     );
   }
 
