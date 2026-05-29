@@ -350,6 +350,12 @@ const navItems: NavItem[] = [
         roles: ["ADMIN"],
       },
       {
+        label: "Metal Prices",
+        href: "/dashboard/admin/metal-prices",
+        icon: Coins,
+        roles: ["ADMIN"],
+      },
+      {
         label: "SMS Test",
         href: "/dashboard/admin/sms-test",
         icon: MessageSquare,

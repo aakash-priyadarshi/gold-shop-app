@@ -22,10 +22,13 @@ const INR_NPR_RATIO_MAX = 1.8;
 
 // Default FX rates (fallback when API unavailable)
 // CRITICAL: These must be accurate to prevent pricing bugs
+const FALLBACK_USD_TO_INR = 83.5; // As of Jan 2026
+const FALLBACK_USD_TO_NPR = 133.5; // NPR is pegged to INR
 const DEFAULT_FX_RATES: FxRates = {
-  usdToINR: 83.5, // As of Jan 2026
-  usdToNPR: 133.5, // NPR is pegged to INR at ~1.6
-  inrToNPR: 1.6, // INR to NPR exchange rate
+  usdToINR: FALLBACK_USD_TO_INR,
+  usdToNPR: FALLBACK_USD_TO_NPR,
+  // Derive INR→NPR from the two USD legs instead of hardcoding a magic ratio.
+  inrToNPR: FALLBACK_USD_TO_NPR / FALLBACK_USD_TO_INR,
   source: "fallback",
   updatedAt: new Date().toISOString(),
 };

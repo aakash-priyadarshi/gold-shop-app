@@ -1,12 +1,14 @@
-import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { MarketRatesService } from './market-rates.service';
 import { GetMarketRatesDto } from './dto/get-market-rates.dto';
-import { MarketRatesResponse, SupportedCountry, SupportedCurrency, MarketRegion } from './types';
+import { UpdateFetchIntervalDto } from './dto/update-fetch-interval.dto';
+import { MarketRatesResponse, SupportedCurrency, MarketRegion } from './types';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { CURRENCY_TO_DEFAULT_REGION, COUNTRY_CURRENCIES, REGION_TO_DEFAULT_CURRENCY } from './country-adjustments';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { REGION_TO_DEFAULT_CURRENCY } from './country-adjustments';
 import { CacheTTL } from '../../common';
 import { SkipSecurity } from '../security/security.guard';
 
@@ -163,6 +165,59 @@ export class MarketRatesController {
     const currency = (query.currency || 'NPR') as SupportedCurrency;
     const region = query.region as MarketRegion | undefined;
     return this.marketRatesService.forceRefresh(currency, region);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // ADMIN: METAL-PRICE FETCH MONITORING & CONTROL
+  // ═══════════════════════════════════════════════════════════════
+
+  @Get('admin/metal-price-monitor')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Metal-price fetch monitor (admin)',
+    description:
+      'Returns the configured fetch interval, last/next fetch time, monthly quota usage, latest spot prices and recent fetch attempts.',
+  })
+  @ApiResponse({ status: 200, description: 'Metal-price monitoring snapshot' })
+  async getMetalPriceMonitor() {
+    return this.marketRatesService.getMetalPriceMonitor();
+  }
+
+  @Put('admin/metal-price-interval')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Update metal-price fetch interval (admin)',
+    description:
+      'Sets how often the external metal-price API may be called (in seconds). ' +
+      'Supports any granularity from per-second (1) to per-month. Reschedules immediately.',
+  })
+  @ApiResponse({ status: 200, description: 'Updated fetch interval' })
+  async updateFetchInterval(
+    @Body() dto: UpdateFetchIntervalDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.marketRatesService.updateFetchInterval(
+      dto.fetchIntervalSeconds,
+      userId,
+    );
+  }
+
+  @Post('admin/metal-price-refresh')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Force a metal-price refresh now (admin)',
+    description:
+      'Triggers ONE external API fetch immediately (bypassing the throttle), recomputes all regional rates and returns the updated monitor.',
+  })
+  @ApiResponse({ status: 200, description: 'Refreshed monitor snapshot' })
+  async manualRefreshMetalPrices() {
+    return this.marketRatesService.manualRefreshMetalPrices();
   }
 
   @Get('status')

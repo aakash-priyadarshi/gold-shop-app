@@ -1098,6 +1098,57 @@ model GoldPriceHistory {
   @@index([createdAt])
 }
 
+/// Raw USD-per-troy-ounce spot prices fetched from the external metal-price
+/// provider. This is the SINGLE SOURCE OF TRUTH: the external API is called at
+/// most once per configured interval, the result is stored here, and every
+/// region/currency rate is computed locally from the latest row. Keeps a short
+/// history so the admin monitor can show recent fetches.
+model MetalSpotSnapshot {
+  id                String   @id @default(uuid())
+  goldUsdOz         Float
+  silverUsdOz       Float
+  platinumUsdOz     Float
+  palladiumUsdOz    Float
+  /// Provider-reported timestamp for the quote (ISO).
+  providerTimestamp DateTime
+  /// "metalpriceapi" | "fallback"
+  source            String
+  /// What triggered this fetch: "cron" | "startup" | "manual" | "on-demand"
+  trigger           String   @default("cron")
+  fetchedAt         DateTime @default(now())
+
+  @@index([fetchedAt])
+}
+
+/// Singleton configuration row controlling how often the external metal-price
+/// API may be called. Admin-editable from the monitoring dashboard.
+model MetalPriceConfig {
+  /// Always the literal "singleton" — enforces a single config row.
+  id                   String   @id @default("singleton")
+  /// Minimum seconds between external API fetches (default: 86400 = 1 day).
+  fetchIntervalSeconds Int      @default(86400)
+  updatedAt            DateTime @updatedAt
+  updatedBy            String?
+}
+
+/// Audit log of every external metal-price fetch attempt (success or failure).
+/// Powers the admin monitor: quota usage, last/next fetch, recent errors.
+model MetalPriceFetchLog {
+  id           String   @id @default(uuid())
+  success      Boolean
+  /// "metalpriceapi" | "fallback"
+  source       String
+  /// "cron" | "startup" | "manual" | "on-demand"
+  trigger      String
+  goldUsdOz    Float?
+  silverUsdOz  Float?
+  errorMessage String?
+  fetchedAt    DateTime @default(now())
+
+  @@index([fetchedAt])
+}
+
+
 model FxRateSnapshot {
   id        String   @id @default(uuid())
   pair      String   @unique
