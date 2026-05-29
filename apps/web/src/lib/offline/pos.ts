@@ -22,7 +22,7 @@ export async function createSale(
 
   const clientId = await enqueue({
     entity: "sale",
-    method: "POST",
+    method: "post",
     endpoint: "/pos/sale",
     body: {
       ...payload,

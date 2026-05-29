@@ -6,7 +6,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { getDB } from "@/lib/offline/db";
+import { getDB, type LocalSavingsMember } from "@/lib/offline/db";
 import {
   enrollMember,
   recordPayment as recordPaymentOffline,
@@ -367,7 +367,7 @@ export default function SavingsPage() {
     () =>
       shopId
         ? getDB().savingsMembers.where("shopId").equals(shopId).reverse().sortBy("id")
-        : Promise.resolve([]),
+        : Promise.resolve([] as LocalSavingsMember[]),
     [shopId],
   ) ?? []) as SavingsMember[];
 

@@ -6,7 +6,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { getDB } from "@/lib/offline/db";
+import { getDB, type LocalRepair } from "@/lib/offline/db";
 import {
   createRepair,
   refreshRepairs,
@@ -328,7 +328,7 @@ export default function RepairsPage() {
             .equals(shopId)
             .reverse()
             .sortBy("createdAt")
-        : Promise.resolve([]),
+        : Promise.resolve([] as LocalRepair[]),
     [shopId],
   ) ?? []) as RepairJob[];
 
