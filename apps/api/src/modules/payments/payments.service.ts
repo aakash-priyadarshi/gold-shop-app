@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentStatus, OrderStatus } from '@prisma/client';
@@ -572,59 +573,145 @@ export class PaymentsService {
     };
   }
 
-  // Verify Stripe webhook signature and payment
+  // Verify Stripe payment by retrieving the PaymentIntent from the Stripe API.
+  // Uses the REST endpoint directly (no SDK dependency). Fails closed if the
+  // secret key is not configured in production.
   private async verifyStripePayment(
-    _paymentIntentId: string,
+    paymentIntentId: string,
     _signature?: string,
   ): Promise<boolean> {
-    // In production:
-    // import Stripe from 'stripe';
-    // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    // const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    // return paymentIntent.status === 'succeeded';
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      return this.missingSecretResult('Stripe', 'STRIPE_SECRET_KEY');
+    }
+    if (!paymentIntentId) {
+      this.logger.warn('[Stripe] verification called without a PaymentIntent id');
+      return false;
+    }
 
-    return this.stubVerifyResult('Stripe');
+    try {
+      const res = await fetch(
+        `https://api.stripe.com/v1/payment_intents/${encodeURIComponent(
+          paymentIntentId,
+        )}`,
+        { headers: { Authorization: `Bearer ${secretKey}` } },
+      );
+      if (!res.ok) {
+        this.logger.error(
+          `[Stripe] PaymentIntent retrieve failed: HTTP ${res.status}`,
+        );
+        return false;
+      }
+      const intent = await res.json();
+      return intent?.status === 'succeeded';
+    } catch (error) {
+      this.logger.error(`[Stripe] verification error: ${error.message}`);
+      return false;
+    }
   }
 
+  // Verify a Razorpay payment signature. Razorpay signs `orderId|paymentId`
+  // with HMAC-SHA256 using the key secret; we recompute and timing-safe compare.
   private async verifyRazorpayPayment(
-    _orderId: string,
-    _paymentId: string,
-    _signature: string,
+    orderId: string,
+    paymentId: string,
+    signature: string,
   ): Promise<boolean> {
-    // TODO: Implement Razorpay signature verification
-    // const crypto = require('crypto');
-    // const generated_signature = crypto.createHmac('sha256', key_secret)
-    //   .update(orderId + '|' + paymentId)
-    //   .digest('hex');
-    // return generated_signature === signature;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) {
+      return this.missingSecretResult('Razorpay', 'RAZORPAY_KEY_SECRET');
+    }
+    if (!orderId || !paymentId || !signature) {
+      this.logger.warn('[Razorpay] verification called with missing fields');
+      return false;
+    }
 
-    return this.stubVerifyResult('Razorpay');
+    const expected = crypto
+      .createHmac('sha256', keySecret)
+      .update(`${orderId}|${paymentId}`)
+      .digest('hex');
+
+    return this.timingSafeEqualHex(expected, signature);
   }
 
+  // Verify a Khalti ePayment by calling the lookup API with the pidx. The
+  // gatewayPaymentId is expected to carry the Khalti `pidx`.
   private async verifyEsewaPayment(_paymentId: string): Promise<boolean> {
-    // TODO: Implement eSewa verification
-    return this.stubVerifyResult('eSewa');
+    // eSewa ePay v2 status verification requires the full transaction context
+    // (product_code, total_amount, transaction_uuid) which is not available on
+    // this manual-verify path — it is handled by the dedicated payment-gateway
+    // module's signed callback. Fail closed here in production.
+    if (!process.env.ESEWA_SECRET_KEY) {
+      return this.missingSecretResult('eSewa', 'ESEWA_SECRET_KEY');
+    }
+    this.logger.error(
+      '[eSewa] manual verification is not supported on this path; use the payment-gateway callback',
+    );
+    return process.env.NODE_ENV !== 'production';
   }
 
-  private async verifyKhaltiPayment(_paymentId: string): Promise<boolean> {
-    // TODO: Implement Khalti verification
-    return this.stubVerifyResult('Khalti');
+  private async verifyKhaltiPayment(pidx: string): Promise<boolean> {
+    const secretKey = process.env.KHALTI_SECRET_KEY;
+    if (!secretKey) {
+      return this.missingSecretResult('Khalti', 'KHALTI_SECRET_KEY');
+    }
+    if (!pidx) {
+      this.logger.warn('[Khalti] verification called without a pidx');
+      return false;
+    }
+
+    const baseUrl =
+      process.env.KHALTI_BASE_URL || 'https://khalti.com/api/v2';
+    try {
+      const res = await fetch(`${baseUrl}/epayment/lookup/`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Key ${secretKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pidx }),
+      });
+      if (!res.ok) {
+        this.logger.error(`[Khalti] lookup failed: HTTP ${res.status}`);
+        return false;
+      }
+      const data = await res.json();
+      return data?.status === 'Completed';
+    } catch (error) {
+      this.logger.error(`[Khalti] verification error: ${error.message}`);
+      return false;
+    }
   }
 
   /**
-   * Stub gateway verification result. These verifiers are not yet wired to the
-   * real gateway SDKs. To avoid accepting forged payments, they FAIL CLOSED in
-   * production (return false) and only return true in non-production so the
-   * local/dev checkout flow keeps working. The production payment path is the
-   * dedicated payment-gateway module, which performs real signature checks.
+   * Constant-time comparison of two hex-encoded strings. Returns false if the
+   * lengths differ (which also guards against crypto.timingSafeEqual throwing
+   * on unequal buffer lengths).
    */
-  private stubVerifyResult(gateway: string): boolean {
+  private timingSafeEqualHex(a: string, b: string): boolean {
+    const bufA = Buffer.from(a, 'hex');
+    const bufB = Buffer.from(b, 'hex');
+    if (bufA.length !== bufB.length || bufA.length === 0) {
+      return false;
+    }
+    return crypto.timingSafeEqual(bufA, bufB);
+  }
+
+  /**
+   * Result when a gateway secret is not configured. Fails CLOSED in production
+   * (a missing secret must never auto-approve a payment) and allows in
+   * non-production so local/dev checkout flows keep working.
+   */
+  private missingSecretResult(gateway: string, envVar: string): boolean {
     if (process.env.NODE_ENV === 'production') {
       this.logger.error(
-        `[${gateway}] payment verification is not implemented; refusing to confirm payment in production`,
+        `[${gateway}] ${envVar} is not configured; refusing to confirm payment in production`,
       );
       return false;
     }
+    this.logger.warn(
+      `[${gateway}] ${envVar} not set; allowing in non-production only`,
+    );
     return true;
   }
 }

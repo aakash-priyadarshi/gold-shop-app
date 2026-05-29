@@ -34,6 +34,7 @@ export class CataloguePublicController {
   }
 
   @Post(":slug/unlock")
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: "Unlock a password-protected catalogue" })
   async unlock(@Param("slug") slug: string, @Body() dto: UnlockCatalogueDto) {
     return this.catalogueService.unlockCatalogue(slug, dto.password);

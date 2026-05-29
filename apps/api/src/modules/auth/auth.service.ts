@@ -498,6 +498,17 @@ export class AuthService {
       const isCustomerEnabled =
         await this.platformConfigService.isCustomerFlowEnabled();
       if (!isCustomerEnabled) {
+        // Record the blocked attempt so we can detect consumers trying to get
+        // in during the B2B-only phase.
+        await this.auditService.log({
+          userId: user.id,
+          actorType: "USER",
+          action: "LOGIN_BLOCKED_CUSTOMER_FLOW_DISABLED",
+          resourceType: "USER",
+          resourceId: user.id,
+          ipAddress,
+          userAgent,
+        });
         throw new ForbiddenException({
           message: "Customer accounts are currently disabled.",
           code: "CUSTOMER_FLOW_DISABLED",

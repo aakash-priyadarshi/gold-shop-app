@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { CONSUMER_TOP_SEGMENT_SET } from "@/lib/constants/consumer-routes";
 
 // Top-level paths that have a dedicated mobile (`/m/*`) version.
 // Anything not in this set falls through to the regular (desktop) page on the
@@ -24,17 +25,6 @@ const MOBILE_TOP_SEGMENTS = new Set([
   "purity",     // Gold Purity Calculator
 ]);
 
-// Top-level segments that make up the B2C consumer surface. These are gated by
-// <CustomerFlowGuard> at the page level; the middleware additionally redirects
-// them when the consumer flow is disabled (see B2C lockout block below).
-const CONSUMER_TOP_SEGMENTS = new Set([
-  "cart",
-  "checkout",
-  "designs",
-  "shops",
-  "shop",
-]);
-
 function mapToSupportedMarket(countryCode: string): string {
   const country = countryCode.toUpperCase();
   if (["NP", "IN", "US", "UK", "EU", "AE"].includes(country)) return country;
@@ -51,6 +41,40 @@ function mapToSupportedMarket(countryCode: string): string {
   if (middleEastCountries.has(country)) return "AE";
 
   return "US";
+}
+
+/**
+ * Resolve the B2C consumer-flow flag for the edge.
+ *
+ * Order: explicit cookie ("1"/"0") wins; otherwise fall back to a CACHED fetch
+ * of the public platform-config (Next fetch cache, ~60s revalidate — not a
+ * per-request hit). Fails OPEN (returns true) on any error/timeout so a
+ * transient API hiccup never bounces legitimate traffic, and so crawlers get a
+ * correct server-side decision once the flow is enabled.
+ */
+async function resolveCustomerFlow(
+  cookieValue: string | undefined,
+): Promise<boolean> {
+  if (cookieValue === "1") return true;
+  if (cookieValue === "0") return false;
+
+  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const base = rawApiUrl.endsWith("/api") ? rawApiUrl : `${rawApiUrl}/api`;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 800);
+    const res = await fetch(`${base}/platform-config/public`, {
+      signal: controller.signal,
+      next: { revalidate: 60 },
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return true; // fail open
+    const json = await res.json();
+    return json?.data?.features?.customerFlowEnabled === true;
+  } catch {
+    return true; // fail open on timeout / network error
+  }
 }
 
 function isApprovedDomain(hostname: string): boolean {
@@ -330,7 +354,7 @@ function withGeoCookies(request: NextRequest, response: NextResponse) {
   return response;
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   // request.nextUrl.hostname is the most reliable source in Next.js edge middleware.
   // It reflects the actual custom domain Vercel matched (e.g. m.orivraa.com),
   // whereas x-forwarded-host can be an internal Vercel hostname.
@@ -355,15 +379,26 @@ export function middleware(request: NextRequest) {
   // ── B2C lockout (defense-in-depth) ─────────────────────────────────
   // While the consumer marketplace is globally disabled, redirect consumer
   // pages back to the seller-focused homepage so they never render. The API
-  // is the authoritative seal; this only avoids briefly painting B2C UI.
-  // Fail-OPEN on unknown (cookie absent) since the cookie lags the real flag
-  // until the client fetches platform-config; only an explicit "0" redirects.
-  const customerFlowCookie = request.cookies.get("orivraa_customer_flow")?.value;
-  if (customerFlowCookie === "0") {
+  // is the authoritative seal; this only avoids painting B2C UI.
+  //
+  // The flag is resolved from the cookie first; if unknown, a CACHED edge fetch
+  // of platform-config decides (fail-open). This removes the first-paint flash
+  // and lets crawlers get a correct server-side decision once enabled.
+  {
     const firstSeg = pathname.split("/")[1];
-    if (CONSUMER_TOP_SEGMENTS.has(firstSeg)) {
-      const homeUrl = new URL("/", request.url);
-      return withGeoCookies(request, NextResponse.redirect(homeUrl, 307));
+    if (CONSUMER_TOP_SEGMENT_SET.has(firstSeg)) {
+      const cookieValue = request.cookies.get("orivraa_customer_flow")?.value;
+      const flowOn = await resolveCustomerFlow(cookieValue);
+      if (!flowOn) {
+        const homeUrl = new URL("/", request.url);
+        const redirect = NextResponse.redirect(homeUrl, 307);
+        redirect.cookies.set("orivraa_customer_flow", "0", {
+          path: "/",
+          maxAge: 60,
+          sameSite: "lax",
+        });
+        return withGeoCookies(request, redirect);
+      }
     }
   }
 
