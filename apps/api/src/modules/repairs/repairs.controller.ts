@@ -11,12 +11,15 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
+import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import { CreateRepairDto, UpdateRepairStatusDto } from "./dto/repair.dto";
 import { RepairsService } from "./repairs.service";
 
 @ApiTags("repairs")
 @Controller("repairs")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureGateGuard)
+@RequireFeature("mobileRepairs")
 @ApiBearerAuth()
 export class RepairsController {
   constructor(private readonly repairsService: RepairsService) {}

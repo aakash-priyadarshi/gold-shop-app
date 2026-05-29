@@ -2750,7 +2750,7 @@ model SubscriptionPlan {
   annualPrice         Float?               // optional discounted annual price
 
   // ─── Resource Limits (null = unlimited) ─────────────────────────────
-  maxProducts         Int?                 // max inventory items per shop
+  maxProducts         Int?                 // max inventory items (products) per shop — ENFORCED by PlanLimitsService.checkProductLimit
   maxInvoicesPerMonth Int?                 // max invoices/bills per calendar month
   maxCatalogues       Int?                 // max catalogues per shop
   catalogueLimit      Int?                 // max items per single catalogue
@@ -2762,7 +2762,7 @@ model SubscriptionPlan {
   rolloverCap         Int                  @default(0)  // max credits that can roll over month-to-month
   extraCreditPrice    Float                @default(0)  // price per extra AI generation
   overageBehavior     OverageBehavior      @default(BLOCK) // what happens when credits run out
-  features            Json?                // { "crmAccess": "BASIC"|"FULL", "analyticsAccess": "NONE"|"BASIC"|"ADVANCED", "automatedQuotes": bool, "priorityListing": bool }
+  features            Json?                // Boolean feature flags keyed by feature id. A feature is ENABLED only when features[key] === true (missing key = blocked). Keys: invoicing, mobilePOS, mobileCatalogue, mobileRepairs, mobileSavings, karigarSupplyChain, lending, etc. See PlanLimitsService.FEATURE_LABELS for the authoritative list.
   isActive            Boolean              @default(true)
   sortOrder           Int                  @default(0)
 

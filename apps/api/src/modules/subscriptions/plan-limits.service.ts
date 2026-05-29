@@ -326,6 +326,7 @@ export class PlanLimitsService {
     taxReportsDownload: "Tax report downloads (CSV, XML, Tally)",
     taxCaShare: "CA/accountant share link",
     karigarSupplyChain: "Karigar & Bullion Supply Chain Tracker",
+    lending: "Gold Loan / Girvi (pawn) management",
   };
 
   /**
@@ -374,6 +375,7 @@ export class PlanLimitsService {
       staffAccounts: "CRM & Business",
       multiBranch: "CRM & Business",
       karigarSupplyChain: "CRM & Business",
+      lending: "CRM & Business",
       purchasableAiCredits: "AI & Intelligence",
       aiDesignGeneration: "AI & Intelligence",
       aiDesignVariations: "AI & Intelligence",

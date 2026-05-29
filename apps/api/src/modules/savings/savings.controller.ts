@@ -10,6 +10,8 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
+import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import {
   EnrollSavingsMemberDto,
   RecordSavingsPaymentDto,
@@ -18,7 +20,8 @@ import { SavingsService } from "./savings.service";
 
 @ApiTags("savings-schemes")
 @Controller("savings-schemes")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureGateGuard)
+@RequireFeature("mobileSavings")
 @ApiBearerAuth()
 export class SavingsController {
   constructor(private readonly savingsService: SavingsService) {}

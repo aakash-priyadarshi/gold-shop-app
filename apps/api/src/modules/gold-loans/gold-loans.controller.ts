@@ -11,6 +11,8 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
+import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import {
   CreateGoldLoanDto,
   UpdateGoldLoanStatusDto,
@@ -19,7 +21,8 @@ import { GoldLoansService } from "./gold-loans.service";
 
 @ApiTags("gold-loans")
 @Controller("gold-loans")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureGateGuard)
+@RequireFeature("lending")
 @ApiBearerAuth()
 export class GoldLoansController {
   constructor(private readonly goldLoansService: GoldLoansService) {}

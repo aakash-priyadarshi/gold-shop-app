@@ -45,7 +45,7 @@ async function main() {
     { monthly: number; annual: number; extraCredit: number }
   > = {
     NP: { monthly: 1999, annual: 19990, extraCredit: 50 },
-    IN: { monthly: 999, annual: 9990, extraCredit: 25 },
+    IN: { monthly: 299, annual: 2990, extraCredit: 25 },
     AE: { monthly: 99, annual: 990, extraCredit: 5 },
     UK: { monthly: 29, annual: 290, extraCredit: 1.5 },
     US: { monthly: 35, annual: 350, extraCredit: 2 },
@@ -57,7 +57,7 @@ async function main() {
     { monthly: number; annual: number; extraCredit: number }
   > = {
     NP: { monthly: 4999, annual: 49990, extraCredit: 30 },
-    IN: { monthly: 2499, annual: 24990, extraCredit: 15 },
+    IN: { monthly: 599, annual: 5990, extraCredit: 15 },
     AE: { monthly: 249, annual: 2490, extraCredit: 3 },
     UK: { monthly: 79, annual: 790, extraCredit: 1 },
     US: { monthly: 99, annual: 990, extraCredit: 1.2 },
@@ -92,6 +92,7 @@ async function main() {
         currency: CURRENCY_MAP[region] as any,
         monthlyPrice: 0,
         annualPrice: 0,
+        maxProducts: 20,
         catalogueLimit: 20,
         commissionPercent: 5.0,
         includesAi: false,
@@ -111,6 +112,8 @@ async function main() {
           taxReports: true,
           taxReportsDownload: false,
           taxCaShare: false,
+          karigarSupplyChain: false,
+          lending: false,
           // Mobile POS
           mobilePOS: true,
           mobileRateCard: true,
@@ -153,6 +156,7 @@ async function main() {
       taxReportsDownload: true,
       taxCaShare: false,
       karigarSupplyChain: true,
+      lending: true,
       // Mobile POS
       mobilePOS: true,
       mobileRateCard: true,
@@ -167,9 +171,7 @@ async function main() {
     };
     const plan = await prisma.subscriptionPlan.upsert({
       where: { name_country: { name: "PRO", country: region } },
-      update: {
-        features: featuresObj,
-      },
+      update: {},
       create: {
         name: "PRO",
         displayName: `Pro (${COUNTRY_NAMES[region]})`,
@@ -179,6 +181,7 @@ async function main() {
         currency: CURRENCY_MAP[region] as any,
         monthlyPrice: p.monthly,
         annualPrice: p.annual,
+        maxProducts: 200,
         catalogueLimit: 200,
         commissionPercent: 3.0,
         includesAi: false,
@@ -223,6 +226,7 @@ async function main() {
       taxReportsDownload: true,
       taxCaShare: true,
       karigarSupplyChain: true,
+      lending: true,
       // Mobile POS
       mobilePOS: true,
       mobileRateCard: true,
@@ -237,9 +241,7 @@ async function main() {
     };
     const plan = await prisma.subscriptionPlan.upsert({
       where: { name_country: { name: "PRO_PLUS", country: region } },
-      update: {
-        features: featuresObj,
-      },
+      update: {},
       create: {
         name: "PRO_PLUS",
         displayName: `Pro+ (${COUNTRY_NAMES[region]})`,
@@ -249,6 +251,7 @@ async function main() {
         currency: CURRENCY_MAP[region] as any,
         monthlyPrice: p.monthly,
         annualPrice: p.annual,
+        maxProducts: 1000,
         catalogueLimit: 1000,
         commissionPercent: 2.0,
         includesAi: true,
@@ -307,6 +310,7 @@ async function main() {
       taxReportsDownload: true,
       taxCaShare: true,
       karigarSupplyChain: true,
+      lending: true,
       // Mobile POS
       mobilePOS: true,
       mobileRateCard: true,
@@ -321,9 +325,7 @@ async function main() {
     };
     const plan = await prisma.subscriptionPlan.upsert({
       where: { name_country: { name: "ENTERPRISE", country: region } },
-      update: {
-        features: featuresObj,
-      },
+      update: {},
       create: {
         name: "ENTERPRISE",
         displayName: `Enterprise (${COUNTRY_NAMES[region]})`,

@@ -396,7 +396,7 @@ UAE/Dubai Market:
 - vs Zoho Inventory: No Arabic invoices, no FTA-specific VAT fields, no jewellery-specific inventory. Side-by-side: /compare/orivraa-vs-zoho-inventory
 
 UK Market:
-- vs Lightspeed: Popular UK retail POS but no jewellery features. Starts at £69+/mo vs Orivraa £9.99/mo. No hallmark fields (London, Birmingham, Sheffield, Edinburgh assay offices), no weight×purity pricing, no investment gold zero-rating. Side-by-side: /compare/orivraa-vs-lightspeed
+- vs Lightspeed: Popular UK retail POS but no jewellery features. Starts at £69+/mo vs Orivraa Pro £29/mo (£290/yr). No hallmark fields (London, Birmingham, Sheffield, Edinburgh assay offices), no weight×purity pricing, no investment gold zero-rating. Side-by-side: /compare/orivraa-vs-lightspeed
 - vs Zoho Inventory: No hallmark fields, no UK assay office support, no jewellery-specific inventory, treats diamonds as generic widgets. Side-by-side: /compare/orivraa-vs-zoho-inventory
 
 Manufacturing (Global):
