@@ -16,6 +16,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { IsNotEmpty, IsString } from "class-validator";
 import { PrismaService } from "../../prisma/prisma.service";
+import { AuditService } from "../audit/audit.service";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -49,6 +50,7 @@ export class UsersController {
   constructor(
     private usersService: UsersService,
     private prisma: PrismaService,
+    private auditService: AuditService,
   ) {}
 
   @Get("me")
@@ -211,8 +213,11 @@ export class UsersController {
   @Patch(":id/activate")
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: "Activate a user (Admin only)" })
-  async activateUser(@Param("id") id: string) {
-    return this.usersService.activateUser(id);
+  async activateUser(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+  ) {
+    return this.usersService.activateUser(id, adminId);
   }
 
   @Get(":id/details")
@@ -453,6 +458,7 @@ export class UsersController {
   @ApiOperation({ summary: "Update user details (Admin only)" })
   async adminUpdateUser(
     @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
     @Body()
     data: {
       email?: string;
@@ -530,6 +536,23 @@ export class UsersController {
         },
       });
 
+      await this.auditService.log({
+        userId: adminId,
+        actorType: "ADMIN",
+        action: "ADMIN_UPDATE_USER",
+        resourceType: "USER",
+        resourceId: id,
+        previousValue: {
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+          role: user.role,
+          status: user.status,
+        },
+        newValue: updateData,
+      });
+
       return { success: true, user: updated };
     } catch (error: any) {
       // Handle Prisma unique constraint violation
@@ -548,6 +571,7 @@ export class UsersController {
   })
   async adminSetPhoneVerified(
     @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
     @Body() data: { verified: boolean },
   ) {
     // Check if user exists
@@ -573,6 +597,18 @@ export class UsersController {
         role: true,
         status: true,
       },
+    });
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: data.verified
+        ? "ADMIN_PHONE_VERIFY_SET"
+        : "ADMIN_PHONE_VERIFY_CLEAR",
+      resourceType: "USER",
+      resourceId: id,
+      previousValue: { phoneVerified: !!user.phoneVerifiedAt },
+      newValue: { phoneVerified: !!updated.phoneVerifiedAt },
     });
 
     return {

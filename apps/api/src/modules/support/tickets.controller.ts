@@ -104,6 +104,41 @@ export class TicketsController {
     );
   }
 
+  // ─── Authenticated: Role-aware AI Chatbot (admin / customer / staff) ───
+  // Role is taken from the verified JWT (never from the request body) so it
+  // cannot be spoofed. Shopkeepers use /seller-chat instead.
+  @Post("assistant-chat")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN", "CUSTOMER", "SUPPORT", "SALES")
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Role-aware AI chatbot for authenticated non-seller users",
+  })
+  async assistantChat(
+    @Req() req: any,
+    @CurrentUser("role") role: string,
+    @CurrentUser("firstName") firstName: string | undefined,
+    @Body()
+    body: {
+      message: string;
+      sessionId?: string;
+      history?: Array<{ role: "user" | "assistant"; content: string }>;
+      botName?: string;
+      userName?: string;
+    },
+  ) {
+    const userAgent = req.headers?.["user-agent"] as string | undefined;
+    return this.aiChatbot.chat(
+      body.message,
+      body.history || [],
+      req.ip,
+      body.sessionId,
+      userAgent,
+      { botName: body.botName, userName: body.userName || firstName },
+      role,
+    );
+  }
+
   // ─── Admin: Bot conversation sessions list ───
   @Get("ai-chat/sessions")
   @UseGuards(JwtAuthGuard, RolesGuard)

@@ -705,9 +705,9 @@ export class AdminController {
     @Query("page") page?: string,
     @Query("limit") limit?: string,
   ) {
-    const pageNum = parseInt(page || "1");
+    const pageNum = Math.max(1, parseInt(page || "1") || 1);
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const limitNum = parseInt(limit || "25");
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit || "25") || 25));
     const skip = (pageNum - 1) * limitNum;
 
     // Fast Redis cache for suggestions (when querying small text)

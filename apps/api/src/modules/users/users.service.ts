@@ -7,6 +7,7 @@ import {
 import { UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../../prisma/prisma.service";
+import { AuditService } from "../audit/audit.service";
 
 // Currency codes matching the Prisma enum (CurrencyCode will be available after Prisma regeneration)
 type CurrencyCode = "NPR" | "INR" | "AED" | "USD" | "GBP" | "EUR";
@@ -30,7 +31,10 @@ interface UpdateProfileData {
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditService: AuditService,
+  ) {}
 
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
@@ -229,7 +233,7 @@ export class UsersService {
     };
   }
 
-  async suspendUser(userId: string, _adminId: string) {
+  async suspendUser(userId: string, adminId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -256,10 +260,28 @@ export class UsersService {
       });
     }
 
+    await this.auditService.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: "ADMIN_SUSPEND_USER",
+      resourceType: "USER",
+      resourceId: userId,
+      previousValue: { status: user.status },
+      newValue: { status: "SUSPENDED" },
+    });
+
     return updated;
   }
 
-  async activateUser(userId: string) {
+  async activateUser(userId: string, adminId: string) {
+    const existing = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException("User not found");
+    }
+
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { status: "ACTIVE" },
@@ -278,6 +300,16 @@ export class UsersService {
         status: "LOCKED",
       },
       data: { status: "ACTIVE" },
+    });
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: "ADMIN_ACTIVATE_USER",
+      resourceType: "USER",
+      resourceId: userId,
+      previousValue: { status: existing.status },
+      newValue: { status: "ACTIVE" },
     });
 
     return updated;

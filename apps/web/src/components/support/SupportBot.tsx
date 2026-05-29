@@ -65,6 +65,21 @@ const QUICK_ASKS_MOBILE = [
   "How do I enroll a customer in savings scheme?",
 ];
 
+const QUICK_ASKS_ADMIN = [
+  "Where do I see who's online now?",
+  "How do I suspend or change a user's role?",
+  "Where are the email templates and triggers?",
+  "How do I check system health?",
+  "Where is the audit log?",
+];
+
+const QUICK_ASKS_CUSTOMER = [
+  "How do I update my profile?",
+  "How do I reset my password?",
+  "How do I view my orders?",
+  "How do I contact support?",
+];
+
 const ESCALATION_CTA: { label: string; href: string }[] = [
   { label: `WhatsApp ${FOUNDER.phoneDisplay}`, href: `https://wa.me/${FOUNDER.phone.replace("+", "")}` },
   { label: "Email Aakash", href: `mailto:${FOUNDER.email}` },
@@ -97,6 +112,30 @@ function makePublicWelcome(botName?: string, userName?: string): Message {
 
 function botIntro(botName?: string, fallback = "I"): string {
   return botName ? `I'm ${botName} and I` : fallback;
+}
+
+function makeAdminWelcome(firstName?: string, botName?: string): Message {
+  const who = firstName ? `, ${firstName}` : "";
+  const intro = botName
+    ? `I'm ${botName}, your Orivraa ops co-pilot.`
+    : "I'm your Orivraa ops co-pilot.";
+  return {
+    id: "welcome",
+    from: "bot",
+    text: `Hi${who} 👋 <T>${intro} Ask me how to manage users, review activity & audit logs, check emails sent, monitor system health, or find any admin panel.</T>`,
+  };
+}
+
+function makeCustomerWelcome(firstName?: string, botName?: string): Message {
+  const who = firstName ? `, ${firstName}` : "";
+  const intro = botName
+    ? `I'm ${botName}, your Orivraa assistant.`
+    : "I'm your Orivraa assistant.";
+  return {
+    id: "welcome",
+    from: "bot",
+    text: `Hi${who} 👋 <T>${intro} I can help with your account, password, or any questions you have.</T>`,
+  };
 }
 
 function makeSellerWelcome(shopName?: string, firstName?: string, botName?: string): Message {
@@ -273,6 +312,8 @@ export function SupportBot() {
   const { user } = useAuth();
   const { planName } = useFeatures();
   const isSellerLoggedIn = user?.role === "SHOPKEEPER";
+  const isAdmin = user?.role === "ADMIN";
+  const isCustomerLoggedIn = user?.role === "CUSTOMER";
   const isMobile = pathname.startsWith("/m/") || pathname === "/m";
   const shopName = user?.shop?.shopName ?? (user as { shopName?: string } | null)?.shopName;
   const isVerified = user?.shop?.isVerified ?? false;
@@ -331,7 +372,27 @@ export function SupportBot() {
     let animation: "none" | "spin" | "wave" | "bounce" | "excited" = "none";
 
     if (isDashboard) {
-      if (pathname.includes("supply-chain")) {
+      if (isAdmin) {
+        // Platform admins are never shown plan upsells — friendly ops nudges only.
+        const adminActions = [
+          { state: "crown" as const, text: "<T>Welcome back, Admin! Ask me where to find users, emails, health or audit logs. 🛡️</T>", animation: "excited" as const },
+          { state: "gold_bar" as const, text: "<T>Need to check who's online or review activity? I can point you to the right panel. 📊</T>", animation: "spin" as const },
+          { state: "diamond" as const, text: "<T>Managing the platform today? I'm your ops co-pilot. ⚙️</T>", animation: "bounce" as const },
+        ];
+        const action = adminActions[Math.floor(Math.random() * adminActions.length)];
+        text = action.text;
+        state = action.state;
+        animation = action.animation;
+      } else if (isCustomerLoggedIn) {
+        const customerActions = [
+          { state: "default" as const, text: "<T>Hi! Need help with your account or an order? Just ask. 💬</T>", animation: "wave" as const },
+          { state: "diamond" as const, text: "<T>I'm here if you have any questions. ✨</T>", animation: "bounce" as const },
+        ];
+        const action = customerActions[Math.floor(Math.random() * customerActions.length)];
+        text = action.text;
+        state = action.state;
+        animation = action.animation;
+      } else if (pathname.includes("supply-chain")) {
         text = "<T>Track your gold reserves, add custom metals, and check Karigar wastages with me! 🛠️</T>";
         state = "gold_bar";
         animation = "spin";
@@ -441,7 +502,7 @@ export function SupportBot() {
       setIsExcited(false);
       setCurrentAnimation("none");
     }, 6500);
-  }, [open, isDragging, pathname, isSellerLoggedIn, planName]);
+  }, [open, isDragging, pathname, isSellerLoggedIn, isAdmin, isCustomerLoggedIn, planName]);
 
   // Periodic Clippy-like interactions timer
   useEffect(() => {
@@ -528,6 +589,10 @@ export function SupportBot() {
     ? QUICK_ASKS_MOBILE
     : isSellerLoggedIn
     ? QUICK_ASKS_SELLER
+    : isAdmin
+    ? QUICK_ASKS_ADMIN
+    : isCustomerLoggedIn
+    ? QUICK_ASKS_CUSTOMER
     : QUICK_ASKS_PUBLIC;
 
   // Replace welcome message when seller auth resolves or mobile mode detected
@@ -547,14 +612,16 @@ export function SupportBot() {
   // Personalise the public welcome with the assistant's chosen name + visitor name
   useEffect(() => {
     if (isSellerLoggedIn) return;
-    if (!botName && !guestName) return;
     setMessages((prev) => {
       if (prev.length === 1 && prev[0].id === "welcome") {
+        if (isAdmin) return [makeAdminWelcome(user?.firstName, botName)];
+        if (isCustomerLoggedIn) return [makeCustomerWelcome(user?.firstName, botName)];
+        if (!botName && !guestName) return prev;
         return [makePublicWelcome(botName, guestName)];
       }
       return prev;
     });
-  }, [isSellerLoggedIn, botName, guestName]);
+  }, [isSellerLoggedIn, isAdmin, isCustomerLoggedIn, botName, guestName, user?.firstName]);
 
   /** Persist the assistant's new name and confirm it warmly in-chat. */
   const commitRename = useCallback(() => {
@@ -618,7 +685,11 @@ export function SupportBot() {
       }));
 
     try {
-      const endpoint = isSellerLoggedIn ? "/tickets/seller-chat" : "/tickets/ai-chat";
+      const endpoint = isSellerLoggedIn
+        ? "/tickets/seller-chat"
+        : user
+        ? "/tickets/assistant-chat"
+        : "/tickets/ai-chat";
       const res = await api.post<{ reply: string; shouldEscalate: boolean; confidence: number }>(
         endpoint,
         { 
