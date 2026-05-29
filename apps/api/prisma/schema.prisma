@@ -341,6 +341,9 @@ model Shop {
   profileImage            String?               // Shop profile picture URL
   coverImage              String?               // Shop cover/banner image URL
   country                 String                @default("NP")
+  // Billing/display currency for this shop. Backfilled from `country` on
+  // migration; falls back to NPR (home market) for unmapped countries.
+  currency                CurrencyCode          @default(NPR)
   state                   String?
   city                    String
   address                 String
@@ -2161,7 +2164,7 @@ model Invoice {
   totalAmount     Float    @default(0)
   paidAmount      Float    @default(0)
   balanceDue      Float    @default(0)
-  currency        String   @default("NPR")
+  currency        CurrencyCode @default(NPR)
 
   // Line items as JSON array
   // Each: { label, category, quantity, unitPrice, amount, details? }
