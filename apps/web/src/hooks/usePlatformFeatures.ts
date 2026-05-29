@@ -16,8 +16,20 @@ export const PLATFORM_FEATURES_KEY = ["platform-features"] as const;
 async function fetchFeatures(): Promise<PlatformFeatures> {
   const res = await platformConfigApi.getPublic();
   const features = res.data?.data?.features ?? {};
+  const customerFlowEnabled = features.customerFlowEnabled === true;
+
+  // Mirror the flag into a cookie so the edge middleware can fail-closed on
+  // consumer pages without a DB round-trip. Only an explicit "0" triggers an
+  // edge redirect; an absent cookie is treated as "unknown" (allow) since the
+  // API is the authoritative B2C seal.
+  if (typeof document !== "undefined") {
+    document.cookie = `orivraa_customer_flow=${
+      customerFlowEnabled ? "1" : "0"
+    }; path=/; max-age=300; samesite=lax`;
+  }
+
   return {
-    customerFlowEnabled: features.customerFlowEnabled === true,
+    customerFlowEnabled,
   };
 }
 

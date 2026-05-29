@@ -11,6 +11,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { RfqStatus, UserRole } from "@prisma/client";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
+import { CustomerFlowGuard } from "../auth/guards/customer-flow.guard";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { BroadcastRfqDto } from "./dto/broadcast-rfq.dto";
@@ -27,6 +28,7 @@ export class RfqController {
   constructor(private rfqService: RfqService) {}
 
   @Post()
+  @UseGuards(CustomerFlowGuard)
   @Roles(UserRole.CUSTOMER, UserRole.ADMIN)
   @ApiOperation({ summary: "Create a new RFQ (Request for Quote)" })
   async create(@CurrentUser("id") userId: string, @Body() dto: CreateRfqDto) {
@@ -34,6 +36,7 @@ export class RfqController {
   }
 
   @Get("my-requests")
+  @UseGuards(CustomerFlowGuard)
   @Roles(UserRole.CUSTOMER)
   @ApiOperation({ summary: "List all RFQs for current customer" })
   async findMyRequests(

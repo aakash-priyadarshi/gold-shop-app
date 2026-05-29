@@ -492,6 +492,19 @@ export class AuthService {
       throw new UnauthorizedException("Account deactivated");
     }
 
+    // B2C lockout: while the consumer flow is disabled, existing CUSTOMER
+    // accounts cannot authenticate (registration is already blocked elsewhere).
+    if (user.role === UserRole.CUSTOMER) {
+      const isCustomerEnabled =
+        await this.platformConfigService.isCustomerFlowEnabled();
+      if (!isCustomerEnabled) {
+        throw new ForbiddenException({
+          message: "Customer accounts are currently disabled.",
+          code: "CUSTOMER_FLOW_DISABLED",
+        });
+      }
+    }
+
     // Update last login
     await this.prisma.user.update({
       where: { id: user.id },

@@ -24,6 +24,17 @@ const MOBILE_TOP_SEGMENTS = new Set([
   "purity",     // Gold Purity Calculator
 ]);
 
+// Top-level segments that make up the B2C consumer surface. These are gated by
+// <CustomerFlowGuard> at the page level; the middleware additionally redirects
+// them when the consumer flow is disabled (see B2C lockout block below).
+const CONSUMER_TOP_SEGMENTS = new Set([
+  "cart",
+  "checkout",
+  "designs",
+  "shops",
+  "shop",
+]);
+
 function mapToSupportedMarket(countryCode: string): string {
   const country = countryCode.toUpperCase();
   if (["NP", "IN", "US", "UK", "EU", "AE"].includes(country)) return country;
@@ -339,6 +350,21 @@ export function middleware(request: NextRequest) {
     pathname.includes(".") // static files (favicon.ico, images, etc.)
   ) {
     return withGeoCookies(request, NextResponse.next());
+  }
+
+  // ── B2C lockout (defense-in-depth) ─────────────────────────────────
+  // While the consumer marketplace is globally disabled, redirect consumer
+  // pages back to the seller-focused homepage so they never render. The API
+  // is the authoritative seal; this only avoids briefly painting B2C UI.
+  // Fail-OPEN on unknown (cookie absent) since the cookie lags the real flag
+  // until the client fetches platform-config; only an explicit "0" redirects.
+  const customerFlowCookie = request.cookies.get("orivraa_customer_flow")?.value;
+  if (customerFlowCookie === "0") {
+    const firstSeg = pathname.split("/")[1];
+    if (CONSUMER_TOP_SEGMENTS.has(firstSeg)) {
+      const homeUrl = new URL("/", request.url);
+      return withGeoCookies(request, NextResponse.redirect(homeUrl, 307));
+    }
   }
 
   // Detect mobile subdomain: m.orivraa.com or m.localhost
