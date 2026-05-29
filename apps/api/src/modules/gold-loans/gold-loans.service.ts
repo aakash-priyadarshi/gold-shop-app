@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import {
@@ -20,7 +24,15 @@ export class GoldLoansService {
       const existing = await this.prisma.goldLoan.findUnique({
         where: { clientId: dto.clientId },
       });
-      if (existing && existing.shopId === shopId) return existing;
+      if (existing) {
+        // Idempotent replay for this shop returns the original record.
+        if (existing.shopId === shopId) return existing;
+        // A different shop already owns this clientId — never leak or
+        // overwrite another tenant's loan (and avoid a unique-constraint 500).
+        throw new ForbiddenException(
+          "This client reference belongs to another shop.",
+        );
+      }
     }
 
     const loanNumber = dto.loanNumber || (await this.nextLoanNumber(shopId));

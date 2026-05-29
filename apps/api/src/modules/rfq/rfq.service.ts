@@ -506,9 +506,6 @@ export class RfqService {
 
     // Access control
     const isCustomer = rfq.customerId === userId;
-    const isShopkeeper = rfq.targetedShops.some(
-      (t) => t.shopId === userId, // This would need shop lookup
-    );
     const isAdmin = userRole === "ADMIN";
     const isSupport = userRole === "SUPPORT";
 
@@ -909,6 +906,7 @@ export class RfqService {
       userRole !== "ADMIN" &&
       userRole !== "SUPPORT"
     ) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { customerPhone, ...safeWalkInMeta } = rfq.walkInMeta as any;
       return { ...rfq, walkInMeta: safeWalkInMeta };
     }

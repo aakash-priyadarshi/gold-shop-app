@@ -1404,8 +1404,8 @@ export class AdminController {
     @Query("type") type?: string,      // 'manual' | 'automated' | 'all'
     @Query("direction") direction?: string, // 'OUTBOUND' | 'INBOUND' | 'all'
   ) {
-    const limitNum = parseInt(limit || "50", 10);
-    const pageNum = parseInt(page || "1", 10);
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit || "50", 10) || 50));
+    const pageNum = Math.max(1, parseInt(page || "1", 10) || 1);
     const skip = (pageNum - 1) * limitNum;
 
     const where: Record<string, any> = {};
@@ -1414,8 +1414,8 @@ export class AdminController {
     } else if (type === "automated") {
       where.adminId = null;
     }
-    if (direction && direction !== "all") {
-      where.direction = direction;
+    if (direction && direction.toLowerCase() !== "all") {
+      where.direction = direction.toUpperCase();
     }
 
     const [emails, total] = await Promise.all([

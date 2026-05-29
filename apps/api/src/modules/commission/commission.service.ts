@@ -50,28 +50,19 @@ export class CommissionService {
     }
     const commissionAmount = order.totalNpr * commissionRate;
 
-    // Check if ledger entry already exists
-    const existing = await this.prisma.commissionLedger.findUnique({
+    // Atomic upsert keyed on the unique orderId. Two concurrent calls (e.g. a
+    // retried webhook) can no longer race between a findUnique check and a
+    // create that would otherwise hit the unique constraint or duplicate work.
+    return this.prisma.commissionLedger.upsert({
       where: { orderId },
-    });
-
-    if (existing) {
-      // Update existing entry
-      return this.prisma.commissionLedger.update({
-        where: { orderId },
-        data: {
-          orderTotal: order.totalNpr,
-          amount: commissionAmount,
-          status: "PENDING",
-          dueAt,
-          updatedAt: new Date(),
-        },
-      });
-    }
-
-    // Create new entry
-    return this.prisma.commissionLedger.create({
-      data: {
+      update: {
+        orderTotal: order.totalNpr,
+        amount: commissionAmount,
+        status: "PENDING",
+        dueAt,
+        updatedAt: new Date(),
+      },
+      create: {
         orderId,
         shopId: order.shopId,
         orderTotal: order.totalNpr,

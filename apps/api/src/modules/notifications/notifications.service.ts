@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { NotificationType, UserRole, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -145,6 +145,8 @@ const TEST_SCENARIOS: Record<
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(private prisma: PrismaService) {}
 
   getTestScenarios() {
@@ -179,10 +181,10 @@ export class NotificationsService {
     // - Push: Firebase Cloud Messaging
     // - WhatsApp: WhatsApp Business API
 
-    // For now, just log
-    console.log(`Notification created: ${dto.type} for user ${dto.userId}`);
-    console.log(`Title: ${dto.titleKey}, Body: ${dto.bodyKey}`);
-    console.log(`Channels: ${dto.channels.join(', ')}`);
+    // For now, just log (debug-level so user metadata is not emitted in prod).
+    this.logger.debug(
+      `Notification created: ${dto.type} for user ${dto.userId} (channels: ${dto.channels.join(', ')})`,
+    );
 
     return notification;
   }
