@@ -19,6 +19,11 @@ export default function robots(): MetadataRoute.Robots {
         "/admin/",
         "/m/",
         "/rfq/",
+        // Phase 1: customer/buyer marketplace flow is disabled. Keep these
+        // buyer-facing routes out of the index until customer flow is enabled.
+        "/shop",
+        "/shops",
+        "/designs",
       ],
     },
     sitemap: `${BASE_URL}/sitemap.xml`,
