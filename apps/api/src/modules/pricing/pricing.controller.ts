@@ -14,7 +14,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth } from "@nestjs/swagger";
-import { UserRole } from "@prisma/client";
+import { CurrencyCode, UserRole } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -208,7 +208,7 @@ export class PricingController {
         sizeMax: number;
         qualityTier: string;
         pricePerStone: number;
-        currency: string;
+        currency: CurrencyCode;
         note?: string;
       }>;
     },
