@@ -814,18 +814,6 @@ export const marketConfigApi = {
   seed: () => api.get("/market/admin/seed"),
 };
 
-// Payment Gateway API
-export const paymentGatewayApi = {
-  /**
-   * Resolve the preferred payment gateway for the visitor's/shop's country,
-   * plus any alternatives. `country` is an optional override.
-   */
-  getPreferredGateway: (country?: string) =>
-    api.get("/payment-gateway/preferred-gateway", {
-      params: country ? { country } : undefined,
-    }),
-};
-
 // Static Pages CMS API
 export const pagesApi = {
   // Public
@@ -1496,6 +1484,14 @@ export const aiCreditsApi = {
 
 // ─── Payment Gateway API ───
 export const paymentGatewayApi = {
+  /**
+   * Resolve the preferred payment gateway for the visitor's/shop's country,
+   * plus any alternatives. `country` is an optional override.
+   */
+  getPreferredGateway: (country?: string) =>
+    api.get("/payment-gateway/preferred-gateway", {
+      params: country ? { country } : undefined,
+    }),
   listConfigs: () => api.get("/payment-gateway/configs"),
   getConfig: (id: string) => api.get(`/payment-gateway/configs/${id}`),
   upsertConfig: (data: Record<string, unknown>) =>
