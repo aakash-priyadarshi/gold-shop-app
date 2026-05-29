@@ -698,6 +698,20 @@ export default function PricingPage() {
     (COUNTRIES[pricingCountry]?.defaultCurrency as CurrencyCode) ??
     "USD";
 
+  // Lowest-priced paid plan in the visitor's local currency, for the hero.
+  const startingPrice = useMemo(() => {
+    const paid = sortedPlans.filter((p) => p.monthlyPrice > 0);
+    if (paid.length === 0) return null;
+    const cheapest = paid.reduce((a, b) =>
+      a.monthlyPrice <= b.monthlyPrice ? a : b,
+    );
+    const amount =
+      billing === "annual"
+        ? Math.round(cheapest.annualPrice / 12)
+        : cheapest.monthlyPrice;
+    return formatPrice(amount, cheapest.currency);
+  }, [sortedPlans, billing]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
@@ -731,6 +745,18 @@ export default function PricingPage() {
               your jewellery business today and upgrade as you grow.
             </T>
           </p>
+
+          {startingPrice && (
+            <p className="mt-5 text-base md:text-lg font-semibold text-amber-600 dark:text-amber-400">
+              <T>Free plan available</T>
+              {" · "}
+              <T>paid plans from</T> {startingPrice}
+              <T>/month</T>{" "}
+              <span className="text-gray-500 dark:text-gray-500 font-normal">
+                {billing === "annual" ? <T>(billed annually)</T> : null}
+              </span>
+            </p>
+          )}
 
           {/* Local pricing badge + Billing toggle */}
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">

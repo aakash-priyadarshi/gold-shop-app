@@ -117,8 +117,25 @@ const STEPS = [
 /* ─────────────────────────────────────────────────────── */
 
 export default function ForSellersPage() {
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: OBJECTIONS.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.a,
+      },
+    })),
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <Header />
 
       <main>
@@ -335,6 +352,17 @@ export default function ForSellersPage() {
                 </div>
               ))}
             </div>
+            <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+              <T>Still comparing?</T>{" "}
+              <Link href="/pricing" className="text-amber-600 dark:text-amber-400 font-medium hover:underline">
+                <T>See plans &amp; pricing</T>
+              </Link>{" "}
+              <T>or</T>{" "}
+              <Link href="/jewellery-shop-software" className="text-amber-600 dark:text-amber-400 font-medium hover:underline">
+                <T>explore every feature</T>
+              </Link>
+              .
+            </p>
           </div>
         </section>
 

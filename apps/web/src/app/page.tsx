@@ -12,6 +12,8 @@ import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
 import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { T } from "@/components/ui/T";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
+import { BRAND } from "@/config/brand";
+import { SITE_URL } from "@/config/site";
 import { resolveHeroVideo } from "@/lib/geo";
 import dynamic from "next/dynamic";
 import { headers } from "next/headers";
@@ -49,8 +51,29 @@ export default function HomePage() {
   const country = headersList.get("cf-ipcountry");
   const { videoSrc } = resolveHeroVideo(country);
 
+  const softwareSchema = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: BRAND.name,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web, Android, iOS",
+    description:
+      "Cloud POS, billing, inventory, and ERP software for jewellery shops — with live gold & silver rate cards, GST/VAT-ready invoices, artisan (karigar) metal tracking, and mobile counter billing.",
+    url: SITE_URL,
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      description: "Free plan available; paid plans for growing shops.",
+    },
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
+      />
       {/* Preconnect to video/image CDN for faster hero load */}
       <link rel="preconnect" href="https://images.orivraa.com" />
       <link rel="dns-prefetch" href="https://images.orivraa.com" />

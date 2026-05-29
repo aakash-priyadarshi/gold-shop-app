@@ -33,9 +33,14 @@ export function TrustSignals({
 
   const items = [
     {
-      icon: ShieldCheck,
-      title: "Bank-grade security",
-      desc: "TLS 1.3, encrypted at rest, SOC2-aligned controls.",
+      icon: Sparkles,
+      title: "Start free — no credit card",
+      desc: "Free plan for small shops, plus a 60-day Pro trial. Cancel anytime.",
+    },
+    {
+      icon: Lock,
+      title: "Your customers stay yours",
+      desc: "We never resell, contact, or share your customer list.",
     },
     {
       icon: Globe2,
@@ -43,14 +48,9 @@ export function TrustSignals({
       desc: "Region-pinned databases. No cross-border data transfer.",
     },
     {
-      icon: Sparkles,
-      title: "Free 60-day trial",
-      desc: "No credit card required. Cancel any time.",
-    },
-    {
-      icon: Lock,
-      title: "Your customers stay yours",
-      desc: "We never resell, contact, or share your customer list.",
+      icon: ShieldCheck,
+      title: "Bank-grade security",
+      desc: "TLS 1.3, encrypted at rest, SOC2-aligned controls.",
     },
   ];
 

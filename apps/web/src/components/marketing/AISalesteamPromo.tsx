@@ -37,8 +37,9 @@ export function AISalesteamPromo({
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
                 <T>
-                  Get instant answers about pricing, GST, Karigar wastage ledgers, 
-                  live Strongroom vault values, or supply chain tracking in Hindi, Nepali, or English.
+                  Have questions before you sign up? Ask about pricing, GST/VAT,
+                  old-gold exchange, offline billing, or how artisan (karigar)
+                  metal tracking works — in Hindi, Nepali, or English. Free, no signup.
                 </T>
               </p>
               <div className="flex flex-wrap gap-2">
@@ -94,7 +95,9 @@ export function AISalesteamPromo({
           <ScrollReveal direction="up" delay={0.18} spring>
             <p className="text-lg text-white/90 mb-8 leading-relaxed">
               <T>
-                Our AI Support Assistant is 100% free across all plans! Ask Orivraa AI about your live Strongroom vault values, total sales analytics, Karigar ledger wastage balance sheets, and raw gold/silver procurement logistics instantly.
+                Our AI assistant is 100% free on every plan. Ask anything before you commit —
+                how much it costs, whether it works offline, how old-gold exchange is billed,
+                or how to track the metal you give each artisan (karigar). Instant answers, no signup.
               </T>
             </p>
           </ScrollReveal>

@@ -81,8 +81,8 @@ const shopFeatures = [
   },
   {
     icon: Gem,
-    title: "Karigar & Wastage Ledger",
-    desc: "Track metal issued to each karigar, wastage returned, and labour due — so not a single gram silently leaks from your shop.",
+    title: "Artisan Metal & Wastage Tracking",
+    desc: "Track the gold you give each artisan (karigar), wastage returned, and labour due — so not a single gram silently leaks from your shop.",
   },
   {
     icon: ShieldCheck,
@@ -245,7 +245,7 @@ export function SellerFeaturesSection() {
             const featureImages: Record<string, string> = {
               "Live Gold & Silver Rates": "https://images.orivraa.com/images/public/vaibhav-nagare-G3Hrl6WzQYQ-unsplash.jpg",
               "Weight Billing + Making Charges": "https://images.orivraa.com/images/public/carlos-esteves-1MWbwTaeJIA-unsplash.jpg",
-              "Karigar & Wastage Ledger": "https://images.orivraa.com/images/public/subham-hait-fVeujn3i5ZE-unsplash.jpg",
+              "Artisan Metal & Wastage Tracking": "https://images.orivraa.com/images/public/subham-hait-fVeujn3i5ZE-unsplash.jpg",
               "Old Gold Exchange & Buy-Back": "https://images.orivraa.com/images/public/hasan-mrad-9Foi-h8zmIU-unsplash.jpg",
               "Savings & Committee Schemes": "https://images.orivraa.com/images/public/luxury-gold-globe.png",
               "Inventory, Barcode & HUID": "https://images.orivraa.com/images/public/carlos-esteves-1MWbwTaeJIA-unsplash.jpg",
@@ -258,7 +258,7 @@ export function SellerFeaturesSection() {
             return (
                 <div
                   key={feature.title}
-                  className="group relative p-5 lg:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 gold-glow-hover overflow-hidden h-full min-h-[200px]"
+                  className="group relative p-5 lg:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 gold-glow-hover overflow-hidden h-full min-h-[200px] hover:-translate-y-1 hover:border-gold-300/60 dark:hover:border-gold-700/50 transition-all duration-300"
                 >
                   {bgImage && (
                     <div 
@@ -302,6 +302,11 @@ export function SellerFeaturesSection() {
               </Button>
             </Link>
           </div>
+        </ScrollReveal>
+        <ScrollReveal direction="up" delay={0.2}>
+          <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            <T>Free plan includes up to 15 products · 60-day Pro trial · no credit card</T>
+          </p>
         </ScrollReveal>
       </div>
     </section>
@@ -619,6 +624,11 @@ export function SellerCtaSection() {
               </Button>
             </Link>
           </div>
+        </ScrollReveal>
+        <ScrollReveal direction="up" delay={0.28}>
+          <p className="mt-4 text-sm text-gold-100/80 font-medium">
+            <T>Free plan includes up to 15 products · 60-day Pro trial · no credit card</T>
+          </p>
         </ScrollReveal>
       </div>
     </section>
