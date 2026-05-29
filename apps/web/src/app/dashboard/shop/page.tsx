@@ -803,7 +803,25 @@ export default function ShopDashboard() {
           </Card>
 
           <div data-tour="dash-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {stats.map((stat, index) => {
+            {isLoading && stats.length === 0
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <Card
+                    key={`stat-skeleton-${i}`}
+                    className="overflow-hidden bg-white/60 dark:bg-gray-950/40 backdrop-blur-sm"
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-2">
+                          <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-800 animate-pulse" />
+                          <div className="h-8 w-16 rounded bg-gray-200 dark:bg-gray-800 animate-pulse" />
+                        </div>
+                        <div className="h-12 w-12 rounded-2xl bg-gray-200 dark:bg-gray-800 animate-pulse" />
+                      </div>
+                      <div className="mt-4 h-4 w-32 rounded bg-gray-200 dark:bg-gray-800 animate-pulse" />
+                    </CardContent>
+                  </Card>
+                ))
+              : stats.map((stat, index) => {
               // Map dynamic accent colors per card index
               const accents = [
                 "text-blue-600 dark:text-blue-400 bg-blue-100/80 dark:bg-blue-900/40 group-hover:bg-blue-500 group-hover:text-white border-blue-200 dark:border-blue-800/30",

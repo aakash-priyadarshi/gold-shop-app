@@ -78,6 +78,7 @@ interface InventoryItem {
   images: string[];
   status: string;
   stockQuantity: number;
+  hallmarkNumber?: string;
   createdAt: string;
 }
 
@@ -215,6 +216,7 @@ interface ProductFormData {
   stockQuantity: string;
   images: string[];
   gemstones: GemstoneData[];
+  hallmarkNumber: string;
 }
 
 const emptyForm: ProductFormData = {
@@ -232,6 +234,7 @@ const emptyForm: ProductFormData = {
   stockQuantity: "1",
   images: [],
   gemstones: [],
+  hallmarkNumber: "",
 };
 
 // Currency from hook (replaces inline mapping)
@@ -384,6 +387,7 @@ export default function ShopProductsPage() {
             valueNpr: Number(g.valueNpr) || 0,
           }))
         : [],
+      hallmarkNumber: product.hallmarkNumber || "",
     });
     setIsDialogOpen(true);
   };
@@ -507,6 +511,7 @@ export default function ShopProductsPage() {
         gemstoneValueNpr: parseFloat(formData.gemstoneValueNpr) || 0,
         stockQuantity: parseInt(formData.stockQuantity) || 1,
         images: formData.images,
+        hallmarkNumber: formData.hallmarkNumber.trim() || undefined,
       };
 
       if (editingProduct) {
@@ -838,6 +843,46 @@ export default function ShopProductsPage() {
                     placeholder="SKU-XXXX"
                     disabled={!!editingProduct}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hallmarkNumber">
+                    <T>HUID / Hallmark No.</T>
+                  </Label>
+                  <Input
+                    id="hallmarkNumber"
+                    value={formData.hallmarkNumber}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        // BIS HUID is a 6-character alphanumeric code; normalise
+                        // to uppercase and strip spaces/symbols as the user types.
+                        hallmarkNumber: e.target.value
+                          .toUpperCase()
+                          .replace(/[^A-Z0-9]/g, "")
+                          .slice(0, 6),
+                      })
+                    }
+                    placeholder="e.g. 8A9B1C"
+                    maxLength={6}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    {formData.hallmarkNumber.length === 0 ? (
+                      <T>
+                        Optional. The 6-character code laser-marked on hallmarked
+                        items.
+                      </T>
+                    ) : formData.hallmarkNumber.length === 6 ? (
+                      <span className="text-green-600 dark:text-green-400">
+                        <T>Looks valid ✓</T>
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {`${formData.hallmarkNumber.length}/6 characters`}
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="jewelleryType">

@@ -747,6 +747,9 @@ export default function CreateInvoicePage() {
   const [makingChargeValue, setMakingChargeValue] = useState("");
   const [discountMode, setDiscountMode] = useState<"left" | "right">("right"); // left = %, right = fixed
   const [discountValue, setDiscountValue] = useState("");
+  // Tax is shown as a single line by default; jewellers can expand the
+  // per-category bifurcation (metal / gemstone / making) on demand.
+  const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
 
   // ── Currency converter (Frankfurter API) ──
   const [showConverter, setShowConverter] = useState(false);
@@ -1986,54 +1989,24 @@ export default function CreateInvoicePage() {
                     )}
                   </div>
 
-                  {/* Tax breakdown */}
+                  {/* Tax — single line by default, breakdown on demand */}
                   <div className="space-y-1">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>
-                        {countryTax.taxName} on Metal (
-                        {(countryTax.rates.PRECIOUS_METAL * 100).toFixed(1)}%)
-                      </span>
-                      <span>
-                        {currencySymbol}{" "}
-                        {taxBreakdown.metalTax.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    </div>
-                    {taxBreakdown.gemstoneTax > 0 && (
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>
-                          {countryTax.taxName} on Gemstone (
-                          {(countryTax.rates.GEMSTONE * 100).toFixed(1)}%)
+                    <div className="flex justify-between items-center text-sm">
+                      <button
+                        type="button"
+                        onClick={() => setShowTaxBreakdown((v) => !v)}
+                        className="flex items-center gap-1 text-left hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                        aria-expanded={showTaxBreakdown}
+                      >
+                        <span>{countryTax.taxName}</span>
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 transition-transform ${showTaxBreakdown ? "rotate-180" : ""}`}
+                        />
+                        <span className="text-[11px] text-muted-foreground">
+                          {showTaxBreakdown ? "Hide breakdown" : "View breakdown"}
                         </span>
-                        <span>
-                          {currencySymbol}{" "}
-                          {taxBreakdown.gemstoneTax.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-                    )}
-                    {taxBreakdown.makingTax > 0 && (
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>
-                          {countryTax.taxName} on Making (
-                          {(countryTax.rates.MAKING_CHARGE * 100).toFixed(1)}%)
-                        </span>
-                        <span>
-                          {currencySymbol}{" "}
-                          {taxBreakdown.makingTax.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-sm">
-                      <span>Total Tax</span>
-                      <span>
+                      </button>
+                      <span className="font-medium">
                         {currencySymbol}{" "}
                         {taxBreakdown.totalTax.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
@@ -2041,6 +2014,54 @@ export default function CreateInvoicePage() {
                         })}
                       </span>
                     </div>
+
+                    {showTaxBreakdown && (
+                      <div className="space-y-1 pl-3 border-l-2 border-amber-100 dark:border-amber-900/40 ml-1">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>
+                            {countryTax.taxName} on Metal (
+                            {(countryTax.rates.PRECIOUS_METAL * 100).toFixed(1)}%)
+                          </span>
+                          <span>
+                            {currencySymbol}{" "}
+                            {taxBreakdown.metalTax.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
+                        </div>
+                        {taxBreakdown.gemstoneTax > 0 && (
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>
+                              {countryTax.taxName} on Gemstone (
+                              {(countryTax.rates.GEMSTONE * 100).toFixed(1)}%)
+                            </span>
+                            <span>
+                              {currencySymbol}{" "}
+                              {taxBreakdown.gemstoneTax.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                        )}
+                        {taxBreakdown.makingTax > 0 && (
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>
+                              {countryTax.taxName} on Making (
+                              {(countryTax.rates.MAKING_CHARGE * 100).toFixed(1)}%)
+                            </span>
+                            <span>
+                              {currencySymbol}{" "}
+                              {taxBreakdown.makingTax.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Discount — pill toggle */}

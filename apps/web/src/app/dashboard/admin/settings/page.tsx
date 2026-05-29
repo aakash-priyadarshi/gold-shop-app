@@ -38,7 +38,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { invalidatePlatformFeatures } from "@/hooks/usePlatformFeatures";
+import { useInvalidatePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { adminApi, platformConfigApi } from "@/lib/api";
 import {
     AlertTriangle,
@@ -80,6 +80,7 @@ const supportedCurrencies = ["NPR", "INR", "USD", "GBP", "AED", "EUR"];
 
 export default function AdminSettingsPage() {
   const { user } = useAuth();
+  const invalidatePlatformFeatures = useInvalidatePlatformFeatures();
   const [refreshingRates, setRefreshingRates] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
   const [sendingNotification, setSendingNotification] = useState(false);
