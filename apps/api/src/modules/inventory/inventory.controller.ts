@@ -52,8 +52,12 @@ export class InventoryController {
   async create(
     @Param("shopId") shopId: string,
     @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
     @Body() dto: CreateInventoryItemDto,
   ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only add items to your own shop");
+    }
     return this.inventoryService.create(shopId, userId, dto);
   }
 
@@ -87,8 +91,12 @@ export class InventoryController {
   async getShopInventory(
     @Param("shopId") shopId: string,
     @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
     @Query() filters: InventoryFilterDto,
   ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only access your own shop inventory");
+    }
     return this.inventoryService.findShopInventory(shopId, userId, filters);
   }
 
@@ -131,8 +139,12 @@ export class InventoryController {
   async bulkUpdatePrices(
     @Param("shopId") shopId: string,
     @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
     @Body() updates: { itemId: string; totalPriceNpr: number }[],
   ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only update your own shop prices");
+    }
     return this.inventoryService.bulkUpdatePrices(shopId, userId, updates);
   }
 }

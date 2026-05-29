@@ -456,16 +456,30 @@ export class InventoryService {
       throw new ForbiddenException("You do not own this shop");
     }
 
+    // Reject the whole batch if any itemId does not belong to this shop
+    // (prevents cross-tenant price tampering via forged itemIds in the payload).
+    const itemIds = [...new Set(updates.map((u) => u.itemId))];
+    if (itemIds.length > 0) {
+      const ownedCount = await this.prisma.inventoryItem.count({
+        where: { id: { in: itemIds }, shopId },
+      });
+      if (ownedCount !== itemIds.length) {
+        throw new ForbiddenException(
+          "One or more items do not belong to this shop",
+        );
+      }
+    }
+
     const results = await this.prisma.$transaction(
       updates.map((update) =>
-        this.prisma.inventoryItem.update({
-          where: { id: update.itemId },
+        this.prisma.inventoryItem.updateMany({
+          where: { id: update.itemId, shopId },
           data: { totalPriceNpr: update.totalPriceNpr },
         }),
       ),
     );
 
-    return { updated: results.length };
+    return { updated: results.reduce((sum, r) => sum + r.count, 0) };
   }
 
   // Get inventory statistics

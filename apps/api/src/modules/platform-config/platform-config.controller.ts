@@ -14,8 +14,10 @@ export class PlatformConfigController {
   constructor(private configService: PlatformConfigService) {}
 
   @Get()
-  @SkipSecurity()
-  @ApiOperation({ summary: "Get all platform configuration values" })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get all platform configuration values (admin only)" })
   async getAll() {
     const configs = await this.configService.getAll();
     return { data: configs };
