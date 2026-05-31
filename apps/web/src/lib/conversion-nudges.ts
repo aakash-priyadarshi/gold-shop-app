@@ -38,11 +38,24 @@ export interface ConversionSignals {
     invoiceValue: number;
     customers: number;
   };
+  /**
+   * Per-plan soft-limit thresholds resolved from the shop's active plan
+   * (admin-editable, per-market). A `null` for a metric means "no nudge for
+   * that metric on this plan". Omitted entirely on older API responses, in
+   * which case the FREE_SOFT_LIMITS defaults are used.
+   */
+  softLimits?: {
+    customers: number | null;
+    invoicesPerMonth: number | null;
+    products: number | null;
+    savingsSchemes: number | null;
+  };
 }
 
 /**
- * Free-tier soft thresholds. These do NOT block usage — they only decide when
- * a gentle "you're outgrowing free" nudge appears.
+ * Default free-tier soft thresholds. Used as a fallback when the API does not
+ * return per-plan `softLimits`. These do NOT block usage — they only decide
+ * when a gentle "you're outgrowing free" nudge appears.
  */
 export const FREE_SOFT_LIMITS = {
   customers: 100,
@@ -116,41 +129,57 @@ export function computeNudge(
   }
 
   // ── 2. Soft limit (you're outgrowing free) ───────────────────────
+  // Resolve the effective thresholds per metric: prefer the per-plan values
+  // the API returned (admin-editable, per-market), fall back to defaults.
+  // A `null` threshold means "no nudge for that metric on this plan".
+  const limits = signals.softLimits;
+  const resolveLimit = (
+    metric: keyof typeof FREE_SOFT_LIMITS,
+  ): number | null => {
+    if (limits) {
+      // Field present (even as null) → trust the plan's configured value.
+      if (metric in limits) return limits[metric];
+    }
+    return FREE_SOFT_LIMITS[metric];
+  };
+
   const softChecks: Array<{
     metric: keyof typeof FREE_SOFT_LIMITS;
     count: number;
-    limit: number;
+    limit: number | null;
     periodScoped?: boolean;
   }> = [
     {
       metric: "customers",
       count: usage.customers,
-      limit: FREE_SOFT_LIMITS.customers,
+      limit: resolveLimit("customers"),
     },
     {
       metric: "invoicesPerMonth",
       count: usage.invoicesThisMonth,
-      limit: FREE_SOFT_LIMITS.invoicesPerMonth,
+      limit: resolveLimit("invoicesPerMonth"),
       periodScoped: true,
     },
     {
       metric: "products",
       count: usage.products,
-      limit: FREE_SOFT_LIMITS.products,
+      limit: resolveLimit("products"),
     },
     {
       metric: "savingsSchemes",
       count: usage.savingsSchemes,
-      limit: FREE_SOFT_LIMITS.savingsSchemes,
+      limit: resolveLimit("savingsSchemes"),
     },
   ];
 
-  let best: (typeof softChecks)[number] | null = null;
+  let best: { metric: keyof typeof FREE_SOFT_LIMITS; count: number; limit: number; periodScoped?: boolean } | null = null;
   let bestRatio = 0;
   for (const c of softChecks) {
-    const ratio = c.limit > 0 ? c.count / c.limit : 0;
+    // null / non-positive threshold → this metric is opted out of nudging.
+    if (c.limit == null || c.limit <= 0) continue;
+    const ratio = c.count / c.limit;
     if (ratio >= SOFT_LIMIT_TRIGGER_RATIO && ratio > bestRatio) {
-      best = c;
+      best = { metric: c.metric, count: c.count, limit: c.limit, periodScoped: c.periodScoped };
       bestRatio = ratio;
     }
   }

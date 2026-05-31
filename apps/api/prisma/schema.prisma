@@ -2810,6 +2810,16 @@ model SubscriptionPlan {
   catalogueLimit      Int?                 // max items per single catalogue
   maxOrdersPerMonth   Int?                 // max orders per calendar month
 
+  // ─── Soft-limit nudge thresholds (null = no nudge for that metric) ──
+  // These NEVER block anything. They only decide when the gentle, dismissible
+  // "you're outgrowing free → upgrade" nudge appears (fires at ~80% of the
+  // value). Read per-plan by PlanLimitsService.getConversionSignals so each
+  // market (region plan) is tuned independently from the admin pricing panel.
+  softLimitCustomers       Int?            // e.g. 100 customers
+  softLimitInvoicesPerMonth Int?           // e.g. 50 bills this month
+  softLimitProducts        Int?            // e.g. 100 products
+  softLimitSavingsSchemes  Int?            // e.g. 5 savings schemes
+
   commissionPercent   Float                // e.g. 5.0 = 5%
   includesAi          Boolean              @default(false)
   monthlyAiCredits    Int                  @default(0)

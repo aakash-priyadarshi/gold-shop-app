@@ -85,6 +85,27 @@ export class CreatePlanDto {
   @Min(0)
   maxOrdersPerMonth?: number;
 
+  // ─── Soft-limit nudge thresholds (null / omit = no nudge) ───────────
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  softLimitCustomers?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  softLimitInvoicesPerMonth?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  softLimitProducts?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  softLimitSavingsSchemes?: number;
+
   @IsNumber()
   @Min(0)
   @Max(100)
@@ -174,6 +195,27 @@ export class UpdatePlanDto {
   @IsInt()
   @Min(0)
   maxOrdersPerMonth?: number;
+
+  // ─── Soft-limit nudge thresholds (null / omit = no nudge) ───────────
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  softLimitCustomers?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  softLimitInvoicesPerMonth?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  softLimitProducts?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  softLimitSavingsSchemes?: number;
 
   @IsOptional()
   @IsNumber()

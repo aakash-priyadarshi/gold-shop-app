@@ -2,6 +2,15 @@ import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { SubscriptionPlansService } from "./subscription-plans.service";
 
+/** Subset of plan fields used to resolve soft-limit nudge thresholds. */
+interface PlanSoftLimits {
+  displayName?: string;
+  softLimitCustomers?: number | null;
+  softLimitInvoicesPerMonth?: number | null;
+  softLimitProducts?: number | null;
+  softLimitSavingsSchemes?: number | null;
+}
+
 /**
  * Thrown when a shop has exceeded (or would exceed) a plan limit.
  * Contains metadata for the frontend to display upgrade prompts.
@@ -487,6 +496,15 @@ export class PlanLimitsService {
       );
     }
 
+    // Soft-limit thresholds come from the shop's effective plan so admins can
+    // tune them per-market from the pricing panel. For free shops (no sub row)
+    // fall back to the resolved FREE plan. NULL = no nudge for that metric.
+    const planForLimits =
+      (sub?.plan as PlanSoftLimits | undefined) ??
+      ((await this.plansService.getActiveShopPlan(
+        shopId,
+      )) as PlanSoftLimits | null);
+
     return {
       planName: sub?.plan?.displayName ?? "Free Plan",
       status,
@@ -504,6 +522,13 @@ export class PlanLimitsService {
         savingsSchemes,
         goldLoans,
         products,
+      },
+      // Soft-limit thresholds (admin-editable per plan/market). NULL = no nudge.
+      softLimits: {
+        customers: planForLimits?.softLimitCustomers ?? null,
+        invoicesPerMonth: planForLimits?.softLimitInvoicesPerMonth ?? null,
+        products: planForLimits?.softLimitProducts ?? null,
+        savingsSchemes: planForLimits?.softLimitSavingsSchemes ?? null,
       },
       // Lifetime totals power the "look how much value you've built" recap.
       lifetime: {

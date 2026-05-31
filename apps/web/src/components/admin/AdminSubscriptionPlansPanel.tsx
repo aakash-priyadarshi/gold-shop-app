@@ -64,6 +64,10 @@ interface SubscriptionPlan {
   maxInvoicesPerMonth?: number;
   maxCatalogues?: number;
   maxOrdersPerMonth?: number;
+  softLimitCustomers?: number;
+  softLimitInvoicesPerMonth?: number;
+  softLimitProducts?: number;
+  softLimitSavingsSchemes?: number;
   commissionPercent: number;
   includesAi: boolean;
   monthlyAiCredits: number;
@@ -181,6 +185,10 @@ export function AdminSubscriptionPlansPanel() {
         maxInvoicesPerMonth: plan.maxInvoicesPerMonth ?? "",
         maxCatalogues: plan.maxCatalogues ?? "",
         maxOrdersPerMonth: plan.maxOrdersPerMonth ?? "",
+        softLimitCustomers: plan.softLimitCustomers ?? "",
+        softLimitInvoicesPerMonth: plan.softLimitInvoicesPerMonth ?? "",
+        softLimitProducts: plan.softLimitProducts ?? "",
+        softLimitSavingsSchemes: plan.softLimitSavingsSchemes ?? "",
         commissionPercent: plan.commissionPercent,
         includesAi: plan.includesAi,
         monthlyAiCredits: plan.monthlyAiCredits,
@@ -236,6 +244,27 @@ export function AdminSubscriptionPlansPanel() {
         Number(f.maxOrdersPerMonth) !== (plan.maxOrdersPerMonth ?? 0)
       )
         payload.maxOrdersPerMonth = Number(f.maxOrdersPerMonth);
+      if (
+        f.softLimitCustomers !== "" &&
+        Number(f.softLimitCustomers) !== (plan.softLimitCustomers ?? 0)
+      )
+        payload.softLimitCustomers = Number(f.softLimitCustomers);
+      if (
+        f.softLimitInvoicesPerMonth !== "" &&
+        Number(f.softLimitInvoicesPerMonth) !==
+          (plan.softLimitInvoicesPerMonth ?? 0)
+      )
+        payload.softLimitInvoicesPerMonth = Number(f.softLimitInvoicesPerMonth);
+      if (
+        f.softLimitProducts !== "" &&
+        Number(f.softLimitProducts) !== (plan.softLimitProducts ?? 0)
+      )
+        payload.softLimitProducts = Number(f.softLimitProducts);
+      if (
+        f.softLimitSavingsSchemes !== "" &&
+        Number(f.softLimitSavingsSchemes) !== (plan.softLimitSavingsSchemes ?? 0)
+      )
+        payload.softLimitSavingsSchemes = Number(f.softLimitSavingsSchemes);
       if (Number(f.commissionPercent) !== plan.commissionPercent)
         payload.commissionPercent = Number(f.commissionPercent);
       if (f.includesAi !== plan.includesAi) payload.includesAi = f.includesAi;
@@ -769,6 +798,77 @@ export function AdminSubscriptionPlansPanel() {
                   updateEditForm("maxOrdersPerMonth", e.target.value)
                 }
                 placeholder="Unlimited"
+              />
+            </div>
+            {/* Upgrade Nudge Thresholds */}
+            <div className="col-span-2">
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                Upgrade Nudge Thresholds (leave empty = no nudge)
+              </p>
+              <p className="text-xs text-muted-foreground mb-2">
+                These never block usage. They only decide when the gentle
+                &quot;you&apos;re outgrowing free → upgrade&quot; banner appears
+                (fires at ~80% of the value). Tune per market.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="edit-softLimitCustomers">Nudge: Customers</Label>
+              <Input
+                id="edit-softLimitCustomers"
+                type="number"
+                min={0}
+                value={(editDialog.form.softLimitCustomers as number) ?? ""}
+                onChange={(e) =>
+                  updateEditForm("softLimitCustomers", e.target.value)
+                }
+                placeholder="No nudge"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-softLimitInvoices">
+                Nudge: Bills/Month
+              </Label>
+              <Input
+                id="edit-softLimitInvoices"
+                type="number"
+                min={0}
+                value={
+                  (editDialog.form.softLimitInvoicesPerMonth as number) ?? ""
+                }
+                onChange={(e) =>
+                  updateEditForm("softLimitInvoicesPerMonth", e.target.value)
+                }
+                placeholder="No nudge"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-softLimitProducts">Nudge: Products</Label>
+              <Input
+                id="edit-softLimitProducts"
+                type="number"
+                min={0}
+                value={(editDialog.form.softLimitProducts as number) ?? ""}
+                onChange={(e) =>
+                  updateEditForm("softLimitProducts", e.target.value)
+                }
+                placeholder="No nudge"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-softLimitSavings">
+                Nudge: Savings Schemes
+              </Label>
+              <Input
+                id="edit-softLimitSavings"
+                type="number"
+                min={0}
+                value={
+                  (editDialog.form.softLimitSavingsSchemes as number) ?? ""
+                }
+                onChange={(e) =>
+                  updateEditForm("softLimitSavingsSchemes", e.target.value)
+                }
+                placeholder="No nudge"
               />
             </div>
             {/* AI Settings */}
