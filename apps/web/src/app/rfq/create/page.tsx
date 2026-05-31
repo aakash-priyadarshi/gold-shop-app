@@ -544,13 +544,11 @@ export default function CreateRfqPage() {
     mounted && (user?.role === "SHOPKEEPER" || user?.role === "ADMIN");
   const isShopVerified = mounted && !!user?.shop?.isVerified;
 
-  // For sellers: need phone + KYC (shop verified) - but admins exempt from KYC too
-  // For customers: need phone only
-  // Admins can always submit
+  // For sellers: need phone verification only — KYC (shop verification) is NOT
+  // a hard blocker, it's surfaced as a soft warning so new sellers can try the
+  // feature. For customers: need phone only. Admins can always submit.
   const canSubmitOrder =
-    mounted &&
-    isLoggedIn &&
-    (isAdmin || (isPhoneVerified && (!isSeller || isShopVerified)));
+    mounted && isLoggedIn && (isAdmin || isPhoneVerified);
 
   // Determine why submit is blocked (for tooltip)
   const getSubmitBlockReason = (): string | null => {
@@ -560,11 +558,6 @@ export default function CreateRfqPage() {
     if (!isPhoneVerified) {
       return t(
         "Please verify your phone number in your profile settings to submit requests",
-      );
-    }
-    if (isSeller && !isShopVerified) {
-      return t(
-        "Your shop needs KYC verification (ID card & tax details) before you can submit requests. Please complete verification in your dashboard.",
       );
     }
     return null;
@@ -5666,6 +5659,32 @@ export default function CreateRfqPage() {
                                 <ArrowRight className="h-4 w-4" />
                               </Link>
                             ) : null}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Soft, non-blocking KYC reminder for unverified sellers —
+                          they can still submit; verification just unlocks full
+                          seller features and removes trial limitations. */}
+                      {step === 3 && canSubmitOrder && isSeller && !isShopVerified && (
+                        <div className="border rounded-lg p-4 flex gap-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50">
+                          <ShieldCheck className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="font-medium text-sm text-amber-800 dark:text-amber-200">
+                              {t("Shop verification recommended")}
+                            </p>
+                            <p className="text-sm mt-1 text-amber-700 dark:text-amber-300">
+                              {t(
+                                "You can submit this request now. Completing your shop's KYC verification (ID card & tax details) builds buyer trust and unlocks the full seller experience.",
+                              )}
+                            </p>
+                            <Link
+                              href="/dashboard/shop/verification"
+                              className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 mt-2"
+                            >
+                              <T>Complete KYC verification</T>
+                              <ArrowRight className="h-4 w-4" />
+                            </Link>
                           </div>
                         </div>
                       )}

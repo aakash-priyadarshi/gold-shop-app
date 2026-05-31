@@ -23,7 +23,7 @@ export function TutorialButton({ className }: TutorialButtonProps) {
   const [running, setRunning] = useState(false);
   const [bubbleVisible, setBubbleVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const { isTutorialDismissed, dismissTutorial, isTutorialShaking } = useHelpUIStore();
+  const { isTutorialDismissed, dismissTutorial, isTutorialShaking, hasAutoLaunchedMobileTour, markMobileTourAutoLaunched } = useHelpUIStore();
 
   // Drag-to-dismiss state (mobile only)
   const [isDragging, setIsDragging] = useState(false);
@@ -126,6 +126,29 @@ export function TutorialButton({ className }: TutorialButtonProps) {
 
     driverObj.drive();
   }, [steps, hasSteps, running, nextLabel, backLabel, doneLabel]);
+
+  // Auto-launch the mobile onboarding tour exactly once, on the first time the
+  // user lands on the mobile POS ("make your first sale") screen. After that the
+  // persisted flag prevents it from ever re-triggering, and the floating help
+  // button remains available for manual replays.
+  useEffect(() => {
+    if (!isMobile) return;
+    if (pathname !== "/m/pos" && pathname !== "/m") return;
+    if (!hasSteps || isTutorialDismissed || hasAutoLaunchedMobileTour || running) return;
+    markMobileTourAutoLaunched();
+    // Give the page's data-tour anchors a moment to mount before driving.
+    const timer = setTimeout(() => startTour(), 1200);
+    return () => clearTimeout(timer);
+  }, [
+    isMobile,
+    pathname,
+    hasSteps,
+    isTutorialDismissed,
+    hasAutoLaunchedMobileTour,
+    running,
+    markMobileTourAutoLaunched,
+    startTour,
+  ]);
 
   // Mobile drag handlers
   const onPointerDown = useCallback(

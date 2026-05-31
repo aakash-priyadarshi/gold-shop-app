@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import api from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, persistAuthTokens } from '@/hooks/useAuth';
 
 interface PinLockScreenProps {
   onUnlocked: () => void;
@@ -43,11 +43,12 @@ export function PinLockScreen({ onUnlocked }: PinLockScreenProps) {
         userId: user.id,
         pin: pinValue,
       });
-      // Store new tokens
+      // Store new tokens using the canonical strategy (correct keys + cookies +
+      // remember-me routing) so the axios interceptor can find them. Writing to
+      // ad-hoc keys here previously caused an immediate 401 → forced logout.
       const { accessToken, refreshToken } = res.data;
-      if (accessToken) {
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
+      if (accessToken && refreshToken) {
+        persistAuthTokens(accessToken, refreshToken);
       }
       onUnlocked();
     } catch (err: any) {

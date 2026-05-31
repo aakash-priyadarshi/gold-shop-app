@@ -258,6 +258,34 @@ const clearTokens = () => {
   clearAuthCookie("orivraa_user_role");
 };
 
+/**
+ * Persist a freshly-issued access/refresh token pair using the SAME storage
+ * strategy as a normal login (correct keys, cookies, and remember-me routing).
+ *
+ * Use this anywhere new tokens are obtained outside the normal login flow
+ * (e.g. PIN unlock) so the axios interceptor — which reads the `token` key —
+ * can actually find them. Writing to ad-hoc keys silently breaks auth and is
+ * the classic cause of "logged out right after unlocking".
+ */
+export function persistAuthTokens(accessToken: string, refreshToken: string) {
+  if (typeof window === "undefined") return;
+  // Honour the user's existing remember-me choice from their original login.
+  const rememberMe = localStorage.getItem("orivraa_remember_me") === "1";
+  storeTokens(accessToken, refreshToken, rememberMe);
+}
+
+/**
+ * Read the current access token using the canonical fallback chain
+ * (localStorage → sessionStorage → cookie) under the correct `token` key.
+ *
+ * Use this for raw `fetch` calls that set their own Authorization header.
+ * Reading ad-hoc keys like `accessToken` silently fails for session-only
+ * (non remember-me) logins whose token lives only in sessionStorage/cookie.
+ */
+export function getStoredAuthToken(): string | null {
+  return getStoredToken();
+}
+
 // Dashboard routes by role
 export const getDashboardRoute = (role: UserRole): string => {
   // On the mobile subdomain (m.orivraa.com), shopkeepers go straight to the POS

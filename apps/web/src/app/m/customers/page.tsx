@@ -5,6 +5,7 @@ import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
 import { T } from "@/components/ui/T";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { customerCrmApi } from "@/lib/api";
+import Link from "next/link";
 import {
     ChevronRight,
     Loader2,
@@ -321,6 +322,19 @@ export default function CustomersPage() {
               <p className="text-sm">
                 {query ? <T>No customers found</T> : <T>No customers yet</T>}
               </p>
+              {!query && (
+                <>
+                  <p className="text-xs text-center text-gray-300 dark:text-gray-600 max-w-[240px]">
+                    <T>Customers are added automatically when you bill them. Make your first sale to start building your customer list.</T>
+                  </p>
+                  <Link
+                    href="/m/pos"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition active:scale-95"
+                  >
+                    <T>Make your first sale</T>
+                  </Link>
+                </>
+              )}
             </div>
           ) : (
             customers.map((c) => (

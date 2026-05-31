@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { getStoredAuthToken } from "@/hooks/useAuth";
 import { getApiUrl } from "@/lib/api";
 import {
     AlertCircle,
@@ -144,7 +145,7 @@ export function AiDesignStudio({
       return;
     }
     const token =
-      typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+      typeof window !== "undefined" ? getStoredAuthToken() : null;
     if (!token) {
       toast({
         title: "Sign in required",

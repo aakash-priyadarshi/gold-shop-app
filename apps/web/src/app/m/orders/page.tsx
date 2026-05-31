@@ -259,6 +259,13 @@ export default function OrdersPage() {
               <p className="text-xs text-center text-gray-300 dark:text-gray-600">
                 <T>Quotes you create will appear here once billed</T>
               </p>
+              <button
+                onClick={() => router.push("/m/pos")}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition active:scale-95"
+              >
+                <Receipt className="h-3.5 w-3.5" />
+                <T>Create your first bill</T>
+              </button>
             </div>
           ) : (
             displayed.map((q) => <QuoteCard key={q.id} q={q} currency={currency} />)

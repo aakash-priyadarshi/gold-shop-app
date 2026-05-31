@@ -871,10 +871,6 @@ export default function MobilePOSPage() {
     return registrationAgeDays <= 7;
   }, [registrationAgeDays]);
 
-  const isLocked = useMemo(() => {
-    if (!user || !user.shop) return false;
-    return !isVerified && !isWithinSandbox;
-  }, [user, isVerified, isWithinSandbox]);
   const haptic = useHaptics();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [search, setSearch] = useState("");
@@ -1138,60 +1134,20 @@ export default function MobilePOSPage() {
     );
   }
 
-  if (isLocked) {
-    return (
-      <MobileFeatureGate feature="mobilePOS" featureName="Mobile POS">
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
-          <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center gap-3">
-            <div className="flex-1">
-              <h1 className="text-base font-bold text-gray-900 dark:text-gray-100"><T>Store Settings</T></h1>
-              <p className="text-xs text-gray-400"><T>Business verification required</T></p>
-            </div>
-            <Link
-              href="/m/settings"
-              className="text-xs font-semibold text-amber-600"
-            >
-              Settings
-            </Link>
-          </div>
-          <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 gap-6 text-center min-h-[70vh]">
-            <div className="w-16 h-16 rounded-3xl bg-amber-500/10 dark:bg-amber-500/20 flex items-center justify-center shadow-inner animate-pulse">
-              <span className="text-3xl">⚠️</span>
-            </div>
-            <div className="space-y-2 max-w-[300px]">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">KYC Verification Required</h2>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Your 7-day KYC Sandbox period has expired. Invoice creation and mobile POS checkouts are locked until business details are submitted for verification.
-              </p>
-            </div>
-            <Link
-              href="/m/settings/kyc"
-              className="w-full max-w-[280px] py-3.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-md transition-all active:scale-95 text-center"
-            >
-              Submit KYC Verification
-            </Link>
-            <Link
-              href="/m/settings"
-              className="text-xs text-amber-600 font-semibold underline underline-offset-2"
-            >
-              Back to Store Settings
-            </Link>
-          </div>
-        </div>
-      </MobileFeatureGate>
-    );
-  }
-
   return (
     <MobileFeatureGate feature="mobilePOS" featureName="Mobile POS">
       <div className="flex flex-col h-full">
-        {/* Sandbox warning banner */}
-        {!isVerified && isWithinSandbox && (
+        {/* KYC reminder banner — non-blocking. Shopkeepers can always use the
+            POS; unverified bills simply print with a watermark (handled at
+            print time) until they enter a Customer Tax ID or complete KYC. */}
+        {!isVerified && (
           <div className="px-4 py-2.5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-b border-amber-200/50 flex items-start gap-2.5 print:hidden">
             <span className="text-sm">⚠️</span>
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                Sandbox Mode ({daysLeft} {daysLeft === 1 ? 'day' : 'days'} left)
+                {isWithinSandbox
+                  ? `Sandbox Mode (${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left)`
+                  : 'Verify your shop to remove the bill watermark'}
               </p>
               <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-normal mt-0.5">
                 Bills will print with a watermark unless you enter a Customer Tax ID or complete KYC.
@@ -1255,7 +1211,22 @@ export default function MobilePOSPage() {
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-gray-400 gap-2">
               <ScanLine className="h-8 w-8" />
-              <p className="text-sm"><T>No products found</T></p>
+              {search.trim() ? (
+                <p className="text-sm"><T>No products found</T></p>
+              ) : (
+                <>
+                  <p className="text-sm"><T>No products in stock yet</T></p>
+                  <p className="text-xs text-center text-gray-300 dark:text-gray-600 max-w-[240px]">
+                    <T>Add items to your inventory and they will appear here, ready to sell.</T>
+                  </p>
+                  <Link
+                    href="/m/stock"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition active:scale-95"
+                  >
+                    <T>Add your first item</T>
+                  </Link>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">

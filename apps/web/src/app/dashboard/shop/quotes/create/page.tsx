@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import {
     AiDesignStudio,
@@ -35,7 +36,7 @@ import {
 import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, getStoredAuthToken } from "@/hooks/useAuth";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useMarket } from "@/hooks/useMarket";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
@@ -549,7 +550,7 @@ export default function CreateShopQuotePage() {
       setError(t("Please select a jewellery type first"));
       return;
     }
-    const token = localStorage.getItem("accessToken");
+    const token = getStoredAuthToken();
     if (!token) {
       setError(t("Please log in to generate design previews"));
       return;

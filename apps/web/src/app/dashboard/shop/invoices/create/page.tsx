@@ -4,14 +4,6 @@ import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
 import { useAuth } from "@/hooks/useAuth";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -416,13 +408,19 @@ export default function CreateInvoicePage() {
   const { user, refreshUser } = useAuth();
   const { symbol: currencySymbol, country: shopCountry } = useShopCurrency();
   const [loading, setLoading] = useState(false);
-  const [showKycModal, setShowKycModal] = useState(false);
   const [isMockInsured, setIsMockInsured] = useState(false);
 
   // Refresh user data on mount to get the latest KYC approval status from the server.
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
+
+  // Unverified shops can still create invoices (KYC is never a hard blocker) —
+  // their bills simply print with a watermark unless a Customer Tax ID is given.
+  const isShopUnverified = useMemo(
+    () => Boolean(user?.shop && !user.shop.isVerified),
+    [user?.shop],
+  );
 
   const isSandboxMode = useMemo(() => {
     if (!user || !user.shop || user.shop.isVerified) return false;
@@ -445,16 +443,6 @@ export default function CreateInvoicePage() {
     const diffDays = 7 - (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
     return Math.max(0, Math.ceil(diffDays));
   }, [user]);
-
-  // Show or hide the KYC modal based on the current verified status.
-  useEffect(() => {
-    if (user?.shop) {
-      const createdDate = new Date(user.createdAt).getTime();
-      const diffDays = (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
-      const isWithinSandbox = diffDays <= 7;
-      setShowKycModal(!user.shop.isVerified && !isWithinSandbox);
-    }
-  }, [user?.shop, user?.shop?.isVerified, user?.createdAt]);
 
   // ── Country ──
   const [invoiceCountry, setInvoiceCountry] = useState(
@@ -1009,21 +997,6 @@ export default function CreateInvoicePage() {
   return (
     <ShopGuard>
       <DashboardLayout>
-        <Dialog open={showKycModal} onOpenChange={(open) => !open && router.back()}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>KYC Verification Required</DialogTitle>
-              <DialogDescription>
-                You need to complete your shop's KYC verification to create invoices. Please submit your business details for admin approval.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="flex gap-2">
-              <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
-              <Button onClick={() => router.push("/dashboard/shop/kyc")}>Complete KYC</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
         <div className="space-y-6 max-w-4xl mx-auto">
           {/* Header */}
           <div className="flex items-center gap-4">
@@ -1049,17 +1022,19 @@ export default function CreateInvoicePage() {
             </Button>
           </div>
 
-          {/* Sandbox warning banner */}
-          {isSandboxMode && (
+          {/* Sandbox / unverified warning banner — non-blocking */}
+          {isShopUnverified && (
             <div className="p-4 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-300/40 dark:border-amber-700/30 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in shadow-sm">
               <div className="flex items-start gap-3">
                 <span className="text-xl">⚠️</span>
                 <div>
                   <h4 className="font-bold text-sm text-amber-800 dark:text-amber-300">
-                    KYC Sandbox Mode — {daysLeftVal} {daysLeftVal === 1 ? 'day' : 'days'} left
+                    {isSandboxMode
+                      ? `KYC Sandbox Mode — ${daysLeftVal} ${daysLeftVal === 1 ? 'day' : 'days'} left`
+                      : 'Verify your shop to remove the bill watermark'}
                   </h4>
                   <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
-                    You are in the 7-day trial sandbox. Generated bills will print with a bold watermark <span className="font-semibold text-red-500">DEMO BILL - NOT FOR COMMERCIAL SALE</span> until your shop's business verification is completed.
+                    You can keep creating invoices freely. Generated bills will print with a bold watermark <span className="font-semibold text-red-500">DEMO BILL - NOT FOR COMMERCIAL SALE</span> until your shop's business verification is completed.
                     <span className="block mt-1 font-medium text-amber-900 dark:text-amber-200">
                       💡 Tax ID Bypass: Providing a valid Customer Tax ID (GST/VAT/PAN) below will automatically suppress the watermark on prints.
                     </span>
