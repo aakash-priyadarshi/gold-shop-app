@@ -73,6 +73,12 @@ interface AdminSnapshot {
   tickets: { open: number; urgent: number };
   emails: { outboundToday: number; outbound24h: number; inbound24h: number };
   bot: { sessions24h: number; escalated24h: number };
+  webActivity: {
+    activeSessionsNow: number;
+    sessionsToday: number;
+    pageViewsToday: number;
+    avgSessionSecToday: number;
+  };
   recentAdminActions: Array<{
     action: string;
     resourceType: string;
@@ -1619,6 +1625,10 @@ SELLER RESPONSE RULES:
       botSessions24hResult,
       botEscalated24hResult,
       recentAuditResult,
+      webActiveSessionsResult,
+      webSessionsTodayResult,
+      pageViewsTodayResult,
+      webAvgSessionTodayResult,
     ] = await Promise.allSettled([
       this.prisma.user.findUnique({
         where: { id: userId },
@@ -1657,6 +1667,16 @@ SELLER RESPONSE RULES:
           createdAt: true,
           user: { select: { firstName: true, lastName: true, email: true } },
         },
+      }),
+      // Web-session / page-analytics telemetry
+      this.prisma.webSession.count({
+        where: { lastActive: { gte: fiveMinAgo }, endedAt: null },
+      }),
+      this.prisma.webSession.count({ where: { startedAt: { gte: dayStart } } }),
+      this.prisma.sessionPageView.count({ where: { visitedAt: { gte: dayStart } } }),
+      this.prisma.webSession.aggregate({
+        where: { startedAt: { gte: dayStart }, durationSec: { not: null } },
+        _avg: { durationSec: true },
       }),
     ]);
 
@@ -1715,6 +1735,16 @@ SELLER RESPONSE RULES:
         sessions24h: this.pickSettledValue(botSessions24hResult, "bot sessions 24h") ?? 0,
         escalated24h: this.pickSettledValue(botEscalated24hResult, "bot escalated 24h") ?? 0,
       },
+      webActivity: {
+        activeSessionsNow: this.pickSettledValue(webActiveSessionsResult, "web active sessions") ?? 0,
+        sessionsToday: this.pickSettledValue(webSessionsTodayResult, "web sessions today") ?? 0,
+        pageViewsToday: this.pickSettledValue(pageViewsTodayResult, "page views today") ?? 0,
+        avgSessionSecToday: Math.round(
+          (this.pickSettledValue(webAvgSessionTodayResult, "web avg session today") as
+            | { _avg?: { durationSec?: number | null } }
+            | undefined)?._avg?.durationSec ?? 0,
+        ),
+      },
       recentAdminActions: recentAudit.map((a) => ({
         action: a.action,
         resourceType: a.resourceType,
@@ -1770,11 +1800,18 @@ EMAIL (system traffic):
 SUPPORT BOT:
 - Chat sessions last 24h: ${snapshot.bot.sessions24h} (Escalated: ${snapshot.bot.escalated24h})
 
+WEB / PAGE ANALYTICS (visitor session telemetry):
+- Active web sessions right now (activity in last 5 min): ${snapshot.webActivity.activeSessionsNow}
+- Web sessions started today: ${snapshot.webActivity.sessionsToday}
+- Page views recorded today: ${snapshot.webActivity.pageViewsToday}
+- Average session duration today: ${this.formatUptime(snapshot.webActivity.avgSessionSecToday)}
+- Per-user page analytics (session count, total time on site, pages visited, per-page breakdown, last seen, device, IP/country) is available — call the lookupUser tool with the user's email or ID to fetch it.
+
 RECENT SENSITIVE ADMIN ACTIONS (from audit log):
 ${recentActions}
 
 ADMIN NAVIGATION MAP:
-- User management & moderation: /dashboard/admin/users (online-now stats, risk scores, suspend/activate, role change, per-user audit log, active sessions + token revoke, direct messaging)
+- User management & moderation: /dashboard/admin/users (online-now stats, risk scores, suspend/activate, role change, per-user audit log, active sessions + token revoke, per-user page analytics, direct messaging)
 - Seller verification / KYC queue & seller CRM: /dashboard/admin (verification + sellers tabs)
 - Customer CRM: /dashboard/admin/customers
 - Email management (templates, triggers, SMTP test, sent log): /dashboard/admin/emails
@@ -1785,8 +1822,9 @@ ADMIN NAVIGATION MAP:
 
 ADMIN RESPONSE RULES:
 - You are an internal OPERATIONS CO-PILOT for the platform admin/founder. NEVER upsell, never pitch plans, never ask for contact details.
-- You MAY state the live telemetry numbers above directly when asked (e.g. "how many users online?", "is the system healthy?", "how many emails sent today?"). Quote the exact figures from this snapshot.
-- For details about a SPECIFIC user (status, role, last login, recent activity, emails), call the lookupUser tool with their email or user id — do NOT guess. Only use it when the admin names a specific person/email.
+- You MAY state the live telemetry numbers above directly when asked (e.g. "how many users online?", "is the system healthy?", "how many emails sent today?", "how many page views today?", "how many active sessions right now?"). Quote the exact figures from this snapshot.
+- For details about a SPECIFIC user (status, role, last login, recent activity, emails, AND their page analytics — session count, time on site, pages visited, last seen), call the lookupUser tool with their email or user id — do NOT guess. Only use it when the admin names a specific person/email.
+- You DO have access to page-analytics data: aggregate figures are in the WEB / PAGE ANALYTICS section above, and per-user page analytics come from the lookupUser tool. Never tell the admin that page analytics "isn't wired into this chat".
 - If a metric is not in this snapshot and no tool can fetch it, say it is not available in this chat yet and point to the exact admin page that shows it.
 - Be concise, factual, and operational. Skip marketing tone entirely.
 - Never fabricate numbers. If a value above shows 0 or "unknown", report it honestly.`;
@@ -1863,6 +1901,44 @@ ADMIN RESPONSE RULES:
         const shopLine = user.shops.length
           ? user.shops.map((s) => `${s.shopName} (${s.isVerified ? "verified" : "unverified"}${s.isOnHold ? ", on hold" : ""})`).join(", ")
           : "no shops";
+
+        // Page-analytics summary for this user (web sessions + page views)
+        const [sessionAgg, lastSession, recentPages] = await Promise.all([
+          this.prisma.webSession.aggregate({
+            where: { userId: user.id },
+            _count: { id: true },
+            _sum: { durationSec: true },
+            _avg: { durationSec: true },
+            _max: { lastActive: true },
+          }),
+          this.prisma.webSession.findFirst({
+            where: { userId: user.id },
+            orderBy: { startedAt: "desc" },
+            select: { startedAt: true, durationSec: true, platform: true, country: true },
+          }),
+          this.prisma.sessionPageView.findMany({
+            where: { session: { userId: user.id } },
+            orderBy: { visitedAt: "desc" },
+            take: 5,
+            select: { path: true, durationSec: true, visitedAt: true },
+          }),
+        ]);
+
+        const totalSessions = sessionAgg._count.id ?? 0;
+        const totalTimeSec = sessionAgg._sum.durationSec ?? 0;
+        const avgSessionSec = Math.round(sessionAgg._avg.durationSec ?? 0);
+        const lastSeen = sessionAgg._max.lastActive;
+        const pageAnalyticsLines =
+          totalSessions > 0
+            ? [
+                `Page analytics: ${totalSessions} web session(s), total time on site ${this.formatUptime(totalTimeSec)}, avg session ${this.formatUptime(avgSessionSec)}`,
+                `Last active: ${lastSeen ? this.formatShortDate(lastSeen.toISOString()) : "never"}${lastSession?.platform ? ` on ${lastSession.platform}` : ""}${lastSession?.country ? ` from ${lastSession.country}` : ""}`,
+                recentPages.length
+                  ? `Recent pages: ${recentPages.map((p) => `${p.path}${p.durationSec ? ` (${p.durationSec}s)` : ""}`).join(", ")}`
+                  : "Recent pages: none recorded",
+              ]
+            : ["Page analytics: no web sessions recorded for this user yet"];
+
         const reply = [
           `${user.firstName} ${user.lastName} — ${user.email}`,
           `Role: ${user.role}, Status: ${user.status}`,
@@ -1870,7 +1946,8 @@ ADMIN RESPONSE RULES:
           `Joined: ${this.formatShortDate(user.createdAt.toISOString())}, Last login: ${user.lastLoginAt ? this.formatShortDate(user.lastLoginAt.toISOString()) : "never"}`,
           `Shops: ${shopLine}`,
           `Audit log entries: ${user._count.auditLogs}`,
-          `Open their full profile at /dashboard/admin/users (search "${user.email}").`,
+          ...pageAnalyticsLines,
+          `Open their full profile and page analytics at /dashboard/admin/users (search "${user.email}").`,
         ].join("\n");
         await this.supportService.logAiChat(sessionId ?? null, "assistant", reply, "lookupUser", 1.0, ipAddress);
         return { reply, shouldEscalate: false, confidence: 1.0 };
@@ -1925,7 +2002,7 @@ ADMIN RESPONSE RULES:
           functionDeclarations: [
             {
               name: "lookupUser",
-              description: "Look up a specific platform user by their email address or user ID to see their role, account status, verification, last login, shops, and audit-log count. Use ONLY when the admin names a specific person or email — never for aggregate questions.",
+              description: "Look up a specific platform user by their email address or user ID to see their role, account status, verification, last login, shops, audit-log count, and PAGE ANALYTICS (web session count, total time on site, average session length, last active time/device, and recent pages visited). Use ONLY when the admin names a specific person or email — never for aggregate questions.",
               parameters: {
                 type: "OBJECT",
                 properties: {

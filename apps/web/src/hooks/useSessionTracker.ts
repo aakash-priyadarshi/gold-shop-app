@@ -26,6 +26,12 @@ export function useSessionTracker() {
   const getToken = () =>
     sessionTokenGlobal || sessionStorage.getItem(SESSION_TOKEN_KEY) || null;
 
+  /** Current full view path, including query string (so ?tab=… switches count) */
+  const getCurrentViewPath = () =>
+    typeof window !== 'undefined'
+      ? window.location.pathname + window.location.search
+      : '/';
+
   /** Flush the current page view to the backend (call before navigation/end) */
   const flushCurrentPage = useCallback(() => {
     const token = getToken();
@@ -43,6 +49,27 @@ export function useSessionTracker() {
 
     currentPageRef.current = null;
   }, []);
+
+  /**
+   * Handle an in-app view change. Fires on pathname changes AND on in-route
+   * changes (query-param / tab switches via history.pushState/replaceState).
+   * Flushes the previous view and starts tracking the new one. Idempotent: if
+   * the full path hasn't actually changed, it does nothing.
+   */
+  const handleViewChange = useCallback(() => {
+    const token = getToken();
+    if (!token) return;
+
+    const fullPath = getCurrentViewPath();
+    if (currentPageRef.current?.path === fullPath) return; // no real change
+
+    flushCurrentPage();
+    currentPageRef.current = {
+      path: fullPath,
+      title: document.title,
+      startedAt: Date.now(),
+    };
+  }, [flushCurrentPage]);
 
   const sendEnd = useCallback((closedBy: string) => {
     const token = getToken();
@@ -98,7 +125,7 @@ export function useSessionTracker() {
 
     // Record the first page immediately
     currentPageRef.current = {
-      path: window.location.pathname,
+      path: getCurrentViewPath(),
       title: document.title,
       startedAt: Date.now(),
     };
@@ -117,6 +144,27 @@ export function useSessionTracker() {
     const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
     activityEvents.forEach(e => window.addEventListener(e, resetInactivity, { passive: true }));
 
+    // ── In-route view change detection ──────────────────────────────
+    // The App Router pathname doesn't change for ?tab= / query-param switches,
+    // so patch history.pushState/replaceState (and listen to popstate) to catch
+    // SPA navigations that only change the query string.
+    const origPushState = window.history.pushState;
+    const origReplaceState = window.history.replaceState;
+    const fireLocationChange = () =>
+      window.dispatchEvent(new Event('orivraa:locationchange'));
+    window.history.pushState = function (...args) {
+      const result = origPushState.apply(this, args as Parameters<typeof origPushState>);
+      fireLocationChange();
+      return result;
+    };
+    window.history.replaceState = function (...args) {
+      const result = origReplaceState.apply(this, args as Parameters<typeof origReplaceState>);
+      fireLocationChange();
+      return result;
+    };
+    window.addEventListener('popstate', fireLocationChange);
+    window.addEventListener('orivraa:locationchange', handleViewChange);
+
     // End session on tab visibility change / close
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
@@ -134,6 +182,10 @@ export function useSessionTracker() {
       clearInterval(heartbeatRef.current!);
       clearTimeout(inactivityRef.current!);
       activityEvents.forEach(e => window.removeEventListener(e, resetInactivity));
+      window.history.pushState = origPushState;
+      window.history.replaceState = origReplaceState;
+      window.removeEventListener('popstate', fireLocationChange);
+      window.removeEventListener('orivraa:locationchange', handleViewChange);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('orivraa:logout', handleLogout);
       sessionTokenGlobal = null;
@@ -143,21 +195,11 @@ export function useSessionTracker() {
   }, []);
 
   // ── Route change detection ─────────────────────────────────────────
-  // Every time pathname changes: flush the OLD page, then start tracking the new one
+  // Every time pathname changes: flush the OLD page, then start tracking the
+  // new one. (Query-param/tab changes are handled by the history patch above.)
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) return;
-
-    // Flush the previous page visit (if any)
-    flushCurrentPage();
-
-    // Start tracking the new page
-    currentPageRef.current = {
-      path: pathname,
-      title: document.title,
-      startedAt: Date.now(),
-    };
+    handleViewChange();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 

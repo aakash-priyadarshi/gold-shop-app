@@ -46,8 +46,11 @@ export class WebSessionService {
     });
     if (!session) return;
 
-    // Sanitise path — strip query strings and hash, keep only the pathname
-    const safePath = data.path.split('?')[0].split('#')[0].substring(0, 300);
+    // Sanitise path — keep the pathname plus a whitelist of non-sensitive
+    // navigation query params (tab/view/section/etc.) so in-route view changes
+    // are distinguishable, while dropping the hash and any other (potentially
+    // sensitive) query parameters such as tokens, emails or search text.
+    const safePath = this.sanitizePagePath(data.path);
 
     await this.prisma.$transaction([
       this.prisma.sessionPageView.create({
@@ -67,6 +70,47 @@ export class WebSessionService {
         },
       }),
     ]);
+  }
+
+  /** Whitelist of non-sensitive query params that identify an in-route view */
+  private static readonly SAFE_QUERY_PARAMS = new Set([
+    'tab',
+    'view',
+    'section',
+    'step',
+    'status',
+    'filter',
+    'sort',
+    'mode',
+    'type',
+    'period',
+  ]);
+
+  /**
+   * Keep the pathname plus a whitelist of navigation query params, dropping the
+   * hash and any other (potentially sensitive) query parameters. Returns a
+   * stable, capped string suitable for storage/grouping.
+   */
+  private sanitizePagePath(rawPath: string): string {
+    const [pathAndQuery] = (rawPath || '/').split('#');
+    const [pathname, queryString] = pathAndQuery.split('?');
+    const safePathname = (pathname || '/').substring(0, 250);
+
+    if (!queryString) return safePathname;
+
+    const params = new URLSearchParams(queryString);
+    const kept = new URLSearchParams();
+    // Sort keys for a stable, canonical representation (so /x?tab=a and the same
+    // view always produce identical paths regardless of param order).
+    for (const key of [...params.keys()].sort()) {
+      if (WebSessionService.SAFE_QUERY_PARAMS.has(key.toLowerCase())) {
+        const value = params.get(key);
+        if (value) kept.set(key, value.substring(0, 40));
+      }
+    }
+
+    const keptString = kept.toString();
+    return (keptString ? `${safePathname}?${keptString}` : safePathname).substring(0, 300);
   }
 
   /** Heartbeat — update lastActive and duration, NO longer increments pageViews (recordPageView does that) */
