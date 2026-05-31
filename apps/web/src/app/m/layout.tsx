@@ -7,6 +7,7 @@
 import { MobileLayoutLoader } from "@/components/mobile/MobileSkeleton";
 import { MoreMenu as SharedMoreMenu } from "@/components/mobile/MoreMenu";
 import { OfflineProvider } from "@/components/offline/OfflineProvider";
+import { SmartUpgradeBanner } from "@/components/SmartUpgradeBanner";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -418,6 +419,7 @@ export default function MobileLayout({
         key={pathname}
         className="flex-1 overflow-y-auto animate-in fade-in duration-200"
       >
+        <SmartUpgradeBanner compact />
         {children}
       </main>
 

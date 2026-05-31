@@ -1424,6 +1424,8 @@ export const sellerSubscriptionsApi = {
   getMySubscription: () => api.get("/seller-subscriptions/my-subscription"),
   getMyHistory: () => api.get("/seller-subscriptions/my-history"),
   getMyUsage: () => api.get("/seller-subscriptions/my-usage"),
+  getConversionSignals: () =>
+    api.get("/seller-subscriptions/my-conversion-signals"),
   // Migration
   getMyMigration: () => api.get("/seller-subscriptions/my-migration"),
   respondToMigration: (id: string, accept: boolean) =>

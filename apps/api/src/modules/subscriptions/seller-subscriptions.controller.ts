@@ -189,6 +189,18 @@ export class SellerSubscriptionsController {
     return this.planLimitsService.getActiveFeatures(shopId);
   }
 
+  @Get("my-conversion-signals")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      "Get usage + trial signals that power soft upgrade nudges (never blocks)",
+  })
+  async getMyConversionSignals(@CurrentUser("shopId") shopId: string) {
+    return this.planLimitsService.getConversionSignals(shopId);
+  }
+
   @Get("my-migration")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)

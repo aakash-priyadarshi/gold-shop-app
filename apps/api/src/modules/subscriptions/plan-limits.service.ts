@@ -410,4 +410,107 @@ export class PlanLimitsService {
       })),
     };
   }
+
+  // ═══════════════════════════════════════════
+  // CONVERSION SIGNALS (soft-limit & trial nudges)
+  // ═══════════════════════════════════════════
+
+  /**
+   * Returns the raw usage + trial signals the frontend uses to decide WHICH
+   * soft upgrade nudge to show (and whether to show one at all).
+   *
+   * This NEVER blocks anything — it only powers gentle, dismissible nudges:
+   *   - trial ending soon (with a "look how much you've done" recap),
+   *   - approaching a free-tier soft threshold (you're growing → upgrade),
+   *   - hitting a usage milestone (celebrate, then suggest PRO).
+   *
+   * Paid subscribers (real money plan, ACTIVE) get `isPaid: true` and the
+   * frontend shows nothing.
+   */
+  async getConversionSignals(shopId: string) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const [
+      sub,
+      shop,
+      customers,
+      invoicesThisMonth,
+      invoicesTotal,
+      invoiceValueAgg,
+      repairs,
+      savingsSchemes,
+      goldLoans,
+      products,
+    ] = await Promise.all([
+      this.prisma.sellerSubscription.findFirst({
+        where: { shopId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+        include: { plan: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { currency: true },
+      }),
+      this.prisma.walkInCustomer.count({
+        where: { createdByShopId: shopId },
+      }),
+      this.prisma.invoice.count({
+        where: { shopId, createdAt: { gte: monthStart, lt: monthEnd } },
+      }),
+      this.prisma.invoice.count({ where: { shopId } }),
+      this.prisma.invoice.aggregate({
+        where: { shopId },
+        _sum: { totalAmount: true },
+      }),
+      this.prisma.repairJob.count({ where: { shopId } }),
+      this.prisma.savingsMember.count({ where: { shopId } }),
+      this.prisma.goldLoan.count({ where: { shopId } }),
+      this.prisma.inventoryItem.count({ where: { shopId } }),
+    ]);
+
+    const status = sub?.status ?? "FREE";
+    const isTrial = status === "TRIALING";
+    const monthlyPrice = Number(
+      (sub?.plan as { monthlyPrice?: number } | undefined)?.monthlyPrice ?? 0,
+    );
+    // A "real" paying customer: active subscription on a priced plan.
+    const isPaid = status === "ACTIVE" && monthlyPrice > 0;
+
+    const periodEnd = sub?.currentPeriodEnd ?? null;
+    let trialDaysRemaining: number | null = null;
+    if (isTrial && periodEnd) {
+      trialDaysRemaining = Math.max(
+        0,
+        Math.ceil((periodEnd.getTime() - now.getTime()) / 86_400_000),
+      );
+    }
+
+    return {
+      planName: sub?.plan?.displayName ?? "Free Plan",
+      status,
+      isPaid,
+      currency: shop?.currency ?? "INR",
+      trial: {
+        active: isTrial,
+        daysRemaining: trialDaysRemaining,
+        endsAt: isTrial ? (periodEnd?.toISOString() ?? null) : null,
+      },
+      usage: {
+        customers,
+        invoicesThisMonth,
+        repairs,
+        savingsSchemes,
+        goldLoans,
+        products,
+      },
+      // Lifetime totals power the "look how much value you've built" recap.
+      lifetime: {
+        invoices: invoicesTotal,
+        invoiceValue: invoiceValueAgg._sum.totalAmount ?? 0,
+        customers,
+      },
+    };
+  }
 }

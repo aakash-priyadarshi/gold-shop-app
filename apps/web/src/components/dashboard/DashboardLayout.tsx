@@ -3,6 +3,7 @@
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { ShopSwitcher } from "@/components/dashboard/ShopSwitcher";
 import { SuspendedOverlay } from "@/components/dashboard/SuspendedOverlay";
+import { SmartUpgradeBanner } from "@/components/SmartUpgradeBanner";
 import { MessageDropdown } from "@/components/notifications/MessageDropdown";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle";
@@ -1345,12 +1346,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </header>
 
           {/* Page content */}
-          <main className="p-6">{children}</main>
+          <main className="p-6">
+            <SmartUpgradeBanner />
+            {children}
+          </main>
         </div>
       </div>
 
       {/* Mobile Main Content */}
       <main className="lg:hidden px-4 py-4 pb-20 safe-area-bottom">
+        <SmartUpgradeBanner />
         {children}
       </main>
 

@@ -134,6 +134,7 @@ function QuoteCard({ q, currency }: { q: ShopQuote; currency: SupportedCurrencyC
 
 export default function OrdersPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [quotes, setQuotes] = useState<ShopQuote[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilterIdx, setActiveFilterIdx] = useState(0);
