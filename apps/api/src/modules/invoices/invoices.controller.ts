@@ -13,14 +13,14 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
-import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
 import { InvoicesService } from "./invoices.service";
 
+// NOTE: Invoicing is a core USP feature and is intentionally NOT gated behind a
+// paid plan. New shops can always create bills/invoices (unverified shops just
+// get a watermark until KYC). Only AI + enterprise modules keep @RequireFeature.
 @Controller("invoices")
-@UseGuards(JwtAuthGuard, RolesGuard, FeatureGateGuard)
-@RequireFeature("invoicing")
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.SHOPKEEPER, UserRole.ADMIN)
 export class InvoicesController {
   constructor(private readonly invoicesService: InvoicesService) {}

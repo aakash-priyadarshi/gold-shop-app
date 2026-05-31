@@ -7,6 +7,8 @@ import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { sellerSubscriptionsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
+import { isPreviewableFeature } from "@/lib/feature-tiers";
+import { UpgradeNudge } from "@/components/UpgradeNudge";
 
 /**
  * Maps a mobile-only feature key to the backend feature key that the admin can
@@ -120,6 +122,19 @@ export function MobileFeatureGate({
 
   if (!hasFeature(effectiveKey)) {
     const isFree = planName?.toUpperCase() === "FREE";
+
+    // Basic USP screens (quotes, customers, catalogue, WhatsApp share, tax
+    // reports) are never hard-walled — render them with a soft, dismissible
+    // upgrade nudge so people can keep trying the core app. Only AI + enterprise
+    // features fall through to the full upgrade wall below.
+    if (isPreviewableFeature(effectiveKey)) {
+      return (
+        <div className="flex flex-col h-full">
+          <UpgradeNudge featureKey={effectiveKey} featureName={featureName} compact />
+          {children}
+        </div>
+      );
+    }
 
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 gap-6 text-center bg-gray-50 dark:bg-gray-900 min-h-[80vh]">

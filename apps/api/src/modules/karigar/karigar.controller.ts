@@ -2,15 +2,15 @@ import { Body, Controller, Get, Put, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
-import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import { SaveKarigarStateDto } from "./dto/karigar.dto";
 import { KarigarService } from "./karigar.service";
 
+// NOTE: Karigar / supply-chain tracking is a core USP feature and is
+// intentionally NOT gated behind a paid plan. Only AI + enterprise modules
+// keep @RequireFeature.
 @ApiTags("karigar")
 @Controller("karigar")
-@UseGuards(JwtAuthGuard, FeatureGateGuard)
-@RequireFeature("karigarSupplyChain")
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class KarigarController {
   constructor(private readonly karigarService: KarigarService) {}

@@ -11,15 +11,15 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
-import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import { CustomerCrmService } from "./customer-crm.service";
 import { AddCustomerNoteDto } from "./dto/customer-note.dto";
 
+// NOTE: Customer CRM is a core USP feature and is intentionally NOT gated behind
+// a paid plan, so new shops can always build their customer directory. Only
+// AI + enterprise modules keep @RequireFeature.
 @ApiTags("customer-crm")
 @Controller("users/customers")
-@UseGuards(JwtAuthGuard, FeatureGateGuard)
-@RequireFeature("crm")
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class CustomerCrmController {
   constructor(private crmService: CustomerCrmService) {}

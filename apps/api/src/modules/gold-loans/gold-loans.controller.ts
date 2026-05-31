@@ -11,18 +11,17 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
-import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import {
   CreateGoldLoanDto,
   UpdateGoldLoanStatusDto,
 } from "./dto/gold-loan.dto";
 import { GoldLoansService } from "./gold-loans.service";
 
+// NOTE: Gold loans / lending is a core USP feature and is intentionally NOT
+// gated behind a paid plan. Only AI + enterprise modules keep @RequireFeature.
 @ApiTags("gold-loans")
 @Controller("gold-loans")
-@UseGuards(JwtAuthGuard, FeatureGateGuard)
-@RequireFeature("lending")
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class GoldLoansController {
   constructor(private readonly goldLoansService: GoldLoansService) {}

@@ -14,6 +14,8 @@ import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { sellerSubscriptionsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
+import { isPreviewableFeature } from "@/lib/feature-tiers";
+import { UpgradeNudge } from "@/components/UpgradeNudge";
 
 /**
  * FeatureGate — wraps UI sections and shows an upgrade prompt when the
@@ -77,6 +79,19 @@ export function FeatureGate({
   if (!hasFeature(feature)) {
     const label = featureLabel || feature.replace(/([A-Z])/g, " $1").trim();
     const isFree = planName?.toUpperCase() === "FREE";
+
+    // Basic USP features (billing, CRM, inventory, repairs, savings, etc.) are
+    // never hard-walled — render them with a soft, dismissible upgrade nudge so
+    // people can keep trying the core app. Only AI + enterprise features show
+    // the full upgrade wall below.
+    if (isPreviewableFeature(feature)) {
+      return (
+        <>
+          <UpgradeNudge featureKey={feature} featureName={t(label)} />
+          {children}
+        </>
+      );
+    }
 
     return (
       <Card className="border-dashed border-2 border-muted bg-white dark:bg-gray-900/50 shadow-sm max-w-2xl mx-auto my-8">
