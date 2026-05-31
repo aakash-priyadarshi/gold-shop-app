@@ -176,23 +176,66 @@ function formatDateTime(d: string) {
 
 function deduplicateSessions(sessions: any[]): any[] {
   if (sessions.length <= 1) return sessions;
-  
-  // Group sessions by IP + platform + date, keep only the latest one per group
-  const grouped: Record<string, any> = {};
-  
+
+  // Group sessions by IP + platform + date, then MERGE every session in a group
+  // into a single combined record. The browser creates a new WebSession row on
+  // each reload / tab change, so a single day's browsing is spread across many
+  // rows; we combine them so durations and page views are summed rather than
+  // discarded (previously only the latest row in a group was kept, which lost
+  // the bulk of the activity).
+  const grouped: Record<string, any[]> = {};
+
   for (const session of sessions) {
     const date = new Date(session.startedAt).toLocaleDateString();
     const key = `${session.ipAddress || "unknown"}-${session.platform || "web"}-${date}`;
-    
-    if (!grouped[key] || new Date(session.startedAt) > new Date(grouped[key].startedAt)) {
-      grouped[key] = session;
-    }
+    (grouped[key] ||= []).push(session);
   }
-  
-  // Return deduplicated sessions sorted by most recent
-  return Object.values(grouped).sort((a, b) => 
-    new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
-  ).slice(0, 10);  // Show max 10 unique sessions
+
+  const merged = Object.values(grouped).map((group) => {
+    if (group.length === 1) return group[0];
+
+    // Latest session in the group provides the display metadata
+    const sorted = [...group].sort(
+      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+    );
+    const latest = sorted[0];
+    const earliest = sorted[sorted.length - 1];
+
+    const pageViewDetails = group
+      .flatMap((s) => s.pageViewDetails ?? [])
+      .sort(
+        (a, b) => new Date(a.visitedAt).getTime() - new Date(b.visitedAt).getTime(),
+      );
+
+    return {
+      ...latest,
+      startedAt: earliest.startedAt,
+      endedAt: group.some((s) => !s.endedAt)
+        ? null
+        : group.reduce(
+            (max, s) =>
+              s.endedAt && (!max || new Date(s.endedAt) > new Date(max))
+                ? s.endedAt
+                : max,
+            null as string | null,
+          ),
+      durationSec: group.reduce((sum, s) => sum + (s.durationSec ?? 0), 0),
+      pageViews: group.reduce(
+        (sum, s) => sum + (s.pageViewDetails?.length ?? s.pageViews ?? 0),
+        0,
+      ),
+      pageViewDetails,
+      isActive: group.some((s) => s.isActive),
+      mergedCount: group.length,
+    };
+  });
+
+  // Return combined sessions sorted by most recent
+  return merged
+    .sort(
+      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+    )
+    .slice(0, 10); // Show max 10 unique session-days
 }
 
 function RiskBadge({ level }: { level: "LOW" | "MEDIUM" | "HIGH" }) {

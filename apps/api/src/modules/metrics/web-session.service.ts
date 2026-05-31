@@ -81,7 +81,6 @@ export class WebSessionService {
 
     const dataToUpdate: any = {
       lastActive: now,
-      pageViews: { increment: 1 },
       durationSec,
     };
 
