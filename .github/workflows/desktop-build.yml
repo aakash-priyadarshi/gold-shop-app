@@ -47,6 +47,7 @@ on:
 env:
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: short
+  PYTHONIOENCODING: utf-8
   # R2 configuration (S3-compatible endpoint)
   R2_BUCKET: orivraa-releases
   R2_ENDPOINT: https://c3219a748734c4ae628206c10c8b2c05.r2.cloudflarestorage.com
@@ -237,9 +238,9 @@ jobs:
               fname = os.path.basename(a)
               # Upload ONLY to latest/ — R2 keeps only the latest version
               dest_latest = f'${R2_BASE}/latest/{fname}'
-              print(f'  Uploading {a} → {dest_latest}')
+              print(f'  Uploading {a} -> {dest_latest}')
               subprocess.run(['aws', 's3', 'cp', a, dest_latest, '--endpoint-url', '${R2_ENDPOINT}', '--no-progress'], check=True)
-              print(f'  ✓ {fname}')
+              print(f'  [OK] {fname}')
           print('R2 upload complete (latest only)')
           "
 
@@ -503,12 +504,12 @@ jobs:
               fname = os.path.basename(a)
               # Upload ONLY to latest/ — R2 keeps only the latest version
               dest_latest = f'${R2_BASE}/latest/{fname}'
-              print(f'  Uploading {a} → {dest_latest}')
+              print(f'  Uploading {a} -> {dest_latest}')
               if fname.endswith('.app'):
                   subprocess.run(['aws', 's3', 'cp', a, dest_latest, '--endpoint-url', '${R2_ENDPOINT}', '--recursive', '--no-progress'], check=True)
               else:
                   subprocess.run(['aws', 's3', 'cp', a, dest_latest, '--endpoint-url', '${R2_ENDPOINT}', '--no-progress'], check=True)
-              print(f'  ✓ {fname}')
+              print(f'  [OK] {fname}')
           print('R2 upload complete (latest only)')
           "
 
