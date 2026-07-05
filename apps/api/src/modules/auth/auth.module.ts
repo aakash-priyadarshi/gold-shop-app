@@ -12,6 +12,7 @@ import { ApiTokenController } from "./api-token.controller";
 import { ApiTokenService } from "./api-token.service";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
+import { CompositeAuthGuard } from "./guards/composite-auth.guard";
 import { OtpController } from "./otp.controller";
 import { OtpService } from "./otp.service";
 import { GoogleStrategy } from "./strategies/google.strategy";
@@ -65,6 +66,7 @@ import { TwoFactorService } from "./two-factor.service";
     JwtStrategy,
     LocalStrategy,
     GoogleStrategy,
+    CompositeAuthGuard,
   ],
   exports: [
     AuthService,
@@ -72,6 +74,7 @@ import { TwoFactorService } from "./two-factor.service";
     OtpService,
     TwoFactorService,
     TurnstileService,
+    CompositeAuthGuard,
   ],
 })
 export class AuthModule {}

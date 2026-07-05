@@ -17,6 +17,7 @@ import { UserRole } from "@prisma/client";
 import { Request } from "express";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
+import { CompositeAuthGuard } from "../auth/guards/composite-auth.guard";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import {
@@ -173,9 +174,10 @@ export class ReleasesController {
    * POST /api/releases/publish
    * Publish a new release — auto-sets as latest, deactivates old ones.
    * Called by CI or manually by admin.
+   * Accepts either a JWT (admin session) or a gshop_ API token with admin:write scope.
    */
   @Post("publish")
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(CompositeAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Publish a new release (sets as latest)" })
