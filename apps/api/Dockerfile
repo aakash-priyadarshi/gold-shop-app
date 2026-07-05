@@ -1,7 +1,8 @@
 FROM node:20-slim
 
 # Prisma requires OpenSSL and we need PostgreSQL 18 client to match Railway's database
-RUN apt-get update && apt-get install -y curl ca-certificates gnupg \
+# git is needed to clone the private gold-shop-core submodule
+RUN apt-get update && apt-get install -y curl ca-certificates gnupg git \
     && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main" > /etc/apt/sources.list.d/postgresql.list \
     && apt-get update \
