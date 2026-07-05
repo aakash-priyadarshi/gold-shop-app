@@ -9,6 +9,7 @@ pub mod sync;
 use commands::{AuthTokenReceiver, SyncState};
 use db::Database;
 use std::sync::Arc;
+use tauri::Manager;
 use tokio::sync::Mutex as AsyncMutex;
 
 /// JavaScript injected into orivraa.com pages for desktop enhancements:
