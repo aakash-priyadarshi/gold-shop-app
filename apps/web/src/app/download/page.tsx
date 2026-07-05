@@ -477,8 +477,8 @@ export default function DownloadPage() {
     target: heroRef,
     offset: ["start start", "end start"],
   });
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 100]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 60]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.85, 1], [1, 1, 0]);
 
   useEffect(() => {
     async function fetchReleases() {

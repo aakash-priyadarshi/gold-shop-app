@@ -344,8 +344,8 @@ jobs:
             CHANGELOG=$(git log -10 --pretty=format:"- %s" --no-merges 2>/dev/null || echo "Release v${VERSION}")
           fi
 
-          # POST to API
-          curl -sS -X POST "${API_BASE}/api/releases/publish" \
+          # POST to API (capture HTTP status to detect failures)
+          API_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${API_BASE}/api/releases/publish" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.ORIVRAA_ADMIN_TOKEN }}" \
             -d "$(python -c "
@@ -362,8 +362,14 @@ jobs:
           }
           print(json.dumps(payload))
           ")"
-          echo ""
-          echo "API publish complete"
+          API_STATUS=$(echo "$API_RESPONSE" | tail -1)
+          API_BODY=$(echo "$API_RESPONSE" | head -n -1)
+          echo "API response status: ${API_STATUS}"
+          echo "API response body: ${API_BODY}"
+          if [ "${API_STATUS}" -lt 200 ] || [ "${API_STATUS}" -ge 300 ]; then
+            echo "WARNING: API publish failed with status ${API_STATUS}"
+          fi
+          echo "API publish complete (Windows)"
 
   # ─── macOS Build ──────────────────────────────────────
   build-macos:
@@ -618,8 +624,14 @@ jobs:
           }
           print(json.dumps(payload))
           ")"
-          echo ""
-          echo "API publish complete"
+          API_STATUS=$(echo "$API_RESPONSE" | tail -1)
+          API_BODY=$(echo "$API_RESPONSE" | head -n -1)
+          echo "API response status: ${API_STATUS}"
+          echo "API response body: ${API_BODY}"
+          if [ "${API_STATUS}" -lt 200 ] || [ "${API_STATUS}" -ge 300 ]; then
+            echo "WARNING: API publish failed with status ${API_STATUS}"
+          fi
+          echo "API publish complete (macOS)"
 
   # ═══════════════════════════════════════════════════════════
   # Summary
