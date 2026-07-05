@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { roundMoney, sumMoney } from "../../common/utils/money";
-import { PlanLimitsService } from "../subscriptions/plan-limits.service";
+import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
 import { CurrencyCode } from "@prisma/client";
 

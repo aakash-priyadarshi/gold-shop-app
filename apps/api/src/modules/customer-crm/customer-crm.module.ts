@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { PrismaModule } from "../../prisma/prisma.module";
-import { SubscriptionPlansModule } from "../subscriptions/subscription-plans.module";
+import { SubscriptionPlansModule } from "../core/subscriptions/subscription-plans.module";
 import { CustomerCrmController } from "./customer-crm.controller";
 import { CustomerCrmService } from "./customer-crm.service";
 

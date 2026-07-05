@@ -6,7 +6,7 @@ import { HttpClientModule } from "../../common";
 import { AuditModule } from "../audit/audit.module";
 import { MailModule } from "../mail/mail.module";
 import { NotificationsModule } from "../notifications/notifications.module";
-import { SubscriptionPlansModule } from "../subscriptions/subscription-plans.module";
+import { SubscriptionPlansModule } from "../core/subscriptions/subscription-plans.module";
 import { UsersModule } from "../users/users.module";
 import { ApiTokenController } from "./api-token.controller";
 import { ApiTokenService } from "./api-token.service";

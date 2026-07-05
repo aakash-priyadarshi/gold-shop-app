@@ -2,6 +2,24 @@
 # Orivraa Desktop — Build & Release
 # Builds Windows (MSI + NSIS) and macOS (DMG) installers
 # Triggered on version tags or manual dispatch
+#
+# Pipeline per platform:
+#   1. Build frontend (Next.js static export with TAURI_BUILD=1)
+#   2. Build Tauri app with signing (tauri-action → GitHub Release)
+#   3. Upload installers to Cloudflare R2 (releases.orivraa.com)
+#   4. Generate R2 latest.json for updater fallback endpoint
+#   5. Publish release metadata to API (/api/releases/publish)
+#
+# Required GitHub secrets:
+#   TAURI_SIGNING_PRIVATE_KEY     — Tauri updater signing key (base64)
+#   R2_ACCOUNT_ID                 — Cloudflare account ID
+#   R2_ACCESS_KEY_ID              — R2 API token access key
+#   R2_SECRET_ACCESS_KEY          — R2 API token secret
+#   ORIVRAA_ADMIN_TOKEN           — Admin JWT for /api/releases/publish
+#
+# Optional (for macOS code signing in the future):
+#   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+#   APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
 # ═══════════════════════════════════════════════════════════
 
 name: Desktop Build
@@ -9,17 +27,17 @@ name: Desktop Build
 on:
   push:
     tags:
-      - 'desktop-v*'   # e.g., desktop-v0.1.0
+      - "desktop-v*" # e.g., desktop-v0.1.0
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version tag (e.g., 0.1.0)'
+        description: "Version tag (e.g., 0.1.0)"
         required: false
-        default: 'dev'
+        default: "dev"
       platform:
-        description: 'Target platform'
+        description: "Target platform"
         required: true
-        default: 'all'
+        default: "all"
         type: choice
         options:
           - all
@@ -27,21 +45,81 @@ on:
           - macos
 
 env:
-  TAURI_BUILD: '1'
+  TAURI_BUILD: "1"
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: short
+  # R2 configuration (S3-compatible endpoint)
+  R2_BUCKET: orivraa-releases
+  R2_ENDPOINT: https://c3219a748734c4ae628206c10c8b2c05.r2.cloudflarestorage.com
+  AWS_REGION: auto
+  AWS_EC2_METADATA_DISABLED: true
 
 jobs:
+  # ═══════════════════════════════════════════════════════════
+  # Extract version from tag or input
+  # ═══════════════════════════════════════════════════════════
+  resolve-version:
+    name: 📋 Resolve Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_build_windows: ${{ steps.platform.outputs.windows }}
+      should_build_macos: ${{ steps.platform.outputs.macos }}
+    steps:
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/desktop-v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/desktop-v}"
+          elif [[ -n "${{ github.event.inputs.version }}" && "${{ github.event.inputs.version }}" != "dev" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            # Read from Cargo.toml
+            echo "No version specified, reading from Cargo.toml"
+            # We'll need to checkout for this, but for tag pushes it's in the tag
+            VERSION="0.0.0"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Resolved version: $VERSION"
+
+      - name: Determine platform targets
+        id: platform
+        run: |
+          PLATFORM="${{ github.event.inputs.platform || 'all' }}"
+          IS_TAG="${{ startsWith(github.ref, 'refs/tags/') }}"
+          if [[ "$PLATFORM" == "all" || "$IS_TAG" == "true" ]]; then
+            echo "windows=true" >> $GITHUB_OUTPUT
+            echo "macos=true" >> $GITHUB_OUTPUT
+          elif [[ "$PLATFORM" == "windows" ]]; then
+            echo "windows=true" >> $GITHUB_OUTPUT
+            echo "macos=false" >> $GITHUB_OUTPUT
+          elif [[ "$PLATFORM" == "macos" ]]; then
+            echo "windows=false" >> $GITHUB_OUTPUT
+            echo "macos=true" >> $GITHUB_OUTPUT
+          else
+            echo "windows=true" >> $GITHUB_OUTPUT
+            echo "macos=true" >> $GITHUB_OUTPUT
+          fi
+
   # ─── Windows Build ────────────────────────────────────
   build-windows:
-    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows' || startsWith(github.ref, 'refs/tags/') }}
+    name: 🪟 Windows Build & Release
+    needs: resolve-version
+    if: needs.resolve-version.outputs.should_build_windows == 'true'
     runs-on: windows-latest
     permissions:
       contents: write
+    outputs:
+      artifact-paths: ${{ steps.tauri-build.outputs.artifactPaths }}
+      release-id: ${{ steps.tauri-build.outputs.releaseId }}
+      release-url: ${{ steps.tauri-build.outputs.releaseUrl }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -67,37 +145,238 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri -> target
 
-      - name: Build Tauri app
+      - name: Build frontend for desktop
+        shell: bash
+        run: |
+          cd apps/web
+          TAURI_BUILD=1 pnpm build
+          # Copy static export to desktop dist-desktop
+          rm -rf ../desktop/dist-desktop
+          cp -r out ../desktop/dist-desktop
+          echo "Frontend exported to dist-desktop"
+
+      - name: Build Tauri app (signed)
+        id: tauri-build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_BUILD: '1'
+          TAURI_BUILD: "1"
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/desktop
-          tagName: desktop-v__VERSION__
-          releaseName: 'Orivraa Desktop v__VERSION__'
+          tagName: desktop-v${{ needs.resolve-version.outputs.version }}
+          releaseName: "Orivraa Desktop v${{ needs.resolve-version.outputs.version }}"
           releaseBody: |
-            ## Orivraa Desktop v__VERSION__
-            
+            ## Orivraa Desktop v${{ needs.resolve-version.outputs.version }}
+
             ### Windows Installers
             - **MSI**: Standard Windows Installer
             - **EXE (NSIS)**: Interactive installer with language selection
-            
+
+            ### Downloads
+            - **Latest version (R2)**: https://releases.orivraa.com/desktop/latest/
+            - **This version (GitHub)**: See assets below
+
+            > R2 hosts only the latest version. Older versions are available exclusively on GitHub Releases.
+
             Download and run the installer. The app will auto-update on future releases.
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
 
+      - name: Configure R2 credentials
+        shell: bash
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+
+      - name: Clean old installers from R2 latest/
+        shell: bash
+        run: |
+          R2_LATEST="s3://${R2_BUCKET}/desktop/latest"
+          echo "Cleaning old files from ${R2_LATEST}/ ..."
+          # Delete all objects under desktop/latest/ (old version's installers)
+          aws s3 rm "${R2_LATEST}" \
+            --endpoint-url "${R2_ENDPOINT}" \
+            --recursive \
+            --exclude "latest.json" \
+            --no-progress 2>/dev/null || true
+          echo "R2 latest/ cleaned (latest.json preserved)"
+
+      - name: Upload installers to R2 (latest only)
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          R2_BASE="s3://${R2_BUCKET}/desktop"
+
+          # Parse artifact paths (JSON array) and upload each
+          ARTIFACTS='${{ steps.tauri-build.outputs.artifactPaths }}'
+          echo "Artifact paths: $ARTIFACTS"
+
+          # Use Python to parse JSON and iterate (available on windows-latest)
+          python -c "
+          import json, subprocess, sys, os
+          artifacts = json.loads('''$ARTIFACTS''') if '''$ARTIFACTS''' != 'null' else []
+          if not artifacts:
+              print('No artifact paths returned, searching manually...')
+              # Fallback: search for built artifacts
+              import glob
+              base = 'apps/desktop/src-tauri/target/release/bundle'
+              for pattern in [f'{base}/nsis/*.exe', f'{base}/msi/*.msi']:
+                  artifacts.extend(glob.glob(pattern))
+          for a in artifacts:
+              if not os.path.exists(a):
+                  print(f'  SKIP (not found): {a}')
+                  continue
+              fname = os.path.basename(a)
+              # Upload ONLY to latest/ — R2 keeps only the latest version
+              dest_latest = f'${R2_BASE}/latest/{fname}'
+              print(f'  Uploading {a} → {dest_latest}')
+              subprocess.run(['aws', 's3', 'cp', a, dest_latest, '--endpoint-url', '${R2_ENDPOINT}', '--no-progress'], check=True)
+              print(f'  ✓ {fname}')
+          print('R2 upload complete (latest only)')
+          "
+
+      - name: Generate and upload R2 latest.json
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          R2_BASE="s3://${R2_BUCKET}/desktop"
+
+          # Find the signature and artifact files
+          BUNDLE_DIR="apps/desktop/src-tauri/target/release/bundle"
+          NSIS_EXE=$(ls "$BUNDLE_DIR/nsis/"*.exe 2>/dev/null | head -1 || true)
+          MSI_FILE=$(ls "$BUNDLE_DIR/msi/"*.msi 2>/dev/null | head -1 || true)
+
+          # Prefer NSIS for the updater
+          if [ -n "$NSIS_EXE" ]; then
+            INSTALLER_NAME=$(basename "$NSIS_EXE")
+            SIG_FILE="${NSIS_EXE}.sig"
+          elif [ -n "$MSI_FILE" ]; then
+            INSTALLER_NAME=$(basename "$MSI_FILE")
+            SIG_FILE="${MSI_FILE}.sig"
+          else
+            echo "No Windows installer found"
+            exit 1
+          fi
+
+          # Read signature (tauri-action generates .sig files alongside artifacts)
+          SIGNATURE=""
+          if [ -f "$SIG_FILE" ]; then
+            SIGNATURE=$(cat "$SIG_FILE")
+          fi
+
+          # Build R2 latest.json for the updater fallback endpoint
+          # URL points to R2 latest/ (releases.orivraa.com)
+          R2_DOWNLOAD_URL="https://releases.orivraa.com/desktop/latest/${INSTALLER_NAME}"
+
+          cat > /tmp/latest.json << ENDJSON
+          {
+            "version": "${VERSION}",
+            "notes": "Orivraa Desktop v${VERSION}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "${SIGNATURE}",
+                "url": "${R2_DOWNLOAD_URL}"
+              }
+            }
+          }
+          ENDJSON
+
+          echo "Generated latest.json:"
+          cat /tmp/latest.json
+
+          # Upload to R2 at /desktop/latest.json (updater fallback endpoint)
+          aws s3 cp /tmp/latest.json "${R2_BASE}/latest.json" \
+            --endpoint-url "${R2_ENDPOINT}" \
+            --content-type "application/json" \
+            --no-progress
+          echo "R2 latest.json uploaded"
+
+      - name: Publish release to API
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          API_BASE="https://api.orivraa.com"
+          # Latest version is served from R2; older versions stay on GitHub
+          DOWNLOAD_BASE="https://releases.orivraa.com/desktop/latest"
+
+          # Find artifacts and their sizes
+          BUNDLE_DIR="apps/desktop/src-tauri/target/release/bundle"
+          NSIS_EXE=$(ls "$BUNDLE_DIR/nsis/"*.exe 2>/dev/null | head -1 || true)
+          MSI_FILE=$(ls "$BUNDLE_DIR/msi/"*.msi 2>/dev/null | head -1 || true)
+
+          # Prefer NSIS for the download page
+          if [ -n "$NSIS_EXE" ]; then
+            INSTALLER_NAME=$(basename "$NSIS_EXE")
+            FILE_SIZE=$(stat -c%s "$NSIS_EXE" 2>/dev/null || wc -c < "$NSIS_EXE")
+          elif [ -n "$MSI_FILE" ]; then
+            INSTALLER_NAME=$(basename "$MSI_FILE")
+            FILE_SIZE=$(stat -c%s "$MSI_FILE" 2>/dev/null || wc -c < "$MSI_FILE")
+          else
+            echo "No Windows installer found for API publish"
+            exit 1
+          fi
+
+          DOWNLOAD_URL="${DOWNLOAD_BASE}/${INSTALLER_NAME}"
+
+          echo "Publishing to API: v${VERSION} WINDOWS"
+          echo "  URL: ${DOWNLOAD_URL}"
+          echo "  Size: ${FILE_SIZE}"
+          echo "  File: ${INSTALLER_NAME}"
+
+          # Build changelog from git log since last tag
+          CHANGELOG=""
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+          if [ -n "$LAST_TAG" ]; then
+            CHANGELOG=$(git log "${LAST_TAG}..HEAD" --pretty=format:"- %s" --no-merges 2>/dev/null || true)
+          fi
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG=$(git log -10 --pretty=format:"- %s" --no-merges 2>/dev/null || echo "Release v${VERSION}")
+          fi
+
+          # POST to API
+          curl -sS -X POST "${API_BASE}/api/releases/publish" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.ORIVRAA_ADMIN_TOKEN }}" \
+            -d "$(python -c "
+          import json, sys
+          payload = {
+              'version': '${VERSION}',
+              'platform': 'WINDOWS',
+              'downloadUrl': '${DOWNLOAD_URL}',
+              'fileSize': int('${FILE_SIZE}'),
+              'fileName': '${INSTALLER_NAME}',
+              'changelog': '''${CHANGELOG}'''.replace(\"'\", \"\"),
+              'minOs': 'Windows 10 (1809+)',
+              'architecture': 'x64'
+          }
+          print(json.dumps(payload))
+          ")"
+          echo ""
+          echo "API publish complete"
+
   # ─── macOS Build ──────────────────────────────────────
   build-macos:
-    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'macos' || startsWith(github.ref, 'refs/tags/') }}
+    name: 🍎 macOS Build & Release
+    needs: resolve-version
+    if: needs.resolve-version.outputs.should_build_macos == 'true'
     runs-on: macos-latest
     permissions:
       contents: write
+    outputs:
+      artifact-paths: ${{ steps.tauri-build.outputs.artifactPaths }}
+      release-id: ${{ steps.tauri-build.outputs.releaseId }}
+      release-url: ${{ steps.tauri-build.outputs.releaseUrl }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -123,11 +402,24 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri -> target
 
-      - name: Build Tauri app (universal binary)
+      - name: Build frontend for desktop
+        shell: bash
+        run: |
+          cd apps/web
+          TAURI_BUILD=1 pnpm build
+          # Copy static export to desktop dist-desktop
+          rm -rf ../desktop/dist-desktop
+          cp -r out ../desktop/dist-desktop
+          echo "Frontend exported to dist-desktop"
+
+      - name: Build Tauri app (signed, universal binary)
+        id: tauri-build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_BUILD: '1'
+          TAURI_BUILD: "1"
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # Uncomment when Apple Developer signing is configured:
           # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -137,16 +429,207 @@ jobs:
           # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/desktop
-          tagName: desktop-v__VERSION__
-          releaseName: 'Orivraa Desktop v__VERSION__'
+          tagName: desktop-v${{ needs.resolve-version.outputs.version }}
+          releaseName: "Orivraa Desktop v${{ needs.resolve-version.outputs.version }}"
           releaseBody: |
-            ## Orivraa Desktop v__VERSION__
-            
+            ## Orivraa Desktop v${{ needs.resolve-version.outputs.version }}
+
             ### macOS Installer
             - **DMG**: Drag-and-drop installer for macOS 10.15+
-            
+
+            ### Downloads
+            - **Latest version (R2)**: https://releases.orivraa.com/desktop/latest/
+            - **This version (GitHub)**: See assets below
+
+            > R2 hosts only the latest version. Older versions are available exclusively on GitHub Releases.
             > ⚠️ macOS builds are currently unsigned. You may need to right-click → Open to bypass Gatekeeper.
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
           args: --target universal-apple-darwin
+
+      - name: Configure R2 credentials
+        shell: bash
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+
+      - name: Clean old macOS installers from R2 latest/
+        shell: bash
+        run: |
+          R2_LATEST="s3://${R2_BUCKET}/desktop/latest"
+          echo "Cleaning old macOS files from ${R2_LATEST}/ ..."
+          # Delete DMG/app objects under desktop/latest/ (preserve latest.json + Windows installers)
+          aws s3 rm "${R2_LATEST}" \
+            --endpoint-url "${R2_ENDPOINT}" \
+            --recursive \
+            --exclude "latest.json" \
+            --exclude "*.exe" \
+            --exclude "*.msi" \
+            --no-progress 2>/dev/null || true
+          echo "R2 latest/ cleaned (latest.json + Windows installers preserved)"
+
+      - name: Upload installers to R2 (latest only)
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          R2_BASE="s3://${R2_BUCKET}/desktop"
+
+          ARTIFACTS='${{ steps.tauri-build.outputs.artifactPaths }}'
+          echo "Artifact paths: $ARTIFACTS"
+
+          python3 -c "
+          import json, subprocess, sys, os, glob
+          artifacts = json.loads('''$ARTIFACTS''') if '''$ARTIFACTS''' != 'null' else []
+          if not artifacts:
+              print('No artifact paths returned, searching manually...')
+              base = 'apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle'
+              for pattern in [f'{base}/dmg/*.dmg', f'{base}/app/*.app']:
+                  artifacts.extend(glob.glob(pattern))
+          for a in artifacts:
+              if not os.path.exists(a):
+                  print(f'  SKIP (not found): {a}')
+                  continue
+              fname = os.path.basename(a)
+              # Upload ONLY to latest/ — R2 keeps only the latest version
+              dest_latest = f'${R2_BASE}/latest/{fname}'
+              print(f'  Uploading {a} → {dest_latest}')
+              if fname.endswith('.app'):
+                  subprocess.run(['aws', 's3', 'cp', a, dest_latest, '--endpoint-url', '${R2_ENDPOINT}', '--recursive', '--no-progress'], check=True)
+              else:
+                  subprocess.run(['aws', 's3', 'cp', a, dest_latest, '--endpoint-url', '${R2_ENDPOINT}', '--no-progress'], check=True)
+              print(f'  ✓ {fname}')
+          print('R2 upload complete (latest only)')
+          "
+
+      - name: Generate and upload R2 latest.json (macOS)
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          R2_BASE="s3://${R2_BUCKET}/desktop"
+
+          BUNDLE_DIR="apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle"
+          DMG_FILE=$(ls "$BUNDLE_DIR/dmg/"*.dmg 2>/dev/null | head -1 || true)
+
+          if [ -z "$DMG_FILE" ]; then
+            echo "No macOS DMG found, skipping latest.json for macOS"
+            exit 0
+          fi
+
+          INSTALLER_NAME=$(basename "$DMG_FILE")
+          SIG_FILE="${DMG_FILE}.sig"
+          SIGNATURE=""
+          if [ -f "$SIG_FILE" ]; then
+            SIGNATURE=$(cat "$SIG_FILE")
+          fi
+
+          # URL points to R2 latest/ (releases.orivraa.com)
+          R2_DOWNLOAD_URL="https://releases.orivraa.com/desktop/latest/${INSTALLER_NAME}"
+
+          cat > /tmp/latest-macos.json << ENDJSON
+          {
+            "version": "${VERSION}",
+            "notes": "Orivraa Desktop v${VERSION}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "${SIGNATURE}",
+                "url": "${R2_DOWNLOAD_URL}"
+              },
+              "darwin-x86_64": {
+                "signature": "${SIGNATURE}",
+                "url": "${R2_DOWNLOAD_URL}"
+              }
+            }
+          }
+          ENDJSON
+
+          echo "Generated macOS latest.json:"
+          cat /tmp/latest-macos.json
+
+          # Upload to /desktop/latest-macos.json (macOS updater fallback)
+          aws s3 cp /tmp/latest-macos.json "${R2_BASE}/latest-macos.json" \
+            --endpoint-url "${R2_ENDPOINT}" \
+            --content-type "application/json" \
+            --no-progress
+          echo "R2 macOS latest.json uploaded"
+
+      - name: Publish release to API
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          API_BASE="https://api.orivraa.com"
+          # Latest version is served from R2; older versions stay on GitHub
+          DOWNLOAD_BASE="https://releases.orivraa.com/desktop/latest"
+
+          BUNDLE_DIR="apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle"
+          DMG_FILE=$(ls "$BUNDLE_DIR/dmg/"*.dmg 2>/dev/null | head -1 || true)
+
+          if [ -z "$DMG_FILE" ]; then
+            echo "No macOS DMG found for API publish"
+            exit 0
+          fi
+
+          INSTALLER_NAME=$(basename "$DMG_FILE")
+          FILE_SIZE=$(stat -f%z "$DMG_FILE" 2>/dev/null || wc -c < "$DMG_FILE")
+          DOWNLOAD_URL="${DOWNLOAD_BASE}/${INSTALLER_NAME}"
+
+          echo "Publishing to API: v${VERSION} MACOS"
+          echo "  URL: ${DOWNLOAD_URL}"
+          echo "  Size: ${FILE_SIZE}"
+          echo "  File: ${INSTALLER_NAME}"
+
+          # Build changelog from git log
+          CHANGELOG=""
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+          if [ -n "$LAST_TAG" ]; then
+            CHANGELOG=$(git log "${LAST_TAG}..HEAD" --pretty=format:"- %s" --no-merges 2>/dev/null || true)
+          fi
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG=$(git log -10 --pretty=format:"- %s" --no-merges 2>/dev/null || echo "Release v${VERSION}")
+          fi
+
+          curl -sS -X POST "${API_BASE}/api/releases/publish" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.ORIVRAA_ADMIN_TOKEN }}" \
+            -d "$(python3 -c "
+          import json
+          payload = {
+              'version': '${VERSION}',
+              'platform': 'MACOS',
+              'downloadUrl': '${DOWNLOAD_URL}',
+              'fileSize': int('${FILE_SIZE}'),
+              'fileName': '${INSTALLER_NAME}',
+              'changelog': '''${CHANGELOG}'''.replace(\"'\", \"\"),
+              'minOs': 'macOS 10.15',
+              'architecture': 'universal'
+          }
+          print(json.dumps(payload))
+          ")"
+          echo ""
+          echo "API publish complete"
+
+  # ═══════════════════════════════════════════════════════════
+  # Summary
+  # ═══════════════════════════════════════════════════════════
+  release-summary:
+    name: 📊 Release Summary
+    needs: [resolve-version, build-windows, build-macos]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## Desktop Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ needs.resolve-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Build | R2 Upload | API Publish |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|-----------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows  | ${{ needs.build-windows.result }} | ${{ needs.build-windows.result }} | ${{ needs.build-windows.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS    | ${{ needs.build-macos.result }} | ${{ needs.build-macos.result }} | ${{ needs.build-macos.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Download URLs" >> $GITHUB_STEP_SUMMARY
+          echo "- **R2 (latest only)**: https://releases.orivraa.com/desktop/latest/" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub (all versions)**: See release assets" >> $GITHUB_STEP_SUMMARY
+          echo "- **Updater manifest (R2)**: https://releases.orivraa.com/desktop/latest.json" >> $GITHUB_STEP_SUMMARY

@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { AuditModule } from "../audit/audit.module";
-import { SubscriptionPlansModule } from "../subscriptions/subscription-plans.module";
+import { SubscriptionPlansModule } from "../core/subscriptions/subscription-plans.module";
 import { ApiKeyController } from "./controllers/api-key.controller";
 import { BranchController } from "./controllers/branch.controller";
 import { BulkImportController } from "./controllers/bulk-import.controller";

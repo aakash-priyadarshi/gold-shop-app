@@ -39,6 +39,21 @@ const CHUNKS: { topic: string; content: string }[] = [
       "Orivraa automatically applies Indian GST on jewellery: 3% on gold value + 5% on making charges. HSN code 7113 (articles of jewellery and parts thereof). Old-gold exchange deductions are handled correctly. Produces GSTR1, GSTR3B, and HSN summary exports. Also supports VAT for UAE/GCC, MTD for UK, and OSS for EU.",
   },
   {
+    topic: "nepal_tax_2083",
+    content:
+      "Nepal tax update (FY 2083/84 — 2026/27 budget): The 2% luxury tax on gold/silver jewellery has been ABOLISHED and replaced with a 0.5% Skill Promotion Fee on jewellery sale value to final consumers (covers metal + making + finish). 13% VAT still applies to diamonds and gemstones only. Customs duty on gold doubled from 10% to 20% (embedded in market premium, not shown as a checkout line item). Orivraa's Nepal tax engine automatically applies the new 0.5% Skill Promotion Fee instead of the old luxury tax.",
+  },
+  {
+    topic: "weight_units",
+    content:
+      "Orivraa supports multiple weight units on invoices and quotes: grams (g), tola (11.6638g), laal (0.1166g, Nepal), kilogram, ounce (troy), and pound. Nepal defaults to tola, India to grams, US to ounces. You can switch the weight unit per invoice using the unit selector next to the weight field. The system internally stores all weights in grams and converts for display. The tola unit is especially useful for Nepali and traditional Indian jewellers.",
+  },
+  {
+    topic: "live_rates_autofill",
+    content:
+      "On the invoice creation page, Orivraa shows live gold and silver market rates in a collapsible panel. Click the 'Live' button next to any line item's Metal Cost to autofill the cost as weight × live rate per gram. The autofilled cost is fully editable afterwards. Rates are fetched per market (Nepal, India, UAE, etc.) in the local currency. Live rates update every 10 minutes.",
+  },
+  {
     topic: "hallmark",
     content:
       "Every invoice can carry HUID (Hallmark Unique ID), purity (24K, 22K, 18K, 14K, 9K), gross weight, net weight, and stone weight. Orivraa is fully BIS-compliant. Full hallmarking compliance checklist available at /blog/hallmarking-compliance-checklist-jewellers-india.",

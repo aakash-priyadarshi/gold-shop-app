@@ -6,8 +6,8 @@ import {
   PlatingOption,
 } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
-import { MarketRegion } from "../market-rates/types";
-import { TaxRulesService } from "../pricing/services/tax-rules.service";
+import { MarketRegion } from "../core/market-rates/types";
+import { TaxRulesService } from "../core/pricing/services/tax-rules.service";
 
 // Expanded Material definitions matching the spec
 const PRECIOUS_METALS = [

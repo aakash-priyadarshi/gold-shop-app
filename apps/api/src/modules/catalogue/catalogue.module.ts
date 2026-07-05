@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module";
-import { SubscriptionPlansModule } from "../subscriptions/subscription-plans.module";
+import { SubscriptionPlansModule } from "../core/subscriptions/subscription-plans.module";
 import { CatalogueController } from "./catalogue.controller";
 import { CataloguePublicController } from "./catalogue.public.controller";
 import { CatalogueService } from "./catalogue.service";

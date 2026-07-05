@@ -28,7 +28,7 @@ import { RolesGuard } from "../auth/guards/roles.guard";
 import { EmailTemplateService } from "../mail/email-template.service";
 import { EMAIL_SENDERS, MailService } from "../mail/mail.service";
 import { NotificationsService } from "../notifications/notifications.service";
-import { SellerEngagementService } from "../seller-performance/seller-engagement.service";
+import { SellerEngagementService } from "../core/seller-performance/seller-engagement.service";
 
 @ApiTags("admin")
 @Controller("admin")

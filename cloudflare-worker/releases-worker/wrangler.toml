@@ -1,0 +1,30 @@
+# Orivraa Releases Worker
+# Serves desktop installers from R2 bucket `orivraa-releases`
+# Bound to releases.orivraa.com via Cloudflare route (configure in dashboard)
+#
+# R2 object layout:
+#   desktop/v{version}/{filename}   — versioned installers
+#   desktop/latest/{filename}       — copy of the latest installer
+#   desktop/latest.json             — Tauri updater manifest (optional fallback)
+#   desktop/v{version}/latest.json  — versioned updater manifest
+
+name = "orivraa-releases"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+account_id = "c3219a748734c4ae628206c10c8b2c05"
+
+# R2 bucket binding for release installers
+[[r2_buckets]]
+binding = "RELEASES_BUCKET"
+bucket_name = "orivraa-releases"
+
+# Optional: restrict which origins can hit HEAD/GET (empty = allow all)
+[vars]
+ALLOWED_ORIGINS = "https://orivraa.com,https://www.orivraa.com,https://api.orivraa.com,http://localhost:3000"
+
+# Production environment
+[env.production]
+name = "orivraa-releases"
+r2_buckets = [
+  { binding = "RELEASES_BUCKET", bucket_name = "orivraa-releases" }
+]

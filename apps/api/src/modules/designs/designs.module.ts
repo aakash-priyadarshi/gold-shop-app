@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { AuditModule } from "../audit/audit.module";
 import { NotificationsModule } from "../notifications/notifications.module";
-import { SubscriptionPlansModule } from "../subscriptions/subscription-plans.module";
+import { SubscriptionPlansModule } from "../core/subscriptions/subscription-plans.module";
 import { DescriptionGeneratorService } from "./description-generator.service";
 import { DesignVariationsService } from "./design-variations.service";
 import { DesignsController } from "./designs.controller";

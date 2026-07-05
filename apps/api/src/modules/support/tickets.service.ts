@@ -8,7 +8,7 @@ import {
 import { TicketPriority, TicketStatus, TicketType } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
-import { PlanLimitsService } from "../subscriptions/plan-limits.service";
+import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 
 // Helper to create notification compatible with the service's DTO
 function ticketNotif(
@@ -87,7 +87,7 @@ export class TicketsService {
   }
 
   // ─── Create a ticket (logged-in user or guest) ───
-  async createTicket(dto: CreateTicketDto, userId?: string, userRole?: string) {
+  async createTicket(dto: CreateTicketDto, userId?: string, _userRole?: string) {
     const ticketNumber = await this.generateTicketNumber();
 
     // Auto-set priority for certain types

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { PrismaService } from "../../prisma/prisma.service";
-import { PlanLimitsService } from "../subscriptions/plan-limits.service";
+import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import { InvoicesService } from "./invoices.service";
 
 const mockPrisma = {

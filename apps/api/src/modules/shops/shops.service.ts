@@ -11,7 +11,7 @@ import { RedisService } from "../../common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
-import { SellerSubscriptionsService } from "../subscriptions/seller-subscriptions.service";
+import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
 import { ContentModerationService } from "./content-moderation.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";

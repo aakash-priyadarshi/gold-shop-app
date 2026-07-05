@@ -16,7 +16,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { MailService } from "../mail/mail.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
-import { SellerSubscriptionsService } from "../subscriptions/seller-subscriptions.service";
+import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { OtpService } from "./otp.service";

@@ -16,7 +16,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { PaymentGatewayService } from "../payment-gateway/payment-gateway.service";
+import { PaymentGatewayService } from "../core/payment-gateway/payment-gateway.service";
 import {
   AdminCancelOrderDto,
   AdminOrderFilterDto,

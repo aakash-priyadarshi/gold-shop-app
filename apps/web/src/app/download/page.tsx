@@ -80,6 +80,31 @@ function formatDate(dateStr: string): string {
   });
 }
 
+/**
+ * Construct the GitHub Release asset download URL for a release.
+ * R2 only hosts the latest version; older versions are served from GitHub.
+ * Pattern: https://github.com/{owner}/{repo}/releases/download/desktop-v{version}/{fileName}
+ */
+const GITHUB_REPO = "aakash-priyadarshi/gold-shop-app";
+
+function githubReleaseUrl(version: string, fileName: string | null): string | null {
+  if (!fileName) return null;
+  return `https://github.com/${GITHUB_REPO}/releases/download/desktop-v${version}/${fileName}`;
+}
+
+/**
+ * Resolve the effective download URL for a release.
+ * - Latest release: use the stored downloadUrl (points to R2 releases.orivraa.com)
+ * - Older releases: use GitHub Release asset URL (R2 no longer hosts them)
+ */
+function resolveDownloadUrl(release: Release): string | null {
+  if (release.isLatest && release.downloadUrl) {
+    return release.downloadUrl;
+  }
+  // Older versions: prefer GitHub Release URL, fall back to stored URL
+  return githubReleaseUrl(release.version, release.fileName) || release.downloadUrl;
+}
+
 const platformLabel = {
   WINDOWS: "Windows",
   MACOS: "macOS",
@@ -252,6 +277,16 @@ export default function DownloadPage() {
                         {primaryRelease.fileName}
                       </p>
                     )}
+
+                    {/* GitHub mirror link — fallback if R2 is slow/unavailable */}
+                    <a
+                      href={`https://github.com/aakash-priyadarshi/gold-shop-app/releases/tag/desktop-v${primaryRelease.version}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-muted-foreground hover:text-gold-600 dark:hover:text-gold-400 transition-colors underline underline-offset-2"
+                    >
+                      <T>Mirror download on GitHub</T>
+                    </a>
 
                     {/* Platform switcher */}
                     <div className="flex items-center gap-2 mt-2">
@@ -464,9 +499,9 @@ export default function DownloadPage() {
                           : ""}
                       </p>
                     </div>
-                    {release.downloadUrl ? (
+                    {resolveDownloadUrl(release) ? (
                       <Button variant="outline" size="sm" asChild>
-                        <a href={release.downloadUrl} download>
+                        <a href={resolveDownloadUrl(release)!} download>
                           <T>Download</T>
                         </a>
                       </Button>

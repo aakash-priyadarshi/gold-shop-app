@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { RedisModule } from "../../common";
 import { AuditModule } from "../audit/audit.module";
-import { SubscriptionPlansModule } from "../subscriptions/subscription-plans.module";
+import { SubscriptionPlansModule } from "../core/subscriptions/subscription-plans.module";
 import { ContentModerationService } from "./content-moderation.service";
 import { ShopsController } from "./shops.controller";
 import { ShopsService } from "./shops.service";

@@ -9,7 +9,7 @@ import {
 import { MilestoneType, OrderStatus, OrderType, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
-import { MarketplaceIntelligenceService } from "../marketplace-intelligence/marketplace-intelligence.service";
+import { MarketplaceIntelligenceService } from "../core/marketplace-intelligence/marketplace-intelligence.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import {
   AdminCancelOrderDto,

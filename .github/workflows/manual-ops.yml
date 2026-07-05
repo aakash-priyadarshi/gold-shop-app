@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Operation to perform'
+        description: "Operation to perform"
         required: true
         type: choice
         options:
@@ -17,29 +17,29 @@ on:
           - full-smoke-test
           - force-refresh-rates
       environment:
-        description: 'Target environment'
+        description: "Target environment"
         required: true
         type: choice
-        default: 'production'
+        default: "production"
         options:
           - production
           - staging
       region:
-        description: 'Region for cache operations (NP, IN, AE, UK, EU, US)'
+        description: "Region for cache operations (NP, IN, AE, UK, EU, US)"
         required: false
-        default: 'NP'
+        default: "NP"
       currency:
-        description: 'Currency for cache operations (NPR, INR, AED, GBP, EUR, USD)'
+        description: "Currency for cache operations (NPR, INR, AED, GBP, EUR, USD)"
         required: false
-        default: 'NPR'
+        default: "NPR"
       dry_run:
-        description: 'Dry run (no actual changes)'
+        description: "Dry run (no actual changes)"
         type: boolean
         default: false
 
 env:
-  NODE_VERSION: '18'
-  PNPM_VERSION: '10.27.0'
+  NODE_VERSION: "18"
+  PNPM_VERSION: "10.27.0"
 
 jobs:
   # ══════════════════════════════════════════════════════════
@@ -65,22 +65,22 @@ jobs:
             echo "::notice::DRY RUN - Would clear cache for ${{ inputs.region }}:${{ inputs.currency }}"
             exit 0
           fi
-          
+
           echo "Clearing market rate cache for ${{ inputs.region }}:${{ inputs.currency }}..."
-          
+
           RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.ADMIN_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             "${{ steps.set-url.outputs.api_url }}/market-rates/refresh" \
             -d '{"region": "${{ inputs.region }}", "currency": "${{ inputs.currency }}"}')
-          
+
           echo "Response: $RESPONSE"
-          
+
           if [[ "$RESPONSE" == *"error"* ]]; then
             echo "::error::Cache clear failed"
             exit 1
           fi
-          
+
           echo "::notice::✅ Cache cleared successfully"
 
   # ══════════════════════════════════════════════════════════
@@ -103,7 +103,7 @@ jobs:
       - name: Warm Cache for All Regions
         run: |
           REGIONS=("NP:NPR" "IN:INR" "AE:AED" "UK:GBP" "EU:EUR" "US:USD")
-          
+
           for combo in "${REGIONS[@]}"; do
             IFS=':' read -r region currency <<< "$combo"
             
@@ -125,7 +125,7 @@ jobs:
             
             sleep 2  # Rate limit protection
           done
-          
+
           echo "::notice::Cache warming complete"
 
   # ══════════════════════════════════════════════════════════
@@ -137,6 +137,9 @@ jobs:
     if: inputs.operation == 'db-health-check'
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -147,7 +150,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -163,7 +166,7 @@ jobs:
             echo "::notice::DRY RUN - Would check database connection"
             exit 0
           fi
-          
+
           echo "Checking database connection..."
           npx prisma db execute --stdin <<< "SELECT 1 as health_check;"
           echo "::notice::✅ Database connection successful"
@@ -206,7 +209,7 @@ jobs:
         run: |
           echo "Testing /market-rates..."
           RESPONSE=$(curl -s "${{ steps.set-url.outputs.api_url }}/market-rates?region=NP&currency=NPR")
-          
+
           if [[ "$RESPONSE" == *"gold24k"* ]]; then
             echo "✅ Market rates OK"
             echo "Response preview: $(echo $RESPONSE | head -c 500)"
@@ -227,7 +230,7 @@ jobs:
         run: |
           echo "Testing auth protection..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.set-url.outputs.api_url }}/auth/profile")
-          
+
           if [[ "$STATUS" == "401" ]]; then
             echo "✅ Auth protection working (401 without token)"
           else
@@ -263,7 +266,7 @@ jobs:
       - name: Force Refresh All Regions
         run: |
           REGIONS=("NP:NPR" "IN:INR" "AE:AED" "UK:GBP" "EU:EUR" "US:USD")
-          
+
           for combo in "${REGIONS[@]}"; do
             IFS=':' read -r region currency <<< "$combo"
             
@@ -288,5 +291,5 @@ jobs:
             
             sleep 3  # Rate limit protection
           done
-          
+
           echo "::notice::Force refresh complete"

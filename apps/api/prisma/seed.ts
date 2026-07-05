@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-import { upsertDefaultGatewayConfigs } from "../src/modules/payment-gateway/default-gateway-configs";
+import { upsertDefaultGatewayConfigs } from "../src/modules/core/payment-gateway/default-gateway-configs";
 
 const prisma = new PrismaClient();
 
@@ -1111,24 +1111,24 @@ async function main() {
   console.log("🔧 Creating tax rule configurations...");
 
   const taxRules = [
-    // ── Nepal ──
+    // ── Nepal (FY 2083/84 — 2% Luxury Tax ABOLISHED, replaced with 0.5% Skill Promotion Fee) ──
     {
       marketRegion: "NP",
-      taxType: "LUXURY_TAX",
-      taxName: "Luxury Tax",
+      taxType: "SKILL_PROMOTION_FEE",
+      taxName: "Skill Promotion Fee",
       category: "PRECIOUS_METAL",
-      rate: 0.02,
+      rate: 0.005,
       priority: 1,
-      description: "2% Luxury Tax on gold/silver metal",
+      description: "0.5% Skill Promotion Fee on gold/silver metal (replaces 2% Luxury Tax per FY 2083/84)",
     },
     {
       marketRegion: "NP",
-      taxType: "LUXURY_TAX",
-      taxName: "Luxury Tax",
+      taxType: "SKILL_PROMOTION_FEE",
+      taxName: "Skill Promotion Fee",
       category: "MAKING_CHARGE",
-      rate: 0.02,
+      rate: 0.005,
       priority: 2,
-      description: "2% Luxury Tax on making charges",
+      description: "0.5% Skill Promotion Fee on making charges",
     },
     {
       marketRegion: "NP",
@@ -1141,12 +1141,12 @@ async function main() {
     },
     {
       marketRegion: "NP",
-      taxType: "LUXURY_TAX",
-      taxName: "Luxury Tax",
+      taxType: "SKILL_PROMOTION_FEE",
+      taxName: "Skill Promotion Fee",
       category: "FINISH",
-      rate: 0.02,
+      rate: 0.005,
       priority: 4,
-      description: "2% Luxury Tax on finish/plating",
+      description: "0.5% Skill Promotion Fee on finish/plating",
     },
     // ── India ──
     {

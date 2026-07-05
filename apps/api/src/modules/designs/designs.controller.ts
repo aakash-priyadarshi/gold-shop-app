@@ -28,8 +28,8 @@ import {
 import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
-import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
-import { RequireFeature } from "../subscriptions/require-feature.decorator";
+import { FeatureGateGuard } from "../core/subscriptions/feature-gate.guard";
+import { RequireFeature } from "../core/subscriptions/require-feature.decorator";
 import { DescriptionGeneratorService } from "./description-generator.service";
 import { DesignVariationsService } from "./design-variations.service";
 import { DesignsService } from "./designs.service";

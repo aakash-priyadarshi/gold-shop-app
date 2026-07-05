@@ -11,7 +11,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import { upsertDefaultGatewayConfigs } from "../../src/modules/payment-gateway/default-gateway-configs";
+import { upsertDefaultGatewayConfigs } from "../../src/modules/core/payment-gateway/default-gateway-configs";
 
 const prisma = new PrismaClient();
 

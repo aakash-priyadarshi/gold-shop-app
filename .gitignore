@@ -36,6 +36,10 @@ credentials/
 **/secrets/
 **/credentials/
 
+# Tauri updater signing keys (private key must NEVER be committed)
+.tauri-keys/
+**/.tauri-keys/
+
 # API keys and tokens (common patterns — files only, not .ts source)
 *apikey*
 *api_key*

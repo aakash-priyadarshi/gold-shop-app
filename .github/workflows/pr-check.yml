@@ -9,8 +9,8 @@ on:
     types: [opened, synchronize, reopened]
 
 env:
-  NODE_VERSION: '18'
-  PNPM_VERSION: '10.27.0'
+  NODE_VERSION: "18"
+  PNPM_VERSION: "10.27.0"
 
 concurrency:
   group: pr-${{ github.event.pull_request.number }}
@@ -27,6 +27,9 @@ jobs:
       cache-key: ${{ steps.cache.outputs.cache-primary-key }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -37,7 +40,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Get pnpm store directory
         id: pnpm-cache
@@ -74,6 +77,9 @@ jobs:
     needs: install
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -84,7 +90,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Restore dependencies
         uses: actions/cache@v4
@@ -115,6 +121,9 @@ jobs:
     needs: install
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -125,7 +134,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Restore dependencies
         uses: actions/cache@v4
@@ -159,6 +168,9 @@ jobs:
     needs: [lint, typecheck]
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -169,7 +181,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Restore dependencies
         uses: actions/cache@v4
@@ -205,7 +217,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for diff
+          fetch-depth: 0 # Full history for diff
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -216,7 +230,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Restore dependencies
         uses: actions/cache@v4
@@ -263,7 +277,7 @@ jobs:
           # Check for destructive operations in new migrations
           DESTRUCTIVE_PATTERNS="DROP TABLE|DROP COLUMN|ALTER TABLE.*DROP|TRUNCATE|DELETE FROM"
           NEW_MIGRATIONS=$(git diff --name-only origin/main...HEAD -- prisma/migrations/ | grep "\.sql$" || true)
-          
+
           FOUND_DESTRUCTIVE=false
           for migration in $NEW_MIGRATIONS; do
             if grep -iE "$DESTRUCTIVE_PATTERNS" "$migration" 2>/dev/null; then
@@ -271,7 +285,7 @@ jobs:
               FOUND_DESTRUCTIVE=true
             fi
           done
-          
+
           if [[ "$FOUND_DESTRUCTIVE" == "true" ]]; then
             echo ""
             echo "::warning::🚨 DESTRUCTIVE MIGRATIONS DETECTED!"
@@ -318,6 +332,9 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -328,7 +345,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Restore dependencies
         uses: actions/cache@v4

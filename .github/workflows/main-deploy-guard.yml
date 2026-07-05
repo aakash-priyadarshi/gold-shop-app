@@ -8,13 +8,13 @@ on:
     branches: [main]
 
 env:
-  NODE_VERSION: '18'
-  PNPM_VERSION: '10.27.0'
+  NODE_VERSION: "18"
+  PNPM_VERSION: "10.27.0"
   API_URL: ${{ secrets.PRODUCTION_API_URL }}
 
 concurrency:
   group: deploy-main
-  cancel-in-progress: false  # Don't cancel in-progress deploys
+  cancel-in-progress: false # Don't cancel in-progress deploys
 
 jobs:
   # ══════════════════════════════════════════════════════════
@@ -28,7 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # Get previous commit for diff
+          fetch-depth: 2 # Get previous commit for diff
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -39,7 +41,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -77,6 +79,9 @@ jobs:
     if: needs.validate.outputs.has_migrations == 'true'
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -87,7 +92,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -135,7 +140,7 @@ jobs:
         run: |
           MAX_RETRIES=10
           RETRY_DELAY=30
-          
+
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Health check attempt $i of $MAX_RETRIES..."
             
@@ -153,7 +158,7 @@ jobs:
               sleep $RETRY_DELAY
             fi
           done
-          
+
           echo "::error::❌ Health check failed after $MAX_RETRIES attempts"
           exit 1
         continue-on-error: true
@@ -172,16 +177,16 @@ jobs:
       - name: Clear Market Rate Cache
         run: |
           echo "::notice::Clearing metal rate cache..."
-          
+
           # Call the admin endpoint to refresh market rates
           RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.ADMIN_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             "${{ env.API_URL }}/market-rates/refresh" \
             -d '{"region": "NP", "currency": "NPR"}')
-          
+
           echo "Cache refresh response: $RESPONSE"
-          
+
           if [[ "$RESPONSE" == *"error"* ]]; then
             echo "::warning::Cache refresh may have issues, but deploy continues"
           else
@@ -211,7 +216,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -220,20 +225,20 @@ jobs:
         run: |
           # Basic endpoint checks
           echo "Testing critical endpoints..."
-          
+
           # Health endpoint
           curl -f "${{ env.API_URL }}/health" || echo "Health endpoint not available"
-          
+
           # Market rates endpoint (public)
           RATES=$(curl -s "${{ env.API_URL }}/market-rates?region=NP&currency=NPR")
           echo "Market rates response: $RATES"
-          
+
           if [[ "$RATES" == *"gold24k"* ]]; then
             echo "::notice::✅ Market rates endpoint working"
           else
             echo "::warning::Market rates response may be unexpected"
           fi
-          
+
           # Auth endpoint (should return 401 without token)
           AUTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.API_URL }}/auth/profile")
           if [[ "$AUTH_CHECK" == "401" ]]; then

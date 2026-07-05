@@ -23,7 +23,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { ContentModerationService } from "./content-moderation.service";
-import { SellerSubscriptionsService } from "../subscriptions/seller-subscriptions.service";
+import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
 import { ShopsService } from "./shops.service";
 
 // ═══════════════════════════════════════════

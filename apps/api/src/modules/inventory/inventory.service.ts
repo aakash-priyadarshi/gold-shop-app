@@ -9,7 +9,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import {
   PlanLimitExceededException,
   PlanLimitsService,
-} from "../subscriptions/plan-limits.service";
+} from "../core/subscriptions/plan-limits.service";
 import {
   CreateInventoryItemDto,
   InventoryFilterDto,

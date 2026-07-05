@@ -780,7 +780,7 @@ AVAILABLE TOOLS:
       case "NP":
         return {
           taxName: "VAT",
-          detail: "Nepal charges 13% VAT on jewellery, plus any applicable luxury tax.",
+          detail: "Nepal applies 0.5% Skill Promotion Fee on jewellery sale value (replaced the 2% luxury tax per FY 2083/84) and 13% VAT on gemstones/diamonds.",
           tab: "Nepal",
         };
       case "AE":
@@ -844,7 +844,7 @@ AVAILABLE TOOLS:
         return [
           `Tax Reports route: ${taxRoute}#NP`,
           "In the left sidebar, open Tax Reports and use the Nepal tab.",
-          "For monthly filing, open the Monthly Return tab for Nepal VAT and luxury tax.",
+          "For monthly filing, open the Monthly Return tab for Nepal VAT and Skill Promotion Fee.",
           "For yearly audit, open the Yearly Audit tab to see IRD audit status and the yearly table.",
           "Use the Share with CA button in the Nepal card header when the seller asks how to share reports with their accountant.",
         ].join(" ");
@@ -1074,7 +1074,7 @@ SELLER RESPONSE RULES:
           };
         case "NP":
           return {
-            reply: `For Nepal, open Tax Reports from the left sidebar at ${taxRoute}#NP. Use the Monthly Return tab for VAT and luxury tax filings, and the Yearly Audit tab if you want to review IRD audit status.`,
+            reply: `For Nepal, open Tax Reports from the left sidebar at ${taxRoute}#NP. Use the Monthly Return tab for VAT and Skill Promotion Fee filings, and the Yearly Audit tab if you want to review IRD audit status.`,
             shouldEscalate: false,
             confidence: 0.94,
           };

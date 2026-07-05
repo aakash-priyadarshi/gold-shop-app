@@ -9,7 +9,7 @@ import { CatalogueMode, InventoryVisibility } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
-import { PlanLimitsService } from "../subscriptions/plan-limits.service";
+import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import {
   createCatalogueToken,
   hashViewerIp,
@@ -649,7 +649,7 @@ export class CatalogueService {
         conversationId: conversation.id,
         senderId: userId,
         senderRole: "CUSTOMER",
-        content: `Quote request from catalogue "${catalogue.name}": ${items.length} item(s)${notes ? `. Notes: ${notes}` : ""}`,
+        content: `Quote request from catalogue "${catalogue.name}": ${items.length} item(s) (${itemSummary})${notes ? `. Notes: ${notes}` : ""}`,
         isSystem: false,
         isSystemGenerated: true,
         messageType: "RFQ_ACTION",
