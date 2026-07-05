@@ -251,7 +251,8 @@ jobs:
           R2_BASE="s3://${R2_BUCKET}/desktop"
 
           # Find the signature and artifact files
-          BUNDLE_DIR="apps/desktop/src-tauri/target/release/bundle"
+          # tauri-action builds to apps/desktop/target/ (projectPath is apps/desktop)
+          BUNDLE_DIR="apps/desktop/target/release/bundle"
           NSIS_EXE=$(ls "$BUNDLE_DIR/nsis/"*.exe 2>/dev/null | head -1 || true)
           MSI_FILE=$(ls "$BUNDLE_DIR/msi/"*.msi 2>/dev/null | head -1 || true)
 
@@ -310,7 +311,7 @@ jobs:
           DOWNLOAD_BASE="https://releases.orivraa.com/desktop/latest"
 
           # Find artifacts and their sizes
-          BUNDLE_DIR="apps/desktop/src-tauri/target/release/bundle"
+          BUNDLE_DIR="apps/desktop/target/release/bundle"
           NSIS_EXE=$(ls "$BUNDLE_DIR/nsis/"*.exe 2>/dev/null | head -1 || true)
           MSI_FILE=$(ls "$BUNDLE_DIR/msi/"*.msi 2>/dev/null | head -1 || true)
 
@@ -519,7 +520,7 @@ jobs:
           VERSION="${{ needs.resolve-version.outputs.version }}"
           R2_BASE="s3://${R2_BUCKET}/desktop"
 
-          BUNDLE_DIR="apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle"
+          BUNDLE_DIR="apps/desktop/target/universal-apple-darwin/release/bundle"
           DMG_FILE=$(ls "$BUNDLE_DIR/dmg/"*.dmg 2>/dev/null | head -1 || true)
 
           if [ -z "$DMG_FILE" ]; then
@@ -573,7 +574,7 @@ jobs:
           # Latest version is served from R2; older versions stay on GitHub
           DOWNLOAD_BASE="https://releases.orivraa.com/desktop/latest"
 
-          BUNDLE_DIR="apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle"
+          BUNDLE_DIR="apps/desktop/target/universal-apple-darwin/release/bundle"
           DMG_FILE=$(ls "$BUNDLE_DIR/dmg/"*.dmg 2>/dev/null | head -1 || true)
 
           if [ -z "$DMG_FILE" ]; then
