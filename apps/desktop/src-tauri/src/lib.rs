@@ -9,7 +9,7 @@ pub mod sync;
 use commands::{AuthTokenReceiver, SyncState};
 use db::Database;
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tokio::sync::Mutex as AsyncMutex;
 
 /// JavaScript injected into orivraa.com pages for desktop enhancements:
@@ -57,6 +57,52 @@ pub fn run() {
 
             log::info!("Orivraa Desktop started");
 
+            // Check for updates on startup (non-blocking, fire-and-forget)
+            // The check runs 5s after startup to avoid blocking initialization.
+            // If an update is found, a system notification is shown and a
+            // Tauri event is emitted for the frontend to display a banner.
+            let app_handle = app.handle().clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                use tauri_plugin_updater::UpdaterExt;
+                use tauri_plugin_notification::NotificationExt;
+
+                match app_handle.updater_builder().build() {
+                    Ok(updater) => {
+                        match updater.check().await {
+                            Ok(Some(update)) => {
+                                log::info!("Update available on startup: v{}", update.version);
+
+                                // Emit event for frontend
+                                let info = serde_json::json!({
+                                    "version": update.version,
+                                    "date": update.date.map(|d| d.to_string()),
+                                    "body": update.body,
+                                    "currentVersion": update.current_version,
+                                });
+                                let _ = app_handle.emit("orivraa-update-available", &info);
+
+                                // Show system notification
+                                let _ = app_handle.notification()
+                                    .builder()
+                                    .title("Orivraa Update Available")
+                                    .body(&format!("Version {} is ready to install. Click the update icon in the app to update.", update.version))
+                                    .show();
+                            }
+                            Ok(None) => {
+                                log::info!("App is up to date (startup check)");
+                            }
+                            Err(e) => {
+                                log::warn!("Startup update check failed: {}", e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        log::warn!("Failed to build updater for startup check: {}", e);
+                    }
+                }
+            });
+
             // Register a desktop session (fire-and-forget, non-blocking)
             let db_handle = app.state::<Arc<Database>>().inner().clone();
             tokio::spawn(async move {
@@ -88,7 +134,9 @@ pub fn run() {
                     if let Ok(body) = resp.json::<serde_json::Value>().await {
                         if let Some(st) = body.get("sessionToken").and_then(|v| v.as_str()) {
                             let _ = db_handle.set_auth("desktop_session_token", st, None);
-                            log::info!("Desktop session registered: {}", st);
+                            // Log only a truncated hash — never the full token
+                            let token_preview = if st.len() > 8 { &st[..8] } else { st };
+                            log::info!("Desktop session registered (token prefix: {}...)", token_preview);
                         }
                     }
                 }
@@ -127,6 +175,7 @@ pub fn run() {
             commands::poll_auth_tokens,
             // Updates
             commands::check_for_updates,
+            commands::auto_check_updates,
             commands::install_update,
             commands::get_app_version,
             commands::send_heartbeat,

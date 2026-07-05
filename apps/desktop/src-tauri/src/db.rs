@@ -467,6 +467,12 @@ impl Database {
 
     pub fn get_auth(&self, key: &str) -> SqlResult<Option<String>> {
         let conn = self.conn.lock().unwrap();
+        // Check expires_at and delete expired entries automatically
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "DELETE FROM auth_cache WHERE expires_at IS NOT NULL AND expires_at < ?1",
+            params![now],
+        )?;
         let mut stmt = conn.prepare("SELECT value FROM auth_cache WHERE key = ?1")?;
         let mut rows = stmt.query(params![key])?;
         match rows.next()? {

@@ -6,7 +6,7 @@
 use crate::db::Database;
 use crate::sync::SyncEngine;
 use std::sync::Arc;
-use tauri::State;
+use tauri::{Emitter, State};
 use tokio::sync::Mutex as AsyncMutex;
 
 /// Managed state for sync engine
@@ -46,6 +46,19 @@ pub fn save_auth_token(
     refresh_token: Option<String>,
     user_json: String,
 ) -> Result<(), String> {
+    // Input validation — reject excessively long inputs
+    if token.is_empty() || token.len() > 8192 {
+        return Err("Invalid token".into());
+    }
+    if user_json.len() > 65536 {
+        return Err("User data too large".into());
+    }
+    if let Some(ref rt) = refresh_token {
+        if rt.is_empty() || rt.len() > 8192 {
+            return Err("Invalid refresh token".into());
+        }
+    }
+
     db.set_auth("access_token", &token, None)
         .map_err(|e| e.to_string())?;
     if let Some(rt) = refresh_token {
@@ -131,6 +144,20 @@ pub fn save_draft(
     title: String,
     payload: String,
 ) -> Result<String, String> {
+    // Input validation
+    if shop_id.is_empty() || shop_id.len() > 256 {
+        return Err("Invalid shop ID".into());
+    }
+    if draft_type.is_empty() || draft_type.len() > 64 {
+        return Err("Invalid draft type".into());
+    }
+    if title.len() > 512 {
+        return Err("Title too long".into());
+    }
+    if payload.len() > 1048576 {
+        return Err("Payload too large (max 1MB)".into());
+    }
+
     let draft = crate::db::DraftItem {
         id: uuid::Uuid::new_v4().to_string(),
         shop_id,
@@ -470,8 +497,7 @@ async fn process_auth_tokens(
 ) {
     match serde_json::from_str::<AuthTokenPayload>(body) {
         Ok(payload) => {
-            log::info!("Received auth tokens from browser OAuth (token len: {}, refresh len: {})",
-                payload.access_token.len(), payload.refresh_token.len());
+            log::info!("Received auth tokens from browser OAuth (tokens received successfully)");
 
             // Store in local DB
             let _ = db.set_auth("access_token", &payload.access_token, None);
@@ -488,7 +514,8 @@ async fn process_auth_tokens(
             log::info!("Auth tokens stored in receiver for polling");
         }
         Err(e) => {
-            log::error!("Failed to parse auth tokens: {} — body preview: {}", e, &body[..body.len().min(500)]);
+            // Log error without body preview to avoid leaking token data
+            log::error!("Failed to parse auth tokens: {}", e);
         }
     }
 }
@@ -533,14 +560,34 @@ pub async fn poll_auth_tokens(
 }
 
 /// Open any external URL in the system browser.
+/// Validates that the URL uses http/https only and is not excessively long.
 #[tauri::command]
 #[allow(deprecated)]
 pub async fn open_external_url(
     app: tauri::AppHandle,
     url: String,
 ) -> Result<(), String> {
+    // Reject URLs that are too long (potential abuse)
+    if url.len() > 2048 {
+        return Err("URL too long".into());
+    }
+
+    // Must start with http:// or https:// — blocks file://, javascript:, data:, etc.
     if !url.starts_with("http://") && !url.starts_with("https://") {
         return Err("Invalid URL: must start with http:// or https://".into());
+    }
+
+    // Parse URL to validate it's well-formed
+    let parsed = url::Url::parse(&url)
+        .map_err(|e| format!("Invalid URL: {}", e))?;
+
+    // Block localhost and private IPs to prevent SSRF
+    let host = parsed.host_str().unwrap_or("");
+    if host == "localhost" || host == "127.0.0.1" || host == "0.0.0.0" || host.starts_with("192.168.") || host.starts_with("10.") || host.starts_with("172.") {
+        // Allow localhost only for dev environment
+        if !cfg!(debug_assertions) {
+            return Err("Blocked: cannot open local/private addresses".into());
+        }
     }
 
     tauri_plugin_shell::ShellExt::shell(&app)
@@ -577,7 +624,55 @@ pub async fn check_for_updates(
     }
 }
 
+/// Check for updates and emit a system notification if one is available.
+/// Called automatically on app startup. Also emits a Tauri event so the
+/// frontend can show an update banner.
+#[tauri::command]
+pub async fn auto_check_updates(
+    app: tauri::AppHandle,
+) -> Result<bool, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    use tauri_plugin_notification::NotificationExt;
+
+    let updater = app.updater_builder().build()
+        .map_err(|e| format!("Failed to build updater: {}", e))?;
+
+    match updater.check().await {
+        Ok(Some(update)) => {
+            log::info!("Update available: v{}", update.version);
+
+            // Emit event for frontend to show update banner
+            let info = serde_json::json!({
+                "version": update.version,
+                "date": update.date.map(|d| d.to_string()),
+                "body": update.body,
+                "currentVersion": update.current_version,
+            });
+            let _ = app.emit("orivraa-update-available", &info);
+
+            // Show system notification
+            let _ = app.notification()
+                .builder()
+                .title("Orivraa Update Available")
+                .body(&format!("Version {} is ready to install. Click to update.", update.version))
+                .show();
+
+            Ok(true)
+        }
+        Ok(None) => {
+            log::info!("App is up to date");
+            Ok(false)
+        }
+        Err(e) => {
+            log::warn!("Update check failed: {}", e);
+            Err(format!("Update check failed: {}", e))
+        }
+    }
+}
+
 /// Download and install an available update.
+/// Emits `orivraa-update-progress` events with download progress so the
+/// frontend can show a progress bar.
 #[tauri::command]
 pub async fn install_update(
     app: tauri::AppHandle,
@@ -591,16 +686,48 @@ pub async fn install_update(
         Ok(Some(update)) => {
             log::info!("Installing update v{}", update.version);
 
-            let mut downloaded = 0;
+            // Emit "started" event
+            let update_version = update.version.clone();
+            let _ = app.emit("orivraa-update-progress", serde_json::json!({
+                "status": "downloading",
+                "version": update_version,
+                "downloaded": 0,
+                "total": 0,
+                "percent": 0,
+            }));
+
+            let app_handle = app.clone();
+            let mut downloaded = 0u64;
             update.download_and_install(
-                |chunk_length, content_length| {
-                    downloaded += chunk_length;
-                    log::info!("Downloaded {} of {:?} bytes", downloaded, content_length);
+                move |chunk_length, content_length| {
+                    downloaded += chunk_length as u64;
+                    let percent = if let Some(total) = content_length {
+                        if total > 0 { (downloaded as f64 / total as f64 * 100.0) as u32 } else { 0 }
+                    } else { 0 };
+
+                    log::info!("Downloaded {} of {:?} bytes ({}%)", downloaded, content_length, percent);
+
+                    // Emit progress event (throttle: only every ~5% to avoid flooding)
+                    if percent % 5 == 0 || downloaded == content_length.unwrap_or(0) {
+                        let _ = app_handle.emit("orivraa-update-progress", serde_json::json!({
+                            "status": "downloading",
+                            "version": update_version,
+                            "downloaded": downloaded,
+                            "total": content_length.unwrap_or(0),
+                            "percent": percent,
+                        }));
+                    }
                 },
                 || {
                     log::info!("Download complete, installing...");
                 },
             ).await.map_err(|e| format!("Install failed: {}", e))?;
+
+            // Emit "installed" event before restarting
+            let _ = app.emit("orivraa-update-progress", serde_json::json!({
+                "status": "installed",
+                "version": update.version,
+            }));
 
             log::info!("Update installed. Restarting...");
             app.restart();

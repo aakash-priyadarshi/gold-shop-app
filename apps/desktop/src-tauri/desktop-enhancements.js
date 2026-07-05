@@ -132,6 +132,51 @@
     '#orivraa-update-banner .btn-update:hover { background: linear-gradient(135deg, #f3dd99, #e5a31e); }',
     '#orivraa-update-banner .btn-later { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); }',
     '#orivraa-update-banner .btn-later:hover { border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.8); }',
+    '',
+    '/* Persistent update icon (pulses when update available) */',
+    '#orivraa-update-icon {',
+    '  position: fixed; bottom: 20px; right: 20px; z-index: 99989;',
+    '  width: 48px; height: 48px; border-radius: 50%;',
+    '  background: linear-gradient(135deg, #e5a31e, #c9942a);',
+    '  display: flex; align-items: center; justify-content: center;',
+    '  cursor: pointer; box-shadow: 0 4px 20px rgba(212,175,55,0.4);',
+    '  transition: transform 0.2s, box-shadow 0.2s;',
+    '  animation: orivraaUpdatePulse 2s ease-in-out infinite;',
+    '}',
+    '#orivraa-update-icon:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(212,175,55,0.6); }',
+    '@keyframes orivraaUpdatePulse {',
+    '  0%, 100% { box-shadow: 0 4px 20px rgba(212,175,55,0.4); }',
+    '  50% { box-shadow: 0 4px 20px rgba(212,175,55,0.7), 0 0 0 8px rgba(212,175,55,0.1); }',
+    '}',
+    '#orivraa-update-icon svg { width: 24px; height: 24px; fill: #0f172a; }',
+    '#orivraa-update-icon .update-badge {',
+    '  position: absolute; top: -2px; right: -2px;',
+    '  background: #22c55e; color: white; font-size: 10px; font-weight: 700;',
+    '  border-radius: 50%; width: 16px; height: 16px;',
+    '  display: flex; align-items: center; justify-content: center;',
+    '  border: 2px solid #0f172a;',
+    '}',
+    '',
+    '/* Update progress bar */',
+    '#orivraa-update-progress {',
+    '  position: fixed; bottom: 20px; right: 20px; z-index: 99991;',
+    '  background: linear-gradient(135deg, #1a2744, #0f172a);',
+    '  border: 1px solid rgba(212,175,55,0.3); border-radius: 12px;',
+    '  padding: 16px 20px; min-width: 300px; max-width: 360px;',
+    '  box-shadow: 0 8px 32px rgba(0,0,0,0.4);',
+    '  animation: slideUp 0.4s ease-out;',
+    '}',
+    '#orivraa-update-progress h4 { color: #f3dd99; font-size: 14px; margin: 0 0 8px; }',
+    '#orivraa-update-progress .progress-bar {',
+    '  width: 100%; height: 6px; background: rgba(255,255,255,0.1);',
+    '  border-radius: 3px; overflow: hidden; margin: 8px 0;',
+    '}',
+    '#orivraa-update-progress .progress-fill {',
+    '  height: 100%; background: linear-gradient(90deg, #e5a31e, #f3dd99);',
+    '  border-radius: 3px; transition: width 0.3s ease-out;',
+    '}',
+    '#orivraa-update-progress .progress-text { color: rgba(255,255,255,0.5); font-size: 11px; }',
+    '#orivraa-update-progress .restart-prompt { color: #4ade80; font-size: 13px; margin-top: 8px; }',
   ].join('\n');
   document.head.appendChild(style);
 
@@ -361,6 +406,37 @@
     });
   }
 
+  // ─── UPDATE ICON (persistent, pulses when update available) ───
+  var updateIconVisible = false;
+  var pendingUpdateInfo = null;
+
+  function showUpdateIcon(info) {
+    pendingUpdateInfo = info;
+    if (updateIconVisible) return;
+    updateIconVisible = true;
+
+    var icon = document.createElement('div');
+    icon.id = 'orivraa-update-icon';
+    icon.title = 'Update available — click to install';
+    icon.innerHTML = [
+      '<svg viewBox="0 0 24 24"><path d="M12 4V2L8 6l4 4V8c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 17.03 20 15.57 20 14c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v2l4-4-4-4v2z"/></svg>',
+      '<span class="update-badge">!</span>',
+    ].join('');
+    document.body.appendChild(icon);
+
+    icon.addEventListener('click', function() {
+      if (pendingUpdateInfo) {
+        showUpdateBanner(pendingUpdateInfo);
+      }
+    });
+  }
+
+  function removeUpdateIcon() {
+    var icon = document.getElementById('orivraa-update-icon');
+    if (icon) icon.remove();
+    updateIconVisible = false;
+  }
+
   function showUpdateBanner(info) {
     var existing = document.getElementById('orivraa-update-banner');
     if (existing) existing.remove();
@@ -378,7 +454,7 @@
     document.body.appendChild(banner);
 
     document.getElementById('update-install-btn').addEventListener('click', function() {
-      this.textContent = 'Downloading...';
+      this.textContent = 'Starting...';
       this.disabled = true;
       TAURI.invoke('install_update').catch(function(err) {
         showToast('Update failed: ' + err);
@@ -388,6 +464,75 @@
 
     document.getElementById('update-later-btn').addEventListener('click', function() {
       banner.remove();
+      // Keep the persistent icon so user can update later
+      showUpdateIcon(info);
+    });
+  }
+
+  // ─── UPDATE PROGRESS (listen for events from Rust) ───
+  function showUpdateProgress(info) {
+    // Remove the banner if it exists
+    var banner = document.getElementById('orivraa-update-banner');
+    if (banner) banner.remove();
+    removeUpdateIcon();
+
+    var existing = document.getElementById('orivraa-update-progress');
+    if (existing) existing.remove();
+
+    var progress = document.createElement('div');
+    progress.id = 'orivraa-update-progress';
+    progress.innerHTML = [
+      '<h4>\u2B07 Downloading v' + (info.version || '') + '</h4>',
+      '<div class="progress-bar"><div class="progress-fill" id="update-progress-fill" style="width: 0%"></div></div>',
+      '<div class="progress-text" id="update-progress-text">0%</div>',
+    ].join('');
+    document.body.appendChild(progress);
+  }
+
+  function updateProgress(percent, downloaded, total) {
+    var fill = document.getElementById('update-progress-fill');
+    var text = document.getElementById('update-progress-text');
+    if (fill) fill.style.width = percent + '%';
+    if (text) {
+      var dlMB = downloaded ? (downloaded / 1048576).toFixed(1) : '0';
+      var totalMB = total ? (total / 1048576).toFixed(1) : '?';
+      text.textContent = percent + '% — ' + dlMB + ' / ' + totalMB + ' MB';
+    }
+  }
+
+  function showUpdateComplete(version) {
+    var progress = document.getElementById('orivraa-update-progress');
+    if (progress) {
+      progress.innerHTML = [
+        '<h4>\u2705 Update Installed — v' + (version || '') + '</h4>',
+        '<p class="restart-prompt">Restarting automatically...</p>',
+      ].join('');
+    }
+  }
+
+  // ─── LISTEN FOR UPDATE EVENTS FROM RUST ───
+  // The Rust side emits these events when it detects an update on startup
+  // or during the download process.
+  if (TAURI && TAURI.event && TAURI.event.listen) {
+    TAURI.event.listen('orivraa-update-available', function(event) {
+      console.log('[Orivraa Desktop] Update available event:', event.payload);
+      var info = event.payload;
+      if (info && info.version) {
+        showUpdateBanner(info);
+      }
+    });
+
+    TAURI.event.listen('orivraa-update-progress', function(event) {
+      var data = event.payload;
+      if (!data) return;
+
+      if (data.status === 'downloading' && data.percent === 0) {
+        showUpdateProgress(data);
+      } else if (data.status === 'downloading') {
+        updateProgress(data.percent || 0, data.downloaded || 0, data.total || 0);
+      } else if (data.status === 'installed') {
+        showUpdateComplete(data.version);
+      }
     });
   }
 
@@ -411,14 +556,20 @@
   }
 
   // Check for updates on startup (with delay)
+  // Note: The Rust side also checks on startup and emits an event.
+  // This JS check is a fallback in case the Rust check fails or the
+  // event listener isn't ready yet.
   setTimeout(function() {
     TAURI.invoke('check_for_updates').then(function(result) {
       if (result) {
         var info = JSON.parse(result);
-        showUpdateBanner(info);
+        // Only show if the event-based banner isn't already showing
+        if (!document.getElementById('orivraa-update-banner') && !document.getElementById('orivraa-update-icon')) {
+          showUpdateBanner(info);
+        }
       }
     }).catch(function() {});
-  }, 10000); // 10s after page load
+  }, 12000); // 12s after page load (after Rust startup check at 5s)
 
   // ─── 8. APP VERSION ───────────────────────────────────
   // Store version for use in crash reports / UI, but do NOT modify
