@@ -38,10 +38,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth, getStoredAuthToken } from "@/hooks/useAuth";
 import { useImageUpload } from "@/hooks/useImageUpload";
-import { useMarket } from "@/hooks/useMarket";
+import { useMarket, WEIGHT_UNIT_SYMBOLS, type WeightUnit } from "@/hooks/useMarket";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { getApiUrl, shopQuotesApi } from "@/lib/api";
+import { toGrams, fromGrams, getSupportedWeightUnits } from "@gold-shop/shared";
 import {
     BUILD_METHODS,
     JEWELLERY_TYPES,
@@ -243,7 +244,30 @@ export default function CreateShopQuotePage() {
   const [designId, setDesignId] = useState<string | null>(null);
   const [regenerationFeedback, setRegenerationFeedback] = useState("");
 
-  const { selectedWeightUnit } = useMarket();
+  const { selectedWeightUnit, setWeightUnit, config: marketConfig } = useMarket();
+
+  // Weight unit helpers
+  const supportedWeightUnits = marketConfig?.supportedWeightUnits ||
+    getSupportedWeightUnits(shopCountry) || ["GRAM"];
+  const weightUnitSymbol = WEIGHT_UNIT_SYMBOLS[selectedWeightUnit] || "g";
+
+  // Convert display weight to grams for storage
+  const displayToGrams = useCallback(
+    (displayValue: number): number => {
+      try { return toGrams(displayValue, selectedWeightUnit); }
+      catch { return displayValue; }
+    },
+    [selectedWeightUnit],
+  );
+
+  // Convert grams to display unit
+  const gramsToDisplay = useCallback(
+    (grams: number): number => {
+      try { return fromGrams(grams, selectedWeightUnit); }
+      catch { return grams; }
+    },
+    [selectedWeightUnit],
+  );
 
   // Form data
   const [formData, setFormData] = useState({
@@ -585,7 +609,7 @@ export default function CreateShopQuotePage() {
                     ? `${formData.methodCConfig.platingType.replace(/_/g, " ").toLowerCase()} on ${formData.methodCConfig.baseMetal.toLowerCase()}`
                     : "",
               formData.targetTotalWeightG
-                ? `weighing approximately ${formData.targetTotalWeightG}g`
+                ? `weighing approximately ${gramsToDisplay(parseFloat(formData.targetTotalWeightG) || 0).toFixed(2)}${weightUnitSymbol} (${formData.targetTotalWeightG}g)`
                 : "",
               formData.surfaceFinish
                 ? `with ${formData.surfaceFinish.replace(/_/g, " ").toLowerCase()} finish`
@@ -1564,32 +1588,74 @@ export default function CreateShopQuotePage() {
                     {/* Weight */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label><T>Target Total Weight (grams)</T></Label>
+                        <div className="flex items-center justify-between">
+                          <Label>
+                            <T>Target Total Weight</T> ({weightUnitSymbol})
+                          </Label>
+                          {supportedWeightUnits.length > 1 && (
+                            <Select
+                              value={selectedWeightUnit}
+                              onValueChange={(v) => setWeightUnit(v as WeightUnit)}
+                            >
+                              <SelectTrigger className="h-7 w-20 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {supportedWeightUnits.map((unit) => (
+                                  <SelectItem
+                                    key={unit}
+                                    value={unit}
+                                    className="text-xs"
+                                  >
+                                    {WEIGHT_UNIT_SYMBOLS[unit as WeightUnit]}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
                         <Input
                           type="number"
                           placeholder="e.g., 10.5"
-                          value={formData.targetTotalWeightG}
-                          onChange={(e) =>
+                          value={
+                            formData.targetTotalWeightG
+                              ? gramsToDisplay(parseFloat(formData.targetTotalWeightG) || 0).toFixed(3)
+                              : ""
+                          }
+                          onChange={(e) => {
+                            const displayVal = parseFloat(e.target.value) || 0;
+                            const gramsVal = displayToGrams(displayVal);
                             setFormData((prev) => ({
                               ...prev,
-                              targetTotalWeightG: e.target.value,
-                            }))
-                          }
+                              targetTotalWeightG: gramsVal.toFixed(3),
+                            }));
+                          }}
                         />
+                        {selectedWeightUnit !== "GRAM" && formData.targetTotalWeightG && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            = {(parseFloat(formData.targetTotalWeightG) || 0).toFixed(3)}g
+                          </p>
+                        )}
                       </div>
                       {formData.buildMethod === "METHOD_D" && (
                         <div>
-                          <Label><T>Target Gold Weight (grams)</T></Label>
+                          <Label><T>Target Gold Weight</T> ({weightUnitSymbol})</Label>
                           <Input
                             type="number"
                             placeholder="e.g., 8.0"
-                            value={formData.targetGoldWeightG}
-                            onChange={(e) =>
+                            value={
+                              formData.targetGoldWeightG
+                                ? gramsToDisplay(parseFloat(formData.targetGoldWeightG) || 0).toFixed(3)
+                                : ""
+                            }
+                            onChange={(e) => {
+                              const displayVal = parseFloat(e.target.value) || 0;
+                              const gramsVal = displayToGrams(displayVal);
                               setFormData((prev) => ({
                                 ...prev,
-                                targetGoldWeightG: e.target.value,
-                              }))
-                            }
+                                targetGoldWeightG: gramsVal.toFixed(3),
+                              }));
+                            }}
                           />
                         </div>
                       )}
@@ -2177,6 +2243,11 @@ export default function CreateShopQuotePage() {
                 {formData.targetTotalWeightG && (
                   <p>
                     <strong><T>Weight:</T></strong> {formData.targetTotalWeightG}g
+                    {selectedWeightUnit !== "GRAM" && (
+                      <span className="text-muted-foreground">
+                        {" "}(= {gramsToDisplay(parseFloat(formData.targetTotalWeightG) || 0).toFixed(2)} {weightUnitSymbol})
+                      </span>
+                    )}
                   </p>
                 )}
               </CardContent>

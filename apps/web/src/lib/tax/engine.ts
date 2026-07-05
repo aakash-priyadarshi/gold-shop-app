@@ -17,7 +17,7 @@
  * 
  * The backend is the SINGLE SOURCE OF TRUTH for:
  * - Tax rules by region
- * - Tax rates (Nepal: 2% luxury on gold, 13% VAT on stones)
+ * - Tax rates (Nepal: 0.5% skill promotion fee on jewellery, 13% VAT on stones)
  * - Tax exemptions/waivers
  * - Component breakdown
  * 

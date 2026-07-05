@@ -429,14 +429,14 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span><T>Nepal VAT & Luxury Tax Return</T></span>
+                <span><T>Nepal VAT & Skill Promotion Fee Return</T></span>
                 <ShareWithCAButton country="NP" period={period} canShare={canShare} />
               </CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? <SkeletonGrid /> : <SummaryGrid data={data} currency="NPR" />}
               <p className="text-xs text-gray-500 mt-4">
-                <T>Gold/silver jewellery: 2% luxury tax on metal + making. Gemstones & services: 13% VAT.</T>
+                <T>Gold/silver jewellery: 0.5% skill promotion fee on jewellery sale. Gemstones & services: 13% VAT.</T>
               </p>
             </CardContent>
           </Card>
@@ -497,7 +497,7 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
                           <th className="text-left py-2 pr-3">Month</th>
                           <th className="text-right py-2 pr-3">Invoices</th>
                           <th className="text-right py-2 pr-3">Sales (NPR)</th>
-                          <th className="text-right py-2 pr-3">Luxury Tax (2%)</th>
+                          <th className="text-right py-2 pr-3">Skill Promotion Fee (0.5%)</th>
                           <th className="text-right py-2">VAT (13%)</th>
                         </tr>
                       </thead>
@@ -507,7 +507,7 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
                             <td className="py-2 pr-3 font-medium">{m.label}</td>
                             <td className="text-right py-2 pr-3 text-muted-foreground">{m.invoiceCount}</td>
                             <td className="text-right py-2 pr-3">{m.totalSales.toLocaleString()}</td>
-                            <td className="text-right py-2 pr-3">{m.luxuryTax.toLocaleString()}</td>
+                            <td className="text-right py-2 pr-3">{m.skillPromotionFee.toLocaleString()}</td>
                             <td className="text-right py-2">{m.vatCollected.toLocaleString()}</td>
                           </tr>
                         ))}
@@ -517,7 +517,7 @@ function NepalPanel({ period, canShare }: { period: string; canShare: boolean })
                           <td className="py-2 pr-3">Total</td>
                           <td className="text-right py-2 pr-3">{auditData.totals.annualInvoices}</td>
                           <td className="text-right py-2 pr-3">{auditData.totals.annualSales.toLocaleString()}</td>
-                          <td className="text-right py-2 pr-3">{auditData.totals.annualLuxuryTax.toLocaleString()}</td>
+                          <td className="text-right py-2 pr-3">{auditData.totals.annualSkillPromotionFee.toLocaleString()}</td>
                           <td className="text-right py-2">{auditData.totals.annualVat.toLocaleString()}</td>
                         </tr>
                       </tfoot>

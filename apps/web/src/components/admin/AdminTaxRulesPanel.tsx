@@ -3,7 +3,7 @@
  *
  * UI for managing country-specific tax rules.
  * Tax rates vary by country AND by product category:
- *   - Nepal: 2% Luxury Tax on gold, 13% VAT on gemstones
+ *   - Nepal: 0.5% Skill Promotion Fee on jewellery, 13% VAT on gemstones
  *   - India: 3% GST on metal, 5% GST on making charges
  *   - UAE/UK/EU: flat VAT on all components
  *

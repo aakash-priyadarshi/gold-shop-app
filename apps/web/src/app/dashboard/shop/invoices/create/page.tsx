@@ -3,7 +3,9 @@
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
+import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
+import { useMarket, WEIGHT_UNIT_SYMBOLS, type WeightUnit } from "@/hooks/useMarket";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -14,17 +16,26 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { invoicesApi, pricingApi, shopQuotesApi } from "@/lib/api";
+import { getApiUrl, invoicesApi, pricingApi, shopQuotesApi } from "@/lib/api";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
     detectTaxIdKind,
     TAX_EXEMPT_REASONS,
     validateTaxId,
 } from "@/lib/tax/validators";
+import { useT } from "@/providers/translation-provider";
+import { toGrams, fromGrams, getSupportedWeightUnits } from "@gold-shop/shared";
 import {
     ArrowLeft,
     Check,
@@ -39,6 +50,7 @@ import {
     Trash2,
     User,
     X,
+    Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -48,6 +60,15 @@ type TaxCategoryKey =
   | "MAKING_CHARGE"
   | "GEMSTONE"
   | "FINISH";
+
+interface MarketRates {
+  metals: Record<string, number>;
+  currency: string;
+  updatedAt: string;
+  cache: "fresh" | "stale" | "fallback" | "miss" | "hit";
+  fx?: { rate: number };
+  source?: string;
+}
 
 interface CountryTaxConfig {
   taxType: string;
@@ -80,15 +101,15 @@ const FALLBACK_CATEGORY_TAX_RATES: Record<
     defaultRate: 0.03,
   },
   NP: {
-    taxType: "LUXURY_TAX",
-    taxName: "Luxury Tax / VAT",
+    taxType: "SKILL_PROMOTION_FEE",
+    taxName: "Skill Promotion Fee / VAT",
     rates: {
-      PRECIOUS_METAL: 0.02,
-      MAKING_CHARGE: 0.02,
+      PRECIOUS_METAL: 0.005,
+      MAKING_CHARGE: 0.005,
       GEMSTONE: 0.13,
-      FINISH: 0.02,
+      FINISH: 0.005,
     },
-    defaultRate: 0.02,
+    defaultRate: 0.005,
   },
   AE: {
     taxType: "VAT",
@@ -407,8 +428,64 @@ export default function CreateInvoicePage() {
   const router = useRouter();
   const { user, refreshUser } = useAuth();
   const { symbol: currencySymbol, country: shopCountry } = useShopCurrency();
+  const t = useT();
+  const { selectedWeightUnit, setWeightUnit, config: marketConfig } = useMarket();
   const [loading, setLoading] = useState(false);
   const [isMockInsured, setIsMockInsured] = useState(false);
+
+  // ── Market rates for live metal pricing ──
+  const [marketRates, setMarketRates] = useState<MarketRates | null>(null);
+  const [marketRatesLoading, setMarketRatesLoading] = useState(false);
+
+  // ── Weight unit helpers ──
+  const supportedWeightUnits = marketConfig?.supportedWeightUnits ||
+    getSupportedWeightUnits(shopCountry) || ["GRAM"];
+  const weightUnitSymbol = WEIGHT_UNIT_SYMBOLS[selectedWeightUnit] || "g";
+
+  // Convert display weight (in selected unit) to grams for storage
+  const displayToGrams = useCallback(
+    (displayValue: number): number => {
+      try {
+        return toGrams(displayValue, selectedWeightUnit);
+      } catch {
+        return displayValue; // fallback to grams
+      }
+    },
+    [selectedWeightUnit],
+  );
+
+  // Convert grams (stored) to display unit
+  const gramsToDisplay = useCallback(
+    (grams: number): number => {
+      try {
+        return fromGrams(grams, selectedWeightUnit);
+      } catch {
+        return grams;
+      }
+    },
+    [selectedWeightUnit],
+  );
+
+  // Fetch market rates on mount and when country/currency changes
+  useEffect(() => {
+    const fetchMarketRates = async () => {
+      setMarketRatesLoading(true);
+      try {
+        const res = await fetch(
+          `${getApiUrl()}/market-rates?country=${shopCountry}`,
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setMarketRates(data);
+        }
+      } catch {
+        // Silent fail — live rates are optional
+      } finally {
+        setMarketRatesLoading(false);
+      }
+    };
+    fetchMarketRates();
+  }, [shopCountry]);
 
   // Refresh user data on mount to get the latest KYC approval status from the server.
   useEffect(() => {
@@ -636,6 +713,59 @@ export default function CreateInvoicePage() {
     (updated[index] as any)[field] = value;
     setLineItems(updated);
   };
+
+  // Autofill metal cost from live rate: cost = weight(g) × rate per gram
+  const autofillMetalCost = useCallback(
+    (idx: number) => {
+      if (!marketRates?.metals) {
+        toast({
+          title: t("Live rates unavailable"),
+          description: t("Market rates are still loading. Please try again in a moment."),
+        });
+        return;
+      }
+      const item = lineItems[idx];
+      if (!item || !item.metalWeightG || !item.metalType) {
+        toast({
+          title: t("Missing weight or metal type"),
+          description: t("Enter the weight and select a metal type first."),
+        });
+        return;
+      }
+      const weightGrams = parseFloat(item.metalWeightG);
+      if (!weightGrams || weightGrams <= 0) return;
+
+      // Try exact metal type match, then base metal fallback
+      let ratePerGram = marketRates.metals[item.metalType] ||
+        marketRates.metals[item.metalType.toLowerCase()];
+      if (!ratePerGram) {
+        const isGold = item.metalType.startsWith("GOLD");
+        const isSilver = item.metalType.startsWith("SILVER");
+        const isPlatinum = item.metalType.startsWith("PLATINUM");
+        const baseKey = isGold ? "GOLD" : isSilver ? "SILVER" : isPlatinum ? "PLATINUM" : null;
+        if (baseKey) {
+          ratePerGram = marketRates.metals[baseKey] || marketRates.metals[baseKey.toLowerCase()];
+        }
+      }
+
+      if (!ratePerGram || ratePerGram <= 0) {
+        toast({
+          title: t("Rate not available"),
+          description: t("No live rate found for this metal type."),
+        });
+        return;
+      }
+
+      const calculatedCost = weightGrams * ratePerGram;
+      updateLineItem(idx, "metalCost", calculatedCost.toFixed(2));
+      toast({
+        title: t("Metal cost autofilled"),
+        description: `${weightGrams.toFixed(3)}g × ${currencySymbol}${ratePerGram.toFixed(2)}/g = ${currencySymbol}${calculatedCost.toFixed(2)}`,
+      });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [marketRates, lineItems, currencySymbol, t],
+  );
 
   // ── Gemstone helpers ──
   const addGemstone = (itemIdx: number) => {
@@ -1004,9 +1134,9 @@ export default function CreateInvoicePage() {
               <ArrowLeft className="h-4 w-4 mr-2" /> Back
             </Button>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold">Create Invoice</h1>
+              <h1 className="text-2xl font-bold"><T>Create Invoice</T></h1>
               <p className="text-muted-foreground text-sm">
-                Generate a new invoice for a customer
+                <T>Generate a new invoice for a customer</T>
               </p>
             </div>
             <Button
@@ -1118,16 +1248,16 @@ export default function CreateInvoicePage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Globe className="h-4 w-4 text-blue-500" />
-                Country &amp; Tax
+                <T>Country &amp; Tax</T>
               </CardTitle>
               <CardDescription>
-                Tax is auto-calculated per category based on country
+                <T>Tax is auto-calculated per category based on country</T>
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label>Invoice Country</Label>
+                  <Label><T>Invoice Country</T></Label>
                   <select
                     value={invoiceCountry}
                     onChange={(e) => setInvoiceCountry(e.target.value)}
@@ -1184,7 +1314,7 @@ export default function CreateInvoicePage() {
                 {/* B2B/B2C selector */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Customer Type</Label>
+                    <Label><T>Customer Type</T></Label>
                     <div className="flex gap-2 mt-1">
                       {(["B2C", "B2B"] as const).map((t) => (
                         <button
@@ -1329,11 +1459,10 @@ export default function CreateInvoicePage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <User className="h-4 w-4 text-green-500" />
-                Customer Details
+                <T>Customer Details</T>
               </CardTitle>
               <CardDescription>
-                Start typing phone number to search existing &amp; registered
-                customers
+                <T>Start typing phone number to search existing &amp; registered customers</T>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1471,7 +1600,7 @@ export default function CreateInvoicePage() {
           {/* Line Items */}
           <Card data-tour="invoice-create-items">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Line Items</CardTitle>
+              <CardTitle className="text-base"><T>Line Items</T></CardTitle>
               <CardDescription>
                 Add jewellery items with metal &amp; gemstone cost breakdowns.
                 Tax applies per category automatically.
@@ -1585,7 +1714,7 @@ export default function CreateInvoicePage() {
                           </p>
                           <div className="grid grid-cols-3 gap-3">
                             <div>
-                              <Label className="text-xs">Metal Type</Label>
+                              <Label className="text-xs"><T>Metal Type</T></Label>
                               <select
                                 value={item.metalType}
                                 onChange={(e) =>
@@ -1607,38 +1736,74 @@ export default function CreateInvoicePage() {
                             </div>
                             <div>
                               <div className="flex items-center justify-between mb-0.5">
-                                <Label className="text-xs">Weight (g)</Label>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setScaleItemIdx(
-                                      scaleItemIdx === idx ? null : idx,
-                                    )
-                                  }
-                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full border transition-colors ${
-                                    scaleItemIdx === idx
-                                      ? "bg-amber-100 border-amber-400 text-amber-700 dark:text-amber-300"
-                                      : "bg-muted border-border text-muted-foreground hover:bg-accent"
-                                  }`}
-                                >
-                                  <Scale className="h-3 w-3" />
-                                  Scale
-                                </button>
+                                <Label className="text-xs">
+                                  {t("Weight")} ({weightUnitSymbol})
+                                </Label>
+                                <div className="flex items-center gap-1">
+                                  {supportedWeightUnits.length > 1 && (
+                                    <Select
+                                      value={selectedWeightUnit}
+                                      onValueChange={(v) => setWeightUnit(v as WeightUnit)}
+                                    >
+                                      <SelectTrigger className="h-6 w-16 text-[10px] px-1">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {supportedWeightUnits.map((unit) => (
+                                          <SelectItem
+                                            key={unit}
+                                            value={unit}
+                                            className="text-xs"
+                                          >
+                                            {WEIGHT_UNIT_SYMBOLS[unit as WeightUnit]}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setScaleItemIdx(
+                                        scaleItemIdx === idx ? null : idx,
+                                      )
+                                    }
+                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full border transition-colors ${
+                                      scaleItemIdx === idx
+                                        ? "bg-amber-100 border-amber-400 text-amber-700 dark:text-amber-300"
+                                        : "bg-muted border-border text-muted-foreground hover:bg-accent"
+                                    }`}
+                                  >
+                                    <Scale className="h-3 w-3" />
+                                    {t("Scale")}
+                                  </button>
+                                </div>
                               </div>
                               <Input
                                 type="number"
                                 step="0.01"
-                                value={item.metalWeightG}
-                                onChange={(e) =>
+                                value={
+                                  item.metalWeightG
+                                    ? gramsToDisplay(parseFloat(item.metalWeightG) || 0).toFixed(3)
+                                    : ""
+                                }
+                                onChange={(e) => {
+                                  const displayVal = parseFloat(e.target.value) || 0;
+                                  const gramsVal = displayToGrams(displayVal);
                                   updateLineItem(
                                     idx,
                                     "metalWeightG",
-                                    e.target.value,
-                                  )
-                                }
+                                    gramsVal.toFixed(3),
+                                  );
+                                }}
                                 placeholder="0.00"
                                 className="h-9 text-xs"
                               />
+                              {selectedWeightUnit !== "GRAM" && item.metalWeightG && (
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                  = {(parseFloat(item.metalWeightG) || 0).toFixed(3)}g
+                                </p>
+                              )}
                               {scaleItemIdx === idx && (
                                 <div className="mt-2">
                                   <WeighingScalePanel
@@ -1650,8 +1815,8 @@ export default function CreateInvoicePage() {
                                         weightGrams.toFixed(3),
                                       );
                                       toast({
-                                        title: "Weight Captured",
-                                        description: `${weightGrams.toFixed(3)}g captured from scale`,
+                                        title: t("Weight Captured"),
+                                        description: `${weightGrams.toFixed(3)}g ${t("captured from scale")}`,
                                       });
                                     }}
                                   />
@@ -1659,9 +1824,25 @@ export default function CreateInvoicePage() {
                               )}
                             </div>
                             <div>
-                              <Label className="text-xs">
-                                Metal Cost ({currencySymbol})
-                              </Label>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <Label className="text-xs">
+                                  {t("Metal Cost")} ({currencySymbol})
+                                </Label>
+                                <button
+                                  type="button"
+                                  onClick={() => autofillMetalCost(idx)}
+                                  disabled={marketRatesLoading || !marketRates}
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full border transition-colors ${
+                                    marketRates
+                                      ? "bg-emerald-100 border-emerald-400 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
+                                      : "bg-muted border-border text-muted-foreground"
+                                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                  title={t("Autofill from live market rate")}
+                                >
+                                  <Zap className="h-3 w-3" />
+                                  {marketRatesLoading ? "..." : t("Live")}
+                                </button>
+                              </div>
                               <Input
                                 type="number"
                                 value={item.metalCost}
@@ -1923,7 +2104,7 @@ export default function CreateInvoicePage() {
               })}
 
               <Button variant="outline" size="sm" onClick={addLineItem}>
-                <Plus className="h-4 w-4 mr-2" /> Add Line Item
+                <Plus className="h-4 w-4 mr-2" /> <T>Add Line Item</T>
               </Button>
 
               <Separator />
@@ -1932,7 +2113,7 @@ export default function CreateInvoicePage() {
               <div className="flex justify-end" data-tour="invoice-create-totals">
                 <div className="w-[420px] space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
+                    <span><T>Subtotal</T></span>
                     <span className="font-medium">
                       {currencySymbol} {subtotal.toLocaleString()}
                     </span>
@@ -1941,7 +2122,7 @@ export default function CreateInvoicePage() {
                   {/* Making Charge — pill toggle */}
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-blue-600 dark:text-blue-400 w-28 flex-shrink-0">
-                      Making Charge
+                      <T>Making Charge</T>
                     </span>
                     <ModeToggle
                       value={makingChargeMode}
@@ -2042,7 +2223,7 @@ export default function CreateInvoicePage() {
                   {/* Discount — pill toggle */}
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-green-600 dark:text-green-400 w-28 flex-shrink-0">
-                      Discount
+                      <T>Discount</T>
                     </span>
                     <ModeToggle
                       value={discountMode}
@@ -2067,7 +2248,7 @@ export default function CreateInvoicePage() {
 
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
+                    <span><T>Total</T></span>
                     <span className="text-amber-600 dark:text-amber-400">
                       {currencySymbol}{" "}
                       {total.toLocaleString(undefined, {
@@ -2208,7 +2389,7 @@ export default function CreateInvoicePage() {
                 </div>
               </div>
               <div>
-                <Label>Notes</Label>
+                <Label><T>Notes</T></Label>
                 <Textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -2242,7 +2423,7 @@ export default function CreateInvoicePage() {
               ) : (
                 <Check className="h-4 w-4 mr-2" />
               )}
-              Create Invoice
+              <T>Create Invoice</T>
             </Button>
           </div>
         </div>

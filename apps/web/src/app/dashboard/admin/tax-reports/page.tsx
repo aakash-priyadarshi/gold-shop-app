@@ -74,6 +74,7 @@ export default function AdminTaxReportsPage() {
       })
       .catch(() => toast({ variant: "destructive", title: "Failed to load shops" }))
       .finally(() => setShopsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectedShop = shops.find((s) => s.id === selectedShopId);
@@ -288,6 +289,7 @@ function IndiaPanel({
       })
       .catch(() => toast({ variant: "destructive", title: "Failed to load India report" }))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId, period]);
 
   const downloadCsv = async (kind: "gstr1" | "hsn") => {
@@ -394,16 +396,17 @@ function NepalPanel({ shopId, period }: { shopId: string; period: string }) {
       .then((r) => setData(r.data))
       .catch(() => toast({ variant: "destructive", title: "Failed to load Nepal VAT" }))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId, period]);
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Nepal VAT &amp; Luxury Tax Return</CardTitle>
+        <CardTitle>Nepal VAT &amp; Skill Promotion Fee Return</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? <SkeletonGrid /> : <SummaryGrid data={data} />}
         <p className="text-xs text-gray-500 mt-4">
-          Gold/silver jewellery: 2% luxury tax on metal + making. Gemstones & services: 13% VAT.
+          Gold/silver jewellery: 0.5% skill promotion fee on jewellery sale. Gemstones & services: 13% VAT.
         </p>
       </CardContent>
     </Card>
@@ -424,6 +427,7 @@ function UaePanel({ shopId, period }: { shopId: string; period: string }) {
       .then((r) => setData(r.data))
       .catch(() => toast({ variant: "destructive", title: "Failed to load UAE VAT 201" }))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId, period]);
   return (
     <Card>
@@ -449,6 +453,7 @@ function UkPanel({ shopId, period }: { shopId: string; period: string }) {
       .then((r) => setData(r.data))
       .catch(() => toast({ variant: "destructive", title: "Failed to load UK MTD" }))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId, period]);
   return (
     <Card>
@@ -474,6 +479,7 @@ function EuPanel({ shopId, period }: { shopId: string; period: string }) {
       .then((r) => setData(r.data))
       .catch(() => toast({ variant: "destructive", title: "Failed to load EU OSS" }))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId, period]);
 
   const downloadCsv = async () => {
@@ -523,6 +529,7 @@ function UsPanel({ shopId, period }: { shopId: string; period: string }) {
       .then((r) => setData(r.data))
       .catch(() => toast({ variant: "destructive", title: "Failed to load US state report" }))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId, period]);
 
   const downloadCsv = async () => {

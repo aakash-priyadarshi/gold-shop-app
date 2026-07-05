@@ -285,7 +285,7 @@ export function TutorialButton({ className }: TutorialButtonProps) {
             onPointerCancel={isMobile ? onPointerUp : undefined}
             onClick={!isMobile ? startTour : undefined}
             disabled={running}
-            aria-label="Start page tutorial"
+            aria-label={bubbleText}
             title={bubbleText}
             style={{
               touchAction: isMobile ? "none" : undefined,
@@ -312,7 +312,7 @@ export function TutorialButton({ className }: TutorialButtonProps) {
               }}
               className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-white text-gray-500 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 shadow-sm z-10"
               title="Hide tutorial button"
-              aria-label="Hide tutorial button"
+              aria-label={t("Hide tutorial button")}
             >
               <X className="h-2.5 w-2.5" />
             </button>

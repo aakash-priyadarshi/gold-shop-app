@@ -17,6 +17,7 @@
 ### For India (IN) with 1g of 24K Gold:
 
 **Console should show**:
+
 ```
 [Tax Engine] calculateTax called with: { country: 'IN', ... }
 [Tax Engine] Tax config: { country: 'IN', rules: [...] }
@@ -29,6 +30,7 @@
 ```
 
 **UI should display**:
+
 - 24K Gold (1g × ₹14,179/g) = ₹14,179
 - Making charge (12%) = ₹1,701
 - **GST (3% of ₹14,179)** = ₹425 ← MUST BE VISIBLE
@@ -40,7 +42,8 @@
 ### For Nepal (NP):
 
 **Should show**:
-- Luxury Tax (2%)
+
+- Skill Promotion Fee (0.5%)
 - VAT (13% if gemstones)
 
 ## If tax still not showing:
@@ -61,6 +64,7 @@
 ## If console shows tax but UI doesn't:
 
 Check these files:
+
 - `apps/web/src/components/pricing/LivePricingPanel.tsx` - Rendering component
 - `apps/web/src/lib/pricing/calculate-estimate.ts` - Calculation logic
 - Browser dev tools → Elements → Search for "TAX" in HTML

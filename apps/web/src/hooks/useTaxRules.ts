@@ -298,7 +298,7 @@ export function useTaxRules(countryCode: string | undefined) {
   }, [taxRules]);
 
   /**
-   * Get a display string like "Luxury Tax (2%)" for the primary tax
+   * Get a display string like "Skill Promotion Fee (0.5%)" for the primary tax
    */
   const taxDisplayString = useMemo(() => {
     const activeRules = taxRules.filter((r) => r.isActive !== false);

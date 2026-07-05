@@ -526,7 +526,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-countries']",
       popover: {
         title: "Nepal (VAT) Tab",
-        description: "You are on the Nepal panel. Nepal taxes jewellery with 2% luxury tax on metal & making charges and 13% VAT on gemstones & services.",
+        description: "You are on the Nepal panel. Nepal taxes jewellery with 0.5% skill promotion fee on metal & making charges and 13% VAT on gemstones & services.",
         side: "bottom",
         align: "start",
       },
@@ -535,7 +535,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='nepal-audit-tabs']",
       popover: {
         title: "Monthly Return vs Yearly Audit",
-        description: "\"Monthly Return\" shows VAT & luxury tax for the selected month for your regular IRD submission. \"Yearly Audit\" shows a full 12-month breakdown required if sales exceed the NPR 1 crore threshold.",
+        description: "\"Monthly Return\" shows VAT & skill promotion fee for the selected month for your regular IRD submission. \"Yearly Audit\" shows a full 12-month breakdown required if sales exceed the NPR 1 crore threshold.",
         side: "bottom",
         align: "start",
       },
@@ -553,7 +553,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='nepal-audit-table']",
       popover: {
         title: "Month-by-Month Breakdown",
-        description: "Every month of the Nepali fiscal year: invoice count, total sales in NPR, 2% luxury tax on metals & making charges, and 13% VAT on gemstones & services. Use the year selector (‹ ›) to view previous years.",
+        description: "Every month of the Nepali fiscal year: invoice count, total sales in NPR, 0.5% skill promotion fee on metals & making charges, and 13% VAT on gemstones & services. Use the year selector (‹ ›) to view previous years.",
         side: "top",
         align: "center",
       },
