@@ -360,22 +360,23 @@ function getDefaultTaxConfig(country: string): CountryTaxConfig | null {
 }
 
 /**
- * Nepal Tax Configuration (FY 2025/26)
+ * Nepal Tax Configuration (FY 2083/84 — 2026/27)
+ * 2% Luxury Tax ABOLISHED, replaced with 0.5% Skill Promotion Fee on jewellery
+ * sale value to final consumers. 13% VAT on gemstones/diamonds unchanged.
  */
 export function getNepalTaxConfig(): CountryTaxConfig {
   return {
     country: 'NP',
-    effectiveFrom: '2025-07-16',
+    effectiveFrom: '2026-05-30',
     rules: [
       {
-        id: 'NP_LUXURY_TAX',
-        name: 'LUXURY_TAX',
-        displayName: 'Luxury Tax',
-        rate: 0.02,
+        id: 'NP_SKILL_PROMOTION_FEE',
+        name: 'SKILL_PROMOTION_FEE',
+        displayName: 'Skill Promotion Fee',
+        rate: 0.005,
         priority: 1,
         applyWhen: {
           isJewellery: true,
-          // Note: Can be configured to require isGold: true if luxury tax only applies to gold
         },
         base: 'item_subtotal_excluding_tax',
         includeInBase: {

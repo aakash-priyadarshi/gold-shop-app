@@ -1,9 +1,9 @@
 "use client";
 
-import { useT } from "@/providers/translation-provider";
+import { useT, useTranslation } from "@/providers/translation-provider";
 import type { DriveStep } from "driver.js";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useTourContext } from "./useTourContext";
 
 /** Tour steps keyed by pathname prefix */
@@ -340,7 +340,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='invoice-create-country']",
       popover: {
         title: "Country & Tax",
-        description: "Select the country for this invoice. Tax rates auto-apply per category: India charges 3% GST on gold value + 18% on making charges; Nepal applies 2% luxury tax on metal and 13% VAT on gemstones. You can also override the rate or mark the invoice tax-exempt for export sales.",
+        description: "Select the country for this invoice. Tax rates auto-apply per category: India charges 3% GST on gold value + 5% on making charges; Nepal applies 0.5% Skill Promotion Fee on jewellery sale value (replaces the old 2% luxury tax per FY 2083/84) and 13% VAT on gemstones. You can also override the rate or mark the invoice tax-exempt for export sales.",
         side: "bottom",
         align: "start",
       },
@@ -358,7 +358,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='invoice-create-items']",
       popover: {
         title: "Line Items",
-        description: "Add each jewellery item with metal type, weight (grams), metal cost, gemstone details, and making charge separately. Tax is split and calculated per component — for example, gold value gets 3% GST while making charges get 18% in India. Expand any row to enter gemstone carat weight, cut, and clarity.",
+        description: "Add each jewellery item with metal type, weight, metal cost, gemstone details, and making charge separately. Switch between weight units (grams, tola, laal) using the unit selector — useful for Nepali and traditional Indian jewellers. Click the 'Live' button next to Metal Cost to autofill cost from live market rates (weight × rate per gram). Tax is split and calculated per component. Expand any row to enter gemstone carat weight, cut, and clarity.",
         side: "top",
         align: "start",
       },
@@ -1326,6 +1326,34 @@ export function useTutorial() {
   const pathname = usePathname();
   const subKey = useTourContext((s) => s.subKey);
   const t = useT();
+  const { register, locale } = useTranslation();
+
+  const rawSteps = useMemo<DriveStep[]>(() => {
+    // Check for sub-key variant first (e.g. "/dashboard/shop/tax-reports#IN")
+    if (subKey) {
+      const subKeyPath = `${pathname}#${subKey}`;
+      if (TOUR_STEPS[subKeyPath]) return TOUR_STEPS[subKeyPath];
+    }
+    // Exact match, then prefix match (longest first)
+    if (TOUR_STEPS[pathname]) return TOUR_STEPS[pathname];
+    const match = Object.keys(TOUR_STEPS)
+      .filter((key) => pathname.startsWith(key) && key !== "/dashboard/shop")
+      .sort((a, b) => b.length - a.length)[0];
+    if (match) return TOUR_STEPS[match];
+    return pathname === "/dashboard/shop" ? TOUR_STEPS["/dashboard/shop"] : [];
+  }, [pathname, subKey]);
+
+  // Pre-register all tour step titles & descriptions for translation as soon
+  // as the path is known, so they're cached BEFORE the user clicks the help
+  // button. Without this, the first tour render shows English because t()
+  // queues async registration and returns English on the first call.
+  useEffect(() => {
+    if (locale === "en") return;
+    for (const step of rawSteps) {
+      if (step.popover?.title) register(step.popover.title);
+      if (step.popover?.description) register(step.popover.description);
+    }
+  }, [rawSteps, locale, register]);
 
   const steps = useMemo<DriveStep[]>(() => {
     const translateSteps = (source: DriveStep[]) =>
@@ -1341,22 +1369,8 @@ export function useTutorial() {
             }
           : step.popover,
       }));
-
-    // Check for sub-key variant first (e.g. "/dashboard/shop/tax-reports#IN")
-    if (subKey) {
-      const subKeyPath = `${pathname}#${subKey}`;
-      if (TOUR_STEPS[subKeyPath]) return translateSteps(TOUR_STEPS[subKeyPath]);
-    }
-    // Exact match, then prefix match (longest first)
-    if (TOUR_STEPS[pathname]) return translateSteps(TOUR_STEPS[pathname]);
-    const match = Object.keys(TOUR_STEPS)
-      .filter((key) => pathname.startsWith(key) && key !== "/dashboard/shop")
-      .sort((a, b) => b.length - a.length)[0];
-    if (match) return translateSteps(TOUR_STEPS[match]);
-    return pathname === "/dashboard/shop"
-      ? translateSteps(TOUR_STEPS["/dashboard/shop"])
-      : [];
-  }, [pathname, subKey, t]);
+    return translateSteps(rawSteps);
+  }, [rawSteps, t]);
 
   return { steps, hasSteps: steps.length > 0 };
 }

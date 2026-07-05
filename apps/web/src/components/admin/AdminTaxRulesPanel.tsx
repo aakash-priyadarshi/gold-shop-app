@@ -84,6 +84,7 @@ export function AdminTaxRulesPanel() {
 
   useEffect(() => {
     loadRules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCountry]);
 
   const loadRules = async () => {
@@ -337,7 +338,8 @@ export function AdminTaxRulesPanel() {
                     <SelectContent>
                       <SelectItem value="VAT">VAT</SelectItem>
                       <SelectItem value="GST">GST</SelectItem>
-                      <SelectItem value="LUXURY_TAX">Luxury Tax</SelectItem>
+                      <SelectItem value="SKILL_PROMOTION_FEE">Skill Promotion Fee</SelectItem>
+                      <SelectItem value="LUXURY_TAX">Luxury Tax (legacy)</SelectItem>
                       <SelectItem value="SALES_TAX">Sales Tax</SelectItem>
                       <SelectItem value="EXCISE">Excise</SelectItem>
                       <SelectItem value="CUSTOMS">Customs</SelectItem>

@@ -23,8 +23,8 @@
 // TYPES
 // ═══════════════════════════════════════════
 
-export type TaxRegime = 
-  | 'NP_2081_82_PLUS'  // Nepal FY 2081/82+
+export type TaxRegime =
+  | 'NP_2083_84_PLUS'  // Nepal FY 2083/84+ (Skill Promotion Fee replaces Luxury Tax)
   | 'IN_GST_2024'      // India GST 2024
   | 'AE_VAT_2024'      // UAE VAT
   | 'UK_VAT_2024'      // UK VAT
@@ -303,7 +303,7 @@ export function formatTaxLineItem(
  */
 export function formatTaxRegime(regime: TaxRegime): string {
   const regimeNames: Record<TaxRegime, string> = {
-    'NP_2081_82_PLUS': 'Nepal FY 2081/82+',
+    'NP_2083_84_PLUS': 'Nepal FY 2083/84+',
     'IN_GST_2024': 'India GST 2024',
     'AE_VAT_2024': 'UAE VAT 2024',
     'UK_VAT_2024': 'UK VAT 2024',
