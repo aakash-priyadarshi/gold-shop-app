@@ -215,17 +215,14 @@ jobs:
           echo "Artifact paths: $ARTIFACTS"
 
           # Use Python to parse JSON and iterate (available on windows-latest)
-          # Note: On Windows, artifact paths contain backslashes which JSON
-          # treats as escape sequences. We use a raw string approach to handle this.
+          # Use raw string (r''') so backslashes in Windows paths are not
+          # interpreted as Python escape sequences before json.loads sees them.
           python -c "
           import json, subprocess, sys, os, glob
-          raw = '''$ARTIFACTS'''
+          raw = r'''$ARTIFACTS'''
           if raw == 'null' or not raw.strip():
               artifacts = []
           else:
-              # Replace double backslashes (JSON-escaped) with forward slashes
-              # to avoid invalid escape sequence errors on Windows paths
-              raw = raw.replace('\\\\\\\\', '/')
               artifacts = json.loads(raw)
           if not artifacts:
               print('No artifact paths returned, searching manually...')
@@ -489,11 +486,10 @@ jobs:
 
           python3 -c "
           import json, subprocess, sys, os, glob
-          raw = '''$ARTIFACTS'''
+          raw = r'''$ARTIFACTS'''
           if raw == 'null' or not raw.strip():
               artifacts = []
           else:
-              raw = raw.replace('\\\\\\\\', '/')
               artifacts = json.loads(raw)
           if not artifacts:
               print('No artifact paths returned, searching manually...')
