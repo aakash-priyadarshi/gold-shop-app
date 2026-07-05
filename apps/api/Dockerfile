@@ -20,6 +20,14 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 
+# Clone private submodule (Railway doesn't checkout submodules automatically)
+# SUBMODULE_PAT is a Railway build variable — a GitHub PAT with read access to gold-shop-core
+ARG SUBMODULE_PAT
+RUN if [ ! -f apps/api/src/modules/core/subscriptions/subscription-plans.module.ts ] && [ -n "$SUBMODULE_PAT" ]; then \
+      rm -rf apps/api/src/modules/core && \
+      git clone https://${SUBMODULE_PAT}@github.com/aakash-priyadarshi/gold-shop-core.git apps/api/src/modules/core; \
+    fi
+
 # Install all dependencies (dev included — needed for @nestjs/cli and prisma)
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
