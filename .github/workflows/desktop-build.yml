@@ -182,7 +182,7 @@ jobs:
             > R2 hosts only the latest version. Older versions are available exclusively on GitHub Releases.
 
             Download and run the installer. The app will auto-update on future releases.
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
 
@@ -451,7 +451,7 @@ jobs:
 
             > R2 hosts only the latest version. Older versions are available exclusively on GitHub Releases.
             > ⚠️ macOS builds are currently unsigned. You may need to right-click → Open to bypass Gatekeeper.
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
           args: --target universal-apple-darwin
