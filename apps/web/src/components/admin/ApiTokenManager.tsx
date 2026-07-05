@@ -259,6 +259,63 @@ export function ApiTokenManager() {
         </Button>
       </div>
 
+      {/* CI/CD Admin Token Info */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-blue-900 flex items-center gap-2">
+            <Key className="h-5 w-5" />
+            CI/CD Admin Token (ORIVRAA_ADMIN_TOKEN)
+          </CardTitle>
+          <CardDescription className="text-blue-700">
+            Used by GitHub Actions to auto-publish desktop releases to the API
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <p className="text-blue-600 font-medium">Secret Name</p>
+              <code className="block mt-1 px-2 py-1 bg-white rounded border border-blue-200 text-blue-900">
+                ORIVRAA_ADMIN_TOKEN
+              </code>
+            </div>
+            <div>
+              <p className="text-blue-600 font-medium">Stored In</p>
+              <p className="mt-1 text-blue-800">
+                <a
+                  href="https://github.com/aakash-priyadarshi/gold-shop-app/settings/secrets/actions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-blue-900 inline-flex items-center gap-1"
+                >
+                  GitHub Actions Secrets
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </p>
+            </div>
+            <div>
+              <p className="text-blue-600 font-medium">Expiry</p>
+              <p className="mt-1 text-blue-800">10 years (July 2036)</p>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-blue-200">
+            <p className="text-sm text-blue-800 mb-2">
+              <strong>How it works:</strong> The <code className="bg-blue-100 px-1 rounded">desktop-build.yml</code> workflow
+              uses this token to call <code className="bg-blue-100 px-1 rounded">POST /api/releases/publish</code> after
+              building installers. Without it, builds succeed but the download page won&apos;t update.
+            </p>
+            <p className="text-sm text-blue-800 mb-2">
+              <strong>To regenerate:</strong> Run the script below locally with the production JWT_SECRET, then update the
+              GitHub secret with the new value:
+            </p>
+            <pre className="text-xs bg-white rounded border border-blue-200 p-3 overflow-x-auto text-blue-900">
+{`cd apps/api
+JWT_SECRET=<secret> DATABASE_URL=<url> \\
+  npx tsx prisma/generate-admin-token.ts`}
+            </pre>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Expiring Tokens Warning */}
       {expiringTokens.length > 0 && (
         <Card className="border-amber-200 bg-amber-50">
@@ -390,7 +447,7 @@ export function ApiTokenManager() {
                         </a>
                       </li>
                       <li>Click "New repository secret"</li>
-                      <li>Name: <code className="bg-blue-100 px-1 rounded">ADMIN_API_TOKEN</code></li>
+                      <li>Name: <code className="bg-blue-100 px-1 rounded">ORIVRAA_ADMIN_TOKEN</code></li>
                       <li>Paste the token above as the value</li>
                       <li>Click "Add secret"</li>
                     </ol>

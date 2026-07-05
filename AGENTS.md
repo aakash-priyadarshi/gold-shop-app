@@ -289,6 +289,24 @@ The desktop app build and release process is fully automated via GitHub Actions 
 | `R2_SECRET_ACCESS_KEY`               | R2 API token secret                       |
 | `ORIVRAA_ADMIN_TOKEN`                | Admin JWT for `/api/releases/publish`     |
 
+### ORIVRAA_ADMIN_TOKEN
+
+A long-lived admin JWT (10-year expiry) used by the `desktop-build.yml` workflow to call
+`POST /api/releases/publish` after building installers. Without this token, builds succeed
+but the download page won't update with the new version.
+
+- **Where it's stored:** [GitHub Actions Secrets](https://github.com/aakash-priyadarshi/gold-shop-app/settings/secrets/actions) → `ORIVRAA_ADMIN_TOKEN`
+- **How it works:** Signed with the production `JWT_SECRET` (Railway env var on `@gold-shop/api`). The payload contains `role: "ADMIN"` for the admin user `admin@orivraa.com`.
+- **Admin dashboard:** The [API Token Management](https://www.orivraa.com/dashboard/admin) page has an info card about this token (visible to admins only).
+- **To regenerate:**
+  ```bash
+  cd apps/api
+  JWT_SECRET=<production-secret> DATABASE_URL=<production-db-url> \
+    npx tsx prisma/generate-admin-token.ts
+  ```
+  Then update the GitHub secret with the new token value.
+- **Script:** `apps/api/prisma/generate-admin-token.ts` — finds active admin users, signs a 10-year JWT, prints the token.
+
 ### Updater Endpoints (in tauri.conf.json)
 
 1. `https://github.com/aakash-priyadarshi/gold-shop-app/releases/latest/download/latest.json` (primary)

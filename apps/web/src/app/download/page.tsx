@@ -110,10 +110,53 @@ const platformLabel: Record<Platform, string> = {
   LINUX: "Linux",
 };
 
-const platformIcon: Record<Platform, string> = {
-  WINDOWS: "🪟",
-  MACOS: "🍎",
-  LINUX: "🐧",
+// ─── Platform SVG Icons ───────────────────────────────────
+function WindowsIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M7.462 0H0v7.19h7.462zM16 0H8.538v7.19H16zM7.462 8.211H0V16h7.462zm8.538 0H8.538V16H16z" />
+    </svg>
+  );
+}
+
+function AppleIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M11.182.008C11.148-.03 9.923.023 8.857 1.18c-1.066 1.156-.902 2.482-.878 2.516s1.52.087 2.475-1.258.762-2.391.728-2.43m3.314 11.733c-.048-.096-2.325-1.234-2.113-3.422s1.675-2.789 1.698-2.854-.597-.79-1.254-1.157a3.7 3.7 0 0 0-1.563-.434c-.108-.003-.483-.095-1.254.116-.508.139-1.653.589-1.968.607-.316.018-1.256-.522-2.267-.665-.647-.125-1.333.131-1.824.328-.49.196-1.422.754-2.074 2.237-.652 1.482-.311 3.83-.067 4.56s.625 1.924 1.273 2.796c.576.984 1.34 1.667 1.659 1.899s1.219.386 1.843.067c.502-.308 1.408-.485 1.766-.472.357.013 1.061.154 1.782.539.571.197 1.111.115 1.652-.105.541-.221 1.324-1.059 2.238-2.758q.52-1.185.473-1.282" />
+    </svg>
+  );
+}
+
+function LinuxIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.664-.287 2.45a.424.424 0 0 0-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.267-.864.68-.09.189-.136.4-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.26 2.26-.334.699-.058 1.574.267 2.577.2.025.134.06.267.145.4.515.94 1.48 1.347 2.51 1.066 1.04-.278 1.91-1.066 2.415-2.133.099-.278.187-.564.245-.834.066-.334.106-.667.146-.934.04-.267.087-.5.187-.667.298-.534.834-1.067 1.313-1.6.466-.534.893-1.067.893-1.667 0-.334-.133-.667-.4-.934-.267-.267-.667-.4-1.134-.4-.066 0-.133 0-.2.027-.267.04-.534.134-.8.267-.267.134-.534.267-.8.267-.066 0-.133 0-.2-.027-.267-.04-.534-.134-.8-.267-.267-.134-.534-.267-.8-.267-.066 0-.133 0-.2.027-.267.04-.534.134-.8.267-.267.134-.534.267-.8.267-.066 0-.133 0-.2-.027-.267-.04-.534-.134-.8-.267-.267-.134-.534-.267-.8-.267-.066 0-.133 0-.2.027-.267.04-.534.134-.8.267-.267.134-.534.267-.8.267-.066 0-.133 0-.2-.027-.267-.04-.534-.134-.8-.267-.267-.134-.534-.267-.8-.267z" />
+    </svg>
+  );
+}
+
+const platformIconComponent: Record<Platform, React.ComponentType<{ className?: string }>> = {
+  WINDOWS: WindowsIcon,
+  MACOS: AppleIcon,
+  LINUX: LinuxIcon,
 };
 
 // ─── Animation variants ────────────────────────────────────
@@ -211,7 +254,10 @@ function PlatformSelector({
             />
           )}
           <span className="relative z-10 flex items-center gap-1.5">
-            <span>{platformIcon[p]}</span>
+            {(() => {
+              const Icon = platformIconComponent[p];
+              return <Icon className="h-4 w-4" />;
+            })()}
             {platformLabel[p]}
           </span>
         </button>
@@ -260,7 +306,10 @@ function DownloadCard({
               transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
               className="text-5xl mb-3 inline-block"
             >
-              {platformIcon[platform]}
+              {(() => {
+                const Icon = platformIconComponent[platform];
+                return <Icon className="h-12 w-12 mx-auto" />;
+              })()}
             </motion.div>
             <CardTitle className="text-2xl font-bold">
               <T>{`Orivraa for ${platformLabel[platform]}`}</T>
@@ -429,8 +478,11 @@ function OlderVersionRow({ release, index }: { release: Release; index: number }
     >
       <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 hover:border-gold-500/20 hover:bg-gold-500/5 transition-all duration-200 group">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center text-lg">
-            {platformIcon[release.platform as Platform] || "📦"}
+          <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center">
+            {(() => {
+              const Icon = platformIconComponent[release.platform as Platform] || LinuxIcon;
+              return <Icon className="h-5 w-5" />;
+            })()}
           </div>
           <div>
             <p className="font-medium text-sm flex items-center gap-2">
