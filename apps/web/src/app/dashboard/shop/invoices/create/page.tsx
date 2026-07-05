@@ -2,6 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { LiveRatesWidget, type LiveRateData } from "@/components/pricing/LiveRatesWidget";
 import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,15 +61,6 @@ type TaxCategoryKey =
   | "MAKING_CHARGE"
   | "GEMSTONE"
   | "FINISH";
-
-interface MarketRates {
-  metals: Record<string, number>;
-  currency: string;
-  updatedAt: string;
-  cache: "fresh" | "stale" | "fallback" | "miss" | "hit";
-  fx?: { rate: number };
-  source?: string;
-}
 
 interface CountryTaxConfig {
   taxType: string;
@@ -434,7 +426,7 @@ export default function CreateInvoicePage() {
   const [isMockInsured, setIsMockInsured] = useState(false);
 
   // ── Market rates for live metal pricing ──
-  const [marketRates, setMarketRates] = useState<MarketRates | null>(null);
+  const [marketRates, setMarketRates] = useState<LiveRateData | null>(null);
   const [marketRatesLoading, setMarketRatesLoading] = useState(false);
 
   // ── Weight unit helpers ──
@@ -466,26 +458,28 @@ export default function CreateInvoicePage() {
     [selectedWeightUnit],
   );
 
-  // Fetch market rates on mount and when country/currency changes
-  useEffect(() => {
-    const fetchMarketRates = async () => {
-      setMarketRatesLoading(true);
-      try {
-        const res = await fetch(
-          `${getApiUrl()}/market-rates?country=${shopCountry}`,
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setMarketRates(data);
-        }
-      } catch {
-        // Silent fail — live rates are optional
-      } finally {
-        setMarketRatesLoading(false);
+  // Fetch market rates (used on mount and via refresh button)
+  const fetchMarketRates = useCallback(async () => {
+    setMarketRatesLoading(true);
+    try {
+      const res = await fetch(
+        `${getApiUrl()}/market-rates?country=${shopCountry}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setMarketRates(data);
       }
-    };
-    fetchMarketRates();
+    } catch {
+      // Silent fail — live rates are optional
+    } finally {
+      setMarketRatesLoading(false);
+    }
   }, [shopCountry]);
+
+  // Fetch market rates on mount and when country changes
+  useEffect(() => {
+    fetchMarketRates();
+  }, [fetchMarketRates]);
 
   // Refresh user data on mount to get the latest KYC approval status from the server.
   useEffect(() => {
@@ -1127,7 +1121,9 @@ export default function CreateInvoicePage() {
   return (
     <ShopGuard>
       <DashboardLayout>
-        <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="flex gap-6 max-w-7xl mx-auto">
+          {/* Main invoice form */}
+          <div className="space-y-6 flex-1 min-w-0 max-w-4xl">
           {/* Header */}
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => router.back()}>
@@ -2425,6 +2421,18 @@ export default function CreateInvoicePage() {
               )}
               <T>Create Invoice</T>
             </Button>
+          </div>
+        </div>
+          {/* Sticky live rates sidebar — invoice page only */}
+          <div className="hidden xl:block w-64 flex-shrink-0">
+            <div className="sticky top-4 space-y-4">
+              <LiveRatesWidget
+                rates={marketRates}
+                loading={marketRatesLoading}
+                currencySymbol={currencySymbol}
+                onRefresh={fetchMarketRates}
+              />
+            </div>
           </div>
         </div>
       </DashboardLayout>
