@@ -65,6 +65,21 @@ function corsHeaders(origin: string | null, allowed: string): Record<string, str
   return headers;
 }
 
+const GITHUB_REPO = "aakash-priyadarshi/gold-shop-app";
+
+/**
+ * Build a GitHub Release asset URL for an R2 key.
+ * Only applies to versioned keys: desktop/v{version}/{filename}
+ * Returns null for non-versioned keys (latest/, latest.json, etc.)
+ */
+function githubFallbackUrl(key: string): string | null {
+  const m = key.match(/^desktop\/v([^/]+)\/(.+)$/);
+  if (m) {
+    return `https://github.com/${GITHUB_REPO}/releases/download/desktop-v${m[1]}/${m[2]}`;
+  }
+  return null;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -113,6 +128,12 @@ export default {
     const object = await env.RELEASES_BUCKET.get(key, options);
 
     if (!object) {
+      // Fallback to GitHub Release for older versions not stored in R2.
+      // R2 only hosts the latest version; older versions live on GitHub.
+      const ghUrl = githubFallbackUrl(key);
+      if (ghUrl) {
+        return Response.redirect(ghUrl, 302);
+      }
       return new Response("Not Found", { status: 404, headers: cors });
     }
 
