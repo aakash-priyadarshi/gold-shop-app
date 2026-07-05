@@ -6,7 +6,7 @@ import { LiveRatesWidget, type LiveRateData } from "@/components/pricing/LiveRat
 import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
-import { useMarket, WEIGHT_UNIT_SYMBOLS, type WeightUnit } from "@/hooks/useMarket";
+import { WEIGHT_UNIT_SYMBOLS, type WeightUnit } from "@/hooks/useMarket";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -28,6 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useCurrency } from "@/store/preferences";
 import { getApiUrl, invoicesApi, pricingApi, shopQuotesApi } from "@/lib/api";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
@@ -36,7 +37,7 @@ import {
     validateTaxId,
 } from "@/lib/tax/validators";
 import { useT } from "@/providers/translation-provider";
-import { toGrams, fromGrams, getSupportedWeightUnits } from "@gold-shop/shared";
+import { toGrams, fromGrams, getSupportedWeightUnits, getDefaultWeightUnit } from "@gold-shop/shared";
 import {
     ArrowLeft,
     Check,
@@ -420,8 +421,8 @@ export default function CreateInvoicePage() {
   const router = useRouter();
   const { user, refreshUser } = useAuth();
   const { symbol: currencySymbol, country: shopCountry } = useShopCurrency();
+  const { currency: selectedCurrency, currencyInfo } = useCurrency();
   const t = useT();
-  const { selectedWeightUnit, setWeightUnit, config: marketConfig } = useMarket();
   const [loading, setLoading] = useState(false);
   const [isMockInsured, setIsMockInsured] = useState(false);
 
@@ -429,10 +430,18 @@ export default function CreateInvoicePage() {
   const [marketRates, setMarketRates] = useState<LiveRateData | null>(null);
   const [marketRatesLoading, setMarketRatesLoading] = useState(false);
 
-  // ── Weight unit helpers ──
-  const supportedWeightUnits = marketConfig?.supportedWeightUnits ||
-    getSupportedWeightUnits(shopCountry) || ["GRAM"];
+  // ── Weight unit helpers (based on shop's country, not buyer's market) ──
+  const supportedWeightUnits = getSupportedWeightUnits(shopCountry);
+  const [selectedWeightUnit, setSelectedWeightUnit] = useState<WeightUnit>(
+    getDefaultWeightUnit(shopCountry),
+  );
+  const setWeightUnit = useCallback((unit: WeightUnit) => setSelectedWeightUnit(unit), []);
   const weightUnitSymbol = WEIGHT_UNIT_SYMBOLS[selectedWeightUnit] || "g";
+
+  // Reset weight unit to shop's default when country changes
+  useEffect(() => {
+    setSelectedWeightUnit(getDefaultWeightUnit(shopCountry));
+  }, [shopCountry]);
 
   // Convert display weight (in selected unit) to grams for storage
   const displayToGrams = useCallback(
@@ -459,11 +468,12 @@ export default function CreateInvoicePage() {
   );
 
   // Fetch market rates (used on mount and via refresh button)
+  // Passes the selected currency from the header currency changer
   const fetchMarketRates = useCallback(async () => {
     setMarketRatesLoading(true);
     try {
       const res = await fetch(
-        `${getApiUrl()}/market-rates?country=${shopCountry}`,
+        `${getApiUrl()}/market-rates?country=${shopCountry}&currency=${selectedCurrency}`,
       );
       if (res.ok) {
         const data = await res.json();
@@ -474,9 +484,9 @@ export default function CreateInvoicePage() {
     } finally {
       setMarketRatesLoading(false);
     }
-  }, [shopCountry]);
+  }, [shopCountry, selectedCurrency]);
 
-  // Fetch market rates on mount and when country changes
+  // Fetch market rates on mount and when country/currency changes
   useEffect(() => {
     fetchMarketRates();
   }, [fetchMarketRates]);
@@ -2429,7 +2439,7 @@ export default function CreateInvoicePage() {
               <LiveRatesWidget
                 rates={marketRates}
                 loading={marketRatesLoading}
-                currencySymbol={currencySymbol}
+                currencySymbol={currencyInfo.symbol}
                 onRefresh={fetchMarketRates}
               />
             </div>
