@@ -4,7 +4,7 @@
 # Triggered on version tags or manual dispatch
 #
 # Pipeline per platform:
-#   1. Build frontend (Next.js static export with TAURI_BUILD=1)
+#   1. Verify desktop frontend (pre-built splash screen in dist-desktop/)
 #   2. Build Tauri app with signing (tauri-action → GitHub Release)
 #   3. Upload installers to Cloudflare R2 (releases.orivraa.com)
 #   4. Generate R2 latest.json for updater fallback endpoint
@@ -45,7 +45,6 @@ on:
           - macos
 
 env:
-  TAURI_BUILD: "1"
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: short
   # R2 configuration (S3-compatible endpoint)
@@ -145,22 +144,24 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri -> target
 
-      - name: Build frontend for desktop
+      - name: Verify desktop frontend (splash screen)
         shell: bash
         run: |
-          cd apps/web
-          TAURI_BUILD=1 pnpm build
-          # Copy static export to desktop dist-desktop
-          rm -rf ../desktop/dist-desktop
-          cp -r out ../desktop/dist-desktop
-          echo "Frontend exported to dist-desktop"
+          # The desktop app uses a pre-built splash screen (dist-desktop/index.html)
+          # that redirects to https://www.orivraa.com/auth/login.
+          # No Next.js static export is needed — the app is a thin wrapper
+          # around the production website.
+          if [[ ! -f apps/desktop/dist-desktop/index.html ]]; then
+            echo "ERROR: dist-desktop/index.html not found"
+            exit 1
+          fi
+          echo "Desktop splash screen verified: dist-desktop/index.html"
 
       - name: Build Tauri app (signed)
         id: tauri-build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_BUILD: "1"
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
@@ -402,22 +403,24 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri -> target
 
-      - name: Build frontend for desktop
+      - name: Verify desktop frontend (splash screen)
         shell: bash
         run: |
-          cd apps/web
-          TAURI_BUILD=1 pnpm build
-          # Copy static export to desktop dist-desktop
-          rm -rf ../desktop/dist-desktop
-          cp -r out ../desktop/dist-desktop
-          echo "Frontend exported to dist-desktop"
+          # The desktop app uses a pre-built splash screen (dist-desktop/index.html)
+          # that redirects to https://www.orivraa.com/auth/login.
+          # No Next.js static export is needed — the app is a thin wrapper
+          # around the production website.
+          if [[ ! -f apps/desktop/dist-desktop/index.html ]]; then
+            echo "ERROR: dist-desktop/index.html not found"
+            exit 1
+          fi
+          echo "Desktop splash screen verified: dist-desktop/index.html"
 
       - name: Build Tauri app (signed, universal binary)
         id: tauri-build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_BUILD: "1"
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # Uncomment when Apple Developer signing is configured:
