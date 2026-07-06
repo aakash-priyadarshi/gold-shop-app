@@ -45,7 +45,7 @@ RUN pnpm exec nest build
 RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found! Listing dist/:" && ls -laR dist/ && exit 1)
 
 # Create a non-root user and switch to it for runtime security
-RUN useradd -m -u 1000 appuser
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 3001
