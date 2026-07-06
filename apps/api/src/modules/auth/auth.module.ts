@@ -75,6 +75,7 @@ import { TwoFactorService } from "./two-factor.service";
     TwoFactorService,
     TurnstileService,
     CompositeAuthGuard,
+    JwtModule,
   ],
 })
 export class AuthModule {}
