@@ -44,9 +44,12 @@ RUN pnpm exec nest build
 # Verify dist/src/main.js was produced (tsc outputs to dist/src/ because tsconfig includes both src/ and prisma/)
 RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found! Listing dist/:" && ls -laR dist/ && exit 1)
 
-# Create a non-root user and switch to it for runtime security
+# Create a non-root user for runtime security
+# Note: We create the user but don't switch to it because prisma migrate
+# and npx need write access to npm/prisma cache directories.
+# TODO: Configure npm/prisma cache dirs with proper permissions to run as non-root
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
-USER appuser
+# USER appuser  # Re-enable after configuring cache directory permissions
 
 EXPOSE 3001
 
