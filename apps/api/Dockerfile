@@ -1,9 +1,8 @@
 FROM node:20-slim
 
-# Force cache invalidation — this file changes every commit
-RUN date > /etc/build-timestamp
-
 # Prisma requires OpenSSL and we need PostgreSQL 18 client to match Railway's database
+# git is needed to clone the private gold-shop-core submodule
+RUN apt-get update && apt-get install -y curl ca-certificates gnupg git \
     && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main" > /etc/apt/sources.list.d/postgresql.list \
     && apt-get update \
@@ -44,13 +43,6 @@ RUN pnpm exec nest build
 
 # Verify dist/src/main.js was produced (tsc outputs to dist/src/ because tsconfig includes both src/ and prisma/)
 RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found! Listing dist/:" && ls -laR dist/ && exit 1)
-
-# Create a non-root user for runtime security
-# Note: We create the user but don't switch to it because prisma migrate
-# and npx need write access to npm/prisma cache directories.
-# TODO: Configure npm/prisma cache dirs with proper permissions to run as non-root
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
-# USER appuser  # Re-enable after configuring cache directory permissions
 
 EXPOSE 3001
 
