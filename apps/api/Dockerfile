@@ -1,5 +1,8 @@
 FROM node:20-slim
 
+# Force cache bust on each deploy
+ARG CACHE_BUST=1
+
 # Prisma requires OpenSSL and we need PostgreSQL 18 client to match Railway's database
 # git is needed to clone the private gold-shop-core submodule
 RUN apt-get update && apt-get install -y curl ca-certificates gnupg git \
