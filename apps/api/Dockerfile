@@ -1,10 +1,12 @@
 FROM node:20-slim
 
-# Force cache bust on each deploy
-ARG CACHE_BUST=1
-
 # Prisma requires OpenSSL and we need PostgreSQL 18 client to match Railway's database
 # git is needed to clone the private gold-shop-core submodule
+# Cache bust: force rebuild on every push
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=$GIT_COMMIT
+RUN echo "Building from commit: $GIT_COMMIT"
+
 RUN apt-get update && apt-get install -y curl ca-certificates gnupg git \
     && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main" > /etc/apt/sources.list.d/postgresql.list \
