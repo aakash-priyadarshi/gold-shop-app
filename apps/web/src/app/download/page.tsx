@@ -316,13 +316,13 @@ function DesktopAppMockup() {
         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none z-20 transition-opacity duration-300 group-hover:opacity-60" />
 
         {/* Windows / macOS bar */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-navy-900/90 border-b border-border/30 shrink-0">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-[#0b1420]/90 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
             <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
             <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
           </div>
-          <div className="text-[10px] font-semibold text-muted-foreground font-mono flex items-center gap-1.5">
+          <div className="text-[10px] font-semibold text-slate-400 font-mono flex items-center gap-1.5">
             <ComputerDesktopIcon className="w-3.5 h-3.5 text-gold-500" />
             <T>Orivraa Shop Counter — Live</T>
           </div>
@@ -331,14 +331,14 @@ function DesktopAppMockup() {
 
         <div className="flex h-[calc(100%-37px)]">
           {/* Sidebar */}
-          <div className="w-[30%] bg-navy-950/90 border-r border-border/20 p-2.5 flex flex-col gap-3 text-left">
+          <div className="w-[30%] bg-[#070e15]/90 border-r border-white/10 p-2.5 flex flex-col gap-3 text-left">
             <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-gold-500/10 border border-gold-500/25">
               <div className="w-5.5 h-5.5 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center font-bold text-[10px] text-navy-950 shrink-0 shadow-sm shadow-gold-500/30">
                 O
               </div>
               <div className="min-w-0">
-                <p className="text-[9px] font-bold text-foreground truncate"><T>Orivraa Jewelers</T></p>
-                <p className="text-[7px] text-muted-foreground truncate"><T>Main Counter</T></p>
+                <p className="text-[9px] font-bold text-slate-100 truncate"><T>Orivraa Jewelers</T></p>
+                <p className="text-[7px] text-slate-400 truncate"><T>Main Counter</T></p>
               </div>
             </div>
 
@@ -355,7 +355,7 @@ function DesktopAppMockup() {
                   className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-[9px] font-semibold transition-colors ${
                     item.active
                       ? "bg-gold-500 text-navy-950 shadow-sm shadow-gold-500/20"
-                      : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                      : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
                   }`}
                 >
                   <item.icon className="w-3 h-3 shrink-0" />
@@ -366,37 +366,37 @@ function DesktopAppMockup() {
 
             <div className="mt-auto p-1.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-center">
               <p className="text-[8px] font-bold text-emerald-400"><T>Cloud Auto-Synced</T></p>
-              <p className="text-[7px] text-muted-foreground"><T>Offline ready</T></p>
+              <p className="text-[7px] text-slate-400"><T>Offline ready</T></p>
             </div>
           </div>
 
           {/* Main POS area */}
-          <div className="flex-1 bg-navy-900/35 p-3 flex flex-col gap-2.5 text-left overflow-hidden">
+          <div className="flex-1 bg-[#0b1420]/35 p-3 flex flex-col gap-2.5 text-left overflow-hidden">
             {/* Headers row */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-1.5 rounded-lg bg-navy-950/70 border border-border/30 flex items-center justify-between">
+              <div className="p-1.5 rounded-lg bg-[#070e15]/70 border border-white/10 flex items-center justify-between">
                 <div>
-                  <p className="text-[6.5px] text-muted-foreground uppercase font-semibold"><T>Gold 24K Rate</T></p>
+                  <p className="text-[6.5px] text-slate-400 uppercase font-semibold"><T>Gold 24K Rate</T></p>
                   <p className="text-[10px] font-bold text-gold-400 font-mono">₹{goldRate}/g</p>
                 </div>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               </div>
 
-              <div className="p-1.5 rounded-lg bg-navy-950/70 border border-border/30 flex items-center justify-between">
+              <div className="p-1.5 rounded-lg bg-[#070e15]/70 border border-white/10 flex items-center justify-between">
                 <div>
-                  <p className="text-[6.5px] text-muted-foreground uppercase font-semibold"><T>Weighing Scale</T></p>
-                  <p className="text-[10px] font-bold text-foreground font-mono">11.6638 g</p>
+                  <p className="text-[6.5px] text-slate-400 uppercase font-semibold"><T>Weighing Scale</T></p>
+                  <p className="text-[10px] font-bold text-slate-100 font-mono">11.6638 g</p>
                 </div>
                 <span className="text-[7px] font-bold text-emerald-400 font-mono uppercase bg-emerald-500/10 px-1 rounded shrink-0">COM3</span>
               </div>
             </div>
 
             {/* Bill Sheet */}
-            <div className="flex-1 bg-navy-950/50 rounded-lg border border-border/30 p-2 flex flex-col gap-1.5 justify-between overflow-hidden">
+            <div className="flex-1 bg-[#070e15]/50 rounded-lg border border-white/10 p-2 flex flex-col gap-1.5 justify-between overflow-hidden">
               <div className="space-y-1">
-                <div className="flex justify-between items-center pb-1 border-b border-border/20">
-                  <span className="text-[8px] font-bold text-foreground"><T>Active Receipt</T></span>
-                  <span className="text-[6.5px] text-muted-foreground font-mono">#GSHOP-9281</span>
+                <div className="flex justify-between items-center pb-1 border-b border-white/10">
+                  <span className="text-[8px] font-bold text-slate-200"><T>Active Receipt</T></span>
+                  <span className="text-[6.5px] text-slate-400 font-mono">#GSHOP-9281</span>
                 </div>
 
                 <div className="space-y-1 max-h-[75px] overflow-y-auto">
@@ -404,27 +404,27 @@ function DesktopAppMockup() {
                     { name: "22K Gold Bridal Chain (Necklace)", desc: "Weight: 24.50g · Making: 8%", price: "₹181,300" },
                     { name: "18K Gold Diamond Stud Ring", desc: "Weight: 4.20g · Gemstone: 0.5ct", price: "₹84,500" },
                   ].map((item, i) => (
-                    <div key={i} className="flex justify-between text-[8px] border-b border-border/10 pb-1">
+                    <div key={i} className="flex justify-between text-[8px] border-b border-white/5 pb-1">
                       <div className="truncate pr-1">
-                        <p className="font-semibold text-foreground truncate"><T>{item.name}</T></p>
-                        <p className="text-[6.5px] text-muted-foreground truncate"><T>{item.desc}</T></p>
+                        <p className="font-semibold text-slate-200 truncate"><T>{item.name}</T></p>
+                        <p className="text-[6.5px] text-slate-400 truncate"><T>{item.desc}</T></p>
                       </div>
-                      <span className="font-bold text-foreground shrink-0">{item.price}</span>
+                      <span className="font-bold text-slate-100 shrink-0">{item.price}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-0.5 border-t border-dashed border-border/20 pt-1.5">
-                <div className="flex justify-between text-[7px] text-muted-foreground">
+              <div className="space-y-0.5 border-t border-dashed border-white/10 pt-1.5">
+                <div className="flex justify-between text-[7px] text-slate-400">
                   <span><T>Subtotal</T></span>
                   <span className="font-mono">₹265,800</span>
                 </div>
-                <div className="flex justify-between text-[7px] text-muted-foreground">
+                <div className="flex justify-between text-[7px] text-slate-400">
                   <span><T>GST/Tax (3% + 5%)</T></span>
                   <span className="font-mono">₹8,124</span>
                 </div>
-                <div className="flex justify-between text-[8.5px] font-bold text-gold-400 pt-0.5 border-t border-border/10">
+                <div className="flex justify-between text-[8.5px] font-bold text-gold-400 pt-0.5 border-t border-white/10">
                   <span><T>Total Net Amount</T></span>
                   <span className="font-mono">₹273,924</span>
                 </div>
@@ -475,7 +475,7 @@ function BentoSyncShowcase() {
         </span>
       </div>
 
-      <div className="relative py-6 flex justify-around items-center h-28 bg-navy-950/45 rounded-xl border border-border/20 my-4 overflow-hidden">
+      <div className="relative py-6 flex justify-around items-center h-28 bg-muted/40 dark:bg-navy-950/45 rounded-xl border border-border/20 my-4 overflow-hidden">
         {/* Connection flow lines */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className={`w-[60%] h-0.5 border-t-2 border-dashed ${offline ? "border-red-500/20" : "border-gold-500/40"} relative`}>
@@ -490,14 +490,14 @@ function BentoSyncShowcase() {
         </div>
 
         <div className="z-10 flex flex-col items-center gap-1">
-          <div className="w-10 h-10 rounded-lg bg-navy-900 border border-border/30 flex items-center justify-center shadow-lg">
+          <div className="w-10 h-10 rounded-lg bg-background border border-border/30 flex items-center justify-center shadow-lg">
             <ComputerDesktopIcon className="w-5 h-5 text-foreground" />
           </div>
           <span className="text-[10px] font-medium text-muted-foreground"><T>Local POS App</T></span>
         </div>
 
         <div className="z-10 flex flex-col items-center gap-1">
-          <div className={`w-10 h-10 rounded-lg border flex items-center justify-center shadow-lg transition-colors ${offline ? "bg-navy-900/50 border-red-500/20" : "bg-gold-500/10 border-gold-500/30"}`}>
+          <div className={`w-10 h-10 rounded-lg border flex items-center justify-center shadow-lg transition-colors bg-background border-border dark:bg-gold-500/10 dark:border-gold-500/30`}>
             <ServerIcon className={`w-5 h-5 ${offline ? "text-muted-foreground" : "text-gold-500"}`} />
           </div>
           <span className="text-[10px] font-medium text-muted-foreground"><T>Orivraa Cloud</T></span>
@@ -538,13 +538,13 @@ function BentoScaleShowcase() {
         <span className="text-xs font-semibold text-gold-400"><T>USB weighing scale sync</T></span>
       </div>
 
-      <div className="my-3 p-4 rounded-xl bg-black/60 border border-gold-500/25 flex flex-col items-center gap-1.5 font-mono shadow-inner shadow-gold-500/5">
-        <p className="text-[10px] text-muted-foreground/60 tracking-wider uppercase font-semibold"><T>Hardware Weight Readout</T></p>
+      <div className="my-3 p-4 rounded-xl bg-black border border-gold-500/25 flex flex-col items-center gap-1.5 font-mono shadow-inner shadow-gold-500/5">
+        <p className="text-[10px] text-slate-400/60 tracking-wider uppercase font-semibold"><T>Hardware Weight Readout</T></p>
         <div className="flex items-baseline gap-1 text-2xl font-bold tracking-tight text-emerald-400">
           <span>{weight === 0 ? "0.0000" : "11.6638"}</span>
           <span className="text-xs text-emerald-500 font-sans">g</span>
         </div>
-        <div className="flex gap-4 text-[9px] text-muted-foreground">
+        <div className="flex gap-4 text-[9px] text-slate-400">
           <span><T>COM3 Port</T></span>
           <span className="text-emerald-400">● <T>Connected</T></span>
         </div>
@@ -569,7 +569,7 @@ function BentoTaxShowcase() {
           <CommandLineIcon className="w-4 h-4 text-gold-500" />
           <T>Interactive Tax Regime Switcher</T>
         </span>
-        <div className="flex gap-1 bg-navy-950 p-1 rounded-md border border-border/20">
+        <div className="flex gap-1 bg-muted dark:bg-navy-950 p-1 rounded-md border border-border/20">
           {(["NP", "IN", "AE"] as const).map((r) => (
             <button
               key={r}
@@ -586,7 +586,7 @@ function BentoTaxShowcase() {
         </div>
       </div>
 
-      <div className="my-3 p-3.5 rounded-xl bg-navy-950/70 border border-border/30 text-left font-mono space-y-1.5">
+      <div className="my-3 p-3.5 rounded-xl bg-muted/40 dark:bg-navy-950/70 border border-border/30 text-left font-mono space-y-1.5">
         <div className="flex justify-between text-[9px] text-muted-foreground border-b border-border/10 pb-1">
           <span><T>Metal + Making Value</T></span>
           <span>₹110,000</span>
@@ -621,7 +621,7 @@ function BentoTaxShowcase() {
             <span className="text-gold-400">₹5,500</span>
           </div>
         )}
-        <div className="flex justify-between text-[10px] font-bold text-gold-400 border-t border-dashed border-border/30 pt-1.5">
+        <div className="flex justify-between text-[10px] font-bold text-gold-600 dark:text-gold-400 border-t border-dashed border-border/30 pt-1.5">
           <span><T>Calculated Tax Amount</T></span>
           <span>
             {regime === "IN" && "₹3,500"}
@@ -645,7 +645,7 @@ function InstallationGuide() {
   const [guideTab, setGuideTab] = useState<"WINDOWS" | "MACOS">("WINDOWS");
 
   return (
-    <Card className="border-gold-500/20 shadow-xl shadow-gold-500/5 bg-gradient-to-b from-navy-950 to-navy-900 overflow-hidden relative">
+    <Card className="border-border/40 dark:border-gold-500/20 shadow-xl shadow-gold-500/5 bg-card dark:bg-gradient-to-b dark:from-navy-950 dark:to-navy-900 overflow-hidden relative">
       <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/5 rounded-full blur-3xl" />
       
       <CardHeader className="border-b border-border/20 flex flex-col sm:flex-row items-center justify-between gap-4 py-6 px-6">
@@ -659,7 +659,7 @@ function InstallationGuide() {
           </CardDescription>
         </div>
 
-        <div className="flex gap-1.5 bg-navy-900 p-1.5 rounded-full border border-border/30 shrink-0">
+        <div className="flex gap-1.5 bg-muted dark:bg-navy-900 p-1.5 rounded-full border border-border/30 shrink-0">
           {(["WINDOWS", "MACOS"] as const).map((t) => (
             <button
               key={t}
@@ -756,7 +756,7 @@ function InstallationGuide() {
           </div>
 
           {/* Visual Instruction Column */}
-          <div className="rounded-xl border border-border/40 bg-navy-950/60 p-5 flex flex-col justify-center items-center gap-4 text-center">
+          <div className="rounded-xl border border-border/40 bg-muted/30 dark:bg-navy-950/60 p-5 flex flex-col justify-center items-center gap-4 text-center">
             {guideTab === "WINDOWS" ? (
               <>
                 <div className="w-16 h-16 rounded-2xl bg-gold-500/10 flex items-center justify-center border border-gold-500/20 shadow-md">
@@ -825,7 +825,7 @@ function OlderVersionRow({ release, index }: { release: Release; index: number }
           </div>
         </div>
         {url ? (
-          <Button variant="outline" size="sm" asChild className="group-hover:border-gold-500/30">
+          <Button variant="outline" size="sm" asChild className="group-hover:border-gold-500/30 font-semibold">
             <a href={url} download>
               <ArrowDownTrayIcon className="w-4 h-4 mr-1" />
               <T>Download</T>
@@ -896,18 +896,22 @@ export default function DownloadPage() {
     )
     .slice(0, 5);
 
+  const downloadUrl = useMemo(() => {
+    return primaryRelease ? resolveDownloadUrl(primaryRelease) : null;
+  }, [primaryRelease]);
+
   const handleDownload = async () => {
-    if (!primaryRelease?.downloadUrl) return;
+    if (!primaryRelease || !downloadUrl) return;
     setDownloading(true);
     await trackDownloadClick(primaryRelease.id);
-    window.location.href = primaryRelease.downloadUrl;
+    window.location.href = downloadUrl;
     setTimeout(() => setDownloading(false), 3000);
   };
 
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-[#070e15] text-slate-100 overflow-x-hidden">
+      <main className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 text-foreground overflow-x-hidden">
         
         {/* ═══ Hero Section (Split Layout) ═══ */}
         <section ref={heroRef} className="relative overflow-hidden pt-28 pb-20 md:pt-36 md:pb-28 border-b border-border/20">
@@ -947,24 +951,24 @@ export default function DownloadPage() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold-500/10 text-gold-400 text-xs font-semibold mb-6 border border-gold-500/25 shadow-sm"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold-500/10 text-gold-600 dark:text-gold-400 text-xs font-semibold mb-6 border border-gold-500/25 shadow-sm"
                 >
                   <ComputerDesktopIcon className="w-4 h-4 animate-pulse" />
                   <T>Desktop POS for jewellery shops</T>
-                  <span className="w-1.5 h-1.5 rounded-full bg-gold-400 animate-ping" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-ping" />
                 </motion.div>
 
                 {/* Headline */}
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight max-w-xl">
                   <T>Supercharge your</T>
                   <br />
-                  <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-600 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-gold-500 via-gold-600 to-gold-700 dark:from-gold-300 dark:via-gold-400 dark:to-gold-600 bg-clip-text text-transparent">
                     <T>shop counter POS</T>
                   </span>
                 </h1>
 
                 {/* Subtitle */}
-                <p className="text-base text-slate-300 max-w-lg mb-6 leading-relaxed">
+                <p className="text-base text-muted-foreground max-w-lg mb-6 leading-relaxed">
                   <T>
                     Bill clients instantly even when your network goes dark. Orivraa Desktop introduces lightning-fast USB weight scale syncing, native barcode parsing, and silent cloud updates directly at the shop counter.
                   </T>
@@ -989,13 +993,13 @@ export default function DownloadPage() {
                       <div className="w-5 h-5 rounded-full border-2 border-transparent border-t-gold-500 border-r-gold-300 animate-spin" />
                       <span className="text-xs text-muted-foreground"><T>Retrieving active build installer...</T></span>
                     </div>
-                  ) : primaryRelease?.downloadUrl ? (
+                  ) : downloadUrl ? (
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                       <Button
                         size="lg"
                         onClick={handleDownload}
                         disabled={downloading}
-                        className="w-full bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600 hover:from-gold-500 hover:to-gold-700 text-navy-950 font-bold py-7 text-base rounded-2xl gap-3 shadow-xl shadow-gold-500/20 border border-gold-300/30 transition-all"
+                        className="w-full bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600 hover:from-gold-500 hover:to-gold-700 text-navy-950 font-bold py-7 text-base rounded-2xl gap-3 shadow-xl shadow-gold-500/20 border border-gold-300/30 transition-all border-none"
                       >
                         {downloading ? (
                           <ArrowPathIcon className="w-5 h-5 animate-spin" />
@@ -1003,12 +1007,12 @@ export default function DownloadPage() {
                           <ArrowDownTrayIcon className="w-5 h-5" />
                         )}
                         <span>
-                          <T>Download for</T> {platformLabel[selectedPlatform]} (v{primaryRelease.version})
+                          <T>Download for</T> {platformLabel[selectedPlatform]} (v{primaryRelease?.version})
                         </span>
                       </Button>
                     </motion.div>
                   ) : (
-                    <div className="w-full p-4 rounded-xl bg-navy-950/60 border border-border/20 text-center space-y-2">
+                    <div className="w-full p-4 rounded-xl bg-muted/60 border border-border/20 text-center space-y-2">
                       <Button size="lg" disabled className="w-full gap-2 opacity-50">
                         <ArrowDownTrayIcon className="w-5 h-5" />
                         <T>Coming Soon</T>
@@ -1030,10 +1034,10 @@ export default function DownloadPage() {
                   )}
 
                   {/* Unsigned Alert Notice (Green-tinted, Reassuring) */}
-                  <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-xs leading-relaxed text-left flex items-start gap-3 shadow-inner shadow-emerald-950/20">
-                    <ShieldExclamationIcon className="w-5 h-5 shrink-0 text-emerald-400 mt-0.5" />
+                  <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/5 text-emerald-800 dark:text-emerald-400 text-xs leading-relaxed text-left flex items-start gap-3 shadow-sm dark:shadow-inner dark:shadow-emerald-950/20">
+                    <ShieldExclamationIcon className="w-5 h-5 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
                     <div>
-                      <p className="font-bold mb-1 text-emerald-300">
+                      <p className="font-bold mb-1 text-emerald-900 dark:text-emerald-300">
                         <T>Notice: Windows & macOS verification warnings</T>
                       </p>
                       <p>
@@ -1051,7 +1055,7 @@ export default function DownloadPage() {
                         href={`https://github.com/${GITHUB_REPO}/releases/tag/desktop-v${primaryRelease.version}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-muted-foreground hover:text-gold-400 transition-colors underline underline-offset-4 flex items-center gap-1.5"
+                        className="text-xs text-muted-foreground hover:text-gold-600 dark:hover:text-gold-400 transition-colors underline underline-offset-4 flex items-center gap-1.5 font-semibold"
                       >
                         <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
                         <T>Download Mirror from GitHub Releases</T>
@@ -1081,7 +1085,7 @@ export default function DownloadPage() {
                   { label: "Offline Mode", value: "Full Cache & Sync Engine" },
                 ].map((stat, i) => (
                   <div key={i}>
-                    <p className="text-xl font-bold bg-gradient-to-r from-gold-300 to-gold-500 bg-clip-text text-transparent">
+                    <p className="text-xl font-bold bg-gradient-to-r from-gold-600 to-gold-800 dark:from-gold-300 dark:to-gold-500 bg-clip-text text-transparent">
                       <T>{stat.value}</T>
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -1097,34 +1101,34 @@ export default function DownloadPage() {
 
         {/* ═══ System Requirements ═══ */}
         {primaryRelease && (
-          <section className="py-16 border-b border-border/20 bg-navy-950/20">
+          <section className="py-16 border-b border-border/20 bg-muted/5 dark:bg-navy-950/20">
             <div className="container mx-auto px-4 max-w-3xl">
-              <h2 className="text-2xl font-bold text-center mb-10 tracking-tight">
+              <h2 className="text-2xl font-bold text-center mb-10 tracking-tight text-foreground">
                 <T>System Requirements</T>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                <div className="border border-border/40 hover:border-gold-500/20 transition-all rounded-2xl bg-navy-950/40 p-6 flex flex-col items-center gap-3">
+                <div className="border border-border/40 hover:border-gold-500/20 transition-all rounded-2xl bg-card text-card-foreground p-6 flex flex-col items-center gap-3">
                   <div className="w-12 h-12 rounded-xl bg-gold-500/10 flex items-center justify-center shrink-0">
-                    <ServerIcon className="w-6 h-6 text-gold-400" />
+                    <ServerIcon className="w-6 h-6 text-gold-500 dark:text-gold-400" />
                   </div>
                   <p className="font-bold text-sm text-foreground"><T>Operating System</T></p>
-                  <p className="text-xs text-slate-400 text-center">{primaryRelease.minOs || "Windows 10+ / macOS 12+"}</p>
+                  <p className="text-xs text-muted-foreground text-center">{primaryRelease.minOs || "Windows 10+ / macOS 12+"}</p>
                 </div>
 
-                <div className="border border-border/40 hover:border-gold-500/20 transition-all rounded-2xl bg-navy-950/40 p-6 flex flex-col items-center gap-3">
+                <div className="border border-border/40 hover:border-gold-500/20 transition-all rounded-2xl bg-card text-card-foreground p-6 flex flex-col items-center gap-3">
                   <div className="w-12 h-12 rounded-xl bg-gold-500/10 flex items-center justify-center shrink-0">
-                    <CpuChipIcon className="w-6 h-6 text-gold-400" />
+                    <CpuChipIcon className="w-6 h-6 text-gold-500 dark:text-gold-400" />
                   </div>
                   <p className="font-bold text-sm text-foreground"><T>Memory</T></p>
-                  <p className="text-xs text-slate-400 text-center">{primaryRelease.minRam || "4 GB RAM"}</p>
+                  <p className="text-xs text-muted-foreground text-center">{primaryRelease.minRam || "4 GB RAM"}</p>
                 </div>
 
-                <div className="border border-border/40 hover:border-gold-500/20 transition-all rounded-2xl bg-navy-950/40 p-6 flex flex-col items-center gap-3">
+                <div className="border border-border/40 hover:border-gold-500/20 transition-all rounded-2xl bg-card text-card-foreground p-6 flex flex-col items-center gap-3">
                   <div className="w-12 h-12 rounded-xl bg-gold-500/10 flex items-center justify-center shrink-0">
-                    <CircleStackIcon className="w-6 h-6 text-gold-400" />
+                    <CircleStackIcon className="w-6 h-6 text-gold-500 dark:text-gold-400" />
                   </div>
                   <p className="font-bold text-sm text-foreground"><T>Disk Space</T></p>
-                  <p className="text-xs text-slate-400 text-center">{primaryRelease.minDisk || "200 MB"}</p>
+                  <p className="text-xs text-muted-foreground text-center">{primaryRelease.minDisk || "200 MB"}</p>
                 </div>
               </div>
             </div>
@@ -1136,10 +1140,10 @@ export default function DownloadPage() {
           <div className="container mx-auto px-4 max-w-5xl">
             
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold tracking-tight mb-4">
+              <h2 className="text-3xl font-bold tracking-tight mb-4 text-foreground">
                 <T>Why Run Orivraa Desktop?</T>
               </h2>
-              <p className="text-sm text-slate-400 max-w-lg mx-auto">
+              <p className="text-sm text-muted-foreground max-w-lg mx-auto">
                 <T>Native application speeds coupled with specialized shop counter hardware compatibility.</T>
               </p>
             </div>
@@ -1154,7 +1158,7 @@ export default function DownloadPage() {
               {/* Bento Card 1: Offline Sync (Wide) */}
               <motion.div
                 variants={itemSlideUp}
-                className="md:col-span-2 rounded-2xl border border-border/40 bg-navy-950/50 p-6 flex flex-col justify-between hover:border-gold-500/30 hover:shadow-lg hover:shadow-gold-500/5 transition-all duration-300 text-left min-h-[250px]"
+                className="md:col-span-2 rounded-2xl border border-border/40 bg-card text-card-foreground p-6 flex flex-col justify-between hover:border-gold-500/30 hover:shadow-lg hover:shadow-gold-500/5 transition-all duration-300 text-left min-h-[250px]"
               >
                 <BentoSyncShowcase />
               </motion.div>
@@ -1162,7 +1166,7 @@ export default function DownloadPage() {
               {/* Bento Card 2: Scale sync (Square) */}
               <motion.div
                 variants={itemSlideUp}
-                className="rounded-2xl border border-border/40 bg-navy-950/50 p-6 flex flex-col justify-between hover:border-gold-500/30 hover:shadow-lg hover:shadow-gold-500/5 transition-all duration-300 text-left min-h-[250px]"
+                className="rounded-2xl border border-border/40 bg-card text-card-foreground p-6 flex flex-col justify-between hover:border-gold-500/30 hover:shadow-lg hover:shadow-gold-500/5 transition-all duration-300 text-left min-h-[250px]"
               >
                 <BentoScaleShowcase />
               </motion.div>
@@ -1170,13 +1174,13 @@ export default function DownloadPage() {
               {/* Bento Card 3: Barcode lookup (Square) */}
               <motion.div
                 variants={itemSlideUp}
-                className="rounded-2xl border border-border/40 bg-navy-950/50 p-6 flex flex-col justify-between hover:border-gold-500/30 hover:shadow-lg hover:shadow-gold-500/5 transition-all duration-300 text-left min-h-[250px] group"
+                className="rounded-2xl border border-border/40 bg-card text-card-foreground p-6 flex flex-col justify-between hover:border-gold-500/30 hover:shadow-lg hover:shadow-gold-500/5 transition-all duration-300 text-left min-h-[250px] group"
               >
                 <div className="flex items-center gap-1.5 pb-2">
                   <QrCodeIcon className="w-4 h-4 text-gold-500" />
-                  <span className="text-xs font-semibold text-gold-400"><T>Barcode Scanning</T></span>
+                  <span className="text-xs font-semibold text-gold-600 dark:text-gold-400"><T>Barcode Scanning</T></span>
                 </div>
-                <div className="relative my-3 p-4 rounded-xl bg-navy-950/80 border border-border/30 overflow-hidden flex flex-col justify-center items-center h-28">
+                <div className="relative my-3 p-4 rounded-xl bg-muted/40 dark:bg-navy-950/80 border border-border/30 overflow-hidden flex flex-col justify-center items-center h-28">
                   {/* Sweep scan bar */}
                   <div className="absolute left-0 right-0 h-[2px] bg-red-500/60 top-0 shadow-lg shadow-red-500 group-hover:animate-[bounce_2.5s_infinite_linear]" />
                   <div className="w-16 h-10 border-x border-border/40 relative flex gap-0.5 justify-around items-end px-1 opacity-70">
@@ -1196,7 +1200,7 @@ export default function DownloadPage() {
               {/* Bento Card 4: Tax switch (Wide) */}
               <motion.div
                 variants={itemSlideUp}
-                className="md:col-span-2 rounded-2xl border border-border/40 bg-navy-950/50 p-6 flex flex-col justify-between hover:border-gold-500/30 hover:shadow-lg hover:shadow-gold-500/5 transition-all duration-300 text-left min-h-[250px]"
+                className="md:col-span-2 rounded-2xl border border-border/40 bg-card text-card-foreground p-6 flex flex-col justify-between hover:border-gold-500/30 hover:shadow-lg hover:shadow-gold-500/5 transition-all duration-300 text-left min-h-[250px]"
               >
                 <BentoTaxShowcase />
               </motion.div>
@@ -1206,7 +1210,7 @@ export default function DownloadPage() {
         </section>
 
         {/* ═══ Auto-update Highlight ═══ */}
-        <section className="py-20 border-b border-border/20 bg-navy-950/20">
+        <section className="py-20 border-b border-border/20">
           <div className="container mx-auto px-4 max-w-3xl">
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
@@ -1214,7 +1218,7 @@ export default function DownloadPage() {
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              <Card className="border-gold-500/20 bg-gradient-to-br from-gold-950/10 to-transparent overflow-hidden relative">
+              <Card className="border-border/40 dark:border-gold-500/20 bg-gradient-to-br from-gold-500/5 dark:from-gold-950/10 to-transparent overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/5 rounded-full blur-3xl" />
                 <CardContent className="py-8 px-6 md:px-8 relative z-10">
                   <div className="flex flex-col sm:flex-row items-start gap-5">
@@ -1224,11 +1228,11 @@ export default function DownloadPage() {
                     <div>
                       <h3 className="font-bold text-lg text-foreground mb-2 flex items-center gap-2 flex-wrap">
                         <T>Silent Background Autoupdates</T>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20 font-semibold font-mono">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 font-semibold font-mono">
                           v0.2.0+
                         </span>
                       </h3>
-                      <p className="text-sm text-slate-300 leading-relaxed mb-4">
+                      <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                         <T>
                           Orivraa Desktop queries for available updates on launch. When updates are published, they download in the background over Cloudflare R2 or GitHub. Once ready, you'll receive a popup notice. A quick restart is all that is required to run the new version.
                         </T>
@@ -1242,7 +1246,7 @@ export default function DownloadPage() {
                         ].map((tag) => (
                           <span
                             key={tag}
-                            className="text-[10px] px-2.5 py-1 rounded bg-navy-950 text-slate-300 border border-border/40 font-medium"
+                            className="text-[10px] px-2.5 py-1 rounded bg-muted dark:bg-navy-950 text-muted-foreground dark:text-slate-300 border border-border/40 font-medium"
                           >
                             <T>{tag}</T>
                           </span>
@@ -1277,10 +1281,10 @@ export default function DownloadPage() {
 
         {/* ═══ Previous Versions ═══ */}
         {platformOlder.length > 0 && (
-          <section className="py-16 border-b border-border/20 bg-navy-950/15">
+          <section className="py-16 border-b border-border/20 bg-muted/10 dark:bg-navy-950/15">
             <div className="container mx-auto px-4 max-w-2xl">
               <div className="mb-8 text-left">
-                <h2 className="text-xl font-bold flex items-center gap-2">
+                <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
                   <CommandLineIcon className="w-5 h-5 text-gold-500" />
                   <T>Previous Versions</T>
                 </h2>
@@ -1298,14 +1302,14 @@ export default function DownloadPage() {
         )}
 
         {/* ═══ Changelog Callout ═══ */}
-        <section className="py-20 bg-navy-950/30">
+        <section className="py-20 bg-muted/20 dark:bg-navy-950/30">
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="container mx-auto px-4 text-center max-w-md"
           >
-            <h2 className="text-xl font-bold mb-2">
+            <h2 className="text-xl font-bold mb-2 text-foreground">
               <T>Release Changelog</T>
             </h2>
             <p className="text-xs text-muted-foreground mb-6">
@@ -1313,9 +1317,9 @@ export default function DownloadPage() {
                 Review features, hotfixes and design logs across both web and desktop branches.
               </T>
             </p>
-            <Button variant="outline" asChild className="gap-2 border-border/40 hover:bg-white/5 text-slate-100">
+            <Button variant="outline" asChild className="gap-2 border-border/40 hover:bg-muted text-foreground font-semibold">
               <Link href="/download/changelog">
-                <CommandLineIcon className="w-4.5 h-4.5 text-gold-400" />
+                <CommandLineIcon className="w-4.5 h-4.5 text-gold-500 dark:text-gold-400" />
                 <T>View Full Changelog</T>
               </Link>
             </Button>
