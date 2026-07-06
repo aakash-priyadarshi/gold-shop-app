@@ -25,6 +25,7 @@ import {
 import {
   AlertCircle,
   Key,
+  Lock,
   Plus,
   Trash2,
   Copy,
@@ -43,6 +44,7 @@ interface ApiToken {
   id: string;
   name: string;
   tokenPrefix: string;
+  tokenType: 'api' | 'jwt';
   scopes: string[];
   expiresAt: string;
   lastUsedAt: string | null;
@@ -85,6 +87,7 @@ export function ApiTokenManager() {
   // Form state
   const [tokenName, setTokenName] = useState('');
   const [tokenDuration, setTokenDuration] = useState('90d');
+  const [tokenType, setTokenType] = useState<'api' | 'jwt'>('api');
   const [selectedScopes, setSelectedScopes] = useState<string[]>(['health:read', 'market-rates:refresh']);
   
   // View token state
@@ -140,6 +143,7 @@ export function ApiTokenManager() {
         name: tokenName,
         duration: tokenDuration,
         scopes: selectedScopes,
+        tokenType,
       });
       
       setNewToken(response.data.token);
@@ -151,6 +155,7 @@ export function ApiTokenManager() {
       // Reset form
       setTokenName('');
       setSelectedScopes(['health:read', 'market-rates:refresh']);
+      setTokenType('api');
       
       // Reload data
       loadData();
@@ -403,6 +408,76 @@ export function ApiTokenManager() {
               </div>
             ) : (
               <>
+                {/* Token Type Selector */}
+                <div className="space-y-3">
+                  <Label>Token Type</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label
+                      className={`flex flex-col gap-1 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        tokenType === 'api'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-border hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="tokenType"
+                        value="api"
+                        checked={tokenType === 'api'}
+                        onChange={() => setTokenType('api')}
+                        className="sr-only"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Key className="h-4 w-4" />
+                        <span className="font-medium text-sm">API Token (gshop_)</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Scope-based. Validated by ApiTokenService. Best for scoped integrations.
+                      </p>
+                    </label>
+                    <label
+                      className={`flex flex-col gap-1 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        tokenType === 'jwt'
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-border hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="tokenType"
+                        value="jwt"
+                        checked={tokenType === 'jwt'}
+                        onChange={() => setTokenType('jwt')}
+                        className="sr-only"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Lock className="h-4 w-4" />
+                        <span className="font-medium text-sm">JWT Token</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Role-based. Signed with JWT_SECRET. Best for CI/CD pipelines (GitHub Actions).
+                      </p>
+                    </label>
+                  </div>
+
+                  {/* Type Info */}
+                  {tokenType === 'api' ? (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                      <strong>API Token (gshop_):</strong> Generates a random <code className="bg-blue-100 px-1 rounded">gshop_</code>-prefixed
+                      token. Access is controlled by selected scopes. Validated by <code>ApiTokenService</code> and
+                      the <code>CompositeAuthGuard</code> on CI/CD endpoints. Use this for integrations that need
+                      limited, specific permissions.
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
+                      <strong>JWT Token:</strong> Generates a JWT signed with the production <code className="bg-purple-100 px-1 rounded">JWT_SECRET</code>,
+                      carrying your <code>ADMIN</code> role. Validated by <code>JwtAuthGuard</code> and
+                      <code>CompositeAuthGuard</code> on all admin endpoints. Use this for GitHub Actions CI/CD
+                      (<code>ORIVRAA_ADMIN_TOKEN</code>). Scopes are informational only — the JWT grants full admin access.
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="tokenName">Token Name</Label>
@@ -495,6 +570,7 @@ export function ApiTokenManager() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Token</TableHead>
                   <TableHead>Scopes</TableHead>
                   <TableHead>Created</TableHead>
@@ -507,6 +583,18 @@ export function ApiTokenManager() {
                 {tokens.map((token) => (
                   <TableRow key={token.id}>
                     <TableCell className="font-medium">{token.name}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          token.tokenType === 'jwt'
+                            ? 'text-purple-700 border-purple-300 bg-purple-50'
+                            : 'text-blue-700 border-blue-300 bg-blue-50'
+                        }
+                      >
+                        {token.tokenType === 'jwt' ? 'JWT' : 'API'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       {viewingTokenId === token.id && viewedToken ? (
                         <div className="flex items-center gap-2">

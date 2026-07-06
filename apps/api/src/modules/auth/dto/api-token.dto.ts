@@ -8,6 +8,11 @@ export enum TokenDuration {
   DAYS_365 = '365d',
 }
 
+export enum TokenType {
+  API = 'api',
+  JWT = 'jwt',
+}
+
 export class CreateApiTokenDto {
   @ApiProperty({ 
     description: 'Human-readable name for the token',
@@ -35,6 +40,16 @@ export class CreateApiTokenDto {
   })
   @IsEnum(TokenDuration)
   duration: TokenDuration;
+
+  @ApiPropertyOptional({
+    description: 'Token type: "api" (gshop_ prefixed, scope-based) or "jwt" (JWT signed with JWT_SECRET, role-based). Defaults to "api".',
+    enum: TokenType,
+    example: TokenType.API,
+    default: TokenType.API,
+  })
+  @IsEnum(TokenType)
+  @IsOptional()
+  tokenType?: TokenType;
 }
 
 export class RevokeApiTokenDto {
@@ -52,6 +67,9 @@ export class ApiTokenResponseDto {
 
   @ApiProperty()
   tokenPrefix: string;
+
+  @ApiProperty({ description: 'Token type: "api" or "jwt"', example: 'api' })
+  tokenType: TokenType;
 
   @ApiProperty()
   scopes: string[];

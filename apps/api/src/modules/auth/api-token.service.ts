@@ -1,6 +1,7 @@
-import { Injectable, Logger, NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateApiTokenDto, TokenDuration, ApiTokenResponseDto, CreateApiTokenResponseDto } from './dto/api-token.dto';
+import { CreateApiTokenDto, TokenDuration, ApiTokenResponseDto, CreateApiTokenResponseDto, TokenType } from './dto/api-token.dto';
 import * as crypto from 'crypto';
 
 // Available scopes for API tokens
@@ -9,7 +10,7 @@ export const API_TOKEN_SCOPES = {
   'market-rates:read': 'Read market rates',
   'market-rates:refresh': 'Refresh market rate cache',
   'admin:read': 'Read admin endpoints',
-  'admin:write': 'Write to admin endpoints',
+  'admin:write': 'Write to admin endpoints (CI/CD releases)',
 } as const;
 
 export type ApiTokenScope = keyof typeof API_TOKEN_SCOPES;
@@ -22,7 +23,10 @@ export class ApiTokenService {
   private readonly logger = new Logger(ApiTokenService.name);
   private readonly TOKEN_PREFIX = 'gshop_';
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   /**
    * Generate a cryptographically secure token
@@ -81,7 +85,10 @@ export class ApiTokenService {
   }
 
   /**
-   * Create a new API token for a user
+   * Create a new API token for a user.
+   * Supports two token types:
+   *   - "api" (gshop_ prefixed, scope-based) — default
+   *   - "jwt" (JWT signed with JWT_SECRET, role-based) — for CI/CD
    */
   async createToken(
     userId: string,
@@ -89,15 +96,43 @@ export class ApiTokenService {
   ): Promise<CreateApiTokenResponseDto> {
     // Validate scopes
     const validScopes = dto.scopes?.filter(s => s in API_TOKEN_SCOPES) || ['health:read'];
-    
-    // Generate token
-    const token = this.generateToken();
+
+    // Fetch user for JWT type (need role + email)
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true },
+    });
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const tokenType = dto.tokenType || TokenType.API;
+    let token: string;
+
+    if (tokenType === TokenType.JWT) {
+      // Generate a JWT with the user's role — validated by JwtAuthGuard/CompositeAuthGuard
+      const durationMs = this.parseDuration(dto.duration);
+      const expiresIn = Math.floor(durationMs / 1000); // seconds
+      token = this.jwtService.sign(
+        {
+          sub: user.id,
+          email: user.email,
+          role: user.role,
+          shopId: null,
+        },
+        { expiresIn },
+      );
+    } else {
+      // Generate a gshop_ API token — validated by ApiTokenService.validateToken
+      token = this.generateToken();
+    }
+
     const tokenHash = this.hashToken(token);
-    const tokenPrefix = token.substring(0, 12); // gshop_ + first 6 chars
-    
+    const tokenPrefix = token.substring(0, 12);
+
     // Calculate expiry
     const expiresAt = new Date(Date.now() + this.parseDuration(dto.duration));
-    
+
     // Encrypt token for 24h viewing window
     const encryptedToken = this.encryptToken(token);
     const tokenViewableUntil = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -116,12 +151,15 @@ export class ApiTokenService {
       },
     });
 
-    this.logger.log(`Created API token "${dto.name}" for user ${userId}, expires ${expiresAt.toISOString()}`);
+    this.logger.log(
+      `Created ${tokenType === TokenType.JWT ? 'JWT' : 'API'} token "${dto.name}" for user ${userId}, expires ${expiresAt.toISOString()}`,
+    );
 
     return {
       id: apiToken.id,
       name: apiToken.name,
       tokenPrefix: apiToken.tokenPrefix,
+      tokenType: this.inferTokenType(apiToken.tokenPrefix),
       scopes: apiToken.scopes,
       expiresAt: apiToken.expiresAt,
       lastUsedAt: apiToken.lastUsedAt,
@@ -302,6 +340,16 @@ export class ApiTokenService {
     return { total, active, expiringSoon, recentlyUsed };
   }
 
+  /**
+   * Infer token type from prefix.
+   * gshop_ → API token, eyJ → JWT
+   */
+  private inferTokenType(tokenPrefix: string): TokenType {
+    if (tokenPrefix.startsWith('gshop_')) return TokenType.API;
+    if (tokenPrefix.startsWith('eyJ')) return TokenType.JWT;
+    return TokenType.API; // fallback
+  }
+
   private toResponseDto(token: {
     id: string;
     name: string;
@@ -322,6 +370,7 @@ export class ApiTokenService {
       id: token.id,
       name: token.name,
       tokenPrefix: token.tokenPrefix,
+      tokenType: this.inferTokenType(token.tokenPrefix),
       scopes: token.scopes,
       expiresAt: token.expiresAt,
       lastUsedAt: token.lastUsedAt,
