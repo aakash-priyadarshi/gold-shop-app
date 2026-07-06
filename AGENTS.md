@@ -346,3 +346,21 @@ but the download page won't update with the new version.
 8. **Use `data-tour` attributes** on key UI elements for tutorial anchors
 9. **Prefer editing existing files** over creating new ones
 10. **Follow existing import ordering** (React → next → @/components → @/hooks → @/lib → @gold-shop/shared → lucide-react)
+
+## MCP Server Authentication (Already Configured — Do NOT Re-Authenticate)
+
+Both Railway and Vercel MCP servers have **permanent authentication** configured in
+`%APPDATA%\devin\mcp_config.json`. Never ask the user to log in again or re-authenticate.
+
+- **Railway** — Uses the **local CLI MCP** (`railway mcp` stdio command). Authenticated via
+  `railway login` (persistent token stored by the Railway CLI). No OAuth, no expiry.
+  Do NOT switch to the remote OAuth endpoint at `mcp.railway.com` — it uses short-lived
+  tokens with no refresh and will require repeated re-authentication.
+
+- **Vercel** — Uses a **permanent API token** via `Authorization: Bearer` header in the MCP
+  config. The token (`vcp_...`) does not expire and has access to all accounts/projects.
+  Do NOT switch to OAuth — the OAuth auto-refresh was broken (tokens expired without
+  refreshing, creating 15+ duplicate tokens).
+
+If either MCP stops working, check the config file first. Do NOT delete OAuth session
+files or change the auth method without explicit user instruction.
