@@ -1,7 +1,7 @@
 FROM node:20-slim
 
 # Force cache invalidation — this file changes every commit
-RUN date > /etc/build-timestamp
+RUN date > /etc/build-timestamp \
 
 # Prisma requires OpenSSL and we need PostgreSQL 18 client to match Railway's database
     && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg \
