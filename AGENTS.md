@@ -291,21 +291,37 @@ The desktop app build and release process is fully automated via GitHub Actions 
 
 ### ORIVRAA_ADMIN_TOKEN
 
-A long-lived admin JWT (10-year expiry) used by the `desktop-build.yml` workflow to call
+A long-lived token used by the `desktop-build.yml` workflow to call
 `POST /api/releases/publish` after building installers. Without this token, builds succeed
 but the download page won't update with the new version.
 
+**Two token types are supported** (the `/api/releases/publish` endpoint uses `CompositeAuthGuard`):
+
+1. **gshop\_ API token** (recommended) — Created from the admin dashboard's API Token Management
+   page at `/dashboard/admin`. Select `admin:write` scope and a duration. Copy the token immediately
+   (it's only shown once) and add it as a GitHub secret named `ORIVRAA_ADMIN_TOKEN`.
+2. **JWT** (legacy) — Signed with the production `JWT_SECRET` using `generate-admin-token.ts`.
+   Works but requires running a script locally with the production secret.
+
 - **Where it's stored:** [GitHub Actions Secrets](https://github.com/aakash-priyadarshi/gold-shop-app/settings/secrets/actions) → `ORIVRAA_ADMIN_TOKEN`
-- **How it works:** Signed with the production `JWT_SECRET` (Railway env var on `@gold-shop/api`). The payload contains `role: "ADMIN"` for the admin user `admin@orivraa.com`.
-- **Admin dashboard:** The [API Token Management](https://www.orivraa.com/dashboard/admin) page has an info card about this token (visible to admins only).
-- **To regenerate:**
+- **Admin dashboard:** The token appears in the Active Tokens table on `/dashboard/admin` and can be
+  revoked from there. The dashboard's "Create Token" button generates `gshop_` tokens that work with
+  the publish endpoint.
+- **To create a new CI/CD token (recommended flow):**
+  1. Go to https://www.orivraa.com/dashboard/admin → API Token Management
+  2. Click "Create Token"
+  3. Name it (e.g., "GitHub Actions CI/CD"), select `admin:write` scope, choose duration
+  4. Copy the token immediately (only shown once)
+  5. Update the `ORIVRAA_ADMIN_TOKEN` GitHub secret with the new value
+- **To regenerate a JWT (legacy):**
   ```bash
   cd apps/api
   JWT_SECRET=<production-secret> DATABASE_URL=<production-db-url> \
     npx tsx prisma/generate-admin-token.ts
   ```
-  Then update the GitHub secret with the new token value.
-- **Script:** `apps/api/prisma/generate-admin-token.ts` — finds active admin users, signs a 10-year JWT, prints the token.
+- **Scripts:**
+  - `apps/api/prisma/generate-admin-token.ts` — generates a 10-year admin JWT (legacy)
+  - `apps/api/prisma/insert-admin-token.ts` — inserts a JWT into the ApiToken table for dashboard visibility
 
 ### Updater Endpoints (in tauri.conf.json)
 
