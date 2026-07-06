@@ -15,8 +15,15 @@ export const API_TOKEN_SCOPES = {
 
 export type ApiTokenScope = keyof typeof API_TOKEN_SCOPES;
 
-// Encryption key from environment or generate one
-const ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex').substring(0, 32);
+// Encryption key from environment — required, no fallback
+const ENCRYPTION_KEY_RAW = process.env.TOKEN_ENCRYPTION_KEY;
+if (!ENCRYPTION_KEY_RAW) {
+  throw new Error(
+    "CRITICAL: TOKEN_ENCRYPTION_KEY environment variable is not set. " +
+      "The application cannot start without a secure token encryption key.",
+  );
+}
+const ENCRYPTION_KEY: string = ENCRYPTION_KEY_RAW;
 
 @Injectable()
 export class ApiTokenService {

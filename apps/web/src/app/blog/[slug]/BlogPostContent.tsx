@@ -3,6 +3,7 @@
 import { T } from "@/components/ui/T";
 import type { BlogPost } from "@/data/blog-posts";
 import { useTranslatedHtml } from "@/hooks/useTranslatedHtml";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import {
     ArrowLeft,
     ArrowRight,
@@ -120,7 +121,7 @@ export function BlogPostContent({ post, related }: Props) {
             prose-table:border-collapse prose-table:text-sm
             prose-th:bg-stone-100 dark:prose-th:bg-stone-800 prose-th:px-4 prose-th:py-2.5 prose-th:text-left prose-th:font-semibold prose-th:text-stone-700 dark:prose-th:text-stone-300
             prose-td:border-t prose-td:border-stone-200 dark:prose-td:border-stone-700 prose-td:px-4 prose-td:py-2.5 prose-td:text-stone-600 dark:prose-td:text-stone-400"
-          dangerouslySetInnerHTML={{ __html: translatedContent }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(translatedContent) }}
         />
 
         {/* Tags */}

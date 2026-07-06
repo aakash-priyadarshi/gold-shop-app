@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import api, { materialsApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { useT } from "@/providers/translation-provider";
 import {
     BarChart2,
@@ -176,7 +177,7 @@ export default function MobileLayout({
   // Auth guard
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+      router.push(`/auth/login?redirect=${encodeURIComponent(sanitizeRedirectUrl(pathname))}`);
     }
   }, [isLoading, isAuthenticated, router, pathname]);
 

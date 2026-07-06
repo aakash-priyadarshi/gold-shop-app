@@ -24,6 +24,7 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api, { chatApi } from "@/lib/api";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { useT } from "@/providers/translation-provider";
 import {
   BuildingStorefrontIcon,
@@ -198,7 +199,7 @@ export default function ShopsPage() {
         title: t("Login Required"),
         description: t("Please login to message this shop"),
       });
-      router.push(`/auth/login?redirect=/shops`);
+      router.push(`/auth/login?redirect=${sanitizeRedirectUrl("/shops")}`);
       return;
     }
     if (user?.role !== "CUSTOMER") {

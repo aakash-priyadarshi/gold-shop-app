@@ -6,8 +6,16 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding admin user...');
 
+  // Fail fast in production if the seed password is not provided via env var.
+  // The fallback below is a dev-only default and must never be used in production.
+  if (process.env.NODE_ENV === 'production' && !process.env.SEED_ADMIN_PASSWORD) {
+    throw new Error(
+      'Refusing to seed admin in production without SEED_ADMIN_PASSWORD env var.',
+    );
+  }
+
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@orivraa.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123!@#';
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin123!@#';
 
   // Check if admin already exists
   const existingAdmin = await prisma.user.findUnique({

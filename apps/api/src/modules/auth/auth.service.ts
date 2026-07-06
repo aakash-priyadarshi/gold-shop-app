@@ -290,9 +290,11 @@ export class AuthService {
     });
 
     if (!user) throw new NotFoundException("User not found");
-    // Ensure only unverified users or CUSTOMERS can convert, just to be safe.
-    if (user.role === "SHOPKEEPER") {
-      throw new BadRequestException("Account is already a shopkeeper");
+    // Only CUSTOMER accounts can be converted to SHOPKEEPER (prevent role escalation)
+    if (user.role !== "CUSTOMER") {
+      throw new BadRequestException(
+        "Only customer accounts can be converted to shopkeeper",
+      );
     }
     if (user.shops && user.shops.length > 0) {
       throw new BadRequestException("User already has a shop");
@@ -1079,7 +1081,7 @@ export class AuthService {
       });
 
       await this.prisma.session.deleteMany({
-        where: { userId, token },
+        where: { userId, token: tokenHash },
       });
     }
 

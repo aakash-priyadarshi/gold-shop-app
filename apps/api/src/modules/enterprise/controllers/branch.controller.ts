@@ -18,6 +18,7 @@ import { RolesGuard } from "../../auth/guards/roles.guard";
 import { FeatureGateGuard } from "../../core/subscriptions/feature-gate.guard";
 import { RequireFeature } from "../../core/subscriptions/require-feature.decorator";
 import { BranchService } from "../services/branch.service";
+import { UpdateBranchDto } from "../dto/update-branch.dto";
 
 @ApiTags("enterprise/branches")
 @Controller("enterprise/branches")
@@ -77,7 +78,7 @@ export class BranchController {
   async update(
     @CurrentUser("activeShopId") shopId: string,
     @Param("id") id: string,
-    @Body() body: Record<string, any>,
+    @Body() body: UpdateBranchDto,
   ) {
     return this.branchService.updateBranch(shopId, id, body);
   }

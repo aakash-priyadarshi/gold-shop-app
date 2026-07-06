@@ -6,6 +6,7 @@ import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { RedisService } from '../../common/redis/redis.service';
 
 // Rate limiting configuration
 interface RateLimitConfig {
@@ -23,13 +24,14 @@ export class OtpService {
     windowMs: 60 * 60 * 1000, // 1 hour
   };
 
-  // In-memory rate limit store (use Redis in production for distributed systems)
+  // In-memory fallback rate limit store (used when Redis is unavailable)
   private rateLimitStore: Map<string, { count: number; resetAt: number }> = new Map();
 
   constructor(
     private prisma: PrismaService,
     private mailService: MailService,
     private configService: ConfigService,
+    private redisService: RedisService,
   ) {}
 
   private generateOtp(length = 6): string {
@@ -41,9 +43,27 @@ export class OtpService {
   }
 
   /**
-   * Check rate limit for email or IP
+   * Check rate limit for email or IP.
+   * Uses Redis when available (distributed-safe), falls back to in-memory Map.
    */
-  private checkRateLimit(key: string, max: number): void {
+  private async checkRateLimit(key: string, max: number): Promise<void> {
+    const ttlSeconds = Math.floor(this.rateLimitConfig.windowMs / 1000);
+    const redisKey = `otp:ratelimit:${key}`;
+
+    // Try Redis first (works across multiple instances)
+    if (this.redisService.isAvailable()) {
+      const count = await this.redisService.incr(redisKey, ttlSeconds);
+      if (count > max) {
+        const minutesLeft = Math.ceil(this.rateLimitConfig.windowMs / 60000);
+        throw new HttpException(
+          `Too many OTP requests. Please try again in ${minutesLeft} minutes.`,
+          HttpStatus.TOO_MANY_REQUESTS
+        );
+      }
+      return;
+    }
+
+    // Fallback: in-memory rate limiting (single-instance only)
     const now = Date.now();
     const record = this.rateLimitStore.get(key);
 
@@ -89,9 +109,9 @@ export class OtpService {
     }
 
     // Rate limit checks
-    this.checkRateLimit(`otp:email:${normalizedTarget}`, this.rateLimitConfig.maxPerEmail);
+    await this.checkRateLimit(`otp:email:${normalizedTarget}`, this.rateLimitConfig.maxPerEmail);
     if (ipAddress) {
-      this.checkRateLimit(`otp:ip:${ipAddress}`, this.rateLimitConfig.maxPerIp);
+      await this.checkRateLimit(`otp:ip:${ipAddress}`, this.rateLimitConfig.maxPerIp);
     }
 
     // Mark any existing OTPs as expired (don't delete - keep for audit)
@@ -162,9 +182,9 @@ export class OtpService {
     const normalizedEmail = email.toLowerCase().trim();
     
     // Rate limit first
-    this.checkRateLimit(`otp:email:${normalizedEmail}`, this.rateLimitConfig.maxPerEmail);
+    await this.checkRateLimit(`otp:email:${normalizedEmail}`, this.rateLimitConfig.maxPerEmail);
     if (ipAddress) {
-      this.checkRateLimit(`otp:ip:${ipAddress}`, this.rateLimitConfig.maxPerIp);
+      await this.checkRateLimit(`otp:ip:${ipAddress}`, this.rateLimitConfig.maxPerIp);
     }
 
     // Look for user with case-insensitive email match

@@ -904,7 +904,12 @@ export default function DownloadPage() {
     if (!primaryRelease || !downloadUrl) return;
     setDownloading(true);
     await trackDownloadClick(primaryRelease.id);
-    window.location.href = downloadUrl;
+    const url = new URL(downloadUrl);
+    if (url.hostname === 'releases.orivraa.com' || url.hostname.endsWith('.github.com') || url.hostname === 'github.com') {
+      window.location.href = downloadUrl;
+    } else {
+      console.error('Invalid download URL:', downloadUrl);
+    }
     setTimeout(() => setDownloading(false), 3000);
   };
 

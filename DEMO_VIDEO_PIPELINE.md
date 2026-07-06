@@ -59,7 +59,7 @@ scripts/demo-dubber/
 ## ElevenLabs Credentials
 
 ```
-API Key:  sk_a2d41e9f1e65560c8bd9abacd8e254f0d137e55e5a94f856
+API Key:  $ELEVENLABS_API_KEY (set via environment variable)
 Voice ID: VG7gYikNQ71LJ52W9fAD
 Model:    eleven_multilingual_v2
 ```
@@ -73,7 +73,7 @@ Python venv: `pipecat-agent\.venv\Scripts\python.exe`
 Run all commands from: `scripts/demo-dubber/`
 
 ```powershell
-$env:ELEVENLABS_API_KEY = "sk_a2d41e9f1e65560c8bd9abacd8e254f0d137e55e5a94f856"
+$env:ELEVENLABS_API_KEY = "your-api-key-here"
 $python = "c:\Users\aakas\OneDrive\project-bussiness\gold-shop-app\pipecat-agent\.venv\Scripts\python.exe"
 Push-Location "c:\Users\aakas\OneDrive\project-bussiness\gold-shop-app\scripts\demo-dubber"
 

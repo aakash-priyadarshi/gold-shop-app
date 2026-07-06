@@ -44,10 +44,19 @@ RUN pnpm exec nest build
 # Verify dist/src/main.js was produced (tsc outputs to dist/src/ because tsconfig includes both src/ and prisma/)
 RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found! Listing dist/:" && ls -laR dist/ && exit 1)
 
+# Create a non-root user and switch to it for runtime security
+RUN useradd -m -u 1000 appuser
+USER appuser
+
 EXPOSE 3001
 
 ENV NODE_ENV=production
 ENV PORT=3001
+
+# Health check — verifies the API is responding on the configured port
+# Uses curl (installed in the base image) since wget is not available in node:20-slim
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -fsS http://localhost:3001/api/health || exit 1
 
 # Run pending migrations then start the server.
 # prisma migrate deploy is idempotent – safe to run on every container start.

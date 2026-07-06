@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -208,7 +209,7 @@ export default function DesignGalleryPage() {
     e?.stopPropagation();
 
     if (!isAuthenticated) {
-      router.push("/auth/login?redirect=/designs");
+      router.push(`/auth/login?redirect=${sanitizeRedirectUrl("/designs")}`);
       return;
     }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { RouteGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { supportApi, ticketsApi } from "@/lib/api";
@@ -23,16 +24,19 @@ export default function SupportDashboardPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex justify-center py-24">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </DashboardLayout>
+      <RouteGuard allowedRoles={["SUPPORT"]} requireAuth>
+        <DashboardLayout>
+          <div className="flex justify-center py-24">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </DashboardLayout>
+      </RouteGuard>
     );
   }
 
   return (
-    <DashboardLayout>
+    <RouteGuard allowedRoles={["SUPPORT"]} requireAuth>
+      <DashboardLayout>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Support Dashboard</h1>
 
@@ -119,7 +123,8 @@ export default function SupportDashboardPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </RouteGuard>
   );
 }
 

@@ -29,6 +29,12 @@ import { EmailTemplateService } from "../mail/email-template.service";
 import { EMAIL_SENDERS, MailService } from "../mail/mail.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { SellerEngagementService } from "../core/seller-performance/seller-engagement.service";
+import { UpdatePlatformSettingsDto } from "./dto/update-platform-settings.dto";
+import {
+  CreateEmailTemplateDto,
+  PreviewEmailTemplateDto,
+  UpdateEmailTemplateDto,
+} from "./dto/email-template.dto";
 
 @ApiTags("admin")
 @Controller("admin")
@@ -446,7 +452,7 @@ export class AdminController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: "Update platform settings" })
   async updateSettings(
-    @Body() data: Record<string, any>,
+    @Body() data: UpdatePlatformSettingsDto,
     @CurrentUser("id") adminId: string,
   ) {
     for (const [key, value] of Object.entries(data)) {
@@ -1843,10 +1849,10 @@ export class AdminController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: "Create an email template" })
   async createEmailTemplate(
-    @Body() data: any,
+    @Body() data: CreateEmailTemplateDto,
     @CurrentUser("id") adminId: string,
   ) {
-    const template = await this.emailTemplateService.createTemplate(data, adminId);
+    const template = await this.emailTemplateService.createTemplate(data as any, adminId);
     return { template };
   }
 
@@ -1855,10 +1861,10 @@ export class AdminController {
   @ApiOperation({ summary: "Update an email template" })
   async updateEmailTemplate(
     @Param("id") id: string,
-    @Body() data: any,
+    @Body() data: UpdateEmailTemplateDto,
     @CurrentUser("id") adminId: string,
   ) {
-    const template = await this.emailTemplateService.updateTemplate(id, data, adminId);
+    const template = await this.emailTemplateService.updateTemplate(id, data as any, adminId);
     return { template };
   }
 
@@ -1882,8 +1888,8 @@ export class AdminController {
   @Post("email/templates/preview")
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: "Preview an email template draft" })
-  async previewEmailTemplateDraft(@Body() data: any) {
-    return this.emailTemplateService.previewDraft(data);
+  async previewEmailTemplateDraft(@Body() data: PreviewEmailTemplateDto) {
+    return this.emailTemplateService.previewDraft(data as any);
   }
 
   @Post("messages/send")

@@ -6,6 +6,7 @@ import {
 import * as crypto from "crypto";
 import * as QRCode from "qrcode";
 import * as speakeasy from "speakeasy";
+import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
@@ -80,7 +81,7 @@ export class TwoFactorService {
       secret: user.twoFactorSecret,
       encoding: "base32",
       token,
-      window: 1, // Allow 30 seconds window
+      window: 0, // Strict — no replay of codes from adjacent time windows
     });
 
     if (!isValid) {
@@ -132,7 +133,7 @@ export class TwoFactorService {
       secret: user.twoFactorSecret,
       encoding: "base32",
       token,
-      window: 1,
+      window: 0,
     });
 
     if (isValidTotp) {
@@ -186,9 +187,7 @@ export class TwoFactorService {
       throw new BadRequestException("2FA is not enabled");
     }
 
-    // Verify password (basic check - should use bcrypt compare)
-    // Note: In production, use proper password verification
-    const bcrypt = require("bcryptjs");
+    // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException("Invalid password");
@@ -200,7 +199,7 @@ export class TwoFactorService {
         secret: user.twoFactorSecret,
         encoding: "base32",
         token,
-        window: 1,
+        window: 0,
       });
 
       if (!isValid) {
@@ -239,7 +238,7 @@ export class TwoFactorService {
       secret: user.twoFactorSecret,
       encoding: "base32",
       token,
-      window: 1,
+      window: 0,
     });
 
     if (!isValid) {

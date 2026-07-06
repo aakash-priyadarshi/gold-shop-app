@@ -3,6 +3,7 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -401,7 +402,7 @@ export default function ShopDetailPage() {
         title: t("Login Required"),
         description: t("Please login to message this shop"),
       });
-      router.push(`/auth/login?redirect=/shops/${shopId}`);
+      router.push(`/auth/login?redirect=${sanitizeRedirectUrl(`/shops/${shopId}`)}`);
       return;
     }
     if (user?.role !== "CUSTOMER") {

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { crashReportApi } from "@/lib/api";
 import {
@@ -178,8 +179,9 @@ export default function CrashReportsPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <AdminGuard>
+      <DashboardLayout>
+        <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -537,6 +539,7 @@ export default function CrashReportsPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </AdminGuard>
   );
 }

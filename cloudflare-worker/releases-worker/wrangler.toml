@@ -20,7 +20,7 @@ bucket_name = "orivraa-releases"
 
 # Optional: restrict which origins can hit HEAD/GET (empty = allow all)
 [vars]
-ALLOWED_ORIGINS = "https://orivraa.com,https://www.orivraa.com,https://api.orivraa.com,http://localhost:3000"
+ALLOWED_ORIGINS = "https://orivraa.com,https://www.orivraa.com,https://api.orivraa.com"
 
 # Production environment
 [env.production]

@@ -20,6 +20,7 @@ import {
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { ordersApi } from "@/lib/api";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { useT } from "@/providers/translation-provider";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
@@ -209,7 +210,7 @@ function MyOrdersPageContent() {
 
   // Not authenticated
   if (!isAuthenticated) {
-    router.push("/auth/login?redirect=/orders");
+    router.push(`/auth/login?redirect=${sanitizeRedirectUrl("/orders")}`);
     return null;
   }
 

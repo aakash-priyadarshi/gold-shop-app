@@ -40,6 +40,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { ordersApi, paymentsApi } from "@/lib/api";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { useT } from "@/providers/translation-provider";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
@@ -449,7 +450,7 @@ function CheckoutPageContent() {
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
-    router.push("/auth/login?redirect=/checkout");
+    router.push(`/auth/login?redirect=${sanitizeRedirectUrl("/checkout")}`);
     return null;
   }
 

@@ -114,6 +114,7 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "setupFiles": ["<rootDir>/jest.setup.ts"],
     "maxWorkers": "50%",
     "workerIdleMemoryLimit": "1GB"
   }

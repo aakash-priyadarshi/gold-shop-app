@@ -13,6 +13,10 @@ on:
   schedule:
     - cron: "0 6 * * *" # daily at 6:00 UTC — monitors production health
 
+permissions:
+  contents: read
+  checks: write
+
 env:
   NODE_VERSION: "18"
   PNPM_VERSION: "10.27.0"

@@ -1,5 +1,6 @@
 "use client";
 
+import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
@@ -86,8 +87,9 @@ export default function CataloguesPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <ShopGuard>
+      <DashboardLayout>
+        <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -260,6 +262,7 @@ export default function CataloguesPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ShopGuard>
   );
 }

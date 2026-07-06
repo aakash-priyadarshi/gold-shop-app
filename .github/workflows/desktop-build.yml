@@ -53,6 +53,10 @@ env:
   R2_ENDPOINT: https://c3219a748734c4ae628206c10c8b2c05.r2.cloudflarestorage.com
   AWS_REGION: auto
   AWS_EC2_METADATA_DISABLED: true
+  # R2 credentials — set directly as env vars (masked by GitHub Actions) instead of
+  # writing to $GITHUB_ENV, which can expose secrets if a step fails mid-write.
+  AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 
 jobs:
   # ═══════════════════════════════════════════════════════════
@@ -185,12 +189,6 @@ jobs:
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
-
-      - name: Configure R2 credentials
-        shell: bash
-        run: |
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
 
       - name: Clean old installers from R2 latest/
         shell: bash
@@ -461,12 +459,6 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           args: --target universal-apple-darwin
-
-      - name: Configure R2 credentials
-        shell: bash
-        run: |
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
 
       - name: Clean old macOS installers from R2 latest/
         shell: bash

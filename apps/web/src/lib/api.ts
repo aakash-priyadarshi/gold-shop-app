@@ -1,4 +1,5 @@
 import { toast } from "@/hooks/use-toast";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import axios from "axios";
 
 // Ensure the API URL always ends with /api
@@ -118,7 +119,7 @@ function forceLogout() {
   });
 
   const returnTo = encodeURIComponent(
-    window.location.pathname + window.location.search,
+    sanitizeRedirectUrl(window.location.pathname + window.location.search),
   );
   window.location.href = `/auth/login?returnTo=${returnTo}`;
 }

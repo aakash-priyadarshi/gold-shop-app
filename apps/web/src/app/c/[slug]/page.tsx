@@ -3,6 +3,7 @@
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { catalogueApi, rfqApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -885,7 +886,7 @@ export default function PublicCataloguePage() {
 
   const handleMessageShop = async () => {
     if (!user) {
-      router.push(`/auth/login?redirect=/c/${slug}`);
+      router.push(`/auth/login?redirect=${sanitizeRedirectUrl(`/c/${slug}`)}`);
       return;
     }
     try {
@@ -902,7 +903,7 @@ export default function PublicCataloguePage() {
 
   const handleRequestQuote = async () => {
     if (!user) {
-      router.push(`/auth/login?redirect=/c/${slug}`);
+      router.push(`/auth/login?redirect=${sanitizeRedirectUrl(`/c/${slug}`)}`);
       return;
     }
     try {

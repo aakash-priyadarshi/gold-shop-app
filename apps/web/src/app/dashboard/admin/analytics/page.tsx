@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import api from "@/lib/api";
 import {
@@ -486,27 +487,29 @@ export default function AnalyticsPage() {
   const [tab, setTab] = useState<"web" | "desktop" | "crashes">("web");
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Activity className="h-6 w-6 text-amber-500" />
-            Platform Analytics & Monitoring
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Real-time session tracking, desktop usage, and error reporting for admin@orivraa.com
-          </p>
+    <AdminGuard>
+      <DashboardLayout>
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Activity className="h-6 w-6 text-amber-500" />
+              Platform Analytics & Monitoring
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Real-time session tracking, desktop usage, and error reporting for admin@orivraa.com
+            </p>
+          </div>
+
+          {/* Tab bar */}
+          <Tabs active={tab} onChange={(t) => setTab(t as any)} />
+
+          {/* Tab content */}
+          {tab === "web" && <WebTab />}
+          {tab === "desktop" && <DesktopTab />}
+          {tab === "crashes" && <CrashTab />}
         </div>
-
-        {/* Tab bar */}
-        <Tabs active={tab} onChange={(t) => setTab(t as any)} />
-
-        {/* Tab content */}
-        {tab === "web" && <WebTab />}
-        {tab === "desktop" && <DesktopTab />}
-        {tab === "crashes" && <CrashTab />}
-      </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </AdminGuard>
   );
 }

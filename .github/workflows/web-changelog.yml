@@ -8,6 +8,10 @@ on:
   push:
     branches: [master]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 env:
   API_URL: ${{ secrets.PRODUCTION_API_URL }}
 

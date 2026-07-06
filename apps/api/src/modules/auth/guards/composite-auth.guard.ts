@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ApiTokenService } from "../api-token.service";
+import { PrismaService } from "../../../prisma/prisma.service";
 
 /**
  * Composite Auth Guard for CI/CD endpoints.
@@ -25,6 +26,7 @@ export class CompositeAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly apiTokenService: ApiTokenService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -43,6 +45,14 @@ export class CompositeAuthGuard implements CanActivate {
       if (!token.startsWith("gshop_")) {
         try {
           const payload = await this.jwtService.verifyAsync(token);
+          // Verify the user is still active (not suspended/deactivated)
+          const user = await this.prisma.user.findUnique({
+            where: { id: payload.sub },
+            select: { id: true, status: true },
+          });
+          if (!user || user.status !== "ACTIVE") {
+            throw new UnauthorizedException("User account is not active");
+          }
           // Populate req.user in the same shape JwtStrategy would
           request.user = {
             id: payload.sub,
@@ -50,7 +60,8 @@ export class CompositeAuthGuard implements CanActivate {
             role: payload.role,
           };
           return true;
-        } catch {
+        } catch (error) {
+          if (error instanceof UnauthorizedException) throw error;
           throw new UnauthorizedException("Invalid or expired JWT");
         }
       }

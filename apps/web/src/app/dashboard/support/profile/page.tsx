@@ -1,5 +1,6 @@
 "use client";
 
+import { RouteGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { Badge } from "@/components/ui/badge";
@@ -60,8 +61,9 @@ export default function SupportProfilePage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
+    <RouteGuard allowedRoles={["SUPPORT"]} requireAuth>
+      <DashboardLayout>
+        <div className="max-w-2xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             Profile
@@ -170,6 +172,7 @@ export default function SupportProfilePage() {
         {/* Appearance */}
         <AppearanceSettings />
       </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </RouteGuard>
   );
 }

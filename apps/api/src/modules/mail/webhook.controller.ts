@@ -1,23 +1,47 @@
-import { Controller, Post, Body, Headers, Logger, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Headers, Logger, HttpCode, HttpStatus, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import * as crypto from 'crypto';
 
 @ApiTags('Webhooks')
 @Controller('webhooks')
 export class WebhookController {
   private readonly logger = new Logger(WebhookController.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('inbound-email')
   @ApiOperation({ summary: 'Receive inbound emails from Resend or Sendgrid' })
   @HttpCode(HttpStatus.OK)
   async handleInboundEmail(
-    @Headers('authorization') auth: string,
+    @Headers('x-webhook-signature') signature: string,
     @Body() body: any
   ) {
-    // In production, you would want to verify a webhook secret or signature here.
-    // For now, we will parse the generic webhook body assuming a Resend Inbound structure.
+    // Verify webhook signature using HMAC-SHA256 if MAIL_WEBHOOK_SECRET is set
+    const webhookSecret = this.configService.get<string>('MAIL_WEBHOOK_SECRET');
+    if (webhookSecret) {
+      if (!signature) {
+        this.logger.warn('Inbound email webhook rejected: missing x-webhook-signature header');
+        throw new UnauthorizedException('Missing webhook signature');
+      }
+      const rawBody = JSON.stringify(body);
+      const expectedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(rawBody)
+        .digest('hex');
+      if (signature !== expectedSignature) {
+        this.logger.warn('Inbound email webhook rejected: invalid signature');
+        throw new UnauthorizedException('Invalid webhook signature');
+      }
+    } else {
+      this.logger.warn(
+        'MAIL_WEBHOOK_SECRET is not set — inbound email webhook signature verification is disabled (development mode)',
+      );
+    }
 
     this.logger.log('Received inbound email webhook');
 

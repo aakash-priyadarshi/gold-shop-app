@@ -1,5 +1,6 @@
 "use client";
 
+import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,8 +99,9 @@ export default function SellerReferralsPage() {
   ).length;
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 max-w-4xl">
+    <ShopGuard>
+      <DashboardLayout>
+        <div className="space-y-6 max-w-4xl">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -321,6 +323,7 @@ export default function SellerReferralsPage() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ShopGuard>
   );
 }

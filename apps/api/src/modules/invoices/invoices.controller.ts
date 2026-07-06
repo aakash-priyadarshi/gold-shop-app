@@ -14,6 +14,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
+import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { InvoicesService } from "./invoices.service";
 
 // NOTE: Invoicing is a core USP feature and is intentionally NOT gated behind a
@@ -66,7 +67,7 @@ export class InvoicesController {
   @Patch("settings")
   async updateSettings(
     @CurrentUser("shopId") shopId: string,
-    @Body() dto: any,
+    @Body() dto: UpdateInvoiceSettingsDto,
   ) {
     if (!shopId) {
       throw new Error("No shop associated with this user");

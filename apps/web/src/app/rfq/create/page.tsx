@@ -45,6 +45,7 @@ import {
   type TaxRule,
 } from "@/hooks/useTaxRules";
 import { getImageUrl } from "@/lib/image-upload";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { useT } from "@/providers/translation-provider";
 import {
   COUNTRIES,
@@ -1095,7 +1096,7 @@ export default function CreateRfqPage() {
     );
 
     if (!isAuthenticated) {
-      router.push("/auth/login?callbackUrl=/rfq/create");
+      router.push(`/auth/login?callbackUrl=${sanitizeRedirectUrl("/rfq/create")}`);
       return;
     }
 
@@ -2689,7 +2690,7 @@ export default function CreateRfqPage() {
 
     if (!token && !isAuthenticated) {
       console.log("[RFQ Submit] Not authenticated, redirecting to login");
-      router.push("/auth/login?callbackUrl=/rfq/create");
+      router.push(`/auth/login?callbackUrl=${sanitizeRedirectUrl("/rfq/create")}`);
       return;
     }
 
@@ -3524,7 +3525,7 @@ export default function CreateRfqPage() {
                                       {aiResult.conversationalMessage}
                                     </p>
                                     <a
-                                      href="/auth/login?redirect=/rfq/create"
+                                      href={`/auth/login?redirect=${sanitizeRedirectUrl("/rfq/create")}`}
                                       className="inline-flex items-center gap-1 text-xs bg-gold-600 text-white px-3 py-1.5 rounded-md hover:bg-gold-700 transition-colors"
                                     >
                                       <T>Sign in for unlimited AI access →</T>
@@ -3636,7 +3637,7 @@ export default function CreateRfqPage() {
                                           </T>
                                         </span>
                                         <a
-                                          href="/auth/login?redirect=/rfq/create"
+                                          href={`/auth/login?redirect=${sanitizeRedirectUrl("/rfq/create")}`}
                                           className="text-blue-700 dark:text-blue-300 font-medium underline hover:text-blue-900 dark:hover:text-blue-100 whitespace-nowrap ml-2"
                                         >
                                           <T>Sign in →</T>
@@ -5090,7 +5091,7 @@ export default function CreateRfqPage() {
                               </p>
                               {!isLoggedIn ? (
                                 <Link
-                                  href="/auth/login?redirect=/rfq/create"
+                                  href={`/auth/login?redirect=${sanitizeRedirectUrl("/rfq/create")}`}
                                   className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mt-2"
                                 >
                                   <T>Sign in now</T>
@@ -5636,7 +5637,7 @@ export default function CreateRfqPage() {
                             </p>
                             {!isLoggedIn ? (
                               <Link
-                                href="/auth/login?redirect=/rfq/create"
+                                href={`/auth/login?redirect=${sanitizeRedirectUrl("/rfq/create")}`}
                                 className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mt-2"
                               >
                                 <T>Sign in now</T>

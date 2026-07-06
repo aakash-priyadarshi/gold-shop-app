@@ -1,5 +1,6 @@
 import { ExecutionContext, Injectable } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
+import * as crypto from "crypto";
 
 @Injectable()
 export class GoogleAuthGuard extends AuthGuard("google") {
@@ -17,6 +18,7 @@ export class GoogleAuthGuard extends AuthGuard("google") {
       const stateData: Record<string, string> = {
         role: request.query.role || "CUSTOMER",
         mode: request.query.mode || "login",
+        ts: String(Date.now()),
       };
       if (request.query.desktop_port) {
         stateData.desktop_port = request.query.desktop_port;
@@ -24,10 +26,17 @@ export class GoogleAuthGuard extends AuthGuard("google") {
       if (request.query.rememberMe !== undefined) {
         stateData.rememberMe = String(request.query.rememberMe);
       }
-      // Encode as base64 to pass through OAuth state parameter
-      request.query.state = Buffer.from(JSON.stringify(stateData)).toString(
+      // Sign the state with HMAC to prevent tampering
+      const secret = process.env.JWT_SECRET!;
+      const encodedData = Buffer.from(JSON.stringify(stateData)).toString(
         "base64",
       );
+      const hmac = crypto
+        .createHmac("sha256", secret)
+        .update(encodedData)
+        .digest("hex");
+      // Encode as base64 + HMAC signature to pass through OAuth state parameter
+      request.query.state = encodedData + "." + hmac;
     }
 
     const result = (await super.canActivate(context)) as boolean;

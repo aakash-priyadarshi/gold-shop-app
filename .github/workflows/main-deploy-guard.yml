@@ -7,6 +7,10 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  deployments: write
+
 env:
   NODE_VERSION: "18"
   PNPM_VERSION: "10.27.0"

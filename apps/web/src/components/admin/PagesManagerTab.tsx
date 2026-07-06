@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { pagesApi } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import {
   Edit,
   ExternalLink,
@@ -687,7 +688,7 @@ export function PagesManagerTab() {
                   <div
                     className="prose prose-lg dark:prose-invert max-w-none"
                     dangerouslySetInnerHTML={{
-                      __html: editingPage.content,
+                      __html: sanitizeHtml(editingPage.content),
                     }}
                   />
                 </div>

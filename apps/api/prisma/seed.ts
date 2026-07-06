@@ -7,8 +7,27 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Starting seed...");
 
+  // Fail fast in production if seed passwords are not provided via env vars.
+  // The fallbacks below are dev-only defaults and must never be used in production.
+  if (process.env.NODE_ENV === "production") {
+    const required = [
+      "SEED_ADMIN_PASSWORD",
+      "SEED_CUSTOMER_PASSWORD",
+      "SEED_SHOPKEEPER_PASSWORD",
+    ];
+    const missing = required.filter((key) => !process.env[key]);
+    if (missing.length > 0) {
+      throw new Error(
+        `Refusing to seed in production without explicit passwords. Set these env vars: ${missing.join(", ")}`,
+      );
+    }
+  }
+
   // Create admin user
-  const adminPassword = await bcrypt.hash("admin123", 10);
+  const adminPassword = await bcrypt.hash(
+    process.env.SEED_ADMIN_PASSWORD || "admin123",
+    10,
+  );
   const admin = await prisma.user.upsert({
     where: { email: "admin@orivraa.com" },
     update: {},
@@ -164,7 +183,10 @@ async function main() {
   console.log("✅ Created metal rates for shop 1");
 
   // Create shopkeeper 2
-  const shopkeeper2Password = await bcrypt.hash("shop123", 10);
+  const shopkeeper2Password = await bcrypt.hash(
+    process.env.SEED_SHOPKEEPER_PASSWORD || "shop123",
+    10,
+  );
   const shopkeeper2 = await prisma.user.upsert({
     where: { email: "sunajewellers@test.com" },
     update: {},
@@ -1255,15 +1277,7 @@ async function main() {
   console.log("✅ Created tax rule configurations");
 
   console.log("✅ Seed completed successfully!");
-  console.log("\n📋 Test Accounts:");
-  console.log("Admin: admin@orivraa.com / admin123");
-  console.log("Customer: customer@test.com / customer123");
-  console.log(
-    "Shopkeeper 1: rameshgold@test.com / shop123 (Ramesh Gold House)",
-  );
-  console.log(
-    "Shopkeeper 2: sunajewellers@test.com / shop123 (Suna Jewellers)",
-  );
+  console.log('Seed complete. Admin credentials were set from environment variables.');
 }
 
 main()

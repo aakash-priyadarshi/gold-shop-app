@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { blogApi } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -1148,7 +1149,7 @@ export default function AdminBlogPage() {
                         prose-th:bg-stone-100 prose-th:px-3 prose-th:py-1.5 prose-th:text-left
                         prose-td:border-t prose-td:px-3 prose-td:py-1.5"
                       dangerouslySetInnerHTML={{
-                        __html: editingPost.content || "<p>Preview will appear here</p>",
+                        __html: sanitizeHtml(editingPost.content || "<p>Preview will appear here</p>"),
                       }}
                     />
                   )}

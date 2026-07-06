@@ -39,6 +39,13 @@ const DEMO_ACCOUNTS = [
 async function main() {
   console.log("🎯 Creating YC Demo accounts...\n");
 
+  // Fail fast in production if the seed password is not provided via env var.
+  if (process.env.NODE_ENV === "production" && !process.env.SEED_DEMO_PASSWORD) {
+    throw new Error(
+      "Refusing to seed demo accounts in production without SEED_DEMO_PASSWORD env var.",
+    );
+  }
+
   const passwordHash = await bcrypt.hash(PASSWORD, 12);
 
   for (const account of DEMO_ACCOUNTS) {
@@ -131,11 +138,11 @@ async function main() {
   console.log(`╠════════════════════════════════════════════════════════════╣`);
   console.log(`║  👤 Customer Account                                       ║`);
   console.log(`║     Email:    demo-customer@orivraa.com                    ║`);
-  console.log(`║     Password: Demo@2026                                    ║`);
+  console.log(`║     (Demo user created — see env vars for password)        ║`);
   console.log(`╠════════════════════════════════════════════════════════════╣`);
   console.log(`║  🏪 Shopkeeper Account                                     ║`);
   console.log(`║     Email:    demo-shop@orivraa.com                        ║`);
-  console.log(`║     Password: Demo@2026                                    ║`);
+  console.log(`║     (Demo user created — see env vars for password)        ║`);
   console.log(`╚════════════════════════════════════════════════════════════╝`);
 }
 

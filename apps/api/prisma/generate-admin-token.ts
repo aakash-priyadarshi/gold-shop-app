@@ -42,7 +42,7 @@ async function main() {
 
   const token = jwt.sign(payload, secret, { expiresIn: "10y" });
   console.log("\n=== ORIVRAA_ADMIN_TOKEN (10-year expiry) ===");
-  console.log(token);
+  console.log('Token generated: ' + token.substring(0, 12) + '...');
   console.log("\nAdd this as a GitHub Actions secret named ORIVRAA_ADMIN_TOKEN:");
   console.log("  https://github.com/aakash-priyadarshi/gold-shop-app/settings/secrets/actions");
 }

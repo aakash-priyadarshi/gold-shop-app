@@ -7,6 +7,7 @@ import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { useT } from "@/providers/translation-provider";
 import {
   BellIcon,
@@ -120,7 +121,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push("/auth/login?redirect=/notifications");
+      router.push(`/auth/login?redirect=${sanitizeRedirectUrl("/notifications")}`);
       return;
     }
     if (isAuthenticated) {

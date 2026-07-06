@@ -4,7 +4,7 @@ import time
 
 from elevenlabs import ElevenLabs, VoiceSettings
 
-api_key  = "sk_a2d41e9f1e65560c8bd9abacd8e254f0d137e55e5a94f856"
+api_key  = os.environ.get("ELEVENLABS_API_KEY", "")
 voice_id = "VG7gYikNQ71LJ52W9fAD"
 model    = "eleven_multilingual_v2"
 out_dir  = os.path.join(os.path.dirname(__file__), "output", "en", "segments")

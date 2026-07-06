@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import {
   OrderStatusBadge,
   OrderStepper,
@@ -256,7 +257,7 @@ export default function OrderTrackingPage() {
 
   // Not authenticated
   if (!isAuthenticated) {
-    router.push(`/auth/login?redirect=/orders/${orderId}`);
+    router.push(`/auth/login?redirect=${sanitizeRedirectUrl(`/orders/${orderId}`)}`);
     return null;
   }
 

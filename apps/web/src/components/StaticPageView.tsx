@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
 import { useTranslatedHtml } from "@/hooks/useTranslatedHtml";
 import { pagesApi } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -81,7 +82,7 @@ function PageContent({ page }: { page: StaticPageData }) {
           prose-li:text-gray-600 dark:prose-li:text-gray-300
           prose-a:text-amber-600 dark:prose-a:text-amber-400
           prose-strong:text-gray-900 dark:prose-strong:text-white"
-        dangerouslySetInnerHTML={{ __html: translatedContent }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(translatedContent) }}
       />
     </article>
   );

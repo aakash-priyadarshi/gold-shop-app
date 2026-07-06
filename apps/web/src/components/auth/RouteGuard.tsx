@@ -6,6 +6,7 @@ import {
   useAuth,
   UserRole,
 } from "@/hooks/useAuth";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -29,7 +30,7 @@ export function RouteGuard({
 
     // If auth is required but user is not authenticated
     if (requireAuth && !isAuthenticated) {
-      const redirectUrl = encodeURIComponent(pathname);
+      const redirectUrl = encodeURIComponent(sanitizeRedirectUrl(pathname));
       router.push(`/auth/login?redirect=${redirectUrl}`);
       return;
     }

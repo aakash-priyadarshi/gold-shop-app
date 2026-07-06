@@ -212,6 +212,7 @@ export class AuthController {
 
   @Post("reset-password")
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiOperation({ summary: "Reset password with OTP" })
   @ApiResponse({ status: 200, description: "Password reset successful" })
   @ApiResponse({ status: 400, description: "Invalid or expired OTP" })
@@ -290,7 +291,6 @@ export class AuthController {
 
     try {
       const requestedRole = req.user?.requestedRole || "CUSTOMER";
-      const mode = req.user?.mode || "login";
       const desktopPort = req.user?.desktopPort;
       const result = await this.authService.googleAuth(
         req.user,
@@ -354,12 +354,15 @@ export class AuthController {
   }
 
   @Post("pin/login")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { ttl: 60000, limit: 10 } })
   @ApiOperation({ summary: "Re-authenticate with PIN after session timeout (no full login required)" })
   @ApiResponse({ status: 200, description: "Authenticated successfully" })
   @ApiResponse({ status: 401, description: "Invalid or locked PIN" })
   async pinLogin(
+    @CurrentUser() user: any,
     @Body() body: { userId: string; pin: string },
     @Request() req: any,
   ) {

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
+import { isSafeUrl } from "../../common/utils/url-validator";
 
 interface DesignSpecs {
   jewelryType: string;
@@ -665,6 +666,13 @@ Forbidden:
     );
 
     try {
+      // SSRF protection: block requests to internal/private URLs
+      if (!isSafeUrl(referenceImageUrl)) {
+        throw new Error(
+          `Reference image URL is blocked (SSRF protection): ${referenceImageUrl}`,
+        );
+      }
+
       // Fetch the reference image
       const imageResponse = await fetch(referenceImageUrl);
       const imageBuffer = await imageResponse.arrayBuffer();

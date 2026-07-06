@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import * as crypto from "crypto";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { isSafeUrl } from "../../../common/utils/url-validator";
 
 @Injectable()
 export class WebhookService {
@@ -115,6 +116,13 @@ export class WebhookService {
 
     for (const webhook of webhooks) {
       try {
+        // SSRF protection: block requests to internal/private URLs
+        if (!isSafeUrl(webhook.url)) {
+          throw new BadRequestException(
+            `Webhook URL is blocked (SSRF protection): ${webhook.url}`,
+          );
+        }
+
         const timestamp = Math.floor(Date.now() / 1000).toString();
         const body = JSON.stringify({ event, data: payload, timestamp });
         const signature = crypto

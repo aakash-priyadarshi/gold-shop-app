@@ -46,6 +46,11 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
 
+# Create a non-root user and switch to it for runtime security
+RUN useradd -m -u 1000 appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 3002
 ENV PORT=3002
 

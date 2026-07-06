@@ -110,6 +110,24 @@ export class RedisService implements OnModuleDestroy {
   }
 
   /**
+   * Increment a counter key, with optional TTL on first increment.
+   * Returns the new value. Falls back to -1 (unavailable) if Redis is down.
+   */
+  async incr(key: string, ttlSeconds?: number): Promise<number> {
+    if (!this.isAvailable()) return -1;
+    try {
+      const value = await this.client!.incr(key);
+      if (value === 1 && ttlSeconds) {
+        await this.client!.expire(key, ttlSeconds);
+      }
+      return value;
+    } catch (error) {
+      this.logger.error(`Redis INCR error for key ${key}: ${error.message}`);
+      return -1;
+    }
+  }
+
+  /**
    * Check if a key exists
    */
   async exists(key: string): Promise<boolean> {

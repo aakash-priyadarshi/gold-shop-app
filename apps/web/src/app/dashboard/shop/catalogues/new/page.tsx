@@ -1,5 +1,6 @@
 "use client";
 
+import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
@@ -55,8 +56,9 @@ export default function NewCataloguePage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
+    <ShopGuard>
+      <DashboardLayout>
+        <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <button
@@ -244,6 +246,7 @@ export default function NewCataloguePage() {
           </div>
         </form>
       </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ShopGuard>
   );
 }

@@ -5,6 +5,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ApiTokenService } from './api-token.service';
 import { CreateApiTokenDto, TokenDuration, TokenType } from './dto/api-token.dto';
 
+// Set test encryption key before importing the service
+process.env.TOKEN_ENCRYPTION_KEY = 'test-encryption-key-for-jest-32ch';
+
 // Mock Prisma
 const mockPrismaService = {
   apiToken: {

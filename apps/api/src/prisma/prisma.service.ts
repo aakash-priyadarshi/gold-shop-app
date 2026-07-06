@@ -178,8 +178,13 @@ export class PrismaService
     const tables = tablenames
       .map(({ tablename }) => tablename)
       .filter((name) => name !== "_prisma_migrations")
+      .filter((name) => /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) // Validate identifier format
       .map((name) => `"public"."${name}"`)
       .join(", ");
+
+    if (!tables) {
+      return; // No tables to truncate
+    }
 
     try {
       await this.$executeRawUnsafe(`TRUNCATE TABLE ${tables} CASCADE;`);
