@@ -179,7 +179,7 @@ export function ApiTokenManager() {
     }
 
     try {
-      await api.delete(`/api/auth/api-tokens/${tokenId}`);
+      await api.delete(`/auth/api-tokens/${tokenId}`);
       toast({
         title: 'Token revoked',
         description: `"${tokenName}" has been revoked`,
@@ -206,7 +206,7 @@ export function ApiTokenManager() {
     setLoadingTokenView(true);
     setViewingTokenId(tokenId);
     try {
-      const response = await api.get(`/api/auth/api-tokens/${tokenId}/value`);
+      const response = await api.get(`/auth/api-tokens/${tokenId}/value`);
       if (response.data.available) {
         setViewedToken(response.data.token);
       } else {
