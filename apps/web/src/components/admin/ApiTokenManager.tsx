@@ -71,6 +71,9 @@ const DURATION_OPTIONS = [
   { value: '90d', label: '90 days' },
   { value: '180d', label: '6 months' },
   { value: '365d', label: '1 year' },
+  { value: '1825d', label: '5 years' },
+  { value: '3650d', label: '10 years' },
+  { value: 'never', label: 'No expiry' },
 ];
 
 export function ApiTokenManager() {
@@ -644,11 +647,17 @@ export function ApiTokenManager() {
                     <TableCell>{formatDate(token.createdAt)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {formatDate(token.expiresAt)}
-                        {token.daysUntilExpiry <= 7 && (
-                          <Badge variant="outline" className="text-amber-600 border-amber-300">
-                            {token.daysUntilExpiry}d
-                          </Badge>
+                        {token.daysUntilExpiry > 30000 ? (
+                          <span className="text-muted-foreground">No expiry</span>
+                        ) : (
+                          <>
+                            {formatDate(token.expiresAt)}
+                            {token.daysUntilExpiry <= 7 && (
+                              <Badge variant="outline" className="text-amber-600 border-amber-300">
+                                {token.daysUntilExpiry}d
+                              </Badge>
+                            )}
+                          </>
                         )}
                       </div>
                     </TableCell>

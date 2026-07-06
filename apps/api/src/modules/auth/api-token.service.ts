@@ -80,6 +80,9 @@ export class ApiTokenService {
       [TokenDuration.DAYS_90]: 90,
       [TokenDuration.DAYS_180]: 180,
       [TokenDuration.DAYS_365]: 365,
+      [TokenDuration.DAYS_1825]: 1825,
+      [TokenDuration.DAYS_3650]: 3650,
+      [TokenDuration.NEVER]: 365 * 100, // ~100 years (year 2126)
     };
     return daysMap[duration] * 24 * 60 * 60 * 1000;
   }

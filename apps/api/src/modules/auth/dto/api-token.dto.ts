@@ -6,6 +6,9 @@ export enum TokenDuration {
   DAYS_90 = '90d',
   DAYS_180 = '180d',
   DAYS_365 = '365d',
+  DAYS_1825 = '1825d', // 5 years
+  DAYS_3650 = '3650d', // 10 years
+  NEVER = 'never',
 }
 
 export enum TokenType {
