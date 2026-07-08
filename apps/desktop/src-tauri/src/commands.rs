@@ -367,6 +367,7 @@ pub async fn open_google_auth(
 
     // Spawn a background task to poll the API for the exchange code
     // (API-mediated fallback — works when localhost communication is blocked)
+    let receiver_for_api = receiver_clone.clone();
     tokio::spawn(async move {
         let api_base = "https://api.orivraa.com/api";
         let poll_url = format!("{}/auth/desktop-exchange/{}", api_base, exchange_code_clone);
@@ -381,40 +382,38 @@ pub async fn open_google_auth(
             // Poll every 2 seconds
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
-            match reqwest::Client::builder()
+            let client = match reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
                 .build()
-                .ok()
-                .and_then(|c| c.get(&poll_url).build().ok())
             {
-                Some(req) => {
-                    if let Ok(resp) = reqwest::Client::new().execute(req).await {
-                        if resp.status().is_success() {
-                            if let Ok(json) = resp.json::<serde_json::Value>().await {
-                                if json.get("available").and_then(|v| v.as_bool()).unwrap_or(false) {
-                                    log::info!("API exchange: tokens retrieved from API!");
-                                    let access_token = json.get("access_token").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                    let refresh_token = json.get("refresh_token").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                    let user_json = json.get("user_json").and_then(|v| v.as_str()).map(|s| s.to_string());
+                Ok(c) => c,
+                Err(_) => continue,
+            };
 
-                                    if !access_token.is_empty() && !refresh_token.is_empty() {
-                                        let payload = AuthTokenPayload {
-                                            access_token,
-                                            refresh_token,
-                                            user_json,
-                                        };
-                                        // Store in receiver for polling
-                                        let mut guard = receiver_clone.lock().await;
-                                        *guard = Some(payload);
-                                        log::info!("API exchange: tokens stored in receiver");
-                                        break;
-                                    }
-                                }
+            if let Ok(resp) = client.get(&poll_url).send().await {
+                if resp.status().is_success() {
+                    if let Ok(json) = resp.json::<serde_json::Value>().await {
+                        if json.get("available").and_then(|v| v.as_bool()).unwrap_or(false) {
+                            log::info!("API exchange: tokens retrieved from API!");
+                            let access_token = json.get("access_token").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                            let refresh_token = json.get("refresh_token").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                            let user_json = json.get("user_json").and_then(|v| v.as_str()).map(|s| s.to_string());
+
+                            if !access_token.is_empty() && !refresh_token.is_empty() {
+                                let payload = AuthTokenPayload {
+                                    access_token,
+                                    refresh_token,
+                                    user_json,
+                                };
+                                // Store in receiver for polling
+                                let mut guard = receiver_for_api.lock().await;
+                                *guard = Some(payload);
+                                log::info!("API exchange: tokens stored in receiver");
+                                break;
                             }
                         }
                     }
                 }
-                None => {}
             }
         }
     });
@@ -549,7 +548,8 @@ pub async fn open_google_auth(
                         if let Some(header_end) = data.windows(4).position(|w| w == b"\r\n\r\n") {
                             let body_start = header_end + 4;
 
-                            // Parse Content-Length from headers
+                            // Parse Content-Length and Content-Type from headers
+                            // (extract as owned strings to avoid borrow issues with `data` below)
                             let header_str = String::from_utf8_lossy(&data[..header_end]);
                             let content_length: usize = header_str
                                 .lines()
@@ -557,6 +557,13 @@ pub async fn open_google_auth(
                                 .and_then(|l| l.split(':').nth(1))
                                 .and_then(|v| v.trim().parse().ok())
                                 .unwrap_or(0);
+                            let content_type: String = header_str
+                                .lines()
+                                .find(|l| l.to_ascii_lowercase().starts_with("content-type:"))
+                                .map(|l| l.to_ascii_lowercase())
+                                .unwrap_or_default();
+                            // Drop the borrow on `data` before mutating it below
+                            drop(header_str);
 
                             log::info!("Auth callback POST: Content-Length={}, body so far={}",
                                 content_length, data.len().saturating_sub(body_start));
@@ -584,11 +591,7 @@ pub async fn open_google_auth(
                             log::info!("Auth callback: processing body ({} bytes)", body.len());
 
                             // Check if this is form-encoded (token_data=...) or JSON
-                            let content_type = header_str
-                                .lines()
-                                .find(|l| l.to_ascii_lowercase().starts_with("content-type:"))
-                                .map(|l| l.to_ascii_lowercase())
-                                .unwrap_or_default();
+                            // (content_type was extracted as owned String above)
 
                             if content_type.contains("application/x-www-form-urlencoded") {
                                 // Form submission fallback: parse token_data field
