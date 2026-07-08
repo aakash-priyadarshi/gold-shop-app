@@ -1,0 +1,117 @@
+# ═══════════════════════════════════════════════════════════
+# Orivraa Desktop — Microsoft Store submission build (no publish)
+#
+# Builds Windows NSIS + MSI with offline WebView2 for Partner Center.
+# Does NOT upload to GitHub Releases, R2, or the API.
+# Installers are available only as workflow artifacts (90-day retention).
+#
+# Partner Center: register as "EXE or MSI app", silent install /S for NSIS.
+# ═══════════════════════════════════════════════════════════
+
+name: Desktop Store Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "App version label for artifact name (e.g. 0.2.5)"
+        required: false
+        default: "0.2.5"
+
+jobs:
+  build-windows-store:
+    name: 🪟 Microsoft Store Windows Build
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
+      - name: Verify desktop frontend (splash screen)
+        shell: bash
+        run: |
+          if [[ ! -f apps/desktop/dist-desktop/index.html ]]; then
+            echo "ERROR: dist-desktop/index.html not found"
+            exit 1
+          fi
+          echo "Desktop splash screen verified"
+
+      - name: Build Windows installers (Microsoft Store config)
+        shell: bash
+        run: |
+          cd apps/desktop
+          npx tauri build --config src-tauri/tauri.microsoftstore.conf.json
+
+      - name: List built installers
+        shell: bash
+        run: |
+          BUNDLE="apps/desktop/src-tauri/target/release/bundle"
+          echo "=== NSIS ==="
+          ls -la "$BUNDLE/nsis/" || true
+          echo "=== MSI ==="
+          ls -la "$BUNDLE/msi/" || true
+
+      - name: Upload Microsoft Store installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: microsoft-store-windows-${{ github.event.inputs.version || '0.2.5' }}
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
+            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Store submission notes
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.version || '0.2.5' }}"
+          BUNDLE="apps/desktop/src-tauri/target/release/bundle"
+          NSIS=$(ls "$BUNDLE/nsis/"*.exe 2>/dev/null | head -1 || true)
+          MSI=$(ls "$BUNDLE/msi/"*.msi 2>/dev/null | head -1 || true)
+          {
+            echo "## Microsoft Store submission build"
+            echo ""
+            echo "**Version:** ${VERSION}"
+            echo ""
+            echo "| Artifact | Path |"
+            echo "|----------|------|"
+            echo "| NSIS (recommended) | \`${NSIS}\` |"
+            echo "| MSI | \`${MSI}\` |"
+            echo ""
+            echo "### Partner Center"
+            echo "- Product type: **EXE or MSI app**"
+            echo "- Silent install (NSIS): \`/S\`"
+            echo "- Silent install (MSI): \`msiexec /i installer.msi /quiet\`"
+            echo "- WebView2: **offline installer** (embedded in this build)"
+            echo ""
+            echo "Download installers from this workflow's **Artifacts** section."
+            echo "Nothing was published to GitHub Releases or R2."
+          } >> "$GITHUB_STEP_SUMMARY"
