@@ -67,7 +67,11 @@ def pick_windows_artifact(bundle_dirs: list[Path]) -> tuple[Path, Path]:
 
 
 def pick_macos_artifact(bundle_dirs: list[Path]) -> tuple[Path, Path]:
-    return _pick_signed_installer(bundle_dirs, [("dmg", "*.dmg")])
+    # Tauri v2 updater uses signed .app.tar.gz (not DMG) in bundle/macos/
+    return _pick_signed_installer(
+        bundle_dirs,
+        [("macos", "*.app.tar.gz"), ("dmg", "*.dmg")],
+    )
 
 
 def read_signature(sig_path: Path) -> str:

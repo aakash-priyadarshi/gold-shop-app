@@ -525,7 +525,11 @@ jobs:
           if not artifacts:
               print('No artifact paths returned, searching manually...')
               base = 'apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle'
-              for pattern in [f'{base}/dmg/*.dmg', f'{base}/app/*.app']:
+              for pattern in [
+                  f'{base}/macos/*.app.tar.gz',
+                  f'{base}/dmg/*.dmg',
+                  f'{base}/app/*.app',
+              ]:
                   artifacts.extend(glob.glob(pattern))
           for a in artifacts:
               if not os.path.exists(a):
