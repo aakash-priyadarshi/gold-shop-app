@@ -62,7 +62,7 @@ pub fn run() {
             // If an update is found, a system notification is shown and a
             // Tauri event is emitted for the frontend to display a banner.
             let app_handle = app.handle().clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_secs(5)).await;
                 use tauri_plugin_updater::UpdaterExt;
                 use tauri_plugin_notification::NotificationExt;
@@ -105,7 +105,7 @@ pub fn run() {
 
             // Register a desktop session (fire-and-forget, non-blocking)
             let db_handle = app.state::<Arc<Database>>().inner().clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 let version = env!("CARGO_PKG_VERSION").to_string();
                 let os = match std::env::consts::OS {
                     "windows" => "Windows",
