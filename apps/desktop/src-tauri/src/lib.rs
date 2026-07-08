@@ -10,7 +10,7 @@ use commands::{AuthTokenReceiver, PendingUpdateState, SyncState};
 use db::Database;
 use std::sync::Arc;
 use tauri::{
-    menu::{AboutMetadata, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
+    menu::{AboutMetadata, MenuBuilder, MenuItemBuilder, SubmenuBuilder},
     Emitter, Manager,
 };
 use tokio::sync::Mutex as AsyncMutex;
@@ -25,6 +25,12 @@ const DESKTOP_ENHANCEMENTS_JS: &str = include_str!("../desktop-enhancements.js")
 
 fn build_app_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     let version = env!("CARGO_PKG_VERSION");
+    let about_metadata = AboutMetadata {
+        name: Some("Orivraa".into()),
+        version: Some(version.into()),
+        copyright: Some("© 2026 Orivraa. All rights reserved.".into()),
+        ..Default::default()
+    };
 
     let check_updates = MenuItemBuilder::with_id("check_updates", "Check for Updates...")
         .accelerator("Ctrl+U")
@@ -32,8 +38,6 @@ fn build_app_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tau
     let download_update = MenuItemBuilder::with_id("download_update", "Download Update")
         .build(app)?;
     let install_update = MenuItemBuilder::with_id("install_update", "Install Update and Restart")
-        .build(app)?;
-    let about_item = MenuItemBuilder::with_id("about_orivraa", &format!("About Orivraa v{version}"))
         .build(app)?;
 
     let reload = MenuItemBuilder::with_id("reload_page", "Reload")
@@ -43,16 +47,10 @@ fn build_app_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tau
         .accelerator("F11")
         .build(app)?;
 
-    let separator = || PredefinedMenuItem::separator(app);
-
     #[cfg(target_os = "macos")]
     let menu = {
         let app_submenu = SubmenuBuilder::new(app, "Orivraa")
-            .about(Some(AboutMetadata {
-                name: Some("Orivraa".into()),
-                version: Some(version.into()),
-                ..Default::default()
-            }))
+            .about(Some(about_metadata))
             .separator()
             .item(&check_updates)
             .item(&download_update)
@@ -66,8 +64,6 @@ fn build_app_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tau
             .build()?;
 
         let file_submenu = SubmenuBuilder::new(app, "File")
-            .item(&about_item)
-            .separator()
             .close_window()
             .build()?;
 
@@ -84,8 +80,6 @@ fn build_app_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tau
     #[cfg(not(target_os = "macos"))]
     let menu = {
         let file_submenu = SubmenuBuilder::new(app, "File")
-            .item(&about_item)
-            .separator()
             .quit()
             .build()?;
 
@@ -95,6 +89,8 @@ fn build_app_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tau
             .build()?;
 
         let help_submenu = SubmenuBuilder::new(app, "Help")
+            .about(Some(about_metadata))
+            .separator()
             .item(&check_updates)
             .item(&download_update)
             .item(&install_update)
@@ -110,7 +106,7 @@ fn build_app_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tau
 
 fn handle_menu_event(app: &tauri::AppHandle, event_id: &str) {
     match event_id {
-        "check_updates" | "about_orivraa" => {
+        "check_updates" => {
             let _ = app.emit("orivraa-menu-action", "open-update-panel");
         }
         "download_update" => {

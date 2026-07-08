@@ -256,19 +256,21 @@ The desktop app build and release process is fully automated via GitHub Actions 
 
 ### Pipeline (per platform)
 
-1. **Build frontend** — Next.js static export with `TAURI_BUILD=1` → `apps/desktop/dist-desktop/`
-2. **Build Tauri app** — `tauri-apps/tauri-action@v0` with updater signing → creates GitHub Release (draft) with installer assets + `latest.json`
-3. **Clean R2 latest/** — Delete old installers from `s3://orivraa-releases/desktop/latest/` (preserves `latest.json`)
+1. **Verify splash screen** — `apps/desktop/dist-desktop/index.html` (thin wrapper around production site)
+2. **Build Tauri app** — `tauri-apps/tauri-action@v0` with updater signing → creates GitHub Release with installer assets
+3. **Clean R2 latest/** — Delete old installers from `s3://orivraa-releases/desktop/latest/` (preserves `latest.json` until the final publish job overwrites it)
 4. **Upload to R2 (latest only)** — New installers uploaded to `desktop/latest/` only. R2 does NOT keep versioned copies — older versions are served exclusively from GitHub Releases.
-5. **Generate R2 latest.json** — Tauri updater manifest with R2 `desktop/latest/` URLs (fallback endpoint)
+5. **Generate platform manifest artifact** — Windows/macOS jobs each emit a signed platform-specific updater manifest (workflow artifact only)
 6. **Publish to API** — POST to `/api/releases/publish` with R2 download URL, file size, changelog → updates the download page
+7. **Publish updater manifest (final job)** — Merges workflow artifacts from the same run, validates required platforms/signatures, uploads `latest.json` once to R2 and GitHub Release
 
 ### Download Strategy (R2 + GitHub hybrid)
 
-- **Latest version**: Served from R2 (`releases.orivraa.com/desktop/latest/`) — fast, CDN-backed
-- **Older versions**: Served from GitHub Release assets (`github.com/.../releases/download/desktop-v{version}/{file}`)
+- **Latest installers**: Served from R2 (`releases.orivraa.com/desktop/latest/`) — fast, CDN-backed
+- **Older installers**: Served from GitHub Release assets (`github.com/.../releases/download/desktop-v{version}/{file}`)
 - **Download page** (`/download`): Uses `resolveDownloadUrl()` — latest release uses stored `downloadUrl` (R2), older releases construct GitHub Release asset URL from version + fileName
-- **Tauri updater**: Checks GitHub Releases `latest.json` (primary) → R2 `desktop/latest.json` (fallback)
+- **Tauri updater manifest**: GitHub `latest.json` (primary) → R2 `latest.json` (fallback). Both serve the **same merged manifest** from the final publish job.
+- **Tauri updater installers**: Platform `url` fields in `latest.json` always point to R2 (`releases.orivraa.com/desktop/latest/{file}`). GitHub does **not** host the installers used by in-app updates — only the manifest mirror and versioned release assets.
 - **R2 cost optimization**: Only one version's installers stored in R2 at any time (~100-200 MB vs. all versions)
 
 ### Tauri Updater Signing
@@ -325,8 +327,10 @@ but the download page won't update with the new version.
 
 ### Updater Endpoints (in tauri.conf.json)
 
-1. `https://github.com/aakash-priyadarshi/gold-shop-app/releases/latest/download/latest.json` (primary)
-2. `https://releases.orivraa.com/desktop/latest.json` (R2 fallback)
+1. `https://github.com/aakash-priyadarshi/gold-shop-app/releases/latest/download/latest.json` (primary — manifest mirror)
+2. `https://releases.orivraa.com/desktop/latest.json` (R2 fallback — identical manifest)
+
+Both endpoints return the same `latest.json` produced by the `publish-updater-manifest` CI job. Installer download URLs inside the manifest point to R2 (`https://releases.orivraa.com/desktop/latest/...`), not GitHub Release assets.
 
 ### Local Build (optional, for dev)
 

@@ -7,8 +7,15 @@
 #   1. Verify desktop frontend (pre-built splash screen in dist-desktop/)
 #   2. Build Tauri app with signing (tauri-action → GitHub Release)
 #   3. Upload installers to Cloudflare R2 (releases.orivraa.com)
-#   4. Generate R2 latest.json for updater fallback endpoint
+#   4. Upload platform-specific updater manifest artifacts
 #   5. Publish release metadata to API (/api/releases/publish)
+#   6. Merge platform manifests once and publish latest.json to R2 + GitHub
+#
+# Updater strategy:
+#   - Installers for the latest version live on R2 (releases.orivraa.com/desktop/latest/)
+#   - latest.json (on GitHub Release + R2) lists platform entries whose url fields point to R2
+#   - GitHub Release assets keep versioned installers for older/manual downloads
+#   - The desktop app checks GitHub latest.json first, then R2 latest.json (same manifest)
 #
 # Required GitHub secrets:
 #   TAURI_SIGNING_PRIVATE_KEY     — Tauri updater signing key (base64)
@@ -242,34 +249,25 @@ jobs:
           print('R2 upload complete (latest only)')
           "
 
-      - name: Generate and upload R2 latest.json
+      - name: Generate Windows updater manifest
         shell: bash
         run: |
           VERSION="${{ needs.resolve-version.outputs.version }}"
-          R2_BASE="s3://${R2_BUCKET}/desktop"
-
           python apps/desktop/scripts/generate-updater-manifest.py \
             --version "${VERSION}" \
             --platform windows \
             --download-base "https://releases.orivraa.com/desktop/latest" \
-            --output /tmp/latest.json
+            --output updater-manifest-windows.json
 
-          echo "Generated latest.json:"
-          cat /tmp/latest.json
+          echo "Generated Windows updater manifest:"
+          cat updater-manifest-windows.json
 
-          aws s3 cp /tmp/latest.json "${R2_BASE}/latest.json" \
-            --endpoint-url "${R2_ENDPOINT}" \
-            --content-type "application/json" \
-            --no-progress
-          echo "R2 latest.json uploaded"
-
-      - name: Upload latest.json to GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ needs.resolve-version.outputs.version }}"
-          gh release upload "desktop-v${VERSION}" /tmp/latest.json --clobber
-          echo "GitHub latest.json uploaded"
+      - name: Upload Windows updater manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-manifest-windows
+          path: updater-manifest-windows.json
+          if-no-files-found: error
 
       - name: Publish release to API
         shell: bash
@@ -545,59 +543,25 @@ jobs:
           print('R2 upload complete (latest only)')
           "
 
-      - name: Generate and upload R2 latest.json (macOS)
+      - name: Generate macOS updater manifest
         shell: bash
         run: |
           VERSION="${{ needs.resolve-version.outputs.version }}"
-          R2_BASE="s3://${R2_BUCKET}/desktop"
-
-          if ! python3 apps/desktop/scripts/generate-updater-manifest.py \
+          python3 apps/desktop/scripts/generate-updater-manifest.py \
             --version "${VERSION}" \
             --platform macos \
             --download-base "https://releases.orivraa.com/desktop/latest" \
-            --output /tmp/latest-macos.json; then
-            echo "No macOS DMG found, skipping latest.json for macOS"
-            exit 0
-          fi
+            --output updater-manifest-macos.json
 
-          echo "Generated macOS latest.json:"
-          cat /tmp/latest-macos.json
+          echo "Generated macOS updater manifest:"
+          cat updater-manifest-macos.json
 
-          aws s3 cp /tmp/latest-macos.json "${R2_BASE}/latest-macos.json" \
-            --endpoint-url "${R2_ENDPOINT}" \
-            --content-type "application/json" \
-            --no-progress
-          echo "R2 macOS latest.json uploaded"
-
-      - name: Merge and upload combined latest.json (macOS)
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ needs.resolve-version.outputs.version }}"
-          R2_BASE="s3://${R2_BUCKET}/desktop"
-
-          if [ ! -f /tmp/latest-macos.json ]; then
-            echo "No macOS manifest generated, skipping combined manifest upload"
-            exit 0
-          fi
-
-          python3 apps/desktop/scripts/merge-updater-manifests.py \
-            --version "${VERSION}" \
-            --base-url "https://releases.orivraa.com/desktop/latest.json" \
-            --patch /tmp/latest-macos.json \
-            --output /tmp/latest.json
-
-          echo "Combined latest.json:"
-          cat /tmp/latest.json
-
-          aws s3 cp /tmp/latest.json "${R2_BASE}/latest.json" \
-            --endpoint-url "${R2_ENDPOINT}" \
-            --content-type "application/json" \
-            --no-progress
-
-          gh release upload "desktop-v${VERSION}" /tmp/latest.json --clobber
-          echo "Combined latest.json uploaded to R2 and GitHub"
+      - name: Upload macOS updater manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-manifest-macos
+          path: updater-manifest-macos.json
+          if-no-files-found: error
 
       - name: Publish release to API
         shell: bash
@@ -713,11 +677,90 @@ jobs:
           echo "API publish complete (macOS)"
 
   # ═══════════════════════════════════════════════════════════
+  # Merge platform manifests and publish latest.json once
+  # ═══════════════════════════════════════════════════════════
+  publish-updater-manifest:
+    name: 📦 Publish Updater Manifest
+    needs: [resolve-version, build-windows, build-macos]
+    if: always() && (needs.build-windows.result == 'success' || needs.build-macos.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Windows updater manifest
+        if: needs.build-windows.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: updater-manifest-windows
+          path: manifests
+
+      - name: Download macOS updater manifest
+        if: needs.build-macos.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: updater-manifest-macos
+          path: manifests
+
+      - name: Merge and validate latest.json
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          INPUTS=()
+          REQUIRED=()
+
+          if [ "${{ needs.build-windows.result }}" == "success" ]; then
+            INPUTS+=("manifests/updater-manifest-windows.json")
+            REQUIRED+=("windows-x86_64")
+          fi
+
+          if [ "${{ needs.build-macos.result }}" == "success" ]; then
+            INPUTS+=("manifests/updater-manifest-macos.json")
+            REQUIRED+=("darwin-aarch64" "darwin-x86_64")
+          fi
+
+          if [ ${#INPUTS[@]} -eq 0 ]; then
+            echo "ERROR: No platform updater manifests available"
+            exit 1
+          fi
+
+          VALIDATE=$(IFS=,; echo "${REQUIRED[*]}")
+
+          python3 apps/desktop/scripts/merge-updater-manifests.py \
+            --version "${VERSION}" \
+            --inputs "${INPUTS[@]}" \
+            --validate-platforms "${VALIDATE}" \
+            --output latest.json
+
+          echo "Final latest.json:"
+          cat latest.json
+
+      - name: Upload latest.json to R2
+        shell: bash
+        run: |
+          aws s3 cp latest.json "s3://${R2_BUCKET}/desktop/latest.json" \
+            --endpoint-url "${R2_ENDPOINT}" \
+            --content-type "application/json" \
+            --no-progress
+          echo "R2 latest.json uploaded"
+
+      - name: Upload latest.json to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          gh release upload "desktop-v${VERSION}" latest.json --clobber
+          echo "GitHub latest.json uploaded"
+
+  # ═══════════════════════════════════════════════════════════
   # Summary
   # ═══════════════════════════════════════════════════════════
   release-summary:
     name: 📊 Release Summary
-    needs: [resolve-version, build-windows, build-macos]
+    needs:
+      [resolve-version, build-windows, build-macos, publish-updater-manifest]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -731,8 +774,10 @@ jobs:
           echo "|----------|-------|-----------|-------------|" >> $GITHUB_STEP_SUMMARY
           echo "| Windows  | ${{ needs.build-windows.result }} | ${{ needs.build-windows.result }} | ${{ needs.build-windows.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| macOS    | ${{ needs.build-macos.result }} | ${{ needs.build-macos.result }} | ${{ needs.build-macos.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Manifest | ${{ needs.publish-updater-manifest.result }} | — | — |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Download URLs" >> $GITHUB_STEP_SUMMARY
-          echo "- **R2 (latest only)**: https://releases.orivraa.com/desktop/latest/" >> $GITHUB_STEP_SUMMARY
-          echo "- **GitHub (all versions)**: See release assets" >> $GITHUB_STEP_SUMMARY
-          echo "- **Updater manifest (R2)**: https://releases.orivraa.com/desktop/latest.json" >> $GITHUB_STEP_SUMMARY
+          echo "### Updater manifest" >> $GITHUB_STEP_SUMMARY
+          echo "- **Primary endpoint (GitHub)**: https://github.com/aakash-priyadarshi/gold-shop-app/releases/latest/download/latest.json" >> $GITHUB_STEP_SUMMARY
+          echo "- **Fallback endpoint (R2)**: https://releases.orivraa.com/desktop/latest.json" >> $GITHUB_STEP_SUMMARY
+          echo "- **Installer CDN (latest)**: https://releases.orivraa.com/desktop/latest/" >> $GITHUB_STEP_SUMMARY
+          echo "- Both endpoints serve the same manifest; platform \`url\` fields point to R2 installers." >> $GITHUB_STEP_SUMMARY

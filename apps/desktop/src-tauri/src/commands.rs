@@ -18,7 +18,7 @@ pub struct AuthTokenReceiver(pub Arc<AsyncMutex<Option<AuthTokenPayload>>>);
 /// Cached downloaded update ready for silent install + restart
 pub struct PendingUpdateState(pub Arc<AsyncMutex<Option<PendingUpdate>>>);
 
-struct PendingUpdate {
+pub struct PendingUpdate {
     update: tauri_plugin_updater::Update,
     bytes: Vec<u8>,
     version: String,
