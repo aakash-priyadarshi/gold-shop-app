@@ -83,7 +83,7 @@ export class ReleasesService {
   /**
    * Register or update a desktop session heartbeat
    */
-  async heartbeat(dto: DesktopHeartbeatDto, userId: string | null, ip: string) {
+  async heartbeat(dto: DesktopHeartbeatDto, _userId: string | null, _ip: string) {
     // Analytics is handled by the dedicated sessions module now.
     // This endpoint just returns version check details for the desktop app.
     const latestWindows = await this.prisma.appRelease.findFirst({
@@ -250,9 +250,14 @@ export class ReleasesService {
       data: { isLatest: false },
     });
 
-    // Create the new release as latest
-    const release = await this.prisma.appRelease.create({
-      data: {
+    // Upsert the release as latest.
+    // Uses upsert instead of create so that re-running the publish step
+    // (e.g. CI retry) does not fail with a unique-constraint violation on
+    // @@unique([version, platform]), which previously left the row stuck
+    // with isLatest=false and the 500 was swallowed by the workflow.
+    const release = await this.prisma.appRelease.upsert({
+      where: { version_platform: { version: dto.version, platform: dto.platform } },
+      create: {
         version: dto.version,
         platform: dto.platform,
         channel: "stable",
@@ -273,6 +278,23 @@ export class ReleasesService {
           (dto.platform === "WINDOWS" ? "x64" : "universal"),
         minRam: "4 GB",
         minDisk: "200 MB",
+      },
+      update: {
+        downloadUrl:
+          dto.downloadUrl ||
+          (dto.platform === "WEB" ? "https://www.orivraa.com" : null),
+        fileSize: dto.fileSize ? BigInt(dto.fileSize) : null,
+        fileName: dto.fileName,
+        changelog: dto.changelog || null,
+        changelogSource: "github",
+        isLatest: true,
+        isActive: true,
+        minOs:
+          dto.minOs ||
+          (dto.platform === "WINDOWS" ? "Windows 10 (1809+)" : "macOS 12+"),
+        architecture:
+          dto.architecture ||
+          (dto.platform === "WINDOWS" ? "x64" : "universal"),
       },
     });
 

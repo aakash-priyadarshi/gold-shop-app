@@ -342,11 +342,9 @@ jobs:
             CHANGELOG=$(git log -10 --pretty=format:"- %s" --no-merges 2>/dev/null || echo "Release v${VERSION}")
           fi
 
-          # POST to API (capture HTTP status to detect failures)
-          API_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${API_BASE}/api/releases/publish" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.ORIVRAA_ADMIN_TOKEN }}" \
-            -d "$(python -c "
+          # POST to API with retry (capture HTTP status to detect failures).
+          # Fails the job on non-2xx so silent publish failures surface.
+          PAYLOAD=$(python -c "
           import json, sys
           payload = {
               'version': '${VERSION}',
@@ -359,13 +357,33 @@ jobs:
               'architecture': 'x64'
           }
           print(json.dumps(payload))
-          ")"
-          API_STATUS=$(echo "$API_RESPONSE" | tail -1)
-          API_BODY=$(echo "$API_RESPONSE" | head -n -1)
-          echo "API response status: ${API_STATUS}"
-          echo "API response body: ${API_BODY}"
+          ")
+
+          API_STATUS=""
+          MAX_ATTEMPTS=3
+          for ATTEMPT in $(seq 1 $MAX_ATTEMPTS); do
+            echo "API publish attempt ${ATTEMPT}/${MAX_ATTEMPTS} (Windows)"
+            API_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${API_BASE}/api/releases/publish" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${{ secrets.ORIVRAA_ADMIN_TOKEN }}" \
+              -d "$PAYLOAD") || true
+            API_STATUS=$(echo "$API_RESPONSE" | tail -1)
+            API_BODY=$(echo "$API_RESPONSE" | head -n -1)
+            echo "API response status: ${API_STATUS}"
+            echo "API response body: ${API_BODY}"
+            if [ "${API_STATUS}" -ge 200 ] && [ "${API_STATUS}" -lt 300 ]; then
+              echo "API publish succeeded (Windows)"
+              break
+            fi
+            if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+              echo "Retrying in 10s..."
+              sleep 10
+            fi
+          done
+
           if [ "${API_STATUS}" -lt 200 ] || [ "${API_STATUS}" -ge 300 ]; then
-            echo "WARNING: API publish failed with status ${API_STATUS}"
+            echo "ERROR: API publish failed after ${MAX_ATTEMPTS} attempts with status ${API_STATUS}"
+            exit 1
           fi
           echo "API publish complete (Windows)"
 
@@ -577,7 +595,7 @@ jobs:
 
           if [ -z "$DMG_FILE" ]; then
             echo "No macOS DMG found for API publish"
-            exit 0
+            exit 1
           fi
 
           INSTALLER_NAME=$(basename "$DMG_FILE")
@@ -599,10 +617,9 @@ jobs:
             CHANGELOG=$(git log -10 --pretty=format:"- %s" --no-merges 2>/dev/null || echo "Release v${VERSION}")
           fi
 
-          curl -sS -X POST "${API_BASE}/api/releases/publish" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.ORIVRAA_ADMIN_TOKEN }}" \
-            -d "$(python3 -c "
+          # POST to API with retry (capture HTTP status to detect failures).
+          # Fails the job on non-2xx so silent publish failures surface.
+          PAYLOAD=$(python3 -c "
           import json
           payload = {
               'version': '${VERSION}',
@@ -611,17 +628,37 @@ jobs:
               'fileSize': int('${FILE_SIZE}'),
               'fileName': '${INSTALLER_NAME}',
               'changelog': '''${CHANGELOG}'''.replace(\"'\", \"\"),
-              'minOs': 'macOS 10.15',
+              'minOs': 'macOS 12+',
               'architecture': 'universal'
           }
           print(json.dumps(payload))
-          ")"
-          API_STATUS=$(echo "$API_RESPONSE" | tail -1)
-          API_BODY=$(echo "$API_RESPONSE" | head -n -1)
-          echo "API response status: ${API_STATUS}"
-          echo "API response body: ${API_BODY}"
+          ")
+
+          API_STATUS=""
+          MAX_ATTEMPTS=3
+          for ATTEMPT in $(seq 1 $MAX_ATTEMPTS); do
+            echo "API publish attempt ${ATTEMPT}/${MAX_ATTEMPTS} (macOS)"
+            API_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${API_BASE}/api/releases/publish" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${{ secrets.ORIVRAA_ADMIN_TOKEN }}" \
+              -d "$PAYLOAD") || true
+            API_STATUS=$(echo "$API_RESPONSE" | tail -1)
+            API_BODY=$(echo "$API_RESPONSE" | head -n -1)
+            echo "API response status: ${API_STATUS}"
+            echo "API response body: ${API_BODY}"
+            if [ "${API_STATUS}" -ge 200 ] && [ "${API_STATUS}" -lt 300 ]; then
+              echo "API publish succeeded (macOS)"
+              break
+            fi
+            if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+              echo "Retrying in 10s..."
+              sleep 10
+            fi
+          done
+
           if [ "${API_STATUS}" -lt 200 ] || [ "${API_STATUS}" -ge 300 ]; then
-            echo "WARNING: API publish failed with status ${API_STATUS}"
+            echo "ERROR: API publish failed after ${MAX_ATTEMPTS} attempts with status ${API_STATUS}"
+            exit 1
           fi
           echo "API publish complete (macOS)"
 
