@@ -302,11 +302,24 @@ jobs:
 
       - name: Publish release to API
         shell: bash
+        env:
+          ORIVRAA_ADMIN_TOKEN: ${{ secrets.ORIVRAA_ADMIN_TOKEN }}
         run: |
           VERSION="${{ needs.resolve-version.outputs.version }}"
           API_BASE="https://api.orivraa.com"
           # Latest version is served from R2; older versions stay on GitHub
           DOWNLOAD_BASE="https://releases.orivraa.com/desktop/latest"
+
+          # Debug: check if ORIVRAA_ADMIN_TOKEN is set (print length only, not value)
+          TOKEN_LEN=${#ORIVRAA_ADMIN_TOKEN}
+          echo "ORIVRAA_ADMIN_TOKEN length: ${TOKEN_LEN}"
+          if [ "${TOKEN_LEN}" -eq 0 ]; then
+            echo "ERROR: ORIVRAA_ADMIN_TOKEN secret is empty or not set"
+            exit 1
+          fi
+          if [ "${TOKEN_LEN}" -lt 50 ]; then
+            echo "WARNING: ORIVRAA_ADMIN_TOKEN seems too short (${TOKEN_LEN} chars) — expected a JWT (~200+ chars) or gshop_ token"
+          fi
 
           # Find artifacts and their sizes
           BUNDLE_DIR="apps/desktop/target/release/bundle"
@@ -331,6 +344,17 @@ jobs:
           echo "  URL: ${DOWNLOAD_URL}"
           echo "  Size: ${FILE_SIZE}"
           echo "  File: ${INSTALLER_NAME}"
+
+          # Debug: check if ORIVRAA_ADMIN_TOKEN is set (print length only, not value)
+          TOKEN_LEN=${#ORIVRAA_ADMIN_TOKEN}
+          echo "  ORIVRAA_ADMIN_TOKEN length: ${TOKEN_LEN}"
+          if [ "${TOKEN_LEN}" -eq 0 ]; then
+            echo "ERROR: ORIVRAA_ADMIN_TOKEN secret is empty or not set"
+            exit 1
+          fi
+          if [ "${TOKEN_LEN}" -lt 50 ]; then
+            echo "WARNING: ORIVRAA_ADMIN_TOKEN seems too short (${TOKEN_LEN} chars) — expected a JWT (~200+ chars) or gshop_ token"
+          fi
 
           # Build changelog from git log since last tag
           CHANGELOG=""
@@ -369,7 +393,7 @@ jobs:
             echo "API publish attempt ${ATTEMPT}/${MAX_ATTEMPTS} (Windows)"
             API_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${API_BASE}/api/releases/publish" \
               -H "Content-Type: application/json" \
-              -H "Authorization: Bearer ${{ secrets.ORIVRAA_ADMIN_TOKEN }}" \
+              -H "Authorization: Bearer ${ORIVRAA_ADMIN_TOKEN}" \
               -d "$PAYLOAD") || true
             API_STATUS=$(echo "$API_RESPONSE" | tail -1)
             API_BODY=$(echo "$API_RESPONSE" | head -n -1)
@@ -592,11 +616,24 @@ jobs:
 
       - name: Publish release to API
         shell: bash
+        env:
+          ORIVRAA_ADMIN_TOKEN: ${{ secrets.ORIVRAA_ADMIN_TOKEN }}
         run: |
           VERSION="${{ needs.resolve-version.outputs.version }}"
           API_BASE="https://api.orivraa.com"
           # Latest version is served from R2; older versions stay on GitHub
           DOWNLOAD_BASE="https://releases.orivraa.com/desktop/latest"
+
+          # Debug: check if ORIVRAA_ADMIN_TOKEN is set (print length only, not value)
+          TOKEN_LEN=${#ORIVRAA_ADMIN_TOKEN}
+          echo "ORIVRAA_ADMIN_TOKEN length: ${TOKEN_LEN}"
+          if [ "${TOKEN_LEN}" -eq 0 ]; then
+            echo "ERROR: ORIVRAA_ADMIN_TOKEN secret is empty or not set"
+            exit 1
+          fi
+          if [ "${TOKEN_LEN}" -lt 50 ]; then
+            echo "WARNING: ORIVRAA_ADMIN_TOKEN seems too short (${TOKEN_LEN} chars) — expected a JWT (~200+ chars) or gshop_ token"
+          fi
 
           BUNDLE_DIR="apps/desktop/target/universal-apple-darwin/release/bundle"
           DMG_FILE=$(ls "$BUNDLE_DIR/dmg/"*.dmg 2>/dev/null | head -1 || true)
@@ -652,7 +689,7 @@ jobs:
             echo "API publish attempt ${ATTEMPT}/${MAX_ATTEMPTS} (macOS)"
             API_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${API_BASE}/api/releases/publish" \
               -H "Content-Type: application/json" \
-              -H "Authorization: Bearer ${{ secrets.ORIVRAA_ADMIN_TOKEN }}" \
+              -H "Authorization: Bearer ${ORIVRAA_ADMIN_TOKEN}" \
               -d "$PAYLOAD") || true
             API_STATUS=$(echo "$API_RESPONSE" | tail -1)
             API_BODY=$(echo "$API_RESPONSE" | head -n -1)
