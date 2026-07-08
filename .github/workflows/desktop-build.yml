@@ -344,15 +344,19 @@ jobs:
 
           # POST to API with retry (capture HTTP status to detect failures).
           # Fails the job on non-2xx so silent publish failures surface.
+          # Write changelog to a temp file to avoid shell escaping issues.
+          echo "$CHANGELOG" > /tmp/changelog.txt
           PAYLOAD=$(python -c "
-          import json, sys
+          import json
+          with open('/tmp/changelog.txt') as f:
+              changelog = f.read().strip()
           payload = {
               'version': '${VERSION}',
               'platform': 'WINDOWS',
               'downloadUrl': '${DOWNLOAD_URL}',
               'fileSize': int('${FILE_SIZE}'),
               'fileName': '${INSTALLER_NAME}',
-              'changelog': '''${CHANGELOG}'''.replace(\"'\", \"\"),
+              'changelog': changelog,
               'minOs': 'Windows 10 (1809+)',
               'architecture': 'x64'
           }
@@ -383,6 +387,10 @@ jobs:
 
           if [ "${API_STATUS}" -lt 200 ] || [ "${API_STATUS}" -ge 300 ]; then
             echo "ERROR: API publish failed after ${MAX_ATTEMPTS} attempts with status ${API_STATUS}"
+            echo "Common causes:"
+            echo "  - ORIVRAA_ADMIN_TOKEN secret is missing or expired"
+            echo "  - API is down or returning errors"
+            echo "  - Payload validation failed (check response body above)"
             exit 1
           fi
           echo "API publish complete (Windows)"
@@ -619,15 +627,19 @@ jobs:
 
           # POST to API with retry (capture HTTP status to detect failures).
           # Fails the job on non-2xx so silent publish failures surface.
+          # Write changelog to a temp file to avoid shell escaping issues.
+          echo "$CHANGELOG" > /tmp/changelog.txt
           PAYLOAD=$(python3 -c "
           import json
+          with open('/tmp/changelog.txt') as f:
+              changelog = f.read().strip()
           payload = {
               'version': '${VERSION}',
               'platform': 'MACOS',
               'downloadUrl': '${DOWNLOAD_URL}',
               'fileSize': int('${FILE_SIZE}'),
               'fileName': '${INSTALLER_NAME}',
-              'changelog': '''${CHANGELOG}'''.replace(\"'\", \"\"),
+              'changelog': changelog,
               'minOs': 'macOS 12+',
               'architecture': 'universal'
           }
@@ -658,6 +670,10 @@ jobs:
 
           if [ "${API_STATUS}" -lt 200 ] || [ "${API_STATUS}" -ge 300 ]; then
             echo "ERROR: API publish failed after ${MAX_ATTEMPTS} attempts with status ${API_STATUS}"
+            echo "Common causes:"
+            echo "  - ORIVRAA_ADMIN_TOKEN secret is missing or expired"
+            echo "  - API is down or returning errors"
+            echo "  - Payload validation failed (check response body above)"
             exit 1
           fi
           echo "API publish complete (macOS)"
