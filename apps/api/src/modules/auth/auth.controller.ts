@@ -4,6 +4,8 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Logger,
+  Param,
   Post,
   Query,
   Request,
@@ -22,6 +24,7 @@ import {
 import { Throttle } from "@nestjs/throttler";
 import { Response } from "express";
 import { SkipSecurity } from "../security/security.guard";
+import { RedisService } from "../../common/redis/redis.service";
 import { AuthResponse, AuthService, RegisterResponse } from "./auth.service";
 import { CurrentUser } from "./decorators/current-user.decorator";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
@@ -39,10 +42,13 @@ import { TurnstileService } from "./turnstile.service";
 @Controller("auth")
 @SkipSecurity() // Auth endpoints must remain accessible even when an IP is temporarily blocked
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private authService: AuthService,
     private configService: ConfigService,
     private turnstileService: TurnstileService,
+    private redisService: RedisService,
   ) {}
 
   @Post("register")
@@ -292,6 +298,7 @@ export class AuthController {
     try {
       const requestedRole = req.user?.requestedRole || "CUSTOMER";
       const desktopPort = req.user?.desktopPort;
+      const desktopExchange = req.user?.desktopExchange;
       const result = await this.authService.googleAuth(
         req.user,
         ipAddress,
@@ -308,6 +315,7 @@ export class AuthController {
           setupRequired: "shop",
         });
         if (desktopPort) params.set("desktop_port", desktopPort);
+        if (desktopExchange) params.set("desktop_exchange", desktopExchange);
         res.redirect(`${frontendUrl}/auth/oauth-callback?${params.toString()}`);
       } else {
         // Normal flow - redirect with tokens
@@ -317,6 +325,7 @@ export class AuthController {
           expiresIn: result.expiresIn.toString(),
         });
         if (desktopPort) params.set("desktop_port", desktopPort);
+        if (desktopExchange) params.set("desktop_exchange", desktopExchange);
         res.redirect(`${frontendUrl}/auth/oauth-callback?${params.toString()}`);
       }
     } catch (error) {
@@ -333,6 +342,87 @@ export class AuthController {
           `${frontendUrl}/auth/login?error=${encodeURIComponent(error.message)}`,
         );
       }
+    }
+  }
+
+  // ─── Desktop OAuth Token Exchange (API-mediated fallback) ────
+  // When the browser can't reach the desktop app's localhost server
+  // (CORS/Private Network Access), the web oauth-callback page stores
+  // tokens here with a one-time code. The desktop app polls to retrieve
+  // them. Tokens expire after 120 seconds and are deleted on read.
+
+  @Post("desktop-exchange/:code")
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
+  @ApiOperation({
+    summary: "Store tokens for desktop app pickup (API-mediated fallback)",
+  })
+  @ApiResponse({ status: 200, description: "Tokens stored successfully" })
+  @ApiResponse({ status: 400, description: "Invalid code or missing tokens" })
+  async storeDesktopTokens(
+    @Param("code") code: string,
+    @Body() body: { access_token?: string; refresh_token?: string; user_json?: string },
+  ) {
+    if (!code || code.length < 8) {
+      return { success: false, error: "Invalid exchange code" };
+    }
+    if (!body.access_token || !body.refresh_token) {
+      return { success: false, error: "Missing tokens" };
+    }
+
+    const payload = JSON.stringify({
+      access_token: body.access_token,
+      refresh_token: body.refresh_token,
+      user_json: body.user_json || null,
+      created_at: Date.now(),
+    });
+
+    // Store in Redis with 120-second TTL
+    const redisKey = `desktop_exchange:${code}`;
+    await this.redisService.set(redisKey, payload, 120);
+
+    this.logger.log(
+      `Desktop token exchange: stored tokens for code ${code.substring(0, 8)}...`,
+    );
+    return { success: true };
+  }
+
+  @Get("desktop-exchange/:code")
+  @Throttle({ default: { ttl: 60000, limit: 60 } })
+  @ApiOperation({
+    summary: "Retrieve tokens for desktop app (one-time read, then deleted)",
+  })
+  @ApiResponse({ status: 200, description: "Tokens retrieved (or not yet available)" })
+  async getDesktopTokens(@Param("code") code: string) {
+    if (!code || code.length < 8) {
+      return { success: false, available: false };
+    }
+
+    const redisKey = `desktop_exchange:${code}`;
+    const payload = await this.redisService.get(redisKey);
+
+    if (!payload) {
+      // Not yet available or expired
+      return { success: false, available: false };
+    }
+
+    // Delete immediately (one-time use)
+    await this.redisService.del(redisKey);
+
+    try {
+      const tokens = JSON.parse(payload);
+      this.logger.log(
+        `Desktop token exchange: retrieved tokens for code ${code.substring(0, 8)}...`,
+      );
+      return {
+        success: true,
+        available: true,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        user_json: tokens.user_json,
+      };
+    } catch {
+      return { success: false, available: false };
     }
   }
 

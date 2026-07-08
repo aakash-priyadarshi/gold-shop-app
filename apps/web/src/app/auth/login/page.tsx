@@ -105,12 +105,17 @@ function LoginForm() {
     setTurnstileError(true);
   }, []);
 
-  // ── Desktop OAuth: persist desktop_port for oauth-callback ──
+  // ── Desktop OAuth: persist desktop_port and desktop_exchange for oauth-callback ──
   useEffect(() => {
     const desktopPort = searchParams.get("desktop_port");
     if (desktopPort) {
       sessionStorage.setItem("orivraa_desktop_port", desktopPort);
       localStorage.setItem("orivraa_desktop_port", desktopPort);
+    }
+    const desktopExchange = searchParams.get("desktop_exchange");
+    if (desktopExchange) {
+      sessionStorage.setItem("orivraa_desktop_exchange", desktopExchange);
+      localStorage.setItem("orivraa_desktop_exchange", desktopExchange);
     }
   }, [searchParams]);
 
@@ -180,19 +185,26 @@ function LoginForm() {
         searchParams.get("desktop_port") ||
         sessionStorage.getItem("orivraa_desktop_port") ||
         localStorage.getItem("orivraa_desktop_port");
+      const desktopExchange =
+        searchParams.get("desktop_exchange") ||
+        sessionStorage.getItem("orivraa_desktop_exchange") ||
+        localStorage.getItem("orivraa_desktop_exchange");
 
-      if (desktopPort) {
+      if (desktopPort || desktopExchange) {
         const accessToken = localStorage.getItem("token");
         const refreshToken = localStorage.getItem("refreshToken");
         if (accessToken && refreshToken) {
           // Redirect to oauth-callback with the tokens so it handles the desktop handoff
           sessionStorage.removeItem("orivraa_desktop_port");
           localStorage.removeItem("orivraa_desktop_port");
+          sessionStorage.removeItem("orivraa_desktop_exchange");
+          localStorage.removeItem("orivraa_desktop_exchange");
           const params = new URLSearchParams({
             accessToken,
             refreshToken,
-            desktop_port: desktopPort,
           });
+          if (desktopPort) params.set("desktop_port", desktopPort);
+          if (desktopExchange) params.set("desktop_exchange", desktopExchange);
           window.location.href = `/auth/oauth-callback?${params.toString()}`;
           return;
         }

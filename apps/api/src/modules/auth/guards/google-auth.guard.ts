@@ -13,6 +13,7 @@ export class GoogleAuthGuard extends AuthGuard("google") {
       request.query?.role ||
       request.query?.mode ||
       request.query?.desktop_port ||
+      request.query?.desktop_exchange ||
       request.query?.rememberMe
     ) {
       const stateData: Record<string, string> = {
@@ -22,6 +23,9 @@ export class GoogleAuthGuard extends AuthGuard("google") {
       };
       if (request.query.desktop_port) {
         stateData.desktop_port = request.query.desktop_port;
+      }
+      if (request.query.desktop_exchange) {
+        stateData.desktop_exchange = request.query.desktop_exchange;
       }
       if (request.query.rememberMe !== undefined) {
         stateData.rememberMe = String(request.query.rememberMe);

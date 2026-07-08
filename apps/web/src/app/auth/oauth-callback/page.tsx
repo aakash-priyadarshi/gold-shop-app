@@ -101,9 +101,16 @@ function OAuthCallbackHandler() {
         searchParams.get("desktop_port") ||
         sessionStorage.getItem("orivraa_desktop_port") ||
         localStorage.getItem("orivraa_desktop_port");
-      if (desktopPort) {
+      // desktop_exchange is the API-mediated fallback code (passed through OAuth state)
+      const desktopExchange =
+        searchParams.get("desktop_exchange") ||
+        sessionStorage.getItem("orivraa_desktop_exchange") ||
+        localStorage.getItem("orivraa_desktop_exchange");
+      if (desktopPort || desktopExchange) {
         sessionStorage.removeItem("orivraa_desktop_port");
         localStorage.removeItem("orivraa_desktop_port");
+        sessionStorage.removeItem("orivraa_desktop_exchange");
+        localStorage.removeItem("orivraa_desktop_exchange");
 
         // Store tokens first so api.get("/auth/me") works
         localStorage.setItem(TOKEN_KEY, accessToken);
@@ -115,6 +122,33 @@ function OAuthCallbackHandler() {
           userJson = JSON.stringify(response.data);
         } catch (_) {
           // User profile fetch failed — still send tokens
+        }
+
+        // ── Strategy 4: API-mediated exchange (ultimate fallback) ──
+        // Store tokens on the API with a one-time code. The desktop app
+        // polls the API to retrieve them. This works through any network
+        // restriction (firewalls, PNA, etc.) since it's just a normal
+        // HTTPS request to the API.
+        if (desktopExchange) {
+          try {
+            const apiBaseUrl =
+              process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+            const baseUrl = apiBaseUrl.endsWith("/api")
+              ? apiBaseUrl
+              : `${apiBaseUrl}/api`;
+            await fetch(`${baseUrl}/auth/desktop-exchange/${desktopExchange}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+                user_json: userJson || null,
+              }),
+            });
+            console.log("[Desktop OAuth] API exchange: tokens stored for pickup");
+          } catch (e) {
+            console.warn("[Desktop OAuth] API exchange failed:", e);
+          }
         }
 
         // Try sending tokens to the desktop app with retries.
@@ -162,7 +196,7 @@ function OAuthCallbackHandler() {
         }
 
         // ── Strategy 2: Image beacon fallback (GET with query params) ──
-        if (!desktopSendSuccess) {
+        if (!desktopSendSuccess && desktopPort) {
           try {
             const params = new URLSearchParams({
               access_token: accessToken,
@@ -183,6 +217,47 @@ function OAuthCallbackHandler() {
             desktopSendSuccess = true;
           } catch (_) {
             console.warn("[Desktop OAuth] Image beacon fallback failed");
+          }
+        }
+
+        // ── Strategy 2.5: Form submission to hidden iframe ──
+        // Form submissions bypass CORS entirely (they navigate the target
+        // frame). The server receives the data as form-encoded POST.
+        if (!desktopSendSuccess && desktopPort) {
+          try {
+            await new Promise<void>((resolve) => {
+              const iframe = document.createElement("iframe");
+              iframe.name = `orivraa-desktop-form-target-${Date.now()}`;
+              iframe.style.display = "none";
+              document.body.appendChild(iframe);
+
+              const form = document.createElement("form");
+              form.method = "POST";
+              form.action = callbackUrl;
+              form.target = iframe.name;
+              form.enctype = "application/x-www-form-urlencoded";
+
+              const input = document.createElement("input");
+              input.type = "hidden";
+              input.name = "token_data";
+              input.value = tokenBody;
+              form.appendChild(input);
+
+              document.body.appendChild(form);
+              form.submit();
+
+              // Clean up after 2 seconds
+              setTimeout(() => {
+                form.remove();
+                iframe.remove();
+                resolve();
+              }, 2000);
+            });
+            // Form submission doesn't give us a status, but the server
+            // should have received the data
+            desktopSendSuccess = true;
+          } catch (_) {
+            console.warn("[Desktop OAuth] Form submission fallback failed");
           }
         }
 

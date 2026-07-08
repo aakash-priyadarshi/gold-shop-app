@@ -339,10 +339,14 @@ pub async fn open_google_auth(
 
     log::info!("Auth callback server started on port {}", port);
 
-    // Open the login page in system browser with desktop_port param
+    // Generate a one-time exchange code for the API-mediated fallback
+    let exchange_code = uuid::Uuid::new_v4().to_string().replace("-", "");
+    log::info!("Desktop OAuth exchange code: {}...", &exchange_code[..8]);
+
+    // Open the login page in system browser with desktop_port and desktop_exchange params
     let login_url = format!(
-        "https://www.orivraa.com/auth/login?desktop_port={}&desktop_role={}&desktop_mode={}",
-        port, role, mode
+        "https://www.orivraa.com/auth/login?desktop_port={}&desktop_exchange={}&desktop_role={}&desktop_mode={}",
+        port, exchange_code, role, mode
     );
 
     tauri_plugin_shell::ShellExt::shell(&app)
@@ -359,6 +363,61 @@ pub async fn open_google_auth(
     // Clone what we need for the async task
     let db_clone = db.inner().clone();
     let receiver_clone = token_receiver.0.clone();
+    let exchange_code_clone = exchange_code.clone();
+
+    // Spawn a background task to poll the API for the exchange code
+    // (API-mediated fallback — works when localhost communication is blocked)
+    tokio::spawn(async move {
+        let api_base = "https://api.orivraa.com/api";
+        let poll_url = format!("{}/auth/desktop-exchange/{}", api_base, exchange_code_clone);
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(300);
+
+        loop {
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            if remaining.is_zero() {
+                break;
+            }
+
+            // Poll every 2 seconds
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
+            match reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .build()
+                .ok()
+                .and_then(|c| c.get(&poll_url).build().ok())
+            {
+                Some(req) => {
+                    if let Ok(resp) = reqwest::Client::new().execute(req).await {
+                        if resp.status().is_success() {
+                            if let Ok(json) = resp.json::<serde_json::Value>().await {
+                                if json.get("available").and_then(|v| v.as_bool()).unwrap_or(false) {
+                                    log::info!("API exchange: tokens retrieved from API!");
+                                    let access_token = json.get("access_token").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                    let refresh_token = json.get("refresh_token").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                    let user_json = json.get("user_json").and_then(|v| v.as_str()).map(|s| s.to_string());
+
+                                    if !access_token.is_empty() && !refresh_token.is_empty() {
+                                        let payload = AuthTokenPayload {
+                                            access_token,
+                                            refresh_token,
+                                            user_json,
+                                        };
+                                        // Store in receiver for polling
+                                        let mut guard = receiver_clone.lock().await;
+                                        *guard = Some(payload);
+                                        log::info!("API exchange: tokens stored in receiver");
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                None => {}
+            }
+        }
+    });
 
     // Listen for the callback in a background task (timeout: 5 minutes)
     tokio::spawn(async move {
@@ -523,7 +582,30 @@ pub async fn open_google_auth(
 
                             let body = String::from_utf8_lossy(&data[body_start..]);
                             log::info!("Auth callback: processing body ({} bytes)", body.len());
-                            process_auth_tokens(&body, &db_clone, &receiver_clone).await;
+
+                            // Check if this is form-encoded (token_data=...) or JSON
+                            let content_type = header_str
+                                .lines()
+                                .find(|l| l.to_ascii_lowercase().starts_with("content-type:"))
+                                .map(|l| l.to_ascii_lowercase())
+                                .unwrap_or_default();
+
+                            if content_type.contains("application/x-www-form-urlencoded") {
+                                // Form submission fallback: parse token_data field
+                                let parsed: std::collections::HashMap<String, String> =
+                                    url::form_urlencoded::parse(body.as_bytes())
+                                        .into_owned()
+                                        .collect();
+                                if let Some(token_data) = parsed.get("token_data") {
+                                    log::info!("Auth callback: form-encoded body, token_data field found");
+                                    process_auth_tokens(token_data, &db_clone, &receiver_clone).await;
+                                } else {
+                                    log::warn!("Auth callback: form-encoded body but no token_data field");
+                                }
+                            } else {
+                                // JSON body (original format)
+                                process_auth_tokens(&body, &db_clone, &receiver_clone).await;
+                            }
                         } else {
                             log::error!("Auth callback POST: no header/body boundary found");
                         }

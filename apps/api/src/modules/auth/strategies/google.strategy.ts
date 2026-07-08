@@ -39,6 +39,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
     let role = "CUSTOMER";
     let mode = "login";
     let desktopPort: string | undefined;
+    let desktopExchange: string | undefined;
     let source: string | undefined;
     let rememberMe = true;
 
@@ -65,6 +66,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
             role = stateData.role || "CUSTOMER";
             mode = stateData.mode || "login";
             desktopPort = stateData.desktop_port;
+            desktopExchange = stateData.desktop_exchange;
             source = stateData.source;
             if (stateData.rememberMe !== undefined) {
               rememberMe =
@@ -72,7 +74,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
                 stateData.rememberMe === "true";
             }
             this.logger.log(
-              `Decoded OAuth state: role=${role}, mode=${mode}, rememberMe=${rememberMe}, desktop_port=${desktopPort || "none"}, source=${source || "main"}`,
+              `Decoded OAuth state: role=${role}, mode=${mode}, rememberMe=${rememberMe}, desktop_port=${desktopPort || "none"}, desktop_exchange=${desktopExchange ? "yes" : "no"}, source=${source || "main"}`,
             );
           }
         }
@@ -128,6 +130,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
       mode,
       rememberMe,
       desktopPort,
+      desktopExchange,
       source,
       // Enriched People API data stored on User model
       googleBirthday,
