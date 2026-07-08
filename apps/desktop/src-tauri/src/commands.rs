@@ -15,6 +15,15 @@ pub struct SyncState(pub Arc<AsyncMutex<Option<Arc<SyncEngine>>>>);
 /// Managed state for auth tokens received from browser OAuth callback
 pub struct AuthTokenReceiver(pub Arc<AsyncMutex<Option<AuthTokenPayload>>>);
 
+/// Cached downloaded update ready for silent install + restart
+pub struct PendingUpdateState(pub Arc<AsyncMutex<Option<PendingUpdate>>>);
+
+struct PendingUpdate {
+    update: tauri_plugin_updater::Update,
+    bytes: Vec<u8>,
+    version: String,
+}
+
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct AuthTokenPayload {
     pub access_token: String,
@@ -766,6 +775,34 @@ pub async fn open_external_url(
 
 // ─── Update Commands ─────────────────────────────────────
 
+fn emit_download_progress(
+    app: &tauri::AppHandle,
+    version: &str,
+    downloaded: u64,
+    total: Option<u64>,
+) {
+    let percent = if let Some(total) = total {
+        if total > 0 {
+            (downloaded as f64 / total as f64 * 100.0) as u32
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+
+    let _ = app.emit(
+        "orivraa-update-progress",
+        serde_json::json!({
+            "status": "downloading",
+            "version": version,
+            "downloaded": downloaded,
+            "total": total.unwrap_or(0),
+            "percent": percent,
+        }),
+    );
+}
+
 /// Check for application updates. Returns version info if update is available.
 #[tauri::command]
 pub async fn check_for_updates(
@@ -773,7 +810,9 @@ pub async fn check_for_updates(
 ) -> Result<Option<String>, String> {
     use tauri_plugin_updater::UpdaterExt;
 
-    let updater = app.updater_builder().build()
+    let updater = app
+        .updater_builder()
+        .build()
         .map_err(|e| format!("Failed to build updater: {}", e))?;
 
     match updater.check().await {
@@ -791,6 +830,20 @@ pub async fn check_for_updates(
     }
 }
 
+/// Return current version and whether a downloaded update is ready to install.
+#[tauri::command]
+pub async fn get_update_status(
+    pending: State<'_, PendingUpdateState>,
+) -> Result<String, String> {
+    let state = pending.0.lock().await;
+    let info = serde_json::json!({
+        "currentVersion": env!("CARGO_PKG_VERSION"),
+        "pendingVersion": state.as_ref().map(|p| p.version.clone()),
+        "downloadReady": state.is_some(),
+    });
+    Ok(info.to_string())
+}
+
 /// Check for updates and emit a system notification if one is available.
 /// Called automatically on app startup. Also emits a Tauri event so the
 /// frontend can show an update banner.
@@ -801,14 +854,15 @@ pub async fn auto_check_updates(
     use tauri_plugin_updater::UpdaterExt;
     use tauri_plugin_notification::NotificationExt;
 
-    let updater = app.updater_builder().build()
+    let updater = app
+        .updater_builder()
+        .build()
         .map_err(|e| format!("Failed to build updater: {}", e))?;
 
     match updater.check().await {
         Ok(Some(update)) => {
             log::info!("Update available: v{}", update.version);
 
-            // Emit event for frontend to show update banner
             let info = serde_json::json!({
                 "version": update.version,
                 "date": update.date.map(|d| d.to_string()),
@@ -817,11 +871,14 @@ pub async fn auto_check_updates(
             });
             let _ = app.emit("orivraa-update-available", &info);
 
-            // Show system notification
-            let _ = app.notification()
+            let _ = app
+                .notification()
                 .builder()
                 .title("Orivraa Update Available")
-                .body(&format!("Version {} is ready to install. Click to update.", update.version))
+                .body(&format!(
+                    "Version {} is ready to install. Open Help → Check for Updates.",
+                    update.version
+                ))
                 .show();
 
             Ok(true)
@@ -837,64 +894,183 @@ pub async fn auto_check_updates(
     }
 }
 
-/// Download and install an available update.
+/// Download an available update in the background without installing yet.
+#[tauri::command]
+pub async fn download_update(
+    app: tauri::AppHandle,
+    pending: State<'_, PendingUpdateState>,
+) -> Result<String, String> {
+    use tauri_plugin_updater::UpdaterExt;
+
+    let updater = app
+        .updater_builder()
+        .build()
+        .map_err(|e| format!("Failed to build updater: {}", e))?;
+
+    match updater.check().await {
+        Ok(Some(update)) => {
+            let update_version = update.version.clone();
+            log::info!("Downloading update v{}", update_version);
+
+            let _ = app.emit(
+                "orivraa-update-progress",
+                serde_json::json!({
+                    "status": "downloading",
+                    "version": update_version,
+                    "downloaded": 0,
+                    "total": 0,
+                    "percent": 0,
+                }),
+            );
+
+            let app_handle = app.clone();
+            let mut downloaded = 0u64;
+            let bytes = update
+                .download(
+                    move |chunk_length, content_length| {
+                        downloaded += chunk_length as u64;
+                        emit_download_progress(
+                            &app_handle,
+                            &update_version,
+                            downloaded,
+                            content_length,
+                        );
+                    },
+                    || {
+                        log::info!("Update download complete");
+                    },
+                )
+                .await
+                .map_err(|e| format!("Download failed: {}", e))?;
+
+            let version = update.version.clone();
+            let mut state = pending.0.lock().await;
+            *state = Some(PendingUpdate {
+                update,
+                bytes,
+                version: version.clone(),
+            });
+
+            let _ = app.emit(
+                "orivraa-update-progress",
+                serde_json::json!({
+                    "status": "ready",
+                    "version": version,
+                }),
+            );
+
+            Ok(version)
+        }
+        Ok(None) => Err("No update available".into()),
+        Err(e) => Err(format!("Update check failed: {}", e)),
+    }
+}
+
+/// Install a previously downloaded update and restart the app.
+#[tauri::command]
+pub async fn install_pending_update(
+    app: tauri::AppHandle,
+    pending: State<'_, PendingUpdateState>,
+) -> Result<(), String> {
+    let pending_update = {
+        let mut state = pending.0.lock().await;
+        state.take()
+    };
+
+    let Some(pending_update) = pending_update else {
+        return Err("No downloaded update ready. Download the update first.".into());
+    };
+
+    log::info!("Installing downloaded update v{}", pending_update.version);
+
+    let _ = app.emit(
+        "orivraa-update-progress",
+        serde_json::json!({
+            "status": "installing",
+            "version": pending_update.version,
+        }),
+    );
+
+    pending_update
+        .update
+        .install(&pending_update.bytes)
+        .map_err(|e| format!("Install failed: {}", e))?;
+
+    let _ = app.emit(
+        "orivraa-update-progress",
+        serde_json::json!({
+            "status": "installed",
+            "version": pending_update.version,
+        }),
+    );
+
+    log::info!("Update installed. Restarting...");
+    app.restart();
+}
+
+/// Download and install an available update in one step.
 /// Emits `orivraa-update-progress` events with download progress so the
 /// frontend can show a progress bar.
 #[tauri::command]
 pub async fn install_update(
     app: tauri::AppHandle,
+    pending: State<'_, PendingUpdateState>,
 ) -> Result<(), String> {
     use tauri_plugin_updater::UpdaterExt;
 
-    let updater = app.updater_builder().build()
+    let updater = app
+        .updater_builder()
+        .build()
         .map_err(|e| format!("Failed to build updater: {}", e))?;
 
     match updater.check().await {
         Ok(Some(update)) => {
             log::info!("Installing update v{}", update.version);
 
-            // Emit "started" event
             let update_version = update.version.clone();
-            let _ = app.emit("orivraa-update-progress", serde_json::json!({
-                "status": "downloading",
-                "version": update_version,
-                "downloaded": 0,
-                "total": 0,
-                "percent": 0,
-            }));
+            let _ = app.emit(
+                "orivraa-update-progress",
+                serde_json::json!({
+                    "status": "downloading",
+                    "version": update_version,
+                    "downloaded": 0,
+                    "total": 0,
+                    "percent": 0,
+                }),
+            );
 
             let app_handle = app.clone();
             let mut downloaded = 0u64;
-            update.download_and_install(
-                move |chunk_length, content_length| {
-                    downloaded += chunk_length as u64;
-                    let percent = if let Some(total) = content_length {
-                        if total > 0 { (downloaded as f64 / total as f64 * 100.0) as u32 } else { 0 }
-                    } else { 0 };
+            update
+                .download_and_install(
+                    move |chunk_length, content_length| {
+                        downloaded += chunk_length as u64;
+                        emit_download_progress(
+                            &app_handle,
+                            &update_version,
+                            downloaded,
+                            content_length,
+                        );
+                    },
+                    || {
+                        log::info!("Download complete, installing...");
+                    },
+                )
+                .await
+                .map_err(|e| format!("Install failed: {}", e))?;
 
-                    log::info!("Downloaded {} of {:?} bytes ({}%)", downloaded, content_length, percent);
+            {
+                let mut state = pending.0.lock().await;
+                *state = None;
+            }
 
-                    // Emit progress event (throttle: only every ~5% to avoid flooding)
-                    if percent % 5 == 0 || downloaded == content_length.unwrap_or(0) {
-                        let _ = app_handle.emit("orivraa-update-progress", serde_json::json!({
-                            "status": "downloading",
-                            "version": update_version,
-                            "downloaded": downloaded,
-                            "total": content_length.unwrap_or(0),
-                            "percent": percent,
-                        }));
-                    }
-                },
-                || {
-                    log::info!("Download complete, installing...");
-                },
-            ).await.map_err(|e| format!("Install failed: {}", e))?;
-
-            // Emit "installed" event before restarting
-            let _ = app.emit("orivraa-update-progress", serde_json::json!({
-                "status": "installed",
-                "version": update.version,
-            }));
+            let _ = app.emit(
+                "orivraa-update-progress",
+                serde_json::json!({
+                    "status": "installed",
+                    "version": update.version,
+                }),
+            );
 
             log::info!("Update installed. Restarting...");
             app.restart();

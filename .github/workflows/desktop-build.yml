@@ -248,57 +248,28 @@ jobs:
           VERSION="${{ needs.resolve-version.outputs.version }}"
           R2_BASE="s3://${R2_BUCKET}/desktop"
 
-          # Find the signature and artifact files
-          # tauri-action builds to apps/desktop/target/ (projectPath is apps/desktop)
-          BUNDLE_DIR="apps/desktop/target/release/bundle"
-          NSIS_EXE=$(ls "$BUNDLE_DIR/nsis/"*.exe 2>/dev/null | head -1 || true)
-          MSI_FILE=$(ls "$BUNDLE_DIR/msi/"*.msi 2>/dev/null | head -1 || true)
-
-          # Prefer NSIS for the updater
-          if [ -n "$NSIS_EXE" ]; then
-            INSTALLER_NAME=$(basename "$NSIS_EXE")
-            SIG_FILE="${NSIS_EXE}.sig"
-          elif [ -n "$MSI_FILE" ]; then
-            INSTALLER_NAME=$(basename "$MSI_FILE")
-            SIG_FILE="${MSI_FILE}.sig"
-          else
-            echo "No Windows installer found"
-            exit 1
-          fi
-
-          # Read signature (tauri-action generates .sig files alongside artifacts)
-          SIGNATURE=""
-          if [ -f "$SIG_FILE" ]; then
-            SIGNATURE=$(cat "$SIG_FILE")
-          fi
-
-          # Build R2 latest.json for the updater fallback endpoint
-          # URL points to R2 latest/ (releases.orivraa.com)
-          R2_DOWNLOAD_URL="https://releases.orivraa.com/desktop/latest/${INSTALLER_NAME}"
-
-          cat > /tmp/latest.json << ENDJSON
-          {
-            "version": "${VERSION}",
-            "notes": "Orivraa Desktop v${VERSION}",
-            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "platforms": {
-              "windows-x86_64": {
-                "signature": "${SIGNATURE}",
-                "url": "${R2_DOWNLOAD_URL}"
-              }
-            }
-          }
-          ENDJSON
+          python apps/desktop/scripts/generate-updater-manifest.py \
+            --version "${VERSION}" \
+            --platform windows \
+            --download-base "https://releases.orivraa.com/desktop/latest" \
+            --output /tmp/latest.json
 
           echo "Generated latest.json:"
           cat /tmp/latest.json
 
-          # Upload to R2 at /desktop/latest.json (updater fallback endpoint)
           aws s3 cp /tmp/latest.json "${R2_BASE}/latest.json" \
             --endpoint-url "${R2_ENDPOINT}" \
             --content-type "application/json" \
             --no-progress
           echo "R2 latest.json uploaded"
+
+      - name: Upload latest.json to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          gh release upload "desktop-v${VERSION}" /tmp/latest.json --clobber
+          echo "GitHub latest.json uploaded"
 
       - name: Publish release to API
         shell: bash
@@ -321,8 +292,20 @@ jobs:
             echo "WARNING: ORIVRAA_ADMIN_TOKEN seems too short (${TOKEN_LEN} chars) — expected a JWT (~200+ chars) or gshop_ token"
           fi
 
-          # Find artifacts and their sizes
-          BUNDLE_DIR="apps/desktop/target/release/bundle"
+          # Find artifacts and their sizes (search both workspace and src-tauri targets)
+          BUNDLE_DIR=""
+          for candidate in \
+            "apps/desktop/target/release/bundle" \
+            "apps/desktop/src-tauri/target/release/bundle"; do
+            if [ -d "$candidate/nsis" ] || [ -d "$candidate/msi" ]; then
+              BUNDLE_DIR="$candidate"
+              break
+            fi
+          done
+          if [ -z "$BUNDLE_DIR" ]; then
+            echo "No Windows bundle directory found"
+            exit 1
+          fi
           NSIS_EXE=$(ls "$BUNDLE_DIR/nsis/"*.exe 2>/dev/null | head -1 || true)
           MSI_FILE=$(ls "$BUNDLE_DIR/msi/"*.msi 2>/dev/null | head -1 || true)
 
@@ -568,51 +551,53 @@ jobs:
           VERSION="${{ needs.resolve-version.outputs.version }}"
           R2_BASE="s3://${R2_BUCKET}/desktop"
 
-          BUNDLE_DIR="apps/desktop/target/universal-apple-darwin/release/bundle"
-          DMG_FILE=$(ls "$BUNDLE_DIR/dmg/"*.dmg 2>/dev/null | head -1 || true)
-
-          if [ -z "$DMG_FILE" ]; then
+          if ! python3 apps/desktop/scripts/generate-updater-manifest.py \
+            --version "${VERSION}" \
+            --platform macos \
+            --download-base "https://releases.orivraa.com/desktop/latest" \
+            --output /tmp/latest-macos.json; then
             echo "No macOS DMG found, skipping latest.json for macOS"
             exit 0
           fi
 
-          INSTALLER_NAME=$(basename "$DMG_FILE")
-          SIG_FILE="${DMG_FILE}.sig"
-          SIGNATURE=""
-          if [ -f "$SIG_FILE" ]; then
-            SIGNATURE=$(cat "$SIG_FILE")
-          fi
-
-          # URL points to R2 latest/ (releases.orivraa.com)
-          R2_DOWNLOAD_URL="https://releases.orivraa.com/desktop/latest/${INSTALLER_NAME}"
-
-          cat > /tmp/latest-macos.json << ENDJSON
-          {
-            "version": "${VERSION}",
-            "notes": "Orivraa Desktop v${VERSION}",
-            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "platforms": {
-              "darwin-aarch64": {
-                "signature": "${SIGNATURE}",
-                "url": "${R2_DOWNLOAD_URL}"
-              },
-              "darwin-x86_64": {
-                "signature": "${SIGNATURE}",
-                "url": "${R2_DOWNLOAD_URL}"
-              }
-            }
-          }
-          ENDJSON
-
           echo "Generated macOS latest.json:"
           cat /tmp/latest-macos.json
 
-          # Upload to /desktop/latest-macos.json (macOS updater fallback)
           aws s3 cp /tmp/latest-macos.json "${R2_BASE}/latest-macos.json" \
             --endpoint-url "${R2_ENDPOINT}" \
             --content-type "application/json" \
             --no-progress
           echo "R2 macOS latest.json uploaded"
+
+      - name: Merge and upload combined latest.json (macOS)
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          R2_BASE="s3://${R2_BUCKET}/desktop"
+
+          if [ ! -f /tmp/latest-macos.json ]; then
+            echo "No macOS manifest generated, skipping combined manifest upload"
+            exit 0
+          fi
+
+          python3 apps/desktop/scripts/merge-updater-manifests.py \
+            --version "${VERSION}" \
+            --base-url "https://releases.orivraa.com/desktop/latest.json" \
+            --patch /tmp/latest-macos.json \
+            --output /tmp/latest.json
+
+          echo "Combined latest.json:"
+          cat /tmp/latest.json
+
+          aws s3 cp /tmp/latest.json "${R2_BASE}/latest.json" \
+            --endpoint-url "${R2_ENDPOINT}" \
+            --content-type "application/json" \
+            --no-progress
+
+          gh release upload "desktop-v${VERSION}" /tmp/latest.json --clobber
+          echo "Combined latest.json uploaded to R2 and GitHub"
 
       - name: Publish release to API
         shell: bash
@@ -635,7 +620,19 @@ jobs:
             echo "WARNING: ORIVRAA_ADMIN_TOKEN seems too short (${TOKEN_LEN} chars) — expected a JWT (~200+ chars) or gshop_ token"
           fi
 
-          BUNDLE_DIR="apps/desktop/target/universal-apple-darwin/release/bundle"
+          BUNDLE_DIR=""
+          for candidate in \
+            "apps/desktop/target/universal-apple-darwin/release/bundle" \
+            "apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle"; do
+            if [ -d "$candidate/dmg" ]; then
+              BUNDLE_DIR="$candidate"
+              break
+            fi
+          done
+          if [ -z "$BUNDLE_DIR" ]; then
+            echo "No macOS bundle directory found for API publish"
+            exit 1
+          fi
           DMG_FILE=$(ls "$BUNDLE_DIR/dmg/"*.dmg 2>/dev/null | head -1 || true)
 
           if [ -z "$DMG_FILE" ]; then

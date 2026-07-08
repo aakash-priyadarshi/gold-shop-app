@@ -6,10 +6,13 @@ pub mod commands;
 pub mod db;
 pub mod sync;
 
-use commands::{AuthTokenReceiver, SyncState};
+use commands::{AuthTokenReceiver, PendingUpdateState, SyncState};
 use db::Database;
 use std::sync::Arc;
-use tauri::{Emitter, Manager};
+use tauri::{
+    menu::{AboutMetadata, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
+    Emitter, Manager,
+};
 use tokio::sync::Mutex as AsyncMutex;
 
 /// JavaScript injected into orivraa.com pages for desktop enhancements:
@@ -19,6 +22,112 @@ use tokio::sync::Mutex as AsyncMutex;
 /// - Opens external links in system browser
 /// - Shows offline connectivity banner
 const DESKTOP_ENHANCEMENTS_JS: &str = include_str!("../desktop-enhancements.js");
+
+fn build_app_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    let version = env!("CARGO_PKG_VERSION");
+
+    let check_updates = MenuItemBuilder::with_id("check_updates", "Check for Updates...")
+        .accelerator("Ctrl+U")
+        .build(app)?;
+    let download_update = MenuItemBuilder::with_id("download_update", "Download Update")
+        .build(app)?;
+    let install_update = MenuItemBuilder::with_id("install_update", "Install Update and Restart")
+        .build(app)?;
+    let about_item = MenuItemBuilder::with_id("about_orivraa", &format!("About Orivraa v{version}"))
+        .build(app)?;
+
+    let reload = MenuItemBuilder::with_id("reload_page", "Reload")
+        .accelerator("F5")
+        .build(app)?;
+    let fullscreen = MenuItemBuilder::with_id("toggle_fullscreen", "Toggle Full Screen")
+        .accelerator("F11")
+        .build(app)?;
+
+    let separator = || PredefinedMenuItem::separator(app);
+
+    #[cfg(target_os = "macos")]
+    let menu = {
+        let app_submenu = SubmenuBuilder::new(app, "Orivraa")
+            .about(Some(AboutMetadata {
+                name: Some("Orivraa".into()),
+                version: Some(version.into()),
+                ..Default::default()
+            }))
+            .separator()
+            .item(&check_updates)
+            .item(&download_update)
+            .item(&install_update)
+            .separator()
+            .services()
+            .separator()
+            .hide()
+            .hide_others()
+            .quit()
+            .build()?;
+
+        let file_submenu = SubmenuBuilder::new(app, "File")
+            .item(&about_item)
+            .separator()
+            .close_window()
+            .build()?;
+
+        let view_submenu = SubmenuBuilder::new(app, "View")
+            .item(&reload)
+            .item(&fullscreen)
+            .build()?;
+
+        MenuBuilder::new(app)
+            .items(&[&app_submenu, &file_submenu, &view_submenu])
+            .build()?
+    };
+
+    #[cfg(not(target_os = "macos"))]
+    let menu = {
+        let file_submenu = SubmenuBuilder::new(app, "File")
+            .item(&about_item)
+            .separator()
+            .quit()
+            .build()?;
+
+        let view_submenu = SubmenuBuilder::new(app, "View")
+            .item(&reload)
+            .item(&fullscreen)
+            .build()?;
+
+        let help_submenu = SubmenuBuilder::new(app, "Help")
+            .item(&check_updates)
+            .item(&download_update)
+            .item(&install_update)
+            .build()?;
+
+        MenuBuilder::new(app)
+            .items(&[&file_submenu, &view_submenu, &help_submenu])
+            .build()?
+    };
+
+    Ok(menu)
+}
+
+fn handle_menu_event(app: &tauri::AppHandle, event_id: &str) {
+    match event_id {
+        "check_updates" | "about_orivraa" => {
+            let _ = app.emit("orivraa-menu-action", "open-update-panel");
+        }
+        "download_update" => {
+            let _ = app.emit("orivraa-menu-action", "download-update");
+        }
+        "install_update" => {
+            let _ = app.emit("orivraa-menu-action", "install-update");
+        }
+        "reload_page" => {
+            let _ = app.emit("orivraa-menu-action", "reload");
+        }
+        "toggle_fullscreen" => {
+            let _ = app.emit("orivraa-menu-action", "toggle-fullscreen");
+        }
+        _ => {}
+    }
+}
 
 /// Build the Tauri application with all plugins, state, and IPC handlers
 #[allow(deprecated)] // tauri_plugin_shell::open — will migrate to tauri-plugin-opener
@@ -37,6 +146,7 @@ pub fn run() {
         .manage(db)
         .manage(SyncState(Arc::new(AsyncMutex::new(None))))
         .manage(AuthTokenReceiver(Arc::new(AsyncMutex::new(None))))
+        .manage(PendingUpdateState(Arc::new(AsyncMutex::new(None))))
         // Inject desktop enhancements into orivraa.com pages after they load
         .on_page_load(|webview, payload| {
             if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
@@ -56,6 +166,13 @@ pub fn run() {
             .init();
 
             log::info!("Orivraa Desktop started");
+
+            let menu = build_app_menu(app.handle())?;
+            app.set_menu(menu)?;
+
+            app.on_menu_event(move |app_handle, event| {
+                handle_menu_event(app_handle, event.id().0.as_str());
+            });
 
             // Check for updates on startup (non-blocking, fire-and-forget)
             // The check runs 5s after startup to avoid blocking initialization.
@@ -176,7 +293,10 @@ pub fn run() {
             // Updates
             commands::check_for_updates,
             commands::auto_check_updates,
+            commands::download_update,
+            commands::install_pending_update,
             commands::install_update,
+            commands::get_update_status,
             commands::get_app_version,
             commands::send_heartbeat,
             // Desktop Session Analytics

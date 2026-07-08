@@ -68,10 +68,10 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDAxNTFFN0FBQ0UxNTg2QjEKUldTeGhoWE9xdWRSQWFlanBTWEVCOEh5WUFlalFHRmZoc1FXZE50WVNZUDN6WUJoVWFjaDRUYjkK",
       "endpoints": [
-        "https://releases.orivraa.com/desktop/latest.json",
-        "https://github.com/aakash-priyadarshi/gold-shop-app/releases/latest/download/latest.json"
+        "https://github.com/aakash-priyadarshi/gold-shop-app/releases/latest/download/latest.json",
+        "https://releases.orivraa.com/desktop/latest.json"
       ],
-      "dialog": true
+      "dialog": false
     },
     "shell": {
       "open": "^https://"

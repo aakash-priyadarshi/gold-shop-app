@@ -5,7 +5,7 @@
  * - Google OAuth via system browser with token callback
  * - Token polling to complete auth flow
  * - Golden loading spinner replacement
- * - Update checking from system menu
+ * - Update checking via Help menu and Ctrl+U
  * - Keyboard shortcuts, scrollbar, offline banner
  */
 (function() {
@@ -114,69 +114,101 @@
     '}',
     '#orivraa-desktop-auth-overlay button:hover { background: rgba(212,175,55,0.1); border-color: rgba(212,175,55,0.5); color: #f3dd99; }',
     '',
-    '/* Update banner */',
-    '#orivraa-update-banner {',
-    '  position: fixed; bottom: 20px; right: 20px; z-index: 99990;',
+    '/* Update panel */',
+    '#orivraa-update-overlay {',
+    '  position: fixed; inset: 0; z-index: 99995;',
+    '  background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(6px);',
+    '  display: flex; align-items: center; justify-content: center; padding: 24px;',
+    '  animation: fadeInOverlay 0.25s ease-out;',
+    '}',
+    '#orivraa-update-panel {',
+    '  width: min(440px, 100%); background: linear-gradient(160deg, #1a2744 0%, #0f172a 100%);',
+    '  border: 1px solid rgba(212,175,55,0.28); border-radius: 16px;',
+    '  box-shadow: 0 24px 64px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,175,55,0.08) inset;',
+    '  overflow: hidden; animation: slideUp 0.35s ease-out;',
+    '}',
+    '#orivraa-update-panel .panel-header {',
+    '  padding: 20px 22px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);',
+    '  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;',
+    '}',
+    '#orivraa-update-panel .panel-title { color: #f3dd99; font-size: 18px; font-weight: 600; margin: 0; }',
+    '#orivraa-update-panel .panel-subtitle { color: rgba(255,255,255,0.5); font-size: 12px; margin: 4px 0 0; }',
+    '#orivraa-update-panel .panel-close {',
+    '  background: transparent; border: none; color: rgba(255,255,255,0.45);',
+    '  font-size: 20px; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 6px;',
+    '}',
+    '#orivraa-update-panel .panel-close:hover { color: #f3dd99; background: rgba(212,175,55,0.08); }',
+    '#orivraa-update-panel .panel-body { padding: 18px 22px 22px; }',
+    '#orivraa-update-panel .status-pill {',
+    '  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;',
+    '  border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px;',
+    '  margin-bottom: 14px;',
+    '}',
+    '#orivraa-update-panel .status-pill.ok { background: rgba(34,197,94,0.12); color: #4ade80; }',
+    '#orivraa-update-panel .status-pill.warn { background: rgba(229,163,30,0.15); color: #f3dd99; }',
+    '#orivraa-update-panel .status-pill.info { background: rgba(147,197,253,0.12); color: #93c5fd; }',
+    '#orivraa-update-panel .release-notes {',
+    '  color: rgba(255,255,255,0.62); font-size: 13px; line-height: 1.55;',
+    '  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);',
+    '  border-radius: 10px; padding: 12px 14px; margin: 0 0 16px; max-height: 120px; overflow: auto;',
+    '}',
+    '#orivraa-update-panel .version-row {',
+    '  display: flex; justify-content: space-between; gap: 12px;',
+    '  font-size: 12px; color: rgba(255,255,255,0.45); margin-bottom: 16px;',
+    '}',
+    '#orivraa-update-panel .version-row strong { color: rgba(255,255,255,0.82); font-weight: 600; }',
+    '#orivraa-update-panel .progress-block { margin: 8px 0 16px; }',
+    '#orivraa-update-panel .progress-bar {',
+    '  width: 100%; height: 8px; background: rgba(255,255,255,0.08);',
+    '  border-radius: 999px; overflow: hidden;',
+    '}',
+    '#orivraa-update-panel .progress-fill {',
+    '  height: 100%; width: 0%; background: linear-gradient(90deg, #e5a31e, #f3dd99);',
+    '  border-radius: 999px; transition: width 0.25s ease-out;',
+    '}',
+    '#orivraa-update-panel .progress-meta {',
+    '  display: flex; justify-content: space-between; margin-top: 8px;',
+    '  font-size: 11px; color: rgba(255,255,255,0.45);',
+    '}',
+    '#orivraa-update-panel .panel-actions { display: flex; gap: 10px; flex-wrap: wrap; }',
+    '#orivraa-update-panel button {',
+    '  border: none; border-radius: 8px; padding: 10px 16px; font-size: 13px;',
+    '  cursor: pointer; transition: all 0.2s; font-weight: 600;',
+    '}',
+    '#orivraa-update-panel button:disabled { opacity: 0.55; cursor: not-allowed; }',
+    '#orivraa-update-panel .btn-primary {',
+    '  background: linear-gradient(135deg, #e5a31e, #c9942a); color: #0f172a;',
+    '}',
+    '#orivraa-update-panel .btn-primary:hover:not(:disabled) {',
+    '  background: linear-gradient(135deg, #f3dd99, #e5a31e);',
+    '}',
+    '#orivraa-update-panel .btn-secondary {',
+    '  background: transparent; color: rgba(255,255,255,0.72);',
+    '  border: 1px solid rgba(255,255,255,0.16);',
+    '}',
+    '#orivraa-update-panel .btn-secondary:hover:not(:disabled) {',
+    '  border-color: rgba(212,175,55,0.35); color: #f3dd99;',
+    '}',
+    '#orivraa-update-panel .panel-hint {',
+    '  margin-top: 12px; font-size: 11px; color: rgba(255,255,255,0.38); line-height: 1.45;',
+    '}',
+    '/* Floating update badge */',
+    '#orivraa-update-badge {',
+    '  position: fixed; bottom: 22px; right: 22px; z-index: 99990;',
+    '  display: inline-flex; align-items: center; gap: 8px;',
+    '  padding: 10px 14px; border-radius: 999px;',
     '  background: linear-gradient(135deg, #1a2744, #0f172a);',
-    '  border: 1px solid rgba(212,175,55,0.3); border-radius: 12px;',
-    '  padding: 16px 20px; max-width: 340px;',
-    '  box-shadow: 0 8px 32px rgba(0,0,0,0.4);',
-    '  animation: slideUp 0.4s ease-out;',
+    '  border: 1px solid rgba(212,175,55,0.35); color: #f3dd99;',
+    '  font-size: 12px; font-weight: 600; cursor: pointer;',
+    '  box-shadow: 0 8px 28px rgba(0,0,0,0.35);',
+    '  animation: orivraaUpdatePulse 2.2s ease-in-out infinite;',
+    '}',
+    '#orivraa-update-badge:hover { transform: translateY(-1px); }',
+    '@keyframes orivraaUpdatePulse {',
+    '  0%, 100% { box-shadow: 0 8px 28px rgba(0,0,0,0.35); }',
+    '  50% { box-shadow: 0 8px 28px rgba(212,175,55,0.25), 0 0 0 6px rgba(212,175,55,0.08); }',
     '}',
     '@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }',
-    '#orivraa-update-banner h4 { color: #f3dd99; font-size: 14px; margin: 0 0 4px; }',
-    '#orivraa-update-banner p { color: rgba(255,255,255,0.6); font-size: 12px; margin: 0 0 12px; line-height: 1.4; }',
-    '#orivraa-update-banner .update-actions { display: flex; gap: 8px; }',
-    '#orivraa-update-banner button { padding: 6px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; border: none; }',
-    '#orivraa-update-banner .btn-update { background: linear-gradient(135deg, #e5a31e, #c9942a); color: #0f172a; font-weight: 600; }',
-    '#orivraa-update-banner .btn-update:hover { background: linear-gradient(135deg, #f3dd99, #e5a31e); }',
-    '#orivraa-update-banner .btn-later { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); }',
-    '#orivraa-update-banner .btn-later:hover { border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.8); }',
-    '',
-    '/* Persistent update icon (pulses when update available) */',
-    '#orivraa-update-icon {',
-    '  position: fixed; bottom: 20px; right: 20px; z-index: 99989;',
-    '  width: 48px; height: 48px; border-radius: 50%;',
-    '  background: linear-gradient(135deg, #e5a31e, #c9942a);',
-    '  display: flex; align-items: center; justify-content: center;',
-    '  cursor: pointer; box-shadow: 0 4px 20px rgba(212,175,55,0.4);',
-    '  transition: transform 0.2s, box-shadow 0.2s;',
-    '  animation: orivraaUpdatePulse 2s ease-in-out infinite;',
-    '}',
-    '#orivraa-update-icon:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(212,175,55,0.6); }',
-    '@keyframes orivraaUpdatePulse {',
-    '  0%, 100% { box-shadow: 0 4px 20px rgba(212,175,55,0.4); }',
-    '  50% { box-shadow: 0 4px 20px rgba(212,175,55,0.7), 0 0 0 8px rgba(212,175,55,0.1); }',
-    '}',
-    '#orivraa-update-icon svg { width: 24px; height: 24px; fill: #0f172a; }',
-    '#orivraa-update-icon .update-badge {',
-    '  position: absolute; top: -2px; right: -2px;',
-    '  background: #22c55e; color: white; font-size: 10px; font-weight: 700;',
-    '  border-radius: 50%; width: 16px; height: 16px;',
-    '  display: flex; align-items: center; justify-content: center;',
-    '  border: 2px solid #0f172a;',
-    '}',
-    '',
-    '/* Update progress bar */',
-    '#orivraa-update-progress {',
-    '  position: fixed; bottom: 20px; right: 20px; z-index: 99991;',
-    '  background: linear-gradient(135deg, #1a2744, #0f172a);',
-    '  border: 1px solid rgba(212,175,55,0.3); border-radius: 12px;',
-    '  padding: 16px 20px; min-width: 300px; max-width: 360px;',
-    '  box-shadow: 0 8px 32px rgba(0,0,0,0.4);',
-    '  animation: slideUp 0.4s ease-out;',
-    '}',
-    '#orivraa-update-progress h4 { color: #f3dd99; font-size: 14px; margin: 0 0 8px; }',
-    '#orivraa-update-progress .progress-bar {',
-    '  width: 100%; height: 6px; background: rgba(255,255,255,0.1);',
-    '  border-radius: 3px; overflow: hidden; margin: 8px 0;',
-    '}',
-    '#orivraa-update-progress .progress-fill {',
-    '  height: 100%; background: linear-gradient(90deg, #e5a31e, #f3dd99);',
-    '  border-radius: 3px; transition: width 0.3s ease-out;',
-    '}',
-    '#orivraa-update-progress .progress-text { color: rgba(255,255,255,0.5); font-size: 11px; }',
-    '#orivraa-update-progress .restart-prompt { color: #4ade80; font-size: 13px; margin-top: 8px; }',
   ].join('\n');
   document.head.appendChild(style);
 
@@ -341,13 +373,12 @@
     if (e.key === 'Escape') {
       var overlay = document.getElementById('orivraa-desktop-auth-overlay');
       if (overlay) { stopAuthPolling(); overlay.remove(); }
-      var updateBanner = document.getElementById('orivraa-update-banner');
-      if (updateBanner) updateBanner.remove();
+      closeUpdatePanel();
     }
     // Ctrl+U — Check for updates
     if (e.ctrlKey && e.key === 'u') {
       e.preventDefault();
-      checkForUpdates();
+      openUpdatePanel();
     }
   });
 
@@ -390,151 +421,321 @@
   window.addEventListener('offline', function() { updateConnectivityUI(false); });
   updateConnectivityUI(navigator.onLine);
 
-  // ─── 7. UPDATE CHECKER ───
-  function checkForUpdates() {
-    TAURI.invoke('check_for_updates').then(function(result) {
-      if (result) {
-        var info = JSON.parse(result);
-        showUpdateBanner(info);
-      } else {
-        // No update available — show brief notification
-        showToast('You\'re on the latest version');
-      }
-    }).catch(function(err) {
-      console.warn('[Orivraa Desktop] Update check failed:', err);
-      showToast('Could not check for updates');
-    });
+  // ─── 7. UPDATE PANEL ───
+  var updateState = {
+    currentVersion: 'unknown',
+    availableInfo: null,
+    downloadReady: false,
+    pendingVersion: null,
+    panelOpen: false,
+    checking: false,
+    downloading: false,
+    progressPercent: 0,
+  };
+
+  function refreshUpdateStatus() {
+    return TAURI.invoke('get_update_status').then(function(raw) {
+      try {
+        var status = JSON.parse(raw);
+        updateState.currentVersion = status.currentVersion || updateState.currentVersion;
+        updateState.downloadReady = !!status.downloadReady;
+        updateState.pendingVersion = status.pendingVersion || null;
+      } catch (e) {}
+    }).catch(function() {});
   }
 
-  // ─── UPDATE ICON (persistent, pulses when update available) ───
-  var updateIconVisible = false;
-  var pendingUpdateInfo = null;
+  function closeUpdatePanel() {
+    var overlay = document.getElementById('orivraa-update-overlay');
+    if (overlay) overlay.remove();
+    updateState.panelOpen = false;
+  }
 
-  function showUpdateIcon(info) {
-    pendingUpdateInfo = info;
-    if (updateIconVisible) return;
-    updateIconVisible = true;
+  function showUpdateBadge(info) {
+    if (updateState.panelOpen) return;
+    var existing = document.getElementById('orivraa-update-badge');
+    if (existing) return;
 
-    var icon = document.createElement('div');
-    icon.id = 'orivraa-update-icon';
-    icon.title = 'Update available — click to install';
-    icon.innerHTML = [
-      '<svg viewBox="0 0 24 24"><path d="M12 4V2L8 6l4 4V8c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 17.03 20 15.57 20 14c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v2l4-4-4-4v2z"/></svg>',
-      '<span class="update-badge">!</span>',
+    var badge = document.createElement('button');
+    badge.id = 'orivraa-update-badge';
+    badge.type = 'button';
+    badge.innerHTML = [
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">',
+      '  <path d="M12 4V2L8 6l4 4V8c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 17.03 20 15.57 20 14c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v2l4-4-4-4v2z"/>',
+      '</svg>',
+      '<span>Update v' + (info && info.version ? info.version : 'available') + '</span>',
     ].join('');
-    document.body.appendChild(icon);
-
-    icon.addEventListener('click', function() {
-      if (pendingUpdateInfo) {
-        showUpdateBanner(pendingUpdateInfo);
-      }
+    badge.addEventListener('click', function() {
+      openUpdatePanel(info);
     });
+    document.body.appendChild(badge);
   }
 
-  function removeUpdateIcon() {
-    var icon = document.getElementById('orivraa-update-icon');
-    if (icon) icon.remove();
-    updateIconVisible = false;
+  function hideUpdateBadge() {
+    var badge = document.getElementById('orivraa-update-badge');
+    if (badge) badge.remove();
   }
 
-  function showUpdateBanner(info) {
-    var existing = document.getElementById('orivraa-update-banner');
-    if (existing) existing.remove();
+  function renderUpdatePanelContent(container) {
+    var info = updateState.availableInfo;
+    var isUpToDate = !info && !updateState.downloadReady && !updateState.checking;
+    var statusClass = 'info';
+    var statusText = 'Checking for updates...';
 
-    var banner = document.createElement('div');
-    banner.id = 'orivraa-update-banner';
-    banner.innerHTML = [
-      '<h4>\u2728 Update Available — v' + (info.version || 'new') + '</h4>',
-      '<p>' + (info.body ? info.body.substring(0, 150) : 'A new version of Orivraa Desktop is available.') + '</p>',
-      '<div class="update-actions">',
-      '  <button class="btn-update" id="update-install-btn">Update Now</button>',
-      '  <button class="btn-later" id="update-later-btn">Later</button>',
-      '</div>',
-    ].join('');
-    document.body.appendChild(banner);
-
-    document.getElementById('update-install-btn').addEventListener('click', function() {
-      this.textContent = 'Starting...';
-      this.disabled = true;
-      TAURI.invoke('install_update').catch(function(err) {
-        showToast('Update failed: ' + err);
-        banner.remove();
-      });
-    });
-
-    document.getElementById('update-later-btn').addEventListener('click', function() {
-      banner.remove();
-      // Keep the persistent icon so user can update later
-      showUpdateIcon(info);
-    });
-  }
-
-  // ─── UPDATE PROGRESS (listen for events from Rust) ───
-  function showUpdateProgress(info) {
-    // Remove the banner if it exists
-    var banner = document.getElementById('orivraa-update-banner');
-    if (banner) banner.remove();
-    removeUpdateIcon();
-
-    var existing = document.getElementById('orivraa-update-progress');
-    if (existing) existing.remove();
-
-    var progress = document.createElement('div');
-    progress.id = 'orivraa-update-progress';
-    progress.innerHTML = [
-      '<h4>\u2B07 Downloading v' + (info.version || '') + '</h4>',
-      '<div class="progress-bar"><div class="progress-fill" id="update-progress-fill" style="width: 0%"></div></div>',
-      '<div class="progress-text" id="update-progress-text">0%</div>',
-    ].join('');
-    document.body.appendChild(progress);
-  }
-
-  function updateProgress(percent, downloaded, total) {
-    var fill = document.getElementById('update-progress-fill');
-    var text = document.getElementById('update-progress-text');
-    if (fill) fill.style.width = percent + '%';
-    if (text) {
-      var dlMB = downloaded ? (downloaded / 1048576).toFixed(1) : '0';
-      var totalMB = total ? (total / 1048576).toFixed(1) : '?';
-      text.textContent = percent + '% — ' + dlMB + ' / ' + totalMB + ' MB';
+    if (updateState.checking) {
+      statusText = 'Checking for updates...';
+    } else if (updateState.downloading) {
+      statusClass = 'warn';
+      statusText = 'Downloading update...';
+    } else if (updateState.downloadReady) {
+      statusClass = 'ok';
+      statusText = 'Ready to install';
+    } else if (info && info.version) {
+      statusClass = 'warn';
+      statusText = 'Update available';
+    } else if (isUpToDate) {
+      statusClass = 'ok';
+      statusText = 'You are up to date';
     }
-  }
 
-  function showUpdateComplete(version) {
-    var progress = document.getElementById('orivraa-update-progress');
-    if (progress) {
-      progress.innerHTML = [
-        '<h4>\u2705 Update Installed — v' + (version || '') + '</h4>',
-        '<p class="restart-prompt">Restarting automatically...</p>',
+    var notes = '';
+    if (info && info.body) {
+      notes = '<div class="release-notes">' + escapeHtml(info.body.substring(0, 400)) + '</div>';
+    } else if (updateState.downloadReady) {
+      notes = '<div class="release-notes">The update has been downloaded in the background. Restart to apply it — no installer wizard needed.</div>';
+    } else if (!info && !updateState.checking) {
+      notes = '<div class="release-notes">Updates download silently in the background. When ready, restart the app to apply them.</div>';
+    }
+
+    var progressBlock = '';
+    if (updateState.downloading || updateState.downloadReady) {
+      progressBlock = [
+        '<div class="progress-block">',
+        '  <div class="progress-bar"><div class="progress-fill" style="width:' + updateState.progressPercent + '%"></div></div>',
+        '  <div class="progress-meta">',
+        '    <span>' + (updateState.downloading ? 'Downloading...' : 'Download complete') + '</span>',
+        '    <span>' + updateState.progressPercent + '%</span>',
+        '  </div>',
+        '</div>',
       ].join('');
     }
+
+    var primaryLabel = 'Check for Updates';
+    var primaryAction = 'check';
+    var primaryDisabled = updateState.checking || updateState.downloading;
+
+    if (updateState.downloadReady) {
+      primaryLabel = 'Restart & Install';
+      primaryAction = 'install';
+    } else if (info && info.version) {
+      primaryLabel = 'Download Update';
+      primaryAction = 'download';
+    } else if (!updateState.checking) {
+      primaryLabel = 'Check Again';
+      primaryAction = 'check';
+    }
+
+    container.innerHTML = [
+      '<div class="status-pill ' + statusClass + '">' + statusText + '</div>',
+      '<div class="version-row">',
+      '  <span>Installed</span><strong>v' + escapeHtml(updateState.currentVersion) + '</strong>',
+      '</div>',
+      info && info.version ? (
+        '<div class="version-row"><span>Latest</span><strong>v' + escapeHtml(info.version) + '</strong></div>'
+      ) : '',
+      notes,
+      progressBlock,
+      '<div class="panel-actions">',
+      '  <button class="btn-primary" id="orivraa-update-primary" data-action="' + primaryAction + '"' + (primaryDisabled ? ' disabled' : '') + '>' + primaryLabel + '</button>',
+      '  <button class="btn-secondary" id="orivraa-update-later">Close</button>',
+      '</div>',
+      '<p class="panel-hint">Tip: Help → Check for Updates, or press Ctrl+U. Use Help → Download Update to fetch in the background.</p>',
+    ].join('');
+
+    document.getElementById('orivraa-update-later').addEventListener('click', closeUpdatePanel);
+    document.getElementById('orivraa-update-primary').addEventListener('click', function() {
+      var action = this.getAttribute('data-action');
+      if (action === 'check') checkForUpdates(true);
+      else if (action === 'download') downloadUpdate();
+      else if (action === 'install') installPendingUpdate();
+    });
   }
 
-  // ─── LISTEN FOR UPDATE EVENTS FROM RUST ───
-  // The Rust side emits these events when it detects an update on startup
-  // or during the download process.
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function openUpdatePanel(prefillInfo) {
+    if (prefillInfo) updateState.availableInfo = prefillInfo;
+    updateState.panelOpen = true;
+    hideUpdateBadge();
+
+    var existing = document.getElementById('orivraa-update-overlay');
+    if (existing) {
+      renderUpdatePanelContent(document.getElementById('orivraa-update-body'));
+      if (!prefillInfo && !updateState.checking) checkForUpdates(false);
+      return;
+    }
+
+    var overlay = document.createElement('div');
+    overlay.id = 'orivraa-update-overlay';
+    overlay.innerHTML = [
+      '<div id="orivraa-update-panel" role="dialog" aria-modal="true" aria-label="Software updates">',
+      '  <div class="panel-header">',
+      '    <div>',
+      '      <h3 class="panel-title">Software Updates</h3>',
+      '      <p class="panel-subtitle">Orivraa Desktop</p>',
+      '    </div>',
+      '    <button class="panel-close" id="orivraa-update-close" aria-label="Close">&times;</button>',
+      '  </div>',
+      '  <div class="panel-body" id="orivraa-update-body"></div>',
+      '</div>',
+    ].join('');
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) closeUpdatePanel();
+    });
+    document.getElementById('orivraa-update-close').addEventListener('click', closeUpdatePanel);
+
+    renderUpdatePanelContent(document.getElementById('orivraa-update-body'));
+    refreshUpdateStatus().then(function() {
+      var body = document.getElementById('orivraa-update-body');
+      if (body) renderUpdatePanelContent(body);
+    });
+
+    if (!prefillInfo && !updateState.checking) {
+      checkForUpdates(false);
+    }
+  }
+
+  function checkForUpdates(openPanel) {
+    if (openPanel && !updateState.panelOpen) openUpdatePanel();
+    updateState.checking = true;
+
+    var body = document.getElementById('orivraa-update-body');
+    if (body) renderUpdatePanelContent(body);
+
+    return TAURI.invoke('check_for_updates').then(function(result) {
+      updateState.checking = false;
+      if (result) {
+        updateState.availableInfo = JSON.parse(result);
+        showUpdateBadge(updateState.availableInfo);
+      } else {
+        updateState.availableInfo = null;
+        hideUpdateBadge();
+        if (!openPanel) showToast('You\'re on the latest version');
+      }
+      var panelBody = document.getElementById('orivraa-update-body');
+      if (panelBody) renderUpdatePanelContent(panelBody);
+    }).catch(function(err) {
+      updateState.checking = false;
+      console.warn('[Orivraa Desktop] Update check failed:', err);
+      showToast('Could not check for updates');
+      var panelBody = document.getElementById('orivraa-update-body');
+      if (panelBody) renderUpdatePanelContent(panelBody);
+    });
+  }
+
+  function downloadUpdate() {
+    updateState.downloading = true;
+    updateState.progressPercent = 0;
+    var body = document.getElementById('orivraa-update-body');
+    if (body) renderUpdatePanelContent(body);
+
+    return TAURI.invoke('download_update').then(function(version) {
+      updateState.downloading = false;
+      updateState.downloadReady = true;
+      updateState.pendingVersion = version;
+      updateState.progressPercent = 100;
+      hideUpdateBadge();
+      var panelBody = document.getElementById('orivraa-update-body');
+      if (panelBody) renderUpdatePanelContent(panelBody);
+      showToast('Update downloaded — ready to install');
+    }).catch(function(err) {
+      updateState.downloading = false;
+      showToast('Download failed: ' + err);
+      var panelBody = document.getElementById('orivraa-update-body');
+      if (panelBody) renderUpdatePanelContent(panelBody);
+    });
+  }
+
+  function installPendingUpdate() {
+    return TAURI.invoke('install_pending_update').catch(function(err) {
+      return TAURI.invoke('install_update').catch(function(err2) {
+        showToast('Install failed: ' + (err2 || err));
+      });
+    });
+  }
+
+  function handleUpdateProgress(data) {
+    if (!data) return;
+
+    if (data.status === 'downloading') {
+      updateState.downloading = true;
+      updateState.progressPercent = data.percent || 0;
+      if (!updateState.panelOpen && (data.percent || 0) < 5) {
+        showToast('Downloading update v' + (data.version || '') + '...');
+      }
+    } else if (data.status === 'ready') {
+      updateState.downloading = false;
+      updateState.downloadReady = true;
+      updateState.pendingVersion = data.version;
+      updateState.progressPercent = 100;
+      hideUpdateBadge();
+    } else if (data.status === 'installing' || data.status === 'installed') {
+      updateState.downloading = false;
+      updateState.progressPercent = 100;
+    }
+
+    var body = document.getElementById('orivraa-update-body');
+    if (body) renderUpdatePanelContent(body);
+  }
+
   if (TAURI && TAURI.event && TAURI.event.listen) {
     TAURI.event.listen('orivraa-update-available', function(event) {
-      console.log('[Orivraa Desktop] Update available event:', event.payload);
       var info = event.payload;
       if (info && info.version) {
-        showUpdateBanner(info);
+        updateState.availableInfo = info;
+        showUpdateBadge(info);
       }
     });
 
     TAURI.event.listen('orivraa-update-progress', function(event) {
-      var data = event.payload;
-      if (!data) return;
+      handleUpdateProgress(event.payload);
+    });
 
-      if (data.status === 'downloading' && data.percent === 0) {
-        showUpdateProgress(data);
-      } else if (data.status === 'downloading') {
-        updateProgress(data.percent || 0, data.downloaded || 0, data.total || 0);
-      } else if (data.status === 'installed') {
-        showUpdateComplete(data.version);
+    TAURI.event.listen('orivraa-menu-action', function(event) {
+      var action = event.payload;
+      if (action === 'open-update-panel') openUpdatePanel();
+      else if (action === 'download-update') {
+        openUpdatePanel();
+        downloadUpdate();
+      } else if (action === 'install-update') {
+        openUpdatePanel();
+        installPendingUpdate();
+      } else if (action === 'reload') window.location.reload();
+      else if (action === 'toggle-fullscreen') {
+        TAURI.invoke('plugin:window|is_fullscreen').then(function(isFs) {
+          TAURI.invoke('plugin:window|set_fullscreen', { value: !isFs });
+        }).catch(function() {});
       }
     });
   }
+
+  refreshUpdateStatus();
+  TAURI.invoke('get_app_version').then(function(version) {
+    if (version) updateState.currentVersion = version;
+  }).catch(function() {});
+
+  setTimeout(function() {
+    checkForUpdates(false).then(function() {
+      if (updateState.availableInfo) showUpdateBadge(updateState.availableInfo);
+    });
+  }, 12000);
 
   function showToast(message) {
     var toast = document.createElement('div');
@@ -554,22 +755,6 @@
       setTimeout(function() { toast.remove(); }, 300);
     }, 3000);
   }
-
-  // Check for updates on startup (with delay)
-  // Note: The Rust side also checks on startup and emits an event.
-  // This JS check is a fallback in case the Rust check fails or the
-  // event listener isn't ready yet.
-  setTimeout(function() {
-    TAURI.invoke('check_for_updates').then(function(result) {
-      if (result) {
-        var info = JSON.parse(result);
-        // Only show if the event-based banner isn't already showing
-        if (!document.getElementById('orivraa-update-banner') && !document.getElementById('orivraa-update-icon')) {
-          showUpdateBanner(info);
-        }
-      }
-    }).catch(function() {});
-  }, 12000); // 12s after page load (after Rust startup check at 5s)
 
   // ─── 8. APP VERSION ───────────────────────────────────
   // Store version for use in crash reports / UI, but do NOT modify
