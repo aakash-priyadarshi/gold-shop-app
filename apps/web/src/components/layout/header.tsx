@@ -354,7 +354,7 @@ export function Header() {
       href: "/support",
       icon: ChatBubbleLeftRightIcon,
     },
-    { name: "About", href: "/about", icon: InformationCircleIcon },
+    { name: "Download", href: "/download", icon: ComputerDesktopIcon },
   ];
 
   // "For Sellers" dropdown items
@@ -402,12 +402,6 @@ export function Header() {
       icon: ChatBubbleLeftRightIcon,
       desc: "Get onboarding, billing, and product help",
     },
-    {
-      name: "Download App",
-      href: "/download",
-      icon: ComputerDesktopIcon,
-      desc: "Desktop & mobile apps for sellers",
-    },
   ];
 
   // More menu items
@@ -429,6 +423,12 @@ export function Header() {
       href: "/tutorial",
       icon: BookOpenIcon,
       desc: "See the full product walkthrough",
+    },
+    {
+      name: "About",
+      href: "/about",
+      icon: InformationCircleIcon,
+      desc: "Learn about Orivraa's mission and team",
     },
   ];
 
