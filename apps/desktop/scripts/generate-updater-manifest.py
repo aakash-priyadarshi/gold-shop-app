@@ -16,58 +16,58 @@ from pathlib import Path
 
 
 def find_bundle_dirs(repo_root: Path, platform: str) -> list[Path]:
+    # Prefer src-tauri targets — tauri-action writes signed artifacts there.
+    # Workspace-level apps/desktop/target may contain stale unsigned copies.
     if platform == "windows":
         rel_paths = [
-            "apps/desktop/target/release/bundle",
             "apps/desktop/src-tauri/target/release/bundle",
+            "apps/desktop/target/release/bundle",
         ]
     else:
         rel_paths = [
-            "apps/desktop/target/universal-apple-darwin/release/bundle",
             "apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle",
-            "apps/desktop/target/release/bundle",
+            "apps/desktop/target/universal-apple-darwin/release/bundle",
             "apps/desktop/src-tauri/target/release/bundle",
+            "apps/desktop/target/release/bundle",
         ]
 
     return [repo_root / rel for rel in rel_paths if (repo_root / rel).is_dir()]
 
 
-def pick_windows_artifact(bundle_dirs: list[Path]) -> tuple[Path, Path]:
-    for bundle_dir in bundle_dirs:
-        nsis_dir = bundle_dir / "nsis"
-        if nsis_dir.is_dir():
-            exes = sorted(nsis_dir.glob("*.exe"))
-            if exes:
-                installer = exes[0]
-                sig_path = installer.parent / f"{installer.name}.sig"
-                return installer, sig_path
+def _has_valid_signature(sig_path: Path) -> bool:
+    return sig_path.is_file() and bool(sig_path.read_text(encoding="utf-8").strip())
 
-        msi_dir = bundle_dir / "msi"
-        if msi_dir.is_dir():
-            msis = sorted(msi_dir.glob("*.msi"))
-            if msis:
-                installer = msis[0]
+
+def _pick_signed_installer(
+    bundle_dirs: list[Path],
+    subdirs: list[tuple[str, str]],
+) -> tuple[Path, Path]:
+    """Pick the first installer that has a non-empty minisign .sig alongside it."""
+    for bundle_dir in bundle_dirs:
+        for subdir_name, glob_pattern in subdirs:
+            artifact_dir = bundle_dir / subdir_name
+            if not artifact_dir.is_dir():
+                continue
+            for installer in sorted(artifact_dir.glob(glob_pattern)):
                 sig_path = installer.parent / f"{installer.name}.sig"
-                return installer, sig_path
+                if _has_valid_signature(sig_path):
+                    return installer, sig_path
 
     raise FileNotFoundError(
-        "No Windows installer found under apps/desktop/*/target/**/bundle"
+        "No signed installer found — expected installer + non-empty .sig under "
+        "apps/desktop/src-tauri/target/**/bundle"
+    )
+
+
+def pick_windows_artifact(bundle_dirs: list[Path]) -> tuple[Path, Path]:
+    return _pick_signed_installer(
+        bundle_dirs,
+        [("nsis", "*.exe"), ("msi", "*.msi")],
     )
 
 
 def pick_macos_artifact(bundle_dirs: list[Path]) -> tuple[Path, Path]:
-    for bundle_dir in bundle_dirs:
-        dmg_dir = bundle_dir / "dmg"
-        if dmg_dir.is_dir():
-            dmgs = sorted(dmg_dir.glob("*.dmg"))
-            if dmgs:
-                installer = dmgs[0]
-                sig_path = installer.parent / f"{installer.name}.sig"
-                return installer, sig_path
-
-    raise FileNotFoundError(
-        "No macOS DMG found under apps/desktop/*/target/**/bundle"
-    )
+    return _pick_signed_installer(bundle_dirs, [("dmg", "*.dmg")])
 
 
 def read_signature(sig_path: Path) -> str:

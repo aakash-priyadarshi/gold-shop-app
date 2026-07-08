@@ -290,11 +290,11 @@ jobs:
             echo "WARNING: ORIVRAA_ADMIN_TOKEN seems too short (${TOKEN_LEN} chars) — expected a JWT (~200+ chars) or gshop_ token"
           fi
 
-          # Find artifacts and their sizes (search both workspace and src-tauri targets)
+          # Prefer src-tauri bundle dir (signed artifacts from tauri-action)
           BUNDLE_DIR=""
           for candidate in \
-            "apps/desktop/target/release/bundle" \
-            "apps/desktop/src-tauri/target/release/bundle"; do
+            "apps/desktop/src-tauri/target/release/bundle" \
+            "apps/desktop/target/release/bundle"; do
             if [ -d "$candidate/nsis" ] || [ -d "$candidate/msi" ]; then
               BUNDLE_DIR="$candidate"
               break
@@ -586,8 +586,8 @@ jobs:
 
           BUNDLE_DIR=""
           for candidate in \
-            "apps/desktop/target/universal-apple-darwin/release/bundle" \
-            "apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle"; do
+            "apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle" \
+            "apps/desktop/target/universal-apple-darwin/release/bundle"; do
             if [ -d "$candidate/dmg" ]; then
               BUNDLE_DIR="$candidate"
               break
