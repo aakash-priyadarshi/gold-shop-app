@@ -475,77 +475,77 @@ function DesktopAppMockup() {
         style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => { x.set(0); y.set(0); }}
-        className="relative w-full max-w-2xl aspect-[16/10] rounded-xl border border-gray-200 dark:border-gray-700 bg-[#0b1420] shadow-2xl shadow-gold-500/10 overflow-hidden transition-all duration-300 ease-out select-none group ring-1 ring-gray-900/5 dark:ring-white/5"
+        className="relative w-full max-w-3xl aspect-[16/10] rounded-2xl border border-gray-200 dark:border-gray-700 bg-[#0b1420] shadow-2xl shadow-gold-500/10 overflow-hidden transition-all duration-300 ease-out select-none group ring-1 ring-gray-900/5 dark:ring-white/5"
       >
         {/* Shine glare */}
         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none z-20 transition-opacity duration-300 group-hover:opacity-60" />
 
         {/* Title bar */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-            <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-500/80" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+            <div className="w-3 h-3 rounded-full bg-green-500/80" />
           </div>
-          <p className="text-[9px] font-bold text-slate-100"><T>Orivraa Desktop — Main Counter</T></p>
-          <div className="w-12" />
+          <p className="text-xs font-bold text-slate-100"><T>Orivraa Desktop — Main Counter</T></p>
+          <div className="w-16" />
         </div>
 
         {/* Body — simplified: sidebar + main area */}
-        <div className="flex h-[calc(100%-2.5rem)]">
+        <div className="flex h-[calc(100%-2.75rem)]">
           {/* Sidebar */}
-          <div className="w-1/5 bg-[#070e15]/60 border-r border-white/10 p-2 flex flex-col gap-1.5">
-            <div className="flex items-center gap-1.5 p-1.5 rounded bg-gold-500/10">
-              <div className="w-5 h-5 rounded bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center shrink-0">
-                <BoltIcon className="w-3 h-3 text-navy-950" />
+          <div className="w-1/5 bg-[#070e15]/60 border-r border-white/10 p-2.5 flex flex-col gap-2">
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-gold-500/10">
+              <div className="w-7 h-7 rounded bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center shrink-0">
+                <BoltIcon className="w-4 h-4 text-navy-950" />
               </div>
-              <p className="text-[8px] font-bold text-slate-100 truncate"><T>POS Billing</T></p>
+              <p className="text-[11px] font-bold text-slate-100 truncate"><T>POS Billing</T></p>
             </div>
             {[
               { label: "Inventory", icon: CircleStackIcon },
               { label: "Live Rates", icon: ArrowPathIcon },
               { label: "Invoices", icon: CommandLineIcon },
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-1.5 p-1.5 rounded text-slate-400 hover:bg-white/5 transition-colors">
-                <item.icon className="w-3 h-3 shrink-0" />
-                <p className="text-[8px] font-semibold truncate"><T>{item.label}</T></p>
+              <div key={i} className="flex items-center gap-2 p-2 rounded-lg text-slate-400 hover:bg-white/5 transition-colors">
+                <item.icon className="w-4 h-4 shrink-0" />
+                <p className="text-[11px] font-semibold truncate"><T>{item.label}</T></p>
               </div>
             ))}
           </div>
 
           {/* Main area */}
-          <div className="flex-1 p-3 flex flex-col gap-2.5">
+          <div className="flex-1 p-4 flex flex-col gap-3">
             {/* Rate cards */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="p-2 rounded-lg bg-[#070e15]/70 border border-white/10">
-                <p className="text-[7px] text-slate-400 uppercase font-semibold"><T>Gold 24K Rate</T></p>
-                <p className="text-sm font-bold text-gold-400 font-mono">₹7,852/g</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-[#070e15]/70 border border-white/10">
+                <p className="text-[10px] text-slate-400 uppercase font-semibold"><T>Gold 24K Rate</T></p>
+                <p className="text-lg font-bold text-gold-400 font-mono">₹7,852/g</p>
               </div>
-              <div className="p-2 rounded-lg bg-[#070e15]/70 border border-white/10">
-                <p className="text-[7px] text-slate-400 uppercase font-semibold"><T>Weighing Scale</T></p>
-                <p className="text-sm font-bold text-slate-100 font-mono">11.6638 g</p>
+              <div className="p-3 rounded-xl bg-[#070e15]/70 border border-white/10">
+                <p className="text-[10px] text-slate-400 uppercase font-semibold"><T>Weighing Scale</T></p>
+                <p className="text-lg font-bold text-slate-100 font-mono">11.6638 g</p>
               </div>
             </div>
 
             {/* Active receipt */}
-            <div className="flex-1 bg-[#070e15]/50 rounded-lg border border-white/10 p-2.5 flex flex-col gap-1.5">
-              <div className="flex justify-between items-center pb-1 border-b border-white/10">
-                <span className="text-[9px] font-bold text-slate-200"><T>Active Receipt</T></span>
-                <span className="text-[7px] text-slate-400 font-mono">#GSHOP-9281</span>
+            <div className="flex-1 bg-[#070e15]/50 rounded-xl border border-white/10 p-3.5 flex flex-col gap-2">
+              <div className="flex justify-between items-center pb-1.5 border-b border-white/10">
+                <span className="text-xs font-bold text-slate-200"><T>Active Receipt</T></span>
+                <span className="text-[10px] text-slate-400 font-mono">#GSHOP-9281</span>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {[
                   { name: "22K Gold Bridal Chain", price: "₹181,300" },
                   { name: "18K Gold Diamond Ring", price: "₹84,500" },
                 ].map((item, i) => (
-                  <div key={i} className="flex justify-between text-[9px]">
+                  <div key={i} className="flex justify-between text-xs">
                     <span className="font-semibold text-slate-200 truncate pr-1"><T>{item.name}</T></span>
                     <span className="font-bold text-slate-100 shrink-0">{item.price}</span>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-dashed border-white/10 pt-1.5 mt-auto">
-                <div className="flex justify-between text-[9px] font-bold text-gold-400">
+              <div className="border-t border-dashed border-white/10 pt-2 mt-auto">
+                <div className="flex justify-between text-xs font-bold text-gold-400">
                   <span><T>Total</T></span>
                   <span className="font-mono">₹273,924</span>
                 </div>
@@ -554,8 +554,8 @@ function DesktopAppMockup() {
 
             {/* Action */}
             <div className="flex justify-end">
-              <div className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-gold-400 to-gold-600 text-navy-950 text-[9px] font-bold shadow-md shadow-gold-500/25 flex items-center gap-1">
-                <CheckIcon className="w-3 h-3 stroke-[3]" />
+              <div className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-gold-400 to-gold-600 text-navy-950 text-xs font-bold shadow-md shadow-gold-500/25 flex items-center gap-1.5">
+                <CheckIcon className="w-4 h-4 stroke-[3]" />
                 <T>Complete & Print</T>
               </div>
             </div>
@@ -866,10 +866,10 @@ export default function DownloadPage() {
             style={{ y: heroY, opacity: heroOpacity }}
             className="container mx-auto px-4 relative z-10"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
 
               {/* Left: headline + download cards */}
-              <div className="lg:col-span-7 flex flex-col items-center lg:items-start text-center lg:text-left">
+              <div className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left">
                 <ScrollReveal direction="scale" delay={0.05} spring once>
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold-50 text-gold-800 text-xs font-semibold mb-6 border border-gold-200/50 dark:bg-gold-950/40 dark:text-gold-300 dark:border-gold-800/40">
                     <ComputerDesktopIcon className="w-4 h-4" />
@@ -927,7 +927,7 @@ export default function DownloadPage() {
               </div>
 
               {/* Right: 3D mockup */}
-              <div className="lg:col-span-5 flex justify-center w-full">
+              <div className="lg:col-span-6 flex justify-center w-full">
                 <ScrollReveal direction="left" delay={0.3} spring once>
                   <DesktopAppMockup />
                 </ScrollReveal>
