@@ -389,17 +389,99 @@ pub async fn open_google_auth(
 
                     // ── CORS preflight (OPTIONS) ──
                     if data.starts_with(b"OPTIONS") {
-                        let response = "HTTP/1.1 204 No Content\r\n\
-                            Access-Control-Allow-Origin: https://www.orivraa.com\r\n\
-                            Access-Control-Allow-Methods: POST, OPTIONS\r\n\
+                        // Echo back the requesting origin instead of hardcoding www.orivraa.com
+                        // This supports both orivraa.com and www.orivraa.com
+                        let origin = String::from_utf8_lossy(&data)
+                            .lines()
+                            .find(|l| l.to_ascii_lowercase().starts_with("origin:"))
+                            .and_then(|l| l.split(':').nth(1))
+                            .map(|v| v.trim().to_string())
+                            .filter(|o| o.contains("orivraa.com") || o.contains("localhost"))
+                            .unwrap_or_else(|| "https://www.orivraa.com".to_string());
+
+                        let response = format!(
+                            "HTTP/1.1 204 No Content\r\n\
+                            Access-Control-Allow-Origin: {}\r\n\
+                            Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n\
                             Access-Control-Allow-Headers: Content-Type\r\n\
                             Access-Control-Allow-Private-Network: true\r\n\
                             Access-Control-Max-Age: 86400\r\n\
                             Content-Length: 0\r\n\
-                            Connection: close\r\n\r\n";
+                            Connection: close\r\n\r\n",
+                            origin
+                        );
                         let _ = stream.write_all(response.as_bytes()).await;
                         let _ = stream.shutdown().await;
                         continue;
+                    }
+
+                    // ── GET with tokens as query params (image beacon fallback) ──
+                    if data.starts_with(b"GET") {
+                        // Parse the request line: GET /auth-callback?access_token=...&refresh_token=... HTTP/1.1
+                        let request_line = String::from_utf8_lossy(&data[..data.len().min(512)])
+                            .lines().next().unwrap_or("").to_string();
+                        log::info!("Auth callback GET: {}", request_line);
+
+                        // Extract query string from the path
+                        if let Some(query_start) = request_line.find('?') {
+                            let path_and_query = &request_line[query_start + 1..];
+                            // Find end of query (space before HTTP/1.1)
+                            let query = if let Some(space) = path_and_query.find(' ') {
+                                &path_and_query[..space]
+                            } else {
+                                path_and_query
+                            };
+
+                            // Parse query params using url::form_urlencoded (already a dependency)
+                            let parsed: std::collections::HashMap<String, String> =
+                                url::form_urlencoded::parse(query.as_bytes())
+                                    .into_owned()
+                                    .collect();
+
+                            let access_token = parsed.get("access_token").cloned();
+                            let refresh_token = parsed.get("refresh_token").cloned();
+                            let user_json = parsed.get("user_json").cloned();
+
+                            if let (Some(at), Some(rt)) = (access_token, refresh_token) {
+                                let payload = AuthTokenPayload {
+                                    access_token: at,
+                                    refresh_token: rt,
+                                    user_json,
+                                };
+                                process_auth_tokens(
+                                    &serde_json::to_string(&payload).unwrap_or_default(),
+                                    &db_clone,
+                                    &receiver_clone,
+                                ).await;
+                            }
+                        }
+
+                        // Respond with a 1x1 transparent PNG (image beacon response)
+                        let png_bytes: &[u8] = &[
+                            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+                            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+                            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+                            0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
+                            0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41,
+                            0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+                            0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+                            0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
+                            0x42, 0x60, 0x82,
+                        ];
+                        let response = format!(
+                            "HTTP/1.1 200 OK\r\n\
+                            Access-Control-Allow-Origin: *\r\n\
+                            Content-Type: image/png\r\n\
+                            Content-Length: {}\r\n\
+                            Cache-Control: no-store\r\n\
+                            Connection: close\r\n\r\n",
+                            png_bytes.len()
+                        );
+                        let _ = stream.write_all(response.as_bytes()).await;
+                        let _ = stream.write_all(png_bytes).await;
+                        let _ = stream.shutdown().await;
+                        log::info!("Auth callback: GET tokens processed, server closing");
+                        break;
                     }
 
                     // ── POST with tokens ──
@@ -455,7 +537,7 @@ pub async fn open_google_auth(
 
                     // ── Unknown method — respond 405 and keep listening ──
                     let resp = "HTTP/1.1 405 Method Not Allowed\r\n\
-                        Access-Control-Allow-Origin: https://www.orivraa.com\r\n\
+                        Access-Control-Allow-Origin: *\r\n\
                         Content-Length: 0\r\n\
                         Connection: close\r\n\r\n";
                     let _ = stream.write_all(resp.as_bytes()).await;
@@ -480,7 +562,7 @@ fn success_response() -> String {
     let body = r#"<!DOCTYPE html><html><body style="background:#0f172a;color:#f3dd99;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h2>✓ Signed in successfully!</h2><p style="color:rgba(255,255,255,0.6)">You can close this tab and return to Orivraa Desktop.</p><script>setTimeout(function(){window.close()},2000)</script></div></body></html>"#;
     format!(
         "HTTP/1.1 200 OK\r\n\
-        Access-Control-Allow-Origin: https://www.orivraa.com\r\n\
+        Access-Control-Allow-Origin: *\r\n\
         Access-Control-Allow-Private-Network: true\r\n\
         Content-Type: text/html; charset=utf-8\r\n\
         Content-Length: {}\r\n\

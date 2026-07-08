@@ -117,34 +117,96 @@ function OAuthCallbackHandler() {
           // User profile fetch failed — still send tokens
         }
 
-        // Try sending tokens to the desktop app with retries
+        // Try sending tokens to the desktop app with retries.
+        // We use multiple strategies because browsers may block cross-origin
+        // requests from HTTPS pages to http://127.0.0.1 (Private Network Access).
+        //
+        // Strategy 1: fetch with mode:'no-cors' — sends the request without a
+        //   CORS preflight. The response is opaque (status 0) but the server
+        //   still receives the data. We send as text/plain (simple content type)
+        //   so no preflight is triggered.
+        // Strategy 2: Image beacon — a GET request via <img> that bypasses CORS
+        //   entirely. Tokens are sent as query params (GET).
+        // Strategy 3: fetch with CORS (legacy) — works in browsers that allow
+        //   PNA with proper headers.
+        const callbackUrl = `http://127.0.0.1:${desktopPort}/auth-callback`;
+        const tokenBody = JSON.stringify({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          user_json: userJson || null,
+        });
+
         let desktopSendSuccess = false;
-        for (let attempt = 0; attempt < 3; attempt++) {
+
+        // ── Strategy 1: no-cors fetch (most reliable) ──
+        for (let attempt = 0; attempt < 3 && !desktopSendSuccess; attempt++) {
           try {
             if (attempt > 0) {
-              // Wait before retry (500ms, 1000ms)
               await new Promise((r) => setTimeout(r, attempt * 500));
             }
-            const resp = await fetch(
-              `http://127.0.0.1:${desktopPort}/auth-callback`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  access_token: accessToken,
-                  refresh_token: refreshToken,
-                  user_json: userJson || null,
-                }),
-              },
-            );
-            if (resp.ok) {
+            const resp = await fetch(callbackUrl, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "text/plain" },
+              body: tokenBody,
+            });
+            // no-cors responses are opaque (status 0) — treat as sent
+            if (resp.ok || resp.status === 0 || resp.type === "opaque") {
               desktopSendSuccess = true;
-              break;
             }
           } catch (_) {
             console.warn(
-              `[Desktop OAuth] Attempt ${attempt + 1} failed to reach desktop app`,
+              `[Desktop OAuth] no-cors attempt ${attempt + 1} failed`,
             );
+          }
+        }
+
+        // ── Strategy 2: Image beacon fallback (GET with query params) ──
+        if (!desktopSendSuccess) {
+          try {
+            const params = new URLSearchParams({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (userJson) params.set("user_json", userJson);
+            await new Promise<void>((resolve) => {
+              const img = new Image();
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+              img.src = `${callbackUrl}?${params.toString()}`;
+              // Give the beacon 2 seconds to fire
+              setTimeout(resolve, 2000);
+            });
+            // The image beacon doesn't give us a status, but if it didn't
+            // throw, assume it was sent. The desktop app's polling will
+            // confirm receipt.
+            desktopSendSuccess = true;
+          } catch (_) {
+            console.warn("[Desktop OAuth] Image beacon fallback failed");
+          }
+        }
+
+        // ── Strategy 3: CORS fetch (legacy, works in some browsers) ──
+        if (!desktopSendSuccess) {
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              if (attempt > 0) {
+                await new Promise((r) => setTimeout(r, attempt * 500));
+              }
+              const resp = await fetch(callbackUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: tokenBody,
+              });
+              if (resp.ok) {
+                desktopSendSuccess = true;
+                break;
+              }
+            } catch (_) {
+              console.warn(
+                `[Desktop OAuth] CORS attempt ${attempt + 1} failed`,
+              );
+            }
           }
         }
 
