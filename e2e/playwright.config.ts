@@ -28,9 +28,16 @@ export default defineConfig({
   use: {
     /* Base URL for the frontend — defaults to production */
     baseURL: process.env.BASE_URL || "https://www.orivraa.com",
-    /* Cloudflare Bot Fight Mode blocks the default Playwright UA; use a
-       browser-like UA that is allowed by the WAF in CI. */
+    /* Cloudflare Bot Fight Mode blocks the default Playwright UA; use the
+       same allowed UA and headers the smoke tests use. */
     userAgent: process.env.CI ? CI_USER_AGENT : undefined,
+    extraHTTPHeaders: process.env.CI
+      ? {
+          "User-Agent": CI_USER_AGENT,
+          Accept: "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+        }
+      : undefined,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
