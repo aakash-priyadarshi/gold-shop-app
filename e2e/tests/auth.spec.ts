@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Authentication", () => {
-  const loginUrl = "/login";
+  const loginUrl = "/auth/login";
 
   test("should show the login form", async ({ page }) => {
     await page.goto(loginUrl);

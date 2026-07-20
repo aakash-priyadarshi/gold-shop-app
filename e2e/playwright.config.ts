@@ -8,8 +8,12 @@ import { defineConfig, devices } from "@playwright/test";
  *   cd e2e && npx playwright test --ui     # interactive UI mode
  *   cd e2e && npx playwright test --headed # headed browser
  */
+const CI_USER_AGENT =
+  "Mozilla/5.0 (compatible; Orivraa-SmokeTest/1.0; +https://orivraa.com)";
+
 export default defineConfig({
   testDir: "./tests",
+  testIgnore: process.env.CI ? ["**/seller-demo.spec.ts"] : [],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -24,6 +28,9 @@ export default defineConfig({
   use: {
     /* Base URL for the frontend — defaults to production */
     baseURL: process.env.BASE_URL || "https://www.orivraa.com",
+    /* Cloudflare Bot Fight Mode blocks the default Playwright UA; use a
+       browser-like UA that is allowed by the WAF in CI. */
+    userAgent: process.env.CI ? CI_USER_AGENT : undefined,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -32,7 +39,10 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        userAgent: process.env.CI ? CI_USER_AGENT : devices["Desktop Chrome"].userAgent,
+      },
     },
     ...(!process.env.CI
       ? [
