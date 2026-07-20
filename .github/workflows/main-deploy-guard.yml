@@ -152,7 +152,7 @@ jobs:
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Health check attempt $i of $MAX_RETRIES..."
             
-            HEALTH_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.API_URL }}/health" || echo "000")
+            HEALTH_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.API_URL }}/api/health" || echo "000")
             
             if [[ "$HEALTH_RESPONSE" == "200" ]]; then
               echo "::notice::✅ Health check passed!"
@@ -190,7 +190,7 @@ jobs:
           RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.ADMIN_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            "${{ env.API_URL }}/market-rates/refresh" \
+            "${{ env.API_URL }}/api/market-rates/refresh" \
             -d '{"region": "NP", "currency": "NPR"}')
 
           echo "Cache refresh response: $RESPONSE"
@@ -235,10 +235,10 @@ jobs:
           echo "Testing critical endpoints..."
 
           # Health endpoint
-          curl -f "${{ env.API_URL }}/health" || echo "Health endpoint not available"
+          curl -f "${{ env.API_URL }}/api/health" || echo "Health endpoint not available"
 
           # Market rates endpoint (public)
-          RATES=$(curl -s "${{ env.API_URL }}/market-rates?region=NP&currency=NPR")
+          RATES=$(curl -s "${{ env.API_URL }}/api/market-rates?region=NP&currency=NPR")
           echo "Market rates response: $RATES"
 
           if [[ "$RATES" == *"gold24k"* ]]; then
@@ -248,7 +248,7 @@ jobs:
           fi
 
           # Auth endpoint (should return 401 without token)
-          AUTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.API_URL }}/auth/profile")
+          AUTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.API_URL }}/api/auth/profile")
           if [[ "$AUTH_CHECK" == "401" ]]; then
             echo "::notice::✅ Auth protection working"
           else
