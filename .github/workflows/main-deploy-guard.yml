@@ -56,6 +56,9 @@ jobs:
 
       - name: Validate Prisma Schema
         working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DATABASE_URL }}
         run: npx prisma validate
 
       - name: Build API (verify it compiles)
@@ -110,6 +113,7 @@ jobs:
         run: npx prisma migrate deploy
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DATABASE_URL }}
 
       - name: Migration Success Notification
         if: success()

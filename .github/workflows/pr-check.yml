@@ -249,6 +249,9 @@ jobs:
 
       - name: Validate Prisma Schema
         working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DATABASE_URL }}
         run: npx prisma validate
 
       - name: Check Prisma Format
