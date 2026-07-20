@@ -1442,7 +1442,7 @@ function KarigarSupplyChainContent() {
                   </Label>
                   <Input
                     type="tel"
-                    placeholder="+91 98765 43210"
+                    placeholder="+91 62039 65557"
                     value={karigarForm.phone}
                     onChange={(e) => setKarigarForm((p) => ({ ...p, phone: e.target.value }))}
                     className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
@@ -1569,7 +1569,7 @@ function KarigarSupplyChainContent() {
                   </Label>
                   <Input
                     type="tel"
-                    placeholder="+91 98765 43210"
+                    placeholder="+91 62039 65557"
                     value={editKarigarForm.phone || ""}
                     onChange={(e) => setEditKarigarForm((p) => (p ? { ...p, phone: e.target.value } : p))}
                     className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"

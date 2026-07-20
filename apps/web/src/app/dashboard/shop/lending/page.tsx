@@ -753,7 +753,7 @@ function GirviLendingContent() {
                 <div className="space-y-1">
                   <Label className="text-gray-700 dark:text-gray-300"><T>Phone Number</T></Label>
                   <Input
-                    placeholder="e.g. +91 98765 01234"
+                    placeholder="e.g. +91 62039 65557"
                     value={newLoan.customerPhone}
                     onChange={(e) => setNewLoan(p => ({ ...p, customerPhone: e.target.value }))}
                     className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"

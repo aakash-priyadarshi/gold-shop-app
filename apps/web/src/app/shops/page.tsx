@@ -39,7 +39,7 @@ import {
 import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface Shop {
   id: string;
@@ -123,11 +123,7 @@ export default function ShopsPage() {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    loadShops();
-  }, []);
-
-  const loadShops = async () => {
+  const loadShops = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get("/shops/public");
@@ -139,58 +135,20 @@ export default function ShopsPage() {
       setShops(shopsArr.filter((s: Shop) => s.isVerified));
     } catch (error) {
       console.error("Failed to load shops:", error);
-      // Set demo data for now
-      setShops([
-        {
-          id: "1",
-          shopName: "Kathmandu Gold House",
-          description: "Premium gold and silver jewelry for over 25 years",
-          country: "NP",
-          state: "Bagmati",
-          city: "Kathmandu",
-          address: "New Road, Kathmandu",
-          isVerified: true,
-          contactPhone: "+977-1-4123456",
-          supportedMaterials: ["GOLD_24K", "GOLD_22K", "SILVER"],
-          supportedJewelleryTypes: ["RING", "NECKLACE", "EARRINGS", "BRACELET"],
-          averageRating: 4.8,
-          totalRatings: 156,
-        },
-        {
-          id: "2",
-          shopName: "Mumbai Jewelers",
-          description: "Traditional and contemporary designs",
-          country: "IN",
-          state: "Maharashtra",
-          city: "Mumbai",
-          address: "Zaveri Bazaar, Mumbai",
-          isVerified: true,
-          contactPhone: "+91-22-12345678",
-          supportedMaterials: ["GOLD_22K", "GOLD_18K", "PLATINUM"],
-          supportedJewelleryTypes: ["RING", "NECKLACE", "BANGLES"],
-          averageRating: 4.5,
-          totalRatings: 89,
-        },
-        {
-          id: "3",
-          shopName: "Pokhara Gems",
-          description: "Specializing in custom designs and gemstones",
-          country: "NP",
-          state: "Gandaki",
-          city: "Pokhara",
-          address: "Lakeside, Pokhara",
-          isVerified: true,
-          contactPhone: "+977-61-123456",
-          supportedMaterials: ["GOLD_22K", "SILVER"],
-          supportedJewelleryTypes: ["RING", "PENDANT", "EARRINGS"],
-          averageRating: 4.6,
-          totalRatings: 42,
-        },
-      ]);
+      toast({
+        variant: "destructive",
+        title: t("Error"),
+        description: t("Unable to load sellers right now. Please try again later."),
+      });
+      setShops([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    loadShops();
+  }, [loadShops]);
 
   const handleMessageShop = async (shopId: string) => {
     if (!isAuthenticated) {

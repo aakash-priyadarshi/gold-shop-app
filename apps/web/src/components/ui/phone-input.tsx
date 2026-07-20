@@ -213,7 +213,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
       value = "",
       onChange,
       onBlur,
-      placeholder = "+977 9812345678",
+      placeholder = "+91 62039 65557",
       disabled = false,
       error = false,
       className,

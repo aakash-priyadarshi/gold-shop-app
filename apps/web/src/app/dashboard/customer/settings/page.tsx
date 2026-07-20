@@ -206,13 +206,7 @@ export default function CustomerSettingsPage() {
     confirmPassword: "",
   });
 
-  useEffect(() => {
-    if (user) {
-      loadProfile();
-    }
-  }, [user]);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get("/users/me");
@@ -241,7 +235,13 @@ export default function CustomerSettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentCurrency, currentCountry]);
+
+  useEffect(() => {
+    if (user) {
+      loadProfile();
+    }
+  }, [user, loadProfile]);
 
   const saveProfile = async () => {
     setIsSaving(true);
@@ -544,7 +544,7 @@ export default function CustomerSettingsPage() {
                         setProfile({ ...profile, phone: value });
                         checkPhoneAvailability(value);
                       }}
-                      placeholder="+977 9812345678"
+                      placeholder="+91 62039 65557"
                       error={phoneCheckState.exists === true}
                     />
                     {/* Real-time phone check indicator */}

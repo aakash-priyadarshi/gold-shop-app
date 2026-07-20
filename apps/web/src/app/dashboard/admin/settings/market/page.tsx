@@ -537,7 +537,7 @@ export default function AdminMarketSettingsPage() {
                     onChange={(e) =>
                       setEditForm({ ...editForm, contactPhone: e.target.value })
                     }
-                    placeholder="+977 9800000000"
+                    placeholder="+91 62039 65557"
                   />
 
                   <Label className="flex items-center gap-2">

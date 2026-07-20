@@ -3,6 +3,7 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
+import { BRAND } from "@/config/brand";
 import { contactApi } from "@/lib/api";
 import { requestSupportChat } from "@/store/help-ui";
 import {
@@ -71,11 +72,11 @@ export default function ContactPage() {
       } else {
         setError(
           res.data?.message ||
-            "Failed to send. Please email us at sales@orivraa.com",
+            `Failed to send. Please email us at ${BRAND.supportEmail}`,
         );
       }
     } catch {
-      setError("Something went wrong. Please email sales@orivraa.com");
+      setError(`Something went wrong. Please email ${BRAND.supportEmail}`);
     } finally {
       setSending(false);
     }
@@ -119,10 +120,10 @@ export default function ContactPage() {
                   Email
                 </p>
                 <a
-                  href="mailto:sales@orivraa.com"
+                  href={`mailto:${BRAND.supportEmail}`}
                   className="text-sm text-amber-600 dark:text-amber-400 hover:underline"
                 >
-                  sales@orivraa.com
+                  {BRAND.supportEmail}
                 </a>
               </div>
             </div>
@@ -236,7 +237,7 @@ export default function ContactPage() {
                           setForm({ ...form, phone: e.target.value })
                         }
                         className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none transition-all"
-                        placeholder="+91 98765 43210"
+                        placeholder={BRAND.contact.phone}
                       />
                     </div>
                     <div>
@@ -359,7 +360,7 @@ export default function ContactPage() {
                   </T>
                 </p>
                 <a
-                  href="mailto:sales@orivraa.com?subject=Enterprise%20Inquiry"
+                  href={`mailto:${BRAND.supportEmail}?subject=Enterprise%20Inquiry`}
                   className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-600 dark:text-amber-400 hover:underline"
                 >
                   <T>Email Enterprise Sales</T>
@@ -375,10 +376,10 @@ export default function ContactPage() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   <T>Reach us directly at</T>{" "}
                   <a
-                    href="mailto:sales@orivraa.com"
+                    href={`mailto:${BRAND.supportEmail}`}
                     className="text-amber-600 dark:text-amber-400 font-semibold hover:underline"
                   >
-                    sales@orivraa.com
+                    {BRAND.supportEmail}
                   </a>
                 </p>
               </div>

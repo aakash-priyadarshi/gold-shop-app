@@ -265,7 +265,7 @@ function RegisterForm() {
       title: t("Verification failed"),
       description: t("Please try again or refresh the page."),
     });
-  }, [toast]);
+  }, [toast, t]);
   const handleTurnstileExpire = useCallback(() => {
     setTurnstileToken("");
     setTurnstileError(true);
@@ -879,7 +879,7 @@ function RegisterForm() {
                   <div className="relative">
                     <PhoneInput
                       id="customer-phone"
-                      placeholder="+977 9812345678"
+                      placeholder="+91 62039 65557"
                       value={customerForm.watch("phone") || ""}
                       onChange={(value: string) => {
                         customerForm.setValue("phone", value);
@@ -1219,7 +1219,7 @@ function RegisterForm() {
                       <div className="relative">
                         <PhoneInput
                           id="shop-phone"
-                          placeholder="+977 9812345678"
+                          placeholder="+91 62039 65557"
                           value={shopkeeperForm.watch("phone") || ""}
                           onChange={(value: string) => {
                             shopkeeperForm.setValue("phone", value);

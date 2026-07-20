@@ -338,6 +338,83 @@ Both endpoints return the same `latest.json` produced by the `publish-updater-ma
 - `apps/desktop/scripts/publish-release.ps1` — publish existing artifacts to API
 - These are for local dev only; CI is the source of truth for production releases
 
+## Microsoft Store MSIX Build
+
+Microsoft Store submission uses **Microsoft WinApp CLI** (`winapp pack`) — the same flow as ViharaOS. This is **not** Tauri's built-in MSIX bundle target and **not** the offline NSIS installer used for direct downloads.
+
+### Flow
+
+1. **Build Tauri release binary** — `npx tauri build --no-bundle` (produces `gold-shop-desktop.exe`, ~tens of MB)
+2. **Stage for packaging** — copy exe as `Orivraa.exe` + `Package.appxmanifest` + Store tile assets into `apps/desktop/msix/dist/`
+3. **Generate dev certificate** — `winapp cert generate --manifest Package.appxmanifest` (publisher must match Partner Center)
+4. **Pack MSIX** — `winapp pack .\dist --cert .\devcert.pfx`
+5. **Upload to Partner Center** — Microsoft Store signs production packages; dev cert is for local testing only
+
+### Repo files
+
+| Path                                        | Purpose                                                                                             |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `apps/desktop/scripts/pack-msix.ps1`        | Local pack script (Tauri build → stage → `winapp pack`)                                             |
+| `apps/desktop/msix/Package.appxmanifest`    | Store identity (`OrivraaLTD.Orivraa`, publisher CN from Partner Center)                             |
+| `.github/workflows/desktop-store-build.yml` | CI workflow — runs `pack-msix.ps1`, uploads MSIX as workflow artifact only (no GitHub Release / R2) |
+| `apps/desktop/store-build-output/`          | Local output folder (gitignored)                                                                    |
+
+### Local pack
+
+```powershell
+cd apps/desktop
+.\scripts\pack-msix.ps1 -Version 0.2.5
+# Or skip rebuild if binary already exists:
+.\scripts\pack-msix.ps1 -Version 0.2.5 -SkipBuild
+```
+
+### CI (artifact only)
+
+Trigger **Desktop Store Build** via GitHub Actions → workflow_dispatch. Download the `.msix` from workflow Artifacts (90-day retention). Does not publish to R2, GitHub Releases, or the API.
+
+### Microsoft Learn documentation (WinApp CLI)
+
+Official guides for `winapp pack` and Tauri MSIX packaging:
+
+| Topic                                      | URL                                                                                      |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| WinApp CLI overview                        | https://learn.microsoft.com/en-us/windows/apps/dev-tools/winapp-cli/                     |
+| CLI reference (`pack`, `cert`, `manifest`) | https://learn.microsoft.com/en-us/windows/apps/dev-tools/winapp-cli/usage                |
+| **Using winapp CLI with Tauri**            | https://learn.microsoft.com/en-us/windows/apps/dev-tools/winapp-cli/guides/tauri         |
+| Packaging an EXE/CLI as MSIX               | https://learn.microsoft.com/en-us/windows/apps/dev-tools/winapp-cli/guides/packaging-cli |
+| Framework guides index                     | https://learn.microsoft.com/en-us/windows/apps/dev-tools/winapp-cli/guides/              |
+| GitHub Actions setup action                | https://github.com/microsoft/setup-WinAppCli                                             |
+
+Install: `winget install Microsoft.winappcli`
+
+### Microsoft Learn MCP (`microsoft-docs`)
+
+Use the **Microsoft Learn MCP Server** for live WinApp CLI, MSIX, Partner Center, and Store documentation — same server used when building ViharaOS MSIX.
+
+| Field       | Value                                                                           |
+| ----------- | ------------------------------------------------------------------------------- |
+| Server name | `microsoft-docs` (or `microsoft-learn`)                                         |
+| Endpoint    | `https://learn.microsoft.com/api/mcp`                                           |
+| Auth        | None required (public streamable HTTP endpoint)                                 |
+| Tools       | `microsoft_docs_search`, `microsoft_docs_fetch`, `microsoft_code_sample_search` |
+
+**Cursor / VS Code workspace config** (`.vscode/mcp.json`):
+
+```json
+{
+  "servers": {
+    "microsoft-learn": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    }
+  }
+}
+```
+
+**Agent usage:** Prefer `microsoft_docs_search` for WinApp CLI / MSIX / Store questions, `microsoft_docs_fetch` for full article content, and `microsoft_code_sample_search` for official `winapp pack` examples. Developer reference: https://learn.microsoft.com/en-us/training/support/mcp-developer-reference
+
+**Important:** Do not use Tauri `bundle.targets = ["msix"]` for Store builds — use `winapp pack` on the release exe instead. The NSIS offline installer (`desktop-build.yml`) and MSIX Store package serve different distribution channels.
+
 ## Key Conventions
 
 1. **Always run typecheck** after changes: `npx tsc --noEmit` in both `apps/web` and `apps/api`
@@ -368,3 +445,15 @@ Both Railway and Vercel MCP servers have **permanent authentication** configured
 
 If either MCP stops working, check the config file first. Do NOT delete OAuth session
 files or change the auth method without explicit user instruction.
+
+### Microsoft Learn MCP (`microsoft-docs`)
+
+Remote HTTP MCP server for official Microsoft documentation. No authentication required.
+
+- **Endpoint:** `https://learn.microsoft.com/api/mcp`
+- **Tools:** `microsoft_docs_search`, `microsoft_docs_fetch`, `microsoft_code_sample_search`
+- **Use for:** WinApp CLI (`winapp pack`), MSIX packaging, Microsoft Store, Partner Center, Entra ID, Azure, .NET
+- **Workspace config:** `.vscode/mcp.json` (also works in Cursor)
+- **Developer reference:** https://learn.microsoft.com/en-us/training/support/mcp-developer-reference
+
+When working on desktop Store MSIX builds, search Microsoft Learn via this MCP before guessing `winapp` flags or manifest fields. See **Microsoft Store MSIX Build** section above for doc links.

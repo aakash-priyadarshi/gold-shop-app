@@ -379,10 +379,10 @@ export default function PartnerPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href={`mailto:${BRAND.salesEmail}`}
+                href={`mailto:${BRAND.supportEmail}`}
                 className="inline-flex items-center gap-2 px-8 py-3 text-white rounded-full font-semibold border border-gray-600 hover:border-amber-500 transition-colors"
               >
-                <T>Contact Sales</T>
+                <T>Contact Support</T>
               </Link>
             </div>
           </div>

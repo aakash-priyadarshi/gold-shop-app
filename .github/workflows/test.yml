@@ -64,6 +64,7 @@ jobs:
             node_modules
             apps/*/node_modules
             packages/*/node_modules
+            e2e/node_modules
           key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
   # ══════════════════════════════════════════════════════════
@@ -92,6 +93,7 @@ jobs:
             node_modules
             apps/*/node_modules
             packages/*/node_modules
+            e2e/node_modules
           key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Verify production API is reachable
@@ -146,6 +148,7 @@ jobs:
             node_modules
             apps/*/node_modules
             packages/*/node_modules
+            e2e/node_modules
           key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
@@ -153,7 +156,6 @@ jobs:
 
       - name: Run Playwright tests against production
         run: pnpm e2e -- --project=chromium
-        continue-on-error: true
         env:
           BASE_URL: "https://www.orivraa.com"
           API_BASE_URL: "https://api.orivraa.com/api"

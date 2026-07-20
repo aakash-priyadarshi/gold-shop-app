@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
+import { BRAND } from "@/config/brand";
 import {
     COMING_SOON_PLATFORMS,
     LIVE_PLATFORMS,
@@ -706,10 +707,10 @@ export default function AboutPage() {
                     <T>Email Us</T>
                   </h3>
                   <a
-                    href="mailto:support@orivraa.com"
+                    href={`mailto:${BRAND.supportEmail}`}
                     className="text-amber-600 hover:underline"
                   >
-                    support@orivraa.com
+                    {BRAND.supportEmail}
                   </a>
                 </CardContent>
               </Card>
@@ -719,10 +720,10 @@ export default function AboutPage() {
                     <T>For Sellers</T>
                   </h3>
                   <a
-                    href="mailto:sellers@orivraa.com"
+                    href={`mailto:${BRAND.supportEmail}`}
                     className="text-amber-600 hover:underline"
                   >
-                    sellers@orivraa.com
+                    {BRAND.supportEmail}
                   </a>
                 </CardContent>
               </Card>

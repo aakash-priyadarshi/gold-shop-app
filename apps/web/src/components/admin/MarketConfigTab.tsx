@@ -324,7 +324,7 @@ export function MarketConfigTab() {
                           contactPhone: e.target.value,
                         })
                       }
-                      placeholder="+977 1-1234567"
+                      placeholder="+91 62039 65557"
                     />
                   </div>
                   <div className="col-span-2 space-y-2">
@@ -351,7 +351,7 @@ export function MarketConfigTab() {
                           contactWhatsapp: e.target.value,
                         })
                       }
-                      placeholder="+977 9800000000"
+                      placeholder="+91 62039 65557"
                     />
                   </div>
                   <div className="space-y-2">

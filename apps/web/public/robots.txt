@@ -16,6 +16,13 @@ Disallow: /notifications
 Disallow: /admin/
 Disallow: /m/
 Disallow: /rfq/
+# Phase 1: customer/buyer marketplace flow is disabled. Keep these
+# buyer-facing routes out of the index until customer flow is enabled.
+Disallow: /shop
+Disallow: /shops
+Disallow: /designs
+
+Host: https://www.orivraa.com
 
 # NOTE: Do NOT disallow /_next/ — Googlebot needs /_next/static/
 # to render JavaScript and see page content for proper indexing.

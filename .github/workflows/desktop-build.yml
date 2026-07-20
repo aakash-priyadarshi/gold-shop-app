@@ -197,6 +197,13 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
 
+      - name: Sign Windows updater artifact
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: python apps/desktop/scripts/sign-updater-artifacts.py --platform windows
+
       - name: Clean old installers from R2 latest/
         shell: bash
         run: |
@@ -232,9 +239,12 @@ jobs:
               artifacts = json.loads(raw)
           if not artifacts:
               print('No artifact paths returned, searching manually...')
-              # Fallback: search for built artifacts
               base = 'apps/desktop/src-tauri/target/release/bundle'
-              for pattern in [f'{base}/nsis/*.exe', f'{base}/msi/*.msi']:
+              for pattern in [
+                  f'{base}/nsis/*.exe',
+                  f'{base}/msi/*.msi',
+                  f'{base}/nsis/*.exe.sig',
+              ]:
                   artifacts.extend(glob.glob(pattern))
           for a in artifacts:
               if not os.path.exists(a):
@@ -490,6 +500,13 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           args: --target universal-apple-darwin
+
+      - name: Sign macOS updater artifact
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: python3 apps/desktop/scripts/sign-updater-artifacts.py --platform macos
 
       - name: Clean old macOS installers from R2 latest/
         shell: bash

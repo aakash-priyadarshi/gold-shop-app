@@ -4,9 +4,11 @@ import {
     SUPPORTED_ABOUT_LANGS,
     type AboutContentLanguage,
 } from "@/data/about-i18n";
+import { BRAND } from "@/config/brand";
+import { SITE_URL } from "@/config/site";
 import { Metadata } from "next";
 
-const BASE_URL = "https://www.orivraa.com";
+const BASE_URL = SITE_URL;
 
 const SOCIAL_PROFILES = [
   "https://twitter.com/orivraa",
@@ -74,7 +76,7 @@ function generateJsonLd(lang: AboutContentLanguage) {
       },
       contactPoint: {
         "@type": "ContactPoint",
-        email: "support@orivraa.com",
+        email: BRAND.contact.supportEmail,
         contactType: "customer service",
         availableLanguage: [
           "English",

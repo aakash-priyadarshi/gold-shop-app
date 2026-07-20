@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/config/brand";
+import { SITE_URL } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Contact Orivraa | Sales & Support for Jewellery Shop Software",
+  title: "Contact Orivraa | Support for Jewellery Shop Software",
   description:
-    "Get in touch with the Orivraa team for sales, demos and support. Email sales@orivraa.com or support@orivraa.com, or call +91 62039 65557. We help jewellery shops across India, Nepal, UAE, UK and US go digital with billing, POS, inventory and live gold rates.",
+    "Get in touch with the Orivraa team for sales, demos and support. Email support@orivraa.com or call +91 62039 65557. We help jewellery shops across India, Nepal, UAE, UK and US go digital with billing, POS, inventory and live gold rates.",
   keywords: [
     "contact Orivraa",
     "Orivraa support",
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Contact Orivraa — Jewellery Shop Software Sales & Support",
     description: `Talk to the ${BRAND.name} team about demos, pricing and support for jewellery billing, POS and inventory software.`,
-    url: "https://www.orivraa.com/contact",
+    url: `${SITE_URL}/contact`,
     type: "website",
   },
   twitter: {

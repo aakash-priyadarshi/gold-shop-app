@@ -1,11 +1,14 @@
 # ═══════════════════════════════════════════════════════════
-# Orivraa Desktop — Microsoft Store submission build (no publish)
+# Orivraa Desktop — Microsoft Store MSIX build (no publish)
 #
-# Builds Windows NSIS + MSI with offline WebView2 for Partner Center.
+# Same flow as ViharaOS: Tauri release exe + Microsoft WinApp CLI pack.
 # Does NOT upload to GitHub Releases, R2, or the API.
-# Installers are available only as workflow artifacts (90-day retention).
+# MSIX is available only as a workflow artifact (90-day retention).
 #
-# Partner Center: register as "EXE or MSI app", silent install /S for NSIS.
+# Microsoft Learn:
+#   https://learn.microsoft.com/en-us/windows/apps/dev-tools/winapp-cli/guides/tauri
+#   https://learn.microsoft.com/en-us/windows/apps/dev-tools/winapp-cli/usage#pack
+#   MCP: https://learn.microsoft.com/api/mcp
 # ═══════════════════════════════════════════════════════════
 
 name: Desktop Store Build
@@ -14,13 +17,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "App version label for artifact name (e.g. 0.2.5)"
+        description: "App version (e.g. 0.2.5 → MSIX 0.2.5.0)"
         required: false
         default: "0.2.5"
 
 jobs:
-  build-windows-store:
-    name: 🪟 Microsoft Store Windows Build
+  build-windows-msix:
+    name: 🪟 Microsoft Store MSIX Build
     runs-on: windows-latest
     permissions:
       contents: read
@@ -50,6 +53,9 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
+      - name: Setup WinApp CLI
+        uses: microsoft/setup-WinAppCli@v0.1
+
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
@@ -64,54 +70,28 @@ jobs:
           fi
           echo "Desktop splash screen verified"
 
-      - name: Build Windows installers (Microsoft Store config)
-        shell: bash
+      - name: Pack MSIX (Tauri + winapp)
+        shell: pwsh
         run: |
-          cd apps/desktop
-          npx tauri build --config src-tauri/tauri.microsoftstore.conf.json
+          $version = "${{ github.event.inputs.version || '0.2.5' }}"
+          & apps/desktop/scripts/pack-msix.ps1 -Version $version
 
-      - name: List built installers
-        shell: bash
-        run: |
-          BUNDLE="apps/desktop/src-tauri/target/release/bundle"
-          echo "=== NSIS ==="
-          ls -la "$BUNDLE/nsis/" || true
-          echo "=== MSI ==="
-          ls -la "$BUNDLE/msi/" || true
-
-      - name: Upload Microsoft Store installers
+      - name: Upload MSIX artifact
         uses: actions/upload-artifact@v4
         with:
-          name: microsoft-store-windows-${{ github.event.inputs.version || '0.2.5' }}
-          path: |
-            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
-            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+          name: orivraa-msix-${{ github.event.inputs.version || '0.2.5' }}
+          path: apps/desktop/store-build-output/*.msix
           if-no-files-found: error
           retention-days: 90
 
-      - name: Store submission notes
-        shell: bash
+      - name: Summary
+        shell: pwsh
         run: |
-          VERSION="${{ github.event.inputs.version || '0.2.5' }}"
-          BUNDLE="apps/desktop/src-tauri/target/release/bundle"
-          NSIS=$(ls "$BUNDLE/nsis/"*.exe 2>/dev/null | head -1 || true)
-          MSI=$(ls "$BUNDLE/msi/"*.msi 2>/dev/null | head -1 || true)
-          {
-            echo "## Microsoft Store submission build"
-            echo ""
-            echo "**Version:** ${VERSION}"
-            echo ""
-            echo "| Artifact | Path |"
-            echo "|----------|------|"
-            echo "| NSIS (recommended) | \`${NSIS}\` |"
-            echo "| MSI | \`${MSI}\` |"
-            echo ""
-            echo "### Partner Center"
-            echo "- Product type: **EXE or MSI app**"
-            echo "- Silent install (NSIS): \`/S\`"
-            echo "- Silent install (MSI): \`msiexec /i installer.msi /quiet\`"
-            echo "- WebView2: **offline installer** (embedded in this build)"
-            echo ""
-            echo "Download installers from this workflow's **Artifacts** section."
-            echo "Nothing was published to GitHub Releases or R2."
-          } >> "$GITHUB_STEP_SUMMARY"
+          $msix = Get-ChildItem apps/desktop/store-build-output/*.msix | Select-Object -First 1
+          @"
+          ## Microsoft Store MSIX build
+          - **Version:** ${{ github.event.inputs.version || '0.2.5' }}
+          - **Artifact:** ``$($msix.Name)`` ($([math]::Round($msix.Length/1MB,2)) MB)
+          - **Tool:** Microsoft WinApp CLI (same as ViharaOS)
+          - **Publish:** none (download from workflow Artifacts only)
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8

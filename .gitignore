@@ -163,3 +163,7 @@ cloudflare-worker/.wrangler/
 target/
 apps/desktop/target/
 apps/desktop/src-tauri/target/
+apps/desktop/store-build-output/
+apps/desktop/msix/devcert.pfx
+apps/desktop/msix/*.msix
+apps/desktop/msix/dist/

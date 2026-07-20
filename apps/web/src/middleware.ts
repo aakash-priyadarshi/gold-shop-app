@@ -332,6 +332,18 @@ function withGeoCookies(request: NextRequest, response: NextResponse) {
   const vercelCountry = request.headers.get("x-vercel-ip-country");
   const rawCountry = cfCountry && cfCountry !== "XX" ? cfCountry : vercelCountry;
 
+  // Prevent Vercel preview / non-production deployments from being indexed
+  // and polluting Google with duplicate canonical URLs.
+  const host = request.nextUrl.hostname.toLowerCase().split(":")[0];
+  const isCanonicalHost =
+    host === "orivraa.com" ||
+    host.endsWith(".orivraa.com") ||
+    host === "localhost" ||
+    host.endsWith(".localhost");
+  if (!isCanonicalHost) {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+
   if (!rawCountry) return response;
 
   const isProdDomain = request.nextUrl.hostname.endsWith("orivraa.com");

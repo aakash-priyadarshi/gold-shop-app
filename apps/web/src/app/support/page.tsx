@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { T } from "@/components/ui/T";
+import { BRAND } from "@/config/brand";
 import { useAuth } from "@/hooks/useAuth";
 import { ticketsApi } from "@/lib/api";
 import { 
@@ -383,11 +384,11 @@ export default function SupportPage() {
                             <h3 className="text-lg font-bold">India Support</h3>
                           </div>
                           <div className="space-y-3">
-                             <a href="tel:+918001234567" className="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+                             <a href={`tel:${BRAND.contact.phone}`} className="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors">
                                 <PhoneCall className="w-5 h-5" />
-                                <span className="font-medium">+91 800 123 4567</span>
+                                <span className="font-medium">{BRAND.contact.phone}</span>
                              </a>
-                             <a href="https://wa.me/918001234567" className="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+                             <a href={`https://wa.me/${BRAND.contact.phone.replace(/\s/g, "")}`} className="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors">
                                 <MessageSquare className="w-5 h-5" />
                                 <span className="font-medium">WhatsApp Support</span>
                              </a>
@@ -401,13 +402,13 @@ export default function SupportPage() {
                             <h3 className="text-lg font-bold">International / US</h3>
                           </div>
                           <div className="space-y-3">
-                             <a href="tel:+18005550199" className="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+                             <a href={`tel:${BRAND.contact.phone}`} className="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors">
                                 <PhoneCall className="w-5 h-5" />
-                                <span className="font-medium">+1 800 555 0199</span>
+                                <span className="font-medium">{BRAND.contact.phone}</span>
                              </a>
-                             <a href="mailto:support@orivraa.com" className="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+                             <a href={`mailto:${BRAND.contact.supportEmail}`} className="flex items-center gap-3 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors">
                                 <Mail className="w-5 h-5" />
-                                <span className="font-medium">support@orivraa.com</span>
+                                <span className="font-medium">{BRAND.contact.supportEmail}</span>
                              </a>
                           </div>
                        </div>

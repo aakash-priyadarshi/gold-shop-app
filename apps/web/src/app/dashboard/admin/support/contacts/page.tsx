@@ -109,7 +109,7 @@ export default function ContactsManagementPage() {
                  </div>
                  <div className="flex-1 min-w-[200px]">
                     <p className="text-sm font-medium mb-1">Value / Number</p>
-                    <Input placeholder="e.g. +91 1800 123 4567" value={value} onChange={(e) => setValue(e.target.value)} />
+                    <Input placeholder="e.g. +91 62039 65557" value={value} onChange={(e) => setValue(e.target.value)} />
                  </div>
                  <Button onClick={handleCreate} disabled={!country || !value}>
                     <Plus className="h-4 w-4 mr-2" />

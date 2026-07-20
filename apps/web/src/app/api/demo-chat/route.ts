@@ -1,3 +1,4 @@
+import { BRAND } from "@/config/brand";
 import { NextRequest, NextResponse } from "next/server";
 
 const SYSTEM_PROMPT = `You are Aria, a premium AI jewellery sales consultant for Orivraa — the world's smartest jewellery retail platform.
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     console.error("GEMINI_API_KEY not configured in environment");
     return NextResponse.json({
       reply:
-        "Our demo is being configured. Please check back shortly, or contact us at sales@orivraa.com!",
+        `Our demo is being configured. Please check back shortly, or contact us at ${BRAND.supportEmail}!`,
     });
   }
 

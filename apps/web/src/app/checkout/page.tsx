@@ -54,6 +54,7 @@ import {
   TruckIcon,
 } from "@heroicons/react/24/outline";
 import { Banknote, CreditCard, Loader2, Store } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -815,12 +816,14 @@ function CheckoutPageContent() {
                 <div className="space-y-3 max-h-60 overflow-y-auto">
                   {items.map((item) => (
                     <div key={item.id} className="flex gap-3">
-                      <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
+                      <div className="relative w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
                         {item.product.image ? (
-                          <img
+                          <Image
                             src={item.product.image}
                             alt={item.product.name}
-                            className="w-full h-full object-cover rounded"
+                            fill
+                            sizes="48px"
+                            className="object-cover rounded"
                           />
                         ) : (
                           <ShoppingCartIcon className="h-6 w-6 text-gray-400" />
@@ -976,7 +979,7 @@ function CheckoutPageContent() {
                 onChange={(e) =>
                   setNewAddress({ ...newAddress, phone: e.target.value })
                 }
-                placeholder="+1234567890"
+                placeholder="+91 62039 65557"
               />
             </div>
             <div className="space-y-2">

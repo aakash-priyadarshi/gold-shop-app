@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { SITE_URL } from "@/config/site";
 
 const DEFAULT_PUBLIC_API_BASE = "https://api.orivraa.com/api";
 
@@ -37,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         openGraph: {
           title: `${shopName} | Orivraa`,
           description: `Browse jewellery collections from ${shopName}. Verified quality, trusted artisan.`,
-          url: `https://www.orivraa.com/shops/${id}`,
+          url: `${SITE_URL}/shops/${id}`,
           ...(shop.logoUrl && {
             images: [
               {

@@ -2,6 +2,7 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { BRAND } from "@/config/brand";
 import {
     ABOUT_CONTENT,
     COMING_SOON_PLATFORMS,
@@ -420,16 +421,16 @@ export default async function LocalizedAboutPage({
               <Card className="flex-1">
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{c.emailUs}</h3>
-                  <a href="mailto:support@orivraa.com" className="text-amber-600 hover:underline">
-                    support@orivraa.com
+                  <a href={`mailto:${BRAND.supportEmail}`} className="text-amber-600 hover:underline">
+                    {BRAND.supportEmail}
                   </a>
                 </CardContent>
               </Card>
               <Card className="flex-1">
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{c.forSellers}</h3>
-                  <a href="mailto:sellers@orivraa.com" className="text-amber-600 hover:underline">
-                    sellers@orivraa.com
+                  <a href={`mailto:${BRAND.supportEmail}`} className="text-amber-600 hover:underline">
+                    {BRAND.supportEmail}
                   </a>
                 </CardContent>
               </Card>

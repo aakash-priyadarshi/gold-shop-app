@@ -43,8 +43,10 @@ export const BRAND: {
     "Discover and customize exquisite jewellery from trusted artisans",
 
   // Contact
+  // Using support@orivraa.com for all public-facing contact until a dedicated
+  // sales alias is set up. Phone is the founder's Indian number for now.
   supportEmail: "support@orivraa.com",
-  salesEmail: "sales@orivraa.com",
+  salesEmail: "support@orivraa.com",
   contact: {
     address: "Patna, Bihar, India",
     phone: "+91 62039 65557",

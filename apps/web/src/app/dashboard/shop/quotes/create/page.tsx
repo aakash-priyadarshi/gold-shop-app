@@ -1086,7 +1086,7 @@ export default function CreateShopQuotePage() {
                     <Label><T>Phone Number *</T></Label>
                     <div className="relative">
                       <Input
-                        placeholder="9876543210"
+                        placeholder="6203965557"
                         value={customerDetails.phone}
                         onChange={(e) =>
                           handlePhoneChange(e.target.value.replace(/\D/g, ""))

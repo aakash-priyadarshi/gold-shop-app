@@ -9,12 +9,13 @@
  * navigation and open/close within the same browser tab.
  *
  * Human escalation contact:
- *   Email:    aakashm301@gmail.com
+ *   Email:    support@orivraa.com
  *   WhatsApp: +91 62039 65557
  */
 
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
+import { BRAND } from "@/config/brand";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { api } from "@/lib/api";
@@ -24,11 +25,11 @@ import { Mail, MessageCircle, Pencil, Phone, Send, Sparkles, X } from "lucide-re
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const FOUNDER = {
-  name: "Aakash",
-  email: "aakashm301@gmail.com",
-  phone: "+916203965557",
-  phoneDisplay: "+91 62039 65557",
+const SUPPORT = {
+  name: "Support",
+  email: BRAND.contact.supportEmail,
+  phone: BRAND.contact.phone.replace(/\s/g, ""),
+  phoneDisplay: BRAND.contact.phone,
 } as const;
 
 type Message = {
@@ -81,9 +82,9 @@ const QUICK_ASKS_CUSTOMER = [
 ];
 
 const ESCALATION_CTA: { label: string; href: string }[] = [
-  { label: `WhatsApp ${FOUNDER.phoneDisplay}`, href: `https://wa.me/${FOUNDER.phone.replace("+", "")}` },
-  { label: "Email Aakash", href: `mailto:${FOUNDER.email}` },
-  { label: `Call ${FOUNDER.phoneDisplay}`, href: `tel:${FOUNDER.phone}` },
+  { label: `WhatsApp ${SUPPORT.phoneDisplay}`, href: `https://wa.me/${SUPPORT.phone.replace(/\+/g, "")}` },
+  { label: `Email ${SUPPORT.name}`, href: `mailto:${SUPPORT.email}` },
+  { label: `Call ${SUPPORT.phoneDisplay}`, href: `tel:${SUPPORT.phone}` },
 ];
 
 /* ───────────────────────── Session persistence helpers ───────────────────────── */
@@ -91,7 +92,7 @@ const ESCALATION_CTA: { label: string; href: string }[] = [
 const WELCOME_MSG_PUBLIC: Message = {
   id: "welcome",
   from: "bot",
-  text: "Hi 👋 <T>I'm the Orivraa AI assistant. Ask me about pricing, features, GST, offline POS, hallmarking \u2014 or just say 'talk to a human' and I'll connect you to our founder.</T>",
+  text: "Hi 👋 <T>I'm the Orivraa AI assistant. Ask me about pricing, features, GST, offline POS, hallmarking \u2014 or just say 'talk to a human' and I'll connect you to our support team.</T>",
 };
 
 /** Default display name shown before the user gives the assistant a custom name. */
@@ -106,7 +107,7 @@ function makePublicWelcome(botName?: string, userName?: string): Message {
   return {
     id: "welcome",
     from: "bot",
-    text: `Hi${who} 👋 <T>${intro} Ask me about pricing, features, GST, offline POS, hallmarking \u2014 or just say 'talk to a human' and I'll connect you to our founder.</T>`,
+    text: `Hi${who} 👋 <T>${intro} Ask me about pricing, features, GST, offline POS, hallmarking \u2014 or just say 'talk to a human' and I'll connect you to our support team.</T>`,
   };
 }
 
@@ -731,7 +732,7 @@ export function SupportBot() {
         {
           id: `${Date.now()}-b`,
           from: "bot",
-          text: `Sorry, I couldn't reach the server. You can reach ${FOUNDER.name} directly:`,
+          text: `Sorry, I couldn't reach the server. You can reach ${SUPPORT.name} directly:`,
           cta: ESCALATION_CTA,
         },
       ]);
@@ -1438,16 +1439,16 @@ export function SupportBot() {
           <p className={`text-[10px] text-center text-gray-400 dark:text-gray-500 ${isMobile ? "pb-[max(0.375rem,env(safe-area-inset-bottom))]" : "pb-1.5"}`}>
             Need a human?{" "}
             <a
-              href={`https://wa.me/${FOUNDER.phone.replace("+", "")}`}
+              href={`https://wa.me/${SUPPORT.phone.replace(/\+/g, "")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-amber-600"
             >
-              WhatsApp Aakash
+              WhatsApp {SUPPORT.name}
             </a>{" "}
             |{" "}
-            <a href={`mailto:${FOUNDER.email}`} className="underline hover:text-amber-600">
-              {FOUNDER.email}
+            <a href={`mailto:${SUPPORT.email}`} className="underline hover:text-amber-600">
+              {SUPPORT.email}
             </a>
           </p>
         </div>

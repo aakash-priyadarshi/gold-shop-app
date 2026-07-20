@@ -6,9 +6,10 @@
  * robots, OpenGraph and JSON-LD URLs.
  *
  * Resolution order:
- *   1. NEXT_PUBLIC_SITE_URL   (explicit, preferred)
- *   2. NEXT_PUBLIC_VERCEL_URL (auto-set on Vercel preview deploys)
- *   3. https://www.orivraa.com (production default)
+ *   1. NEXT_PUBLIC_SITE_URL            (explicit, preferred)
+ *   2. VERCEL_PROJECT_PRODUCTION_URL   (production deployment domain)
+ *   3. NEXT_PUBLIC_VERCEL_URL           (auto-set on Vercel preview deploys)
+ *   4. https://www.orivraa.com          (production default)
  */
 
 const PRODUCTION_SITE_URL = "https://www.orivraa.com";
@@ -23,6 +24,20 @@ function normalize(url: string): string {
 export const SITE_URL: string = (() => {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (explicit) return normalize(explicit);
+
+  // In production, never let a Vercel preview/slug domain become the canonical
+  // origin. This prevents sitemaps, robots Host, and OpenGraph URLs from
+  // pointing to a deployment URL and causing Google to unlist pages.
+  if (process.env.VERCEL_ENV === "production") {
+    const productionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+    if (
+      productionUrl &&
+      !productionUrl.toLowerCase().includes("vercel.app")
+    ) {
+      return normalize(productionUrl);
+    }
+    return PRODUCTION_SITE_URL;
+  }
 
   const vercel = process.env.NEXT_PUBLIC_VERCEL_URL?.trim();
   if (vercel) return normalize(vercel);

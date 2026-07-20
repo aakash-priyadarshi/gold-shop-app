@@ -168,14 +168,75 @@ async function fetchUrlsFromSitemap(sitemapUrl: string): Promise<string[]> {
     .filter((u) => u.length > 0);
 }
 
+function getAllowedHosts(originUrl: string): string[] {
+  try {
+    const { host } = new URL(originUrl);
+    const parts = host.split(".");
+    const apex =
+      parts.length > 2
+        ? parts.slice(1).join(".")
+        : host.startsWith("www.")
+          ? host.slice(4)
+          : host;
+    const hosts = new Set([host, apex]);
+    if (!host.startsWith("www.")) hosts.add(`www.${apex}`);
+    if (!host.startsWith("m.")) hosts.add(`m.${apex}`);
+    return [...hosts];
+  } catch {
+    return [];
+  }
+}
+
+function filterUrlsByOrigin(urls: string[], origin: string): string[] {
+  const allowed = getAllowedHosts(origin);
+  const valid: string[] = [];
+  const skipped: string[] = [];
+  for (const url of urls) {
+    try {
+      const { host } = new URL(url);
+      if (allowed.some((h) => host === h || host.endsWith(`.${h}`))) {
+        valid.push(url);
+      } else {
+        skipped.push(url);
+      }
+    } catch {
+      skipped.push(url);
+    }
+  }
+  if (skipped.length > 0) {
+    console.warn(
+      `⚠️ Skipping ${skipped.length} URL(s) not owned by the configured origin (${origin}):`,
+    );
+    skipped.slice(0, 10).forEach((u) => console.warn(`  - ${u}`));
+    if (skipped.length > 10) console.warn(`  ... and ${skipped.length - 10} more`);
+  }
+  return valid;
+}
+
 async function resolveUrls(): Promise<string[]> {
   const singleUrl = getArgValue("--url=");
-  if (singleUrl) return [singleUrl];
+  if (singleUrl) {
+    const allowed = getAllowedHosts(DEFAULT_SITEMAP_URL);
+    try {
+      const { host } = new URL(singleUrl);
+      if (!allowed.some((h) => host === h || host.endsWith(`.${h}`))) {
+        console.warn(
+          `⚠️ Single URL ${singleUrl} does not match the configured origin (${DEFAULT_SITEMAP_URL}). Skipping submission.`,
+        );
+        return [];
+      }
+    } catch {
+      console.warn(`⚠️ Invalid URL: ${singleUrl}`);
+      return [];
+    }
+    return [singleUrl];
+  }
+
+  const sitemap =
+    process.env.SEARCH_CONSOLE_SITEMAP_URL?.trim() || DEFAULT_SITEMAP_URL;
 
   if (process.argv.includes("--diff")) {
-    const sitemap =
-      process.env.SEARCH_CONSOLE_SITEMAP_URL?.trim() || DEFAULT_SITEMAP_URL;
-    const sitemapUrls = await fetchUrlsFromSitemap(sitemap);
+    const sitemapUrls = filterUrlsByOrigin(await fetchUrlsFromSitemap(sitemap), sitemap);
     const seen = readSeenUrls();
     const newUrls = sitemapUrls.filter((u) => !seen.has(u));
 
@@ -189,12 +250,10 @@ async function resolveUrls(): Promise<string[]> {
   }
 
   if (process.argv.includes("--from-sitemap")) {
-    const sitemap =
-      process.env.SEARCH_CONSOLE_SITEMAP_URL?.trim() || DEFAULT_SITEMAP_URL;
-    return fetchUrlsFromSitemap(sitemap);
+    return filterUrlsByOrigin(await fetchUrlsFromSitemap(sitemap), sitemap);
   }
 
-  return PRIORITY_URLS;
+  return filterUrlsByOrigin(PRIORITY_URLS, DEFAULT_SITEMAP_URL);
 }
 
 function getStateFilePath(): string {

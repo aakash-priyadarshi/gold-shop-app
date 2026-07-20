@@ -1,13 +1,14 @@
 packages:
   - apps/*
   - packages/*
+  - e2e
 
 enablePrePostScripts: true
 
 ignoredBuiltDependencies:
-  - '@nestjs/core'
-  - '@prisma/client'
-  - '@prisma/engines'
+  - "@nestjs/core"
+  - "@prisma/client"
+  - "@prisma/engines"
   - bcrypt
   - msgpackr-extract
   - prisma
