@@ -155,7 +155,7 @@ jobs:
         run: cd e2e && npx playwright install --with-deps chromium
 
       - name: Run Playwright tests against production
-        run: pnpm e2e -- --project=chromium
+        run: pnpm e2e
         env:
           BASE_URL: "https://www.orivraa.com"
           API_BASE_URL: "https://api.orivraa.com/api"
