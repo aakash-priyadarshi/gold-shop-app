@@ -1,0 +1,164 @@
+# Post-deploy soft checks
+# Runs AFTER Deploy Guard finishes — never blocks or slows the deploy path.
+# Failures become GitHub warnings / job summary only (continue-on-error).
+
+name: Post-Deploy Soft Checks
+
+on:
+  workflow_run:
+    workflows: ["Deploy Guard"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+  actions: read
+
+concurrency:
+  group: post-deploy-soft-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "18"
+  PNPM_VERSION: "10.27.0"
+
+jobs:
+  soft-smoke:
+    name: Soft API smoke (warnings only)
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_PAT }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait briefly for Vercel/Railway settle
+        run: sleep 45
+
+      - name: Run full smoke suite
+        id: smoke
+        continue-on-error: true
+        run: pnpm smoke-test:full
+        env:
+          SMOKE_TEST_URL: ${{ secrets.PRODUCTION_API_URL }}/api
+
+      - name: Authenticated shop API smoke (optional)
+        id: auth-smoke
+        continue-on-error: true
+        run: |
+          TOKEN="${{ secrets.SHOP_SMOKE_TOKEN }}"
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::SHOP_SMOKE_TOKEN not set — skipping authenticated soft smoke"
+            echo "AUTH_SMOKE=skipped" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          API="${{ secrets.PRODUCTION_API_URL }}/api"
+          UA="Mozilla/5.0 (compatible; Orivraa-SmokeTest/1.0; +https://orivraa.com)"
+          FAIL=0
+
+          check() {
+            local name="$1" method="$2" path="$3" expect="$4"
+            code=$(curl -s -o /tmp/smoke_body.json -w "%{http_code}" -X "$method" \
+              -H "Authorization: Bearer $TOKEN" -H "User-Agent: $UA" \
+              -H "Accept: application/json" "$API$path")
+            if [[ "$code" == "$expect" ]]; then
+              echo "::notice::$name → $code OK"
+            else
+              echo "::warning::$name expected $expect got $code"
+              FAIL=1
+            fi
+          }
+
+          check "Invoice settings" GET "/invoices/settings" "200"
+          check "Karigar snapshot" GET "/karigar/snapshot" "200"
+          check "Shop materials" GET "/shops/my-shop/materials" "200"
+          check "POS active session" GET "/pos/session/active" "200"
+          check "Shop quotes list" GET "/shop-quotes" "200"
+
+          if [[ "$FAIL" == "1" ]]; then
+            echo "AUTH_SMOKE=warn" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "AUTH_SMOKE=ok" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Post-deploy soft smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Public smoke | ${{ steps.smoke.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Auth smoke | ${{ steps.auth-smoke.outcome || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "These checks are **warnings only** — deploy is not rolled back." >> "$GITHUB_STEP_SUMMARY"
+          if [[ "${{ steps.smoke.outcome }}" != "success" || "${{ steps.auth-smoke.outcome }}" == "failure" ]]; then
+            echo "::warning::Post-deploy soft checks reported issues — review job logs"
+          fi
+
+  soft-e2e:
+    name: Soft Playwright (public, warnings only)
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Run public Playwright suite
+        id: e2e
+        continue-on-error: true
+        working-directory: e2e
+        run: npx playwright test
+        env:
+          CI: "true"
+          BASE_URL: https://www.orivraa.com
+          API_BASE_URL: https://api.orivraa.com/api
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Post-deploy soft Playwright" >> "$GITHUB_STEP_SUMMARY"
+          echo "Outcome: **${{ steps.e2e.outcome }}** (warnings only)" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "${{ steps.e2e.outcome }}" != "success" ]]; then
+            echo "::warning::Playwright soft checks failed — review artifacts/logs"
+          fi

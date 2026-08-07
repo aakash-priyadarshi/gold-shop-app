@@ -44,6 +44,7 @@ import {
   buildUpiPayUri,
   isDigitalWalletMethod,
 } from "@/lib/counterPayments";
+import { loadTradeInPayload } from "@/lib/oldGoldTradeIn";
 import { usePreferencesStore } from "@/store/preferences";
 import Image from "next/image";
 import { useT } from "@/providers/translation-provider";
@@ -214,6 +215,18 @@ function PosPageInner() {
       })
       .catch(() => setShopUpiId(""));
   }, []);
+
+  useEffect(() => {
+    const fromQuery = searchParams.get("tradeInCredit");
+    let credit = fromQuery ? Number(fromQuery) : NaN;
+    const payload = loadTradeInPayload();
+    if (payload?.finalCredit && (!Number.isFinite(credit) || credit <= 0)) {
+      credit = payload.finalCredit;
+    }
+    if (Number.isFinite(credit) && credit > 0) {
+      setDiscountAmount(Math.round(credit));
+    }
+  }, [searchParams]);
 
   // Auto-create session if coming from chat with customer
   useEffect(() => {

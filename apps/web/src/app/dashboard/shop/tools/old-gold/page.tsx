@@ -16,18 +16,22 @@ import { Separator } from "@/components/ui/separator";
 import { T } from "@/components/ui/T";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { materialsApi } from "@/lib/api";
+import { saveTradeInPayload } from "@/lib/oldGoldTradeIn";
 import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
   ArrowLeftRight,
   Coins,
+  FileText,
   Loader2,
   RefreshCw,
   Scale,
+  ShoppingCart,
   TrendingUp,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "@/hooks/use-toast";
 
 // Purity multipliers for gold
 const GOLD_PURITIES: { label: string; karat: number; purity: number }[] = [
@@ -61,9 +65,13 @@ export default function OldGoldExchangePage() {
   const [newWeight, setNewWeight] = useState("");
   const [newPurity, setNewPurity] = useState(0.916);
   const [makingCharge, setMakingCharge] = useState("12"); // % making charge
+  const [finalOldCredit, setFinalOldCredit] = useState(""); // shopkeeper override
+  const [finalNewCost, setFinalNewCost] = useState(""); // shopkeeper override
+  const [overrideReason, setOverrideReason] = useState("");
 
   useEffect(() => {
-    loadGoldRate();
+    void loadGoldRate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   const loadGoldRate = async () => {
@@ -116,10 +124,56 @@ export default function OldGoldExchangePage() {
   const makingCost = newGoldCost * (makingPct / 100);
   const newTotalCost = newGoldCost + makingCost;
 
-  // Exchange result
-  const difference = newTotalCost - oldGoldValue;
+  // Exchange result (honour shopkeeper final overrides when set)
+  const effectiveOldCredit =
+    finalOldCredit !== "" && Number.isFinite(parseFloat(finalOldCredit))
+      ? parseFloat(finalOldCredit)
+      : oldGoldValue;
+  const effectiveNewCost =
+    finalNewCost !== "" && Number.isFinite(parseFloat(finalNewCost))
+      ? parseFloat(finalNewCost)
+      : newTotalCost;
+  const difference = effectiveNewCost - effectiveOldCredit;
   const customerPays = difference > 0 ? difference : 0;
   const shopPays = difference < 0 ? Math.abs(difference) : 0;
+
+  const applyTradeIn = (target: "invoice" | "pos") => {
+    if (effectiveOldCredit <= 0) {
+      toast({
+        variant: "destructive",
+        title: t("Enter old gold details first"),
+      });
+      return;
+    }
+    saveTradeInPayload({
+      calculatedCredit: Math.round(oldGoldValue),
+      finalCredit: Math.round(effectiveOldCredit),
+      overrideReason: overrideReason || undefined,
+      currency: currencyCode,
+      items: [
+        {
+          metal: "GOLD",
+          karatOrPurity: oldPurity,
+          weightG: oldWeightG,
+          calculatedCredit: Math.round(effectiveOldCredit),
+        },
+      ],
+      rateSnapshot: { rate24k: goldRate24k, fetchedAt: new Date().toISOString() },
+    });
+    toast({
+      title: t("Trade-in credit ready"),
+      description: `${currencySymbol} ${Math.round(effectiveOldCredit).toLocaleString()}`,
+    });
+    if (target === "invoice") {
+      router.push(
+        `/dashboard/shop/invoices/create?tradeInCredit=${Math.round(effectiveOldCredit)}`,
+      );
+    } else {
+      router.push(
+        `/dashboard/shop/pos?tradeInCredit=${Math.round(effectiveOldCredit)}`,
+      );
+    }
+  };
 
   return (
     <ShopGuard>
@@ -413,7 +467,50 @@ export default function OldGoldExchangePage() {
                   </div>
                 </div>
                 <Separator className="my-4" />
-                <div className="text-center">
+                <div className="text-center space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                    <div>
+                      <Label>
+                        <T>Final old gold credit</T> ({currencySymbol})
+                      </Label>
+                      <Input
+                        type="number"
+                        value={finalOldCredit}
+                        onChange={(e) => setFinalOldCredit(e.target.value)}
+                        placeholder={String(Math.round(oldGoldValue))}
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        <T>Calculated</T>: {currencySymbol}{" "}
+                        {Math.round(oldGoldValue).toLocaleString()} —{" "}
+                        <T>edit to negotiate</T>
+                      </p>
+                    </div>
+                    <div>
+                      <Label>
+                        <T>Final new item price</T> ({currencySymbol})
+                      </Label>
+                      <Input
+                        type="number"
+                        value={finalNewCost}
+                        onChange={(e) => setFinalNewCost(e.target.value)}
+                        placeholder={String(Math.round(newTotalCost))}
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        <T>Calculated</T>: {currencySymbol}{" "}
+                        {Math.round(newTotalCost).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <Label>
+                      <T>Override reason (optional)</T>
+                    </Label>
+                    <Input
+                      value={overrideReason}
+                      onChange={(e) => setOverrideReason(e.target.value)}
+                      placeholder={t("e.g. Loyalty discount on buyback")}
+                    />
+                  </div>
                   {customerPays > 0 ? (
                     <div>
                       <p className="text-sm text-muted-foreground">
@@ -448,6 +545,16 @@ export default function OldGoldExchangePage() {
                       </p>
                     </div>
                   )}
+                  <div className="flex flex-wrap gap-2 justify-center pt-2">
+                    <Button onClick={() => applyTradeIn("invoice")}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      <T>Apply to Invoice</T>
+                    </Button>
+                    <Button variant="outline" onClick={() => applyTradeIn("pos")}>
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      <T>Apply to POS</T>
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

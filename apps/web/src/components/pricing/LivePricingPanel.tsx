@@ -85,6 +85,14 @@ interface LivePricingPanelProps {
   marketRatesLoading?: boolean;
   marketRatesWarning?: string | null;
   currencySymbol?: string;
+  /** When set, these replace auto-calculated category totals in the panel (quote step 3 overrides). */
+  costOverrides?: {
+    metalCost?: number | null;
+    makingCharge?: number | null;
+    gemstoneCost?: number | null;
+    finishCost?: number | null;
+    taxRate?: number;
+  };
 }
 
 // ═══════════════════════════════════════════
@@ -98,6 +106,7 @@ export function LivePricingPanel({
   marketRatesLoading = false,
   marketRatesWarning,
   currencySymbol = "₹",
+  costOverrides,
 }: LivePricingPanelProps) {
   // Hydration fix - only show relative time after mount
   const [mounted, setMounted] = useState(false);
@@ -118,8 +127,103 @@ export function LivePricingPanel({
     };
 
     const result = calculateEstimate(request);
-    return result;
-  }, [formData, marketRates]);
+    if (!costOverrides) return result;
+
+    const metal =
+      costOverrides.metalCost != null && !Number.isNaN(costOverrides.metalCost)
+        ? costOverrides.metalCost
+        : result.metalCost;
+    const making =
+      costOverrides.makingCharge != null &&
+      !Number.isNaN(costOverrides.makingCharge)
+        ? costOverrides.makingCharge
+        : result.makingCharge;
+    const gemstone =
+      costOverrides.gemstoneCost != null &&
+      !Number.isNaN(costOverrides.gemstoneCost)
+        ? costOverrides.gemstoneCost
+        : result.gemstoneCost;
+    const finish =
+      costOverrides.finishCost != null &&
+      !Number.isNaN(costOverrides.finishCost)
+        ? costOverrides.finishCost
+        : result.finishCost;
+    const subtotal = metal + making + gemstone + finish;
+    const taxRate = costOverrides.taxRate ?? result.taxRate ?? 0;
+    const taxAmount = Math.round(subtotal * taxRate);
+    const hasOverride =
+      costOverrides.metalCost != null ||
+      costOverrides.makingCharge != null ||
+      costOverrides.gemstoneCost != null ||
+      costOverrides.finishCost != null;
+
+    const lineItems = [
+      ...(metal > 0
+        ? [
+            {
+              label: hasOverride && costOverrides.metalCost != null
+                ? "Metal (overridden)"
+                : "Metal",
+              category: "METAL" as const,
+              amount: metal,
+            },
+          ]
+        : []),
+      ...(making > 0
+        ? [
+            {
+              label:
+                hasOverride && costOverrides.makingCharge != null
+                  ? "Making charge (overridden)"
+                  : "Making charge",
+              category: "MAKING" as const,
+              amount: making,
+            },
+          ]
+        : []),
+      ...(gemstone > 0
+        ? [
+            {
+              label:
+                hasOverride && costOverrides.gemstoneCost != null
+                  ? "Gemstones (overridden)"
+                  : "Gemstones",
+              category: "GEMSTONE" as const,
+              amount: gemstone,
+            },
+          ]
+        : []),
+      ...(finish > 0
+        ? [
+            {
+              label:
+                hasOverride && costOverrides.finishCost != null
+                  ? "Finish (overridden)"
+                  : "Finish",
+              category: "FINISH" as const,
+              amount: finish,
+            },
+          ]
+        : []),
+    ];
+
+    return {
+      ...result,
+      metalCost: metal,
+      makingCharge: making,
+      gemstoneCost: gemstone,
+      finishCost: finish,
+      subtotal,
+      taxRate,
+      taxAmount,
+      total: subtotal + taxAmount,
+      lineItems: hasOverride ? lineItems : result.lineItems,
+      status: "complete" as const,
+      statusMessage: hasOverride
+        ? "Showing shopkeeper overrides — final quote price"
+        : result.statusMessage,
+    };
+  }, [formData, marketRates, costOverrides]);
 
   return (
     <TooltipProvider delayDuration={200}>

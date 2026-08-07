@@ -18,6 +18,7 @@ import { T } from "@/components/ui/T";
 import { useHaptics } from "@/hooks/useHaptics";
 import { materialsApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { saveTradeInPayload } from "@/lib/oldGoldTradeIn";
 import { useT } from "@/providers/translation-provider";
 import {
   ArrowRight,
@@ -95,6 +96,7 @@ export default function OldGoldExchangePage() {
     { id: 1, karat: "22", weight: "", deduction: "5" },
   ]);
   const [copied, setCopied] = useState(false);
+  const [finalCredit, setFinalCredit] = useState("");
 
   const loadRates = useCallback(async () => {
     setRateLoading(true);
@@ -142,6 +144,10 @@ export default function OldGoldExchangePage() {
   const totalBuyback = rates
     ? items.reduce((s, i) => s + calcBuyback(i, rates), 0)
     : 0;
+  const effectiveBuyback =
+    finalCredit !== "" && Number.isFinite(parseFloat(finalCredit))
+      ? parseFloat(finalCredit)
+      : totalBuyback;
 
   const copyToClipboard = () => {
     if (!rates) return;
@@ -152,12 +158,38 @@ export default function OldGoldExchangePage() {
         (i) =>
           `${KARAT_LABELS[i.karat]} · ${i.weight}g · ${i.deduction !== "none" ? `-${i.deduction}% deduction` : "no deduction"} → ${rates.currency} ${calcBuyback(i, rates).toLocaleString()}`,
       );
-    lines.push(`\nTotal buyback: ${rates.currency} ${totalBuyback.toLocaleString()}`);
+    lines.push(
+      `\nCalculated buyback: ${rates.currency} ${totalBuyback.toLocaleString()}`,
+    );
+    if (effectiveBuyback !== totalBuyback) {
+      lines.push(
+        `Final credit (adjusted): ${rates.currency} ${Math.round(effectiveBuyback).toLocaleString()}`,
+      );
+    }
     navigator.clipboard.writeText(lines.join("\n")).then(() => {
       setCopied(true);
       haptic("success");
       setTimeout(() => setCopied(false), 2000);
     });
+  };
+
+  const applyToPos = () => {
+    if (effectiveBuyback <= 0) return;
+    saveTradeInPayload({
+      calculatedCredit: totalBuyback,
+      finalCredit: Math.round(effectiveBuyback),
+      currency: rates?.currency,
+      items: items
+        .filter((i) => parseFloat(i.weight) > 0)
+        .map((i) => ({
+          metal: i.karat === "SILVER" ? "SILVER" : "GOLD",
+          karatOrPurity: i.karat,
+          weightG: parseFloat(i.weight) || 0,
+          deductionPct: i.deduction === "none" ? 0 : parseInt(i.deduction, 10),
+          calculatedCredit: rates ? calcBuyback(i, rates) : 0,
+        })),
+    });
+    window.location.href = `/m/pos?tradeInCredit=${Math.round(effectiveBuyback)}`;
   };
 
   return (
@@ -306,11 +338,33 @@ export default function OldGoldExchangePage() {
         {/* Sticky total */}
         {totalBuyback > 0 && rates && (
           <div className="bg-white border-t border-gray-100 px-4 py-4 space-y-3">
+            <div>
+              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+                <T>Calculated buyback</T>
+              </p>
+              <p className="text-lg font-semibold text-gray-700">
+                {rates.currency} {totalBuyback.toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-medium">
+                <T>Final credit (adjust if needed)</T>
+              </label>
+              <input
+                type="number"
+                value={finalCredit}
+                onChange={(e) => setFinalCredit(e.target.value)}
+                placeholder={String(totalBuyback)}
+                className="mt-1 w-full rounded-xl border border-amber-200 px-3 py-2.5 text-sm font-semibold"
+              />
+            </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide"><T>Total Trade-In Value</T></p>
+                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+                  <T>Total Trade-In Value</T>
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {rates.currency} {totalBuyback.toLocaleString()}
+                  {rates.currency} {Math.round(effectiveBuyback).toLocaleString()}
                 </p>
               </div>
               <button
@@ -322,9 +376,17 @@ export default function OldGoldExchangePage() {
               </button>
             </div>
 
+            <button
+              type="button"
+              onClick={applyToPos}
+              className="w-full h-11 rounded-xl bg-amber-600 text-white text-sm font-semibold"
+            >
+              <T>Apply to POS bill</T>
+            </button>
+
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />
-              <T>Deduct this from the new bill total when the customer is trading in old gold</T>
+              <T>Final credit is deducted from the new bill as a trade-in discount</T>
             </div>
           </div>
         )}

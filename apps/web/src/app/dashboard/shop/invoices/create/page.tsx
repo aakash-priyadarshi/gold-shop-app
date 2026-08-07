@@ -28,6 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { loadTradeInPayload } from "@/lib/oldGoldTradeIn";
 import { useCurrency } from "@/store/preferences";
 import { getApiUrl, invoicesApi, pricingApi, shopQuotesApi } from "@/lib/api";
 import { COUNTER_PAYMENT_METHODS } from "@/lib/counterPayments";
@@ -870,6 +871,7 @@ export default function CreateInvoicePage() {
   const [makingChargeValue, setMakingChargeValue] = useState("");
   const [discountMode, setDiscountMode] = useState<"left" | "right">("right"); // left = %, right = fixed
   const [discountValue, setDiscountValue] = useState("");
+  const [tradeInNote, setTradeInNote] = useState("");
   // Tax is shown as a single line by default; jewellers can expand the
   // per-category bifurcation (metal / gemstone / making) on demand.
   const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
@@ -932,6 +934,40 @@ export default function CreateInvoicePage() {
   );
   const [dueDate, setDueDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
+
+  // Prefill old-gold trade-in credit from calculator handoff
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const fromQuery = params.get("tradeInCredit");
+    let credit = fromQuery ? parseFloat(fromQuery) : NaN;
+    let reason = "";
+    const payload = loadTradeInPayload();
+    if (payload?.finalCredit && (!Number.isFinite(credit) || credit <= 0)) {
+      credit = payload.finalCredit;
+    }
+    if (payload?.overrideReason) reason = payload.overrideReason;
+    if (
+      payload?.calculatedCredit &&
+      payload.finalCredit !== payload.calculatedCredit
+    ) {
+      reason =
+        reason ||
+        `Old gold trade-in (calculated ${payload.calculatedCredit}, applied ${payload.finalCredit})`;
+    }
+    if (Number.isFinite(credit) && credit > 0) {
+      setDiscountMode("right");
+      setDiscountValue(String(Math.round(credit)));
+      const note =
+        reason || `Old gold trade-in credit: ${Math.round(credit)}`;
+      setTradeInNote(note);
+      setNotes((prev) =>
+        prev?.includes("Old gold")
+          ? prev
+          : [prev, note].filter(Boolean).join("\n"),
+      );
+    }
+  }, []);
 
   // ── Totals ──
   const subtotal = lineItems.reduce(
@@ -2233,6 +2269,11 @@ export default function CreateInvoicePage() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-green-600 dark:text-green-400 w-28 flex-shrink-0">
                       <T>Discount</T>
+                      {tradeInNote ? (
+                        <span className="block text-[10px] text-amber-700 dark:text-amber-300 leading-tight">
+                          <T>Old gold</T>
+                        </span>
+                      ) : null}
                     </span>
                     <ModeToggle
                       value={discountMode}

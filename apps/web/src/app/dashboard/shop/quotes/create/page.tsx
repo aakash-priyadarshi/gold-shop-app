@@ -709,8 +709,30 @@ export default function CreateShopQuotePage() {
       parseFloat(formData.finishCostOverride) || autoEstimate?.finishCost || 0;
     const subtotal = metal + making + gemstone + finish;
     const tax = subtotal * taxRate;
-    return { subtotal, tax, total: subtotal + tax };
+    return { metal, making, gemstone, finish, subtotal, tax, total: subtotal + tax };
   };
+
+  /** Parsed overrides for LivePricingPanel — null means "use auto". */
+  const costOverrides = useMemo(() => {
+    const parse = (v: string): number | null => {
+      if (v === "" || v == null) return null;
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    return {
+      metalCost: parse(formData.metalCostOverride),
+      makingCharge: parse(formData.makingChargeOverride),
+      gemstoneCost: parse(formData.gemstoneCostOverride),
+      finishCost: parse(formData.finishCostOverride),
+      taxRate,
+    };
+  }, [
+    formData.metalCostOverride,
+    formData.makingChargeOverride,
+    formData.gemstoneCostOverride,
+    formData.finishCostOverride,
+    taxRate,
+  ]);
 
   const handleSubmit = async () => {
     if (
@@ -733,6 +755,38 @@ export default function CreateShopQuotePage() {
     setLoading(true);
     setError("");
     try {
+      const totals = calculateTotal();
+      const composition = {
+        ...formData.composition,
+        jewelleryType: formData.jewelleryType,
+        buildMethod: formData.buildMethod,
+        metalType: formData.metalType,
+        targetTotalWeightG: parseFloat(formData.targetTotalWeightG) || null,
+        targetGoldWeightG: parseFloat(formData.targetGoldWeightG) || null,
+        alloyConfig: formData.alloyConfig,
+        methodCConfig: formData.methodCConfig,
+        methodDConfig: formData.methodDConfig,
+        surfaceFinish: formData.surfaceFinish || null,
+        description: formData.description || null,
+        hasGemstones: formData.hasGemstones,
+        gemstones: formData.hasGemstones ? formData.gemstonesV2 : [],
+        estimateLineItems: autoEstimate?.lineItems ?? [],
+        costBreakdown: {
+          metal: totals.metal,
+          making: totals.making,
+          gemstone: totals.gemstone,
+          finish: totals.finish,
+          tax: totals.tax,
+          total: totals.total,
+          overrides: {
+            metal: formData.metalCostOverride || null,
+            making: formData.makingChargeOverride || null,
+            gemstone: formData.gemstoneCostOverride || null,
+            finish: formData.finishCostOverride || null,
+          },
+        },
+      };
+
       const response = await shopQuotesApi.create({
         customer: {
           name: customerDetails.name,
@@ -745,7 +799,7 @@ export default function CreateShopQuotePage() {
         },
         jewelleryType: formData.jewelleryType,
         buildMethod: formData.buildMethod,
-        composition: formData.composition,
+        composition,
         targetTotalWeightG:
           parseFloat(formData.targetTotalWeightG) || undefined,
         targetGoldWeightG: parseFloat(formData.targetGoldWeightG) || undefined,
@@ -758,10 +812,11 @@ export default function CreateShopQuotePage() {
               ),
             ]
           : formData.referenceImages,
-        metalCostNpr: parseFloat(formData.metalCostOverride) || undefined,
-        makingChargeNpr: parseFloat(formData.makingChargeOverride) || undefined,
-        gemstoneCostNpr: parseFloat(formData.gemstoneCostOverride) || undefined,
-        finishCostNpr: parseFloat(formData.finishCostOverride) || undefined,
+        metalCostNpr: totals.metal,
+        makingChargeNpr: totals.making,
+        gemstoneCostNpr: totals.gemstone,
+        finishCostNpr: totals.finish,
+        taxNpr: Math.round(totals.tax),
         estimatedDays: parseInt(formData.estimatedDays) || undefined,
         shopNotes: formData.shopNotes || undefined,
       });
@@ -1984,7 +2039,7 @@ export default function CreateShopQuotePage() {
                   <CardHeader>
                     <CardTitle><T>Pricing & Quote</T></CardTitle>
                     <CardDescription>
-                      <T>Review the live estimate and set final pricing.</T>
+                      <T>Review the live estimate and set final pricing. Overrides update the live panel and the saved quote.</T>
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -2016,12 +2071,15 @@ export default function CreateShopQuotePage() {
                       </p>
                     )}
 
-                    {/* Manual Override Section */}
-                    <details className="group">
-                      <summary className="cursor-pointer text-sm font-medium text-amber-700 hover:text-amber-800">
-                        <T>Override individual costs manually</T>
-                      </summary>
-                      <div className="grid grid-cols-2 gap-4 mt-3">
+                    {/* Four override slots — always visible so metal/making/gemstone/finish stay consistent */}
+                    <div className="rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-3">
+                      <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                        <T>Override costs (final quote price)</T>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        <T>Leave blank to keep the auto value. Overridden amounts are used for the total, live panel, and invoice line items.</T>
+                      </p>
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label>
                             <T>Metal Cost</T> ({currencySymbol})
@@ -2135,7 +2193,7 @@ export default function CreateShopQuotePage() {
                           />
                         </div>
                       </div>
-                    </details>
+                    </div>
                     <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 space-y-2">
                       <div className="flex justify-between text-sm">
                         <span><T>Subtotal</T></span>
@@ -2202,6 +2260,7 @@ export default function CreateShopQuotePage() {
                   marketRatesLoading={marketRatesLoading}
                   marketRatesWarning={marketRatesWarning}
                   currencySymbol={currencySymbol}
+                  costOverrides={costOverrides}
                 />
                 {designPreviewUrl && (
                   <Card>
