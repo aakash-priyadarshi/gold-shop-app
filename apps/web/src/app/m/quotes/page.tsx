@@ -24,7 +24,7 @@ import {
   User,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const JEWELLERY_TYPES = [
   "RING",
@@ -163,9 +163,12 @@ export default function QuotesPage() {
   // Tax rate + label loaded from the server based on shop country (e.g. 3% GST for IN, 13% VAT for NP)
   const [taxRate, setTaxRate] = useState(0.13);
   const [taxLabel, setTaxLabel] = useState("VAT (13%)");
-  const [shopMaterialRatesNpr, setShopMaterialRatesNpr] = useState<Record<string, number>>({});
+  const [shopMakingPerGramNpr, setShopMakingPerGramNpr] = useState<Record<string, number>>({});
+  const [shopMakingChargePercent, setShopMakingChargePercent] = useState(10);
   const [baseMetalPricesNpr, setBaseMetalPricesNpr] = useState<Record<string, number>>({});
   const [gemstoneRateOptions, setGemstoneRateOptions] = useState<GemstoneRateOption[]>([]);
+  const [makingChargeManual, setMakingChargeManual] = useState(false);
+  const lastAutoMakingRef = useRef(0);
 
   const [phoneCountryCode, setPhoneCountryCode] = useState("+977");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -213,14 +216,6 @@ export default function QuotesPage() {
   );
 
   const materialRateInfo = useMemo(() => {
-    const shopRateNpr = shopMaterialRatesNpr[materialCode];
-    if (shopRateNpr > 0) {
-      return {
-        ratePerGram: shopRateNpr * nprToDisplayCurrency,
-        source: "Store inventory rate",
-      };
-    }
-
     const baseMetalRateNpr = baseMetalPricesNpr[materialCode];
     if (baseMetalRateNpr > 0) {
       return {
@@ -238,7 +233,7 @@ export default function QuotesPage() {
     }
 
     return { ratePerGram: 0, source: "Manual rate" };
-  }, [baseMetalPricesNpr, materialCode, marketRateData, nprToDisplayCurrency, shopMaterialRatesNpr]);
+  }, [baseMetalPricesNpr, materialCode, marketRateData, nprToDisplayCurrency]);
 
   const autoMetalCost = useMemo(() => {
     if (!materialRateInfo.ratePerGram || !resolvedWeightGrams) return 0;
@@ -282,7 +277,7 @@ export default function QuotesPage() {
         fxRates ? convertCurrencyAmount(1, "NPR", displayCurrency, fxRates) : 1,
       );
 
-      const materialRates = (shopMaterialsRes.data?.materials ?? []).reduce(
+      const makingRates = (shopMaterialsRes.data?.materials ?? []).reduce(
         (acc: Record<string, number>, material: any) => {
           const rate = Number(material?.pricePerGramNpr ?? 0);
           if (material?.code && rate > 0) acc[material.code] = rate;
@@ -290,7 +285,11 @@ export default function QuotesPage() {
         },
         {},
       );
-      setShopMaterialRatesNpr(materialRates);
+      setShopMakingPerGramNpr(makingRates);
+      const pct = Number(shopMaterialsRes.data?.makingChargePercent);
+      setShopMakingChargePercent(
+        Number.isFinite(pct) && pct > 0 ? pct : 10,
+      );
       setBaseMetalPricesNpr(componentRes.data?.baseMetalPrices ?? {});
 
       const gemstoneOptions = (gemstoneRes.data?.rates ?? [])
@@ -346,6 +345,37 @@ export default function QuotesPage() {
       setMetalCostNpr(autoMetalCost);
     }
   }, [autoMetalCost, metalCostMode]);
+
+  // Auto-fill making charge from shop making-per-gram rates or percent.
+  // Only overwrite when the field is empty / still at the previous auto value.
+  useEffect(() => {
+    if (makingChargeManual) return;
+    const makingPerGram = shopMakingPerGramNpr[materialCode] ?? 0;
+    let next = 0;
+    if (makingPerGram > 0 && resolvedWeightGrams > 0) {
+      next = Math.round(
+        makingPerGram * nprToDisplayCurrency * resolvedWeightGrams * quantity,
+      );
+    } else if (shopMakingChargePercent > 0 && autoMetalCost > 0) {
+      next = Math.round((autoMetalCost * shopMakingChargePercent) / 100);
+    }
+    setMakingChargeNpr((prev) => {
+      if (prev === 0 || prev === lastAutoMakingRef.current) {
+        lastAutoMakingRef.current = next;
+        return next;
+      }
+      return prev;
+    });
+  }, [
+    autoMetalCost,
+    makingChargeManual,
+    materialCode,
+    nprToDisplayCurrency,
+    quantity,
+    resolvedWeightGrams,
+    shopMakingChargePercent,
+    shopMakingPerGramNpr,
+  ]);
 
   useEffect(() => {
     if (gemstoneCostMode === "auto") {
@@ -784,7 +814,10 @@ export default function QuotesPage() {
                 inputMode="decimal"
                 min="0"
                 value={makingChargeNpr || ""}
-                onChange={(event) => setMakingChargeNpr(numberFromInput(event.target.value))}
+                onChange={(event) => {
+                  setMakingChargeManual(true);
+                  setMakingChargeNpr(numberFromInput(event.target.value));
+                }}
                 placeholder="Making charge"
               className="rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- product thumbnails use dynamic remote URLs */
+
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +36,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { inventoryApi, posApi } from "@/lib/api";
+import { inventoryApi, invoicesApi, posApi, shopsApi } from "@/lib/api";
+import { printBill, type BillSettings } from "@/lib/billPrint";
+import {
+  COUNTER_PAYMENT_METHODS,
+  buildQrImageUrl,
+  buildUpiPayUri,
+  isDigitalWalletMethod,
+} from "@/lib/counterPayments";
 import { usePreferencesStore } from "@/store/preferences";
 import Image from "next/image";
 import { useT } from "@/providers/translation-provider";
@@ -156,17 +165,18 @@ function PosPageInner() {
   const [discountAmount, setDiscountAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [makingChargeRate, setMakingChargeRate] = useState(0);
-  const [checkoutSuccess, setCheckoutSuccess] = useState<{ invoiceNumber: string; total: number } | null>(null);
+  const [checkoutSuccess, setCheckoutSuccess] = useState<{
+    invoiceNumber: string;
+    total: number;
+    paymentMethod?: string;
+    customerName?: string;
+    customerPhone?: string;
+  } | null>(null);
+  const [billSettings, setBillSettings] = useState<BillSettings | null>(null);
+  const [shopUpiId, setShopUpiId] = useState("");
 
   const shopCountry = user?.shop?.country || "NP";
-  const PAYMENT_METHODS = [
-    { value: "CASH", label: "Cash" },
-    { value: "CARD", label: "Card" },
-    { value: "UPI", label: "UPI / QR" },
-    { value: "ESEWA", label: "eSewa" },
-    { value: "KHALTI", label: "Khalti" },
-    { value: "BANK", label: "Bank Transfer" },
-  ];
+  const PAYMENT_METHODS = COUNTER_PAYMENT_METHODS;
   const TAX_PRESETS = shopCountry === "IN"
     ? [{ label: "GST 3%", value: 0.03 }, { label: "GST 5%", value: 0.05 }, { label: "Exempt", value: 0 }]
     : shopCountry === "NP"
@@ -190,6 +200,21 @@ function PosPageInner() {
     loadActiveSession();
   }, [loadActiveSession]);
 
+  useEffect(() => {
+    invoicesApi
+      .getSettings()
+      .then((res) => setBillSettings(res.data))
+      .catch(() => setBillSettings(null));
+    shopsApi
+      .getSettings()
+      .then((res) => {
+        const shop = res.data?.shop || res.data;
+        const upi = shop?.bankAccountDetails?.upiId || "";
+        setShopUpiId(typeof upi === "string" ? upi : "");
+      })
+      .catch(() => setShopUpiId(""));
+  }, []);
+
   // Auto-create session if coming from chat with customer
   useEffect(() => {
     if (urlCustomerId && urlConversationId && !session) {
@@ -200,11 +225,12 @@ function PosPageInner() {
 
   // ── Counter Mode: debounced product search ──
   useEffect(() => {
-    if (!isCounterMode || !user?.shop?.id) return;
+    const shopId = user?.shop?.id;
+    if (!isCounterMode || !shopId) return;
     const timer = setTimeout(async () => {
       setCounterLoading(true);
       try {
-        const res = await inventoryApi.getShopInventory(user.shop!.id, {
+        const res = await inventoryApi.getShopInventory(shopId, {
           search: counterSearch,
           limit: 30,
           page: 1,
@@ -329,6 +355,9 @@ function PosPageInner() {
       setCheckoutSuccess({
         invoiceNumber: inv?.invoiceNumber || "N/A",
         total: inv?.totalAmount || basketTotal,
+        paymentMethod,
+        customerName,
+        customerPhone,
       });
       toast({
         title: t("Checkout complete!"),
@@ -922,6 +951,35 @@ function PosPageInner() {
                     </button>
                   ))}
                 </div>
+                {isDigitalWalletMethod(paymentMethod) && (
+                  <div className="mt-3 rounded-lg border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-center space-y-2">
+                    {shopUpiId && basketTotal > 0 ? (
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          <T>Customer can scan to pay via UPI / PhonePe</T>
+                        </p>
+                        <img
+                          src={buildQrImageUrl(
+                            buildUpiPayUri({
+                              upiId: shopUpiId,
+                              amount: Math.round(basketTotal),
+                              currency: "INR",
+                              payeeName: billSettings?.shopNameOnBill || user?.shop?.shopName,
+                              note: "POS sale",
+                            }) || shopUpiId,
+                          )}
+                          alt="UPI QR"
+                          className="mx-auto h-36 w-36 rounded bg-white p-2"
+                        />
+                        <p className="text-[11px] font-mono text-muted-foreground">{shopUpiId}</p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        <T>Add UPI ID in Shop Settings to show a payment QR.</T>
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Tax Presets */}
@@ -1062,7 +1120,26 @@ function PosPageInner() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    window.print();
+                    if (!checkoutSuccess) return;
+                    const ok = printBill({
+                      fallbackShopName: user?.shop?.shopName,
+                      settings: billSettings,
+                      invoiceNumber: checkoutSuccess.invoiceNumber,
+                      customerName: checkoutSuccess.customerName,
+                      customerPhone: checkoutSuccess.customerPhone,
+                      totalAmount: checkoutSuccess.total,
+                      paidAmount: checkoutSuccess.total,
+                      balanceDue: 0,
+                      currency: currencySymbol,
+                      paymentMethod: checkoutSuccess.paymentMethod,
+                    });
+                    if (!ok) {
+                      toast({
+                        variant: "destructive",
+                        title: t("Pop-ups blocked"),
+                        description: t("Allow pop-ups to print the receipt"),
+                      });
+                    }
                   }}
                 >
                   🖨️ <T>Print Receipt</T>
@@ -1070,7 +1147,7 @@ function PosPageInner() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: ${currencySymbol} ${checkoutSuccess?.total?.toLocaleString()}\nThank you for your purchase!`;
+                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: ${currencySymbol} ${checkoutSuccess?.total?.toLocaleString()}\nPaid via: ${checkoutSuccess?.paymentMethod || "CASH"}\nThank you for your purchase!`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
                   }}
                 >

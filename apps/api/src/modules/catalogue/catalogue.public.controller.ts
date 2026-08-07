@@ -13,17 +13,20 @@ import { Throttle } from "@nestjs/throttler";
 import { Request } from "express";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
-import { CustomerFlowGuard } from "../auth/guards/customer-flow.guard";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { SkipSecurity } from "../security/security.guard";
 import { CatalogueService } from "./catalogue.service";
 import { UnlockCatalogueDto } from "./dto/unlock-catalogue.dto";
 
+/**
+ * Public catalogue share links (/c/{slug}) are a walk-in / WhatsApp seller tool
+ * and must work even when marketplace customer flow is disabled.
+ * CustomerFlowGuard is intentionally NOT applied here.
+ */
 @ApiTags("public-catalogues")
 @Controller("public/catalogues")
 @SkipSecurity() // All endpoints in this controller are public
-@UseGuards(CustomerFlowGuard) // B2C lockout: blocked while customer flow is off
 export class CataloguePublicController {
   constructor(private catalogueService: CatalogueService) {}
 

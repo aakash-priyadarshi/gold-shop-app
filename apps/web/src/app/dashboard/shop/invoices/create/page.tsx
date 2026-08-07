@@ -30,6 +30,7 @@ import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { useCurrency } from "@/store/preferences";
 import { getApiUrl, invoicesApi, pricingApi, shopQuotesApi } from "@/lib/api";
+import { COUNTER_PAYMENT_METHODS } from "@/lib/counterPayments";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
     detectTaxIdKind,
@@ -930,6 +931,7 @@ export default function CreateInvoicePage() {
     "Payment due upon delivery. All sales are final.",
   );
   const [dueDate, setDueDate] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
 
   // ── Totals ──
   const subtotal = lineItems.reduce(
@@ -1109,6 +1111,7 @@ export default function CreateInvoicePage() {
         dueDate: dueDate || undefined,
         notes: notes || undefined,
         terms: terms || undefined,
+        paymentMethod,
       });
 
       toast({
@@ -2392,6 +2395,27 @@ export default function CreateInvoicePage() {
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
                   />
+                </div>
+              </div>
+              <div>
+                <Label>
+                  <T>Payment Method</T>
+                </Label>
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {COUNTER_PAYMENT_METHODS.map((pm) => (
+                    <button
+                      key={pm.value}
+                      type="button"
+                      onClick={() => setPaymentMethod(pm.value)}
+                      className={`py-2.5 rounded-lg text-sm font-medium border-2 transition-all ${
+                        paymentMethod === pm.value
+                          ? "bg-amber-50 border-amber-500 text-amber-700"
+                          : "border-gray-100 text-gray-600 bg-white hover:border-gray-200"
+                      }`}
+                    >
+                      <T>{pm.label}</T>
+                    </button>
+                  ))}
                 </div>
               </div>
               <div>

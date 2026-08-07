@@ -379,20 +379,27 @@ function CartDrawer({
 
 function BillSuccess({
   quoteId,
+  trackingToken,
   total,
   currency,
   customerPhone,
   onNew,
 }: {
   quoteId: string;
+  trackingToken?: string;
   total: number;
   currency: SupportedCurrencyCode;
   customerPhone?: string;
   onNew: () => void;
 }) {
-  const trackUrl = `${typeof window !== "undefined" ? window.location.origin : "https://orivraa.com"}/track/${quoteId}`;
+  // Public /track/:token only works with shop-quote tracking tokens — not POS clientIds.
+  const trackUrl = trackingToken
+    ? `${typeof window !== "undefined" ? window.location.origin : "https://orivraa.com"}/track/${trackingToken}`
+    : null;
   const whatsappMsg = encodeURIComponent(
-    `Thank you for your purchase at our store!\n\nBill Amount: ${formatMoney(total, currency)}\nView/Download Bill: ${trackUrl}`,
+    `Thank you for your purchase at our store!\n\nBill Amount: ${formatMoney(total, currency)}` +
+      (trackUrl ? `\nView/Download Bill: ${trackUrl}` : "") +
+      (quoteId ? `\nRef: ${quoteId}` : ""),
   );
   const whatsappUrl = customerPhone
     ? `https://wa.me/${customerPhone.replace(/\D/g, "")}?text=${whatsappMsg}`
@@ -420,15 +427,22 @@ function BillSuccess({
         <T>Send Bill via WhatsApp</T>
       </a>
 
-      <a
-        href={trackUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-full max-w-xs py-4 border border-gray-200 text-gray-700 text-base font-medium rounded-2xl flex items-center justify-center gap-2"
-      >
-        <Share2 className="h-5 w-5" />
-        <T>Copy Bill Link</T>
-      </a>
+      {trackUrl ? (
+        <button
+          type="button"
+          onClick={() => {
+            void navigator.clipboard?.writeText(trackUrl);
+          }}
+          className="w-full max-w-xs py-4 border border-gray-200 text-gray-700 text-base font-medium rounded-2xl flex items-center justify-center gap-2"
+        >
+          <Share2 className="h-5 w-5" />
+          <T>Copy Bill Link</T>
+        </button>
+      ) : (
+        <p className="text-xs text-gray-400">
+          <T>Receipt ref</T>: {quoteId}
+        </p>
+      )}
 
       <button
         onClick={onNew}
@@ -888,6 +902,7 @@ export default function MobilePOSPage() {
   const [showCart, setShowCart] = useState(false);
   const [billResult, setBillResult] = useState<{
     quoteId: string;
+    trackingToken?: string;
     total: number;
     customerPhone?: string;
   } | null>(null);
@@ -1126,6 +1141,7 @@ export default function MobilePOSPage() {
     return (
       <BillSuccess
         quoteId={billResult.quoteId}
+        trackingToken={billResult.trackingToken}
         total={billResult.total}
         currency={shopCurrency}
         customerPhone={billResult.customerPhone}

@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Put, UseGuards } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Put,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -30,6 +37,11 @@ export class KarigarController {
     @CurrentUser("shopId") shopId: string,
     @Body() dto: SaveKarigarStateDto,
   ) {
+    if (!shopId) {
+      throw new BadRequestException(
+        "No active shop selected. Select a shop before saving supply-chain data.",
+      );
+    }
     return this.karigarService.replaceSnapshot(shopId, dto);
   }
 }

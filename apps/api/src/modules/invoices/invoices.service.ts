@@ -217,6 +217,9 @@ export class InvoicesService {
         status: newStatus,
         paymentStatus: newPaymentStatus,
         paidAt,
+        ...(dto.paymentMethod
+          ? { paymentMethod: dto.paymentMethod.toUpperCase() }
+          : {}),
       },
     });
   }

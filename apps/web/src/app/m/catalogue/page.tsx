@@ -126,9 +126,6 @@ export default function CataloguePage() {
     setSelected(new Set());
   };
 
-  const baseUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://orivraa.com";
-
   const message = useMemo(() => {
     if (selectedItems.length === 0) return "";
     const lines: string[] = [];
@@ -142,7 +139,6 @@ export default function CataloguePage() {
       const meta = bits.length ? ` (${bits.join(" · ")})` : "";
       lines.push(`${idx + 1}. *${it.nameEn}*${meta}`);
       lines.push(`   ${fmt(it.totalPriceNpr ?? 0, currency)} — SKU ${it.sku}`);
-      lines.push(`   ${baseUrl}/p/${it.sku}`);
       lines.push("");
     });
     const total = selectedItems.reduce(
@@ -154,7 +150,7 @@ export default function CataloguePage() {
     if (shopPhone) lines.push(`📞 ${shopPhone}`);
     lines.push(`_— ${shopName}_`);
     return lines.join("\n");
-  }, [selectedItems, intro, currency, baseUrl, shopName, shopPhone]);
+  }, [selectedItems, intro, currency, shopName, shopPhone]);
 
   const openWhatsApp = () => {
     if (!message) {

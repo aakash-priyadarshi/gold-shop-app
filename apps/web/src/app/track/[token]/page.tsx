@@ -1,346 +1,207 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
 import { T } from "@/components/ui/T";
 import { shopQuotesApi } from "@/lib/api";
-import {
-    AlertCircle,
-    CheckCircle2,
-    Clock,
-    Hammer,
-    Loader2,
-    Package,
-    PackageCheck,
-    RefreshCw,
-    Store,
-    XCircle,
-} from "lucide-react";
-import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
-interface TrackingData {
-  quoteNumber: string;
-  invoiceNumber: string | null;
-  jewelleryType: string;
-  status: string;
-  estimatedDays: number | null;
-  createdAt: string;
-  updatedAt: string;
-  confirmedAt: string | null;
-  startedAt: string | null;
-  readyAt: string | null;
-  completedAt: string | null;
-  cancelledAt: string | null;
-  cancelReason: string | null;
-  shop: { shopName: string; city: string; country: string };
-  customerName: string;
+interface TrackData {
+  quoteNumber?: string;
+  invoiceNumber?: string | null;
+  jewelleryType?: string;
+  status?: string;
+  estimatedDays?: number | null;
+  createdAt?: string;
+  shop?: { shopName?: string; city?: string; country?: string };
+  customerName?: string;
+  totalAmount?: number | null;
+  paidAmount?: number | null;
+  currency?: string | null;
 }
 
-const STATUS_STEPS = [
-  { key: "QUOTED", label: "Quote Ready", icon: Clock, color: "text-amber-500" },
-  {
-    key: "CONFIRMED",
-    label: "Confirmed",
-    icon: CheckCircle2,
-    color: "text-blue-500",
-  },
-  {
-    key: "IN_PROGRESS",
-    label: "Being Made",
-    icon: Hammer,
-    color: "text-purple-500",
-  },
-  {
-    key: "READY",
-    label: "Ready for Pickup",
-    icon: Package,
-    color: "text-green-500",
-  },
-  {
-    key: "COMPLETED",
-    label: "Delivered",
-    icon: PackageCheck,
-    color: "text-green-600",
-  },
-];
-
-const STATUS_ORDER = [
-  "QUOTED",
-  "CONFIRMED",
-  "IN_PROGRESS",
-  "READY",
-  "COMPLETED",
-];
-
-function formatDate(d: string | null) {
-  if (!d) return null;
-  return new Date(d).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatStatus(status?: string) {
+  if (!status) return "—";
+  return status.replace(/_/g, " ");
 }
 
-function formatJewelleryType(type: string) {
-  return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-export default function TrackOrderPage() {
+export default function TrackQuotePage() {
   const params = useParams();
-  const token = params?.token as string;
-
-  const [data, setData] = useState<TrackingData | null>(null);
+  const token = typeof params?.token === "string" ? params.token : "";
+  const [data, setData] = useState<TrackData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
-
-  const fetchTracking = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await shopQuotesApi.trackByToken(token);
-      setData(res.data);
-      setLastRefreshed(new Date());
-    } catch (err: unknown) {
-      const axiosErr = err as any;
-      const msg = axiosErr?.response?.data?.message;
-      setError(
-        typeof msg === "string"
-          ? msg
-          : "Invalid or expired tracking link.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
 
   useEffect(() => {
-    fetchTracking();
-  }, [fetchTracking]);
+    if (!token) {
+      setLoading(false);
+      setError("Invalid tracking link");
+      return;
+    }
 
-  const currentStatusIndex = data
-    ? STATUS_ORDER.indexOf(data.status)
-    : -1;
-  const isCancelled = data?.status === "CANCELLED";
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await shopQuotesApi.trackByToken(token);
+        if (cancelled) return;
+        setData(res.data ?? res);
+      } catch (err: any) {
+        if (cancelled) return;
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Tracking link is invalid or has expired";
+        setError(Array.isArray(msg) ? msg[0] : msg);
+        setData(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 dark:from-gray-900 dark:to-gray-800">
-      {/* Header */}
-      <header className="border-b border-amber-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-amber-600 font-bold text-lg">
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white text-gray-900">
+      <div className="mx-auto flex min-h-screen max-w-lg flex-col px-4 py-10">
+        <header className="mb-8 text-center">
+          <p className="text-sm font-semibold tracking-wide text-amber-700">
             Orivraa
-          </Link>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={fetchTracking}
-            disabled={loading}
-            className="text-muted-foreground"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            <span className="ml-1 hidden sm:inline"><T>Refresh</T></span>
-          </Button>
-        </div>
-      </header>
+          </p>
+          <h1 className="mt-2 text-2xl font-bold">
+            <T>Track your order</T>
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            <T>Quote and bill status</T>
+          </p>
+        </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        {loading && !data && (
-          <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-            <p><T>Loading order status...</T></p>
+        {loading && (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-gray-500">
+            <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+            <p className="text-sm">
+              <T>Loading…</T>
+            </p>
           </div>
         )}
 
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="pt-6 flex flex-col items-center gap-3 text-center">
-              <AlertCircle className="h-10 w-10 text-destructive" />
-              <h2 className="font-semibold text-lg"><T>Tracking Not Found</T></h2>
-              <p className="text-muted-foreground text-sm">{error}</p>
-              <Link href="/">
-                <Button variant="outline" size="sm">
-                  <T>Go to Homepage</T>
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+        {!loading && error && (
+          <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-8 text-center">
+            <p className="text-base font-semibold text-red-700">
+              <T>Not found</T>
+            </p>
+            <p className="mt-2 text-sm text-red-600">{error}</p>
+          </div>
         )}
 
-        {data && (
-          <>
-            {/* Order Header */}
-            <Card className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border-0">
-              <CardContent className="pt-6 pb-4">
-                <div className="flex items-start justify-between flex-wrap gap-3">
-                  <div>
-                    <p className="text-amber-100 text-sm uppercase tracking-wide font-medium">
-                      <T>Order Reference</T>
-                    </p>
-                    <p className="font-mono font-bold text-xl mt-0.5">
-                      {data.quoteNumber}
-                    </p>
-                    {data.invoiceNumber && (
-                      <p className="text-amber-100 text-xs mt-1">
-                        Invoice: {data.invoiceNumber}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-amber-100 text-sm">
-                      {formatJewelleryType(data.jewelleryType)}
-                    </p>
-                    <p className="text-amber-100 text-xs mt-0.5">
-                      <T>for</T> {data.customerName}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Shop info */}
-            <Card>
-              <CardContent className="pt-4 pb-4 flex items-center gap-3">
-                <Store className="h-5 w-5 text-amber-500 shrink-0" />
-                <div>
-                  <p className="font-medium">{data.shop.shopName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {data.shop.city}, {data.shop.country}
+        {!loading && !error && data && (
+          <div className="space-y-4 rounded-2xl border border-amber-100 bg-white p-6 shadow-sm">
+            {data.shop?.shopName && (
+              <div className="border-b border-gray-100 pb-4 text-center">
+                <p className="text-lg font-bold">{data.shop.shopName}</p>
+                {(data.shop.city || data.shop.country) && (
+                  <p className="text-xs text-gray-500">
+                    {[data.shop.city, data.shop.country]
+                      .filter(Boolean)
+                      .join(", ")}
                   </p>
-                </div>
-                {data.estimatedDays && (
-                  <Badge variant="secondary" className="ml-auto">
-                    ~{data.estimatedDays} days
-                  </Badge>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Status tracker */}
-            {isCancelled ? (
-              <Card className="border-destructive/40">
-                <CardContent className="pt-6 flex flex-col items-center gap-3 text-center">
-                  <XCircle className="h-10 w-10 text-destructive" />
-                  <h3 className="font-semibold text-lg"><T>Order Cancelled</T></h3>
-                  {data.cancelReason && (
-                    <p className="text-muted-foreground text-sm">{data.cancelReason}</p>
-                  )}
-                  {data.cancelledAt && (
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(data.cancelledAt)}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base"><T>Order Progress</T></CardTitle>
-                  <CardDescription>
-                    <T>Live status of your custom jewellery order</T>
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-0">
-                    {STATUS_STEPS.map((step, idx) => {
-                      const isDone = idx <= currentStatusIndex;
-                      const isCurrent = idx === currentStatusIndex;
-                      const Icon = step.icon;
-
-                      const timestamps: Record<string, string | null> = {
-                        QUOTED: data.createdAt,
-                        CONFIRMED: data.confirmedAt,
-                        IN_PROGRESS: data.startedAt,
-                        READY: data.readyAt,
-                        COMPLETED: data.completedAt,
-                      };
-
-                      return (
-                        <div key={step.key} className="flex gap-4">
-                          {/* Icon + line */}
-                          <div className="flex flex-col items-center">
-                            <div
-                              className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all ${
-                                isDone
-                                  ? "bg-green-500 border-green-500 text-white"
-                                  : "bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-400"
-                              } ${isCurrent ? "ring-2 ring-offset-2 ring-green-400" : ""}`}
-                            >
-                              <Icon className="h-4 w-4" />
-                            </div>
-                            {idx < STATUS_STEPS.length - 1 && (
-                              <div
-                                className={`w-0.5 h-8 mt-1 ${
-                                  idx < currentStatusIndex
-                                    ? "bg-green-400"
-                                    : "bg-gray-200 dark:bg-gray-700"
-                                }`}
-                              />
-                            )}
-                          </div>
-
-                          {/* Label */}
-                          <div className="pb-8 pt-1.5">
-                            <p
-                              className={`font-medium text-sm ${
-                                isCurrent
-                                  ? "text-green-600 dark:text-green-400"
-                                  : isDone
-                                    ? "text-foreground"
-                                    : "text-muted-foreground"
-                              }`}
-                            >
-                              <T>{step.label}</T>
-                              {isCurrent && (
-                                <Badge
-                                  variant="default"
-                                  className="ml-2 bg-green-500 text-white text-xs"
-                                >
-                                  <T>Current</T>
-                                </Badge>
-                              )}
-                            </p>
-                            {timestamps[step.key] && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {formatDate(timestamps[step.key])}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+              </div>
             )}
 
-            {/* Last refreshed */}
-            <p className="text-center text-xs text-muted-foreground">
-              <T>Last updated</T>:{" "}
-              {lastRefreshed.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-          </>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                  <T>Customer</T>
+                </p>
+                <p className="mt-0.5 font-medium">
+                  {data.customerName || "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                  <T>Status</T>
+                </p>
+                <p className="mt-0.5 font-medium capitalize">
+                  {formatStatus(data.status)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                  <T>Quote #</T>
+                </p>
+                <p className="mt-0.5 font-medium">
+                  {data.quoteNumber || "—"}
+                </p>
+              </div>
+              {data.invoiceNumber && (
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    <T>Invoice #</T>
+                  </p>
+                  <p className="mt-0.5 font-medium">{data.invoiceNumber}</p>
+                </div>
+              )}
+              {data.jewelleryType && (
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    <T>Item</T>
+                  </p>
+                  <p className="mt-0.5 font-medium capitalize">
+                    {data.jewelleryType.replace(/_/g, " ").toLowerCase()}
+                  </p>
+                </div>
+              )}
+              {data.estimatedDays != null && (
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    <T>Est. days</T>
+                  </p>
+                  <p className="mt-0.5 font-medium">{data.estimatedDays}</p>
+                </div>
+              )}
+            </div>
+
+            {(data.totalAmount != null || data.paidAmount != null) && (
+              <div className="mt-2 space-y-2 rounded-xl bg-amber-50 px-4 py-3">
+                {data.totalAmount != null && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      <T>Total</T>
+                    </span>
+                    <span className="font-semibold">
+                      {data.currency ? `${data.currency} ` : ""}
+                      {Number(data.totalAmount).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {data.paidAmount != null && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      <T>Paid</T>
+                    </span>
+                    <span className="font-semibold">
+                      {data.currency ? `${data.currency} ` : ""}
+                      {Number(data.paidAmount).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {data.createdAt && (
+              <p className="pt-2 text-center text-xs text-gray-400">
+                <T>Created</T>{" "}
+                {new Date(data.createdAt).toLocaleDateString()}
+              </p>
+            )}
+          </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

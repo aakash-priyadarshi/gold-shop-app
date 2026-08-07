@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useImageUpload } from "@/hooks/useImageUpload";
+import { useAuth } from "@/hooks/useAuth";
 import { invoicesApi } from "@/lib/api";
 import {
     ArrowDown,
@@ -132,6 +133,7 @@ function PositionToggle({
 
 export default function InvoiceSettingsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [settings, setSettings] =
     useState<InvoiceSettingsData>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
@@ -277,13 +279,15 @@ export default function InvoiceSettingsPage() {
       </div>,
     );
   }
-  if (settings.shopNameOnBill) {
+  const previewShopName =
+    settings.shopNameOnBill || user?.shop?.shopName || "";
+  if (previewShopName) {
     addPreviewItem(
       "shopNamePosition",
       null,
       "name",
       <p className="font-bold text-lg text-center">
-        {settings.shopNameOnBill}
+        {previewShopName}
       </p>,
     );
   }

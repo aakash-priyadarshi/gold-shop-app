@@ -41,7 +41,7 @@ import { useImageUpload } from "@/hooks/useImageUpload";
 import { useMarket, WEIGHT_UNIT_SYMBOLS, type WeightUnit } from "@/hooks/useMarket";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
-import { getApiUrl, shopQuotesApi } from "@/lib/api";
+import { getApiUrl, shopQuotesApi, shopsApi } from "@/lib/api";
 import { toGrams, fromGrams, getSupportedWeightUnits } from "@gold-shop/shared";
 import {
     BUILD_METHODS,
@@ -199,6 +199,47 @@ export default function CreateShopQuotePage() {
   const [marketRatesWarning, setMarketRatesWarning] = useState<string | null>(
     null,
   );
+  const [shopMakingChargePercent, setShopMakingChargePercent] = useState(10);
+  const [shopPrices, setShopPrices] = useState<{
+    baseMetalPrices?: Record<string, number>;
+    platingPrices?: Record<string, number>;
+    finishPrices?: Record<string, number>;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [materialsRes, componentRes] = await Promise.all([
+          shopsApi.getMaterials().catch(() => null),
+          shopsApi.getComponentPricing().catch(() => null),
+        ]);
+        if (cancelled) return;
+        const pct = Number(materialsRes?.data?.makingChargePercent);
+        setShopMakingChargePercent(
+          Number.isFinite(pct) && pct > 0 ? pct : 10,
+        );
+        const cp = componentRes?.data;
+        if (
+          cp &&
+          (Object.keys(cp.baseMetalPrices || {}).length > 0 ||
+            Object.keys(cp.platingPrices || {}).length > 0 ||
+            Object.keys(cp.finishPrices || {}).length > 0)
+        ) {
+          setShopPrices({
+            baseMetalPrices: cp.baseMetalPrices || {},
+            platingPrices: cp.platingPrices || {},
+            finishPrices: cp.finishPrices || {},
+          });
+        }
+      } catch {
+        // keep defaults
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchMarketRates = async () => {
@@ -404,7 +445,7 @@ export default function CreateShopQuotePage() {
       jewelleryType: formData.jewelleryType,
       country: shopCountry,
       currency: currencyCode,
-      makingChargePercent: 12,
+      makingChargePercent: shopMakingChargePercent,
       methodA:
         formData.buildMethod === "METHOD_A"
           ? { metal: formData.metalType, weightGrams: weight }
@@ -466,6 +507,10 @@ export default function CreateShopQuotePage() {
       request.surfaceFinish = { finishType: formData.surfaceFinish };
     }
 
+    if (shopPrices) {
+      request.shopPrices = shopPrices;
+    }
+
     return request;
   };
 
@@ -497,6 +542,8 @@ export default function CreateShopQuotePage() {
     marketRates,
     shopCountry,
     currencyCode,
+    shopMakingChargePercent,
+    shopPrices,
   ]);
 
   const applyAiVariation = useCallback(

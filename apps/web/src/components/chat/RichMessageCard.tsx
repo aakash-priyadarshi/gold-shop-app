@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- chat product cards use dynamic remote URLs */
+
 import { ClipboardList, ExternalLink, ShoppingBag, Store } from "lucide-react";
 import Link from "next/link";
 
@@ -36,7 +38,7 @@ export function RichMessageCard({
           </p>
         )}
         <a
-          href={`/c/${payload.slug}`}
+          href={`/c/${payload.catalogueSlug || payload.slug}`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-xs font-medium text-gold-600 hover:text-gold-700"

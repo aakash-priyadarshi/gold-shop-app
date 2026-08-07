@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- bill logo + UPI QR use dynamic remote URLs */
+
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +36,15 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { useAuth } from "@/hooks/useAuth";
-import { invoicesApi } from "@/lib/api";
+import { invoicesApi, shopsApi } from "@/lib/api";
+import { printBill, type BillSettings } from "@/lib/billPrint";
+import {
+  COUNTER_PAYMENT_METHODS,
+  buildQrImageUrl,
+  buildUpiPayUri,
+  isDigitalWalletMethod,
+  paymentMethodLabel,
+} from "@/lib/counterPayments";
 import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
@@ -83,6 +93,7 @@ interface InvoiceDetail {
   currency: string;
   status: string;
   paymentStatus: string;
+  paymentMethod?: string;
   issuedAt?: string;
   dueDate?: string;
   paidAt?: string;
@@ -123,11 +134,13 @@ export default function InvoiceDetailPage() {
     return true;
   }, [user, invoice]);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "other">("cash");
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCreatedBanner, setShowCreatedBanner] = useState(justCreated);
+  const [billSettings, setBillSettings] = useState<BillSettings | null>(null);
+  const [shopUpiId, setShopUpiId] = useState<string>("");
 
   const loadInvoice = useCallback(async () => {
     setIsLoading(true);
@@ -149,6 +162,44 @@ export default function InvoiceDetailPage() {
     if (invoiceId) loadInvoice();
   }, [invoiceId, loadInvoice]);
 
+  useEffect(() => {
+    invoicesApi
+      .getSettings()
+      .then((res) => setBillSettings(res.data))
+      .catch(() => setBillSettings(null));
+    shopsApi
+      .getSettings()
+      .then((res) => {
+        const shop = res.data?.shop || res.data;
+        const upi = shop?.bankAccountDetails?.upiId || "";
+        setShopUpiId(typeof upi === "string" ? upi : "");
+      })
+      .catch(() => setShopUpiId(""));
+  }, []);
+
+  const upiQrUrl = useMemo(() => {
+    if (!isDigitalWalletMethod(paymentMethod) || !shopUpiId || !invoice) {
+      return null;
+    }
+    const amount = parseFloat(paymentAmount) || invoice.balanceDue || 0;
+    const uri = buildUpiPayUri({
+      upiId: shopUpiId,
+      amount,
+      currency: invoice.currency === "NPR" ? "INR" : invoice.currency || "INR",
+      payeeName: billSettings?.shopNameOnBill || user?.shop?.shopName,
+      note: `Invoice ${invoice.invoiceNumber}`,
+      transactionRef: invoice.invoiceNumber,
+    });
+    return uri ? buildQrImageUrl(uri) : null;
+  }, [
+    paymentMethod,
+    shopUpiId,
+    invoice,
+    paymentAmount,
+    billSettings?.shopNameOnBill,
+    user?.shop?.shopName,
+  ]);
+
   const handleRecordPayment = async () => {
     const amount = parseFloat(paymentAmount);
     if (!amount || amount <= 0) {
@@ -160,14 +211,11 @@ export default function InvoiceDetailPage() {
     try {
       await invoicesApi.updatePaymentStatus(invoiceId, {
         amount,
-        method: paymentMethod,
+        paymentMethod,
       });
       toast({
-        title:
-          paymentMethod === "cash"
-            ? t("Cash Payment Recorded")
-            : t("Payment Recorded"),
-        description: `${invoice?.currency} ${amount.toLocaleString()} recorded`,
+        title: t("Payment Recorded"),
+        description: `${invoice?.currency} ${amount.toLocaleString()} via ${paymentMethodLabel(paymentMethod)}`,
       });
       setPaymentDialogOpen(false);
       setPaymentAmount("");
@@ -202,7 +250,41 @@ export default function InvoiceDetailPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    if (!invoice) return;
+    const ok = printBill({
+      fallbackShopName: user?.shop?.shopName,
+      settings: billSettings,
+      invoiceNumber: invoice.invoiceNumber,
+      customerName: invoice.customerName,
+      customerPhone: invoice.customerPhone,
+      customerEmail: invoice.customerEmail,
+      customerAddress: invoice.customerAddress,
+      issuedAt: invoice.issuedAt || invoice.createdAt,
+      lineItems: invoice.lineItems?.map((li) => ({
+        label: li.label,
+        quantity: li.quantity,
+        amount: li.amount,
+        details: li.details,
+      })),
+      subtotal: invoice.subtotal,
+      taxAmount: invoice.taxAmount,
+      taxLabel: invoice.taxLabel,
+      discountAmount: invoice.discountAmount,
+      totalAmount: invoice.totalAmount,
+      paidAmount: invoice.paidAmount,
+      balanceDue: invoice.balanceDue,
+      currency: invoice.currency || currencySymbol,
+      paymentMethod: invoice.paymentMethod,
+      notes: invoice.notes,
+      watermark: shouldShowWatermark,
+    });
+    if (!ok) {
+      toast({
+        variant: "destructive",
+        title: t("Pop-ups blocked"),
+        description: t("Allow pop-ups to print the bill"),
+      });
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -272,8 +354,8 @@ export default function InvoiceDetailPage() {
                 <Button
                   size="sm"
                   className="bg-green-600 hover:bg-green-700"
-                  onClick={() => {
-                    setPaymentMethod("cash");
+                    onClick={() => {
+                    setPaymentMethod("CASH");
                     setPaymentAmount(String(invoice.balanceDue));
                     setPaymentDialogOpen(true);
                   }}
@@ -330,7 +412,7 @@ export default function InvoiceDetailPage() {
                     variant="outline"
                     className="border-green-300 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-950/30"
                     onClick={() => {
-                      setPaymentMethod("cash");
+                      setPaymentMethod("CASH");
                       setPaymentAmount(String(invoice.balanceDue));
                       setPaymentDialogOpen(true);
                     }}
@@ -341,7 +423,7 @@ export default function InvoiceDetailPage() {
                     size="sm"
                     className="bg-green-600 hover:bg-green-700"
                     onClick={() => {
-                      setPaymentMethod("other");
+                      setPaymentMethod("UPI");
                       setPaymentAmount(String(invoice.balanceDue));
                       setPaymentDialogOpen(true);
                     }}
@@ -415,12 +497,41 @@ export default function InvoiceDetailPage() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
+                  {(billSettings?.shopLogoUrl && billSettings.showLogo !== false) && (
+                    <img
+                      src={billSettings.shopLogoUrl}
+                      alt="Shop logo"
+                      className="h-12 w-auto object-contain mb-2"
+                    />
+                  )}
                   <CardTitle className="text-xl">
-                    <T>INVOICE</T>
+                    {billSettings?.shopNameOnBill || user?.shop?.shopName || (
+                      <T>INVOICE</T>
+                    )}
                   </CardTitle>
+                  {billSettings?.tagline && (
+                    <p className="text-xs text-muted-foreground italic mt-0.5">
+                      {billSettings.tagline}
+                    </p>
+                  )}
                   <CardDescription className="font-mono text-base mt-1">
                     {invoice.invoiceNumber}
                   </CardDescription>
+                  {(billSettings?.showAddress !== false && billSettings?.shopAddress) && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {billSettings.shopAddress}
+                    </p>
+                  )}
+                  {(billSettings?.showGstin !== false && billSettings?.gstin) && (
+                    <p className="text-xs text-muted-foreground">
+                      Tax ID: {billSettings.gstin}
+                    </p>
+                  )}
+                  {invoice.paymentMethod && (
+                    <p className="text-xs mt-1">
+                      <T>Paid via</T>: {paymentMethodLabel(invoice.paymentMethod)}
+                    </p>
+                  )}
                 </div>
                 <div className="text-right text-sm text-muted-foreground">
                   {invoice.issuedAt && (
@@ -619,14 +730,12 @@ export default function InvoiceDetailPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                {paymentMethod === "cash" ? (
+                {paymentMethod === "CASH" ? (
                   <Banknote className="h-5 w-5 text-green-600" />
                 ) : (
                   <CreditCard className="h-5 w-5 text-green-600" />
                 )}
-                {paymentMethod === "cash"
-                  ? t("Record Cash Payment")
-                  : t("Record Payment")}
+                {t("Record Payment")}
               </DialogTitle>
               <DialogDescription>
                 {t(`Record a payment for invoice ${invoice.invoiceNumber}`)}
@@ -643,36 +752,53 @@ export default function InvoiceDetailPage() {
                   </span>
                 </div>
               </div>
-              {/* Payment method toggle */}
               <div>
                 <Label className="text-xs mb-1.5 block">
                   <T>Payment Method</T>
                 </Label>
-                <div className="inline-flex h-9 rounded-full border bg-muted p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("cash")}
-                    className={`px-4 text-sm font-medium rounded-full transition-all flex items-center gap-1.5 ${
-                      paymentMethod === "cash"
-                        ? "bg-green-600 text-white shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Banknote className="h-3.5 w-3.5" /> <T>Cash</T>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("other")}
-                    className={`px-4 text-sm font-medium rounded-full transition-all flex items-center gap-1.5 ${
-                      paymentMethod === "other"
-                        ? "bg-green-600 text-white shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <CreditCard className="h-3.5 w-3.5" /> <T>Other</T>
-                  </button>
+                <div className="grid grid-cols-3 gap-2">
+                  {COUNTER_PAYMENT_METHODS.map((pm) => (
+                    <button
+                      key={pm.value}
+                      type="button"
+                      onClick={() => setPaymentMethod(pm.value)}
+                      className={`px-2 py-2 rounded-lg text-xs font-medium border transition-all ${
+                        paymentMethod === pm.value
+                          ? "bg-green-600 text-white border-green-600 shadow-sm"
+                          : "bg-muted/50 border-muted-foreground/20 hover:border-green-500/50"
+                      }`}
+                    >
+                      {pm.label}
+                    </button>
+                  ))}
                 </div>
               </div>
+              {isDigitalWalletMethod(paymentMethod) && (
+                <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-center space-y-2">
+                  {upiQrUrl ? (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        <T>Ask customer to scan UPI / PhonePe QR</T>
+                      </p>
+                      <img
+                        src={upiQrUrl}
+                        alt="UPI QR"
+                        className="mx-auto h-40 w-40 rounded bg-white p-2"
+                      />
+                      <p className="text-[11px] text-muted-foreground font-mono">
+                        {shopUpiId}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      <T>
+                        Add your UPI ID in Shop Settings → Bank Details to show a
+                        payment QR here.
+                      </T>
+                    </p>
+                  )}
+                </div>
+              )}
               <div>
                 <Label>{t(`Payment Amount (${invoice.currency})`)}</Label>
                 <Input

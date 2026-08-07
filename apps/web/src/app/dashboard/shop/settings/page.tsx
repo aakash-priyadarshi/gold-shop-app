@@ -85,6 +85,9 @@ interface ShopData {
     accountName?: string;
     branchName?: string;
     swiftCode?: string;
+    upiId?: string;
+    phonePeMerchantRef?: string;
+    posTerminalId?: string;
   };
   user?: {
     id: string;
@@ -1131,6 +1134,24 @@ export default function ShopSettingsPage() {
                           }
                           placeholder="NBLNPKA"
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="upiId">
+                          <T>UPI ID / VPA</T>
+                        </Label>
+                        <Input
+                          id="upiId"
+                          value={shopData.bankAccountDetails?.upiId || ""}
+                          onChange={(e) =>
+                            updateBankDetails({ upiId: e.target.value })
+                          }
+                          placeholder="shop@upi"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          <T>
+                            Used for counter bill QR (PhonePe/UPI)
+                          </T>
+                        </p>
                       </div>
                     </div>
                   </div>
