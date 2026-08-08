@@ -38,6 +38,7 @@ import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 // ChatPopupProvider is now in root Providers
 import { useAuth, UserRole } from "@/hooks/useAuth";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
@@ -50,10 +51,8 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-    CURRENCIES,
     LANGUAGES,
     usePreferencesStore,
-    type CurrencyCode,
     type Language,
     type DashboardMode,
 } from "@/store/preferences";
@@ -197,28 +196,50 @@ function LanguageSelector() {
   );
 }
 
-function CurrencySelector() {
-  const currency = usePreferencesStore((s) => s.currency);
-  const setCurrency = usePreferencesStore((s) => s.setCurrency);
+/**
+ * Read-only shop currency badge. Sellers change currency in shop settings only.
+ */
+function ShopCurrencyBadge({ compact = false }: { compact?: boolean }) {
+  const { user } = useAuth();
+  const { currencyCode, symbol } = useShopCurrency();
+  const hasShop = Boolean(user?.shop?.id);
+  const href = hasShop
+    ? "/dashboard/shop/settings"
+    : `/dashboard/${(user?.role || "customer").toLowerCase()}/settings`;
+
+  const badge = (
+    <Link
+      href={href}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-[#161B22]/70 text-xs font-medium text-gray-700 dark:text-gray-200 hover:border-amber-300 dark:hover:border-amber-600 transition-colors",
+        compact ? "h-8 px-2" : "h-9 px-2.5",
+      )}
+      title="Shop currency — change in Settings"
+      aria-label={`Shop currency ${currencyCode}. Open settings to change.`}
+    >
+      <CreditCard
+        className={cn(
+          "text-gray-400 shrink-0",
+          compact ? "h-3 w-3" : "h-3.5 w-3.5",
+        )}
+      />
+      <span className="tabular-nums">
+        {symbol} {currencyCode}
+      </span>
+    </Link>
+  );
 
   return (
-    <Select
-      value={currency}
-      onValueChange={(v) => setCurrency(v as CurrencyCode)}
-    >
-      <SelectTrigger className="w-[100px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
-        <CreditCard className="h-3.5 w-3.5 mr-1 text-gray-400" />
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {Object.entries(CURRENCIES).map(([code, info]) => (
-          <SelectItem key={code} value={code} className="text-xs">
-            <span className="mr-1">{info.symbol}</span>
-            {code}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>{badge}</TooltipTrigger>
+        <TooltipContent side="bottom" className="text-xs max-w-[220px]">
+          <T>Shop currency</T>
+          {" — "}
+          <T>change in Settings</T>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -1167,6 +1188,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Mobile Actions */}
           <div className="flex items-center gap-1">
+            <ShopCurrencyBadge compact />
             {/* Mobile Theme Toggle */}
             <AnimatedThemeToggle size={36} className="touch-target" />
             <MessageDropdown />
@@ -1266,8 +1288,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               {/* Language Selector */}
               <LanguageSelector />
 
-              {/* Currency Selector */}
-              <CurrencySelector />
+              {/* Shop currency (read-only — change in settings) */}
+              <ShopCurrencyBadge />
 
               {/* Theme Toggle */}
               <AnimatedThemeToggle size={40} />

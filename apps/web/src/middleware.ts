@@ -585,6 +585,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|monitoring).*)"],
+  // Skip static / PWA / SEO assets so Fluid Active CPU is not spent on them.
+  // Keep HTML app routes for geo cookies, m.orivraa.com rewrites, consumer lockout.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon\\.ico|monitoring|robots\\.txt|sitemap\\.xml|manifest\\.json|manifest-pos\\.json|sw\\.js|workbox-.*|worker-.*|brand/|patterns/|catalog/|favicon/|flags/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|txt|xml|json|woff2?|ttf|eot)$).*)",
+  ],
 };
 

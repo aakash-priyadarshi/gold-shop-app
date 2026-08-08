@@ -183,16 +183,9 @@ export function middleware(request: NextRequest) {
   return response;
 }
 
-// Run middleware on all routes except static files
+// Run middleware on HTML/app routes only — skip static/PWA/SEO assets (Active CPU).
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder files
-     */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|monitoring|robots\\.txt|sitemap\\.xml|manifest\\.json|manifest-pos\\.json|sw\\.js|workbox-.*|worker-.*|brand/|patterns/|catalog/|favicon/|flags/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|txt|xml|json|woff2?|ttf|eot)$).*)",
   ],
 };
