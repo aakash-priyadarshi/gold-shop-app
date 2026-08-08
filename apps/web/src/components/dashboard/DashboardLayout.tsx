@@ -1061,6 +1061,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           "/dashboard/shop/lending",
           "/dashboard/shop/savings",
           "/dashboard/shop/chit",
+          "/dashboard/shop/accounting",
           "/dashboard/shop/customers",
           "/dashboard/shop/messages",
           "/dashboard/shop/settings",
