@@ -2,7 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 
 const dsn =
   process.env.NEXT_PUBLIC_SENTRY_DSN ||
-  "https://81c9a5e5d7c0c5e96006c979ee379258@o105835.ingest.us.sentry.io/4511604651982848";
+  "https://a4441c29112069bd06a2e419d466045d@o105835.ingest.us.sentry.io/4511874239561728";
 
 Sentry.init({
   dsn,
