@@ -10,6 +10,7 @@ export type TaxIdKind =
   | "VAT_GB"     // UK VAT
   | "VAT_EU"     // EU VAT (DE, FR, IT, ES, NL, ...)
   | "PAN_NP"     // Nepal PAN/VAT (9-digit)
+  | "TIN_LK"     // Sri Lanka IRD TIN/VAT (9-digit)
   | "EIN_US"     // US EIN
   | "GENERIC";
 
@@ -19,6 +20,7 @@ const TRN_AE_RE = /^[0-9]{15}$/;
 const VAT_GB_RE = /^GB[0-9]{9}$|^GB[0-9]{12}$|^GBGD[0-9]{3}$|^GBHA[0-9]{3}$/;
 const VAT_EU_RE = /^(AT|BE|BG|CY|CZ|DE|DK|EE|EL|ES|FI|FR|HR|HU|IE|IT|LT|LU|LV|MT|NL|PL|PT|RO|SE|SI|SK)[0-9A-Z]{2,12}$/;
 const PAN_NP_RE = /^[0-9]{9}$/;
+const TIN_LK_RE = /^[0-9]{9}$/;
 const EIN_US_RE = /^[0-9]{2}-[0-9]{7}$/;
 
 export interface TaxIdValidationResult {
@@ -30,12 +32,44 @@ export interface TaxIdValidationResult {
   countryCode?: string; // EU/UK
 }
 
+export interface SriLankaTaxInvoiceEligibility {
+  country: string;
+  requested: boolean;
+  customerType: "B2C" | "B2B";
+  sellerTaxId: string | null | undefined;
+  sellerVatRegistrationStatus: string | null | undefined;
+  purchaserTaxId: string | null | undefined;
+}
+
+/**
+ * A Sri Lankan TAX INVOICE is only available for an explicit B2B request when
+ * both parties have valid TINs and the seller's VAT registration is verified.
+ */
+export function canIssueSriLankaTaxInvoice({
+  country,
+  requested,
+  customerType,
+  sellerTaxId,
+  sellerVatRegistrationStatus,
+  purchaserTaxId,
+}: SriLankaTaxInvoiceEligibility): boolean {
+  return Boolean(
+    country.trim().toUpperCase() === "LK" &&
+      requested &&
+      customerType === "B2B" &&
+      sellerVatRegistrationStatus?.trim().toUpperCase() === "VERIFIED" &&
+      /^\d{9}$/.test(String(sellerTaxId || "").trim()) &&
+      /^\d{9}$/.test(String(purchaserTaxId || "").trim()),
+  );
+}
+
 export function detectTaxIdKind(country: string): TaxIdKind {
-  const c = country.toUpperCase();
+  const c = country.trim().toUpperCase();
   if (c === "IN") return "GSTIN";
   if (c === "AE") return "TRN_AE";
   if (c === "GB" || c === "UK") return "VAT_GB";
   if (c === "NP") return "PAN_NP";
+  if (c === "LK") return "TIN_LK";
   if (c === "US") return "EIN_US";
   if (["AT","BE","BG","CY","CZ","DE","DK","EE","EL","ES","FI","FR","HR","HU","IE","IT","LT","LU","LV","MT","NL","PL","PT","RO","SE","SI","SK","GR"].includes(c)) return "VAT_EU";
   return "GENERIC";
@@ -46,12 +80,10 @@ export function validateTaxId(
   kindOrCountry: TaxIdKind | string,
 ): TaxIdValidationResult {
   const v = (value || "").trim().toUpperCase();
-  const kind: TaxIdKind = (Object.values({ GSTIN: 1, PAN_IN: 1, TRN_AE: 1, VAT_GB: 1, VAT_EU: 1, PAN_NP: 1, EIN_US: 1, GENERIC: 1 }).length && (kindOrCountry as TaxIdKind))
-    || detectTaxIdKind(kindOrCountry);
-  // Resolve when caller passes a country code instead of kind
-  const resolvedKind = (["GSTIN","PAN_IN","TRN_AE","VAT_GB","VAT_EU","PAN_NP","EIN_US","GENERIC"] as TaxIdKind[]).includes(kindOrCountry as TaxIdKind)
+  const resolvedKind = (["GSTIN","PAN_IN","TRN_AE","VAT_GB","VAT_EU","PAN_NP","TIN_LK","EIN_US","GENERIC"] as TaxIdKind[]).includes(kindOrCountry as TaxIdKind)
     ? (kindOrCountry as TaxIdKind)
     : detectTaxIdKind(kindOrCountry);
+  const kind = resolvedKind;
 
   if (!v) return { valid: false, kind: resolvedKind, message: "Tax ID is required" };
 
@@ -74,6 +106,9 @@ export function validateTaxId(
     case "PAN_NP":
       if (!PAN_NP_RE.test(v)) return { valid: false, kind, message: "Nepal PAN/VAT must be 9 digits" };
       return { valid: true, kind: "PAN_NP", countryCode: "NP" };
+    case "TIN_LK":
+      if (!TIN_LK_RE.test(v)) return { valid: false, kind, message: "Sri Lanka IRD TIN must be exactly 9 digits" };
+      return { valid: true, kind: "TIN_LK", countryCode: "LK" };
     case "EIN_US":
       if (!EIN_US_RE.test(v)) return { valid: false, kind, message: "US EIN must be XX-XXXXXXX" };
       return { valid: true, kind: "EIN_US", countryCode: "US" };
@@ -107,6 +142,7 @@ export const TAX_EXEMPT_REASONS = [
 export const COUNTRIES = [
   { code: "NP", name: "Nepal", currency: "NPR" },
   { code: "IN", name: "India", currency: "INR" },
+  { code: "LK", name: "Sri Lanka", currency: "LKR" },
   { code: "AE", name: "UAE", currency: "AED" },
   { code: "GB", name: "United Kingdom", currency: "GBP" },
   { code: "DE", name: "Germany", currency: "EUR" },

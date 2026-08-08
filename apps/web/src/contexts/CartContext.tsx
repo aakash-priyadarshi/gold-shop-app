@@ -50,7 +50,12 @@ interface CartContextType {
   removeAddress: (id: string) => Promise<void>;
   setSelectedAddress: (id: string) => void;
   // Delivery estimation
-  estimateDelivery: (shopPincode: string, deliveryPincode: string) => DeliveryEstimate;
+  estimateDelivery: (
+    shopPincode: string,
+    deliveryPincode: string,
+    shopCountry?: string,
+    deliveryCountry?: string,
+  ) => DeliveryEstimate;
 }
 
 export interface DeliveryEstimate {
@@ -66,48 +71,57 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_STORAGE_KEY = 'orivraa_cart';
 const ADDRESSES_STORAGE_KEY = 'orivraa_addresses';
 
-// Pincode utilities
-const getPincodeRegion = (pincode: string): { city?: string; country: string } => {
-  // Nepal pincodes (5 digits, starting with specific ranges)
-  if (/^[1-5]\d{4}$/.test(pincode)) {
-    const prefix = pincode.substring(0, 2);
-    const cities: Record<string, string> = {
-      '44': 'Kathmandu',
-      '45': 'Lalitpur',
-      '46': 'Bhaktapur',
-      '33': 'Pokhara',
-      '56': 'Biratnagar',
-      '21': 'Birgunj',
+// Postal codes are only a city hint. Nepal, Sri Lanka, and the US all use
+// five-digit codes, so the explicitly selected country must win.
+export const getPincodeRegion = (
+  pincode: string,
+  countryHint?: string,
+): { city?: string; country: string } => {
+  const normalizedCountry = countryHint?.trim().toUpperCase();
+  const prefix = pincode.trim().substring(0, 2);
+
+  if (normalizedCountry) {
+    const cityPrefixes: Record<string, Record<string, string>> = {
+      NP: {
+        '44': 'Kathmandu',
+        '45': 'Lalitpur',
+        '46': 'Bhaktapur',
+        '33': 'Pokhara',
+        '56': 'Biratnagar',
+        '21': 'Birgunj',
+      },
+      LK: {
+        '00': 'Colombo',
+        '01': 'Colombo',
+        '20': 'Kandy',
+        '40': 'Jaffna',
+        '80': 'Galle',
+      },
+      IN: {
+        '11': 'Delhi',
+        '40': 'Mumbai',
+        '50': 'Hyderabad',
+        '56': 'Bengaluru',
+        '60': 'Chennai',
+        '70': 'Kolkata',
+        '38': 'Ahmedabad',
+      },
     };
-    return { city: cities[prefix], country: 'NP' };
+    return {
+      city: cityPrefixes[normalizedCountry]?.[prefix],
+      country: normalizedCountry,
+    };
   }
-  
-  // India pincodes (6 digits)
+
+  // Six numeric digits are unambiguous for India in the supported markets.
   if (/^\d{6}$/.test(pincode)) {
-    const prefix = pincode.substring(0, 2);
-    const cities: Record<string, string> = {
-      '11': 'Delhi',
-      '40': 'Mumbai',
-      '50': 'Hyderabad',
-      '56': 'Bangalore',
-      '60': 'Chennai',
-      '70': 'Kolkata',
-      '38': 'Ahmedabad',
-    };
-    return { city: cities[prefix], country: 'IN' };
+    return getPincodeRegion(pincode, 'IN');
   }
-  
-  // US ZIP codes (5 digits or 5+4)
-  if (/^\d{5}(-\d{4})?$/.test(pincode)) {
-    return { country: 'US' };
-  }
-  
-  // UK postcodes
+  // ZIP+4 is unambiguous; a plain five-digit code is deliberately not guessed.
+  if (/^\d{5}-\d{4}$/.test(pincode)) return { country: 'US' };
   if (/^[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}$/i.test(pincode)) {
     return { country: 'UK' };
   }
-  
-  // UAE (no specific postal codes, but we'll handle it)
   return { country: 'UNKNOWN' };
 };
 
@@ -277,9 +291,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Delivery estimation
-  const estimateDelivery = useCallback((shopPincode: string, deliveryPincode: string): DeliveryEstimate => {
-    const shopRegion = getPincodeRegion(shopPincode);
-    const deliveryRegion = getPincodeRegion(deliveryPincode);
+  const estimateDelivery = useCallback((
+    shopPincode: string,
+    deliveryPincode: string,
+    shopCountry?: string,
+    deliveryCountry?: string,
+  ): DeliveryEstimate => {
+    const shopRegion = getPincodeRegion(shopPincode, shopCountry);
+    const deliveryRegion = getPincodeRegion(deliveryPincode, deliveryCountry);
 
     const today = new Date();
     let minDays: number;
@@ -324,6 +343,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         customsInfo = 'India Customs: Import duty on gold jewellery is 12.5% + 2.5% Social Welfare Surcharge. GST of 3% also applies. Keep purchase invoice for customs.';
       } else if (deliveryRegion.country === 'NP') {
         customsInfo = 'Nepal Customs: Gold jewellery import may require declaration. Duty rates vary. Contact local customs for current rates.';
+      } else if (deliveryRegion.country === 'LK') {
+        customsInfo = 'Sri Lanka Customs: Jewellery imports may require declaration and can be subject to duties and taxes set by the authorities. Check current requirements before shipment.';
       } else {
         customsInfo = 'International shipments may be subject to import duties, taxes, and customs fees. Please check with your local customs office.';
       }

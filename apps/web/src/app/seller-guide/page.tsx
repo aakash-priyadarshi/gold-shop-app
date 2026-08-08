@@ -25,6 +25,7 @@ import {
     Zap,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 /* ────────────────────────────────────────────────────────────── */
@@ -281,11 +282,13 @@ export default function SellerGuidePage() {
                   <div className="relative rounded-3xl overflow-hidden border border-gold-500/30 shadow-2xl bg-navy-950/60 backdrop-blur-md p-4 transition-transform duration-500 hover:-translate-y-1.5 hover:shadow-gold-500/5">
                     <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-navy-950 relative">
                       {/* Premium AI Image */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img 
+                      <Image
                         src="https://images.orivraa.com/images/public/luxury-gold-ring-box.png" 
                         alt="Luxury Diamond & Gold Ring" 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.2s] ease-out"
+                        className="object-cover group-hover:scale-105 transition-transform [transition-duration:1.2s] ease-out"
+                        fill
+                        sizes="(min-width: 1024px) 50vw, 100vw"
+                        unoptimized
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
                       <div className="absolute bottom-4 left-4 right-4">

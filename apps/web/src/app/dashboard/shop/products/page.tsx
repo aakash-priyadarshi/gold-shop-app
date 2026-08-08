@@ -60,6 +60,7 @@ import {
     Search,
     Trash2,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 interface InventoryItem {
@@ -708,14 +709,16 @@ export default function ShopProductsPage() {
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center">
                               {product.images?.[0] ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
+                                <Image
                                   src={getImageUrl(
                                     product.images[0],
                                     "thumbnail",
                                   )}
                                   alt={product.nameEn}
                                   className="w-full h-full object-cover"
+                                  width={48}
+                                  height={48}
+                                  unoptimized
                                 />
                               ) : (
                                 <ImageIcon className="h-5 w-5 text-gray-400" />
@@ -1454,11 +1457,13 @@ export default function ShopProductsPage() {
                               Primary
                             </div>
                           )}
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
+                          <Image
                             src={getImageUrl(url, "thumbnail")}
                             alt={`Product ${idx + 1}`}
                             className="w-20 h-20 object-cover rounded-lg border"
+                            width={80}
+                            height={80}
+                            unoptimized
                           />
                           <button
                             type="button"

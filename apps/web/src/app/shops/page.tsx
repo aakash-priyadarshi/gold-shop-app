@@ -96,6 +96,20 @@ const COUNTRIES = {
       "Kerala",
     ],
   },
+  LK: {
+    name: "Sri Lanka",
+    states: [
+      "Western",
+      "Central",
+      "Southern",
+      "Northern",
+      "Eastern",
+      "North Western",
+      "North Central",
+      "Uva",
+      "Sabaragamuwa",
+    ],
+  },
   US: {
     name: "United States",
     states: ["California", "New York", "Texas", "Florida", "Illinois"],
@@ -105,6 +119,7 @@ const COUNTRIES = {
     states: ["England", "Scotland", "Wales", "Northern Ireland"],
   },
   AE: { name: "UAE", states: ["Dubai", "Abu Dhabi", "Sharjah"] },
+  EU: { name: "Europe", states: [] },
 };
 
 export default function ShopsPage() {

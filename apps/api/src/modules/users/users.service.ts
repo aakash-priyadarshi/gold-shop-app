@@ -10,7 +10,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 
 // Currency codes matching the Prisma enum (CurrencyCode will be available after Prisma regeneration)
-type CurrencyCode = "NPR" | "INR" | "AED" | "USD" | "GBP" | "EUR";
+type CurrencyCode = "NPR" | "INR" | "AED" | "USD" | "GBP" | "EUR" | "LKR";
 const DEFAULT_CURRENCY: CurrencyCode = "NPR";
 
 interface UpdateProfileData {

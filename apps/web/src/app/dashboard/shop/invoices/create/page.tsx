@@ -30,10 +30,11 @@ import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { loadTradeInPayload } from "@/lib/oldGoldTradeIn";
 import { useCurrency } from "@/store/preferences";
-import { getApiUrl, invoicesApi, pricingApi, shopQuotesApi } from "@/lib/api";
+import { getApiUrl, invoicesApi, pricingApi, shopQuotesApi, shopsApi } from "@/lib/api";
 import { COUNTER_PAYMENT_METHODS } from "@/lib/counterPayments";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
+    canIssueSriLankaTaxInvoice,
     detectTaxIdKind,
     TAX_EXEMPT_REASONS,
     validateTaxId,
@@ -161,6 +162,17 @@ const FALLBACK_CATEGORY_TAX_RATES: Record<
     },
     defaultRate: 0.1,
   },
+  LK: {
+    taxType: "VAT",
+    taxName: "VAT",
+    rates: {
+      PRECIOUS_METAL: 0.18,
+      MAKING_CHARGE: 0.18,
+      GEMSTONE: 0.18,
+      FINISH: 0.18,
+    },
+    defaultRate: 0.18,
+  },
 };
 
 const PRICING_REGION_BY_INVOICE_COUNTRY: Record<string, string> = {
@@ -171,6 +183,7 @@ const PRICING_REGION_BY_INVOICE_COUNTRY: Record<string, string> = {
   GB: "UK",
   UK: "UK",
   EU: "EU",
+  LK: "LK",
 };
 
 const TAX_CATEGORIES: TaxCategoryKey[] = [
@@ -181,10 +194,17 @@ const TAX_CATEGORIES: TaxCategoryKey[] = [
 ];
 
 function getFallbackCountryTax(countryCode: string): CountryTaxConfig {
-  return (
-    FALLBACK_CATEGORY_TAX_RATES[countryCode] ||
-    FALLBACK_CATEGORY_TAX_RATES["IN"]
-  );
+  return FALLBACK_CATEGORY_TAX_RATES[countryCode] || {
+    taxType: "NONE",
+    taxName: "Tax unavailable",
+    rates: {
+      PRECIOUS_METAL: 0,
+      MAKING_CHARGE: 0,
+      GEMSTONE: 0,
+      FINISH: 0,
+    },
+    defaultRate: 0,
+  };
 }
 
 function normalizeInvoiceCountryCode(countryCode: string): string {
@@ -234,9 +254,10 @@ const COUNTRIES = [
   { code: "GB", name: "United Kingdom", phone: "+44", currency: "GBP" },
   { code: "EU", name: "Europe", phone: "+49", currency: "EUR" },
   { code: "AU", name: "Australia", phone: "+61", currency: "AUD" },
+  { code: "LK", name: "Sri Lanka", phone: "+94", currency: "LKR" },
 ];
 
-// Currencies for converter (Frankfurter supported + NPR derived)
+// Currencies for converter (Frankfurter supported + NPR/LKR derived)
 const CONVERTIBLE_CURRENCIES = [
   { code: "INR", symbol: "₹", name: "Indian Rupee" },
   { code: "NPR", symbol: "रू", name: "Nepalese Rupee" },
@@ -245,6 +266,7 @@ const CONVERTIBLE_CURRENCIES = [
   { code: "EUR", symbol: "€", name: "Euro" },
   { code: "AED", symbol: "د.إ", name: "UAE Dirham" },
   { code: "AUD", symbol: "A$", name: "Australian Dollar" },
+  { code: "LKR", symbol: "Rs.", name: "Sri Lankan Rupee" },
 ];
 
 const METAL_TYPES = [
@@ -579,17 +601,76 @@ export default function CreateInvoicePage() {
   const [useCustomTaxRate, setUseCustomTaxRate] = useState(false);
   const [customTaxRatePercent, setCustomTaxRatePercent] = useState("");
   const [placeOfSupply, setPlaceOfSupply] = useState("");
+  const [requestTaxInvoice, setRequestTaxInvoice] = useState(false);
+  const [supplyDate, setSupplyDate] = useState(
+    () => new Date().toISOString().slice(0, 10),
+  );
+  const [sellerLkTaxId, setSellerLkTaxId] = useState("");
+  const [sellerVatRegistrationStatus, setSellerVatRegistrationStatus] =
+    useState(() =>
+      String((user?.shop as any)?.vatRegistrationStatus || "NOT_REGISTERED"),
+    );
 
   const taxIdValidation = useMemo(() => {
     if (!customerTaxId) return null;
     return validateTaxId(customerTaxId, invoiceCountry);
   }, [customerTaxId, invoiceCountry]);
   const taxIdKind = detectTaxIdKind(invoiceCountry);
+  const sellerHasValidLkTin = /^\d{9}$/.test(sellerLkTaxId.trim());
+  const sellerLkVatVerified = sellerVatRegistrationStatus === "VERIFIED";
+  const lkVatChargeBlocked =
+    invoiceCountry === "LK" && !sellerLkVatVerified;
+  const isLkTaxInvoice = canIssueSriLankaTaxInvoice({
+    country: invoiceCountry,
+    requested: requestTaxInvoice,
+    customerType,
+    sellerTaxId: sellerLkTaxId,
+    sellerVatRegistrationStatus,
+    purchaserTaxId: customerTaxId,
+  });
+
+  useEffect(() => {
+    if (invoiceCountry !== "LK") {
+      setRequestTaxInvoice(false);
+      setSellerLkTaxId("");
+      setSellerVatRegistrationStatus("NOT_REGISTERED");
+      return;
+    }
+
+    let cancelled = false;
+    Promise.allSettled([shopsApi.getKyc(), invoicesApi.getSettings()]).then(
+      ([kycResult, settingsResult]) => {
+        if (cancelled) return;
+        const kyc =
+          kycResult.status === "fulfilled"
+            ? kycResult.value.data ?? kycResult.value
+            : {};
+        const settings =
+          settingsResult.status === "fulfilled"
+            ? settingsResult.value.data ?? settingsResult.value
+            : {};
+        const candidates = [kyc.vatNumber, kyc.panNumber, settings.gstin];
+        setSellerLkTaxId(
+          String(candidates.find((value) => /^\d{9}$/.test(String(value || "").trim())) || ""),
+        );
+        setSellerVatRegistrationStatus(
+          String(
+            kyc.vatRegistrationStatus ||
+              (user?.shop as any)?.vatRegistrationStatus ||
+              "NOT_REGISTERED",
+          ).toUpperCase(),
+        );
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [invoiceCountry, user?.shop]);
 
   // ── Customer ──
   const [customerName, setCustomerName] = useState("");
   const [phoneCountryCode, setPhoneCountryCode] = useState(
-    COUNTRIES.find((c) => c.code === shopCountry)?.phone || "+91",
+    COUNTRIES.find((c) => c.code === shopCountry)?.phone || "",
   );
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -827,7 +908,7 @@ export default function CreateInvoicePage() {
     if (quote.customerName) setCustomerName(quote.customerName);
     if (quote.customerPhone) {
       setCustomerPhone(quote.customerPhone);
-      setPhoneCountryCode(quote.phoneCountryCode || "+91");
+      setPhoneCountryCode(quote.phoneCountryCode || "");
     }
     if (quote.customerEmail) setCustomerEmail(quote.customerEmail);
 
@@ -981,7 +1062,7 @@ export default function CreateInvoicePage() {
   }, [subtotal, makingChargeMode, makingChargeValue]);
 
   const taxBreakdown = useMemo(() => {
-    if (isTaxExempt) {
+    if (isTaxExempt || lkVatChargeBlocked) {
       return { metalTax: 0, gemstoneTax: 0, makingTax: 0, totalTax: 0 };
     }
     const rates = countryTax.rates;
@@ -1018,7 +1099,13 @@ export default function CreateInvoicePage() {
       makingTax,
       totalTax: metalTax + gemstoneTax + makingTax,
     };
-  }, [lineItems, countryTax, makingChargeAmount, isTaxExempt]);
+  }, [
+    lineItems,
+    countryTax,
+    makingChargeAmount,
+    isTaxExempt,
+    lkVatChargeBlocked,
+  ]);
 
   const discountAmount = useMemo(() => {
     const val = parseFloat(discountValue) || 0;
@@ -1060,6 +1147,46 @@ export default function CreateInvoicePage() {
         description: taxIdValidation.message || "Check the customer tax ID format",
       });
       return;
+    }
+    if (invoiceCountry === "LK" && requestTaxInvoice) {
+      if (customerType !== "B2B") {
+        toast({
+          variant: "destructive",
+          title: t("Tax invoice requires a VAT-registered purchaser"),
+        });
+        return;
+      }
+      if (!sellerHasValidLkTin) {
+        toast({
+          variant: "destructive",
+          title: t("Seller TIN required"),
+          description: t("Add a valid 9-digit IRD TIN/VAT registration in KYC or invoice settings."),
+        });
+        return;
+      }
+      if (!sellerLkVatVerified) {
+        toast({
+          variant: "destructive",
+          title: t("VAT registration is not verified"),
+          description: t("An admin must verify the Sri Lanka VAT registration before a TAX INVOICE can be issued."),
+        });
+        return;
+      }
+      if (!taxIdValidation?.valid) {
+        toast({
+          variant: "destructive",
+          title: t("Purchaser TIN required"),
+          description: t("A Sri Lanka tax invoice requires the purchaser's valid 9-digit TIN."),
+        });
+        return;
+      }
+      if (!supplyDate) {
+        toast({
+          variant: "destructive",
+          title: t("Date of supply required"),
+        });
+        return;
+      }
     }
 
     setLoading(true);
@@ -1121,27 +1248,39 @@ export default function CreateInvoicePage() {
         customerEmail: customerEmail || undefined,
         customerAddress: fullAddress || undefined,
         lineItems: apiLineItems,
-        taxRate: isTaxExempt
+        taxRate: isTaxExempt || lkVatChargeBlocked
           ? 0
           : useCustomTaxRate
             ? (parseFloat(customTaxRatePercent) || 0) / 100
             : countryTax.defaultRate,
-        taxLabel: isTaxExempt ? "Tax Exempt" : countryTax.taxName || undefined,
+        taxLabel: isTaxExempt
+          ? "Tax Exempt"
+          : lkVatChargeBlocked
+            ? "VAT not charged - registration not verified"
+            : countryTax.taxName || undefined,
         taxBreakdown: {
-          metalTax: isTaxExempt ? 0 : taxBreakdown.metalTax,
-          gemstoneTax: isTaxExempt ? 0 : taxBreakdown.gemstoneTax,
-          makingTax: isTaxExempt ? 0 : taxBreakdown.makingTax,
-          totalTax: isTaxExempt ? 0 : taxBreakdown.totalTax,
+          metalTax: isTaxExempt || lkVatChargeBlocked ? 0 : taxBreakdown.metalTax,
+          gemstoneTax: isTaxExempt || lkVatChargeBlocked ? 0 : taxBreakdown.gemstoneTax,
+          makingTax: isTaxExempt || lkVatChargeBlocked ? 0 : taxBreakdown.makingTax,
+          totalTax: isTaxExempt || lkVatChargeBlocked ? 0 : taxBreakdown.totalTax,
           country: invoiceCountry,
           isMockInsured,
+          lkTaxInvoice: isLkTaxInvoice,
+          sellerTaxId: invoiceCountry === "LK" ? sellerLkTaxId || undefined : undefined,
+          supplyDate: invoiceCountry === "LK" ? supplyDate : undefined,
+          placeOfSupply: invoiceCountry === "LK" ? placeOfSupply || undefined : undefined,
+          purchaserVatRegistered: invoiceCountry === "LK" ? customerType === "B2B" : undefined,
         },
         // Tax filing
         isTaxExempt,
         taxExemptReason: isTaxExempt ? taxExemptReason : undefined,
         customerType,
+        taxInvoiceRequested:
+          invoiceCountry === "LK" ? requestTaxInvoice : undefined,
         customerTaxId: customerTaxId || undefined,
         invoiceCountry,
         placeOfSupply: placeOfSupply || undefined,
+        supplyDate: invoiceCountry === "LK" ? supplyDate : undefined,
         makingCharge: makingChargeAmount || undefined,
         discountAmount: discountAmount || undefined,
         dueDate: dueDate || undefined,
@@ -1365,21 +1504,36 @@ export default function CreateInvoicePage() {
                         <button
                           key={t}
                           type="button"
-                          onClick={() => setCustomerType(t)}
+                          onClick={() => {
+                            setCustomerType(t);
+                            if (t === "B2C") setRequestTaxInvoice(false);
+                          }}
                           className={`flex-1 px-3 py-2 text-sm rounded-md border transition ${
                             customerType === t
                               ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 font-semibold"
                               : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                           }`}
                         >
-                          {t === "B2C" ? "Consumer (B2C)" : "Business (B2B)"}
+                          <T>
+                            {t === "B2C"
+                              ? "Consumer (B2C)"
+                              : invoiceCountry === "LK"
+                                ? "VAT-registered business (B2B)"
+                                : "Business (B2B)"}
+                          </T>
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
                     <Label>
-                      Customer Tax ID
+                      <T>
+                        {invoiceCountry === "LK"
+                          ? requestTaxInvoice
+                            ? "Purchaser TIN (9 digits)"
+                            : "Purchaser TIN (optional for ordinary invoice)"
+                          : "Customer Tax ID"}
+                      </T>
                       <span className="text-xs text-gray-500 ml-1">
                         ({taxIdKind.replace("_", " ")})
                       </span>
@@ -1396,8 +1550,12 @@ export default function CreateInvoicePage() {
                               ? "GB123456789"
                               : taxIdKind === "PAN_NP"
                                 ? "123456789"
+                                : taxIdKind === "TIN_LK"
+                                  ? "123456789"
                                 : "Tax ID"
                       }
+                      inputMode={taxIdKind === "TIN_LK" ? "numeric" : undefined}
+                      maxLength={taxIdKind === "TIN_LK" ? 9 : undefined}
                       className={
                         taxIdValidation && !taxIdValidation.valid
                           ? "border-red-400 focus-visible:ring-red-400"
@@ -1422,6 +1580,88 @@ export default function CreateInvoicePage() {
                   </div>
                 </div>
 
+                {invoiceCountry === "LK" && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-3 dark:border-blue-900 dark:bg-blue-950/20">
+                    <label className="flex items-start gap-3" htmlFor="lk-tax-invoice">
+                      <input
+                        id="lk-tax-invoice"
+                        type="checkbox"
+                        className="mt-1"
+                        checked={requestTaxInvoice}
+                        disabled={
+                          customerType !== "B2B" ||
+                          !sellerHasValidLkTin ||
+                          !sellerLkVatVerified
+                        }
+                        onChange={(event) => setRequestTaxInvoice(event.target.checked)}
+                      />
+                      <span>
+                        <span className="block text-sm font-medium">
+                          <T>Issue a Sri Lanka TAX INVOICE</T>
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          <T>
+                            Use this only for a VAT-registered B2B purchaser. A valid
+                            9-digit seller TIN and purchaser TIN are required.
+                          </T>
+                        </span>
+                      </span>
+                    </label>
+                    {!sellerHasValidLkTin && (
+                      <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                        <T>
+                          Add a valid 9-digit seller IRD TIN/VAT registration in KYC
+                          or invoice settings to enable TAX INVOICE.
+                        </T>
+                      </p>
+                    )}
+                    {sellerHasValidLkTin && !sellerLkVatVerified && (
+                      <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                        <T>VAT registration status</T>: {sellerVatRegistrationStatus.replace(/_/g, " ")}.{" "}
+                        <T>
+                          VAT will not be charged and TAX INVOICE remains disabled
+                          until an admin verifies the registration.
+                        </T>
+                      </p>
+                    )}
+                    {customerType === "B2C" && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        <T>
+                          B2C sales remain ordinary invoices or receipts; output VAT
+                          is still calculated.
+                        </T>
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {invoiceCountry === "LK" && requestTaxInvoice && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="lk-supply-date">
+                        <T>Date of supply</T> *
+                      </Label>
+                      <Input
+                        id="lk-supply-date"
+                        type="date"
+                        value={supplyDate}
+                        onChange={(event) => setSupplyDate(event.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="lk-place-of-supply">
+                        <T>Place of supply (optional)</T>
+                      </Label>
+                      <Input
+                        id="lk-place-of-supply"
+                        value={placeOfSupply}
+                        onChange={(event) => setPlaceOfSupply(event.target.value)}
+                        placeholder={t("e.g. Colombo")}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* India: Place of Supply for IGST detection */}
                 {invoiceCountry === "IN" && customerType === "B2B" && (
                   <div>
@@ -1442,7 +1682,7 @@ export default function CreateInvoicePage() {
                     checked={useCustomTaxRate}
                     onChange={(e) => setUseCustomTaxRate(e.target.checked)}
                     className="mt-1"
-                    disabled={isTaxExempt}
+                    disabled={isTaxExempt || lkVatChargeBlocked}
                   />
                   <div className="flex-1">
                     <label htmlFor="custom-tax-rate" className="text-sm font-medium cursor-pointer">

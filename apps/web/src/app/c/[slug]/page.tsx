@@ -20,6 +20,7 @@ import {
   Store,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -186,10 +187,13 @@ function WalkInRfqModal({
                   className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
                 >
                   {si.item.inventoryItem.images?.[0] ? (
-                    <img
+                    <Image
                       src={si.item.inventoryItem.images[0]}
                       className="w-12 h-12 rounded-lg object-cover"
                       alt={`${si.item.inventoryItem.title} thumbnail`}
+                      width={48}
+                      height={48}
+                      unoptimized
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700" />
@@ -629,10 +633,13 @@ function ShowroomView({
       {/* Main image */}
       <div className="flex-1 relative flex items-center justify-center overflow-hidden">
         {item.inventoryItem.images?.[0] ? (
-          <img
+          <Image
             src={item.inventoryItem.images[0]}
             alt={item.inventoryItem.title}
-            className="max-w-full max-h-full object-contain"
+            className="h-auto w-auto max-w-full max-h-full object-contain"
+            width={1200}
+            height={1200}
+            unoptimized
           />
         ) : (
           <div className="w-64 h-64 bg-gray-800 rounded-xl flex items-center justify-center text-gray-600">
@@ -740,10 +747,13 @@ function ShowroomView({
                   className="flex items-center gap-3 bg-gray-800 rounded-lg p-3"
                 >
                   {si.inventoryItem.images?.[0] ? (
-                    <img
+                    <Image
                       src={si.inventoryItem.images[0]}
                       className="w-10 h-10 rounded object-cover"
                       alt={`${si.inventoryItem.title} thumbnail`}
+                      width={40}
+                      height={40}
+                      unoptimized
                     />
                   ) : (
                     <div className="w-10 h-10 rounded bg-gray-700" />
@@ -801,7 +811,6 @@ export default function PublicCataloguePage() {
   const [items, setItems] = useState<CatalogueItemPublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
   const [showShowroom, setShowShowroom] = useState(false);
   const [error, setError] = useState("");
   const t = useT();
@@ -810,6 +819,17 @@ export default function PublicCataloguePage() {
     if (!user || !catalogue) return false;
     return user.role === "SHOPKEEPER" && user.shop?.id === catalogue.shop.id;
   }, [user, catalogue]);
+
+  const fetchItems = useCallback(async (authToken?: string) => {
+    try {
+      const res = await catalogueApi.getPublicItems(slug, authToken);
+      setItems(
+        (res.data || []).filter((i: CatalogueItemPublic) => !i.isHidden),
+      );
+    } catch {
+      setError(t("Failed to load items."));
+    }
+  }, [slug, t]);
 
   // Fetch catalogue metadata
   const fetchCatalogue = useCallback(async () => {
@@ -822,9 +842,7 @@ export default function PublicCataloguePage() {
       if (data.requiresPassword) {
         // Check localStorage for token
         storedToken = localStorage.getItem(`cat_token_${slug}`);
-        if (storedToken) {
-          setToken(storedToken);
-        } else {
+        if (!storedToken) {
           setNeedsPassword(true);
           setLoading(false);
           return;
@@ -840,22 +858,10 @@ export default function PublicCataloguePage() {
     } finally {
       setLoading(false);
     }
-  }, [slug]);
-
-  const fetchItems = async (tkn?: string) => {
-    try {
-      const authTkn = tkn || token || undefined;
-      const res = await catalogueApi.getPublicItems(slug, authTkn);
-      setItems(
-        (res.data || []).filter((i: CatalogueItemPublic) => !i.isHidden),
-      );
-    } catch {
-      setError(t("Failed to load items."));
-    }
-  };
+  }, [fetchItems, slug, t]);
 
   useEffect(() => {
-    fetchCatalogue();
+    void fetchCatalogue();
   }, [fetchCatalogue]);
 
   // Check for showroom mode
@@ -876,7 +882,6 @@ export default function PublicCataloguePage() {
   }, [catalogue, needsPassword, slug]);
 
   const handleUnlock = async (newToken: string) => {
-    setToken(newToken);
     localStorage.setItem(`cat_token_${slug}`, newToken);
     setNeedsPassword(false);
     setLoading(true);
@@ -1006,10 +1011,13 @@ export default function PublicCataloguePage() {
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
             {catalogue.shop.logo && (
-              <img
+              <Image
                 src={catalogue.shop.logo}
                 alt={catalogue.shop.name}
                 className="w-12 h-12 rounded-full object-cover border-2 border-gold-200 dark:border-gold-800"
+                width={48}
+                height={48}
+                unoptimized
               />
             )}
             <div>
@@ -1078,10 +1086,13 @@ export default function PublicCataloguePage() {
               >
                 <div className="aspect-square relative overflow-hidden">
                   {item.inventoryItem.images?.[0] ? (
-                    <img
+                    <Image
                       src={item.inventoryItem.images[0]}
                       alt={item.inventoryItem.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                      unoptimized
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">

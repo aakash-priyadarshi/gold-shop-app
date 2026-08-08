@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element -- bill logo + UPI QR use dynamic remote URLs */
-
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +57,7 @@ import {
   Printer,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -95,6 +94,7 @@ interface InvoiceDetail {
   paymentStatus: string;
   paymentMethod?: string;
   issuedAt?: string;
+  supplyDate?: string;
   dueDate?: string;
   paidAt?: string;
   voidedAt?: string;
@@ -102,6 +102,14 @@ interface InvoiceDetail {
   terms?: string;
   createdAt: string;
   customerTaxId?: string;
+  customerType?: string;
+  invoiceCountry?: string;
+  placeOfSupply?: string;
+  invoiceTitle?: string;
+  supplierName?: string;
+  supplierAddress?: string;
+  supplierPhone?: string;
+  supplierTaxId?: string;
   taxBreakdown?: any;
 }
 
@@ -141,6 +149,25 @@ export default function InvoiceDetailPage() {
   const [showCreatedBanner, setShowCreatedBanner] = useState(justCreated);
   const [billSettings, setBillSettings] = useState<BillSettings | null>(null);
   const [shopUpiId, setShopUpiId] = useState<string>("");
+
+  const invoiceCountry = String(
+    invoice?.invoiceCountry || invoice?.taxBreakdown?.country || "",
+  ).toUpperCase();
+  const sellerLkTin = String(
+    invoice?.supplierTaxId ||
+      invoice?.taxBreakdown?.sellerTaxId ||
+      billSettings?.gstin ||
+      "",
+  ).trim();
+  const purchaserLkTin = String(invoice?.customerTaxId || "").trim();
+  const isLkTaxInvoice = Boolean(
+    invoiceCountry === "LK" &&
+      (invoice?.invoiceTitle === "TAX INVOICE" ||
+        invoice?.taxBreakdown?.lkTaxInvoice === true) &&
+      /^\d{9}$/.test(sellerLkTin) &&
+      /^\d{9}$/.test(purchaserLkTin),
+  );
+  const isSriLankaInvoice = invoiceCountry === "LK";
 
   const loadInvoice = useCallback(async () => {
     setIsLoading(true);
@@ -255,11 +282,21 @@ export default function InvoiceDetailPage() {
       fallbackShopName: user?.shop?.shopName,
       settings: billSettings,
       invoiceNumber: invoice.invoiceNumber,
+      invoiceCountry,
+      isTaxInvoice: isLkTaxInvoice,
+      sellerTaxId: sellerLkTin,
+      supplierName: invoice.supplierName,
+      supplierAddress: invoice.supplierAddress,
+      supplierPhone: invoice.supplierPhone,
+      customerTaxId: invoice.customerTaxId,
       customerName: invoice.customerName,
       customerPhone: invoice.customerPhone,
       customerEmail: invoice.customerEmail,
       customerAddress: invoice.customerAddress,
       issuedAt: invoice.issuedAt || invoice.createdAt,
+      supplyDate: invoice.supplyDate,
+      placeOfSupply:
+        invoice.placeOfSupply || invoice.taxBreakdown?.placeOfSupply,
       lineItems: invoice.lineItems?.map((li) => ({
         label: li.label,
         quantity: li.quantity,
@@ -288,7 +325,11 @@ export default function InvoiceDetailPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return `${invoice?.currency || currencySymbol} ${amount.toLocaleString()}`;
+    const code = isSriLankaInvoice ? "LKR" : invoice?.currency || currencySymbol;
+    return `${code} ${amount.toLocaleString(isSriLankaInvoice ? "en-LK" : undefined, {
+      minimumFractionDigits: isSriLankaInvoice ? 2 : 0,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const formatDate = (dateStr: string) => {
@@ -297,6 +338,15 @@ export default function InvoiceDetailPage() {
       day: "numeric",
       year: "numeric",
     });
+  };
+
+  const formatLkDate = (dateStr?: string) => {
+    if (!dateStr) return "";
+    return new Intl.DateTimeFormat("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
+    }).format(new Date(dateStr));
   };
 
   if (isLoading) {
@@ -495,17 +545,30 @@ export default function InvoiceDetailPage() {
               </>
             )}
             <CardHeader>
+              {isSriLankaInvoice && (
+                <div className="mb-5 text-center text-2xl font-black tracking-[0.16em] text-gray-950 dark:text-gray-50">
+                  <T>{isLkTaxInvoice ? "TAX INVOICE" : "INVOICE / RECEIPT"}</T>
+                </div>
+              )}
               <div className="flex justify-between items-start">
                 <div>
+                  {isLkTaxInvoice && (
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <T>Supplier</T>
+                    </p>
+                  )}
                   {(billSettings?.shopLogoUrl && billSettings.showLogo !== false) && (
-                    <img
+                    <Image
                       src={billSettings.shopLogoUrl}
                       alt="Shop logo"
                       className="h-12 w-auto object-contain mb-2"
+                      width={192}
+                      height={48}
+                      unoptimized
                     />
                   )}
                   <CardTitle className="text-xl">
-                    {billSettings?.shopNameOnBill || user?.shop?.shopName || (
+                    {invoice.supplierName || billSettings?.shopNameOnBill || user?.shop?.shopName || (
                       <T>INVOICE</T>
                     )}
                   </CardTitle>
@@ -517,25 +580,37 @@ export default function InvoiceDetailPage() {
                   <CardDescription className="font-mono text-base mt-1">
                     {invoice.invoiceNumber}
                   </CardDescription>
-                  {(billSettings?.showAddress !== false && billSettings?.shopAddress) && (
+                  {(invoice.supplierAddress || (billSettings?.showAddress !== false && billSettings?.shopAddress)) && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      {billSettings.shopAddress}
+                      {invoice.supplierAddress || billSettings?.shopAddress}
                     </p>
                   )}
-                  {(billSettings?.showGstin !== false && billSettings?.gstin) && (
+                  {(billSettings?.showGstin !== false && (isLkTaxInvoice ? sellerLkTin : billSettings?.gstin)) && (
                     <p className="text-xs text-muted-foreground">
-                      Tax ID: {billSettings.gstin}
+                      <T>{isLkTaxInvoice ? "Supplier TIN" : "Tax ID"}</T>: {isLkTaxInvoice ? sellerLkTin : billSettings?.gstin}
                     </p>
                   )}
                   {invoice.paymentMethod && (
                     <p className="text-xs mt-1">
-                      <T>Paid via</T>: {paymentMethodLabel(invoice.paymentMethod)}
+                      <T>{isLkTaxInvoice ? "Mode of payment" : "Paid via"}</T>: {paymentMethodLabel(invoice.paymentMethod)}
                     </p>
                   )}
                 </div>
                 <div className="text-right text-sm text-muted-foreground">
                   {invoice.issuedAt && (
-                    <p>{t(`Issued: ${formatDate(invoice.issuedAt)}`)}</p>
+                    <p>
+                      <T>{isLkTaxInvoice ? "Invoice date" : "Issued"}</T>: {isLkTaxInvoice ? formatLkDate(invoice.issuedAt) : formatDate(invoice.issuedAt)}
+                    </p>
+                  )}
+                  {isLkTaxInvoice && invoice.supplyDate && (
+                    <p>
+                      <T>Date of supply</T>: {formatLkDate(invoice.supplyDate)}
+                    </p>
+                  )}
+                  {isLkTaxInvoice && (invoice.placeOfSupply || invoice.taxBreakdown?.placeOfSupply) && (
+                    <p>
+                      <T>Place of supply</T>: {invoice.placeOfSupply || invoice.taxBreakdown?.placeOfSupply}
+                    </p>
                   )}
                   {invoice.dueDate && (
                     <p>{t(`Due: ${formatDate(invoice.dueDate)}`)}</p>
@@ -547,7 +622,7 @@ export default function InvoiceDetailPage() {
               {/* Customer Info */}
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                 <Label className="text-xs text-muted-foreground">
-                  <T>Bill To</T>
+                  <T>{isLkTaxInvoice ? "Purchaser" : "Bill To"}</T>
                 </Label>
                 <p className="font-semibold text-lg">{invoice.customerName}</p>
                 {invoice.customerPhone && (
@@ -559,6 +634,11 @@ export default function InvoiceDetailPage() {
                 {invoice.customerAddress && (
                   <p className="text-sm text-muted-foreground">
                     {invoice.customerAddress}
+                  </p>
+                )}
+                {isLkTaxInvoice && (
+                  <p className="text-sm font-medium">
+                    <T>Purchaser TIN</T>: {purchaserLkTin}
                   </p>
                 )}
               </div>
@@ -616,15 +696,23 @@ export default function InvoiceDetailPage() {
                 <div className="w-72 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>
-                      <T>Subtotal</T>
+                      <T>{isLkTaxInvoice ? "Value excluding VAT" : "Subtotal"}</T>
                     </span>
-                    <span>{formatCurrency(invoice.subtotal)}</span>
+                    <span>
+                      {formatCurrency(
+                        isLkTaxInvoice
+                          ? Math.max(0, invoice.totalAmount - invoice.taxAmount)
+                          : invoice.subtotal,
+                      )}
+                    </span>
                   </div>
                   {invoice.taxAmount > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>
-                        {invoice.taxLabel ||
-                          `Tax (${(invoice.taxRate * 100).toFixed(1)}%)`}
+                        {isLkTaxInvoice
+                          ? "VAT"
+                          : invoice.taxLabel ||
+                            `Tax (${(invoice.taxRate * 100).toFixed(1)}%)`}
                       </span>
                       <span>{formatCurrency(invoice.taxAmount)}</span>
                     </div>
@@ -640,7 +728,7 @@ export default function InvoiceDetailPage() {
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>
-                      <T>Total</T>
+                      <T>{isLkTaxInvoice ? "Total including VAT" : "Total"}</T>
                     </span>
                     <span>{formatCurrency(invoice.totalAmount)}</span>
                   </div>
@@ -780,10 +868,13 @@ export default function InvoiceDetailPage() {
                       <p className="text-xs text-muted-foreground">
                         <T>Ask customer to scan UPI / PhonePe QR</T>
                       </p>
-                      <img
+                      <Image
                         src={upiQrUrl}
                         alt="UPI QR"
                         className="mx-auto h-40 w-40 rounded bg-white p-2"
+                        width={160}
+                        height={160}
+                        unoptimized
                       />
                       <p className="text-[11px] text-muted-foreground font-mono">
                         {shopUpiId}

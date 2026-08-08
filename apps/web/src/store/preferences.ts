@@ -16,10 +16,10 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { api } from "../lib/api";
 
 // Currency types matching backend CurrencyCode enum
-export type CurrencyCode = "NPR" | "INR" | "AED" | "USD" | "GBP" | "EUR";
+export type CurrencyCode = "NPR" | "INR" | "AED" | "USD" | "GBP" | "EUR" | "LKR";
 
 // Country/Tax jurisdiction types
-export type CountryCode = "NP" | "IN" | "AE" | "UK" | "EU" | "US";
+export type CountryCode = "NP" | "IN" | "AE" | "UK" | "EU" | "US" | "LK";
 
 export type ThemeMode = "light" | "dark" | "system";
 
@@ -34,6 +34,7 @@ export type Language =
   | "ta"
   | "te"
   | "kn"
+  | "si"
   | "fr"
   | "de"
   | "es"
@@ -50,6 +51,7 @@ export const CURRENCIES: Record<
   USD: { symbol: "$", name: "US Dollar", locale: "en-US" },
   GBP: { symbol: "£", name: "British Pound", locale: "en-GB" },
   EUR: { symbol: "€", name: "Euro", locale: "de-DE" },
+  LKR: { symbol: "Rs.", name: "Sri Lankan Rupee", locale: "si-LK" },
 };
 
 // Country metadata (for TAX jurisdiction)
@@ -116,6 +118,14 @@ export const COUNTRIES: Record<
     taxDisplay: "Tax (varies by state)",
     defaultCurrency: "USD",
   },
+  LK: {
+    name: "Sri Lanka",
+    flag: "/flags/sri-lanka-flag-icon.svg",
+    taxType: "VAT",
+    taxRate: 0.18,
+    taxDisplay: "VAT (18%)",
+    defaultCurrency: "LKR",
+  },
 };
 
 // Language metadata
@@ -131,6 +141,7 @@ export const LANGUAGES: Record<
   ta: { name: "Tamil", nativeName: "தமிழ்" },
   te: { name: "Telugu", nativeName: "తెలుగు" },
   kn: { name: "Kannada", nativeName: "ಕನ್ನಡ" },
+  si: { name: "Sinhala", nativeName: "සිංහල" },
   fr: { name: "French", nativeName: "Français" },
   de: { name: "German", nativeName: "Deutsch" },
   es: { name: "Spanish", nativeName: "Español" },

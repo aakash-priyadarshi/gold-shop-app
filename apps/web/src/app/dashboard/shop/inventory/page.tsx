@@ -42,7 +42,8 @@ import {
     Sparkles,
     TrendingUp,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
 
 interface Material {
   metal: string;
@@ -278,13 +279,7 @@ export default function ShopInventoryPage() {
   const [isSavingComponentPricing, setIsSavingComponentPricing] =
     useState(false);
 
-  useEffect(() => {
-    if (user?.shop?.id) {
-      loadData();
-    }
-  }, [user?.shop?.id, shopCountry]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [
@@ -411,7 +406,13 @@ export default function ShopInventoryPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [shopCountry, shopCurrency, t]);
+
+  useEffect(() => {
+    if (user?.shop?.id) {
+      void loadData();
+    }
+  }, [loadData, user?.shop?.id]);
 
   const refreshMarketRates = async () => {
     setIsRefreshingRates(true);
@@ -1576,10 +1577,13 @@ export default function ShopInventoryPage() {
                               >
                                 <Checkbox checked={isSelected} />
                                 {info?.image && (
-                                  <img
+                                  <Image
                                     src={info.image}
                                     alt={info.label}
                                     className="h-8 w-8 rounded object-cover"
+                                    width={32}
+                                    height={32}
+                                    unoptimized
                                   />
                                 )}
                                 <Label className="cursor-pointer text-sm">
@@ -1593,10 +1597,13 @@ export default function ShopInventoryPage() {
                                 className="p-0 overflow-hidden max-w-[220px]"
                               >
                                 <div>
-                                  <img
+                                  <Image
                                     src={info.image}
                                     alt={info.label}
                                     className="w-full h-32 object-cover"
+                                    width={220}
+                                    height={128}
+                                    unoptimized
                                   />
                                   <div className="p-2">
                                     <p className="font-medium text-sm">
@@ -1984,10 +1991,13 @@ export default function ShopInventoryPage() {
                                 >
                                   <Checkbox checked={isSelected} />
                                   {info?.image && (
-                                    <img
+                                    <Image
                                       src={info.image}
                                       alt={info.label}
                                       className="h-8 w-8 rounded object-cover"
+                                      width={32}
+                                      height={32}
+                                      unoptimized
                                     />
                                   )}
                                   <div className="min-w-0 flex-1">
@@ -2030,10 +2040,13 @@ export default function ShopInventoryPage() {
                                 className="p-0 overflow-hidden max-w-[220px]"
                               >
                                 <div>
-                                  <img
+                                  <Image
                                     src={info.image}
                                     alt={info.label}
                                     className="w-full h-32 object-cover"
+                                    width={220}
+                                    height={128}
+                                    unoptimized
                                   />
                                   <div className="p-2">
                                     <p className="font-medium text-sm">

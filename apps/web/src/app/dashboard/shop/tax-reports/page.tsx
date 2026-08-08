@@ -35,6 +35,7 @@ const COUNTRY_TABS = [
   { code: "GB", name: "UK", flag: "🇬🇧" },
   { code: "EU", name: "EU OSS", flag: "🇪🇺" },
   { code: "US", name: "US", flag: "🇺🇸" },
+  { code: "LK", name: "Sri Lanka", flag: "🇱🇰" },
 ];
 
 function currentMonth() {
@@ -134,7 +135,7 @@ export default function TaxReportsPage() {
 
         {/* Country tabs */}
         <Tabs value={activeCountry} onValueChange={setActiveCountry} data-tour="tax-countries">
-          <TabsList className="grid grid-cols-3 md:grid-cols-6 w-full">
+          <TabsList className="grid grid-cols-3 md:grid-cols-7 w-full">
             {COUNTRY_TABS.map((c) => (
               <TabsTrigger key={c.code} value={c.code} className="text-xs md:text-sm">
                 <span className="mr-1">{c.flag}</span>
@@ -160,6 +161,9 @@ export default function TaxReportsPage() {
           </TabsContent>
           <TabsContent value="US" className="mt-6">
             <UsPanel period={period} canDownload={canDownload} canShare={canShare} />
+          </TabsContent>
+          <TabsContent value="LK" className="mt-6">
+            <LkPanel period={period} canShare={canShare} />
           </TabsContent>
         </Tabs>
       </div>
@@ -285,7 +289,7 @@ function IndiaPanel({ period, canDownload, canShare }: { period: string; canDown
       })
       .catch(() => toast({ variant: "destructive", title: "Failed to load India report" }))
       .finally(() => setLoading(false));
-  }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [period, toast]);
 
   const downloadCsv = async (kind: "gstr1" | "hsn") => {
     const res = kind === "gstr1"
@@ -566,6 +570,39 @@ function UaePanel({ period, canShare }: { period: string; canShare: boolean }) {
         <CardContent>{loading ? <SkeletonGrid /> : <SummaryGrid data={data} currency="AED" />}</CardContent>
       </Card>
       <PhaseCNote items={["Direct submission to EmaraTax portal (requires FTA TRN integration)"]} />
+    </div>
+  );
+}
+
+// ─── SRI LANKA ────────────────────────────────────────────────────
+function LkPanel({ period, canShare }: { period: string; canShare: boolean }) {
+  const { toast } = useToast();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setLoading(true);
+    taxReportsApi.lkVat(period)
+      .then((r) => setData(r.data))
+      .catch(() => toast({ variant: "destructive", title: "Failed to load Sri Lanka VAT" }))
+      .finally(() => setLoading(false));
+  }, [period, toast]);
+  return (
+    <div className="space-y-4">
+      <Card data-tour="lk-vat">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span><T>Sri Lanka Output VAT Sales Summary</T></span>
+            <ShareWithCAButton country="LK" period={period} canShare={canShare} />
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-4 text-sm text-muted-foreground">
+            <T>Accountant export only; input VAT and direct IRD filing are not implemented.</T>
+          </p>
+          {loading ? <SkeletonGrid /> : <SummaryGrid data={data} currency="LKR" />}
+        </CardContent>
+      </Card>
+      <PhaseCNote items={["Direct submission to Inland Revenue Department e-Services portal"]} />
     </div>
   );
 }

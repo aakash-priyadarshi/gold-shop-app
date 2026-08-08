@@ -1,14 +1,30 @@
 import {
-    BadRequestException,
-    ForbiddenException,
-    Injectable,
-    NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
 } from "@nestjs/common";
+import {
+  CurrencyCode,
+  JournalReferenceType,
+  MarketRegion,
+  Prisma,
+} from "@prisma/client";
+import { randomUUID } from "crypto";
 import { PrismaService } from "../../prisma/prisma.service";
 import { roundMoney, sumMoney } from "../../common/utils/money";
+import {
+  getDefaultCurrencyForMarket,
+  isCurrencySupportedForMarket,
+  resolveMarketRegion,
+} from "../../common/market/country-currency";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
+import {
+  BackendTaxEngineService,
+  TaxableComponent,
+} from "../core/pricing/services/backend-tax-engine.service";
 import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
-import { CurrencyCode } from "@prisma/client";
+import { AccountingService } from "../accounting/accounting.service";
 
 // Map a shop's registered country to its default display/billing currency.
 // Used so invoices are not blindly defaulted to NPR when no currency is supplied.
@@ -23,6 +39,7 @@ const COUNTRY_TO_CURRENCY: Record<string, CurrencyCode> = {
   DE: CurrencyCode.EUR,
   FR: CurrencyCode.EUR,
   IT: CurrencyCode.EUR,
+  LK: CurrencyCode.LKR,
 };
 
 @Injectable()
@@ -30,6 +47,8 @@ export class InvoicesService {
   constructor(
     private prisma: PrismaService,
     private planLimitsService: PlanLimitsService,
+    private backendTaxEngine: BackendTaxEngineService,
+    private accounting: AccountingService,
   ) {}
 
   /**
@@ -55,77 +74,513 @@ export class InvoicesService {
     return `${prefix}-${String(seq).padStart(4, "0")}`;
   }
 
-  async create(shopId: string, dto: CreateInvoiceDto) {
-    // ── Plan limit check ──────────────────────────────────────────────
-    await this.planLimitsService.checkInvoiceLimit(shopId);
+  private mapTaxCategory(category: string): TaxableComponent["category"] {
+    const value = category.trim().toUpperCase();
+    if (value.includes("DIAMOND")) return "DIAMOND";
+    if (value.includes("GEM") || value.includes("STONE")) return "GEMSTONE";
+    if (value.includes("PLAT")) return "PLATING";
+    if (value.includes("FINISH")) return "FINISH";
+    if (value.includes("SILVER") && value.includes("MAKING")) return "SILVER_MAKING";
+    if (value.includes("SILVER")) return "SILVER_METAL";
+    if (value.includes("MAKING")) return "GOLD_MAKING";
+    if (value.includes("METAL") || value.includes("GOLD")) return "GOLD_METAL";
+    return "OTHER";
+  }
 
-    const invoiceNumber = await this.generateInvoiceNumber();
+  private taxCategoryAliases(category: TaxableComponent["category"]): string[] {
+    if (category.endsWith("_METAL")) return [category, "METAL"];
+    if (category.endsWith("_MAKING")) return [category, "MAKING"];
+    return [category];
+  }
 
-    // Calculate totals from line items
-    const lineItems = dto.lineItems || [];
-    const subtotal = sumMoney(lineItems.map((item) => item.amount));
-
-    // Tax-exempt sales force tax to zero regardless of submitted rate
-    const isTaxExempt = !!dto.isTaxExempt;
-    const taxRate = isTaxExempt ? 0 : dto.taxRate || 0;
-    const taxAmount = isTaxExempt ? 0 : roundMoney(subtotal * taxRate);
-    const discountAmount = roundMoney(dto.discountAmount || 0);
-    const totalAmount = roundMoney(subtotal + taxAmount - discountAmount);
-
-    // Resolve currency: explicit DTO value → shop's country default → NPR (home market).
-    let currency: CurrencyCode;
-    if (dto.currency && dto.currency in CurrencyCode) {
-      currency = dto.currency as CurrencyCode;
-    } else {
-      const shop = await this.prisma.shop.findUnique({
-        where: { id: shopId },
-        select: { country: true },
-      });
-      currency = COUNTRY_TO_CURRENCY[shop?.country || ""] || CurrencyCode.NPR;
+  private async calculateServerTax(
+    region: MarketRegion,
+    components: TaxableComponent[],
+  ) {
+    if (components.length === 0) {
+      return {
+        taxTotal: 0,
+        effectiveRate: 0,
+        label: null,
+        source: "EXEMPT",
+        lines: [] as any[],
+      };
     }
 
-    const invoice = await this.prisma.invoice.create({
-      data: {
-        invoiceNumber,
-        shopId,
-        orderId: dto.orderId || null,
-        shopQuoteId: dto.shopQuoteId || null,
-        customerName: dto.customerName,
-        customerPhone: dto.customerPhone || null,
-        customerEmail: dto.customerEmail || null,
-        customerAddress: dto.customerAddress || null,
-        lineItems: lineItems as any,
-        subtotal,
-        taxAmount,
-        taxRate,
-        taxLabel: isTaxExempt ? "Tax Exempt" : dto.taxLabel || null,
-        discountAmount,
-        totalAmount,
-        paidAmount: 0,
-        balanceDue: totalAmount,
-        currency,
-        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
-        notes: dto.notes || null,
-        terms: dto.terms || null,
-        status: "ISSUED",
-        issuedAt: new Date(),
-        // Tax filing
-        isTaxExempt,
-        taxExemptReason: dto.taxExemptReason || null,
-        customerType: dto.customerType || "B2C",
-        customerTaxId: dto.customerTaxId || null,
-        invoiceCountry: dto.invoiceCountry || null,
-        placeOfSupply: dto.placeOfSupply || null,
-        hsnCode: dto.hsnCode || "7113", // default for jewellery
-        taxBreakdown: (dto.taxBreakdown as any) || null,
-        // POS payment tracking
-        paymentMethod: dto.paymentMethod || null,
-        makingChargeRate: dto.makingChargeRate ?? null,
-        makingChargesAmt: dto.makingChargesAmt ?? null,
+    const now = new Date();
+    const dbRules = await this.prisma.taxRuleConfig.findMany({
+      where: {
+        marketRegion: region,
+        isActive: true,
+        effectiveFrom: { lte: now },
+        OR: [{ effectiveUntil: null }, { effectiveUntil: { gte: now } }],
       },
+      orderBy: { priority: "asc" },
     });
 
-    return invoice;
+    if (dbRules.length > 0) {
+      const lines = components.map((component) => {
+        const aliases = this.taxCategoryAliases(component.category);
+        const rule = dbRules.find(
+          (candidate) =>
+            aliases.includes(candidate.category.toUpperCase()) ||
+            candidate.category.toUpperCase() === "ALL",
+        );
+        const rate = rule?.rate ?? 0;
+        return {
+          type: rule?.taxType || "NO_TAX",
+          name: rule?.taxName || "Tax",
+          category: component.category,
+          description: component.description,
+          baseAmount: roundMoney(component.amount),
+          rate,
+          taxAmount: roundMoney(component.amount * rate),
+        };
+      });
+      const taxTotal = sumMoney(lines.map((line) => line.taxAmount));
+      const taxableTotal = sumMoney(components.map((item) => item.amount));
+      const firstTaxLine = lines.find((line) => line.rate > 0);
+      return {
+        taxTotal,
+        effectiveRate: taxableTotal > 0 ? taxTotal / taxableTotal : 0,
+        label: firstTaxLine
+          ? `${firstTaxLine.name} (${(firstTaxLine.rate * 100).toFixed(2)}%)`
+          : null,
+        source: "DB_CONFIG",
+        lines,
+      };
+    }
+
+    const result = await this.backendTaxEngine.calculateTax({
+      region: region as any,
+      components,
+      isJewellery: true,
+    });
+    return {
+      taxTotal: roundMoney(result.taxTotal),
+      effectiveRate:
+        result.components.subtotalBeforeTax > 0
+          ? result.taxTotal / result.components.subtotalBeforeTax
+          : 0,
+      label: result.taxes[0]
+        ? `${result.taxes[0].name} (${(result.taxes[0].rate * 100).toFixed(2)}%)`
+        : null,
+      source: result.meta.source,
+      lines: result.taxes,
+    };
+  }
+
+  private buildLkInvoiceNumber(
+    issuedAt: Date,
+    shopId: string,
+    sequence: number,
+  ): string {
+    const months = [
+      "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+      "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+    ];
+    let entityCode = `S1${shopId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()}`.slice(0, 15);
+    if (!/\d/.test(entityCode)) entityCode = `${entityCode.slice(0, 14)}1`;
+    const number = `${String(issuedAt.getUTCFullYear()).slice(-2)}${months[issuedAt.getUTCMonth()]}_${entityCode}_${sequence}`;
+    if (number.length > 40 || /\s/.test(number)) {
+      throw new BadRequestException(
+        "Unable to generate a compliant Sri Lankan tax invoice serial",
+      );
+    }
+    return number;
+  }
+
+  async create(shopId: string, dto: CreateInvoiceDto) {
+    await this.planLimitsService.checkInvoiceLimit(shopId);
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: {
+        id: true,
+        shopName: true,
+        country: true,
+        currency: true,
+        address: true,
+        city: true,
+        state: true,
+        contactPhone: true,
+        vatNumber: true,
+        vatRegistrationStatus: true,
+        panNumber: true,
+        invoiceSettings: { select: { gstin: true } },
+      },
+    });
+    if (!shop) throw new NotFoundException("Shop not found");
+
+    const invoiceCountry = dto.invoiceCountry || shop.country;
+    const region = resolveMarketRegion(invoiceCountry);
+    if (!region) {
+      throw new BadRequestException(
+        `Unsupported invoice country: ${invoiceCountry}`,
+      );
+    }
+    const issuedAt = new Date();
+    const isLk = region === MarketRegion.LK;
+    const isTaxExempt = !!dto.isTaxExempt;
+    const supplierTaxId = isLk
+      ? shop.vatNumber || null
+      : shop.invoiceSettings?.gstin || shop.vatNumber || null;
+    const sellerVatRegistered =
+      !isLk ||
+      (shop.vatRegistrationStatus === "VERIFIED" &&
+        !!supplierTaxId &&
+        /^\d{9}$/.test(supplierTaxId));
+    if (
+      dto.taxInvoiceRequested !== undefined &&
+      dto.requestTaxInvoice !== undefined &&
+      dto.taxInvoiceRequested !== dto.requestTaxInvoice
+    ) {
+      throw new BadRequestException(
+        "Conflicting Sri Lankan tax invoice request flags",
+      );
+    }
+    const taxInvoiceRequested =
+      dto.taxInvoiceRequested ?? dto.requestTaxInvoice ?? false;
+    const purchaserVatRegistered = dto.purchaserVatRegistered === true;
+    const isLkTaxInvoice =
+      isLk &&
+      taxInvoiceRequested &&
+      sellerVatRegistered &&
+      purchaserVatRegistered &&
+      !isTaxExempt;
+
+    if (isLk && taxInvoiceRequested && !sellerVatRegistered) {
+      throw new BadRequestException(
+        "This shop is not verified to issue Sri Lankan TAX INVOICE documents",
+      );
+    }
+    if (isLk && taxInvoiceRequested && !purchaserVatRegistered) {
+      throw new BadRequestException(
+        "A Sri Lankan TAX INVOICE request requires a VAT-registered purchaser",
+      );
+    }
+    if (isTaxExempt && (!dto.taxExemptReason || !dto.taxExemptEvidence)) {
+      throw new BadRequestException(
+        "Tax-exempt invoices require both a reason and supporting evidence reference",
+      );
+    }
+
+    if (isLk) {
+      const hasExplicitExempt = dto.lineItems.some(
+        (item) => item.taxTreatment === "EXEMPT",
+      );
+      const hasExplicitTaxable = dto.lineItems.some(
+        (item) => item.taxTreatment === "TAXABLE",
+      );
+      if (hasExplicitExempt && hasExplicitTaxable) {
+        throw new BadRequestException(
+          "Taxable and exempt Sri Lankan supplies must be issued on separate documents",
+        );
+      }
+      if (isLkTaxInvoice && hasExplicitExempt) {
+        throw new BadRequestException(
+          "A Sri Lankan TAX INVOICE may contain only VAT-subject supplies; issue exempt supplies separately",
+        );
+      }
+      if (isTaxExempt && hasExplicitTaxable) {
+        throw new BadRequestException(
+          "Taxable and exempt Sri Lankan supplies must be issued on separate documents",
+        );
+      }
+    }
+
+    const lineItems = dto.lineItems.map((item) => {
+      const authoritativeAmount = roundMoney(item.quantity * item.unitPrice);
+      if (Math.abs(authoritativeAmount - item.amount) > 0.01) {
+        throw new BadRequestException(
+          `Line item amount for ${item.label} must equal quantity × unit price`,
+        );
+      }
+      return { ...item, amount: authoritativeAmount };
+    });
+    const subtotal = sumMoney(lineItems.map((item) => item.amount));
+    const discountAmount = roundMoney(dto.discountAmount || 0);
+    if (discountAmount > subtotal) {
+      throw new BadRequestException("Discount cannot exceed the invoice subtotal");
+    }
+    const netSubtotal = roundMoney(subtotal - discountAmount);
+    const discountFactor = subtotal > 0 ? netSubtotal / subtotal : 1;
+    const shouldChargeTax = !isTaxExempt && (!isLk || sellerVatRegistered);
+    const taxableLineItems = !shouldChargeTax
+      ? []
+      : lineItems.filter((item) => item.taxTreatment !== "EXEMPT");
+    const components: TaxableComponent[] = taxableLineItems.map((item) => ({
+      category: this.mapTaxCategory(item.category),
+      amount: roundMoney(item.amount * discountFactor),
+      description: item.label,
+    }));
+    const tax = await this.calculateServerTax(region, components);
+    const taxableAmount = sumMoney(components.map((item) => item.amount));
+    const taxAmount = shouldChargeTax ? tax.taxTotal : 0;
+    const taxRate = shouldChargeTax ? tax.effectiveRate : 0;
+    const totalAmount = roundMoney(netSubtotal + taxAmount);
+    if (totalAmount <= 0) {
+      throw new BadRequestException("Invoice total must be greater than zero");
+    }
+
+    const currency =
+      dto.currency ||
+      (dto.invoiceCountry
+        ? getDefaultCurrencyForMarket(region)
+        : shop.currency || COUNTRY_TO_CURRENCY[shop.country] || CurrencyCode.NPR);
+    if (isLk && currency !== CurrencyCode.LKR) {
+      throw new BadRequestException("Sri Lankan invoices must be denominated in LKR");
+    }
+    if (!isCurrencySupportedForMarket(region, currency)) {
+      throw new BadRequestException(
+        `${currency} is not supported for invoice market ${region}`,
+      );
+    }
+    const accountingContext = await this.accounting.prepareMonetaryContext(
+      totalAmount,
+      currency,
+    );
+
+    if (isLkTaxInvoice) {
+      if (!dto.customerTaxId || !/^\d{9}$/.test(dto.customerTaxId)) {
+        throw new BadRequestException(
+          "Sri Lankan TAX INVOICE requires a 9-digit purchaser TIN",
+        );
+      }
+      if (!dto.customerAddress) {
+        throw new BadRequestException(
+          "Sri Lankan TAX INVOICE requires the purchaser address",
+        );
+      }
+      if (!dto.supplyDate) {
+        throw new BadRequestException(
+          "Sri Lankan TAX INVOICE requires an explicit supply date",
+        );
+      }
+    }
+
+    const supplyDate = dto.supplyDate ? new Date(dto.supplyDate) : issuedAt;
+    if (!Number.isFinite(supplyDate.getTime())) {
+      throw new BadRequestException("Invalid supply date");
+    }
+    if (
+      isLkTaxInvoice &&
+      supplyDate.getTime() > issuedAt.getTime() + 24 * 60 * 60 * 1000
+    ) {
+      throw new BadRequestException(
+        "Sri Lankan TAX INVOICE supply date cannot be in the future",
+      );
+    }
+
+    const supplierAddress = [shop.address, shop.city, shop.state]
+      .filter(Boolean)
+      .join(", ");
+    const taxBreakdown = {
+      region,
+      source: isTaxExempt
+        ? "EXEMPT"
+        : isLk && !sellerVatRegistered
+          ? "NOT_VAT_REGISTERED"
+          : tax.source,
+      taxableAmount,
+      lines: shouldChargeTax ? tax.lines : [],
+    };
+
+    const invoiceTitle = isLkTaxInvoice
+      ? "TAX INVOICE"
+      : isLk && !sellerVatRegistered
+        ? "NON-VAT INVOICE / RECEIPT"
+        : isLk && sellerVatRegistered && !isTaxExempt
+          ? "INVOICE / RECEIPT"
+          : isTaxExempt
+            ? "EXEMPT INVOICE"
+            : "INVOICE";
+
+    const baseData = {
+      shopId,
+      orderId: dto.orderId || null,
+      shopQuoteId: dto.shopQuoteId || null,
+      customerName: dto.customerName,
+      customerPhone: dto.customerPhone || null,
+      customerEmail: dto.customerEmail || null,
+      customerAddress: dto.customerAddress || null,
+      invoiceTitle,
+      supplierName: shop.shopName,
+      supplierAddress,
+      supplierPhone: shop.contactPhone,
+      supplierTaxId,
+      sellerVatStatus: isLk
+        ? shop.vatRegistrationStatus
+        : "NOT_REGISTERED" as const,
+      lineItems: lineItems as unknown as Prisma.InputJsonValue,
+      subtotal,
+      taxableAmount,
+      taxAmount,
+      taxRate,
+      taxLabel: isTaxExempt
+        ? "Tax Exempt"
+        : isLk && !sellerVatRegistered
+          ? "Not VAT Registered"
+          : tax.label || dto.taxLabel || null,
+      discountAmount,
+      totalAmount,
+      paidAmount: 0,
+      balanceDue: totalAmount,
+      currency,
+      dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+      notes: dto.notes || null,
+      terms: dto.terms || null,
+      status: "ISSUED",
+      issuedAt,
+      isTaxExempt,
+      taxExemptReason: dto.taxExemptReason || null,
+      taxExemptEvidence: dto.taxExemptEvidence || null,
+      customerType: dto.customerType || "B2C",
+      customerTaxId: dto.customerTaxId || null,
+      invoiceCountry: region,
+      placeOfSupply: dto.placeOfSupply || null,
+      supplyDate,
+      hsnCode: dto.hsnCode || "7113",
+      taxBreakdown: taxBreakdown as unknown as Prisma.InputJsonValue,
+      taxSource: taxBreakdown.source,
+      paymentMethod: dto.paymentMethod || null,
+      makingChargeRate: dto.makingChargeRate ?? null,
+      makingChargesAmt: dto.makingChargesAmt ?? null,
+    };
+
+    const ordinaryInvoiceNumber = isLkTaxInvoice
+      ? null
+      : await this.generateInvoiceNumber();
+
+    return this.prisma.$transaction(async (tx) => {
+      let invoiceNumber = ordinaryInvoiceNumber!;
+      let serialSequence: number | undefined;
+      if (isLkTaxInvoice) {
+        const sequence = await tx.invoiceSequence.upsert({
+          where: { shopId_marketRegion: { shopId, marketRegion: region } },
+          update: { lastNumber: { increment: 1 } },
+          create: { shopId, marketRegion: region, lastNumber: 1 },
+        });
+        invoiceNumber = this.buildLkInvoiceNumber(
+          issuedAt,
+          shopId,
+          sequence.lastNumber,
+        );
+        serialSequence = sequence.lastNumber;
+      }
+
+      const invoice = await tx.invoice.create({
+        data: {
+          invoiceNumber,
+          ...(serialSequence ? { serialSequence } : {}),
+          ...baseData,
+        },
+      });
+      await this.accounting.postInvoiceIssuance(tx, {
+        ...accountingContext,
+        shopId,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        taxAmount,
+        transactionDate: issuedAt,
+      });
+
+      let finalInvoice = invoice;
+      if (dto.orderId) {
+        const order = await tx.order.findFirst({
+          where: { id: dto.orderId, shopId },
+          select: { id: true, orderNumber: true },
+        });
+        if (order) {
+          const advanceEntries = await tx.journalEntry.findMany({
+            where: {
+              shopId,
+              status: "POSTED",
+              referenceType: {
+                in: [
+                  JournalReferenceType.ORDER_PAYMENT,
+                  JournalReferenceType.ORDER_ADVANCE_APPLIED,
+                  JournalReferenceType.ORDER_REFUND,
+                ],
+              },
+              metadata: { path: ["orderId"], equals: order.id },
+            },
+            select: { referenceType: true, canonicalAmountNpr: true },
+          });
+          const availableAdvance = advanceEntries.reduce(
+            (sum, entry) =>
+              entry.referenceType === JournalReferenceType.ORDER_PAYMENT
+                ? sum.plus(entry.canonicalAmountNpr)
+                : sum.minus(entry.canonicalAmountNpr),
+            new Prisma.Decimal(0),
+          );
+          const maximumNpr = Prisma.Decimal.min(
+            Prisma.Decimal.max(availableAdvance, 0),
+            accountingContext.canonicalAmountNpr,
+          );
+          const appliedTransaction = accountingContext.canonicalAmountNpr
+              .isZero()
+              ? new Prisma.Decimal(0)
+              : accountingContext.transactionAmount
+                  .mul(maximumNpr)
+                  .div(accountingContext.canonicalAmountNpr)
+                  .toDecimalPlaces(2);
+          const appliedNpr = accountingContext.transactionAmount.isZero()
+            ? new Prisma.Decimal(0)
+            : accountingContext.canonicalAmountNpr
+                .mul(appliedTransaction)
+                .div(accountingContext.transactionAmount)
+                .toDecimalPlaces(4);
+          if (appliedTransaction.gt(0) && appliedNpr.gt(0)) {
+            const advancePayment = await tx.invoicePayment.create({
+              data: {
+                invoiceId: invoice.id,
+                amount: appliedTransaction,
+                currency: invoice.currency,
+                canonicalAmountNpr: appliedNpr,
+                fxRate: accountingContext.fxRate,
+                fxSource: accountingContext.fxSource,
+                fxQuotedAt: accountingContext.fxQuotedAt,
+                method: "ORDER_ADVANCE",
+                reference: order.id,
+                idempotencyKey: `order-advance:${invoice.id}`,
+                notes: `Applied customer advance from order ${order.orderNumber}`,
+                receivedAt: issuedAt,
+              },
+            });
+            const balanceDue = new Prisma.Decimal(invoice.totalAmount)
+              .minus(appliedTransaction)
+              .toDecimalPlaces(2);
+            const isPaid = balanceDue.lte(0);
+            finalInvoice = await tx.invoice.update({
+              where: { id: invoice.id },
+              data: {
+                paidAmount: appliedTransaction.toNumber(),
+                balanceDue: Prisma.Decimal.max(balanceDue, 0).toNumber(),
+                status: isPaid ? "PAID" : "PARTIALLY_PAID",
+                paymentStatus: isPaid ? "PAID" : "PARTIALLY_PAID",
+                paidAt: isPaid ? issuedAt : null,
+                paymentMethod: "ORDER_ADVANCE",
+              },
+            });
+            await this.accounting.postOrderAdvanceApplied(tx, {
+              ...accountingContext,
+              transactionAmount: appliedTransaction,
+              canonicalAmountNpr: appliedNpr,
+              shopId,
+              orderId: order.id,
+              invoiceId: invoice.id,
+              invoiceNumber: invoice.invoiceNumber,
+              orderNumber: order.orderNumber,
+              transactionDate: issuedAt,
+            });
+            // Keep the immutable source payment reachable in transaction
+            // inspection even though no second cash receipt journal is posted.
+            void advancePayment;
+          }
+        }
+      }
+      return finalInvoice;
+    });
   }
 
   async findAll(
@@ -184,59 +639,164 @@ export class InvoicesService {
     return invoices;
   }
 
-  async recordPayment(id: string, shopId: string, dto: UpdatePaymentDto) {
-    const invoice = await this.findById(id, shopId);
+  async recordPayment(
+    id: string,
+    shopId: string,
+    dto: Omit<UpdatePaymentDto, "idempotencyKey"> & { idempotencyKey?: string },
+  ) {
+    const amount = roundMoney(dto.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException("Payment amount must be greater than zero");
+    }
+    // Public requests require this in the DTO. Internal POS callers receive a
+    // unique server key until they are migrated to propagate their own key.
+    const idempotencyKey = dto.idempotencyKey || randomUUID();
 
-    if (invoice.status === "VOID" || invoice.status === "CANCELLED") {
-      throw new BadRequestException(
-        "Cannot record payment on a voided/cancelled invoice",
-      );
+    const replay = await this.prisma.invoicePayment.findUnique({
+      where: { idempotencyKey },
+    });
+    if (replay) {
+      if (replay.invoiceId !== id) {
+        throw new BadRequestException(
+          "Idempotency key is already associated with another invoice",
+        );
+      }
+      const replayInvoice = await this.prisma.invoice.findFirst({
+        where: { id, shopId },
+      });
+      if (!replayInvoice) throw new NotFoundException("Invoice not found");
+      return {
+        ...replayInvoice,
+        recordedPayment: replay,
+        idempotentReplay: true,
+      };
     }
 
-    const newPaidAmount = roundMoney(invoice.paidAmount + dto.amount);
-    const newBalanceDue = roundMoney(invoice.totalAmount - newPaidAmount);
+    const invoiceForQuote = await this.prisma.invoice.findFirst({
+      where: { id, shopId },
+      select: { currency: true },
+    });
+    if (!invoiceForQuote) throw new NotFoundException("Invoice not found");
+    const accountingContext = await this.accounting.prepareMonetaryContext(
+      amount,
+      invoiceForQuote.currency,
+    );
 
-    let newStatus = invoice.status;
-    let newPaymentStatus = invoice.paymentStatus;
-    let paidAt: Date | null = null;
+    return this.prisma.$transaction(async (tx) => {
+      const existingPayment = await tx.invoicePayment.findUnique({
+        where: { idempotencyKey },
+      });
+      if (existingPayment) {
+        if (existingPayment.invoiceId !== id) {
+          throw new BadRequestException(
+            "Idempotency key is already associated with another invoice",
+          );
+        }
+        const existingInvoice = await tx.invoice.findUnique({ where: { id } });
+        return {
+          ...existingInvoice,
+          recordedPayment: existingPayment,
+          idempotentReplay: true,
+        };
+      }
 
-    if (newBalanceDue <= 0) {
-      newStatus = "PAID";
-      newPaymentStatus = "PAID";
-      paidAt = new Date();
-    } else if (newPaidAmount > 0) {
-      newStatus = "PARTIALLY_PAID";
-      newPaymentStatus = "PARTIALLY_PAID";
-    }
+      const invoice = await tx.invoice.findFirst({ where: { id, shopId } });
+      if (!invoice) throw new NotFoundException("Invoice not found");
+      if (invoice.status === "VOID" || invoice.status === "CANCELLED") {
+        throw new BadRequestException(
+          "Cannot record payment on a voided/cancelled invoice",
+        );
+      }
+      if (amount > roundMoney(invoice.balanceDue)) {
+        throw new BadRequestException("Payment amount exceeds invoice balance");
+      }
 
-    return this.prisma.invoice.update({
-      where: { id },
-      data: {
-        paidAmount: Math.min(newPaidAmount, invoice.totalAmount),
-        balanceDue: Math.max(newBalanceDue, 0),
-        status: newStatus,
-        paymentStatus: newPaymentStatus,
-        paidAt,
-        ...(dto.paymentMethod
-          ? { paymentMethod: dto.paymentMethod.toUpperCase() }
-          : {}),
-      },
+      const balanceUpdate = await tx.invoice.updateMany({
+        where: {
+          id,
+          shopId,
+          status: { notIn: ["VOID", "CANCELLED"] },
+          balanceDue: { gte: amount },
+        },
+        data: {
+          paidAmount: { increment: amount },
+          balanceDue: { decrement: amount },
+          ...(dto.paymentMethod
+            ? { paymentMethod: dto.paymentMethod.toUpperCase() }
+            : {}),
+        },
+      });
+      if (balanceUpdate.count !== 1) {
+        throw new BadRequestException(
+          "Invoice balance changed; reload before recording this payment",
+        );
+      }
+
+      const payment = await tx.invoicePayment.create({
+        data: {
+          invoiceId: id,
+          amount: new Prisma.Decimal(amount),
+          currency: invoice.currency,
+          canonicalAmountNpr: accountingContext.canonicalAmountNpr,
+          fxRate: accountingContext.fxRate,
+          fxSource: accountingContext.fxSource,
+          fxQuotedAt: accountingContext.fxQuotedAt,
+          method: (dto.paymentMethod || "UNSPECIFIED").toUpperCase(),
+          reference: dto.reference || null,
+          idempotencyKey,
+          notes: dto.notes || null,
+          receivedAt: dto.receivedAt ? new Date(dto.receivedAt) : new Date(),
+        },
+      });
+
+      const updated = await tx.invoice.findUniqueOrThrow({ where: { id } });
+      const isPaid = roundMoney(updated.balanceDue) <= 0;
+      const finalInvoice = await tx.invoice.update({
+        where: { id },
+        data: {
+          status: isPaid ? "PAID" : "PARTIALLY_PAID",
+          paymentStatus: isPaid ? "PAID" : "PARTIALLY_PAID",
+          paidAt: isPaid ? new Date() : null,
+        },
+      });
+
+      await this.accounting.postInvoicePayment(tx, {
+        ...accountingContext,
+        shopId,
+        invoicePaymentId: payment.id,
+        invoiceNumber: invoice.invoiceNumber,
+        method: payment.method,
+        transactionDate: payment.receivedAt,
+      });
+
+      return { ...finalInvoice, recordedPayment: payment };
     });
   }
 
   async voidInvoice(id: string, shopId: string) {
     const invoice = await this.findById(id, shopId);
 
-    if (invoice.status === "PAID") {
-      throw new BadRequestException("Cannot void a fully paid invoice");
+    if (roundMoney(invoice.paidAmount) > 0) {
+      throw new BadRequestException("Cannot void an invoice with payments");
     }
 
-    return this.prisma.invoice.update({
-      where: { id },
-      data: {
-        status: "VOID",
-        voidedAt: new Date(),
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.invoice.update({
+        where: { id },
+        data: {
+          status: "VOID",
+          voidedAt: new Date(),
+        },
+      });
+      await this.accounting.reverseReference(tx, {
+        shopId,
+        originalReferenceType: JournalReferenceType.INVOICE_ISSUED,
+        originalReferenceId: id,
+        reversalReferenceType: JournalReferenceType.REVERSAL,
+        reversalReferenceId: `invoice-void:${id}`,
+        reason: "Invoice voided",
+      });
+      return updated;
     });
   }
 

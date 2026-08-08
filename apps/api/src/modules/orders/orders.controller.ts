@@ -29,6 +29,7 @@ import {
   CreateInventoryOrderDto,
   CreateMilestoneDto,
   OrderFilterDto,
+  PayOrderDto,
   RespondToCounterOfferDto,
   ShopkeeperPaidAtShopDto,
   UpdateOrderStatusDto,
@@ -62,30 +63,12 @@ export class OrdersController {
   async payOrder(
     @Param("id") orderId: string,
     @CurrentUser("id") userId: string,
-    @Body() body: { preferredGateway?: string },
+    @Body() body: PayOrderDto,
   ) {
-    const order = await this.ordersService.getOrderById(orderId);
-    if (!order) {
-      throw new ForbiddenException("Order not found");
-    }
-    if (order.customerId !== userId) {
-      throw new ForbiddenException("You can only pay for your own orders");
-    }
-    if (order.paymentStatus === "COMPLETED") {
-      throw new ForbiddenException("This order is already paid");
-    }
-
-    return this.paymentGatewayService.initiatePayment({
-      type: "order",
-      resourceId: orderId,
-      amount: order.balanceDueNpr,
-      currency: order.displayCurrency || "NPR",
-      country: order.marketCountry || "NP",
-      metadata: {
-        orderNumber: order.orderNumber,
-        customerId: userId,
-      },
-      customerId: userId,
+    return this.paymentGatewayService.initiateOrderPayment({
+      orderId,
+      userId,
+      idempotencyKey: body.idempotencyKey,
       preferredGateway: body.preferredGateway,
     });
   }

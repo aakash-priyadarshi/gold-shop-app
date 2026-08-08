@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { variantsApi } from '@/lib/api';
 
 interface ProductVariant {
@@ -35,13 +35,7 @@ export function SizeVariantSelector({
   const [selected, setSelected] = useState<ProductVariant | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (hasSizes && inventoryItemId) {
-      loadVariants();
-    }
-  }, [inventoryItemId, hasSizes]);
-
-  async function loadVariants() {
+  const loadVariants = useCallback(async () => {
     setLoading(true);
     try {
       const res = await variantsApi.listVariants(inventoryItemId);
@@ -52,7 +46,13 @@ export function SizeVariantSelector({
     } finally {
       setLoading(false);
     }
-  }
+  }, [inventoryItemId]);
+
+  useEffect(() => {
+    if (hasSizes && inventoryItemId) {
+      void loadVariants();
+    }
+  }, [hasSizes, inventoryItemId, loadVariants]);
 
   function handleSelect(variant: ProductVariant) {
     if (variant.stock <= 0) return;

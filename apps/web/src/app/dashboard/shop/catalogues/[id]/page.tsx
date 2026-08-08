@@ -23,6 +23,7 @@ import {
   Settings,
   Trash2,
 } from "lucide-react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -107,7 +108,7 @@ export default function CatalogueDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, t]);
 
   const fetchAnalytics = useCallback(async () => {
     try {
@@ -117,8 +118,8 @@ export default function CatalogueDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    fetchCatalogue();
-    fetchAnalytics();
+    void fetchCatalogue();
+    void fetchAnalytics();
   }, [fetchCatalogue, fetchAnalytics]);
 
   const catalogueUrl = catalogue
@@ -315,10 +316,13 @@ export default function CatalogueDetailPage() {
             </h3>
             <div className="inline-block p-4 bg-white rounded-xl">
               {/* Using a QR code API for simplicity */}
-              <img
+              <Image
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(catalogueUrl)}`}
                 alt="QR Code"
                 className="w-48 h-48"
+                width={192}
+                height={192}
+                unoptimized
               />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -521,10 +525,13 @@ export default function CatalogueDetailPage() {
                       className="flex items-center gap-3 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
                     >
                       {item.images?.[0] ? (
-                        <img
+                        <Image
                           src={item.images[0]}
                           alt={item.nameEn || item.title}
                           className="w-10 h-10 rounded-lg object-cover"
+                          width={40}
+                          height={40}
+                          unoptimized
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700" />
@@ -576,10 +583,13 @@ export default function CatalogueDetailPage() {
                   <GripVertical className="h-4 w-4 text-gray-400 cursor-grab flex-shrink-0" />
                   <span className="text-xs text-gray-400 w-6">{idx + 1}</span>
                   {item.inventoryItem.images?.[0] ? (
-                    <img
+                    <Image
                       src={item.inventoryItem.images[0]}
                       alt={item.inventoryItem.title}
                       className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                      width={48}
+                      height={48}
+                      unoptimized
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex-shrink-0" />

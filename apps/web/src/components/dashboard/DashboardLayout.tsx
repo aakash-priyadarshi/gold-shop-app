@@ -101,6 +101,7 @@ import {
     Users,
     Wrench,
     Coins,
+    PiggyBank,
 } from "lucide-react";
 import { useDesktopShortcuts } from "@/hooks/useDesktopShortcuts";
 import dynamic from "next/dynamic";
@@ -557,6 +558,12 @@ const navItems: NavItem[] = [
     label: "Money Lending (Girvi)",
     href: "/dashboard/shop/lending",
     icon: Coins,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Savings Schemes",
+    href: "/dashboard/shop/savings",
+    icon: PiggyBank,
     roles: ["SHOPKEEPER"],
   },
   {
@@ -1040,6 +1047,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           "/dashboard/shop/inventory",
           "/dashboard/shop/stock",
           "/dashboard/shop/lending",
+          "/dashboard/shop/savings",
           "/dashboard/shop/customers",
           "/dashboard/shop/messages",
           "/dashboard/shop/settings",

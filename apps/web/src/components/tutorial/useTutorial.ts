@@ -13,7 +13,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='pos-search']",
       popover: {
         title: "Search Products",
-        description: "Type a product name or scan a barcode to find items quickly.",
+        description:
+          "Type a product name or scan a barcode to find items quickly.",
         side: "bottom",
         align: "start",
       },
@@ -22,7 +23,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='pos-cart']",
       popover: {
         title: "Cart",
-        description: "Items you add appear here. Adjust quantities or remove items before billing.",
+        description:
+          "Items you add appear here. Adjust quantities or remove items before billing.",
         side: "left",
         align: "start",
       },
@@ -31,7 +33,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='pos-checkout']",
       popover: {
         title: "Checkout",
-        description: "Select payment method and generate a GST/VAT-ready bill instantly.",
+        description:
+          "Select payment method and generate a GST/VAT-ready bill instantly.",
         side: "top",
         align: "end",
       },
@@ -42,7 +45,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='stock-valuation']",
       popover: {
         title: "Finished Stock Valuation",
-        description: "View the live dynamic valuation of your finished display and safe stock, calculated dynamically using live gold and silver rates with craft markup.",
+        description:
+          "View the live dynamic valuation of your finished display and safe stock, calculated dynamically using live gold and silver rates with craft markup.",
         side: "bottom",
         align: "start",
       },
@@ -51,7 +55,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='stock-table']",
       popover: {
         title: "Finished Stock Ledger",
-        description: "Real-time records of finished jewelry. Search by tag or HUID code, view weights, and manage display showcase vs strong-room vault locations.",
+        description:
+          "Real-time records of finished jewelry. Search by tag or HUID code, view weights, and manage display showcase vs strong-room vault locations.",
         side: "top",
         align: "center",
       },
@@ -62,7 +67,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='supply-ticker']",
       popover: {
         title: "Live Bullion Ticker",
-        description: "Real-time feed of raw materials (gold grains 24K, 22K, 18K, silver) dynamically synced from international commodities markets for accurate valuation.",
+        description:
+          "Real-time feed of raw materials (gold grains 24K, 22K, 18K, silver) dynamically synced from international commodities markets for accurate valuation.",
         side: "bottom",
         align: "start",
       },
@@ -71,7 +77,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='supply-vault']",
       popover: {
         title: "Bullion Safe Vault Reserves",
-        description: "Track the total raw materials physical stock (gold cast bars, silver scrap, grains) currently locked inside your strong-room vault.",
+        description:
+          "Track the total raw materials physical stock (gold cast bars, silver scrap, grains) currently locked inside your strong-room vault.",
         side: "bottom",
         align: "start",
       },
@@ -80,7 +87,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='supply-add-material']",
       popover: {
         title: "Add Custom Material Types",
-        description: "Click here to add custom metal types (such as Platinum 950, Rose Gold 14K, or Palladium) dynamically to your strong-room vault grid. Once added, they will be available across all procurement and allotment modules!",
+        description:
+          "Click here to add custom metal types (such as Platinum 950, Rose Gold 14K, or Palladium) dynamically to your strong-room vault grid. Once added, they will be available across all procurement and allotment modules!",
         side: "bottom",
         align: "end",
       },
@@ -89,7 +97,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='supply-ledger']",
       popover: {
         title: "Artisan Balance Ledger",
-        description: "Complete CRUD dashboard for registered Karigars. View their name, contact phone, email, wastage limit (%), float balances (gold/silver), and total pending wages. You can also edit details or delete records securely.",
+        description:
+          "Complete CRUD dashboard for registered Karigars. View their name, contact phone, email, wastage limit (%), float balances (gold/silver), and total pending wages. You can also edit details or delete records securely.",
         side: "top",
         align: "center",
       },
@@ -98,7 +107,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='supply-add-karigar']",
       popover: {
         title: "Register New Karigar",
-        description: "Click here to register a new goldsmith or artisan. Save their name, workshop name, location, phone (with country code), email, wastage target limit, and basic labor rates directly to the cloud.",
+        description:
+          "Click here to register a new goldsmith or artisan. Save their name, workshop name, location, phone (with country code), email, wastage target limit, and basic labor rates directly to the cloud.",
         side: "bottom",
         align: "center",
       },
@@ -107,7 +117,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='supply-pipeline']",
       popover: {
         title: "Artisan Fabrication Pipeline",
-        description: "Track active custom jobs through their fabrication lifecycle on the workbench! Click the interactive stages checklist (Cast → File → Set → Polish → HUID) to record milestones in real-time as your Karigars complete each step.",
+        description:
+          "Track active custom jobs through their fabrication lifecycle on the workbench! Click the interactive stages checklist (Cast → File → Set → Polish → HUID) to record milestones in real-time as your Karigars complete each step.",
         side: "top",
         align: "center",
       },
@@ -116,7 +127,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='supply-add-job']",
       popover: {
         title: "Create Fabrication Job",
-        description: "Launch a new custom job order for any product. Select from your registered Karigars, specify the product description, and enter the gross weight of precious metal to initialize the tracking card.",
+        description:
+          "Launch a new custom job order for any product. Select from your registered Karigars, specify the product description, and enter the gross weight of precious metal to initialize the tracking card.",
         side: "bottom",
         align: "center",
       },
@@ -127,7 +139,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='inventory-add']",
       popover: {
         title: "Add Product",
-        description: "Click here to add a new jewellery item with live metal-weight pricing.",
+        description:
+          "Click here to add a new jewellery item with live metal-weight pricing.",
         side: "bottom",
         align: "start",
       },
@@ -145,7 +158,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='inventory-table']",
       popover: {
         title: "Product List",
-        description: "All your products. Click a row to edit details, pricing, or stock levels.",
+        description:
+          "All your products. Click a row to edit details, pricing, or stock levels.",
         side: "top",
         align: "center",
       },
@@ -156,7 +170,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='inventory-add']",
       popover: {
         title: "Add Product",
-        description: "Click here to add a new jewellery item with live metal-weight pricing.",
+        description:
+          "Click here to add a new jewellery item with live metal-weight pricing.",
         side: "bottom",
         align: "start",
       },
@@ -174,7 +189,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='inventory-table']",
       popover: {
         title: "Product List",
-        description: "All your products. Click a row to edit details, pricing, or stock levels.",
+        description:
+          "All your products. Click a row to edit details, pricing, or stock levels.",
         side: "top",
         align: "center",
       },
@@ -185,7 +201,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='quotes-list']",
       popover: {
         title: "Walk-in Quotes",
-        description: "Manage quote requests from walk-in customers. Tap a quote to respond.",
+        description:
+          "Manage quote requests from walk-in customers. Tap a quote to respond.",
         side: "right",
         align: "start",
       },
@@ -194,7 +211,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='quotes-create']",
       popover: {
         title: "New Quote",
-        description: "Create a custom quote for any walk-in customer in seconds.",
+        description:
+          "Create a custom quote for any walk-in customer in seconds.",
         side: "bottom",
         align: "start",
       },
@@ -205,7 +223,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='orders-filters']",
       popover: {
         title: "Filter Orders",
-        description: "Narrow down by status — Pending, Processing, Shipped, Delivered, etc.",
+        description:
+          "Narrow down by status — Pending, Processing, Shipped, Delivered, etc.",
         side: "bottom",
         align: "start",
       },
@@ -214,7 +233,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='orders-table']",
       popover: {
         title: "Order List",
-        description: "Click any order to view details, update status, or print a bill.",
+        description:
+          "Click any order to view details, update status, or print a bill.",
         side: "top",
         align: "center",
       },
@@ -225,7 +245,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tools-grid']",
       popover: {
         title: "Shop Tools",
-        description: "6 built-in tools to streamline your jewellery business — click any card to open that tool.",
+        description:
+          "6 built-in tools to streamline your jewellery business — click any card to open that tool.",
         side: "top",
         align: "center",
       },
@@ -233,19 +254,22 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "Old Gold Exchange",
-        description: "Calculate exchange value when a customer trades old gold for new jewellery. Get the exact buy-back rate based on live gold prices.",
+        description:
+          "Calculate exchange value when a customer trades old gold for new jewellery. Get the exact buy-back rate based on live gold prices.",
       },
     },
     {
       popover: {
         title: "EMI Calculator",
-        description: "Show customers an easy installment plan. Enter the price and duration to generate EMI options on the spot.",
+        description:
+          "Show customers an easy installment plan. Enter the price and duration to generate EMI options on the spot.",
       },
     },
     {
       popover: {
         title: "Repair Tracking",
-        description: "Log jewellery repair, alteration, and service jobs. Track status and notify customers when work is ready.",
+        description:
+          "Log jewellery repair, alteration, and service jobs. Track status and notify customers when work is ready.",
       },
     },
   ],
@@ -254,7 +278,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='settings-tabs']",
       popover: {
         title: "Settings Tabs",
-        description: "Switch between Profile, Location, Preferences, and Payment Methods to configure every aspect of your shop.",
+        description:
+          "Switch between Profile, Location, Preferences, and Payment Methods to configure every aspect of your shop.",
         side: "bottom",
         align: "start",
       },
@@ -263,7 +288,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='settings-shop-info']",
       popover: {
         title: "Shop Information",
-        description: "Set your shop name in English, Nepali, and Hindi. This name appears on invoices, catalogues, and your public store page.",
+        description:
+          "Set your shop name in English, Nepali, and Hindi. This name appears on invoices, catalogues, and your public store page.",
         side: "bottom",
         align: "start",
       },
@@ -271,7 +297,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "Preferences Tab",
-        description: "Under Preferences, configure making charge %, Cash on Delivery toggle, and min/max order values. Under Payment Methods, add your bank account for payouts.",
+        description:
+          "Under Preferences, configure making charge %, Cash on Delivery toggle, and min/max order values. Under Payment Methods, add your bank account for payouts.",
       },
     },
   ],
@@ -280,7 +307,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='messages-list']",
       popover: {
         title: "Conversations",
-        description: "All buyer conversations appear here. Click any conversation to open the chat thread. Unread messages are highlighted.",
+        description:
+          "All buyer conversations appear here. Click any conversation to open the chat thread. Unread messages are highlighted.",
         side: "right",
         align: "start",
       },
@@ -289,7 +317,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='messages-thread']",
       popover: {
         title: "Message Thread",
-        description: "Reply to buyers in real-time. All messages are moderated — if a message violates policy you'll see a warning banner with details.",
+        description:
+          "Reply to buyers in real-time. All messages are moderated — if a message violates policy you'll see a warning banner with details.",
         side: "left",
         align: "start",
       },
@@ -300,7 +329,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='catalogues-create']",
       popover: {
         title: "Create Catalogue",
-        description: "Build a shareable digital catalogue to send on WhatsApp, email, or social media. Choose which products to include.",
+        description:
+          "Build a shareable digital catalogue to send on WhatsApp, email, or social media. Choose which products to include.",
         side: "bottom",
         align: "end",
       },
@@ -309,7 +339,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='catalogues-grid']",
       popover: {
         title: "Your Catalogues",
-        description: "Each catalogue has a public link. Share it with customers and track how many people viewed it. You can have public or private catalogues.",
+        description:
+          "Each catalogue has a public link. Share it with customers and track how many people viewed it. You can have public or private catalogues.",
         side: "top",
         align: "center",
       },
@@ -320,7 +351,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='rfqs-filters']",
       popover: {
         title: "Filter Requests",
-        description: "Switch between All, Online (custom jewellery requests from your marketplace listing), and Walk-in (in-person customer requests).",
+        description:
+          "Switch between All, Online (custom jewellery requests from your marketplace listing), and Walk-in (in-person customer requests).",
         side: "bottom",
         align: "start",
       },
@@ -329,7 +361,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='rfqs-table']",
       popover: {
         title: "RFQ Requests",
-        description: "Each row is a custom jewellery request from a buyer with their budget, design description, and deadline. Click any row to send a price quote back.",
+        description:
+          "Each row is a custom jewellery request from a buyer with their budget, design description, and deadline. Click any row to send a price quote back.",
         side: "top",
         align: "center",
       },
@@ -340,7 +373,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='invoice-create-country']",
       popover: {
         title: "Country & Tax",
-        description: "Select the country for this invoice. Tax rates auto-apply per category: India charges 3% GST on gold value + 5% on making charges; Nepal applies 0.5% Skill Promotion Fee on jewellery sale value (replaces the old 2% luxury tax per FY 2083/84) and 13% VAT on gemstones. You can also override the rate or mark the invoice tax-exempt for export sales.",
+        description:
+          "Select the country for this invoice. Tax rates auto-apply per category: India charges 3% GST on gold value + 5% on making charges; Nepal applies 0.5% Skill Promotion Fee on jewellery sale value (replaces the old 2% luxury tax per FY 2083/84) and 13% VAT on gemstones. You can also override the rate or mark the invoice tax-exempt for export sales.",
         side: "bottom",
         align: "start",
       },
@@ -349,7 +383,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='invoice-create-customer']",
       popover: {
         title: "Customer Details",
-        description: "Type the customer's phone number to search your existing customer database — it auto-fills name, address, and GST/PAN. For B2B invoices enter the customer's GSTIN or VAT number so the tax ID prints on the bill. Walk-in customers can be added without a phone.",
+        description:
+          "Type the customer's phone number to search your existing customer database — it auto-fills name, address, and GST/PAN. For B2B invoices enter the customer's GSTIN or VAT number so the tax ID prints on the bill. Walk-in customers can be added without a phone.",
         side: "bottom",
         align: "start",
       },
@@ -358,7 +393,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='invoice-create-items']",
       popover: {
         title: "Line Items",
-        description: "Add each jewellery item with metal type, weight, metal cost, gemstone details, and making charge separately. Switch between weight units (grams, tola, laal) using the unit selector — useful for Nepali and traditional Indian jewellers. Click the 'Live' button next to Metal Cost to autofill cost from live market rates (weight × rate per gram). Tax is split and calculated per component. Expand any row to enter gemstone carat weight, cut, and clarity.",
+        description:
+          "Add each jewellery item with metal type, weight, metal cost, gemstone details, and making charge separately. Switch between weight units (grams, tola, laal) using the unit selector — useful for Nepali and traditional Indian jewellers. Click the 'Live' button next to Metal Cost to autofill cost from live market rates (weight × rate per gram). Tax is split and calculated per component. Expand any row to enter gemstone carat weight, cut, and clarity.",
         side: "top",
         align: "start",
       },
@@ -367,7 +403,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='invoice-create-totals']",
       popover: {
         title: "Invoice Totals & Tax Breakdown",
-        description: "See the live subtotal, making charge, tax breakdown (metal tax vs making tax vs gemstone tax), discount, and grand total. The tax is split exactly as required for GSTR-1 filing — you don't need to calculate anything manually. Click 'Create Invoice' to generate a print-ready GST/VAT bill.",
+        description:
+          "See the live subtotal, making charge, tax breakdown (metal tax vs making tax vs gemstone tax), discount, and grand total. The tax is split exactly as required for GSTR-1 filing — you don't need to calculate anything manually. Click 'Create Invoice' to generate a print-ready GST/VAT bill.",
         side: "top",
         align: "end",
       },
@@ -378,7 +415,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='invoice-settings-branding']",
       popover: {
         title: "Shop Branding",
-        description: "Set the shop name, logo, and tagline that appear on every printed bill. Upload a PNG or JPG logo (max 5 MB). The name here overrides your registered shop name on the bill header.",
+        description:
+          "Set the shop name, logo, and tagline that appear on every printed bill. Upload a PNG or JPG logo (max 5 MB). The name here overrides your registered shop name on the bill header.",
         side: "bottom",
         align: "start",
       },
@@ -387,7 +425,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='invoice-settings-layout']",
       popover: {
         title: "Layout & Visibility",
-        description: "Control which fields (address, GSTIN, licence number, footer, terms) appear on your printed invoice, and whether they print at the top or bottom. Toggle any field off to hide it from the bill. Changes apply to all new invoices immediately.",
+        description:
+          "Control which fields (address, GSTIN, licence number, footer, terms) appear on your printed invoice, and whether they print at the top or bottom. Toggle any field off to hide it from the bill. Changes apply to all new invoices immediately.",
         side: "top",
         align: "start",
       },
@@ -398,7 +437,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='invoices-create']",
       popover: {
         title: "Create Invoice",
-        description: "Generate GST/VAT-ready invoices with automatic tax calculation for India, Nepal, UAE, UK, EU, and US. Supports partial payments too.",
+        description:
+          "Generate GST/VAT-ready invoices with automatic tax calculation for India, Nepal, Sri Lanka, UAE, UK, EU, and US. Supports partial payments too.",
         side: "bottom",
         align: "end",
       },
@@ -407,7 +447,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='invoices-stats']",
       popover: {
         title: "Invoice Summary",
-        description: "Track total invoices issued, revenue collected, outstanding amounts, and count of paid invoices — all at a glance.",
+        description:
+          "Track total invoices issued, revenue collected, outstanding amounts, and count of paid invoices — all at a glance.",
         side: "bottom",
         align: "start",
       },
@@ -416,7 +457,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='invoices-table']",
       popover: {
         title: "Invoice List",
-        description: "View all invoices with status (Issued / Paid / Partial / Overdue / Voided). Click any invoice to see full details, mark as paid, or send a payment reminder.",
+        description:
+          "View all invoices with status (Issued / Paid / Partial / Overdue / Voided). Click any invoice to see full details, mark as paid, or send a payment reminder.",
         side: "top",
         align: "center",
       },
@@ -424,7 +466,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "💡 Invoice Settings",
-        description: "Want to change what your printed bill looks like? Go to Invoice Settings (top-right gear icon) to add your shop logo, GSTIN, footer note, and control which fields appear on the bill.",
+        description:
+          "Want to change what your printed bill looks like? Go to Invoice Settings (top-right gear icon) to add your shop logo, GSTIN, footer note, and control which fields appear on the bill.",
       },
     },
   ],
@@ -434,7 +477,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-period']",
       popover: {
         title: "Select Period",
-        description: "Choose the month to generate your tax filing report. Reports are based on invoices issued in that month.",
+        description:
+          "Choose the month to generate your tax filing report. Reports are based on invoices issued in that month.",
         side: "bottom",
         align: "start",
       },
@@ -443,7 +487,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-countries']",
       popover: {
         title: "Country Tax Tabs",
-        description: "Reports are organised per country — IN (GST), NP (VAT), AE (UAE VAT), GB (MTD), EU (OSS), US (state tax). Switch tabs to see country-specific data and filing details.",
+        description:
+          "Reports are organised per country — IN (GST), NP (VAT), LK (output VAT), AE (UAE VAT), GB (MTD), EU (OSS), US (state tax). Switch tabs to see country-specific data and filing details.",
         side: "bottom",
         align: "start",
       },
@@ -451,7 +496,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "Download & Share",
-        description: "Export your tax report as CSV or PDF for your accountant. You can also share a secure, time-limited link directly with your CA or tax adviser.",
+        description:
+          "Export your tax report as CSV or PDF for your accountant. You can also share a secure, time-limited link directly with your CA or tax adviser.",
       },
     },
   ],
@@ -462,7 +508,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-period']",
       popover: {
         title: "Select Period",
-        description: "Choose the month for your GST report. All India invoices in that month are included.",
+        description:
+          "Choose the month for your GST report. All India invoices in that month are included.",
         side: "bottom",
         align: "start",
       },
@@ -471,7 +518,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-countries']",
       popover: {
         title: "India (GST) Tab",
-        description: "You are on the India panel. It shows your GSTR-3B summary, HSN-wise breakdown, and lets you download GSTR-1 CSV or Tally XML for filing with the GSTN portal.",
+        description:
+          "You are on the India panel. It shows your GSTR-3B summary, HSN-wise breakdown, and lets you download GSTR-1 CSV or Tally XML for filing with the GSTN portal.",
         side: "bottom",
         align: "start",
       },
@@ -480,7 +528,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='india-gstr3b']",
       popover: {
         title: "GSTR-3B Summary",
-        description: "Your monthly GST summary: total taxable sales, IGST (inter-state), CGST + SGST (intra-state), and net tax liability. Gold jewellery attracts 3% GST on metal value; making charges are taxed at 18%.",
+        description:
+          "Your monthly GST summary: total taxable sales, IGST (inter-state), CGST + SGST (intra-state), and net tax liability. Gold jewellery attracts 3% GST on metal value; making charges are taxed at 18%.",
         side: "top",
         align: "start",
       },
@@ -489,7 +538,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='india-hsn']",
       popover: {
         title: "HSN-wise Breakdown",
-        description: "Every product sold is mapped to its HSN code. HSN 7113 covers gold jewellery, 7116 covers gems and pearls. This table is required for GSTR-1 if your annual turnover exceeds ₹5 crore.",
+        description:
+          "Every product sold is mapped to its HSN code. HSN 7113 covers gold jewellery, 7116 covers gems and pearls. This table is required for GSTR-1 if your annual turnover exceeds ₹5 crore.",
         side: "top",
         align: "center",
       },
@@ -498,7 +548,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='india-downloads']",
       popover: {
         title: "Downloads: GSTR-1, HSN & Tally",
-        description: "Export GSTR-1 CSV to upload on the GSTN portal, HSN summary CSV for your CA, or Tally XML to import directly into Tally ERP. Available on Pro plan.",
+        description:
+          "Export GSTR-1 CSV to upload on the GSTN portal, HSN summary CSV for your CA, or Tally XML to import directly into Tally ERP. Available on Pro plan.",
         side: "top",
         align: "start",
       },
@@ -506,7 +557,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "Share with CA",
-        description: "Click \"Share with CA\" on any card to generate a secure, 7-day read-only link you can send to your Chartered Accountant for GST filing review.",
+        description:
+          'Click "Share with CA" on any card to generate a secure, 7-day read-only link you can send to your Chartered Accountant for GST filing review.',
       },
     },
   ],
@@ -517,7 +569,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-period']",
       popover: {
         title: "Select Period",
-        description: "Choose the Nepali fiscal month. Nepal follows BS (Bikram Sambat) calendar — the period shown maps to the corresponding BS month for IRD filing.",
+        description:
+          "Choose the Nepali fiscal month. Nepal follows BS (Bikram Sambat) calendar — the period shown maps to the corresponding BS month for IRD filing.",
         side: "bottom",
         align: "start",
       },
@@ -526,7 +579,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-countries']",
       popover: {
         title: "Nepal (VAT) Tab",
-        description: "You are on the Nepal panel. Nepal taxes jewellery with 0.5% skill promotion fee on metal & making charges and 13% VAT on gemstones & services.",
+        description:
+          "You are on the Nepal panel. Nepal taxes jewellery with 0.5% skill promotion fee on metal & making charges and 13% VAT on gemstones & services.",
         side: "bottom",
         align: "start",
       },
@@ -535,7 +589,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='nepal-audit-tabs']",
       popover: {
         title: "Monthly Return vs Yearly Audit",
-        description: "\"Monthly Return\" shows VAT & skill promotion fee for the selected month for your regular IRD submission. \"Yearly Audit\" shows a full 12-month breakdown required if sales exceed the NPR 1 crore threshold.",
+        description:
+          '"Monthly Return" shows VAT & skill promotion fee for the selected month for your regular IRD submission. "Yearly Audit" shows a full 12-month breakdown required if sales exceed the NPR 1 crore threshold.',
         side: "bottom",
         align: "start",
       },
@@ -544,7 +599,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='nepal-audit-threshold']",
       popover: {
         title: "IRD Audit Threshold",
-        description: "The progress bar tracks your annual sales against the NPR 1 crore (10,000,000) IRD audit threshold. If sales exceed this limit, a formal audit filing with IRD Nepal is required — the bar turns red as a warning.",
+        description:
+          "The progress bar tracks your annual sales against the NPR 1 crore (10,000,000) IRD audit threshold. If sales exceed this limit, a formal audit filing with IRD Nepal is required — the bar turns red as a warning.",
         side: "top",
         align: "start",
       },
@@ -553,7 +609,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='nepal-audit-table']",
       popover: {
         title: "Month-by-Month Breakdown",
-        description: "Every month of the Nepali fiscal year: invoice count, total sales in NPR, 0.5% skill promotion fee on metals & making charges, and 13% VAT on gemstones & services. Use the year selector (‹ ›) to view previous years.",
+        description:
+          "Every month of the Nepali fiscal year: invoice count, total sales in NPR, 0.5% skill promotion fee on metals & making charges, and 13% VAT on gemstones & services. Use the year selector (‹ ›) to view previous years.",
         side: "top",
         align: "center",
       },
@@ -561,7 +618,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "Share with CA / Tax Adviser",
-        description: "Generate a secure 7-day link for your IRD-registered tax adviser to review the yearly audit report without giving them access to your full dashboard.",
+        description:
+          "Generate a secure 7-day link for your IRD-registered tax adviser to review the yearly audit report without giving them access to your full dashboard.",
       },
     },
   ],
@@ -572,7 +630,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-period']",
       popover: {
         title: "Select Period",
-        description: "Choose the filing period. UAE VAT is filed quarterly with the FTA — select the month within the quarter you are reviewing.",
+        description:
+          "Choose the filing period. UAE VAT is filed quarterly with the FTA — select the month within the quarter you are reviewing.",
         side: "bottom",
         align: "start",
       },
@@ -581,7 +640,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-countries']",
       popover: {
         title: "UAE (VAT) Tab",
-        description: "You are on the UAE panel. UAE applies a flat 5% VAT on most goods and services. Precious metals sold as financial instruments may be zero-rated.",
+        description:
+          "You are on the UAE panel. UAE applies a flat 5% VAT on most goods and services. Precious metals sold as financial instruments may be zero-rated.",
         side: "bottom",
         align: "start",
       },
@@ -590,7 +650,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='uae-vat201']",
       popover: {
         title: "VAT 201 Summary (FTA)",
-        description: "Your VAT 201 form data: standard-rated sales, zero-rated supplies, exempt sales, input tax recoverable, and net VAT payable to the FTA (Federal Tax Authority). Use this to complete your EmaraTax submission.",
+        description:
+          "Your VAT 201 form data: standard-rated sales, zero-rated supplies, exempt sales, input tax recoverable, and net VAT payable to the FTA (Federal Tax Authority). Use this to complete your EmaraTax submission.",
         side: "top",
         align: "start",
       },
@@ -598,7 +659,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "FTA Filing & Share",
-        description: "Export or share the VAT 201 summary with your UAE-registered tax agent. Direct EmaraTax API submission is on the roadmap (Phase C).",
+        description:
+          "Export or share the VAT 201 summary with your UAE-registered tax agent. Direct EmaraTax API submission is on the roadmap (Phase C).",
       },
     },
   ],
@@ -609,7 +671,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-period']",
       popover: {
         title: "Select Period",
-        description: "UK MTD VAT is filed quarterly. Select any month within the VAT quarter to preview your 9-box return figures.",
+        description:
+          "UK MTD VAT is filed quarterly. Select any month within the VAT quarter to preview your 9-box return figures.",
         side: "bottom",
         align: "start",
       },
@@ -618,7 +681,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-countries']",
       popover: {
         title: "UK (MTD) Tab",
-        description: "You are on the UK panel. HMRC's Making Tax Digital (MTD) requires digital VAT records and electronic submission via compatible software. UK standard VAT rate is 20%.",
+        description:
+          "You are on the UK panel. HMRC's Making Tax Digital (MTD) requires digital VAT records and electronic submission via compatible software. UK standard VAT rate is 20%.",
         side: "bottom",
         align: "start",
       },
@@ -627,7 +691,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='uk-mtd']",
       popover: {
         title: "MTD 9-Box VAT Return",
-        description: "The 9 boxes map directly to the HMRC MTD return: Box 1 (VAT due on sales), Box 4 (VAT reclaimed on purchases), Box 5 (net VAT to pay/reclaim), and Boxes 6-9 (turnover and input totals). Share with your accountant before submitting.",
+        description:
+          "The 9 boxes map directly to the HMRC MTD return: Box 1 (VAT due on sales), Box 4 (VAT reclaimed on purchases), Box 5 (net VAT to pay/reclaim), and Boxes 6-9 (turnover and input totals). Share with your accountant before submitting.",
         side: "top",
         align: "start",
       },
@@ -635,7 +700,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "HMRC Submission",
-        description: "Direct HMRC MTD API submission requires OAuth authorisation with HMRC. This is planned for Phase C — for now export the data and use bridging software or your accountant.",
+        description:
+          "Direct HMRC MTD API submission requires OAuth authorisation with HMRC. This is planned for Phase C — for now export the data and use bridging software or your accountant.",
       },
     },
   ],
@@ -646,7 +712,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-period']",
       popover: {
         title: "Select Period",
-        description: "EU OSS (One-Stop Shop) is declared quarterly. Select any month to see that period's cross-border sales breakdown.",
+        description:
+          "EU OSS (One-Stop Shop) is declared quarterly. Select any month to see that period's cross-border sales breakdown.",
         side: "bottom",
         align: "start",
       },
@@ -655,7 +722,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-countries']",
       popover: {
         title: "EU (OSS) Tab",
-        description: "You are on the EU panel. The OSS scheme lets you declare and pay VAT for all EU countries in a single quarterly return filed in your home member state. Each country has its own VAT rate.",
+        description:
+          "You are on the EU panel. The OSS scheme lets you declare and pay VAT for all EU countries in a single quarterly return filed in your home member state. Each country has its own VAT rate.",
         side: "bottom",
         align: "start",
       },
@@ -664,7 +732,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='eu-oss']",
       popover: {
         title: "OSS by Destination Country",
-        description: "Each row is an EU member state where you have sales. The table shows invoice count, net sales, applicable local VAT rate, and VAT amount due for that country. Total this up for your quarterly OSS declaration.",
+        description:
+          "Each row is an EU member state where you have sales. The table shows invoice count, net sales, applicable local VAT rate, and VAT amount due for that country. Total this up for your quarterly OSS declaration.",
         side: "top",
         align: "start",
       },
@@ -672,7 +741,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "Export & Filing",
-        description: "Download the OSS CSV to import into your home-state tax portal. Direct OSS portal integration is planned for Phase C.",
+        description:
+          "Download the OSS CSV to import into your home-state tax portal. Direct OSS portal integration is planned for Phase C.",
       },
     },
   ],
@@ -683,7 +753,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-period']",
       popover: {
         title: "Select Period",
-        description: "Choose the month to see US sales tax collected by state for that period.",
+        description:
+          "Choose the month to see US sales tax collected by state for that period.",
         side: "bottom",
         align: "start",
       },
@@ -692,7 +763,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='tax-countries']",
       popover: {
         title: "US (Sales Tax) Tab",
-        description: "You are on the US panel. Sales tax in the USA is state-by-state — rates range from 0% (Oregon, Montana) to over 10% in some counties. Economic nexus rules apply if you exceed a state's revenue or transaction threshold.",
+        description:
+          "You are on the US panel. Sales tax in the USA is state-by-state — rates range from 0% (Oregon, Montana) to over 10% in some counties. Economic nexus rules apply if you exceed a state's revenue or transaction threshold.",
         side: "bottom",
         align: "start",
       },
@@ -701,7 +773,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='us-state-tax']",
       popover: {
         title: "Sales Tax by State",
-        description: "Each row is a US state where you have sales: invoice count, net sales, and total sales tax collected. States where you have economic nexus (typically $100k revenue or 200 transactions) require separate state tax registration and filing.",
+        description:
+          "Each row is a US state where you have sales: invoice count, net sales, and total sales tax collected. States where you have economic nexus (typically $100k revenue or 200 transactions) require separate state tax registration and filing.",
         side: "top",
         align: "start",
       },
@@ -709,7 +782,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "TaxJar / Avalara & Filing",
-        description: "Export the CSV for your accountant or import into TaxJar/Avalara for automated multi-state filing. Real-time rooftop tax rates and auto-filing integration are on the roadmap.",
+        description:
+          "Export the CSV for your accountant or import into TaxJar/Avalara for automated multi-state filing. Real-time rooftop tax rates and auto-filing integration are on the roadmap.",
       },
     },
   ],
@@ -718,7 +792,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='customers-search']",
       popover: {
         title: "Search Customers",
-        description: "Find any customer instantly by name, phone number, or email. Search works across both registered (online) and walk-in customers.",
+        description:
+          "Find any customer instantly by name, phone number, or email. Search works across both registered (online) and walk-in customers.",
         side: "bottom",
         align: "start",
       },
@@ -727,7 +802,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='customers-grid']",
       popover: {
         title: "Customer Directory",
-        description: "Each card shows order count, RFQ count, total spend, and last activity. Click a customer to see their full order history and contact details.",
+        description:
+          "Each card shows order count, RFQ count, total spend, and last activity. Click a customer to see their full order history and contact details.",
         side: "top",
         align: "center",
       },
@@ -738,7 +814,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='desktop-app']",
       popover: {
         title: "Desktop App",
-        description: "Download the Orivraa desktop app for faster access, offline mode, and system-level notifications. Available for Windows and macOS.",
+        description:
+          "Download the Orivraa desktop app for faster access, offline mode, and system-level notifications. Available for Windows and macOS.",
         side: "bottom",
         align: "center",
       },
@@ -749,7 +826,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='analytics-period']",
       popover: {
         title: "Time Period",
-        description: "Switch between 7 days, 30 days, 90 days, or 1 year to see how your business is trending over time.",
+        description:
+          "Switch between 7 days, 30 days, 90 days, or 1 year to see how your business is trending over time.",
         side: "bottom",
         align: "end",
       },
@@ -758,7 +836,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='analytics-stats']",
       popover: {
         title: "Key Metrics",
-        description: "Your total revenue, order count, RFQ win rate, and average customer rating — compared to the previous period so you can see growth.",
+        description:
+          "Your total revenue, order count, RFQ win rate, and average customer rating — compared to the previous period so you can see growth.",
         side: "bottom",
         align: "start",
       },
@@ -767,7 +846,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='analytics-tabs']",
       popover: {
         title: "Deep Dive",
-        description: "Switch between Revenue (breakdown by direct vs custom orders), Orders, RFQs (win rate), and Customers (new vs returning) for detailed charts.",
+        description:
+          "Switch between Revenue (breakdown by direct vs custom orders), Orders, RFQs (win rate), and Customers (new vs returning) for detailed charts.",
         side: "top",
         align: "center",
       },
@@ -778,7 +858,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='engagement-tier']",
       popover: {
         title: "Seller Tier",
-        description: "Your tier (Standard → Silver → Gold → Elite) unlocks advanced features and boosts your visibility in search results. The progress bar shows what metrics you need to reach the next tier.",
+        description:
+          "Your tier (Standard → Silver → Gold → Elite) unlocks advanced features and boosts your visibility in search results. The progress bar shows what metrics you need to reach the next tier.",
         side: "bottom",
         align: "start",
       },
@@ -787,7 +868,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='engagement-health']",
       popover: {
         title: "Health Score",
-        description: "Your overall shop health grade (A to F) is calculated across profile completeness, order performance, verification status, and customer engagement.",
+        description:
+          "Your overall shop health grade (A to F) is calculated across profile completeness, order performance, verification status, and customer engagement.",
         side: "top",
         align: "center",
       },
@@ -796,7 +878,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='engagement-tabs']",
       popover: {
         title: "Milestones & Growth",
-        description: "Complete milestones to earn rewards and unlock features. Track your RFQ performance, referral stats, KYC status, and onboarding progress from the tabs.",
+        description:
+          "Complete milestones to earn rewards and unlock features. Track your RFQ performance, referral stats, KYC status, and onboarding progress from the tabs.",
         side: "bottom",
         align: "start",
       },
@@ -807,7 +890,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='reviews-platforms']",
       popover: {
         title: "Platform Reviews",
-        description: "Leaving a review on SaaSHub, G2, or Crunchbase helps more jewellers discover Orivraa. Click the platform, leave your review, then submit a screenshot as proof to earn rewards.",
+        description:
+          "Leaving a review on SaaSHub, G2, or Crunchbase helps more jewellers discover Orivraa. Click the platform, leave your review, then submit a screenshot as proof to earn rewards.",
         side: "top",
         align: "center",
       },
@@ -818,7 +902,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='referrals-invite']",
       popover: {
         title: "Invite Other Jewellers",
-        description: "Enter a colleague's email and click Send Invite. When they sign up using your link, both of you get 1 month free plus 50 AI credits automatically.",
+        description:
+          "Enter a colleague's email and click Send Invite. When they sign up using your link, both of you get 1 month free plus 50 AI credits automatically.",
         side: "bottom",
         align: "start",
       },
@@ -827,7 +912,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='referrals-list']",
       popover: {
         title: "Your Referrals",
-        description: "Track every jeweller you've invited — see whether they've signed up, your reward status, and your unique referral code to share manually.",
+        description:
+          "Track every jeweller you've invited — see whether they've signed up, your reward status, and your unique referral code to share manually.",
         side: "top",
         align: "center",
       },
@@ -838,7 +924,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='billing-tabs']",
       popover: {
         title: "Billing Sections",
-        description: "My Plan shows your current subscription. AI Credits tracks your usage balance. Available Plans lets you compare and upgrade your subscription.",
+        description:
+          "My Plan shows your current subscription. AI Credits tracks your usage balance. Available Plans lets you compare and upgrade your subscription.",
         side: "bottom",
         align: "start",
       },
@@ -847,7 +934,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='billing-plan']",
       popover: {
         title: "Your Current Plan",
-        description: "See your plan name, billing cycle (monthly/annual), status, and feature limits. You can cancel or change your plan here at any time.",
+        description:
+          "See your plan name, billing cycle (monthly/annual), status, and feature limits. You can cancel or change your plan here at any time.",
         side: "bottom",
         align: "start",
       },
@@ -855,7 +943,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "AI Credits",
-        description: "Credits are used for AI-powered features: auto-generated product descriptions, the voice sales agent, smart message replies, and price suggestions. Top up credits anytime from the AI Credits tab.",
+        description:
+          "Credits are used for AI-powered features: auto-generated product descriptions, the voice sales agent, smart message replies, and price suggestions. Top up credits anytime from the AI Credits tab.",
       },
     },
   ],
@@ -864,7 +953,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='profile-info']",
       popover: {
         title: "Personal Information",
-        description: "Your name, email, and phone number. Keep this up to date — your email is used for billing receipts and your phone for 2FA and customer calls.",
+        description:
+          "Your name, email, and phone number. Keep this up to date — your email is used for billing receipts and your phone for 2FA and customer calls.",
         side: "bottom",
         align: "start",
       },
@@ -873,7 +963,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='profile-tabs']",
       popover: {
         title: "Profile Sections",
-        description: "Personal Info has your contact details. Preferences lets you set language and notification settings. Security is where you change your password or enable 2-factor authentication.",
+        description:
+          "Personal Info has your contact details. Preferences lets you set language and notification settings. Security is where you change your password or enable 2-factor authentication.",
         side: "bottom",
         align: "start",
       },
@@ -884,7 +975,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='support-new']",
       popover: {
         title: "Raise a Ticket",
-        description: "Can't find an answer in the docs? Open a support ticket and the Orivraa team will respond within 24 hours. Include screenshots for faster resolution.",
+        description:
+          "Can't find an answer in the docs? Open a support ticket and the Orivraa team will respond within 24 hours. Include screenshots for faster resolution.",
         side: "bottom",
         align: "end",
       },
@@ -893,7 +985,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='support-tickets']",
       popover: {
         title: "Your Tickets",
-        description: "Track the status of all your support requests here (Open, In Progress, Resolved). Click any ticket to continue the conversation with the support team.",
+        description:
+          "Track the status of all your support requests here (Open, In Progress, Resolved). Click any ticket to continue the conversation with the support team.",
         side: "top",
         align: "center",
       },
@@ -904,7 +997,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='dashboard-mode-toggle']",
       popover: {
         title: "Workspace Mode Toggle",
-        description: "Located at the top-right of your sidebar header. Switch between Easy Mode (simplifies the navigation down to 10 core daily POS & invoicing links) and Advanced Mode (expands the sidebar to expose all 21+ advanced enterprise ERP tools). Your layout preference is automatically remembered.",
+        description:
+          "Located at the top-right of your sidebar header. Switch between Easy Mode (simplifies the navigation down to 10 core daily POS & invoicing links) and Advanced Mode (expands the sidebar to expose all 21+ advanced enterprise ERP tools). Your layout preference is automatically remembered.",
         side: "bottom",
         align: "center",
       },
@@ -913,7 +1007,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='quick-estimator']",
       popover: {
         title: "Quick Gold Estimator",
-        description: "A floating gold bar button at the bottom-right corner of the window. Click it (or press Alt+E) to toggle a real-time price calculator. Select gold purity (24K, 22K, 18K, 14K), type the weight in grams, enter optional making charges, and get an instant cost estimate dynamically synced with the live spot market rate.",
+        description:
+          "A floating gold bar button at the bottom-right corner of the window. Click it (or press Alt+E) to toggle a real-time price calculator. Select gold purity (24K, 22K, 18K, 14K), type the weight in grams, enter optional making charges, and get an instant cost estimate dynamically synced with the live spot market rate.",
         side: "right",
         align: "end",
       },
@@ -922,7 +1017,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='dash-live-rates']",
       popover: {
         title: "Live Market Pulse Card",
-        description: "Displays live spot market rates for 24K, 22K, 18K gold and silver per gram, synced every 10 minutes. It includes a daily percentage change index badge and a real-time AI advisory insight recommending whether to restock or hedge based on active commodities price momentum.",
+        description:
+          "Displays live spot market rates for 24K, 22K, 18K gold and silver per gram, synced every 10 minutes. It includes a daily percentage change index badge and a real-time AI advisory insight recommending whether to restock or hedge based on active commodities price momentum.",
         side: "left",
         align: "start",
       },
@@ -931,7 +1027,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='dash-quests']",
       popover: {
         title: "Setup Quests Roadmap",
-        description: "A gamified progress card tracking your setup milestones, including shop profiling, inventory seed uploads, and KYC compliance. Each quest displays the premium reward earned on completion, along with an action button that redirects you directly to the relevant settings page.",
+        description:
+          "A gamified progress card tracking your setup milestones, including shop profiling, inventory seed uploads, and KYC compliance. Each quest displays the premium reward earned on completion, along with an action button that redirects you directly to the relevant settings page.",
         side: "bottom",
         align: "start",
       },
@@ -940,7 +1037,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='dash-stats']",
       popover: {
         title: "Today's Key Metrics Overview",
-        description: "At-a-glance KPI cards tracking today's total sales revenue, active order counts, pending custom marketplace requests (RFQs), and your shop's average customer review score. Clicking any card takes you instantly to its complete ledger details.",
+        description:
+          "At-a-glance KPI cards tracking today's total sales revenue, active order counts, pending custom marketplace requests (RFQs), and your shop's average customer review score. Clicking any card takes you instantly to its complete ledger details.",
         side: "bottom",
         align: "start",
       },
@@ -949,7 +1047,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='dash-quick-actions']",
       popover: {
         title: "Quick Actions Console",
-        description: "Jump instantly into key modules. Launch the Quick Bill POS screen, open the Add Product inventory form, or create a walk-in Quote with single-click shortcut buttons designed to speed up customer checkout flows.",
+        description:
+          "Jump instantly into key modules. Launch the Quick Bill POS screen, open the Add Product inventory form, or create a walk-in Quote with single-click shortcut buttons designed to speed up customer checkout flows.",
         side: "left",
         align: "start",
       },
@@ -958,7 +1057,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='dash-orders']",
       popover: {
         title: "Recent Orders Monitor",
-        description: "Tracks active customer transactions in real-time, showing order ID, fulfillment status, and final amount. Click any transaction row to open details or print invoices.",
+        description:
+          "Tracks active customer transactions in real-time, showing order ID, fulfillment status, and final amount. Click any transaction row to open details or print invoices.",
         side: "top",
         align: "center",
       },
@@ -967,7 +1067,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='dash-rfqs']",
       popover: {
         title: "Custom RFQ Request Inbox",
-        description: "Displays custom design requests sent by marketplace shoppers. View their target budget, deadline, and jewelry type specifications. Tap 'Respond' to submit a customized price quote and lock in the deal.",
+        description:
+          "Displays custom design requests sent by marketplace shoppers. View their target budget, deadline, and jewelry type specifications. Tap 'Respond' to submit a customized price quote and lock in the deal.",
         side: "top",
         align: "center",
       },
@@ -976,7 +1077,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='dash-low-stock']",
       popover: {
         title: "Low Stock Inventory Alerts",
-        description: "Flags items that have dropped below your specified safety threshold. Restock directly from this ledger card to avoid running out of display items.",
+        description:
+          "Flags items that have dropped below your specified safety threshold. Restock directly from this ledger card to avoid running out of display items.",
         side: "top",
         align: "center",
       },
@@ -985,7 +1087,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='dash-supply-chain']",
       popover: {
         title: "Karigar & Bullion Supply Chain Tracker",
-        description: "Your unified manufacturing workspace! Monitor live raw gold/silver bullion reserves in your safe vault, track outstanding float balances allotted to Karigars (artisans), record process wastages, and issue metal or receive finished pieces with direct cloud-persisted ledgers.",
+        description:
+          "Your unified manufacturing workspace! Monitor live raw gold/silver bullion reserves in your safe vault, track outstanding float balances allotted to Karigars (artisans), record process wastages, and issue metal or receive finished pieces with direct cloud-persisted ledgers.",
         side: "top",
         align: "center",
       },
@@ -994,7 +1097,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='support-bot']",
       popover: {
         title: "AI Support & Shop Intelligence Assistant",
-        description: "Click the amber chat bubble anytime in the bottom-right corner to talk with your context-aware AI. Since it has access to your shop data, you can ask questions like 'How many invoices are unpaid?' or 'What were my sales this month?' to get instant answers.",
+        description:
+          "Click the amber chat bubble anytime in the bottom-right corner to talk with your context-aware AI. Since it has access to your shop data, you can ask questions like 'How many invoices are unpaid?' or 'What were my sales this month?' to get instant answers.",
         side: "left",
         align: "end",
       },
@@ -1002,7 +1106,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "💡 Need Help Anytime?",
-        description: "You can click the floating '?' Help Button in the bottom-right corner of the screen at any point to restart this guide or get in-context assistance on any page you visit!",
+        description:
+          "You can click the floating '?' Help Button in the bottom-right corner of the screen at any point to restart this guide or get in-context assistance on any page you visit!",
       },
     },
   ],
@@ -1013,7 +1118,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-gold-ticker']",
       popover: {
         title: "Live Gold Price Ticker",
-        description: "A header banner displaying live spot market prices for 24K, 22K, 18K gold and silver per gram. Automatically synced every 10 minutes to guarantee accurate walk-in pricing on the retail floor.",
+        description:
+          "A header banner displaying live spot market prices for 24K, 22K, 18K gold and silver per gram. Automatically synced every 10 minutes to guarantee accurate walk-in pricing on the retail floor.",
         side: "bottom",
         align: "start",
       },
@@ -1022,7 +1128,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-pos-search']",
       popover: {
         title: "Intelligent Search & Filter",
-        description: "Type here to perform an instant search by product name, SKU, or category to filter your store catalogue dynamically. Tap to select or clear.",
+        description:
+          "Type here to perform an instant search by product name, SKU, or category to filter your store catalogue dynamically. Tap to select or clear.",
         side: "bottom",
         align: "start",
       },
@@ -1031,7 +1138,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-pos-grid']",
       popover: {
         title: "Product Grid & Detail Sheets",
-        description: "Displays your catalog cards. Tapping any card opens a modal sheet showing weight in grams, metal purity, base value, and making charges. Tapping the orange '+' button instantly adds the item to your active bill, updating the badge count in real-time.",
+        description:
+          "Displays your catalog cards. Tapping any card opens a modal sheet showing weight in grams, metal purity, base value, and making charges. Tapping the orange '+' button instantly adds the item to your active bill, updating the badge count in real-time.",
         side: "top",
         align: "center",
       },
@@ -1040,7 +1148,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-pos-bill-btn']",
       popover: {
         title: "View Bill & Finalize Checkout",
-        description: "Visible when items are in your cart. Displays the total bill amount and cart count. Tapping this launches the Cart Drawer, where you can enter customer CRM details (phone/name) for invoice linking, view VAT/GST tax splits, select standard payment methods, and finalize checkout.",
+        description:
+          "Visible when items are in your cart. Displays the total bill amount and cart count. Tapping this launches the Cart Drawer, where you can enter customer CRM details (phone/name) for invoice linking, view VAT/GST tax splits, select standard payment methods, and finalize checkout.",
         side: "top",
         align: "center",
       },
@@ -1049,7 +1158,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-bottom-nav']",
       popover: {
         title: "Bottom Navigation bar",
-        description: "Switch seamlessly between POS billing, Walk-in Quotes, Orders list, and your CRM Customers list. Tapping '⋯ More' unlocks advanced tools like live Rate Card templates, Tax reports, Repairs logs, and Savings Schemes.",
+        description:
+          "Switch seamlessly between POS billing, Walk-in Quotes, Orders list, and your CRM Customers list. Tapping '⋯ More' unlocks advanced tools like live Rate Card templates, Tax reports, Repairs logs, and Savings Schemes.",
         side: "top",
         align: "center",
       },
@@ -1058,7 +1168,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='support-bot']",
       popover: {
         title: "AI Assistant Chat",
-        description: "A floating helper button to ask the AI assistant about mobile-specific features, billing calculations, gold savings installment logs, or WhatsApp message sharing rules.",
+        description:
+          "A floating helper button to ask the AI assistant about mobile-specific features, billing calculations, gold savings installment logs, or WhatsApp message sharing rules.",
         side: "left",
         align: "end",
       },
@@ -1066,7 +1177,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "💡 Need Help on Mobile?",
-        description: "You can tap the floating '?' Help Button in the bottom-right corner of the screen at any point to restart this guide or get in-context assistance on any mobile page you visit!",
+        description:
+          "You can tap the floating '?' Help Button in the bottom-right corner of the screen at any point to restart this guide or get in-context assistance on any mobile page you visit!",
       },
     },
   ],
@@ -1075,7 +1187,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-quote-customer']",
       popover: {
         title: "Customer Details",
-        description: "Enter the customer's name and phone number. Phone is used to send the quote via WhatsApp.",
+        description:
+          "Enter the customer's name and phone number. Phone is used to send the quote via WhatsApp.",
         side: "bottom",
         align: "start",
       },
@@ -1084,7 +1197,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-quote-items']",
       popover: {
         title: "Quote Line Items",
-        description: "Add each item with description, purity (24K/22K/18K/14K), weight in grams, and making charges. Price is auto-calculated using live gold rate.",
+        description:
+          "Add each item with description, purity (24K/22K/18K/14K), weight in grams, and making charges. Price is auto-calculated using live gold rate.",
         side: "top",
         align: "center",
       },
@@ -1093,7 +1207,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-quote-total']",
       popover: {
         title: "Quote Total",
-        description: "Subtotal, 3% tax, and grand total are calculated automatically. The gold rate used is shown for transparency.",
+        description:
+          "Subtotal, 3% tax, and grand total are calculated automatically. The gold rate used is shown for transparency.",
         side: "top",
         align: "center",
       },
@@ -1101,7 +1216,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "WhatsApp Share",
-        description: "After saving the quote, you can share a formatted quote message directly to the customer's WhatsApp with a single tap.",
+        description:
+          "After saving the quote, you can share a formatted quote message directly to the customer's WhatsApp with a single tap.",
       },
     },
   ],
@@ -1110,7 +1226,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-rate-card']",
       popover: {
         title: "Today's Rate Card",
-        description: "Live gold and silver rates for your shop — 24K, 22K, 18K, 14K, and silver per gram.",
+        description:
+          "Live gold and silver rates for your shop — 24K, 22K, 18K, 14K, and silver per gram.",
         side: "bottom",
         align: "center",
       },
@@ -1119,7 +1236,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-rate-whatsapp']",
       popover: {
         title: "Share on WhatsApp",
-        description: "Tap to share today's rate card as a formatted text message to any WhatsApp contact. Great for sending to regular customers every morning.",
+        description:
+          "Tap to share today's rate card as a formatted text message to any WhatsApp contact. Great for sending to regular customers every morning.",
         side: "top",
         align: "center",
       },
@@ -1128,7 +1246,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-rate-refresh']",
       popover: {
         title: "Refresh Rates",
-        description: "Pull the latest rates from the market. Rates auto-refresh when you open this page.",
+        description:
+          "Pull the latest rates from the market. Rates auto-refresh when you open this page.",
         side: "top",
         align: "center",
       },
@@ -1139,7 +1258,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-tax-country']",
       popover: {
         title: "Country Selector",
-        description: "Switch between Nepal VAT and India GST. The report format changes accordingly.",
+        description:
+          "Switch between Nepal VAT and India GST. The report format changes accordingly.",
         side: "bottom",
         align: "start",
       },
@@ -1148,7 +1268,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-tax-period']",
       popover: {
         title: "Select Month",
-        description: "Choose any month in the past year to generate that period's tax summary.",
+        description:
+          "Choose any month in the past year to generate that period's tax summary.",
         side: "bottom",
         align: "start",
       },
@@ -1157,7 +1278,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-tax-stats']",
       popover: {
         title: "Tax Summary",
-        description: "Total sales, tax collected, taxable amount, and invoice count for the selected period.",
+        description:
+          "Total sales, tax collected, taxable amount, and invoice count for the selected period.",
         side: "top",
         align: "center",
       },
@@ -1166,7 +1288,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-tax-download']",
       popover: {
         title: "Download Reports",
-        description: "Download GSTR-1 CSV, GSTR-3B JSON (India), Tally XML, or Nepal VAT JSON — ready to submit or share with your CA.",
+        description:
+          "Download GSTR-1 CSV, GSTR-3B JSON (India), Tally XML, or Nepal VAT JSON — ready to submit or share with your CA.",
         side: "top",
         align: "center",
       },
@@ -1177,7 +1300,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-orders-filter']",
       popover: {
         title: "Filter by Status",
-        description: "Tap All, Pending, Processing, or Ready to filter today's orders. Tap any order card to open full details.",
+        description:
+          "Tap All, Pending, Processing, or Ready to filter today's orders. Tap any order card to open full details.",
         side: "bottom",
         align: "start",
       },
@@ -1186,7 +1310,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-orders-list']",
       popover: {
         title: "Today's Orders",
-        description: "All orders placed today. Tap a card to manage the order — update status, print bill, or contact the customer.",
+        description:
+          "All orders placed today. Tap a card to manage the order — update status, print bill, or contact the customer.",
         side: "top",
         align: "center",
       },
@@ -1197,7 +1322,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-repairs-list']",
       popover: {
         title: "Repair Jobs",
-        description: "All logged repair and alteration jobs. Filter by Active to see only in-progress work.",
+        description:
+          "All logged repair and alteration jobs. Filter by Active to see only in-progress work.",
         side: "top",
         align: "center",
       },
@@ -1206,7 +1332,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-repairs-log']",
       popover: {
         title: "Log New Job",
-        description: "Tap '+' to log a new repair — enter customer details, item description, issue, estimated cost, and ready date.",
+        description:
+          "Tap '+' to log a new repair — enter customer details, item description, issue, estimated cost, and ready date.",
         side: "top",
         align: "center",
       },
@@ -1214,13 +1341,15 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "Advance Status",
-        description: "Tap 'Advance' on a job card to move it through: Received → Diagnosing → In Repair → Ready → Delivered.",
+        description:
+          "Tap 'Advance' on a job card to move it through: Received → Diagnosing → In Repair → Ready → Delivered.",
       },
     },
     {
       popover: {
         title: "WhatsApp Notify",
-        description: "Tap the WhatsApp button on any job to instantly send the customer a status update message.",
+        description:
+          "Tap the WhatsApp button on any job to instantly send the customer a status update message.",
       },
     },
   ],
@@ -1229,7 +1358,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-customers-search']",
       popover: {
         title: "Search Customers",
-        description: "Type a name or phone number to find any customer in your CRM.",
+        description:
+          "Type a name or phone number to find any customer in your CRM.",
         side: "bottom",
         align: "start",
       },
@@ -1238,7 +1368,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-customers-list']",
       popover: {
         title: "Customer Cards",
-        description: "Each card shows the customer's order count and total spend. Tap to open their full profile.",
+        description:
+          "Each card shows the customer's order count and total spend. Tap to open their full profile.",
         side: "top",
         align: "center",
       },
@@ -1246,7 +1377,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "Customer Profile",
-        description: "Profile drawer shows stats (orders, total spent, avg order, last visit), recent order history, and a WhatsApp message button.",
+        description:
+          "Profile drawer shows stats (orders, total spent, avg order, last visit), recent order history, and a WhatsApp message button.",
       },
     },
   ],
@@ -1255,7 +1387,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-savings-header']",
       popover: {
         title: "Savings Scheme Overview",
-        description: "See total active members and the total gold savings pool at a glance.",
+        description:
+          "See total active members and the total gold savings pool at a glance.",
         side: "bottom",
         align: "center",
       },
@@ -1264,7 +1397,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-savings-list']",
       popover: {
         title: "Member Cards",
-        description: "Each card shows installments paid, progress towards completion, and saved/bonus/payout amounts. Tap 'Record Payment' to log an installment.",
+        description:
+          "Each card shows installments paid, progress towards completion, and saved/bonus/payout amounts. Tap 'Record Payment' to log an installment.",
         side: "top",
         align: "center",
       },
@@ -1273,7 +1407,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='m-savings-enroll']",
       popover: {
         title: "Enroll New Member",
-        description: "Tap '+' to enroll a customer in a new gold savings scheme — set type (Daily/Weekly/Monthly), installment amount, and duration.",
+        description:
+          "Tap '+' to enroll a customer in a new gold savings scheme — set type (Daily/Weekly/Monthly), installment amount, and duration.",
         side: "top",
         align: "center",
       },
@@ -1281,7 +1416,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "Payout Calculator",
-        description: "The enrollment form auto-calculates the payout amount based on installments, bonus, and current gold rate so you and the customer know the expected final payout.",
+        description:
+          "The enrollment form auto-calculates the payout amount based on installments, bonus, and current gold rate so you and the customer know the expected final payout.",
       },
     },
   ],
@@ -1290,7 +1426,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='admin-users-stats']",
       popover: {
         title: "Live Activity Stats",
-        description: "Monitor real-time platform engagement including how many users are 'Online Now' and the average session duration for today.",
+        description:
+          "Monitor real-time platform engagement including how many users are 'Online Now' and the average session duration for today.",
         side: "bottom",
         align: "start",
       },
@@ -1299,7 +1436,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='admin-users-table']",
       popover: {
         title: "User Directory & Risk",
-        description: "View all users. Pay attention to the 'Last Seen' column for activity tracking and the 'Risk Score' badge indicating potential security or policy issues.",
+        description:
+          "View all users. Pay attention to the 'Last Seen' column for activity tracking and the 'Risk Score' badge indicating potential security or policy issues.",
         side: "top",
         align: "center",
       },
@@ -1308,7 +1446,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       element: "[data-tour='admin-users-bulk']",
       popover: {
         title: "Bulk Actions",
-        description: "Select multiple users to perform bulk operations like suspending accounts, exporting data to CSV, or sending mass messages.",
+        description:
+          "Select multiple users to perform bulk operations like suspending accounts, exporting data to CSV, or sending mass messages.",
         side: "left",
         align: "center",
       },
@@ -1316,7 +1455,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       popover: {
         title: "Deep Insights Panel",
-        description: "Click the 👁 eye icon on any user to open the sliding panel. It features 5 tabs: Profile, Activity (with active sessions), Shops, Audit Log, and Direct Messaging (with AI compose).",
+        description:
+          "Click the 👁 eye icon on any user to open the sliding panel. It features 5 tabs: Profile, Activity (with active sessions), Shops, Audit Log, and Direct Messaging (with AI compose).",
       },
     },
   ],
@@ -1362,7 +1502,9 @@ export function useTutorial() {
         popover: step.popover
           ? {
               ...step.popover,
-              title: step.popover.title ? t(step.popover.title) : step.popover.title,
+              title: step.popover.title
+                ? t(step.popover.title)
+                : step.popover.title,
               description: step.popover.description
                 ? t(step.popover.description)
                 : step.popover.description,

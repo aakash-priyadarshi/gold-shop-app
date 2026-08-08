@@ -1,5 +1,6 @@
 import { Module, forwardRef } from "@nestjs/common";
 import { PrismaModule } from "../../prisma/prisma.module";
+import { AccountingModule } from "../accounting/accounting.module";
 import { MarketplaceIntelligenceModule } from "../core/marketplace-intelligence/marketplace-intelligence.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { PaymentGatewayModule } from "../core/payment-gateway/payment-gateway.module";
@@ -10,6 +11,7 @@ import { StateMachineService } from "./state-machine.service";
 @Module({
   imports: [
     PrismaModule,
+    AccountingModule,
     NotificationsModule,
     MarketplaceIntelligenceModule,
     forwardRef(() => PaymentGatewayModule),

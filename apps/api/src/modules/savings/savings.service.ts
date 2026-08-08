@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import type { SavingsMember } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import {
@@ -136,6 +136,30 @@ export class SavingsService {
       }),
     ]);
 
+    return this.decorate(updated);
+  }
+
+  /**
+   * Mark a matured (or active) scheme as redeemed when the customer
+   * collects jewellery / payout at the counter.
+   */
+  async redeem(shopId: string, memberId: string) {
+    const member = await this.prisma.savingsMember.findFirst({
+      where: { id: memberId, shopId },
+    });
+    if (!member) throw new NotFoundException("Savings member not found");
+
+    if (member.status === "REDEEMED") {
+      return this.decorate(member);
+    }
+    if (member.status === "CANCELLED") {
+      throw new BadRequestException("Cannot redeem a cancelled scheme");
+    }
+
+    const updated = await this.prisma.savingsMember.update({
+      where: { id: memberId },
+      data: { status: "REDEEMED" },
+    });
     return this.decorate(updated);
   }
 }

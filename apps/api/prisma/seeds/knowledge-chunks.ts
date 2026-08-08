@@ -49,6 +49,11 @@ const CHUNKS: { topic: string; content: string }[] = [
       "Orivraa supports multiple weight units on invoices and quotes: grams (g), tola (11.6638g), laal (0.1166g, Nepal), kilogram, ounce (troy), and pound. Nepal defaults to tola, India to grams, US to ounces. You can switch the weight unit per invoice using the unit selector next to the weight field. The system internally stores all weights in grams and converts for display. The tola unit is especially useful for Nepali and traditional Indian jewellers.",
   },
   {
+    topic: "sri_lanka_launch",
+    content:
+      "Orivraa supports Sri Lankan jewellery shops under the LK market with Sri Lankan Rupee (LKR) billing. The configured standard VAT rate is 18%, but tax applicability, exemptions, registration thresholds, and filing obligations can change; shops should confirm current treatment with Sri Lanka's Inland Revenue Department or a qualified local accountant. Card payments use Orivraa's existing Stripe account, with canonical NPR base amounts converted to the actual LKR charge and the FX details recorded. Jewellery weights remain stored internally in grams and can be displayed in grams or tola. Sinhala (si) UI translation is supported through dynamic translation with English fallback, and Tamil support remains available.",
+  },
+  {
     topic: "live_rates_autofill",
     content:
       "On the invoice creation page, Orivraa shows live gold and silver market rates in a collapsible panel. Click the 'Live' button next to any line item's Metal Cost to autofill the cost as weight × live rate per gram. The autofilled cost is fully editable afterwards. Rates are fetched per market (Nepal, India, UAE, etc.) in the local currency. Live rates update every 10 minutes.",

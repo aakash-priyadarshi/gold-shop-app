@@ -40,6 +40,7 @@ import {
   Truck,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -308,10 +309,13 @@ export default function ProductDetailPage() {
               {/* Main Image */}
               <div className="relative aspect-square bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-lg">
                 {item.images?.[currentImageIndex] ? (
-                  <img
+                  <Image
                     src={getImageUrl(item.images[currentImageIndex])}
                     alt={item.nameEn}
-                    className="object-cover w-full h-full"
+                    className="object-cover"
+                    fill
+                    sizes="(min-width: 1024px) 50vw, 100vw"
+                    unoptimized
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full">
@@ -362,10 +366,13 @@ export default function ProductDetailPage() {
                           : "border-gray-200 hover:border-gray-300"
                       }`}
                     >
-                      <img
+                      <Image
                         src={getImageUrl(img)}
                         alt={`${item?.nameEn || "Product"} - Image ${idx + 1}`}
                         className="w-full h-full object-cover"
+                        width={80}
+                        height={80}
+                        unoptimized
                       />
                     </button>
                   ))}
@@ -439,10 +446,13 @@ export default function ProductDetailPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
                       {item.shop.logoUrl ? (
-                        <img
+                        <Image
                           src={item.shop.logoUrl}
                           alt={`${item.shop.shopName} logo`}
-                          className="w-full h-full rounded-full"
+                          className="w-full h-full rounded-full object-cover"
+                          width={48}
+                          height={48}
+                          unoptimized
                         />
                       ) : (
                         <Gem className="h-6 w-6 text-gray-400" />

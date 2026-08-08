@@ -56,6 +56,7 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
     UK: "Britain's Finest Jewellery Marketplace",
     EU: "Europe's Premium Jewellery Marketplace",
     AE: "UAE's Luxury Jewellery Marketplace",
+    LK: "Sri Lanka's Trusted Jewellery Marketplace",
   };
   const badgeText =
     badgeTextMap[selectedCountry] || "Your Premium Jewellery Marketplace";
@@ -313,6 +314,12 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
       headline: "The premium cloud ERP & POS software for European jewellers",
       subheadline: "EU One Stop Shop (OSS) VAT compliance, multi-lingual client invoicing, carat weight management, RFID counter scanning, and daily cloud backup.",
       trustFooter: "Trusted by fine jewellery manufacturers and boutiques across France, Italy & Germany"
+    },
+    LK: {
+      badge: "🇱🇰 Sri Lanka's Easy Jewellery Billing, Schemes & Tag Printing",
+      headline: "The simple cloud POS & billing software for Sri Lankan jewellers",
+      subheadline: "LKR invoicing, 18% output VAT sales summaries for accountant review, gold savings schemes, jewellery tag printing, and walk-in quotes — built for busy shop counters.",
+      trustFooter: "Built for jewellers across Colombo, Kandy, Galle & Jaffna"
     }
   };
 

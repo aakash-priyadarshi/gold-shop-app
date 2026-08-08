@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { T } from "@/components/ui/T";
 import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import {
   Select,
@@ -37,6 +38,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import api, { adminApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   Calendar,
   CheckCircle,
@@ -51,7 +53,7 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface ShopMaterial {
   materialCode: string;
@@ -86,6 +88,13 @@ interface Shop {
   codEnabled?: boolean;
   rating?: number;
   totalReviews?: number;
+  vatNumber?: string;
+  vatRegistrationStatus?:
+    | "NOT_REGISTERED"
+    | "PENDING"
+    | "VERIFIED"
+    | "REJECTED";
+  vatRegistrationVerifiedAt?: string;
   shopMaterials?: ShopMaterial[];
   _count?: {
     inventory?: number;
@@ -101,8 +110,8 @@ interface Shop {
 }
 
 export default function AdminShopsPage() {
+  const t = useT();
   const [shops, setShops] = useState<Shop[]>([]);
-  const [filteredShops, setFilteredShops] = useState<Shop[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("directory");
@@ -114,6 +123,9 @@ export default function AdminShopsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingShop, setEditingShop] = useState<Partial<Shop>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [vatTin, setVatTin] = useState("");
+  const [vatActionStatus, setVatActionStatus] = useState<string | null>(null);
+  const [vatActionError, setVatActionError] = useState<string | null>(null);
 
   // Create shop dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -134,15 +146,7 @@ export default function AdminShopsPage() {
     contactPhone: "",
   });
 
-  useEffect(() => {
-    loadShops();
-  }, []);
-
-  useEffect(() => {
-    filterShops();
-  }, [shops, searchQuery]);
-
-  const loadShops = async () => {
+  const loadShops = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get("/shops");
@@ -161,9 +165,9 @@ export default function AdminShopsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const filterShops = () => {
+  const filteredShops = useMemo(() => {
     let filtered = [...shops];
 
     // Filter by search
@@ -177,8 +181,12 @@ export default function AdminShopsPage() {
       );
     }
 
-    setFilteredShops(filtered);
-  };
+    return filtered;
+  }, [searchQuery, shops]);
+
+  useEffect(() => {
+    void loadShops();
+  }, [loadShops]);
 
   const searchOwners = async (query: string) => {
     if (query.length < 2) {
@@ -246,7 +254,58 @@ export default function AdminShopsPage() {
 
   const handleViewShop = (shop: Shop) => {
     setSelectedShop(shop);
+    setVatTin(shop.vatNumber || "");
+    setVatActionError(null);
     setViewDialogOpen(true);
+  };
+
+  const handleVatRegistrationUpdate = async (
+    status: "PENDING" | "VERIFIED" | "REJECTED",
+  ) => {
+    if (!selectedShop || selectedShop.country.toUpperCase() !== "LK") return;
+    const normalizedTin = vatTin.trim();
+    if (status === "VERIFIED" && !/^\d{9}$/.test(normalizedTin)) {
+      setVatActionError(t("Verification requires a valid 9-digit Sri Lankan TIN."));
+      return;
+    }
+    const confirmed = window.confirm(
+      t(`Set ${selectedShop.shopName}'s VAT registration status to ${status}?`),
+    );
+    if (!confirmed) return;
+
+    setVatActionStatus(status);
+    setVatActionError(null);
+    try {
+      const response = await api.patch(
+        `/shops/${selectedShop.id}/vat-registration`,
+        {
+          status,
+          vatNumber: normalizedTin || undefined,
+        },
+      );
+      const updated = response.data as Partial<Shop>;
+      const nextShop = { ...selectedShop, ...updated };
+      setSelectedShop(nextShop);
+      setVatTin(nextShop.vatNumber || normalizedTin);
+      setShops((current) =>
+        current.map((shop) => (shop.id === nextShop.id ? nextShop : shop)),
+      );
+      toast({
+        title: t("VAT registration updated"),
+        description: t(`Status changed to ${status}.`),
+      });
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message || t("Could not update VAT registration.");
+      setVatActionError(message);
+      toast({
+        variant: "destructive",
+        title: t("VAT registration update failed"),
+        description: message,
+      });
+    } finally {
+      setVatActionStatus(null);
+    }
   };
 
   const handleEditShop = (shop: Shop) => {
@@ -327,7 +386,7 @@ export default function AdminShopsPage() {
   };
 
   const getCountryFlag = (country: string) => {
-    const validCodes = ["NP", "IN", "US", "UK", "AE", "EU", "GB"];
+    const validCodes = ["NP", "IN", "US", "UK", "AE", "EU", "GB", "LK"];
     if (validCodes.includes(country)) {
       return <FlagImage code={country as FlagCode} size={16} />;
     }
@@ -579,6 +638,11 @@ export default function AdminShopsPage() {
                                   <FlagImage code="IN" size={16} /> India
                                 </span>
                               </SelectItem>
+                              <SelectItem value="LK">
+                                <span className="flex items-center gap-2">
+                                  <FlagImage code="LK" size={16} /> Sri Lanka
+                                </span>
+                              </SelectItem>
                               <SelectItem value="AE">
                                 <span className="flex items-center gap-2">
                                   <FlagImage code="AE" size={16} /> UAE
@@ -806,6 +870,14 @@ export default function AdminShopsPage() {
                                     Inactive
                                   </Badge>
                                 )}
+                                {shop.country.toUpperCase() === "LK" && (
+                                  <Badge
+                                    variant="outline"
+                                    className="w-fit text-xs"
+                                  >
+                                    <T>VAT</T>: {shop.vatRegistrationStatus || "NOT_REGISTERED"}
+                                  </Badge>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -944,6 +1016,81 @@ export default function AdminShopsPage() {
                     </p>
                   )}
                 </div>
+
+                {selectedShop.country.toUpperCase() === "LK" && (
+                  <div className="border-t pt-4 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="font-semibold">
+                          <T>Sri Lanka VAT Registration</T>
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          <T>
+                            Only VERIFIED registrations can charge VAT or issue a
+                            TAX INVOICE.
+                          </T>
+                        </p>
+                      </div>
+                      <Badge
+                        className={
+                          selectedShop.vatRegistrationStatus === "VERIFIED"
+                            ? "bg-green-100 text-green-700"
+                            : selectedShop.vatRegistrationStatus === "REJECTED"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-amber-100 text-amber-700"
+                        }
+                      >
+                        {selectedShop.vatRegistrationStatus || "NOT_REGISTERED"}
+                      </Badge>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-lk-vat-tin">
+                        <T>IRD TIN / VAT Registration (9 digits)</T>
+                      </Label>
+                      <Input
+                        id="admin-lk-vat-tin"
+                        value={vatTin}
+                        inputMode="numeric"
+                        maxLength={9}
+                        onChange={(event) =>
+                          setVatTin(event.target.value.replace(/\D/g, ""))
+                        }
+                        placeholder="123456789"
+                        disabled={vatActionStatus !== null}
+                      />
+                    </div>
+                    {vatActionError && (
+                      <p className="rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+                        {vatActionError}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {(["PENDING", "VERIFIED", "REJECTED"] as const).map(
+                        (status) => (
+                          <Button
+                            key={status}
+                            type="button"
+                            size="sm"
+                            variant={status === "VERIFIED" ? "default" : "outline"}
+                            disabled={vatActionStatus !== null}
+                            onClick={() => void handleVatRegistrationUpdate(status)}
+                          >
+                            {vatActionStatus === status && (
+                              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                            )}
+                            <T>
+                              {status === "VERIFIED"
+                                ? "Verify VAT"
+                                : status === "REJECTED"
+                                  ? "Reject VAT"
+                                  : "Mark pending"}
+                            </T>
+                          </Button>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="border-t pt-4">
                   <h4 className="font-semibold mb-3">Location & Contact</h4>
@@ -1256,6 +1403,11 @@ export default function AdminShopsPage() {
                       <SelectItem value="IN">
                         <span className="flex items-center gap-2">
                           <FlagImage code="IN" size={16} /> India
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="LK">
+                        <span className="flex items-center gap-2">
+                          <FlagImage code="LK" size={16} /> Sri Lanka
                         </span>
                       </SelectItem>
                       <SelectItem value="AE">

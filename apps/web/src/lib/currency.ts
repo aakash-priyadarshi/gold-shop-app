@@ -9,6 +9,7 @@ export const CURRENCY_SYMBOLS: Record<SupportedCurrencyCode, string> = {
   USD: "$",
   GBP: "£",
   EUR: "€",
+  LKR: "Rs.",
   AUD: "A$",
 };
 
@@ -21,6 +22,7 @@ const COUNTRY_TO_CURRENCY: Record<string, SupportedCurrencyCode> = {
   GB: "GBP",
   AU: "AUD",
   EU: "EUR",
+  LK: "LKR",
   AT: "EUR",
   BE: "EUR",
   DE: "EUR",
@@ -38,6 +40,7 @@ export const DEFAULT_USD_FX_RATES: Record<SupportedCurrencyCode, number> = {
   GBP: 0.79,
   EUR: 0.92,
   AED: 3.67,
+  LKR: 300,
   AUD: 1.51,
 };
 

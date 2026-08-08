@@ -33,8 +33,9 @@ import {
   Truck,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface OrderDetail {
   id: string;
@@ -120,13 +121,7 @@ export default function CustomerOrderDetailPage() {
   const { formatWithConversion, selectedCurrency, currencySymbol } =
     useCurrencyConversion();
 
-  useEffect(() => {
-    if (params.id) {
-      loadOrder();
-    }
-  }, [params.id]);
-
-  const loadOrder = async () => {
+  const loadOrder = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get(`/orders/${params.id}`);
@@ -141,7 +136,13 @@ export default function CustomerOrderDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    if (params.id) {
+      void loadOrder();
+    }
+  }, [loadOrder, params.id]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -321,13 +322,17 @@ export default function CustomerOrderDetailPage() {
                   {(order.productSnapshot?.images?.[0] ||
                     order.productSnapshot?.referenceImages?.[0]) && (
                     <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                      <img
+                      <Image
                         src={
                           order.productSnapshot.images?.[0] ||
-                          order.productSnapshot.referenceImages?.[0]
+                          order.productSnapshot.referenceImages?.[0] ||
+                          ""
                         }
                         alt="Product"
                         className="w-full h-full object-cover"
+                        width={96}
+                        height={96}
+                        unoptimized
                       />
                     </div>
                   )}

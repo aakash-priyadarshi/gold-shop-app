@@ -20,7 +20,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Notification {
   id: string;
@@ -119,17 +119,7 @@ export default function NotificationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push(`/auth/login?redirect=${sanitizeRedirectUrl("/notifications")}`);
-      return;
-    }
-    if (isAuthenticated) {
-      loadNotifications();
-    }
-  }, [isAuthenticated, authLoading]);
-
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get("/notifications");
@@ -167,7 +157,17 @@ export default function NotificationsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push(`/auth/login?redirect=${sanitizeRedirectUrl("/notifications")}`);
+      return;
+    }
+    if (isAuthenticated) {
+      void loadNotifications();
+    }
+  }, [authLoading, isAuthenticated, loadNotifications, router]);
 
   const markAsRead = async (id: string) => {
     try {

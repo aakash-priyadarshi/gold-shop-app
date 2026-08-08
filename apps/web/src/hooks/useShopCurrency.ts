@@ -12,6 +12,7 @@ const COUNTRY_CURRENCY_MAP: Record<string, CurrencyCode> = {
   NP: "NPR",
   IN: "INR",
   AE: "AED",
+  LK: "LKR",
   US: "USD",
   GB: "GBP",
   UK: "GBP",
@@ -107,6 +108,19 @@ export const COUNTRY_PLACEHOLDERS: Record<
     swiftLabel: "Sort Code",
     minOrderExample: "e.g., 100",
     maxCodExample: "e.g., 5000",
+  },
+  LK: {
+    phone: "+94 7X XXX XXXX",
+    city: "Colombo",
+    state: "Western Province",
+    pincode: "00100",
+    pincodeLabel: "Postal Code",
+    addressExample: "Colombo 01, Western Province",
+    bankName: "Bank of Ceylon",
+    bankBranch: "Colombo Main Branch",
+    swiftLabel: "SWIFT/BIC Code",
+    minOrderExample: "e.g., 10000",
+    maxCodExample: "e.g., 250000",
   },
 };
 

@@ -152,6 +152,8 @@ const SHOP_TO_PREF_COUNTRY: Record<string, CountryCode> = {
   GB: "UK",
   UK: "UK",
   US: "US",
+  EU: "EU",
+  LK: "LK",
 };
 
 /**

@@ -20,7 +20,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Catalogue {
   id: string;
@@ -47,7 +47,7 @@ export default function CataloguesPage() {
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({ total: 0, totalPages: 1 });
 
-  const fetchCatalogues = async () => {
+  const fetchCatalogues = useCallback(async () => {
     try {
       setLoading(true);
       const res = await catalogueApi.getMyCatalogues({ page, limit: 20 });
@@ -58,11 +58,11 @@ export default function CataloguesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
 
   useEffect(() => {
-    fetchCatalogues();
-  }, [page]);
+    void fetchCatalogues();
+  }, [fetchCatalogues]);
 
   const handleDelete = async (id: string, name: string) => {
     if (

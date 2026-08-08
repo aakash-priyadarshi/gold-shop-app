@@ -4,6 +4,7 @@ import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { inventoryApi, materialsApi } from "@/lib/api";
+import { printJewelleryTags } from "@/lib/jewelleryTagPrint";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -13,6 +14,7 @@ import {
   Loader2,
   Package,
   Plus,
+  Printer,
   Search,
   Store,
   X,
@@ -374,10 +376,34 @@ export default function MobileStockPage() {
                     <p className="font-semibold text-gray-900 dark:text-gray-200">{item.purity}</p>
                     <p>{item.grossWeight.toFixed(2)}g G / {item.netWeight.toFixed(2)}g N</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <span className="text-sm font-extrabold text-gray-900 dark:text-gray-100">
                       {formatCurrency(calculateItemValuation(item))}
                     </span>
+                    <button
+                      onClick={() => {
+                        try {
+                          printJewelleryTags([
+                            {
+                              sku: item.tag,
+                              name: item.name,
+                              purity: item.purity,
+                              weightGrams: item.netWeight,
+                              price: calculateItemValuation(item),
+                              currency: goldRates.currency,
+                              hallmark: item.huid,
+                              shopName: user?.shop?.shopName,
+                            },
+                          ]);
+                        } catch {
+                          // popup blocked
+                        }
+                      }}
+                      className="h-8 w-8 bg-gray-50 dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-950/20 text-gray-600 dark:text-gray-400 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
+                      aria-label="Print tag"
+                    >
+                      <Printer className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={() => {
                         setTransferForm({ tag: item.tag, newLocation: item.location });

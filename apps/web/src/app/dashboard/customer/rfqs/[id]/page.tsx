@@ -40,8 +40,9 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Shop {
   id: string;
@@ -172,13 +173,7 @@ export default function CustomerRFQDetailPage() {
   });
   const [declineReason, setDeclineReason] = useState("");
 
-  useEffect(() => {
-    if (params.id) {
-      loadRFQ();
-    }
-  }, [params.id]);
-
-  const loadRFQ = async () => {
+  const loadRFQ = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get(`/rfq/${params.id}`);
@@ -193,7 +188,13 @@ export default function CustomerRFQDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    if (params.id) {
+      void loadRFQ();
+    }
+  }, [loadRFQ, params.id]);
 
   const acceptOffer = async (offerId: string) => {
     setActionLoading(offerId);
@@ -495,11 +496,14 @@ export default function CustomerRFQDetailPage() {
                       </p>
                       <div className="grid grid-cols-3 gap-2">
                         {rfq.referenceImages.map((img, i) => (
-                          <img
+                          <Image
                             key={i}
                             src={img}
                             alt={`Reference ${i + 1}`}
                             className="w-full aspect-square object-cover rounded-lg"
+                            width={600}
+                            height={600}
+                            unoptimized
                           />
                         ))}
                       </div>

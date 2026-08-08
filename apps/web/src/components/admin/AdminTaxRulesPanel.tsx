@@ -68,6 +68,7 @@ const CATEGORIES = [
 const COUNTRIES = [
   { code: "NP", name: "Nepal", flag: "🇳🇵" },
   { code: "IN", name: "India", flag: "🇮🇳" },
+  { code: "LK", name: "Sri Lanka", flag: "🇱🇰" },
   { code: "AE", name: "UAE", flag: "🇦🇪" },
   { code: "UK", name: "United Kingdom", flag: "🇬🇧" },
   { code: "EU", name: "Europe", flag: "🇪🇺" },

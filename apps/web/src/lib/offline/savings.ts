@@ -151,3 +151,22 @@ export async function recordPayment(memberId: string): Promise<void> {
     body: {},
   });
 }
+
+/** Mark a scheme as redeemed (optimistic + queued). */
+export async function redeemMember(memberId: string): Promise<void> {
+  const db = getDB();
+  const member = await db.savingsMembers.get(memberId);
+  if (!member) return;
+  if (member.status === "REDEEMED" || member.status === "CANCELLED") return;
+
+  await db.savingsMembers.update(memberId, { status: "REDEEMED" });
+
+  if (member._sync === "pending") return;
+
+  await enqueue({
+    entity: "savingsMember",
+    method: "post",
+    endpoint: `/savings-schemes/${memberId}/redeem`,
+    body: {},
+  });
+}

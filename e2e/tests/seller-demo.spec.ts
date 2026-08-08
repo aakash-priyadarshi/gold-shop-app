@@ -117,7 +117,15 @@ test.describe("Orivraa Seller Demo", () => {
     await pause(2000);
 
     // Click through region tabs
-    for (const tab of ["India", "Nepal", "UAE", "UK", "EU", "US"]) {
+    for (const tab of [
+      "India",
+      "Nepal",
+      "UAE",
+      "UK",
+      "EU",
+      "US",
+      "Sri Lanka",
+    ]) {
       const tabEl = page.getByRole("tab", { name: new RegExp(tab, "i") });
       if (await tabEl.isVisible({ timeout: 2000 }).catch(() => false)) {
         await tabEl.click();

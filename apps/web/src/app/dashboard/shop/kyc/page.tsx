@@ -15,13 +15,24 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { shopsApi } from "@/lib/api";
+import {
+  getKycIdentifierConfig,
+  validateKycIdentifiers,
+} from "@/lib/kyc/market-requirements";
+import { useT } from "@/providers/translation-provider";
 import { AlertTriangle, CheckCircle, Clock, Save, Shield, UploadCloud, X } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 const CLOUDFLARE_UPLOAD_URL = process.env.NEXT_PUBLIC_CDN_UPLOAD_URL || "https://images.orivraa.com/upload";
 
 export default function ShopKycPage() {
+  const { user } = useAuth();
+  const t = useT();
+  const shopCountry = user?.shop?.country?.toUpperCase();
+  const identifierConfig = getKycIdentifierConfig(shopCountry);
+  const isSriLanka = shopCountry === "LK";
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isReminding, setIsReminding] = useState(false);
@@ -36,6 +47,7 @@ export default function ShopKycPage() {
     isVerified: boolean;
     verificationDocuments: Record<string, string>;
     verificationRequests?: any[];
+    vatRegistrationStatus?: string;
   }>({
     panNumber: "",
     vatNumber: "",
@@ -43,6 +55,7 @@ export default function ShopKycPage() {
     isVerified: false,
     verificationDocuments: {},
     verificationRequests: [],
+    vatRegistrationStatus: undefined,
   });
 
   useEffect(() => {
@@ -59,6 +72,7 @@ export default function ShopKycPage() {
         isVerified: response.data.isVerified || false,
         verificationDocuments: response.data.verificationDocuments || {},
         verificationRequests: response.data.verificationRequests || [],
+        vatRegistrationStatus: response.data.vatRegistrationStatus,
       });
     } catch (error) {
       console.error("Failed to load KYC:", error);
@@ -73,6 +87,15 @@ export default function ShopKycPage() {
   };
 
   const handleSave = async () => {
+    const validationErrors = validateKycIdentifiers(shopCountry, kycData);
+    if (validationErrors.length > 0) {
+      toast({
+        variant: "destructive",
+        title: t("Check Sri Lanka registration details"),
+        description: t(validationErrors[0]),
+      });
+      return;
+    }
     setIsSaving(true);
     try {
       await shopsApi.updateKyc({
@@ -285,10 +308,15 @@ export default function ShopKycPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {isSriLanka && (
+                <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                  <T>Sri Lanka VAT registration status</T>: {kycData.vatRegistrationStatus || "NOT_REGISTERED"}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="panNumber">
-                    <T>Tax ID / PAN Number</T>
+                    <T>{identifierConfig.panLabel}</T>
                   </Label>
                   <Input
                     id="panNumber"
@@ -297,12 +325,14 @@ export default function ShopKycPage() {
                     onChange={(e) =>
                       setKycData({ ...kycData, panNumber: e.target.value })
                     }
-                    placeholder="Enter Tax ID / PAN"
+                    placeholder={t(identifierConfig.panPlaceholder)}
+                    inputMode={isSriLanka ? "numeric" : undefined}
+                    maxLength={isSriLanka ? 9 : undefined}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="vatNumber">
-                    <T>VAT / GST Number (Optional)</T>
+                    <T>{identifierConfig.vatLabel}</T>
                   </Label>
                   <Input
                     id="vatNumber"
@@ -311,12 +341,14 @@ export default function ShopKycPage() {
                     onChange={(e) =>
                       setKycData({ ...kycData, vatNumber: e.target.value })
                     }
-                    placeholder="Enter VAT / GST Number"
+                    placeholder={t(identifierConfig.vatPlaceholder)}
+                    inputMode={isSriLanka ? "numeric" : undefined}
+                    maxLength={isSriLanka ? 9 : undefined}
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="bisLicenseNumber">
-                    <T>Business / Registration License (Optional)</T>
+                    <T>{identifierConfig.businessLabel}</T>
                   </Label>
                   <Input
                     id="bisLicenseNumber"
@@ -325,7 +357,7 @@ export default function ShopKycPage() {
                     onChange={(e) =>
                       setKycData({ ...kycData, bisLicenseNumber: e.target.value })
                     }
-                    placeholder="Enter Registration Authority Number"
+                    placeholder={t(identifierConfig.businessPlaceholder)}
                   />
                 </div>
               </div>

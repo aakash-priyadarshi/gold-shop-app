@@ -1,8 +1,21 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger, ServiceUnavailableException } from '@nestjs/common';
 import * as crypto from 'crypto';
+import Stripe from 'stripe';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { PaymentStatus, OrderStatus } from '@prisma/client';
+import {
+  CurrencyCode,
+  JournalReferenceType,
+  MarketRegion,
+  PaymentStatus,
+  OrderStatus,
+} from '@prisma/client';
+import { FxRatesService } from '../fx-rates/fx-rates.service';
+import { AccountingService } from '../accounting/accounting.service';
+import {
+  getDefaultCurrencyForMarket,
+  normalizeMarketRegion,
+} from '../../common/market/country-currency';
 import {
   InitiatePaymentDto,
   VerifyPaymentDto,
@@ -21,6 +34,15 @@ interface PaymentGatewayOrder {
   gatewayKey?: string;
 }
 
+interface ChargeQuote {
+  amountNpr: number;
+  chargedAmount: number;
+  chargedCurrency: CurrencyCode;
+  fxRate: number;
+  fxSource: string;
+  fxQuotedAt: Date;
+}
+
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
@@ -28,7 +50,58 @@ export class PaymentsService {
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private fxRatesService: FxRatesService,
+    private accounting: AccountingService,
   ) {}
+
+  private async quoteCharge(
+    amountNpr: number,
+    chargedCurrency: CurrencyCode,
+  ): Promise<ChargeQuote> {
+    if (!Number.isFinite(amountNpr) || amountNpr <= 0) {
+      throw new BadRequestException('Payment amount must be greater than zero');
+    }
+    const conversion = await this.fxRatesService.convertCurrency(
+      amountNpr,
+      'NPR',
+      chargedCurrency as any,
+    );
+    return {
+      amountNpr,
+      chargedAmount: conversion.amount,
+      chargedCurrency,
+      fxRate: conversion.rate,
+      fxSource: conversion.source,
+      fxQuotedAt: new Date(conversion.quotedAt),
+    };
+  }
+
+  private resolveGatewayMethod(
+    requested: PaymentMethod,
+    marketCountry: MarketRegion,
+  ): PaymentMethod {
+    if (
+      marketCountry === MarketRegion.LK &&
+      ![PaymentMethod.COD, PaymentMethod.BANK_TRANSFER].includes(requested)
+    ) {
+      return PaymentMethod.STRIPE;
+    }
+    return requested;
+  }
+
+  private resolveChargeCurrency(
+    method: PaymentMethod,
+    marketCountry: MarketRegion,
+    displayCurrency: CurrencyCode,
+  ): CurrencyCode {
+    if (method === PaymentMethod.STRIPE) {
+      return marketCountry === MarketRegion.LK
+        ? CurrencyCode.LKR
+        : displayCurrency;
+    }
+    if (method === PaymentMethod.RAZORPAY) return CurrencyCode.INR;
+    return CurrencyCode.NPR;
+  }
 
   // Initiate payment for order
   async initiatePayment(userId: string, dto: InitiatePaymentDto) {
@@ -45,11 +118,34 @@ export class PaymentsService {
       throw new BadRequestException('You do not own this order');
     }
 
+    if (dto.idempotencyKey) {
+      const existing = await this.prisma.payment.findUnique({
+        where: { idempotencyKey: dto.idempotencyKey },
+      });
+      if (existing) {
+        if (existing.orderId !== order.id) {
+          throw new BadRequestException(
+            'Idempotency key is already associated with another order',
+          );
+        }
+        return {
+          paymentId: existing.id,
+          orderId: order.id,
+          amountNpr: existing.amountNpr,
+          amount: existing.chargedAmount ?? existing.amountNpr,
+          currency: existing.chargedCurrency ?? CurrencyCode.NPR,
+          method: existing.paymentGateway,
+          gatewayOrderId: existing.gatewayOrderId,
+          idempotentReplay: true,
+        };
+      }
+    }
+
     // Calculate payment amount based on type
     let amount: number;
     switch (dto.paymentType) {
       case PaymentType.FULL_PAYMENT:
-        amount = order.totalNpr;
+        amount = order.balanceDueNpr;
         break;
       case PaymentType.BALANCE_PAYMENT:
         amount = order.balanceDueNpr;
@@ -64,59 +160,95 @@ export class PaymentsService {
         throw new BadRequestException('Invalid payment type for orders');
     }
 
-    if (amount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       throw new BadRequestException('Invalid payment amount');
     }
+    if (amount > order.balanceDueNpr) {
+      throw new BadRequestException('Payment amount exceeds the order balance');
+    }
 
-    // Create payment record
+    const method = this.resolveGatewayMethod(dto.method, order.marketCountry);
+    const chargedCurrency = this.resolveChargeCurrency(
+      method,
+      order.marketCountry,
+      order.displayCurrency,
+    );
+    const quote = await this.quoteCharge(amount, chargedCurrency);
+
     const payment = await this.prisma.payment.create({
       data: {
         orderId: order.id,
         amountNpr: amount,
-        currency: 'NPR',
-        paymentGateway: dto.method,
+        currency: CurrencyCode.NPR,
+        chargedAmount: quote.chargedAmount,
+        chargedCurrency: quote.chargedCurrency,
+        fxRate: quote.fxRate,
+        fxSource: quote.fxSource,
+        fxQuotedAt: quote.fxQuotedAt,
+        idempotencyKey: dto.idempotencyKey,
+        paymentGateway: method,
         status: PaymentStatus.PENDING,
         metadata: {
           orderNumber: order.orderNumber,
           customerEmail: order.customer.email,
           paymentType: dto.paymentType,
+          requestedMethod: dto.method,
+          amountNpr: amount,
+          chargedAmount: quote.chargedAmount,
+          chargedCurrency: quote.chargedCurrency,
+          fxRate: quote.fxRate,
+          fxSource: quote.fxSource,
+          fxQuotedAt: quote.fxQuotedAt.toISOString(),
         },
       },
     });
+    if (method === PaymentMethod.COD || method === PaymentMethod.BANK_TRANSFER) {
+      return {
+        paymentId: payment.id,
+        orderId: order.id,
+        amountNpr: amount,
+        amount: quote.chargedAmount,
+        currency: quote.chargedCurrency,
+        method,
+        message:
+          method === PaymentMethod.COD
+            ? 'Pay on delivery'
+            : 'Bank transfer pending verification',
+      };
+    }
 
-    // Create gateway order based on method
     let gatewayOrder: PaymentGatewayOrder;
-
-    switch (dto.method) {
-      case PaymentMethod.RAZORPAY:
-        gatewayOrder = await this.createRazorpayOrder(payment.id, amount);
-        break;
-      case PaymentMethod.STRIPE:
-        // For UK/USA customers - convert NPR to appropriate currency
-        // In production, use proper currency conversion
-        const stripeCurrency = order.displayCurrency || 'USD';
-        gatewayOrder = await this.createStripePaymentIntent(
-          payment.id, 
-          amount, 
-          stripeCurrency,
-          order.customer.email,
-        );
-        break;
-      case PaymentMethod.ESEWA:
-        gatewayOrder = await this.createEsewaOrder(payment.id, amount);
-        break;
-      case PaymentMethod.KHALTI:
-        gatewayOrder = await this.createKhaltiOrder(payment.id, amount);
-        break;
-      case PaymentMethod.COD:
-        // For COD, just mark as pending COD
-        return {
-          paymentId: payment.id,
-          method: 'COD',
-          message: 'Pay on delivery',
-        };
-      default:
-        throw new BadRequestException('Unsupported payment method');
+    try {
+      switch (method) {
+        case PaymentMethod.RAZORPAY:
+          gatewayOrder = await this.createRazorpayOrder(
+            payment.id,
+            quote.chargedAmount,
+          );
+          break;
+        case PaymentMethod.STRIPE:
+          gatewayOrder = await this.createStripePaymentIntent(
+            payment.id,
+            quote,
+            order.customer.email,
+            dto.idempotencyKey,
+          );
+          break;
+        case PaymentMethod.ESEWA:
+          gatewayOrder = await this.createEsewaOrder(payment.id, amount);
+          break;
+        case PaymentMethod.KHALTI:
+          gatewayOrder = await this.createKhaltiOrder(payment.id, amount);
+          break;
+        default:
+          throw new BadRequestException('Unsupported payment method');
+      }
+    } catch (error) {
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: PaymentStatus.FAILED, failureReason: error.message },
+      });
+      throw error;
     }
 
     // Update payment with gateway order ID
@@ -130,9 +262,13 @@ export class PaymentsService {
     return {
       paymentId: payment.id,
       orderId: dto.orderId,
-      amount,
-      currency: 'NPR',
-      method: dto.method,
+      amountNpr: amount,
+      amount: quote.chargedAmount,
+      currency: quote.chargedCurrency,
+      fxRate: quote.fxRate,
+      fxSource: quote.fxSource,
+      fxQuotedAt: quote.fxQuotedAt,
+      method,
       gatewayOrderId: gatewayOrder.gatewayOrderId,
       gatewayKey: gatewayOrder.gatewayKey,
     };
@@ -165,6 +301,26 @@ export class PaymentsService {
       throw new BadRequestException('Please accept the offer first');
     }
 
+    if (dto.idempotencyKey) {
+      const existing = await this.prisma.payment.findUnique({
+        where: { idempotencyKey: dto.idempotencyKey },
+      });
+      if (existing) {
+        return {
+          paymentId: existing.id,
+          orderId: existing.orderId,
+          rfqRequestId: dto.rfqRequestId,
+          offerId: dto.offerId,
+          amountNpr: existing.amountNpr,
+          amount: existing.chargedAmount ?? existing.amountNpr,
+          currency: existing.chargedCurrency ?? CurrencyCode.NPR,
+          method: existing.paymentGateway,
+          gatewayOrderId: existing.gatewayOrderId,
+          idempotentReplay: true,
+        };
+      }
+    }
+
     const bookingFee = offer.bookingFeeNpr || 0;
     if (bookingFee <= 0) {
       throw new BadRequestException('No booking fee required');
@@ -173,8 +329,23 @@ export class PaymentsService {
     // Get customer's preferred currency
     const customer = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { preferredCurrency: true },
+      select: { preferredCurrency: true, preferredCountry: true },
     });
+    const marketCountry = normalizeMarketRegion(
+      customer?.preferredCountry,
+      MarketRegion.NP,
+    );
+    const displayCurrency =
+      marketCountry === MarketRegion.LK
+        ? CurrencyCode.LKR
+        : customer?.preferredCurrency || getDefaultCurrencyForMarket(marketCountry);
+    const method = this.resolveGatewayMethod(dto.method, marketCountry);
+    const chargedCurrency = this.resolveChargeCurrency(
+      method,
+      marketCountry,
+      displayCurrency,
+    );
+    const quote = await this.quoteCharge(bookingFee, chargedCurrency);
 
     // Create a placeholder order for the booking fee payment
     // Note: In a real scenario, you might want to create the order first
@@ -200,8 +371,9 @@ export class PaymentsService {
         shippingNpr: 0,
         discountNpr: 0,
         totalNpr: offer.totalPriceNpr,
-        displayCurrency: customer?.preferredCurrency || 'NPR',
-        paymentMethod: dto.method,
+        displayCurrency,
+        marketCountry,
+        paymentMethod: method,
         paymentStatus: 'PENDING',
         bookingFeePaidNpr: 0,
         balanceDueNpr: offer.totalPriceNpr,
@@ -215,24 +387,58 @@ export class PaymentsService {
       data: {
         orderId: order.id,
         amountNpr: bookingFee,
-        currency: 'NPR',
-        paymentGateway: dto.method,
+        currency: CurrencyCode.NPR,
+        chargedAmount: quote.chargedAmount,
+        chargedCurrency: quote.chargedCurrency,
+        fxRate: quote.fxRate,
+        fxSource: quote.fxSource,
+        fxQuotedAt: quote.fxQuotedAt,
+        idempotencyKey: dto.idempotencyKey,
+        paymentGateway: method,
         status: PaymentStatus.PENDING,
         metadata: {
           rfqId: rfq.id,
           offerId: offer.id,
           customerEmail: rfq.customer?.email || null,
           paymentType: 'BOOKING_FEE',
+          requestedMethod: dto.method,
+          amountNpr: bookingFee,
+          chargedAmount: quote.chargedAmount,
+          chargedCurrency: quote.chargedCurrency,
+          fxRate: quote.fxRate,
+          fxSource: quote.fxSource,
+          fxQuotedAt: quote.fxQuotedAt.toISOString(),
         },
       },
     });
 
+    if (method === PaymentMethod.COD || method === PaymentMethod.BANK_TRANSFER) {
+      return {
+        paymentId: payment.id,
+        orderId: order.id,
+        rfqRequestId: dto.rfqRequestId,
+        offerId: dto.offerId,
+        amountNpr: bookingFee,
+        amount: quote.chargedAmount,
+        currency: quote.chargedCurrency,
+        method,
+      };
+    }
+
     // Create gateway order
     let gatewayOrder: PaymentGatewayOrder;
 
-    switch (dto.method) {
+    switch (method) {
       case PaymentMethod.RAZORPAY:
-        gatewayOrder = await this.createRazorpayOrder(payment.id, bookingFee);
+        gatewayOrder = await this.createRazorpayOrder(payment.id, quote.chargedAmount);
+        break;
+      case PaymentMethod.STRIPE:
+        gatewayOrder = await this.createStripePaymentIntent(
+          payment.id,
+          quote,
+          rfq.customer?.email,
+          dto.idempotencyKey,
+        );
         break;
       case PaymentMethod.ESEWA:
         gatewayOrder = await this.createEsewaOrder(payment.id, bookingFee);
@@ -255,9 +461,13 @@ export class PaymentsService {
       orderId: order.id,
       rfqRequestId: dto.rfqRequestId,
       offerId: dto.offerId,
-      amount: bookingFee,
-      currency: 'NPR',
-      method: dto.method,
+      amountNpr: bookingFee,
+      amount: quote.chargedAmount,
+      currency: quote.chargedCurrency,
+      fxRate: quote.fxRate,
+      fxSource: quote.fxSource,
+      fxQuotedAt: quote.fxQuotedAt,
+      method,
       gatewayOrderId: gatewayOrder.gatewayOrderId,
       gatewayKey: gatewayOrder.gatewayKey,
     };
@@ -272,6 +482,9 @@ export class PaymentsService {
     if (!payment) {
       throw new NotFoundException('Payment not found');
     }
+    if (payment.status === PaymentStatus.COMPLETED) {
+      return { success: true, paymentId: payment.id, idempotentReplay: true };
+    }
 
     // Get the related order
     const order = await this.prisma.order.findUnique({
@@ -281,6 +494,23 @@ export class PaymentsService {
         customer: true,
       },
     });
+    if (!order) {
+      throw new NotFoundException('Payment order not found');
+    }
+    const chargedCurrency = payment.chargedCurrency || CurrencyCode.NPR;
+    const chargedAmount = payment.chargedAmount ?? payment.amountNpr;
+    const ledgerContext = await this.accounting.prepareMonetaryContext(
+      chargedAmount,
+      chargedCurrency,
+      chargedCurrency === CurrencyCode.NPR
+        ? undefined
+        : {
+            canonicalAmountNpr: payment.amountNpr,
+            fxRate: payment.fxRate!,
+            fxSource: payment.fxSource || '',
+            fxQuotedAt: payment.fxQuotedAt || new Date(NaN),
+          },
+    );
 
     // Verify with gateway
     let isValid = false;
@@ -295,7 +525,7 @@ export class PaymentsService {
       case 'STRIPE':
         isValid = await this.verifyStripePayment(
           dto.gatewayPaymentId || '',
-          dto.signature,
+          payment,
         );
         break;
       case 'ESEWA':
@@ -310,38 +540,71 @@ export class PaymentsService {
     }
 
     if (!isValid) {
-      await this.prisma.payment.update({
-        where: { id: payment.id },
+      await this.prisma.payment.updateMany({
+        where: { id: payment.id, status: { not: PaymentStatus.COMPLETED } },
         data: { status: PaymentStatus.FAILED },
       });
       throw new BadRequestException('Payment verification failed');
     }
 
-    // Update payment status
-    await this.prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        status: PaymentStatus.COMPLETED,
-        gatewayPaymentId: dto.gatewayPaymentId,
-        completedAt: new Date(),
-      },
+    const duplicateGatewayPayment = await this.prisma.payment.findUnique({
+      where: { gatewayPaymentId: dto.gatewayPaymentId },
     });
+    if (duplicateGatewayPayment && duplicateGatewayPayment.id !== payment.id) {
+      throw new BadRequestException(
+        'Gateway payment ID is already associated with another payment',
+      );
+    }
 
-    // Update order
-    if (order) {
-      const newBookingFeePaid = (order.bookingFeePaidNpr || 0) + payment.amountNpr;
-      const newBalanceDue = order.totalNpr - newBookingFeePaid;
-
-      await this.prisma.order.update({
+    const completedNow = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.payment.updateMany({
+        where: { id: payment.id, status: { not: PaymentStatus.COMPLETED } },
+        data: {
+          status: PaymentStatus.COMPLETED,
+          gatewayPaymentId: dto.gatewayPaymentId,
+          completedAt: new Date(),
+        },
+      });
+      if (claimed.count === 0) return false;
+      const currentOrder = await tx.order.findUniqueOrThrow({
+        where: { id: payment.orderId },
+      });
+      const newPaidAmount = Math.min(
+        currentOrder.totalNpr,
+        (currentOrder.bookingFeePaidNpr || 0) + payment.amountNpr,
+      );
+      const newBalanceDue = Math.max(0, currentOrder.totalNpr - newPaidAmount);
+      await tx.order.update({
         where: { id: payment.orderId },
         data: {
-          bookingFeePaidNpr: newBookingFeePaid,
+          bookingFeePaidNpr: newPaidAmount,
           balanceDueNpr: newBalanceDue,
           paymentStatus: newBalanceDue <= 0 ? 'COMPLETED' : 'PARTIAL',
-          status: newBalanceDue <= 0 ? OrderStatus.PAID : order.status,
+          status:
+            newBalanceDue <= 0 ? OrderStatus.PAID : currentOrder.status,
         },
       });
 
+      const metadata = payment.metadata as { rfqId?: string } | null;
+      if (metadata?.rfqId) {
+        await tx.rfqRequest.update({
+          where: { id: metadata.rfqId },
+          data: { status: 'CONFIRMED' },
+        });
+      }
+      await this.accounting.postOrderPayment(tx, {
+        ...ledgerContext,
+        shopId: order.shopId,
+        orderId: order.id,
+        paymentReferenceId: payment.id,
+        orderNumber: order.orderNumber,
+        method: payment.paymentGateway,
+        transactionDate: new Date(),
+      });
+      return true;
+    });
+
+    if (order && completedNow) {
       // Notify shopkeeper
       await this.notificationsService.create({
         userId: order.shop.userId,
@@ -357,18 +620,13 @@ export class PaymentsService {
         referenceId: order.id,
         channels: ['EMAIL', 'PUSH'],
       });
-
-      // Check if this was a booking fee and update RFQ status
-      const metadata = payment.metadata as { rfqId?: string } | null;
-      if (metadata?.rfqId) {
-        await this.prisma.rfqRequest.update({
-          where: { id: metadata.rfqId },
-          data: { status: 'CONFIRMED' },
-        });
-      }
     }
 
-    return { success: true, paymentId: payment.id };
+    return {
+      success: true,
+      paymentId: payment.id,
+      idempotentReplay: !completedNow,
+    };
   }
 
   // Process refund
@@ -397,35 +655,143 @@ export class PaymentsService {
       }
     }
 
-    const paidAmount = order.bookingFeePaidNpr || 0;
-    if (dto.amount > paidAmount) {
-      throw new BadRequestException('Refund amount exceeds paid amount');
-    }
+    const requestFingerprint = crypto
+      .createHash('sha256')
+      .update(
+        dto.idempotencyKey ||
+          `${order.id}:${dto.amount}:${dto.reason || ''}:${requesterId || 'system'}`,
+      )
+      .digest('hex')
+      .slice(0, 40);
+    const idempotencyKey = `refund:${requestFingerprint}`;
+    const ledgerContext = await this.accounting.prepareMonetaryContext(
+      dto.amount,
+      CurrencyCode.NPR,
+    );
 
-    // Create refund payment record (negative amount indicates refund)
-    const refund = await this.prisma.payment.create({
-      data: {
-        orderId: order.id,
-        amountNpr: -dto.amount, // Negative for refund
-        currency: 'NPR',
-        paymentGateway: 'BANK_TRANSFER', // Default for refunds
-        status: PaymentStatus.PROCESSING,
-        metadata: {
-          reason: dto.reason,
-          type: 'REFUND',
+    const result = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${order.id}))`;
+      const replay = await tx.payment.findUnique({ where: { idempotencyKey } });
+      if (replay) {
+        if (replay.orderId !== order.id) {
+          throw new BadRequestException('Refund key belongs to another order');
+        }
+        return { refund: replay, idempotent: true };
+      }
+
+      const currentOrder = await tx.order.findUniqueOrThrow({
+        where: { id: order.id },
+      });
+      const paidAmount = currentOrder.bookingFeePaidNpr || 0;
+      if (dto.amount > paidAmount) {
+        throw new BadRequestException('Refund amount exceeds paid amount');
+      }
+      const refund = await tx.payment.create({
+        data: {
+          orderId: order.id,
+          amountNpr: -dto.amount,
+          currency: CurrencyCode.NPR,
+          chargedAmount: -dto.amount,
+          chargedCurrency: CurrencyCode.NPR,
+          fxRate: 1,
+          fxSource: 'identity',
+          fxQuotedAt: ledgerContext.fxQuotedAt,
+          idempotencyKey,
+          paymentGateway: 'BANK_TRANSFER',
+          status: PaymentStatus.COMPLETED,
+          completedAt: new Date(),
+          metadata: {
+            reason: dto.reason,
+            type: 'REFUND',
+          },
         },
-      },
-    });
-
-    // Update order
-    const newBookingFeePaid = Math.max(0, paidAmount - dto.amount);
-    await this.prisma.order.update({
-      where: { id: order.id },
-      data: {
-        bookingFeePaidNpr: newBookingFeePaid,
-        balanceDueNpr: order.totalNpr - newBookingFeePaid,
-        status: OrderStatus.REFUNDED,
-      },
+      });
+      const newBookingFeePaid = Math.max(0, paidAmount - dto.amount);
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          bookingFeePaidNpr: newBookingFeePaid,
+          balanceDueNpr: currentOrder.totalNpr - newBookingFeePaid,
+          status: OrderStatus.REFUNDED,
+          paymentStatusEnum:
+            newBookingFeePaid <= 0 ? 'REFUNDED' : 'PARTIAL',
+        },
+      });
+      const invoice = await tx.invoice.findFirst({
+        where: {
+          orderId: order.id,
+          status: { notIn: ['VOID', 'CANCELLED'] },
+        },
+        orderBy: { issuedAt: 'desc' },
+        select: { totalAmount: true, taxAmount: true },
+      });
+      const taxRatio =
+        invoice && invoice.totalAmount > 0
+          ? invoice.taxAmount / invoice.totalAmount
+          : undefined;
+      await this.accounting.postOrderRefund(tx, {
+        ...ledgerContext,
+        shopId: order.shopId,
+        orderId: order.id,
+        refundReferenceId: refund.id,
+        orderNumber: order.orderNumber,
+        method: 'BANK_TRANSFER',
+        transactionDate: refund.completedAt || new Date(),
+        invoicedTaxRatio: taxRatio,
+        actorUserId: requesterId,
+      });
+      const commission = await tx.commissionLedger.findUnique({
+        where: { orderId: order.id },
+      });
+      if (commission && commission.amount > 0) {
+        const adjustment = Math.min(
+          commission.amount,
+          commission.amount * (dto.amount / currentOrder.totalNpr),
+        );
+        if (adjustment > 0) {
+          if (adjustment >= commission.amount - 0.0001) {
+            await tx.commissionLedger.update({
+              where: { id: commission.id },
+              data: {
+                amount: 0,
+                status: 'REVERSED',
+                notes: `Reversed by refund ${refund.id}`,
+              },
+            });
+            await this.accounting.reverseReference(tx, {
+              shopId: order.shopId,
+              originalReferenceType: JournalReferenceType.COMMISSION_ACCRUAL,
+              originalReferenceId: commission.id,
+              reversalReferenceType: JournalReferenceType.REVERSAL,
+              reversalReferenceId: `commission-refund:${refund.id}`,
+              reason: `Commission reversed by refund on ${order.orderNumber}`,
+              actorUserId: requesterId,
+            });
+          } else {
+            await tx.commissionLedger.update({
+              where: { id: commission.id },
+              data: {
+                amount: commission.amount - adjustment,
+                notes: `Reduced by ${adjustment} NPR for refund ${refund.id}`,
+              },
+            });
+            const commissionContext =
+              await this.accounting.prepareMonetaryContext(
+                adjustment,
+                CurrencyCode.NPR,
+              );
+            await this.accounting.postCommissionRefundAdjustment(tx, {
+              ...commissionContext,
+              shopId: order.shopId,
+              refundReferenceId: refund.id,
+              orderNumber: order.orderNumber,
+              transactionDate: refund.completedAt || new Date(),
+              actorUserId: requesterId,
+            });
+          }
+        }
+      }
+      return { refund, idempotent: false };
     });
 
     // Notify customer
@@ -444,7 +810,11 @@ export class PaymentsService {
       channels: ['EMAIL', 'PUSH'],
     });
 
-    return { refundId: refund.id, amount: dto.amount };
+    return {
+      refundId: result.refund.id,
+      amount: Math.abs(result.refund.amountNpr),
+      idempotentReplay: result.idempotent,
+    };
   }
 
   // Get payment history for order
@@ -518,7 +888,7 @@ export class PaymentsService {
     return {
       orderId: paymentId,
       amount,
-      currency: 'NPR',
+      currency: 'INR',
       gatewayOrderId: `rpay_${Date.now()}`,
       gatewayKey: process.env.RAZORPAY_KEY_ID,
     };
@@ -544,32 +914,56 @@ export class PaymentsService {
     };
   }
 
-  // Create Stripe Payment Intent for UK/USA customers
+  private toStripeMinorUnits(amount: number): number {
+    return Math.round(amount * 100);
+  }
+
   private async createStripePaymentIntent(
-    paymentId: string, 
-    amount: number, 
-    currency: string,
-    _customerEmail?: string,
+    paymentId: string,
+    quote: ChargeQuote,
+    customerEmail?: string,
+    idempotencyKey?: string,
   ): Promise<PaymentGatewayOrder> {
-    // Note: In production, use the stripe SDK:
-    // import Stripe from 'stripe';
-    // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    // const paymentIntent = await stripe.paymentIntents.create({
-    //   amount: Math.round(amount * 100), // Stripe uses cents
-    //   currency: currency.toLowerCase(),
-    //   receipt_email: customerEmail,
-    //   metadata: { paymentId },
-    // });
-    
-    // Stub for development - returns mock payment intent
-    const mockClientSecret = `pi_${Date.now()}_secret_${Math.random().toString(36).substring(7)}`;
-    
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new ServiceUnavailableException('Stripe is not configured');
+      }
+      const mockId = `pi_${Date.now()}`;
+      return {
+        orderId: paymentId,
+        amount: quote.chargedAmount,
+        currency: quote.chargedCurrency,
+        gatewayOrderId: mockId,
+        gatewayKey: `${mockId}_secret_dev`,
+      };
+    }
+
+    const stripe = new Stripe(secretKey);
+    const intent = await stripe.paymentIntents.create(
+      {
+        amount: this.toStripeMinorUnits(quote.chargedAmount),
+        currency: quote.chargedCurrency.toLowerCase(),
+        receipt_email: customerEmail || undefined,
+        metadata: {
+          paymentId,
+          amountNpr: String(quote.amountNpr),
+          chargedAmount: String(quote.chargedAmount),
+          chargedCurrency: quote.chargedCurrency,
+          fxRate: String(quote.fxRate),
+          fxSource: quote.fxSource,
+          fxQuotedAt: quote.fxQuotedAt.toISOString(),
+        },
+      },
+      { idempotencyKey: idempotencyKey || `payment-${paymentId}` },
+    );
+
     return {
       orderId: paymentId,
-      amount,
-      currency,
-      gatewayOrderId: `pi_${Date.now()}`,
-      gatewayKey: mockClientSecret, // This is the client_secret for Stripe Elements
+      amount: quote.chargedAmount,
+      currency: quote.chargedCurrency,
+      gatewayOrderId: intent.id,
+      gatewayKey: intent.client_secret || undefined,
     };
   }
 
@@ -578,7 +972,10 @@ export class PaymentsService {
   // secret key is not configured in production.
   private async verifyStripePayment(
     paymentIntentId: string,
-    _signature?: string,
+    payment: {
+      chargedAmount: number | null;
+      chargedCurrency: CurrencyCode | null;
+    },
   ): Promise<boolean> {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
@@ -603,7 +1000,18 @@ export class PaymentsService {
         return false;
       }
       const intent = await res.json();
-      return intent?.status === 'succeeded';
+      const expectedCurrency = payment.chargedCurrency?.toLowerCase();
+      const expectedAmount = payment.chargedAmount
+        ? this.toStripeMinorUnits(payment.chargedAmount)
+        : null;
+      const actualAmount = intent?.amount_received || intent?.amount;
+      return (
+        intent?.status === 'succeeded' &&
+        !!expectedCurrency &&
+        expectedAmount !== null &&
+        intent.currency === expectedCurrency &&
+        actualAmount === expectedAmount
+      );
     } catch (error) {
       this.logger.error(`[Stripe] verification error: ${error.message}`);
       return false;

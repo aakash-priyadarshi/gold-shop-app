@@ -37,6 +37,7 @@ import {
     Sparkles,
     Wand2,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -446,11 +447,13 @@ function VariationCard({
     <div className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
       <div className="relative aspect-square w-full bg-gradient-to-br from-amber-50 to-rose-50 dark:from-gray-800 dark:to-gray-900">
         {v.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={v.imageUrl}
             alt={v.title}
-            className="h-full w-full object-cover"
+            className="object-cover"
+            fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+            unoptimized
           />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center text-muted-foreground">

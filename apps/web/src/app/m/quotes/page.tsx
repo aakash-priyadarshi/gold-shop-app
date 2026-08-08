@@ -63,7 +63,7 @@ const MATERIAL_OPTIONS = [
 ];
 
 const TOLA_TO_GRAMS = 11.6638038;
-const SUPPORTED_CURRENCY_CODES = ["NPR", "INR", "AED", "USD", "GBP", "EUR", "AUD"] as const;
+const SUPPORTED_CURRENCY_CODES = ["NPR", "INR", "AED", "USD", "GBP", "EUR", "LKR", "AUD"] as const;
 const RATE_ALIASES: Record<string, string[]> = {
   GOLD_24K: ["GOLD_24K", "XAU", "GOLD"],
   GOLD_22K: ["GOLD_22K", "GOLD_24K", "XAU", "GOLD"],
@@ -161,8 +161,8 @@ export default function QuotesPage() {
   const [marketRateData, setMarketRateData] = useState<any>(null);
   const [nprToDisplayCurrency, setNprToDisplayCurrency] = useState(1);
   // Tax rate + label loaded from the server based on shop country (e.g. 3% GST for IN, 13% VAT for NP)
-  const [taxRate, setTaxRate] = useState(0.13);
-  const [taxLabel, setTaxLabel] = useState("VAT (13%)");
+  const [taxRate, setTaxRate] = useState(0);
+  const [taxLabel, setTaxLabel] = useState("Tax");
   const [shopMakingPerGramNpr, setShopMakingPerGramNpr] = useState<Record<string, number>>({});
   const [shopMakingChargePercent, setShopMakingChargePercent] = useState(10);
   const [baseMetalPricesNpr, setBaseMetalPricesNpr] = useState<Record<string, number>>({});
@@ -170,13 +170,13 @@ export default function QuotesPage() {
   const [makingChargeManual, setMakingChargeManual] = useState(false);
   const lastAutoMakingRef = useRef(0);
 
-  const [phoneCountryCode, setPhoneCountryCode] = useState("+977");
+  const [phoneCountryCode, setPhoneCountryCode] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerCity, setCustomerCity] = useState<string>((user?.shop as any)?.city ?? "");
-  const [customerCountry, setCustomerCountry] = useState<string>((user?.shop as any)?.country ?? "Nepal");
+  const [customerCountry, setCustomerCountry] = useState<string>((user?.shop as any)?.country ?? "");
   const [matchedCustomerId, setMatchedCustomerId] = useState<string | null>(null);
   const [lookingUpCustomer, setLookingUpCustomer] = useState(false);
 
@@ -328,14 +328,20 @@ export default function QuotesPage() {
   // Load the correct tax rate + label from the server for the shop's country.
   // E.g. Indian shops → GST 3%, Nepal shops → VAT 13%, UAE → VAT 5%.
   useEffect(() => {
-    const country = (user?.shop as any)?.country || "NP";
+    const country = (user?.shop as any)?.country;
+    if (!country) {
+      setTaxRate(0);
+      setTaxLabel("Tax unavailable");
+      return;
+    }
     fetchTaxRules(country).then((result) => {
       if (result?.rules?.length) {
         const { rate, name } = lookupTaxRate(result.rules);
-        if (rate > 0) {
-          setTaxRate(rate);
-          setTaxLabel(`${name} (${(rate * 100).toFixed(1)}%)`);
-        }
+        setTaxRate(rate);
+        setTaxLabel(`${name} (${(rate * 100).toFixed(1)}%)`);
+      } else {
+        setTaxRate(0);
+        setTaxLabel("Tax unavailable");
       }
     });
   }, [user?.shop]);
@@ -385,9 +391,19 @@ export default function QuotesPage() {
 
   useEffect(() => {
     setCustomerCity((prev: string) => prev || (user?.shop as any)?.city || "");
-    setCustomerCountry((prev: string) => prev || (user?.shop as any)?.country || "Nepal");
+    setCustomerCountry((prev: string) => prev || (user?.shop as any)?.country || "");
     if (user?.shop) {
       setCurrency(toSupportedCurrency(getMobileMarketParams(user.shop).currency));
+      const phoneCodes: Record<string, string> = {
+        NP: "+977",
+        IN: "+91",
+        LK: "+94",
+        AE: "+971",
+        US: "+1",
+        GB: "+44",
+        UK: "+44",
+      };
+      setPhoneCountryCode(phoneCodes[(user.shop as any).country] || "");
     }
   }, [user?.shop]);
 
@@ -413,7 +429,7 @@ export default function QuotesPage() {
           setCustomerEmail((prev) => prev || customer.email || "");
           setCustomerAddress((prev) => prev || customer.address || "");
           setCustomerCity((prev) => prev || customer.city || "");
-          setCustomerCountry((prev) => prev || customer.country || "Nepal");
+          setCustomerCountry((prev) => prev || customer.country || "");
         } else {
           setMatchedCustomerId(null);
         }
@@ -501,7 +517,7 @@ export default function QuotesPage() {
           email: customerEmail.trim() || undefined,
           address: customerAddress.trim() || "Not provided",
           city: customerCity.trim() || (user?.shop as any)?.city || "Not provided",
-          country: customerCountry.trim() || (user?.shop as any)?.country || "Nepal",
+          country: customerCountry.trim() || (user?.shop as any)?.country || "",
         },
         jewelleryType,
         buildMethod,
@@ -587,6 +603,7 @@ export default function QuotesPage() {
               >
                 <option value="+91">🇮🇳 +91</option>
                 <option value="+977">🇳🇵 +977</option>
+                <option value="+94">🇱🇰 +94</option>
                 <option value="+1">🇺🇸 +1</option>
                 <option value="+44">🇬🇧 +44</option>
                 <option value="+971">🇦🇪 +971</option>
@@ -943,7 +960,7 @@ export default function QuotesPage() {
                   setGemstoneCostMode("auto");
                 }}
                 currencySymbol={
-                  currency === "NPR" ? "रु" : currency === "INR" ? "₹" : currency === "USD" ? "$" : currency
+                  currency === "NPR" ? "रु" : currency === "INR" ? "₹" : currency === "LKR" ? "Rs." : currency === "USD" ? "$" : currency
                 }
                 selectedCurrency={currency}
                 exchangeRate={nprToDisplayCurrency * 144}

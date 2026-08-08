@@ -1,13 +1,18 @@
 import { Type } from "class-transformer";
+import { CurrencyCode } from "@prisma/client";
 import {
-    IsArray,
-    IsBoolean,
-    IsDateString,
-    IsIn,
-    IsNumber,
-    IsOptional,
-    IsString,
-    ValidateNested,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+  ValidateNested,
 } from "class-validator";
 
 export class InvoiceLineItemDto {
@@ -18,13 +23,20 @@ export class InvoiceLineItemDto {
   category: string; // METAL, MAKING, GEMSTONE, FINISH, TAX, DISCOUNT, etc.
 
   @IsNumber()
+  @Min(0.000001)
   quantity: number;
 
   @IsNumber()
+  @Min(0)
   unitPrice: number;
 
   @IsNumber()
+  @Min(0)
   amount: number;
+
+  @IsOptional()
+  @IsIn(["TAXABLE", "EXEMPT"])
+  taxTreatment?: "TAXABLE" | "EXEMPT";
 
   @IsOptional()
   @IsString()
@@ -62,6 +74,8 @@ export class CreateInvoiceDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(1)
   taxRate?: number;
 
   @IsOptional()
@@ -70,11 +84,12 @@ export class CreateInvoiceDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
   discountAmount?: number;
 
   @IsOptional()
-  @IsString()
-  currency?: string;
+  @IsEnum(CurrencyCode)
+  currency?: CurrencyCode;
 
   @IsOptional()
   @IsDateString()
@@ -98,8 +113,25 @@ export class CreateInvoiceDto {
   taxExemptReason?: string;
 
   @IsOptional()
+  @IsString()
+  taxExemptEvidence?: string;
+
+  @IsOptional()
   @IsIn(["B2C", "B2B"])
   customerType?: "B2C" | "B2B";
+
+  @IsOptional()
+  @IsBoolean()
+  purchaserVatRegistered?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  taxInvoiceRequested?: boolean;
+
+  // Backward-compatible alias used by the current invoice UI.
+  @IsOptional()
+  @IsBoolean()
+  requestTaxInvoice?: boolean;
 
   @IsOptional()
   @IsString()
@@ -112,6 +144,10 @@ export class CreateInvoiceDto {
   @IsOptional()
   @IsString()
   placeOfSupply?: string;
+
+  @IsOptional()
+  @IsDateString()
+  supplyDate?: string;
 
   @IsOptional()
   @IsString()
@@ -136,6 +172,7 @@ export class CreateInvoiceDto {
 
 export class UpdatePaymentDto {
   @IsNumber()
+  @Min(0.01)
   amount: number;
 
   @IsOptional()
@@ -145,4 +182,15 @@ export class UpdatePaymentDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  reference?: string;
+
+  @IsUUID()
+  idempotencyKey: string;
+
+  @IsOptional()
+  @IsDateString()
+  receivedAt?: string;
 }

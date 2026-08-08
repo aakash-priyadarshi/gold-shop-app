@@ -14,6 +14,7 @@ export const FLAG_IMAGES = {
   GB: "/flags/united-kingdom-flag-icon.svg",
   UK: "/flags/united-kingdom-flag-icon.svg", // Alias for UK
   EU: "/flags/europe-flag-icon.svg",
+  LK: "/flags/sri-lanka-flag-icon.svg",
 } as const;
 
 // Supported countries with phone codes
@@ -45,6 +46,13 @@ export const SUPPORTED_PHONE_COUNTRIES = [
     dialCode: "+971",
     minLength: 9,
     maxLength: 9,
+  },
+  {
+    code: "LK" as const,
+    name: "Sri Lanka",
+    dialCode: "+94",
+    minLength: 9,
+    maxLength: 10,
   },
   {
     code: "GB" as const,

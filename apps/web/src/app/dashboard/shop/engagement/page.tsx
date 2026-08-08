@@ -54,7 +54,7 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 /* ═══════════════════════════════════════════════════════
  *  TYPES
@@ -311,6 +311,7 @@ const CRITERIA_LABELS: Record<
 const COUNTRY_NAMES: Record<string, string> = {
   IN: "India",
   NP: "Nepal",
+  LK: "Sri Lanka",
   US: "United States",
   GB: "United Kingdom",
   AE: "UAE",
@@ -395,6 +396,53 @@ function getKycFieldsForCountry(country: string): {
           placeholder: "Upload BIS license",
           type: "document",
           required: false,
+        },
+      ],
+    };
+  }
+
+  if (country === "LK") {
+    return {
+      title: "Sri Lanka KYC Verification",
+      description:
+        "Submit your Sri Lankan business registration and Inland Revenue Department tax details.",
+      fields: [
+        {
+          key: "panNumber",
+          label: "IRD TIN (9 digits)",
+          placeholder: "123456789",
+          type: "text",
+          required: true,
+          helpText: "Exactly 9 digits, issued by the Inland Revenue Department",
+        },
+        {
+          key: "vatNumber",
+          label: "VAT Registration TIN (9 digits)",
+          placeholder: "123456789",
+          type: "text",
+          required: true,
+          helpText: "Exactly 9 digits for VAT registration",
+        },
+        {
+          key: "bisLicenseNumber",
+          label: "Business Registration Number",
+          placeholder: "Enter business registration number",
+          type: "text",
+          required: true,
+        },
+        {
+          key: "businessRegistrationCertificate",
+          label: "Business Registration Certificate",
+          placeholder: "Upload business registration certificate",
+          type: "document",
+          required: true,
+        },
+        {
+          key: "vatCertificate",
+          label: "VAT Registration Certificate",
+          placeholder: "Upload VAT registration certificate",
+          type: "document",
+          required: true,
         },
       ],
     };
@@ -716,13 +764,40 @@ export default function ShopEngagementPage() {
       }),
   });
 
-  useEffect(() => {
-    if (user?.shop?.id) {
-      loadAll();
+  const loadTierDashboard = useCallback(async (targetTier?: string) => {
+    setTierLoading(true);
+    try {
+      const response = await sellerPerformanceApi.getMyDashboard(targetTier);
+      setTierDashboard(response.data);
+    } catch (error) {
+      console.error("Failed to load tier:", error);
+    } finally {
+      setTierLoading(false);
     }
-  }, [user?.shop?.id]);
+  }, []);
 
-  const loadAll = async () => {
+  const loadPlatformReviews = useCallback(async () => {
+    try {
+      const res = await sellerPerformanceApi.getMyReviews();
+      if (res?.data) setPlatformReviews(res.data);
+    } catch (error) {
+      console.warn("Failed to load platform reviews:", error);
+    }
+  }, []);
+
+  const loadReferrals = useCallback(async () => {
+    try {
+      const res = await sellerPerformanceApi.getMyReferrals();
+      if (res?.data) {
+        setReferrals(res.data.referrals || []);
+        setReferralSettings(res.data.settings || null);
+      }
+    } catch (error) {
+      console.warn("Failed to load referrals:", error);
+    }
+  }, []);
+
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
       const results = await Promise.allSettled([
@@ -783,13 +858,13 @@ export default function ShopEngagementPage() {
       });
 
       // Load tier dashboard
-      loadTierDashboard();
+      void loadTierDashboard();
 
       // Load platform reviews
-      loadPlatformReviews();
+      void loadPlatformReviews();
 
       // Load referrals
-      loadReferrals();
+      void loadReferrals();
     } catch (error) {
       console.error("Failed to load engagement data:", error);
       toast({
@@ -799,40 +874,13 @@ export default function ShopEngagementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadPlatformReviews, loadReferrals, loadTierDashboard, t]);
 
-  const loadTierDashboard = async (targetTier?: string) => {
-    setTierLoading(true);
-    try {
-      const response = await sellerPerformanceApi.getMyDashboard(targetTier);
-      setTierDashboard(response.data);
-    } catch (error) {
-      console.error("Failed to load tier:", error);
-    } finally {
-      setTierLoading(false);
+  useEffect(() => {
+    if (user?.shop?.id) {
+      void loadAll();
     }
-  };
-
-  const loadPlatformReviews = async () => {
-    try {
-      const res = await sellerPerformanceApi.getMyReviews();
-      if (res?.data) setPlatformReviews(res.data);
-    } catch (error) {
-      console.warn("Failed to load platform reviews:", error);
-    }
-  };
-
-  const loadReferrals = async () => {
-    try {
-      const res = await sellerPerformanceApi.getMyReferrals();
-      if (res?.data) {
-        setReferrals(res.data.referrals || []);
-        setReferralSettings(res.data.settings || null);
-      }
-    } catch (error) {
-      console.warn("Failed to load referrals:", error);
-    }
-  };
+  }, [loadAll, user?.shop?.id]);
 
   const handleSendReferral = async () => {
     if (!referralEmail.trim()) return;
@@ -937,6 +985,32 @@ export default function ShopEngagementPage() {
 
   const saveKyc = async () => {
     if (!kycData) return;
+    if (kycData.country?.toUpperCase() === "LK") {
+      if (!/^\d{9}$/.test((kycForm.panNumber || "").trim())) {
+        toast({
+          variant: "destructive",
+          title: t("Invalid IRD TIN"),
+          description: t("IRD TIN must be exactly 9 digits."),
+        });
+        return;
+      }
+      if (!/^\d{9}$/.test((kycForm.vatNumber || "").trim())) {
+        toast({
+          variant: "destructive",
+          title: t("Invalid VAT registration TIN"),
+          description: t("VAT registration TIN must be exactly 9 digits."),
+        });
+        return;
+      }
+      if (!(kycForm.bisLicenseNumber || "").trim()) {
+        toast({
+          variant: "destructive",
+          title: t("Business registration required"),
+          description: t("Enter your business registration number."),
+        });
+        return;
+      }
+    }
     setKycSaving(true);
     try {
       const docs: Record<string, any> = {

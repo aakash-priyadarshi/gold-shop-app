@@ -34,7 +34,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface ReferralData {
   id: string;
@@ -74,16 +74,7 @@ export default function AdminReferralsPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [expiringOld, setExpiringOld] = useState(false);
 
-  useEffect(() => {
-    loadReferrals();
-    loadSettings();
-  }, []);
-
-  useEffect(() => {
-    loadReferrals();
-  }, [statusFilter]);
-
-  const loadReferrals = async () => {
+  const loadReferrals = useCallback(async () => {
     setLoading(true);
     try {
       const res = await sellerPerformanceApi.getAdminReferrals(
@@ -95,9 +86,9 @@ export default function AdminReferralsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
 
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     setSettingsLoading(true);
     try {
       const res = await sellerPerformanceApi.getReferralSettings();
@@ -107,7 +98,15 @@ export default function AdminReferralsPage() {
     } finally {
       setSettingsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadReferrals();
+  }, [loadReferrals]);
+
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
 
   const handleComplete = async (referralId: string) => {
     setActionLoading(referralId);

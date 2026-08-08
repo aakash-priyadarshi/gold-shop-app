@@ -25,6 +25,7 @@ async function main() {
     UK: "GBP",
     US: "USD",
     EU: "EUR",
+    LK: "LKR",
   };
 
   const COUNTRY_NAMES: Record<string, string> = {
@@ -34,9 +35,10 @@ async function main() {
     UK: "United Kingdom",
     US: "United States",
     EU: "Europe",
+    LK: "Sri Lanka",
   };
 
-  const REGIONS = ["NP", "IN", "AE", "UK", "US", "EU"] as const;
+  const REGIONS = ["NP", "IN", "AE", "UK", "US", "EU", "LK"] as const;
 
   // ─── Country-specific pricing tables ───────────
 
@@ -50,6 +52,7 @@ async function main() {
     UK: { monthly: 29, annual: 290, extraCredit: 1.5 },
     US: { monthly: 35, annual: 350, extraCredit: 2 },
     EU: { monthly: 29, annual: 290, extraCredit: 1.5 },
+    LK: { monthly: 4500, annual: 45000, extraCredit: 75 },
   };
 
   const PRO_PLUS_PRICING: Record<
@@ -62,6 +65,7 @@ async function main() {
     UK: { monthly: 79, annual: 790, extraCredit: 1 },
     US: { monthly: 99, annual: 990, extraCredit: 1.2 },
     EU: { monthly: 79, annual: 790, extraCredit: 1 },
+    LK: { monthly: 9900, annual: 99000, extraCredit: 50 },
   };
 
   // Enterprise pricing is a starting-from baseline — actual pricing is custom per client
@@ -75,6 +79,7 @@ async function main() {
     UK: { monthly: 249, annual: 2490, extraCredit: 0.8 },
     US: { monthly: 299, annual: 2990, extraCredit: 1 },
     EU: { monthly: 249, annual: 2490, extraCredit: 0.8 },
+    LK: { monthly: 25000, annual: 250000, extraCredit: 40 },
   };
 
   // ─── FREE plans ───────────────────────────────

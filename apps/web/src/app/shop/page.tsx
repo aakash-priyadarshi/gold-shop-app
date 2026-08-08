@@ -40,7 +40,8 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
 
 interface InventoryItem {
   id: string;
@@ -87,16 +88,7 @@ export default function ShopPage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    fetchItems();
-  }, [category, metalType, sortBy]);
-
-  useEffect(() => {
-    // Fetch recommended items (simple heuristic: newest from different categories)
-    fetchRecommendations();
-  }, []);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -124,9 +116,9 @@ export default function ShopPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [category, sortBy]);
 
-  const fetchRecommendations = async () => {
+  const fetchRecommendations = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       params.append("sortBy", "createdAt");
@@ -142,7 +134,16 @@ export default function ShopPage() {
     } catch (error) {
       console.error("Failed to fetch recommendations:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchItems();
+  }, [fetchItems]);
+
+  useEffect(() => {
+    // Fetch recommended items (simple heuristic: newest from different categories)
+    void fetchRecommendations();
+  }, [fetchRecommendations]);
 
   const getMetalFromComposition = (composition: any) => {
     const metal = composition?.baseAlloy?.metal || composition?.metal || "";
@@ -236,10 +237,13 @@ export default function ShopPage() {
                     <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                       <div className="aspect-square bg-gray-100 relative">
                         {item.images?.[0] ? (
-                          <img
+                          <Image
                             src={getImageUrl(item.images[0])}
                             alt={item.nameEn}
-                            className="object-cover w-full h-full"
+                            className="object-cover"
+                            fill
+                            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                            unoptimized
                           />
                         ) : (
                           <div className="flex items-center justify-center h-full">
@@ -508,10 +512,13 @@ export default function ShopPage() {
                   >
                     <div className="relative aspect-square bg-gray-100">
                       {item.images?.[0] ? (
-                        <img
+                        <Image
                           src={getImageUrl(item.images[0])}
                           alt={item.nameEn}
-                          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          fill
+                          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                          unoptimized
                         />
                       ) : (
                         <div className="flex items-center justify-center h-full">

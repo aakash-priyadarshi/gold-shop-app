@@ -12,13 +12,18 @@ import { CurrencyCode, UserRole, UserStatus } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 import { RedisService } from "../../common/redis";
+import {
+  getDefaultCurrencyForMarket,
+  isCurrencySupportedForMarket,
+  normalizeMarketRegion,
+} from "../../common/market/country-currency";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { MailService } from "../mail/mail.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
 import { LoginDto } from "./dto/login.dto";
-import { RegisterDto } from "./dto/register.dto";
+import { CreateShopDto, RegisterDto } from "./dto/register.dto";
 import { OtpService } from "./otp.service";
 
 export interface JwtPayload {
@@ -181,10 +186,17 @@ export class AuthService {
     // Hash password
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    // Determine preferred currency based on shop country or default
+    const marketCountry = dto.shop
+      ? normalizeMarketRegion(dto.shop.country)
+      : null;
     let preferredCurrency: CurrencyCode = CurrencyCode.NPR;
-    if (dto.shop?.currency) {
-      preferredCurrency = dto.shop.currency as CurrencyCode;
+    if (dto.shop) {
+      if (!isCurrencySupportedForMarket(marketCountry!, dto.shop.currency)) {
+        throw new BadRequestException(
+          `${dto.shop.currency} is not supported for market ${marketCountry}`,
+        );
+      }
+      preferredCurrency = dto.shop.currency;
     }
 
     // Use transaction for user + shop creation
@@ -202,6 +214,7 @@ export class AuthService {
           emailVerified: false,
           preferredLanguage: dto.preferredLanguage || "en",
           preferredCurrency,
+          ...(marketCountry ? { preferredCountry: marketCountry } : {}),
         },
       });
 
@@ -213,7 +226,8 @@ export class AuthService {
           data: {
             userId: user.id,
             shopName: dto.shop.shopName,
-            country: dto.shop.country,
+            country: marketCountry!,
+            currency: preferredCurrency,
             city: dto.shop.city,
             address: dto.shop.address,
             contactPhone: dto.shop.contactPhone,
@@ -283,7 +297,7 @@ export class AuthService {
   // ═══════════════════════════════════════════════════════════
   //  CONVERT TO SHOPKEEPER
   // ═══════════════════════════════════════════════════════════
-  async convertToShopkeeper(userId: string, shopDto: any) {
+  async convertToShopkeeper(userId: string, shopDto: CreateShopDto) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { shops: true },
@@ -300,8 +314,14 @@ export class AuthService {
       throw new BadRequestException("User already has a shop");
     }
 
+    const marketCountry = normalizeMarketRegion(shopDto.country);
     const preferredCurrency =
-      (shopDto.currency as CurrencyCode) || user.preferredCurrency;
+      shopDto.currency || getDefaultCurrencyForMarket(marketCountry);
+    if (!isCurrencySupportedForMarket(marketCountry, preferredCurrency)) {
+      throw new BadRequestException(
+        `${preferredCurrency} is not supported for market ${marketCountry}`,
+      );
+    }
 
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedUser = await tx.user.update({
@@ -309,6 +329,7 @@ export class AuthService {
         data: {
           role: "SHOPKEEPER",
           preferredCurrency,
+          preferredCountry: marketCountry,
         },
       });
 
@@ -316,7 +337,8 @@ export class AuthService {
         data: {
           userId,
           shopName: shopDto.shopName,
-          country: shopDto.country,
+          country: marketCountry,
+          currency: preferredCurrency,
           city: shopDto.city,
           address: shopDto.address,
           contactPhone: shopDto.contactPhone,
@@ -332,7 +354,7 @@ export class AuthService {
     // Auto-activate FREE subscription plan for the new shop
     await this.sellerSubscriptionsService.autoActivateFreePlan(
       result.shop.id,
-      shopDto.country || "NP",
+      marketCountry,
     );
 
     // Audit log

@@ -6,6 +6,11 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { toast } from "@/hooks/use-toast";
 import { shopsApi } from "@/lib/api";
 import {
+  getKycIdentifierConfig,
+  validateKycIdentifiers,
+} from "@/lib/kyc/market-requirements";
+import { useT } from "@/providers/translation-provider";
+import {
   ArrowLeft,
   CheckCircle,
   Clock,
@@ -25,6 +30,10 @@ const CLOUDFLARE_UPLOAD_URL =
 
 export default function MobileKycPage() {
   const { user, refreshUser } = useAuth();
+  const t = useT();
+  const shopCountry = user?.shop?.country?.toUpperCase();
+  const identifierConfig = getKycIdentifierConfig(shopCountry);
+  const isSriLanka = shopCountry === "LK";
   const router = useRouter();
   const haptic = useHaptics();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,6 +51,7 @@ export default function MobileKycPage() {
     isVerified: boolean;
     verificationDocuments: Record<string, string>;
     verificationRequests?: any[];
+    vatRegistrationStatus?: string;
   }>({
     panNumber: "",
     vatNumber: "",
@@ -49,6 +59,7 @@ export default function MobileKycPage() {
     isVerified: false,
     verificationDocuments: {},
     verificationRequests: [],
+    vatRegistrationStatus: undefined,
   });
 
   useEffect(() => {
@@ -66,6 +77,7 @@ export default function MobileKycPage() {
         isVerified: data.isVerified || false,
         verificationDocuments: data.verificationDocuments || {},
         verificationRequests: data.verificationRequests || [],
+        vatRegistrationStatus: data.vatRegistrationStatus,
       });
     } catch {
       toast({
@@ -80,6 +92,16 @@ export default function MobileKycPage() {
 
   const handleSave = async () => {
     haptic("medium");
+    const validationErrors = validateKycIdentifiers(shopCountry, kycData);
+    if (validationErrors.length > 0) {
+      haptic("error");
+      toast({
+        variant: "destructive",
+        title: t("Check Sri Lanka registration details"),
+        description: t(validationErrors[0]),
+      });
+      return;
+    }
     setIsSaving(true);
     try {
       await shopsApi.updateKyc({
@@ -283,10 +305,15 @@ export default function MobileKycPage() {
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide">
             <T>Business Identifiers</T>
           </h3>
+          {isSriLanka && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+              <T>Sri Lanka VAT registration status</T>: {kycData.vatRegistrationStatus || "NOT_REGISTERED"}
+            </div>
+          )}
           <div className="space-y-3">
             <div>
               <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-                <T>Tax ID / PAN Number</T> *
+                <T>{identifierConfig.panLabel}</T> *
               </label>
               <input
                 type="text"
@@ -295,14 +322,17 @@ export default function MobileKycPage() {
                 onChange={(e) =>
                   setKycData({ ...kycData, panNumber: e.target.value })
                 }
-                placeholder="Enter official Tax ID"
+                placeholder={t(identifierConfig.panPlaceholder)}
+                inputMode={isSriLanka ? "numeric" : undefined}
+                maxLength={isSriLanka ? 9 : undefined}
                 className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-850 bg-gray-50/50 dark:bg-gray-950 text-gray-950 dark:text-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-60"
               />
             </div>
 
             <div>
               <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-                <T>VAT / GST Number (Optional)</T>
+                <T>{identifierConfig.vatLabel}</T>
+                {identifierConfig.vatRequired ? " *" : null}
               </label>
               <input
                 type="text"
@@ -311,14 +341,17 @@ export default function MobileKycPage() {
                 onChange={(e) =>
                   setKycData({ ...kycData, vatNumber: e.target.value })
                 }
-                placeholder="Enter VAT or GSTIN Number"
+                placeholder={t(identifierConfig.vatPlaceholder)}
+                inputMode={isSriLanka ? "numeric" : undefined}
+                maxLength={isSriLanka ? 9 : undefined}
                 className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-850 bg-gray-50/50 dark:bg-gray-950 text-gray-950 dark:text-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-60"
               />
             </div>
 
             <div>
               <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-                <T>Business / Registration License (Optional)</T>
+                <T>{identifierConfig.businessLabel}</T>
+                {identifierConfig.businessRequired ? " *" : null}
               </label>
               <input
                 type="text"
@@ -327,7 +360,7 @@ export default function MobileKycPage() {
                 onChange={(e) =>
                   setKycData({ ...kycData, bisLicenseNumber: e.target.value })
                 }
-                placeholder="Enter Registration Authority Number"
+                placeholder={t(identifierConfig.businessPlaceholder)}
                 className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-850 bg-gray-50/50 dark:bg-gray-950 text-gray-950 dark:text-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-60"
               />
             </div>
@@ -434,7 +467,11 @@ export default function MobileKycPage() {
         {!isReadOnly && (
           <button
             onClick={handleSave}
-            disabled={isSaving || !kycData.panNumber}
+            disabled={
+              isSaving ||
+              !kycData.panNumber ||
+              (isSriLanka && (!kycData.vatNumber || !kycData.bisLicenseNumber))
+            }
             className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 transition-all active:scale-95 mt-4"
           >
             {isSaving ? (

@@ -54,15 +54,18 @@ import {
   TruckIcon,
 } from "@heroicons/react/24/outline";
 import { Loader2, Package } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const COUNTRIES = [
   { code: "NP", name: "Nepal" },
   { code: "IN", name: "India" },
+  { code: "LK", name: "Sri Lanka" },
   { code: "US", name: "United States" },
   { code: "UK", name: "United Kingdom" },
   { code: "AE", name: "UAE" },
+  { code: "EU", name: "Europe" },
 ];
 
 interface ShopInfo {
@@ -96,6 +99,7 @@ export default function CartPage() {
 
   // Currency from preferences
   const currency = usePreferencesStore((state) => state.currency);
+  const marketCountry = usePreferencesStore((state) => state.country);
   const currencyInfo = CURRENCIES[currency] || CURRENCIES.USD;
   const [mounted, setMounted] = useState(false);
 
@@ -136,14 +140,14 @@ export default function CartPage() {
     addressLine2: "",
     city: "",
     state: "",
-    country: "NP",
+    country: marketCountry,
     pincode: "",
     isDefault: false,
   });
   const [savingAddress, setSavingAddress] = useState(false);
 
-  const itemsByShop = getItemsByShop();
-  const shopIds = Object.keys(itemsByShop);
+  const itemsByShop = useMemo(() => getItemsByShop(), [getItemsByShop]);
+  const shopIds = useMemo(() => Object.keys(itemsByShop), [itemsByShop]);
 
   // Load shop info for delivery estimation
   useEffect(() => {
@@ -175,8 +179,8 @@ export default function CartPage() {
       setLoadingShops(false);
     };
 
-    loadShopInfos();
-  }, [shopIds.join(",")]);
+    void loadShopInfos();
+  }, [shopIds]);
 
   // Calculate delivery estimates when address or shops change
   useEffect(() => {
@@ -192,6 +196,8 @@ export default function CartPage() {
         estimates[shopId] = estimateDelivery(
           shop.pincode,
           selectedAddress.pincode,
+          shop.country,
+          selectedAddress.country,
         );
       }
     }
@@ -231,7 +237,7 @@ export default function CartPage() {
         addressLine2: "",
         city: "",
         state: "",
-        country: "NP",
+        country: marketCountry,
         pincode: "",
         isDefault: false,
       });
@@ -402,10 +408,13 @@ export default function CartPage() {
                       >
                         <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex-shrink-0">
                           {item.product.image ? (
-                            <img
+                            <Image
                               src={item.product.image}
                               alt={item.product.name}
                               className="w-full h-full object-cover"
+                              width={80}
+                              height={80}
+                              unoptimized
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">

@@ -22,7 +22,7 @@ import {
   Trophy,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface OfferData {
   id: string;
@@ -87,11 +87,7 @@ export function OfferComparison({
   const [data, setData] = useState<ComparisonData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadComparison();
-  }, [rfqId]);
-
-  const loadComparison = async () => {
+  const loadComparison = useCallback(async () => {
     try {
       setLoading(true);
       const res = await intelligenceApi.compareOffers(rfqId);
@@ -101,7 +97,11 @@ export function OfferComparison({
     } finally {
       setLoading(false);
     }
-  };
+  }, [rfqId]);
+
+  useEffect(() => {
+    void loadComparison();
+  }, [loadComparison]);
 
   if (loading) {
     return (

@@ -37,7 +37,7 @@ import {
     Truck,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Order {
   id: string;
@@ -77,13 +77,7 @@ export default function ShopOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const t = useT();
 
-  useEffect(() => {
-    if (user?.shop?.id) {
-      loadOrders();
-    }
-  }, [user?.shop?.id, statusFilter]);
-
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     if (!user?.shop?.id) return;
     setIsLoading(true);
     try {
@@ -109,7 +103,13 @@ export default function ShopOrdersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter, user?.shop?.id]);
+
+  useEffect(() => {
+    if (user?.shop?.id) {
+      void loadOrders();
+    }
+  }, [loadOrders, user?.shop?.id]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {

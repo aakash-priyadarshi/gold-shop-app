@@ -79,6 +79,7 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 // Order status badge styles - matches DetailedOrderStatus enum + legacy OrderStatus values
@@ -1676,10 +1677,13 @@ export default function AdminOrdersPage() {
                                     key={idx}
                                     className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50 dark:bg-gray-800/50"
                                   >
-                                    <img
+                                    <Image
                                       src={url}
                                       alt={`Reference ${idx + 1}`}
-                                      className="w-full h-full object-cover"
+                                      className="object-cover"
+                                      fill
+                                      sizes="160px"
+                                      unoptimized
                                     />
                                     {idx === 0 && (
                                       <div className="absolute top-1 right-1">

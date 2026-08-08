@@ -69,6 +69,7 @@ import {
   XCircle,
   ZoomIn,
 } from "lucide-react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -193,13 +194,7 @@ export default function ShopRfqDetailPage() {
   const [counterEstimatedDays, setCounterEstimatedDays] = useState("");
   const [counterShopNotes, setCounterShopNotes] = useState("");
 
-  useEffect(() => {
-    if (rfqId) {
-      loadRfq();
-    }
-  }, [rfqId]);
-
-  const loadRfq = async () => {
+  const loadRfq = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await rfqApi.getById(rfqId);
@@ -214,7 +209,13 @@ export default function ShopRfqDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [rfqId]);
+
+  useEffect(() => {
+    if (rfqId) {
+      void loadRfq();
+    }
+  }, [loadRfq, rfqId]);
 
   const submitOffer = async () => {
     if (offerType === "DECLINE" && !declineReason) {
@@ -610,10 +611,13 @@ export default function ShopRfqDetailPage() {
                   <div className="flex items-start gap-4">
                     {JEWELLERY_TYPE_IMAGES[rfq.jewelleryType] && (
                       <div className="relative h-20 w-20 rounded-lg overflow-hidden border bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
-                        <img
+                        <Image
                           src={JEWELLERY_TYPE_IMAGES[rfq.jewelleryType]}
                           alt={getJewelleryTypeLabel(rfq.jewelleryType)}
-                          className="w-full h-full object-cover"
+                          className="object-cover"
+                          fill
+                          sizes="80px"
+                          unoptimized
                         />
                       </div>
                     )}
@@ -815,10 +819,13 @@ export default function ShopRfqDetailPage() {
                         <div className="flex items-center gap-3 mt-2">
                           {surfaceFinishInfo && (
                             <div className="relative h-14 w-14 rounded-lg overflow-hidden border bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
-                              <img
+                              <Image
                                 src={surfaceFinishInfo.image}
                                 alt={rfq.surfaceFinish}
-                                className="w-full h-full object-cover"
+                                className="object-cover"
+                                fill
+                                sizes="56px"
+                                unoptimized
                               />
                             </div>
                           )}
@@ -942,10 +949,13 @@ export default function ShopRfqDetailPage() {
                                 setImagePreviewOpen(true);
                               }}
                             >
-                              <img
+                              <Image
                                 src={url}
                                 alt={`Reference ${idx + 1}`}
-                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                className="object-cover transition-transform group-hover:scale-105"
+                                fill
+                                sizes="160px"
+                                unoptimized
                               />
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                                 <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -988,10 +998,13 @@ export default function ShopRfqDetailPage() {
                               setImagePreviewOpen(true);
                             }}
                           >
-                            <img
+                            <Image
                               src={aiDesignUrl}
                               alt="AI Design"
-                              className="w-full h-full object-cover"
+                              className="object-cover"
+                              fill
+                              sizes="160px"
+                              unoptimized
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                               <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1590,10 +1603,13 @@ export default function ShopRfqDetailPage() {
                         setImagePreviewOpen(true);
                       }}
                     >
-                      <img
+                      <Image
                         src={aiDesignUrl}
                         alt="AI Generated Design"
-                        className="w-full h-full object-cover"
+                        className="object-cover"
+                        fill
+                        sizes="240px"
+                        unoptimized
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                         <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1868,10 +1884,13 @@ export default function ShopRfqDetailPage() {
             </DialogHeader>
             {imagePreviewUrl && (
               <div className="relative w-full max-h-[80vh] flex items-center justify-center">
-                <img
+                <Image
                   src={imagePreviewUrl}
                   alt="Preview"
-                  className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                  className="w-auto h-auto max-w-full max-h-[80vh] object-contain rounded-lg"
+                  width={1600}
+                  height={1200}
+                  unoptimized
                 />
               </div>
             )}

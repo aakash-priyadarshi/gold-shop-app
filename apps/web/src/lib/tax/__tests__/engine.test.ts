@@ -557,6 +557,34 @@ describe('Tax Engine - US Rules', () => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// Sri Lanka VAT Rules (18% on all components)
+// ═══════════════════════════════════════════════════════════
+describe('Tax Engine - Sri Lanka Rules', () => {
+  test('LK: 18% VAT on all components', () => {
+    const breakdown: CartBreakdown = {
+      metalSubtotal: 10000,
+      alloyPremiumSubtotal: 0,
+      baseMetalSubtotal: 0,
+      makingChargeSubtotal: 1000,
+      finishSubtotal: 500,
+      platingSubtotal: 0,
+      gemstoneSubtotal: 2000,
+      total: 13500,
+      hasGemstones: true,
+      isGold: true,
+      isJewellery: true,
+    };
+
+    const result = calculateTax({ country: 'LK', cartBreakdown: breakdown });
+
+    // 18% on 13500 = 2430
+    expect(result.totalTax).toBe(2430);
+    expect(result.lineItems).toHaveLength(1);
+    expect(result.lineItems[0].rate).toBe(0.18);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
 // Nepal FY 2083/84 — Skill Promotion Fee (replaces Luxury Tax)
 // ═══════════════════════════════════════════════════════════
 describe('Tax Engine - Nepal FY 2083/84 (Skill Promotion Fee)', () => {

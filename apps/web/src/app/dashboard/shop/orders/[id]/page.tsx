@@ -54,8 +54,9 @@ import {
   Store,
   User,
 } from "lucide-react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface OrderDetails {
   id: string;
@@ -164,13 +165,7 @@ export default function ShopOrderDetailPage() {
   const [isMarkingPaidAtShop, setIsMarkingPaidAtShop] = useState(false);
   const t = useT();
 
-  useEffect(() => {
-    if (orderId) {
-      loadOrder();
-    }
-  }, [orderId]);
-
-  const loadOrder = async () => {
+  const loadOrder = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get(`/orders/${orderId}`);
@@ -185,7 +180,13 @@ export default function ShopOrderDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [orderId]);
+
+  useEffect(() => {
+    if (orderId) {
+      void loadOrder();
+    }
+  }, [loadOrder, orderId]);
 
   const updateStatus = async (newStatus: string) => {
     setIsUpdating(true);
@@ -474,10 +475,13 @@ export default function ShopOrderDetailPage() {
                                   key={idx}
                                   className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50 dark:bg-gray-800/50"
                                 >
-                                  <img
+                                  <Image
                                     src={url}
                                     alt={`Reference ${idx + 1}`}
-                                    className="w-full h-full object-cover"
+                                    className="object-cover"
+                                    fill
+                                    sizes="160px"
+                                    unoptimized
                                   />
                                   {idx === 0 && (
                                     <div className="absolute top-1 right-1">

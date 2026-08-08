@@ -22,7 +22,7 @@ import api from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import { Eye, Loader2, Search, Store, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Shop {
   id: string;
@@ -45,19 +45,16 @@ export default function SalesShopsPage() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const t = useT();
 
-  useEffect(() => {
-    loadShops();
-  }, [currentPage]);
-
-  const loadShops = async () => {
+  const loadShops = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get(
-        `/shops?page=${currentPage}&limit=20${searchQuery ? `&search=${searchQuery}` : ""}`,
+        `/shops?page=${currentPage}&limit=20${appliedSearch ? `&search=${appliedSearch}` : ""}`,
       );
       setShops(res.data?.data || res.data?.shops || []);
       setTotalPages(res.data?.pagination?.totalPages || 1);
@@ -66,11 +63,20 @@ export default function SalesShopsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [appliedSearch, currentPage]);
+
+  useEffect(() => {
+    void loadShops();
+  }, [loadShops]);
 
   const handleSearch = () => {
+    const nextSearch = searchQuery.trim();
     setCurrentPage(1);
-    loadShops();
+    if (nextSearch === appliedSearch && currentPage === 1) {
+      void loadShops();
+      return;
+    }
+    setAppliedSearch(nextSearch);
   };
 
   const getCountryFlag = (code: string) => {

@@ -57,6 +57,7 @@ const validFlagCodes = Object.keys(FLAG_IMAGES);
 const marketNames: Record<string, string> = {
   NP: "Nepal",
   IN: "India",
+  LK: "Sri Lanka",
   US: "United States",
   UK: "United Kingdom",
   EU: "European Union",
@@ -66,6 +67,7 @@ const marketNames: Record<string, string> = {
 const availableCurrencies = [
   { code: "NPR", name: "Nepalese Rupee", symbol: "रु" },
   { code: "INR", name: "Indian Rupee", symbol: "₹" },
+  { code: "LKR", name: "Sri Lankan Rupee", symbol: "Rs." },
   { code: "USD", name: "US Dollar", symbol: "$" },
   { code: "GBP", name: "British Pound", symbol: "£" },
   { code: "EUR", name: "Euro", symbol: "€" },

@@ -14,7 +14,7 @@ import {
   Clock,
   DollarSign,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { refundsApi } from '@/lib/api';
 
 interface RefundRequest {
@@ -40,11 +40,7 @@ export default function AdminRefundsPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadRequests();
-  }, [activeFilter]);
-
-  async function loadRequests() {
+  const loadRequests = useCallback(async () => {
     setLoading(true);
     try {
       const res = await refundsApi.listRequests(activeFilter);
@@ -54,7 +50,11 @@ export default function AdminRefundsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [activeFilter]);
+
+  useEffect(() => {
+    void loadRequests();
+  }, [loadRequests]);
 
   async function handleApprove(orderId: string) {
     setProcessing(orderId);

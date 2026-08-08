@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-type Country = "NP" | "IN" | "AE" | "GB" | "EU" | "US";
+type Country = "NP" | "IN" | "AE" | "GB" | "EU" | "US" | "LK";
 
 interface CountryConfig {
   code: Country;
@@ -105,6 +105,18 @@ const COUNTRY_CONFIGS: CountryConfig[] = [
     portalLabel: "State Tax Portals",
     portalUrl: "https://www.taxjar.com/resources/sales-tax/state-guides",
     note: "No federal sales tax in the US. Each state sets its own rate. Most states exempt bullion and investment gold. Fabricated jewellery is taxable in most states. Nexus rules apply.",
+  },
+  {
+    code: "LK",
+    flag: "🇱🇰",
+    label: "Sri Lanka",
+    regime: "VAT",
+    rate: "18%",
+    currency: "LKR",
+    filingFreq: "Select reporting period",
+    portalLabel: "Sri Lanka IRD",
+    portalUrl: "https://www.ird.gov.lk",
+    note: "Sri Lanka VAT is 18% on taxable jewellery sales. This screen summarizes output VAT only; use the export with your accountant because input VAT and direct IRD filing are not implemented.",
   },
 ];
 
@@ -313,6 +325,9 @@ export default function TaxAuditPage() {
       } else if (country === "AE") {
         const res = await taxReportsApi.uaeVat201(period);
         jsonDown(res.data, `UAE_VAT201_${period}.json`);
+      } else if (country === "LK") {
+        const res = await taxReportsApi.lkVat(period);
+        jsonDown(res.data, `LK_Output_VAT_${period}.json`);
       } else if (country === "GB") {
         const res = await taxReportsApi.ukMtd(period);
         jsonDown(res.data, `UK_MTD_${period}.json`);
@@ -373,11 +388,11 @@ export default function TaxAuditPage() {
           </div>
           <MobileHelpButton
             title="Multi-Country Tax Audit"
-            description="Generate filing-ready tax reports for any month or quarter across all supported countries."
+            description="Review tax summaries and generate available accountant exports for supported countries."
             tips={[
               "Select your country and the billing period",
               "Tap the blue info bar to see tax rates, deadlines, and portal links",
-              "Download reports in the exact format each portal needs",
+              "Download available report formats for accountant review",
               "All sales are audited and displayed in their respective local currencies (e.g. INR for India, AED for UAE).",
               "Share a secure link with your accountant (7-day expiry)",
             ]}
@@ -531,6 +546,16 @@ export default function TaxAuditPage() {
               icon={FileText}
               loading={downloading === "mtd"}
               onPress={() => handleDownload("mtd")}
+            />
+          )}
+
+          {country === "LK" && (
+            <DownloadRow
+              label="Output VAT Summary (JSON)"
+              desc="Accountant export; not an IRD return or direct filing"
+              icon={Receipt}
+              loading={downloading === "vat201"}
+              onPress={() => handleDownload("vat201")}
             />
           )}
 

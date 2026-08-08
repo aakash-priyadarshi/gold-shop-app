@@ -29,7 +29,8 @@ export type TaxRegime =
   | 'AE_VAT_2024'      // UAE VAT
   | 'UK_VAT_2024'      // UK VAT
   | 'EU_VAT_2024'      // EU VAT
-  | 'US_SALES_TAX';    // US (state-based)
+  | 'US_SALES_TAX'     // US (state-based)
+  | 'LK_VAT_2024';     // Sri Lanka VAT
 
 export type TaxableComponentCategory = 
   | 'GOLD_METAL' 
@@ -309,6 +310,7 @@ export function formatTaxRegime(regime: TaxRegime): string {
     'UK_VAT_2024': 'UK VAT 2024',
     'EU_VAT_2024': 'EU VAT 2024',
     'US_SALES_TAX': 'US Sales Tax',
+    'LK_VAT_2024': 'Sri Lanka VAT 2024',
   };
   return regimeNames[regime] || regime;
 }

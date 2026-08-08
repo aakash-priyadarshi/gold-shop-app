@@ -33,6 +33,7 @@ import {
     Upload,
     X,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -270,11 +271,13 @@ export default function InvoiceSettingsPage() {
       "showLogo",
       "logo",
       <div className="flex justify-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={settings.shopLogoUrl}
           alt="Logo"
           className="h-12 w-12 object-contain"
+          width={48}
+          height={48}
+          unoptimized
         />
       </div>,
     );
@@ -452,11 +455,13 @@ export default function InvoiceSettingsPage() {
                 <div className="flex items-center gap-3 mt-1">
                   {settings.shopLogoUrl ? (
                     <div className="relative w-16 h-16 rounded-lg border overflow-hidden flex-shrink-0 bg-white dark:bg-[#161B22]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src={settings.shopLogoUrl}
                         alt="Logo"
-                        className="w-full h-full object-contain"
+                        className="object-contain"
+                        fill
+                        sizes="64px"
+                        unoptimized
                       />
                       <button
                         onClick={() => updateField("shopLogoUrl", "")}

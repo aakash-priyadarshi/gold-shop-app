@@ -88,6 +88,7 @@ const REGION_OPTIONS = [
   { value: "ALL", label: "All regions" },
   { value: "NP", label: "Nepal" },
   { value: "IN", label: "India" },
+  { value: "LK", label: "Sri Lanka" },
   { value: "AE", label: "UAE" },
   { value: "UK", label: "United Kingdom" },
   { value: "EU", label: "Europe" },

@@ -26,7 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { variantsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import { Package, Plus, Ruler, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface InventoryItem {
   id: string;
@@ -85,11 +85,7 @@ export default function ShopVariantsPage() {
     priceOverride: "",
   });
 
-  useEffect(() => {
-    if (shopData?.id) loadItems();
-  }, [shopData?.id]);
-
-  async function loadItems() {
+  const loadItems = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/inventory?shopId=${shopData?.id}`);
@@ -106,7 +102,11 @@ export default function ShopVariantsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [shopData?.id]);
+
+  useEffect(() => {
+    if (shopData?.id) void loadItems();
+  }, [loadItems, shopData?.id]);
 
   async function selectItem(item: InventoryItem) {
     setSelectedItem(item);

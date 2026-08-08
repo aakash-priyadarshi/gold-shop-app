@@ -78,6 +78,7 @@ export const MARKET_WEIGHT_UNITS: Record<string, WeightUnit[]> = {
   UK: ['GRAM', 'KILOGRAM', 'OUNCE'],               // United Kingdom
   EU: ['GRAM', 'KILOGRAM'],                        // Europe
   AE: ['GRAM', 'TOLA', 'OUNCE'],                   // UAE
+  LK: ['GRAM', 'TOLA', 'KILOGRAM'],                // Sri Lanka
 };
 
 // Default weight unit per market
@@ -88,6 +89,7 @@ export const MARKET_DEFAULT_WEIGHT_UNIT: Record<string, WeightUnit> = {
   UK: 'GRAM',
   EU: 'GRAM',
   AE: 'GRAM',
+  LK: 'GRAM',
 };
 
 /**
@@ -214,7 +216,7 @@ export function roundWeight(value: number, unit: WeightUnit): number {
 
 /**
  * Get supported weight units for a market/country
- * @param countryCode - The market country code (NP, IN, US, UK, EU, AE)
+ * @param countryCode - The market country code (NP, IN, US, UK, EU, AE, LK)
  * @returns Array of supported weight units
  */
 export function getSupportedWeightUnits(countryCode: string): WeightUnit[] {

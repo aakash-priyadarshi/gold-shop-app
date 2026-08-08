@@ -9,7 +9,7 @@ const API_BASE_URL =
 /**
  * GET /api/settings/tax-config
  * Fetch tax rules for a country from the backend
- * Query params: country=NP|IN|AE|UK|EU|US
+ * Query params: country=NP|IN|AE|UK|EU|US|LK
  */
 export async function GET(request: NextRequest) {
   try {

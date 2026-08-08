@@ -18,6 +18,7 @@ const COUNTRY_TO_CURRENCY: Record<string, string> = {
   GB: "GBP",
   AE: "AED",
   EU: "EUR",
+  LK: "LKR",
   AT: "EUR",
   BE: "EUR",
   DE: "EUR",

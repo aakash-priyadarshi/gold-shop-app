@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const NOTE_CATEGORIES = [
   {
@@ -135,11 +135,7 @@ export default function CustomerProfilePage() {
     }
   };
 
-  useEffect(() => {
-    loadAll();
-  }, [customerId]);
-
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
       const [profileRes, ordersRes, statsRes, notesRes] = await Promise.all([
@@ -161,7 +157,11 @@ export default function CustomerProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [customerId]);
+
+  useEffect(() => {
+    void loadAll();
+  }, [loadAll]);
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return;

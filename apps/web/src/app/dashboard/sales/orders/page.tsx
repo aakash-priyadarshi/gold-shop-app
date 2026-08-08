@@ -33,7 +33,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Order {
   id: string;
@@ -84,22 +84,19 @@ export default function SalesOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadOrders();
-  }, [currentPage, statusFilter]);
-
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       setLoading(true);
       let url = `/orders/admin/all?page=${currentPage}&limit=20&sortBy=createdAt&sortOrder=desc`;
       if (statusFilter !== "ALL") url += `&status=${statusFilter}`;
-      if (searchQuery) url += `&search=${searchQuery}`;
+      if (appliedSearch) url += `&search=${appliedSearch}`;
 
       const res = await api.get(url);
       setOrders(res.data?.data || []);
@@ -115,11 +112,20 @@ export default function SalesOrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [appliedSearch, currentPage, statusFilter, toast]);
+
+  useEffect(() => {
+    void loadOrders();
+  }, [loadOrders]);
 
   const handleSearch = () => {
+    const nextSearch = searchQuery.trim();
     setCurrentPage(1);
-    loadOrders();
+    if (nextSearch === appliedSearch && currentPage === 1) {
+      void loadOrders();
+      return;
+    }
+    setAppliedSearch(nextSearch);
   };
 
   const formatDate = (dateStr: string) => {

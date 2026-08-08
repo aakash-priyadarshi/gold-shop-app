@@ -63,8 +63,9 @@ import {
   ShoppingBag,
   TrendingUp,
 } from "lucide-react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Shop {
   id: string;
@@ -123,9 +124,11 @@ const COUNTRIES: Record<
 > = {
   NP: { name: "Nepal", currency: "NPR", symbol: "रू" },
   IN: { name: "India", currency: "INR", symbol: "₹" },
+  LK: { name: "Sri Lanka", currency: "LKR", symbol: "Rs." },
   US: { name: "United States", currency: "USD", symbol: "$" },
   UK: { name: "United Kingdom", currency: "GBP", symbol: "£" },
   AE: { name: "UAE", currency: "AED", symbol: "د.إ" },
+  EU: { name: "Europe", currency: "EUR", symbol: "€" },
 };
 
 const JEWELLERY_TYPES = [
@@ -191,13 +194,6 @@ export default function ShopDetailPage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (shopId) {
-      loadShopDetails();
-      loadShopProducts();
-    }
-  }, [shopId]);
-
   // Fetch market rates when shop loads
   useEffect(() => {
     if (shop?.country) {
@@ -226,7 +222,7 @@ export default function ShopDetailPage() {
       shop.userId === user.id ||
       shop.user?.id === user.id);
 
-  const loadShopDetails = async () => {
+  const loadShopDetails = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -238,9 +234,9 @@ export default function ShopDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [shopId]);
 
-  const loadShopProducts = async () => {
+  const loadShopProducts = useCallback(async () => {
     setProductsLoading(true);
     try {
       const response = await api.get("/inventory", {
@@ -254,7 +250,14 @@ export default function ShopDetailPage() {
     } finally {
       setProductsLoading(false);
     }
-  };
+  }, [shopId]);
+
+  useEffect(() => {
+    if (shopId) {
+      void loadShopDetails();
+      void loadShopProducts();
+    }
+  }, [loadShopDetails, loadShopProducts, shopId]);
 
   // Market rates use PLATINUM_PT950 but shop stores PLATINUM_950
   const normalizeRateKey = (code: string): string => {
@@ -266,10 +269,10 @@ export default function ShopDetailPage() {
   };
 
   const getCurrency = () => {
-    if (!shop) return { code: "NPR", symbol: "रू" };
+    if (!shop) return { code: "USD", symbol: "$" };
     return {
-      code: COUNTRIES[shop.country]?.currency || "NPR",
-      symbol: COUNTRIES[shop.country]?.symbol || "रू",
+      code: COUNTRIES[shop.country]?.currency || "USD",
+      symbol: COUNTRIES[shop.country]?.symbol || "$",
     };
   };
 
@@ -515,10 +518,13 @@ export default function ShopDetailPage() {
           {/* Cover Image */}
           {shop.coverImage ? (
             <div className="h-48 md:h-64 w-full overflow-hidden">
-              <img
+              <Image
                 src={shop.coverImage}
                 alt="Shop cover"
                 className="w-full h-full object-cover"
+                width={1600}
+                height={512}
+                unoptimized
               />
               <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60" />
             </div>
@@ -540,10 +546,13 @@ export default function ShopDetailPage() {
               {/* Profile Image */}
               <div className="h-28 w-28 rounded-xl border-4 border-white bg-white dark:bg-gray-900 shadow-lg flex items-center justify-center overflow-hidden">
                 {shop.profileImage ? (
-                  <img
+                  <Image
                     src={shop.profileImage}
                     alt={shop.shopName}
                     className="w-full h-full object-cover"
+                    width={112}
+                    height={112}
+                    unoptimized
                   />
                 ) : (
                   <BuildingStorefrontIcon className="h-12 w-12 text-amber-600" />
@@ -861,10 +870,13 @@ export default function ShopDetailPage() {
                         >
                           <div className="aspect-square bg-gray-100 dark:bg-gray-800 relative">
                             {product.images?.[0] ? (
-                              <img
+                              <Image
                                 src={product.images[0]}
                                 alt={product.nameEn}
-                                className="w-full h-full object-cover"
+                                className="object-cover"
+                                fill
+                                sizes="(min-width: 640px) 50vw, 100vw"
+                                unoptimized
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">

@@ -1,8 +1,7 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element -- chat product cards use dynamic remote URLs */
-
 import { ClipboardList, ExternalLink, ShoppingBag, Store } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 /**
@@ -68,10 +67,13 @@ export function RichMessageCard({
             className="flex items-center gap-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2"
           >
             {p.image ? (
-              <img
+              <Image
                 src={p.image}
                 alt={p.title || "Product"}
                 className="w-10 h-10 rounded object-cover flex-shrink-0"
+                width={40}
+                height={40}
+                unoptimized
               />
             ) : (
               <div className="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 flex-shrink-0" />

@@ -8,10 +8,11 @@
  * - UK (United Kingdom)
  * - EU (Europe)
  * - AE (UAE/Dubai)
+ * - LK (Sri Lanka)
  */
 
-export type MarketRegion = 'NP' | 'IN' | 'US' | 'UK' | 'EU' | 'AE';
-export type CurrencyCode = 'NPR' | 'INR' | 'USD' | 'GBP' | 'EUR' | 'AED';
+export type MarketRegion = 'NP' | 'IN' | 'US' | 'UK' | 'EU' | 'AE' | 'LK';
+export type CurrencyCode = 'NPR' | 'INR' | 'USD' | 'GBP' | 'EUR' | 'AED' | 'LKR';
 export type PaymentMethod = 
   | 'CARD' 
   | 'BANK_TRANSFER' 
@@ -50,6 +51,7 @@ export const CURRENCY_CONFIG: Record<CurrencyCode, {
   GBP: { symbol: '£', name: 'British Pound', decimals: 2, locale: 'en-GB' },
   EUR: { symbol: '€', name: 'Euro', decimals: 2, locale: 'de-DE' },
   AED: { symbol: 'د.إ', name: 'UAE Dirham', decimals: 2, locale: 'ar-AE' },
+  LKR: { symbol: 'Rs.', name: 'Sri Lankan Rupee', decimals: 2, locale: 'si-LK' },
 };
 
 // Default currency for each market region
@@ -60,6 +62,7 @@ export const MARKET_DEFAULT_CURRENCY: Record<MarketRegion, CurrencyCode> = {
   UK: 'GBP',
   EU: 'EUR',
   AE: 'AED',
+  LK: 'LKR',
 };
 
 // Supported currencies for each market (user can view prices in these)
@@ -70,6 +73,7 @@ export const MARKET_SUPPORTED_CURRENCIES: Record<MarketRegion, CurrencyCode[]> =
   UK: ['GBP', 'USD', 'EUR'],
   EU: ['EUR', 'USD', 'GBP'],
   AE: ['AED', 'USD'],
+  LK: ['LKR', 'USD', 'INR'],
 };
 
 // Payment methods supported per market
@@ -80,6 +84,8 @@ export const MARKET_PAYMENT_METHODS: Record<MarketRegion, PaymentMethod[]> = {
   UK: ['CARD', 'BANK_TRANSFER', 'PAYPAL', 'STRIPE', 'PAID_AT_SHOP'],
   EU: ['CARD', 'BANK_TRANSFER', 'PAYPAL', 'STRIPE', 'PAID_AT_SHOP'],
   AE: ['CARD', 'BANK_TRANSFER', 'CASH', 'PAID_AT_SHOP'],
+  // Stripe is the hosted-card default until a Sri Lanka-specific gateway is added.
+  LK: ['CARD', 'BANK_TRANSFER', 'STRIPE', 'CASH', 'PAID_AT_SHOP'],
 };
 
 // Country names
@@ -90,6 +96,7 @@ export const COUNTRY_NAMES: Record<MarketRegion, string> = {
   UK: 'United Kingdom',
   EU: 'Europe',
   AE: 'United Arab Emirates',
+  LK: 'Sri Lanka',
 };
 
 // Price multiplier per region (for regional pricing adjustments)
@@ -100,6 +107,9 @@ export const MARKET_PRICE_MULTIPLIERS: Record<MarketRegion, number> = {
   AE: 1.020,
   IN: 1.100,
   NP: 1.245,
+  // Transactional VAT belongs in MARKET_TAX_CONFIG/the tax engine. Keeping
+  // this neutral prevents VAT being charged once as markup and again as tax.
+  LK: 1.000,
 };
 
 // Tax configuration per market
@@ -113,6 +123,7 @@ export const MARKET_TAX_CONFIG: Record<MarketRegion, {
   UK: { name: 'VAT', rate: 20 },
   EU: { name: 'VAT', rate: 19 },     // Varies by country, using average
   AE: { name: 'VAT', rate: 5 },
+  LK: { name: 'VAT', rate: 18 },     // Sri Lanka VAT (admin-adjustable)
 };
 
 // Payment method display names
@@ -212,7 +223,7 @@ export function getPaymentMethods(marketRegion: MarketRegion): PaymentMethod[] {
  * Check if a country code is a supported market
  */
 export function isSupportedMarket(countryCode: string): countryCode is MarketRegion {
-  return ['NP', 'IN', 'US', 'UK', 'EU', 'AE'].includes(countryCode);
+  return ['NP', 'IN', 'US', 'UK', 'EU', 'AE', 'LK'].includes(countryCode);
 }
 
 /**
@@ -227,9 +238,11 @@ export function getFallbackMarket(): MarketRegion {
  * Some countries map to broader regions (e.g., European countries → EU)
  */
 export function mapCountryToMarket(countryCode: string): MarketRegion {
+  const normalizedCountryCode = countryCode.trim().toUpperCase();
+
   // Direct mappings
-  if (isSupportedMarket(countryCode)) {
-    return countryCode;
+  if (isSupportedMarket(normalizedCountryCode)) {
+    return normalizedCountryCode;
   }
   
   // European countries → EU
@@ -238,13 +251,13 @@ export function mapCountryToMarket(countryCode: string): MarketRegion {
     'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 
     'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'CH', 'NO'
   ];
-  if (europeanCountries.includes(countryCode)) {
+  if (europeanCountries.includes(normalizedCountryCode)) {
     return 'EU';
   }
   
   // Middle East countries → AE
   const middleEastCountries = ['BH', 'KW', 'OM', 'QA', 'SA'];
-  if (middleEastCountries.includes(countryCode)) {
+  if (middleEastCountries.includes(normalizedCountryCode)) {
     return 'AE';
   }
   

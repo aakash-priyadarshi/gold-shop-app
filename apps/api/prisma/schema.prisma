@@ -56,19 +56,19 @@ model User {
   // Delivery addresses
   deliveryAddresses    CustomerAddress[]
   // CRM notes
-  customerNotes        CustomerNote[]     @relation("CustomerNotes")
-  authoredNotes        CustomerNote[]     @relation("AuthoredNotes")
+  customerNotes        CustomerNote[]          @relation("CustomerNotes")
+  authoredNotes        CustomerNote[]          @relation("AuthoredNotes")
   // Chat
-  sentMessages         Message[]          @relation("MessageSender")
-  buyerConversations   Conversation[]     @relation("BuyerConversations")
+  sentMessages         Message[]               @relation("MessageSender")
+  buyerConversations   Conversation[]          @relation("BuyerConversations")
   // Support Tickets
-  supportTickets       SupportTicket[]    @relation("UserTickets")
-  assignedTickets      SupportTicket[]    @relation("AssignedTickets")
-  ticketMessages       TicketMessage[]    @relation("TicketMessageSender")
+  supportTickets       SupportTicket[]         @relation("UserTickets")
+  assignedTickets      SupportTicket[]         @relation("AssignedTickets")
+  ticketMessages       TicketMessage[]         @relation("TicketMessageSender")
   // POS / Wishlist
   wishlistItems        WishlistItem[]
   // AI Credits
-  aiCreditsBalance     Int                 @default(0)
+  aiCreditsBalance     Int                     @default(0)
   aiCreditsGrantedAt   DateTime?
   aiCreditLedger       AiCreditLedger[]
   // Enterprise staff
@@ -77,27 +77,27 @@ model User {
   desktopSessions      DesktopSession[]
   // Web app sessions
   webSessions          WebSession[]
-  
+
   // Custom Profile Enrivhment fields
-  dateOfBirth          DateTime?
-  gender               String?    // e.g. "MALE", "FEMALE", "OTHER"
+  dateOfBirth DateTime?
+  gender      String? // e.g. "MALE", "FEMALE", "OTHER"
 
   // Survey responses
-  surveyResponses      SurveyResponse[]
+  surveyResponses SurveyResponse[]
 
   // Google People API enriched data
-  googleBirthday       String?    // "YYYY-MM-DD" or partial
-  googleGender         String?    // "male" | "female" | "unspecified"
-  googlePhoneRaw       String?
-  googleAddressRaw     Json?
-  googleLocale         String?    // e.g. "en-IN"
-  googlePicture        String?    // profile photo URL
+  googleBirthday   String? // "YYYY-MM-DD" or partial
+  googleGender     String? // "male" | "female" | "unspecified"
+  googlePhoneRaw   String?
+  googleAddressRaw Json?
+  googleLocale     String? // e.g. "en-IN"
+  googlePicture    String? // profile photo URL
 
   // 6-digit PIN fast login (after session timeout)
-  pinHash              String?    // bcrypt hash
-  pinSetAt             DateTime?
-  pinFailedCount       Int        @default(0)
-  pinLockedUntil       DateTime?  // locked for 15min after 5 fails
+  pinHash        String? // bcrypt hash
+  pinSetAt       DateTime?
+  pinFailedCount Int       @default(0)
+  pinLockedUntil DateTime? // locked for 15min after 5 fails
 
   @@index([email])
   @@index([phone])
@@ -107,20 +107,20 @@ model User {
 
 // Customer delivery addresses
 model CustomerAddress {
-  id          String   @id @default(uuid())
-  userId      String
-  label       String   @default("Home") // Home, Work, Other
-  fullName    String
-  phone       String
+  id           String   @id @default(uuid())
+  userId       String
+  label        String   @default("Home") // Home, Work, Other
+  fullName     String
+  phone        String
   addressLine1 String
   addressLine2 String?
-  city        String
-  state       String
-  postalCode  String
-  country     String   @default("IN")
-  isDefault   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  city         String
+  state        String
+  postalCode   String
+  country      String   @default("IN")
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -149,9 +149,9 @@ model CustomerPurchaseStats {
 // CRM: Notes about customers added by shop staff
 model CustomerNote {
   id         String   @id @default(uuid())
-  customerId String   // User ID of the customer
-  shopId     String?  // Which shop's staff added this note (null for admin notes)
-  authorId   String   // User ID of the shop staff or admin who wrote it
+  customerId String // User ID of the customer
+  shopId     String? // Which shop's staff added this note (null for admin notes)
+  authorId   String // User ID of the shop staff or admin who wrote it
   note       String
   category   String   @default("GENERAL") // GENERAL, PREFERENCE, FOLLOW_UP, COMPLAINT, VIP
   createdAt  DateTime @default(now())
@@ -328,123 +328,127 @@ model Session {
 }
 
 model Shop {
-  id                      String                @id @default(uuid())
-  userId                  String
-  shopName                String
-  shopNameNe              String?
-  shopNameHi              String?
-  slug                    String?               @unique
-  description             String?
-  descriptionNe           String?
-  descriptionHi           String?
-  about                   String?               // Moderated about section (no contacts allowed)
-  profileImage            String?               // Shop profile picture URL
-  coverImage              String?               // Shop cover/banner image URL
-  country                 String                @default("NP")
+  id                        String                @id @default(uuid())
+  userId                    String
+  shopName                  String
+  shopNameNe                String?
+  shopNameHi                String?
+  slug                      String?               @unique
+  description               String?
+  descriptionNe             String?
+  descriptionHi             String?
+  about                     String? // Moderated about section (no contacts allowed)
+  profileImage              String? // Shop profile picture URL
+  coverImage                String? // Shop cover/banner image URL
+  country                   String                @default("NP")
   // Billing/display currency for this shop. Backfilled from `country` on
   // migration; falls back to NPR (home market) for unmapped countries.
-  currency                CurrencyCode          @default(NPR)
-  state                   String?
-  city                    String
-  address                 String
-  pincode                 String?
-  latitude                Float?
-  longitude               Float?
-  contactPhone            String
-  contactEmail            String?
-  whatsappNumber          String?
-  isVerified              Boolean               @default(false)
-  verificationDocuments   Json?
-  bisLicenseNumber        String?
-  panNumber               String?
-  vatNumber               String?
-  supportedJewelleryTypes String[]
-  supportedMethods        String[]
-  supportedMaterials      String[]
-  supportedGemstones      String[]
-  supportedFinishes       String[]
-  supportedAlloys         String[]              // e.g. ["GOLD_18K", "GOLD_14K", "STERLING_SILVER_925"]
-  supportedBaseMetals     String[]              // e.g. ["BRASS", "COPPER", "STAINLESS_STEEL_316L"]
-  supportedPlatingTypes   String[]              // e.g. ["GOLD_PLATING", "RHODIUM_PLATING", "PVD_COATING"]
-  minOrderValueNpr        Float                 @default(0)
-  maxOrderValueNpr        Float?
-  maxWeightGrams          Float?
-  acceptsComplexOrders    Boolean               @default(true)
-  codEnabled              Boolean               @default(false)
-  codMaxValueNpr          Float?
-  bankAccountDetails      Json?
-  makingChargePercent     Float                 @default(10)
-  nickelCompliantFlag     Boolean               @default(false)
-  isActive                Boolean               @default(true)
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @updatedAt
-  holdAt                  DateTime?
-  holdReason              String?
-  isOnHold                Boolean               @default(false)
-  lastComplianceCheckAt   DateTime?
+  currency                  CurrencyCode          @default(NPR)
+  state                     String?
+  city                      String
+  address                   String
+  pincode                   String?
+  latitude                  Float?
+  longitude                 Float?
+  contactPhone              String
+  contactEmail              String?
+  whatsappNumber            String?
+  isVerified                Boolean               @default(false)
+  verificationDocuments     Json?
+  bisLicenseNumber          String?
+  panNumber                 String?
+  vatNumber                 String?
+  vatRegistrationStatus     VatRegistrationStatus @default(NOT_REGISTERED)
+  vatRegistrationVerifiedAt DateTime?
+  supportedJewelleryTypes   String[]
+  supportedMethods          String[]
+  supportedMaterials        String[]
+  supportedGemstones        String[]
+  supportedFinishes         String[]
+  supportedAlloys           String[] // e.g. ["GOLD_18K", "GOLD_14K", "STERLING_SILVER_925"]
+  supportedBaseMetals       String[] // e.g. ["BRASS", "COPPER", "STAINLESS_STEEL_316L"]
+  supportedPlatingTypes     String[] // e.g. ["GOLD_PLATING", "RHODIUM_PLATING", "PVD_COATING"]
+  minOrderValueNpr          Float                 @default(0)
+  maxOrderValueNpr          Float?
+  maxWeightGrams            Float?
+  acceptsComplexOrders      Boolean               @default(true)
+  codEnabled                Boolean               @default(false)
+  codMaxValueNpr            Float?
+  bankAccountDetails        Json?
+  makingChargePercent       Float                 @default(10)
+  nickelCompliantFlag       Boolean               @default(false)
+  isActive                  Boolean               @default(true)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  holdAt                    DateTime?
+  holdReason                String?
+  isOnHold                  Boolean               @default(false)
+  lastComplianceCheckAt     DateTime?
 
   // Seller tier & performance fields
-  sellerTier              SellerTier            @default(STANDARD)
-  tierUnlockedAt          DateTime?
-  tierLockedReason        String?
-  eliteFastTracked        Boolean               @default(false)
-  makingChargeCap         Float                 @default(15)  // Dynamic cap per tier
-  suspendedAt             DateTime?
-  suspensionCount         Int                   @default(0)
-  disputeCount            Int                   @default(0)
-  firstSaleAt             DateTime?
+  sellerTier       SellerTier @default(STANDARD)
+  tierUnlockedAt   DateTime?
+  tierLockedReason String?
+  eliteFastTracked Boolean    @default(false)
+  makingChargeCap  Float      @default(15) // Dynamic cap per tier
+  suspendedAt      DateTime?
+  suspensionCount  Int        @default(0)
+  disputeCount     Int        @default(0)
+  firstSaleAt      DateTime?
 
-  commissionLedgers       CommissionLedger[]
-  inventoryItems          InventoryItem[]
-  orders                  Order[]
-  rfqOffers               RfqOffer[]
-  shopQuotes              ShopQuote[]
-  walkInCustomers         WalkInCustomer[]
-  user                    User                  @relation(fields: [userId], references: [id])
-  finishPricing           ShopFinishPricing[]
-  gemstoneRates           ShopGemstoneRate[]
-  metalRates              ShopMetalRate[]
-  priceOverrides          ShopPriceOverride[]
-  ratings                 ShopRating[]
-  verificationRequests    VerificationRequest[] @relation("ShopVerificationRequests")
-  performance             SellerPerformance?
-  badges                  SellerBadge[]
-  invoices                Invoice[]
-  invoiceSettings         InvoiceSettings?
-  customerNotes           CustomerNote[]       @relation("ShopCustomerNotes")
-  conversations           Conversation[]       @relation("ShopConversations")
-  catalogues              Catalogue[]
-  walkInRfqs              RfqRequest[]         @relation("ShopWalkInRfqs")
-  showroomSessions        ShowroomSession[]
-  posSessions             PosSession[]
-  stockReservations       StockReservation[]
-  subscriptions           SellerSubscription[]
-  platformReviews         PlatformReview[]
-  referralsMade           Referral[]           @relation("ShopReferralsMade")
-  referralsReceived       Referral[]           @relation("ShopReferralsReceived")
+  commissionLedgers    CommissionLedger[]
+  ledgerAccounts       LedgerAccount[]
+  journalEntries       JournalEntry[]
+  inventoryItems       InventoryItem[]
+  orders               Order[]
+  rfqOffers            RfqOffer[]
+  shopQuotes           ShopQuote[]
+  walkInCustomers      WalkInCustomer[]
+  user                 User                  @relation(fields: [userId], references: [id])
+  finishPricing        ShopFinishPricing[]
+  gemstoneRates        ShopGemstoneRate[]
+  metalRates           ShopMetalRate[]
+  priceOverrides       ShopPriceOverride[]
+  ratings              ShopRating[]
+  verificationRequests VerificationRequest[] @relation("ShopVerificationRequests")
+  performance          SellerPerformance?
+  badges               SellerBadge[]
+  invoices             Invoice[]
+  invoiceSettings      InvoiceSettings?
+  customerNotes        CustomerNote[]        @relation("ShopCustomerNotes")
+  conversations        Conversation[]        @relation("ShopConversations")
+  catalogues           Catalogue[]
+  walkInRfqs           RfqRequest[]          @relation("ShopWalkInRfqs")
+  showroomSessions     ShowroomSession[]
+  posSessions          PosSession[]
+  stockReservations    StockReservation[]
+  subscriptions        SellerSubscription[]
+  platformReviews      PlatformReview[]
+  referralsMade        Referral[]            @relation("ShopReferralsMade")
+  referralsReceived    Referral[]            @relation("ShopReferralsReceived")
   // Enterprise features
-  branches                ShopBranch[]
-  staffAccounts           StaffAccount[]
-  apiKeys                 ShopApiKey[]
-  webhookSubscriptions    WebhookSubscription[]
-  whiteLabelConfig        WhiteLabelConfig?
-  scheduledReports        ScheduledReport[]
-  bulkImportJobs          BulkImportJob[]
-  demandForecasts         DemandForecast[]
-  repricingRules          RepricingRule[]
+  branches             ShopBranch[]
+  staffAccounts        StaffAccount[]
+  apiKeys              ShopApiKey[]
+  webhookSubscriptions WebhookSubscription[]
+  whiteLabelConfig     WhiteLabelConfig?
+  scheduledReports     ScheduledReport[]
+  bulkImportJobs       BulkImportJob[]
+  demandForecasts      DemandForecast[]
+  repricingRules       RepricingRule[]
 
   // Mobile shopkeeper tools (offline-first capable)
-  repairJobs              RepairJob[]
-  savingsMembers          SavingsMember[]
-  goldLoans               GoldLoan[]
-  karigarWorkshops        KarigarWorkshop[]
-  karigarJobs             KarigarJob[]
-  karigarVaultReserves    KarigarVaultReserve[]
+  repairJobs           RepairJob[]
+  savingsMembers       SavingsMember[]
+  goldLoans            GoldLoan[]
+  karigarWorkshops     KarigarWorkshop[]
+  karigarJobs          KarigarJob[]
+  karigarVaultReserves KarigarVaultReserve[]
 
   // AI Credit Auto-Recharge
-  autoRechargeEnabled     Boolean               @default(false)
-  autoRechargeThreshold   Int                   @default(5)   // trigger when balance drops below this
-  autoRechargePack        Int                   @default(50)  // credits to buy per auto-recharge
+  autoRechargeEnabled   Boolean @default(false)
+  autoRechargeThreshold Int     @default(5) // trigger when balance drops below this
+  autoRechargePack      Int     @default(50) // credits to buy per auto-recharge
 
   @@index([userId])
   @@index([country, city])
@@ -479,11 +483,11 @@ model ShopFinishPricing {
 model ShopGemstoneRate {
   id            String   @id @default(uuid())
   shopId        String
-  stoneType     String   // e.g. DIAMOND, RUBY, EMERALD, SAPPHIRE, etc.
+  stoneType     String // e.g. DIAMOND, RUBY, EMERALD, SAPPHIRE, etc.
   origin        String   @default("NATURAL") // NATURAL or LAB_GROWN
-  sizeCategory  String   // e.g. "0.1-0.25", "0.25-0.5", "0.5-1", "1-2" (carat ranges)
+  sizeCategory  String // e.g. "0.1-0.25", "0.25-0.5", "0.5-1", "1-2" (carat ranges)
   qualityTier   String   @default("MEDIUM") // LOW, MEDIUM, HIGH, PREMIUM
-  pricePerStone Float    // NPR per stone
+  pricePerStone Float // NPR per stone
   lastUpdatedAt DateTime @default(now())
   shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
@@ -516,39 +520,39 @@ model Material {
 }
 
 model InventoryItem {
-  id               String          @id @default(uuid())
-  shopId           String
-  sku              String          @unique
-  jewelleryType    JewelleryType
-  nameEn           String
-  nameNe           String?
-  nameHi           String?
-  descriptionEn    String?
-  descriptionNe    String?
-  descriptionHi    String?
-  buildMethod      String
-  composition      Json
-  totalWeightGrams Float
-  dimensions       Json?
-  gemstones        Json?
-  metalValueNpr    Float
-  makingChargeNpr  Float
-  gemstoneValueNpr Float           @default(0)
-  taxNpr           Float           @default(0)
-  totalPriceNpr    Float
-  images           String[]
-  videos           String[]
-  certificateUrl   String?
-  hallmarkNumber   String?
-  hallmarkDate     DateTime?
-  purityCertUrl    String?
-  labels           String[]
-  status           InventoryStatus @default(AVAILABLE)
-  stockQuantity    Int             @default(1)
-  hasSizes         Boolean             @default(false)
-  visibility       InventoryVisibility @default(PUBLIC)
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  id                String              @id @default(uuid())
+  shopId            String
+  sku               String              @unique
+  jewelleryType     JewelleryType
+  nameEn            String
+  nameNe            String?
+  nameHi            String?
+  descriptionEn     String?
+  descriptionNe     String?
+  descriptionHi     String?
+  buildMethod       String
+  composition       Json
+  totalWeightGrams  Float
+  dimensions        Json?
+  gemstones         Json?
+  metalValueNpr     Float
+  makingChargeNpr   Float
+  gemstoneValueNpr  Float               @default(0)
+  taxNpr            Float               @default(0)
+  totalPriceNpr     Float
+  images            String[]
+  videos            String[]
+  certificateUrl    String?
+  hallmarkNumber    String?
+  hallmarkDate      DateTime?
+  purityCertUrl     String?
+  labels            String[]
+  status            InventoryStatus     @default(AVAILABLE)
+  stockQuantity     Int                 @default(1)
+  hasSizes          Boolean             @default(false)
+  visibility        InventoryVisibility @default(PUBLIC)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   shop              Shop                @relation(fields: [shopId], references: [id])
   variants          ProductVariant[]
   catalogueItems    CatalogueItem[]
@@ -564,19 +568,19 @@ model InventoryItem {
 
 // Product size variants (rings, bracelets, etc.)
 model ProductVariant {
-  id              String        @id @default(uuid())
-  inventoryItemId String
-  sizeLabel       String        // e.g. "US 7", "UK O", "16.5 cm"
-  sizeSystem      String        @default("US") // US, UK, EU, MM
-  sizeValue       Float?        // numeric value for sorting (e.g. 7.0)
-  sku             String        @unique
-  stock           Int           @default(0)
-  priceOverride   Float?        // optional price override for this variant
-  isActive        Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  inventoryItem    InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
-  posSessionItems  PosSessionItem[]
+  id                String             @id @default(uuid())
+  inventoryItemId   String
+  sizeLabel         String // e.g. "US 7", "UK O", "16.5 cm"
+  sizeSystem        String             @default("US") // US, UK, EU, MM
+  sizeValue         Float? // numeric value for sorting (e.g. 7.0)
+  sku               String             @unique
+  stock             Int                @default(0)
+  priceOverride     Float? // optional price override for this variant
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  inventoryItem     InventoryItem      @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  posSessionItems   PosSessionItem[]
   stockReservations StockReservation[]
 
   @@unique([inventoryItemId, sizeLabel])
@@ -614,8 +618,8 @@ model RfqRequest {
   mandatoryLabels       String[]
   // Walk-in RFQ support
   source                RfqSource       @default(ONLINE)
-  createdByShopId       String?         // Shop that created this walk-in RFQ
-  walkInMeta            Json?           // { customerName?, customerPhone?, customerNotes?, catalogueSlug?, items, measurements?, budgetMin?, budgetMax?, deadlineDays? }
+  createdByShopId       String? // Shop that created this walk-in RFQ
+  walkInMeta            Json? // { customerName?, customerPhone?, customerNotes?, catalogueSlug?, items, measurements?, budgetMin?, budgetMax?, deadlineDays? }
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
@@ -690,8 +694,8 @@ model RfqOffer {
   status                OfferStatus @default(PENDING)
   parentOfferId         String?
   // Win/Loss tracking (Sprint 3)
-  lossReasonCategory    String?     // PRICE_TOO_HIGH, SLOW_DELIVERY, LOW_TRUST, BETTER_OFFER, OTHER
-  lossReasonNote        String?     // Free-text explanation
+  lossReasonCategory    String? // PRICE_TOO_HIGH, SLOW_DELIVERY, LOW_TRUST, BETTER_OFFER, OTHER
+  lossReasonNote        String? // Free-text explanation
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
   parentOffer           RfqOffer?   @relation("OfferChain", fields: [parentOfferId], references: [id])
@@ -708,21 +712,21 @@ model RfqOffer {
 // Walk-in customer model - for customers who visit the shop in person
 // Phone number is the unique identifier for returning customers
 model WalkInCustomer {
-  id               String      @id @default(uuid())
-  phone            String      @unique // Unique identifier - phone is used for lookup
-  phoneCountryCode String      @default("+91")
+  id               String   @id @default(uuid())
+  phone            String   @unique // Unique identifier - phone is used for lookup
+  phoneCountryCode String   @default("+91")
   name             String
   email            String?
   address          String
   city             String
-  country          String      @default("India")
-  createdByShopId  String      // First shop that created this customer
-  notes            String?     // Any notes about the customer
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  country          String   @default("India")
+  createdByShopId  String // First shop that created this customer
+  notes            String? // Any notes about the customer
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  createdByShop    Shop        @relation(fields: [createdByShopId], references: [id])
-  shopQuotes       ShopQuote[]
+  createdByShop Shop        @relation(fields: [createdByShopId], references: [id])
+  shopQuotes    ShopQuote[]
 
   @@index([phone])
   @@index([createdByShopId])
@@ -731,61 +735,61 @@ model WalkInCustomer {
 // Shop Quote model - for walk-in customer orders
 // Separate from RfqRequest for cleaner workflow
 model ShopQuote {
-  id                    String           @id @default(uuid())
-  quoteNumber           String           @unique // SQ-XXXXXX
-  shopId                String
-  walkInCustomerId      String
+  id               String @id @default(uuid())
+  quoteNumber      String @unique // SQ-XXXXXX
+  shopId           String
+  walkInCustomerId String
 
   // Jewellery details (same as RFQ)
-  jewelleryType         JewelleryType
-  buildMethod           BuildMethod
-  composition           Json
-  targetTotalWeightG    Float?
-  targetGoldWeightG     Float?
-  specialInstructions   String?
-  referenceImages       String[]
+  jewelleryType       JewelleryType
+  buildMethod         BuildMethod
+  composition         Json
+  targetTotalWeightG  Float?
+  targetGoldWeightG   Float?
+  specialInstructions String?
+  referenceImages     String[]
 
   // Pricing (calculated by shopkeeper)
-  metalCostNpr          Float?
-  makingChargeNpr       Float?
-  gemstoneCostNpr       Float            @default(0)
-  finishCostNpr         Float            @default(0)
-  taxNpr                Float            @default(0)
-  totalPriceNpr         Float?
-  goldPriceSnapshot     Float?           // Gold rate at time of quote
-  estimatedDays         Int?
+  metalCostNpr      Float?
+  makingChargeNpr   Float?
+  gemstoneCostNpr   Float  @default(0)
+  finishCostNpr     Float  @default(0)
+  taxNpr            Float  @default(0)
+  totalPriceNpr     Float?
+  goldPriceSnapshot Float? // Gold rate at time of quote
+  estimatedDays     Int?
 
   // Status: QUOTED → CONFIRMED → IN_PROGRESS → READY → COMPLETED / CANCELLED
-  status                ShopQuoteStatus  @default(QUOTED)
-  confirmedAt           DateTime?
-  startedAt             DateTime?
-  readyAt               DateTime?
-  completedAt           DateTime?
-  cancelledAt           DateTime?
-  cancelReason          String?
+  status       ShopQuoteStatus @default(QUOTED)
+  confirmedAt  DateTime?
+  startedAt    DateTime?
+  readyAt      DateTime?
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+  cancelReason String?
 
   // Invoice
-  invoiceNumber         String?          @unique  // Generated when quote is invoiced
-  invoicedAt            DateTime?                 // When converted to invoice
+  invoiceNumber String?   @unique // Generated when quote is invoiced
+  invoicedAt    DateTime? // When converted to invoice
 
   // Tracking (guest + registered customer)
-  trackingToken         String?          @unique  // UUID for public guest tracking URL
-  trackingEmailSent     Boolean          @default(false)
-  trackingSmsSent       Boolean          @default(false)
-  registeredCustomerId  String?          // Linked to User account if customer is registered
+  trackingToken        String? @unique // UUID for public guest tracking URL
+  trackingEmailSent    Boolean @default(false)
+  trackingSmsSent      Boolean @default(false)
+  registeredCustomerId String? // Linked to User account if customer is registered
 
   // Payment (always at shop)
-  advancePaidNpr        Float            @default(0)
-  balanceDueNpr         Float?
-  paidInFullAt          DateTime?
+  advancePaidNpr Float     @default(0)
+  balanceDueNpr  Float?
+  paidInFullAt   DateTime?
 
   // Metadata
-  shopNotes             String?          // Internal notes for shopkeeper
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+  shopNotes String? // Internal notes for shopkeeper
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  shop                  Shop             @relation(fields: [shopId], references: [id])
-  walkInCustomer        WalkInCustomer   @relation(fields: [walkInCustomerId], references: [id])
+  shop           Shop           @relation(fields: [shopId], references: [id])
+  walkInCustomer WalkInCustomer @relation(fields: [walkInCustomerId], references: [id])
 
   @@index([shopId])
   @@index([walkInCustomerId])
@@ -794,12 +798,12 @@ model ShopQuote {
 }
 
 enum ShopQuoteStatus {
-  QUOTED      // Initial quote created
-  CONFIRMED   // Customer agreed, work can start
+  QUOTED // Initial quote created
+  CONFIRMED // Customer agreed, work can start
   IN_PROGRESS // Manufacturing in progress
-  READY       // Ready for pickup
-  COMPLETED   // Delivered and fully paid
-  CANCELLED   // Cancelled by customer or shop
+  READY // Ready for pickup
+  COMPLETED // Delivered and fully paid
+  CANCELLED // Cancelled by customer or shop
 }
 
 model Order {
@@ -920,10 +924,18 @@ model OrderMilestone {
 model Payment {
   id               String        @id @default(uuid())
   orderId          String
+  // Canonical base amount. Despite the legacy field name, this must always be NPR.
   amountNpr        Float
   currency         CurrencyCode  @default(NPR)
+  // Actual amount/currency submitted to the external gateway.
+  chargedAmount    Float?
+  chargedCurrency  CurrencyCode?
+  fxRate           Float?
+  fxSource         String?
+  fxQuotedAt       DateTime?
+  idempotencyKey   String?       @unique
   paymentGateway   String
-  gatewayPaymentId String?
+  gatewayPaymentId String?       @unique
   gatewayOrderId   String?
   status           PaymentStatus @default(PENDING)
   metadata         Json?
@@ -933,7 +945,6 @@ model Payment {
   completedAt      DateTime?
 
   @@index([orderId])
-  @@index([gatewayPaymentId])
 }
 
 model ShopRating {
@@ -952,16 +963,16 @@ model ShopRating {
   shop          Shop     @relation(fields: [shopId], references: [id])
 
   // Seller reply
-  sellerReply   String?
+  sellerReply     String?
   sellerRepliedAt DateTime?
 
   // Deletion request
-  deleteRequested      Boolean  @default(false)
-  deleteRequestReason  String?
-  deleteRequestAt      DateTime?
-  deleteRequestStatus  String?  @default("NONE") // NONE, PENDING, APPROVED, REJECTED
-  deleteReviewedBy     String?
-  deleteReviewedAt     DateTime?
+  deleteRequested     Boolean   @default(false)
+  deleteRequestReason String?
+  deleteRequestAt     DateTime?
+  deleteRequestStatus String?   @default("NONE") // NONE, PENDING, APPROVED, REJECTED
+  deleteReviewedBy    String?
+  deleteReviewedAt    DateTime?
 
   @@index([shopId])
   @@index([customerId])
@@ -1017,24 +1028,24 @@ model SystemConfig {
 }
 
 model SellerPerformance {
-  id                    String   @id @default(uuid())
-  shopId                String   @unique
-  totalOrders           Int      @default(0)
-  successfulOrders      Int      @default(0)
-  cancelledOrders       Int      @default(0)
-  refundedOrders        Int      @default(0)
-  cancellationRate      Float    @default(0)   // percentage
-  refundRate            Float    @default(0)   // percentage
-  avgRating             Float    @default(0)   // overall all-time
-  avgRating60Days       Float    @default(0)   // rolling 60-day
-  positiveFeedbackRate  Float    @default(0)   // percentage >= 4 stars
-  onTimeDispatchRate    Float    @default(0)   // percentage shipped on time
-  totalRevenue          Float    @default(0)
-  responseTimeHours     Float    @default(0)   // avg response time to RFQs
-  firstSaleAt           DateTime?
-  lastOrderAt           DateTime?
-  lastCalculatedAt      DateTime @default(now())
-  shop                  Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  id                   String    @id @default(uuid())
+  shopId               String    @unique
+  totalOrders          Int       @default(0)
+  successfulOrders     Int       @default(0)
+  cancelledOrders      Int       @default(0)
+  refundedOrders       Int       @default(0)
+  cancellationRate     Float     @default(0) // percentage
+  refundRate           Float     @default(0) // percentage
+  avgRating            Float     @default(0) // overall all-time
+  avgRating60Days      Float     @default(0) // rolling 60-day
+  positiveFeedbackRate Float     @default(0) // percentage >= 4 stars
+  onTimeDispatchRate   Float     @default(0) // percentage shipped on time
+  totalRevenue         Float     @default(0)
+  responseTimeHours    Float     @default(0) // avg response time to RFQs
+  firstSaleAt          DateTime?
+  lastOrderAt          DateTime?
+  lastCalculatedAt     DateTime  @default(now())
+  shop                 Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([shopId])
   @@index([avgRating60Days])
@@ -1042,15 +1053,15 @@ model SellerPerformance {
 }
 
 model SellerBadge {
-  id          String    @id @default(uuid())
-  shopId      String
-  badgeType   BadgeType
-  awardedAt   DateTime  @default(now())
-  expiresAt   DateTime?
-  isActive    Boolean   @default(true)
-  awardedBy   String?   // admin userId or 'SYSTEM'
-  reason      String?
-  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid())
+  shopId    String
+  badgeType BadgeType
+  awardedAt DateTime  @default(now())
+  expiresAt DateTime?
+  isActive  Boolean   @default(true)
+  awardedBy String? // admin userId or 'SYSTEM'
+  reason    String?
+  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@unique([shopId, badgeType])
   @@index([shopId])
@@ -1148,7 +1159,6 @@ model MetalPriceFetchLog {
   @@index([fetchedAt])
 }
 
-
 model FxRateSnapshot {
   id        String   @id @default(uuid())
   pair      String   @unique
@@ -1161,36 +1171,36 @@ model FxRateSnapshot {
 }
 
 model MaterialRate {
-  id               String   @id @default(uuid())
+  id               String       @id @default(uuid())
   materialCode     String
   ratePerGramUsd   Float
   ratePerGramLocal Float
   currency         CurrencyCode
-  source           String   @default("seed")
-  isRestricted     Boolean  @default(false)
+  source           String       @default("seed")
+  isRestricted     Boolean      @default(false)
   note             String?
-  updatedAt        DateTime @default(now())
+  updatedAt        DateTime     @default(now())
 
   @@unique([materialCode, currency])
   @@index([materialCode])
 }
 
 model FinishPrice {
-  id         String   @id @default(uuid())
+  id         String       @id @default(uuid())
   finishType String
   tier       String
   flatFee    Float
   currency   CurrencyCode
-  source     String   @default("seed")
+  source     String       @default("seed")
   note       String?
-  updatedAt  DateTime @default(now())
+  updatedAt  DateTime     @default(now())
 
   @@unique([finishType, tier, currency])
   @@index([finishType])
 }
 
 model GemstoneCatalog {
-  id            String   @id @default(uuid())
+  id            String       @id @default(uuid())
   stoneType     String
   origin        String?
   sizeUnit      String
@@ -1199,22 +1209,22 @@ model GemstoneCatalog {
   qualityTier   String
   pricePerStone Float
   currency      CurrencyCode
-  source        String   @default("seed")
+  source        String       @default("seed")
   note          String?
-  updatedAt     DateTime @default(now())
+  updatedAt     DateTime     @default(now())
 
   @@index([stoneType, qualityTier])
   @@index([sizeMin, sizeMax])
 }
 
 model SettingPrice {
-  id              String   @id @default(uuid())
+  id              String       @id @default(uuid())
   settingType     String
   flatFeePerStone Float
   currency        CurrencyCode
-  source          String   @default("seed")
+  source          String       @default("seed")
   note            String?
-  updatedAt       DateTime @default(now())
+  updatedAt       DateTime     @default(now())
 
   @@unique([settingType, currency])
   @@index([settingType])
@@ -1345,25 +1355,25 @@ model TaxRuleConfig {
 }
 
 model TaxSyncRun {
-  id           String                  @id @default(uuid())
-  triggerSource String                 @default("MANUAL")
-  status       String                  @default("PENDING")
-  region       MarketRegion?
-  summary      Json?
-  errorMessage String?
-  triggeredBy  String?
-  startedAt    DateTime                @default(now())
-  completedAt  DateTime?
-  createdAt    DateTime                @default(now())
-  updatedAt    DateTime                @updatedAt
-  proposals    TaxRuleChangeProposal[]
+  id            String                  @id @default(uuid())
+  triggerSource String                  @default("MANUAL")
+  status        String                  @default("PENDING")
+  region        MarketRegion?
+  summary       Json?
+  errorMessage  String?
+  triggeredBy   String?
+  startedAt     DateTime                @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  proposals     TaxRuleChangeProposal[]
 
   @@index([status, startedAt])
   @@index([region, startedAt])
 }
 
 model TaxRuleChangeProposal {
-  id                  String      @id @default(uuid())
+  id                  String       @id @default(uuid())
   syncRunId           String
   marketRegion        MarketRegion
   taxType             String
@@ -1374,22 +1384,22 @@ model TaxRuleChangeProposal {
   proposedRate        Float
   changeDelta         Float?
   proposedDescription String?
-  status              String      @default("PENDING")
+  status              String       @default("PENDING")
   sourceLabel         String
   sourceUrl           String
   sourceExcerpt       String?
   evidence            Json?
   confidence          Float?
   rationale           String?
-  dedupeKey           String      @unique
+  dedupeKey           String       @unique
   effectiveFrom       DateTime?
   reviewedBy          String?
   reviewedAt          DateTime?
   reviewNotes         String?
   appliedRuleId       String?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
-  syncRun             TaxSyncRun  @relation(fields: [syncRunId], references: [id], onDelete: Cascade)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  syncRun             TaxSyncRun   @relation(fields: [syncRunId], references: [id], onDelete: Cascade)
 
   @@index([status, marketRegion, createdAt])
   @@index([marketRegion, category, status])
@@ -1642,71 +1652,190 @@ model CommissionLedger {
 }
 
 // ============================================
+// Double-entry accounting ledger
+// ============================================
+
+enum LedgerAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum LedgerAccountKey {
+  CASH_ON_HAND
+  BANK
+  GATEWAY_CLEARING
+  ACCOUNTS_RECEIVABLE
+  CUSTOMER_ADVANCES
+  TAX_PAYABLE
+  PLATFORM_COMMISSION_PAYABLE
+  SALES_REVENUE
+  SALES_RETURNS
+  PLATFORM_COMMISSION_EXPENSE
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  POSTED
+}
+
+enum JournalReferenceType {
+  INVOICE_ISSUED
+  INVOICE_PAYMENT
+  ORDER_PAYMENT
+  ORDER_ADVANCE_APPLIED
+  ORDER_REFUND
+  COMMISSION_ACCRUAL
+  COMMISSION_PAYMENT
+  COMMISSION_REFUND_ADJUSTMENT
+  COMMISSION_WAIVER
+  REVERSAL
+}
+
+model LedgerAccount {
+  id        String            @id
+  shopId    String
+  code      String            @db.VarChar(32)
+  name      String
+  type      LedgerAccountType
+  systemKey LedgerAccountKey?
+  isSystem  Boolean           @default(false)
+  isActive  Boolean           @default(true)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  shop  Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  lines JournalLine[]
+
+  @@unique([shopId, code])
+  @@unique([shopId, systemKey])
+  @@index([shopId, type])
+  @@index([shopId, isActive])
+}
+
+model JournalEntry {
+  id                  String               @id @default(uuid())
+  shopId              String
+  entryNumber         String               @db.VarChar(64)
+  status              JournalEntryStatus   @default(DRAFT)
+  referenceType       JournalReferenceType
+  referenceId         String
+  idempotencyKey      String               @db.VarChar(191)
+  description         String
+  transactionDate     DateTime
+  postedAt            DateTime             @default(now())
+  canonicalCurrency   CurrencyCode         @default(NPR)
+  transactionCurrency CurrencyCode
+  transactionAmount   Decimal              @db.Decimal(24, 4)
+  canonicalAmountNpr  Decimal              @db.Decimal(24, 4)
+  fxRate              Decimal              @db.Decimal(24, 10)
+  fxSource            String
+  fxQuotedAt          DateTime
+  actorUserId         String?
+  metadata            Json?
+  reversalOfId        String?              @unique
+  createdAt           DateTime             @default(now())
+
+  shop       Shop          @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  lines      JournalLine[]
+  reversalOf JournalEntry? @relation("JournalEntryReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy JournalEntry? @relation("JournalEntryReversal")
+
+  @@unique([shopId, entryNumber])
+  @@unique([shopId, idempotencyKey])
+  @@unique([shopId, referenceType, referenceId])
+  @@index([shopId, transactionDate])
+  @@index([shopId, referenceType, referenceId])
+  @@index([reversalOfId])
+}
+
+model JournalLine {
+  id                  String       @id @default(uuid())
+  journalEntryId      String
+  accountId           String
+  description         String?
+  debitNpr            Decimal      @default(0) @db.Decimal(24, 4)
+  creditNpr           Decimal      @default(0) @db.Decimal(24, 4)
+  transactionDebit    Decimal      @default(0) @db.Decimal(24, 4)
+  transactionCredit   Decimal      @default(0) @db.Decimal(24, 4)
+  transactionCurrency CurrencyCode
+  createdAt           DateTime     @default(now())
+
+  journalEntry JournalEntry  @relation(fields: [journalEntryId], references: [id], onDelete: Restrict)
+  account      LedgerAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([journalEntryId])
+  @@index([accountId])
+}
+
+// ============================================
 // Design Gallery - AI-Generated Jewelry Designs
 // ============================================
 
 model Design {
-  id              String   @id @default(uuid())
-  
+  id String @id @default(uuid())
+
   // Design specifications (matches RFQ form structure)
   jewelryType     JewelleryType
   buildMethod     BuildMethod
-  metalType       String?              // e.g., "GOLD_22K", "SILVER_925"
-  metalColor      String?              // e.g., "YELLOW", "WHITE", "ROSE"
+  metalType       String? // e.g., "GOLD_22K", "SILVER_925"
+  metalColor      String? // e.g., "YELLOW", "WHITE", "ROSE"
   weightCategory  WeightCategory?
-  estimatedWeight Float?               // in grams
-  surfaceFinish   String?              // e.g., "HIGH_POLISH", "MATTE"
-  
+  estimatedWeight Float? // in grams
+  surfaceFinish   String? // e.g., "HIGH_POLISH", "MATTE"
+
   // Gemstone specifications
-  hasGemstones    Boolean  @default(false)
-  primaryStone    String?              // e.g., "DIAMOND_NATURAL", "RUBY"
-  stoneCut        String?              // e.g., "ROUND", "PRINCESS", "OVAL"
-  stoneCarat      Float?
-  stoneColor      String?
-  settingStyle    String?              // e.g., "PRONG", "BEZEL", "HALO"
-  
+  hasGemstones Boolean @default(false)
+  primaryStone String? // e.g., "DIAMOND_NATURAL", "RUBY"
+  stoneCut     String? // e.g., "ROUND", "PRINCESS", "OVAL"
+  stoneCarat   Float?
+  stoneColor   String?
+  settingStyle String? // e.g., "PRONG", "BEZEL", "HALO"
+
   // Additional specs stored as JSON for flexibility
   additionalSpecs Json?
-  
+
   // The prompt used to generate the image
-  generationPrompt String?  @db.Text
-  
+  generationPrompt String? @db.Text
+
   // Generated/uploaded image
-  imageUrl        String               // R2 URL to the generated image
-  thumbnailUrl    String?              // Optional smaller thumbnail
-  imageHash       String   @unique     // Hash of specs for deduplication
-  
+  imageUrl     String // R2 URL to the generated image
+  thumbnailUrl String? // Optional smaller thumbnail
+  imageHash    String  @unique // Hash of specs for deduplication
+
   // Source: "generated" (AI) or "uploaded" (customer reference)
-  imageSource     DesignImageSource @default(GENERATED)
-  
+  imageSource DesignImageSource @default(GENERATED)
+
   // Creator info
-  creatorId       String
-  creator         User     @relation("DesignCreator", fields: [creatorId], references: [id], onDelete: Cascade)
-  creatorName     String?              // Display name (can be anonymous)
-  
+  creatorId   String
+  creator     User    @relation("DesignCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorName String? // Display name (can be anonymous)
+
   // Visibility
-  isPublic        Boolean  @default(true)
-  isFeatured      Boolean  @default(false)
-  
+  isPublic   Boolean @default(true)
+  isFeatured Boolean @default(false)
+
   // Engagement metrics (denormalized for fast queries)
-  likesCount      Int      @default(0)
-  viewsCount      Int      @default(0)
-  ordersCount     Int      @default(0)  // "Build me this" clicks
-  ordersCompleted Int      @default(0)  // Actually manufactured
-  
+  likesCount      Int @default(0)
+  viewsCount      Int @default(0)
+  ordersCount     Int @default(0) // "Build me this" clicks
+  ordersCompleted Int @default(0) // Actually manufactured
+
   // Moderation
-  isApproved      Boolean  @default(true) // Auto-approved, can be flagged
-  flaggedAt       DateTime?
-  flagReason      String?
-  
+  isApproved Boolean   @default(true) // Auto-approved, can be flagged
+  flaggedAt  DateTime?
+  flagReason String?
+
   // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  likes           DesignLike[]
-  rfqRequests     RfqRequest[]  // RFQs created from this design via "Build This"
-  
+  likes       DesignLike[]
+  rfqRequests RfqRequest[] // RFQs created from this design via "Build This"
+
   @@index([jewelryType])
   @@index([buildMethod])
   @@index([metalType])
@@ -1727,16 +1856,16 @@ model DesignLike {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  
+
   @@unique([designId, userId]) // One like per user per design
   @@index([designId])
   @@index([userId])
 }
 
 enum DesignImageSource {
-  GENERATED    // AI-generated from specs
-  UPLOADED     // Customer uploaded reference
-  REFINED      // AI-refined from uploaded reference
+  GENERATED // AI-generated from specs
+  UPLOADED // Customer uploaded reference
+  REFINED // AI-refined from uploaded reference
 }
 
 enum UserRole {
@@ -1761,6 +1890,7 @@ enum CurrencyCode {
   USD
   GBP
   EUR
+  LKR
 }
 
 enum MarketRegion {
@@ -1770,6 +1900,14 @@ enum MarketRegion {
   UK
   EU
   US
+  LK
+}
+
+enum VatRegistrationStatus {
+  NOT_REGISTERED
+  PENDING
+  VERIFIED
+  REJECTED
 }
 
 enum MaterialCategory {
@@ -1806,9 +1944,9 @@ enum InventoryStatus {
 }
 
 enum InventoryVisibility {
-  PUBLIC           // Shown on marketplace + catalogues
-  CATALOGUE_ONLY   // Only in catalogues, not on public marketplace
-  HIDDEN           // Not visible anywhere publicly
+  PUBLIC // Shown on marketplace + catalogues
+  CATALOGUE_ONLY // Only in catalogues, not on public marketplace
+  HIDDEN // Not visible anywhere publicly
 }
 
 enum CatalogueMode {
@@ -2189,70 +2327,82 @@ enum BadgeType {
 // ═══════════════════════════════════════════
 
 model Invoice {
-  id              String   @id @default(uuid())
-  invoiceNumber   String   @unique
-  shopId          String
-  orderId         String?
-  shopQuoteId     String?
+  id            String  @id @default(uuid())
+  invoiceNumber String  @unique
+  shopId        String
+  orderId       String?
+  shopQuoteId   String?
 
   // Idempotency key for offline-replayed POS sales (client-generated UUID).
   // A replayed sale with the same key returns the existing invoice instead of
   // creating a duplicate. NULL for non-POS / online back-office invoices.
-  posClientId     String?  @unique
+  posClientId String? @unique
 
   // Customer details (denormalized for PDF generation)
   customerName    String
   customerPhone   String?
   customerEmail   String?
   customerAddress String?
+  invoiceTitle    String                @default("INVOICE")
+  supplierName    String?
+  supplierAddress String?
+  supplierPhone   String?
+  supplierTaxId   String?
+  sellerVatStatus VatRegistrationStatus @default(NOT_REGISTERED)
 
   // Financial
-  subtotal        Float    @default(0)
-  taxAmount       Float    @default(0)
-  taxRate         Float    @default(0)
-  taxLabel        String?
-  discountAmount  Float    @default(0)
-  totalAmount     Float    @default(0)
-  paidAmount      Float    @default(0)
-  balanceDue      Float    @default(0)
-  currency        CurrencyCode @default(NPR)
+  subtotal       Float        @default(0)
+  taxableAmount  Float        @default(0)
+  taxAmount      Float        @default(0)
+  taxRate        Float        @default(0)
+  taxLabel       String?
+  discountAmount Float        @default(0)
+  totalAmount    Float        @default(0)
+  paidAmount     Float        @default(0)
+  balanceDue     Float        @default(0)
+  currency       CurrencyCode @default(NPR)
 
   // Line items as JSON array
   // Each: { label, category, quantity, unitPrice, amount, details? }
-  lineItems       Json     @default("[]")
+  lineItems Json @default("[]")
 
   // Status
-  status          String   @default("DRAFT")  // DRAFT, ISSUED, PAID, PARTIALLY_PAID, OVERDUE, VOID, CANCELLED
-  paymentStatus   String   @default("UNPAID") // UNPAID, PARTIALLY_PAID, PAID
+  status        String @default("DRAFT") // DRAFT, ISSUED, PAID, PARTIALLY_PAID, OVERDUE, VOID, CANCELLED
+  paymentStatus String @default("UNPAID") // UNPAID, PARTIALLY_PAID, PAID
 
   // Dates
-  issuedAt        DateTime?
-  dueDate         DateTime?
-  paidAt          DateTime?
-  voidedAt        DateTime?
+  issuedAt DateTime?
+  dueDate  DateTime?
+  paidAt   DateTime?
+  voidedAt DateTime?
 
-  notes           String?
-  terms           String?
+  notes String?
+  terms String?
 
   // POS payment tracking (structured, replaces notes-string hacks)
-  paymentMethod   String?  // CASH, CARD, UPI, ESEWA, KHALTI, BANK_TRANSFER
-  makingChargeRate Float?   // percentage e.g. 8.0
-  makingChargesAmt Float?   // flat calculated amount
+  paymentMethod    String? // CASH, CARD, UPI, ESEWA, KHALTI, BANK_TRANSFER
+  makingChargeRate Float? // percentage e.g. 8.0
+  makingChargesAmt Float? // flat calculated amount
 
   // ── Tax filing fields (Sprint 1) ────────────────────────────────
-  isTaxExempt      Boolean  @default(false)
-  taxExemptReason  String?  // EXPORT, COMPOSITE, REVERSE_CHARGE, THRESHOLD, INVESTMENT_GOLD, OTHER
-  customerType     String   @default("B2C") // B2C | B2B
-  customerTaxId    String?  // GSTIN / TRN / VAT / PAN
-  invoiceCountry   String?  // ISO-2: NP, IN, AE, GB, DE, US, ...
-  placeOfSupply    String?  // For India inter-state IGST detection (state code/name)
-  hsnCode          String?  // HS / HSN classification (jewellery default 7113)
-  taxBreakdown     Json?    // { igst, cgst, sgst, vat, makingTax, metalTax, ... }
+  isTaxExempt       Boolean   @default(false)
+  taxExemptReason   String? // EXPORT, COMPOSITE, REVERSE_CHARGE, THRESHOLD, INVESTMENT_GOLD, OTHER
+  customerType      String    @default("B2C") // B2C | B2B
+  customerTaxId     String? // GSTIN / TRN / VAT / PAN
+  invoiceCountry    String? // ISO-2: NP, IN, AE, GB, DE, US, ...
+  placeOfSupply     String? // For India inter-state IGST detection (state code/name)
+  hsnCode           String? // HS / HSN classification (jewellery default 7113)
+  taxBreakdown      Json? // { igst, cgst, sgst, vat, makingTax, metalTax, ... }
+  taxSource         String?
+  taxExemptEvidence String?
+  supplyDate        DateTime?
+  serialSequence    Int?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  shop            Shop     @relation(fields: [shopId], references: [id])
+  shop     Shop             @relation(fields: [shopId], references: [id])
+  payments InvoicePayment[]
 
   @@index([shopId])
   @@index([orderId])
@@ -2262,69 +2412,115 @@ model Invoice {
   @@index([invoiceCountry])
 }
 
+enum InvoicePaymentStatus {
+  RECEIVED
+  VOIDED
+  REVERSED
+}
+
+model InvoicePayment {
+  id                 String               @id @default(uuid())
+  invoiceId          String
+  amount             Decimal              @db.Decimal(18, 2)
+  currency           CurrencyCode
+  canonicalAmountNpr Decimal?             @db.Decimal(24, 4)
+  fxRate             Decimal?             @db.Decimal(24, 10)
+  fxSource           String?
+  fxQuotedAt         DateTime?
+  method             String
+  reference          String?
+  idempotencyKey     String               @unique
+  status             InvoicePaymentStatus @default(RECEIVED)
+  notes              String?
+  receivedAt         DateTime             @default(now())
+  voidedAt           DateTime?
+  voidReason         String?
+  reversalOfId       String?              @unique
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  invoice    Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  reversalOf InvoicePayment? @relation("InvoicePaymentReversal", fields: [reversalOfId], references: [id])
+  reversedBy InvoicePayment? @relation("InvoicePaymentReversal")
+
+  @@index([invoiceId, receivedAt])
+  @@index([status])
+}
+
+model InvoiceSequence {
+  id           String       @id @default(uuid())
+  shopId       String
+  marketRegion MarketRegion
+  lastNumber   Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([shopId, marketRegion])
+}
+
 // Tax export / share audit log (GDPR + CA collaboration)
 model TaxExportLog {
-  id            String   @id @default(uuid())
-  shopId        String
-  exportType    String   // GSTR1, GSTR3B, HSN, NEPAL_VAT, UAE_VAT201, UK_MTD, EU_OSS, US_STATE, TALLY_XML, CA_SHARE
-  country       String
-  period        String   // e.g. "2026-02" or "2026-Q1"
-  format        String   // CSV, JSON, XML, PDF, LINK
-  requestedBy   String?  // userId
-  ipHash        String?  // hashed IP, no PII
-  shareToken    String?  @unique
+  id             String    @id @default(uuid())
+  shopId         String
+  exportType     String // GSTR1, GSTR3B, HSN, NEPAL_VAT, UAE_VAT201, UK_MTD, EU_OSS, US_STATE, TALLY_XML, CA_SHARE
+  country        String
+  period         String // e.g. "2026-02" or "2026-Q1"
+  format         String // CSV, JSON, XML, PDF, LINK
+  requestedBy    String? // userId
+  ipHash         String? // hashed IP, no PII
+  shareToken     String?   @unique
   shareExpiresAt DateTime?
-  rowCount      Int      @default(0)
-  createdAt     DateTime @default(now())
+  rowCount       Int       @default(0)
+  createdAt      DateTime  @default(now())
 
   @@index([shopId, createdAt])
   @@index([shareToken])
 }
 
 model InvoiceSettings {
-  id              String   @id @default(uuid())
-  shopId          String   @unique
+  id     String @id @default(uuid())
+  shopId String @unique
 
   // Branding
-  shopNameOnBill  String?          // Custom name to print on invoice (overrides shop.shopName)
-  shopLogoUrl     String?          // Logo/icon URL for the bill
-  tagline         String?          // e.g. "Trusted since 1990"
+  shopNameOnBill String? // Custom name to print on invoice (overrides shop.shopName)
+  shopLogoUrl    String? // Logo/icon URL for the bill
+  tagline        String? // e.g. "Trusted since 1990"
 
   // Contact & legal
-  shopAddress     String?          // Address to show on bill
-  shopPhone       String?          // Phone to show on bill
-  shopEmail       String?          // Email to show on bill
-  gstin           String?          // GST / VAT / PAN number
-  licenseNumber   String?          // BIS / Hallmark license
-  footerNote      String?          // Custom footer text (e.g. "Thank you for your business")
-  termsText       String?          // Default terms & conditions
+  shopAddress   String? // Address to show on bill
+  shopPhone     String? // Phone to show on bill
+  shopEmail     String? // Email to show on bill
+  gstin         String? // GST / VAT / PAN number
+  licenseNumber String? // BIS / Hallmark license
+  footerNote    String? // Custom footer text (e.g. "Thank you for your business")
+  termsText     String? // Default terms & conditions
 
   // Per-field position: each field can be TOP or BOTTOM independently
-  shopNamePosition  String  @default("TOP")
-  logoPosition      String  @default("TOP")
-  taglinePosition   String  @default("TOP")
-  addressPosition   String  @default("TOP")
-  phonePosition     String  @default("TOP")
-  emailPosition     String  @default("TOP")
-  gstinPosition     String  @default("TOP")
-  licensePosition   String  @default("TOP")
-  footerPosition    String  @default("BOTTOM")
-  termsPosition     String  @default("BOTTOM")
+  shopNamePosition String @default("TOP")
+  logoPosition     String @default("TOP")
+  taglinePosition  String @default("TOP")
+  addressPosition  String @default("TOP")
+  phonePosition    String @default("TOP")
+  emailPosition    String @default("TOP")
+  gstinPosition    String @default("TOP")
+  licensePosition  String @default("TOP")
+  footerPosition   String @default("BOTTOM")
+  termsPosition    String @default("BOTTOM")
 
   // Visibility toggles
-  showLogo        Boolean  @default(true)
-  showAddress     Boolean  @default(true)
-  showPhone       Boolean  @default(true)
-  showEmail       Boolean  @default(false)
-  showGstin       Boolean  @default(true)
-  showLicense     Boolean  @default(false)
-  showFooter      Boolean  @default(true)
-  showTerms       Boolean  @default(true)
+  showLogo    Boolean @default(true)
+  showAddress Boolean @default(true)
+  showPhone   Boolean @default(true)
+  showEmail   Boolean @default(false)
+  showGstin   Boolean @default(true)
+  showLicense Boolean @default(false)
+  showFooter  Boolean @default(true)
+  showTerms   Boolean @default(true)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }
 
 // ═══════════════════════════════════════════
@@ -2333,19 +2529,19 @@ model InvoiceSettings {
 
 // Captures data from every RFQ→Offer→Order cycle for AI training
 model RfqOrderInsight {
-  id                 String   @id @default(uuid())
-  rfqId              String
-  rfqJewelleryType   String
-  rfqBuildMethod     String
-  rfqComposition     Json
-  rfqBudgetMin       Float?
-  rfqBudgetMax       Float?
-  rfqWeightCategory  String?
-  rfqSpecialNotes    String?
-  rfqMarketRegion    String?
+  id                String  @id @default(uuid())
+  rfqId             String
+  rfqJewelleryType  String
+  rfqBuildMethod    String
+  rfqComposition    Json
+  rfqBudgetMin      Float?
+  rfqBudgetMax      Float?
+  rfqWeightCategory String?
+  rfqSpecialNotes   String?
+  rfqMarketRegion   String?
 
   // Offer aggregates
-  totalOffers        Int      @default(0)
+  totalOffers        Int    @default(0)
   avgOfferPrice      Float?
   minOfferPrice      Float?
   maxOfferPrice      Float?
@@ -2353,24 +2549,24 @@ model RfqOrderInsight {
   avgEstimatedDays   Int?
 
   // Outcome
-  selectedOfferId    String?
-  selectedShopId     String?
-  selectedPrice      Float?
-  orderId            String?
-  orderCompleted     Boolean  @default(false)
-  orderRating        Int?
+  selectedOfferId String?
+  selectedShopId  String?
+  selectedPrice   Float?
+  orderId         String?
+  orderCompleted  Boolean @default(false)
+  orderRating     Int?
 
   // Loss analysis
-  lossReasons        Json?    // [{ offerId, reason, category }]
+  lossReasons Json? // [{ offerId, reason, category }]
 
   // Timing metrics
-  rfqCreatedAt       DateTime
-  firstOfferAt       DateTime?
-  offerSelectedAt    DateTime?
-  orderCompletedAt   DateTime?
+  rfqCreatedAt     DateTime
+  firstOfferAt     DateTime?
+  offerSelectedAt  DateTime?
+  orderCompletedAt DateTime?
 
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([rfqJewelleryType])
   @@index([rfqBuildMethod])
@@ -2383,15 +2579,15 @@ model RfqOrderInsight {
 // Tracks AI phase milestones and admin alerts
 model AiPhaseMilestone {
   id              String    @id @default(uuid())
-  phase           Int       // 1, 2, 3
-  milestoneName   String    // e.g. "PHASE_1_LAUNCH", "100_ORDERS", "500_ORDERS"
-  description     String?   // Human-readable description of what this enables
-  thresholdValue  Int       // 0, 100, 200, 500
+  phase           Int // 1, 2, 3
+  milestoneName   String // e.g. "PHASE_1_LAUNCH", "100_ORDERS", "500_ORDERS"
+  description     String? // Human-readable description of what this enables
+  thresholdValue  Int // 0, 100, 200, 500
   currentValue    Int       @default(0)
   isReached       Boolean   @default(false)
   reachedAt       DateTime?
   adminNotifiedAt DateTime?
-  actionItems     Json?     // [{ action, status, completedAt }]
+  actionItems     Json? // [{ action, status, completedAt }]
   notes           String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -2403,20 +2599,20 @@ model AiPhaseMilestone {
 
 // Quote anomaly detection results
 model QuoteAnomaly {
-  id              String   @id @default(uuid())
-  offerId         String
-  shopId          String
-  rfqId           String
-  anomalyType     String   // PRICE_TOO_HIGH, PRICE_TOO_LOW, MAKING_CHARGE_SPIKE, DELIVERY_OUTLIER
-  severity        String   @default("MEDIUM") // LOW, MEDIUM, HIGH
-  expectedValue   Float    // What the average/median was
-  actualValue     Float    // What this offer had
-  deviationPct    Float    // How far off from expected
-  isReviewed      Boolean  @default(false)
-  reviewedAt      DateTime?
-  reviewedBy      String?
-  reviewNote      String?
-  createdAt       DateTime @default(now())
+  id            String    @id @default(uuid())
+  offerId       String
+  shopId        String
+  rfqId         String
+  anomalyType   String // PRICE_TOO_HIGH, PRICE_TOO_LOW, MAKING_CHARGE_SPIKE, DELIVERY_OUTLIER
+  severity      String    @default("MEDIUM") // LOW, MEDIUM, HIGH
+  expectedValue Float // What the average/median was
+  actualValue   Float // What this offer had
+  deviationPct  Float // How far off from expected
+  isReviewed    Boolean   @default(false)
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  reviewNote    String?
+  createdAt     DateTime  @default(now())
 
   @@index([shopId])
   @@index([anomalyType])
@@ -2430,19 +2626,19 @@ model QuoteAnomaly {
 // ═══════════════════════════════════════════
 
 model Conversation {
-  id              String             @id @default(uuid())
-  orderId         String?            @unique
-  rfqId           String?
-  buyerId         String
-  shopId          String
-  status          ConversationStatus @default(ACTIVE)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id        String             @id @default(uuid())
+  orderId   String?            @unique
+  rfqId     String?
+  buyerId   String
+  shopId    String
+  status    ConversationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
-  messages        Message[]
-  buyer           User               @relation("BuyerConversations", fields: [buyerId], references: [id])
-  shop            Shop               @relation("ShopConversations", fields: [shopId], references: [id])
-  order           Order?             @relation(fields: [orderId], references: [id])
+  messages Message[]
+  buyer    User      @relation("BuyerConversations", fields: [buyerId], references: [id])
+  shop     Shop      @relation("ShopConversations", fields: [shopId], references: [id])
+  order    Order?    @relation(fields: [orderId], references: [id])
 
   @@index([buyerId])
   @@index([shopId])
@@ -2452,29 +2648,29 @@ model Conversation {
 }
 
 model Message {
-  id               String       @id @default(uuid())
-  conversationId   String
-  senderId         String
-  senderRole       String       // CUSTOMER, SHOPKEEPER, SUPPORT, ADMIN
-  content          String
-  maskedContent    String?      // Content after masking PII
-  hasViolation     Boolean      @default(false)
-  violationType    String?      // PHONE, EMAIL, WHATSAPP, TELEGRAM, INSTAGRAM, CONTACT_PHRASE
-  attachmentUrl    String?      // R2 image/file URL
-  attachmentType   String?      // image, document
-  messageType      MessageType  @default(TEXT)
-  payload          Json?        // Structured payload for PRODUCT_CARD, CATALOGUE_LINK, etc.
-  isSystemGenerated Boolean     @default(false) // System-generated messages bypass PII scanning
-  isRead           Boolean      @default(false)
-  readAt           DateTime?
-  isSystem         Boolean      @default(false) // System-generated messages (warnings, etc.)
-  isBlocked        Boolean      @default(false) // Blocked by moderation — not delivered to recipient
-  isFalsePositive  Boolean      @default(false) // Admin manually confirmed this was NOT a violation
-  embedding        Unsupported("vector(768)")?   // Embedded content for similarity search
-  createdAt        DateTime     @default(now())
+  id                String                      @id @default(uuid())
+  conversationId    String
+  senderId          String
+  senderRole        String // CUSTOMER, SHOPKEEPER, SUPPORT, ADMIN
+  content           String
+  maskedContent     String? // Content after masking PII
+  hasViolation      Boolean                     @default(false)
+  violationType     String? // PHONE, EMAIL, WHATSAPP, TELEGRAM, INSTAGRAM, CONTACT_PHRASE
+  attachmentUrl     String? // R2 image/file URL
+  attachmentType    String? // image, document
+  messageType       MessageType                 @default(TEXT)
+  payload           Json? // Structured payload for PRODUCT_CARD, CATALOGUE_LINK, etc.
+  isSystemGenerated Boolean                     @default(false) // System-generated messages bypass PII scanning
+  isRead            Boolean                     @default(false)
+  readAt            DateTime?
+  isSystem          Boolean                     @default(false) // System-generated messages (warnings, etc.)
+  isBlocked         Boolean                     @default(false) // Blocked by moderation — not delivered to recipient
+  isFalsePositive   Boolean                     @default(false) // Admin manually confirmed this was NOT a violation
+  embedding         Unsupported("vector(768)")? // Embedded content for similarity search
+  createdAt         DateTime                    @default(now())
 
-  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender          User         @relation("MessageSender", fields: [senderId], references: [id])
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessageSender", fields: [senderId], references: [id])
 
   @@index([conversationId])
   @@index([senderId])
@@ -2487,15 +2683,15 @@ model Message {
 // ═══════════════════════════════════════════
 
 model SizeChart {
-  id           String       @id @default(uuid())
+  id            String        @id @default(uuid())
   jewelleryType JewelleryType
-  sizeSystem   String       // US, UK, EU, MM
-  region       MarketRegion
-  sizeLabel    String       // "7", "O", "55", "17.3mm"
-  sizeValue    Float        // numeric sort value
-  diameterMm   Float?       // inner diameter in mm
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
+  sizeSystem    String // US, UK, EU, MM
+  region        MarketRegion
+  sizeLabel     String // "7", "O", "55", "17.3mm"
+  sizeValue     Float // numeric sort value
+  diameterMm    Float? // inner diameter in mm
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
 
   @@unique([jewelleryType, sizeSystem, region, sizeLabel])
   @@index([jewelleryType, region])
@@ -2503,8 +2699,8 @@ model SizeChart {
 
 enum ConversationStatus {
   ACTIVE
-  LOCKED       // Locked due to violations
-  ARCHIVED     // Completed / closed
+  LOCKED // Locked due to violations
+  ARCHIVED // Completed / closed
 }
 
 enum RefundStatus {
@@ -2520,37 +2716,37 @@ enum RefundStatus {
 // ═══════════════════════════════════════════
 
 model SupportTicket {
-  id              String         @id @default(uuid())
-  ticketNumber    String         @unique // e.g. TKT-00001
-  userId          String?        // null for guest tickets (from public help page)
-  guestEmail      String?        // for non-logged-in users
-  guestName       String?        // for non-logged-in users
-  type            TicketType
-  subject         String
-  description     String
-  status          TicketStatus   @default(OPEN)
-  priority        TicketPriority @default(MEDIUM)
+  id           String         @id @default(uuid())
+  ticketNumber String         @unique // e.g. TKT-00001
+  userId       String? // null for guest tickets (from public help page)
+  guestEmail   String? // for non-logged-in users
+  guestName    String? // for non-logged-in users
+  type         TicketType
+  subject      String
+  description  String
+  status       TicketStatus   @default(OPEN)
+  priority     TicketPriority @default(MEDIUM)
 
   // Assignment
-  assigneeId      String?        // support/admin who claimed this
-  claimedAt       DateTime?
+  assigneeId String? // support/admin who claimed this
+  claimedAt  DateTime?
 
   // Context (optional references)
-  orderId         String?        // related order
-  conversationId  String?        // related chat conversation
+  orderId        String? // related order
+  conversationId String? // related chat conversation
 
   // Resolution
-  resolvedAt      DateTime?
-  closedAt        DateTime?
-  resolutionNote  String?
+  resolvedAt     DateTime?
+  closedAt       DateTime?
+  resolutionNote String?
 
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user            User?          @relation("UserTickets", fields: [userId], references: [id])
-  assignee        User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
-  messages        TicketMessage[]
+  user     User?           @relation("UserTickets", fields: [userId], references: [id])
+  assignee User?           @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  messages TicketMessage[]
 
   @@index([userId])
   @@index([assigneeId])
@@ -2562,19 +2758,19 @@ model SupportTicket {
 }
 
 model TicketMessage {
-  id              String   @id @default(uuid())
-  ticketId        String
-  senderId        String?  // null for system messages or guest messages
-  senderRole      String   // CUSTOMER, SHOPKEEPER, SUPPORT, ADMIN, SYSTEM, GUEST, AI_BOT
-  senderName      String?  // display name (for guests or bot)
-  content         String
-  attachmentUrl   String?
-  attachmentType  String?  // image, document, video
-  isInternal      Boolean  @default(false) // internal notes visible only to support/admin
-  createdAt       DateTime @default(now())
+  id             String   @id @default(uuid())
+  ticketId       String
+  senderId       String? // null for system messages or guest messages
+  senderRole     String // CUSTOMER, SHOPKEEPER, SUPPORT, ADMIN, SYSTEM, GUEST, AI_BOT
+  senderName     String? // display name (for guests or bot)
+  content        String
+  attachmentUrl  String?
+  attachmentType String? // image, document, video
+  isInternal     Boolean  @default(false) // internal notes visible only to support/admin
+  createdAt      DateTime @default(now())
 
-  ticket          SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  sender          User?         @relation("TicketMessageSender", fields: [senderId], references: [id])
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender User?         @relation("TicketMessageSender", fields: [senderId], references: [id])
 
   @@index([ticketId])
   @@index([senderId])
@@ -2587,15 +2783,15 @@ model TicketMessage {
 // ============================================
 
 model StaticPage {
-  id              String    @id @default(uuid())
-  slug            String    @unique // e.g. "privacy", "terms", "refund"
+  id              String   @id @default(uuid())
+  slug            String   @unique // e.g. "privacy", "terms", "refund"
   title           String
-  content         String    @db.Text // Rich HTML content
+  content         String   @db.Text // Rich HTML content
   metaDescription String?
-  isPublished     Boolean   @default(false)
-  sortOrder       Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  isPublished     Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([slug])
   @@index([isPublished])
@@ -2606,22 +2802,22 @@ model StaticPage {
 // ═══════════════════════════════════════════
 
 model Catalogue {
-  id            String              @id @default(cuid())
-  shopId        String
-  name          String
-  slug          String              @unique
-  description   String?
-  isPublic      Boolean             @default(true)
-  mode          CatalogueMode       @default(NORMAL)
-  passwordHash  String?             // bcrypt hash if password-protected
-  expiresAt     DateTime?
-  deletedAt     DateTime?           // soft delete
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  id           String        @id @default(cuid())
+  shopId       String
+  name         String
+  slug         String        @unique
+  description  String?
+  isPublic     Boolean       @default(true)
+  mode         CatalogueMode @default(NORMAL)
+  passwordHash String? // bcrypt hash if password-protected
+  expiresAt    DateTime?
+  deletedAt    DateTime? // soft delete
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
-  shop          Shop                @relation(fields: [shopId], references: [id])
-  items         CatalogueItem[]
-  viewEvents    CatalogueViewEvent[]
+  shop       Shop                 @relation(fields: [shopId], references: [id])
+  items      CatalogueItem[]
+  viewEvents CatalogueViewEvent[]
 
   @@index([shopId])
   @@index([slug])
@@ -2629,17 +2825,17 @@ model Catalogue {
 }
 
 model CatalogueItem {
-  id              String        @id @default(cuid())
+  id              String   @id @default(cuid())
   catalogueId     String
   inventoryItemId String
-  sortOrder       Int           @default(0)
-  overridePrice   Float?        // optional override display price
-  isHidden        Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  sortOrder       Int      @default(0)
+  overridePrice   Float? // optional override display price
+  isHidden        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  catalogue       Catalogue     @relation(fields: [catalogueId], references: [id], onDelete: Cascade)
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  catalogue     Catalogue     @relation(fields: [catalogueId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
 
   @@index([catalogueId])
   @@index([inventoryItemId])
@@ -2647,30 +2843,30 @@ model CatalogueItem {
 }
 
 model CatalogueViewEvent {
-  id            String    @id @default(cuid())
-  catalogueId   String
-  viewedAt      DateTime  @default(now())
-  viewerIpHash  String?   // sha256(ip + salt); never raw IP
-  userAgent     String?
-  referrer      String?
-  count         Int       @default(1)
+  id           String   @id @default(cuid())
+  catalogueId  String
+  viewedAt     DateTime @default(now())
+  viewerIpHash String? // sha256(ip + salt); never raw IP
+  userAgent    String?
+  referrer     String?
+  count        Int      @default(1)
 
-  catalogue     Catalogue @relation(fields: [catalogueId], references: [id], onDelete: Cascade)
+  catalogue Catalogue @relation(fields: [catalogueId], references: [id], onDelete: Cascade)
 
   @@index([catalogueId, viewedAt])
   @@index([catalogueId, viewerIpHash])
 }
 
 model ShowroomSession {
-  id              String    @id @default(cuid())
-  conversationId  String?
-  shopId          String
-  status          String    @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
-  items           Json      // [{ inventoryItemId, variantId?, qty? }]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String   @id @default(cuid())
+  conversationId String?
+  shopId         String
+  status         String   @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
+  items          Json // [{ inventoryItemId, variantId?, qty? }]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  shop            Shop      @relation(fields: [shopId], references: [id])
+  shop Shop @relation(fields: [shopId], references: [id])
 
   @@index([shopId])
   @@index([conversationId])
@@ -2686,13 +2882,13 @@ enum PosSessionStatus {
 }
 
 model WishlistItem {
-  id              String        @id @default(cuid())
+  id              String   @id @default(cuid())
   userId          String
   inventoryItemId String
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime @default(now())
 
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
 
   @@unique([userId, inventoryItemId])
   @@index([userId])
@@ -2700,17 +2896,17 @@ model WishlistItem {
 }
 
 model PosSession {
-  id              String           @id @default(cuid())
-  shopId          String
-  customerId      String?
-  conversationId  String?
-  status          PosSessionStatus @default(ACTIVE)
-  expiresAt       DateTime
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  shopId         String
+  customerId     String?
+  conversationId String?
+  status         PosSessionStatus @default(ACTIVE)
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
-  shop            Shop             @relation(fields: [shopId], references: [id])
-  items           PosSessionItem[]
+  shop              Shop               @relation(fields: [shopId], references: [id])
+  items             PosSessionItem[]
   stockReservations StockReservation[]
 
   @@index([shopId, status])
@@ -2718,37 +2914,37 @@ model PosSession {
 }
 
 model PosSessionItem {
-  id              String        @id @default(cuid())
+  id              String   @id @default(cuid())
   posSessionId    String
   inventoryItemId String
   variantId       String?
-  qty             Int           @default(1)
+  qty             Int      @default(1)
   unitPrice       Float
   lineTotal       Float
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  posSession      PosSession    @relation(fields: [posSessionId], references: [id], onDelete: Cascade)
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
-  variant         ProductVariant? @relation(fields: [variantId], references: [id])
+  posSession    PosSession      @relation(fields: [posSessionId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem   @relation(fields: [inventoryItemId], references: [id])
+  variant       ProductVariant? @relation(fields: [variantId], references: [id])
 
   @@index([posSessionId])
 }
 
 model StockReservation {
-  id              String        @id @default(cuid())
+  id              String   @id @default(cuid())
   shopId          String
   posSessionId    String
   inventoryItemId String
   variantId       String?
   qty             Int
   expiresAt       DateTime
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime @default(now())
 
-  shop            Shop          @relation(fields: [shopId], references: [id])
-  posSession      PosSession    @relation(fields: [posSessionId], references: [id], onDelete: Cascade)
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
-  variant         ProductVariant? @relation(fields: [variantId], references: [id])
+  shop          Shop            @relation(fields: [shopId], references: [id])
+  posSession    PosSession      @relation(fields: [posSessionId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem   @relation(fields: [inventoryItemId], references: [id])
+  variant       ProductVariant? @relation(fields: [variantId], references: [id])
 
   @@index([posSessionId])
   @@index([expiresAt])
@@ -2756,30 +2952,30 @@ model StockReservation {
 }
 
 enum TicketType {
-  ACCOUNT_SUSPENSION  // suspended account appeal
-  LOGIN_ISSUE         // can't login
-  PASSWORD_RECOVERY   // forgot password / hacked account
-  HACKED_ACCOUNT      // account compromise
-  ORDER_ISSUE         // problem with order
-  REFUND_ISSUE        // refund dispute
-  PAYMENT_ISSUE       // payment problem
-  PRODUCT_ISSUE       // product quality / mismatch
-  SHIPPING_ISSUE      // delivery problem
-  SELLER_COMPLAINT    // complaint about seller
-  BUYER_COMPLAINT     // complaint about buyer  
-  PLATFORM_BUG        // technical issue
-  FEATURE_REQUEST     // feature suggestion
-  KYC_VERIFICATION    // KYC help
-  OTHER               // general inquiry
+  ACCOUNT_SUSPENSION // suspended account appeal
+  LOGIN_ISSUE // can't login
+  PASSWORD_RECOVERY // forgot password / hacked account
+  HACKED_ACCOUNT // account compromise
+  ORDER_ISSUE // problem with order
+  REFUND_ISSUE // refund dispute
+  PAYMENT_ISSUE // payment problem
+  PRODUCT_ISSUE // product quality / mismatch
+  SHIPPING_ISSUE // delivery problem
+  SELLER_COMPLAINT // complaint about seller
+  BUYER_COMPLAINT // complaint about buyer
+  PLATFORM_BUG // technical issue
+  FEATURE_REQUEST // feature suggestion
+  KYC_VERIFICATION // KYC help
+  OTHER // general inquiry
 }
 
 enum TicketStatus {
-  OPEN          // newly created, unclaimed
-  CLAIMED       // claimed by support/admin
-  IN_PROGRESS   // being worked on
-  WAITING_USER  // waiting for user response
-  RESOLVED      // resolved by support
-  CLOSED        // confirmed closed
+  OPEN // newly created, unclaimed
+  CLAIMED // claimed by support/admin
+  IN_PROGRESS // being worked on
+  WAITING_USER // waiting for user response
+  RESOLVED // resolved by support
+  CLOSED // confirmed closed
 }
 
 enum TicketPriority {
@@ -2794,60 +2990,60 @@ enum TicketPriority {
 // ═══════════════════════════════════════════
 
 model SubscriptionPlan {
-  id                  String               @id @default(uuid())
-  name                String               // FREE, PRO, PRO_PLUS, ENTERPRISE, etc.
-  displayName         String               // "Free Plan", "Pro Plan", etc.
-  description         String?
-  country             MarketRegion         // IN, NP, AE, UK, EU, US
-  currency            CurrencyCode
-  monthlyPrice        Float                // 0 for free plan
-  annualPrice         Float?               // optional discounted annual price
+  id           String       @id @default(uuid())
+  name         String // FREE, PRO, PRO_PLUS, ENTERPRISE, etc.
+  displayName  String // "Free Plan", "Pro Plan", etc.
+  description  String?
+  country      MarketRegion // IN, NP, AE, UK, EU, US
+  currency     CurrencyCode
+  monthlyPrice Float // 0 for free plan
+  annualPrice  Float? // optional discounted annual price
 
   // ─── Resource Limits (null = unlimited) ─────────────────────────────
-  maxProducts         Int?                 // max inventory items (products) per shop — ENFORCED by PlanLimitsService.checkProductLimit
-  maxInvoicesPerMonth Int?                 // max invoices/bills per calendar month
-  maxCatalogues       Int?                 // max catalogues per shop
-  catalogueLimit      Int?                 // max items per single catalogue
-  maxOrdersPerMonth   Int?                 // max orders per calendar month
+  maxProducts         Int? // max inventory items (products) per shop — ENFORCED by PlanLimitsService.checkProductLimit
+  maxInvoicesPerMonth Int? // max invoices/bills per calendar month
+  maxCatalogues       Int? // max catalogues per shop
+  catalogueLimit      Int? // max items per single catalogue
+  maxOrdersPerMonth   Int? // max orders per calendar month
 
   // ─── Soft-limit nudge thresholds (null = no nudge for that metric) ──
   // These NEVER block anything. They only decide when the gentle, dismissible
   // "you're outgrowing free → upgrade" nudge appears (fires at ~80% of the
   // value). Read per-plan by PlanLimitsService.getConversionSignals so each
   // market (region plan) is tuned independently from the admin pricing panel.
-  softLimitCustomers       Int?            // e.g. 100 customers
-  softLimitInvoicesPerMonth Int?           // e.g. 50 bills this month
-  softLimitProducts        Int?            // e.g. 100 products
-  softLimitSavingsSchemes  Int?            // e.g. 5 savings schemes
+  softLimitCustomers        Int? // e.g. 100 customers
+  softLimitInvoicesPerMonth Int? // e.g. 50 bills this month
+  softLimitProducts         Int? // e.g. 100 products
+  softLimitSavingsSchemes   Int? // e.g. 5 savings schemes
 
-  commissionPercent   Float                // e.g. 5.0 = 5%
-  includesAi          Boolean              @default(false)
-  monthlyAiCredits    Int                  @default(0)
-  rolloverCap         Int                  @default(0)  // max credits that can roll over month-to-month
-  extraCreditPrice    Float                @default(0)  // price per extra AI generation
-  overageBehavior     OverageBehavior      @default(BLOCK) // what happens when credits run out
-  features            Json?                // Boolean feature flags keyed by feature id. A feature is ENABLED only when features[key] === true (missing key = blocked). Keys: invoicing, mobilePOS, mobileCatalogue, mobileRepairs, mobileSavings, karigarSupplyChain, lending, etc. See PlanLimitsService.FEATURE_LABELS for the authoritative list.
-  isActive            Boolean              @default(true)
-  sortOrder           Int                  @default(0)
+  commissionPercent Float // e.g. 5.0 = 5%
+  includesAi        Boolean         @default(false)
+  monthlyAiCredits  Int             @default(0)
+  rolloverCap       Int             @default(0) // max credits that can roll over month-to-month
+  extraCreditPrice  Float           @default(0) // price per extra AI generation
+  overageBehavior   OverageBehavior @default(BLOCK) // what happens when credits run out
+  features          Json? // Boolean feature flags keyed by feature id. A feature is ENABLED only when features[key] === true (missing key = blocked). Keys: invoicing, mobilePOS, mobileCatalogue, mobileRepairs, mobileSavings, karigarSupplyChain, lending, etc. See PlanLimitsService.FEATURE_LABELS for the authoritative list.
+  isActive          Boolean         @default(true)
+  sortOrder         Int             @default(0)
 
   // ─── Display Customization (admin-editable) ─────────────────────────
-  badgeText           String?              // e.g. "Most Popular", "Best Value", shown on pricing page
-  buttonColor         String?              // e.g. "#f59e0b", hex color for CTA button on pricing page
+  badgeText   String? // e.g. "Most Popular", "Best Value", shown on pricing page
+  buttonColor String? // e.g. "#f59e0b", hex color for CTA button on pricing page
 
   // ─── Plan Succession ────────────────────────────────────────────────
-  successorPlanId     String?              // when disabled, point users to this replacement plan
-  successorPlan       SubscriptionPlan?    @relation("PlanSuccessor", fields: [successorPlanId], references: [id])
-  predecessors        SubscriptionPlan[]   @relation("PlanSuccessor")
+  successorPlanId String? // when disabled, point users to this replacement plan
+  successorPlan   SubscriptionPlan?  @relation("PlanSuccessor", fields: [successorPlanId], references: [id])
+  predecessors    SubscriptionPlan[] @relation("PlanSuccessor")
 
   // ─── Stripe Billing IDs ────────────────────────────────────────────
-  stripeProductId     String?              // Stripe Product ID (prod_xxx)
-  stripePriceId       String?              // Stripe monthly recurring Price ID (price_xxx)
-  stripeAnnualPriceId String?              // Stripe annual recurring Price ID (price_xxx)
+  stripeProductId     String? // Stripe Product ID (prod_xxx)
+  stripePriceId       String? // Stripe monthly recurring Price ID (price_xxx)
+  stripeAnnualPriceId String? // Stripe annual recurring Price ID (price_xxx)
 
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  subscriptions       SellerSubscription[]
+  subscriptions SellerSubscription[]
 
   @@unique([name, country])
   @@index([country, isActive])
@@ -2855,32 +3051,32 @@ model SubscriptionPlan {
 }
 
 model SellerSubscription {
-  id                    String             @id @default(uuid())
-  shopId                String
-  planId                String
-  status                SubscriptionStatus @default(ACTIVE)
-  startedAt             DateTime           @default(now())
-  currentPeriodStart    DateTime           @default(now())
-  currentPeriodEnd      DateTime
-  expiresAt             DateTime?          // hard expiry (for non-renewing)
-  cancelledAt           DateTime?
-  cancelReason          String?
-  stripeSubscriptionId  String?            @unique
-  stripeCustomerId      String?
-  country               MarketRegion
-  autoRenew             Boolean            @default(true)
+  id                   String             @id @default(uuid())
+  shopId               String
+  planId               String
+  status               SubscriptionStatus @default(ACTIVE)
+  startedAt            DateTime           @default(now())
+  currentPeriodStart   DateTime           @default(now())
+  currentPeriodEnd     DateTime
+  expiresAt            DateTime? // hard expiry (for non-renewing)
+  cancelledAt          DateTime?
+  cancelReason         String?
+  stripeSubscriptionId String?            @unique
+  stripeCustomerId     String?
+  country              MarketRegion
+  autoRenew            Boolean            @default(true)
 
   // ─── Plan Migration ─────────────────────────────────────────────────
-  migrationStatus       MigrationStatus    @default(NONE)
-  migrationNotifiedAt   DateTime?          // when the first migration email was sent
-  migrationNotifyCount  Int                @default(0)  // how many follow-up emails sent
+  migrationStatus      MigrationStatus @default(NONE)
+  migrationNotifiedAt  DateTime? // when the first migration email was sent
+  migrationNotifyCount Int             @default(0) // how many follow-up emails sent
 
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  shop                  Shop               @relation(fields: [shopId], references: [id])
-  plan                  SubscriptionPlan   @relation(fields: [planId], references: [id])
-  payments              SubscriptionPayment[]
+  shop     Shop                  @relation(fields: [shopId], references: [id])
+  plan     SubscriptionPlan      @relation(fields: [planId], references: [id])
+  payments SubscriptionPayment[]
 
   @@index([shopId])
   @@index([planId])
@@ -2891,21 +3087,21 @@ model SellerSubscription {
 }
 
 model SubscriptionPayment {
-  id                    String             @id @default(uuid())
-  subscriptionId        String
-  amount                Float
-  currency              CurrencyCode
-  gateway               String             // "stripe", "phonepe", "manual"
-  gatewayPaymentId      String?
-  status                PaymentStatus      @default(PENDING)
-  periodStart           DateTime
-  periodEnd             DateTime
-  invoiceUrl            String?
-  failureReason         String?
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  id               String        @id @default(uuid())
+  subscriptionId   String
+  amount           Float
+  currency         CurrencyCode
+  gateway          String // "stripe", "phonepe", "manual"
+  gatewayPaymentId String?
+  status           PaymentStatus @default(PENDING)
+  periodStart      DateTime
+  periodEnd        DateTime
+  invoiceUrl       String?
+  failureReason    String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
-  subscription          SellerSubscription @relation(fields: [subscriptionId], references: [id])
+  subscription SellerSubscription @relation(fields: [subscriptionId], references: [id])
 
   @@index([subscriptionId])
   @@index([gatewayPaymentId])
@@ -2921,15 +3117,15 @@ enum SubscriptionStatus {
 }
 
 enum MigrationStatus {
-  NONE       // no migration pending
-  PENDING    // notified, awaiting response
-  ACCEPTED   // user accepted migration to successor plan
-  DECLINED   // user declined, will downgrade to FREE at period end
+  NONE // no migration pending
+  PENDING // notified, awaiting response
+  ACCEPTED // user accepted migration to successor plan
+  DECLINED // user declined, will downgrade to FREE at period end
 }
 
 enum OverageBehavior {
-  BLOCK        // Block generation when credits run out
-  AUTO_CHARGE  // Auto-charge extraCreditPrice via Stripe
+  BLOCK // Block generation when credits run out
+  AUTO_CHARGE // Auto-charge extraCreditPrice via Stripe
 }
 
 // ═══════════════════════════════════════════
@@ -2937,19 +3133,19 @@ enum OverageBehavior {
 // ═══════════════════════════════════════════
 
 model AiCreditLedger {
-  id              String       @id @default(uuid())
-  userId          String
-  shopId          String?
-  action          CreditAction
-  amount          Int          // always positive; action determines direction
-  balanceBefore   Int
-  balanceAfter    Int
-  reason          String?      // "monthly_grant", "image_gen", "admin_adjustment", "overage_charge", "expiry"
-  referenceId     String?      // designId, subscriptionPaymentId, etc.
-  idempotencyKey  String?      @unique
-  createdAt       DateTime     @default(now())
+  id             String       @id @default(uuid())
+  userId         String
+  shopId         String?
+  action         CreditAction
+  amount         Int // always positive; action determines direction
+  balanceBefore  Int
+  balanceAfter   Int
+  reason         String? // "monthly_grant", "image_gen", "admin_adjustment", "overage_charge", "expiry"
+  referenceId    String? // designId, subscriptionPaymentId, etc.
+  idempotencyKey String?      @unique
+  createdAt      DateTime     @default(now())
 
-  user            User         @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([shopId, createdAt])
@@ -2958,13 +3154,13 @@ model AiCreditLedger {
 }
 
 enum CreditAction {
-  GRANT        // Monthly/admin grant
-  DEBIT        // Used for generation
-  REFUND       // Failed generation refund
-  EXPIRE       // End-of-period expiry beyond rollover cap
+  GRANT // Monthly/admin grant
+  DEBIT // Used for generation
+  REFUND // Failed generation refund
+  EXPIRE // End-of-period expiry beyond rollover cap
   ADMIN_ADJUST // Manual admin adjustment
-  OVERAGE      // Extra credit purchased (auto-charge)
-  PURCHASE     // Manually purchased extra credits
+  OVERAGE // Extra credit purchased (auto-charge)
+  PURCHASE // Manually purchased extra credits
 }
 
 // ═══════════════════════════════════════════
@@ -2972,21 +3168,21 @@ enum CreditAction {
 // ═══════════════════════════════════════════
 
 model PaymentGatewayConfig {
-  id                  String       @id @default(uuid())
-  gatewayName         String       // "stripe", "phonepe", "razorpay", "esewa", "khalti"
-  displayName         String       // "Stripe", "PhonePe", etc.
-  isEnabled           Boolean      @default(false)
-  isDefault           Boolean      @default(false)  // fallback gateway when no country match
-  supportedCountries  MarketRegion[]
-  supportedMethods    PaymentMethod[] // CARD, UPI, BANK_TRANSFER, etc.
-  priority            Int          @default(0)  // higher = preferred when multiple gateways available
-  envKeyLabel         String       // reference label: "STRIPE_SECRET_KEY", "PHONEPE_MERCHANT_ID" — never the actual value
-  envKeysRequired     Json?        // JSON array of env key names: ["STRIPE_SECRET_KEY","STRIPE_WEBHOOK_SECRET"]
-  commissionInfo      String?      // human-readable: "1.5% + ₹2 per txn"
-  webhookEndpoint     String?      // e.g. "/api/webhooks/stripe"
-  updatedBy           String?
-  updatedAt           DateTime     @updatedAt
-  createdAt           DateTime     @default(now())
+  id                 String          @id @default(uuid())
+  gatewayName        String // "stripe", "phonepe", "razorpay", "esewa", "khalti"
+  displayName        String // "Stripe", "PhonePe", etc.
+  isEnabled          Boolean         @default(false)
+  isDefault          Boolean         @default(false) // fallback gateway when no country match
+  supportedCountries MarketRegion[]
+  supportedMethods   PaymentMethod[] // CARD, UPI, BANK_TRANSFER, etc.
+  priority           Int             @default(0) // higher = preferred when multiple gateways available
+  envKeyLabel        String // reference label: "STRIPE_SECRET_KEY", "PHONEPE_MERCHANT_ID" — never the actual value
+  envKeysRequired    Json? // JSON array of env key names: ["STRIPE_SECRET_KEY","STRIPE_WEBHOOK_SECRET"]
+  commissionInfo     String? // human-readable: "1.5% + ₹2 per txn"
+  webhookEndpoint    String? // e.g. "/api/webhooks/stripe"
+  updatedBy          String?
+  updatedAt          DateTime        @updatedAt
+  createdAt          DateTime        @default(now())
 
   @@unique([gatewayName])
   @@index([isEnabled])
@@ -3000,25 +3196,25 @@ model PaymentGatewayConfig {
 
 // Multi-branch support — single enterprise account managing multiple locations
 model ShopBranch {
-  id              String   @id @default(uuid())
-  shopId          String
-  branchName      String
-  branchCode      String   // e.g. "KTM-01", "BLR-MAIN"
-  country         String
-  state           String?
-  city            String
-  address         String
-  pincode         String?
-  latitude        Float?
-  longitude       Float?
-  contactPhone    String
-  contactEmail    String?
-  isActive        Boolean  @default(true)
-  isHeadquarter   Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(uuid())
+  shopId        String
+  branchName    String
+  branchCode    String // e.g. "KTM-01", "BLR-MAIN"
+  country       String
+  state         String?
+  city          String
+  address       String
+  pincode       String?
+  latitude      Float?
+  longitude     Float?
+  contactPhone  String
+  contactEmail  String?
+  isActive      Boolean  @default(true)
+  isHeadquarter Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@unique([shopId, branchCode])
   @@index([shopId, isActive])
@@ -3027,21 +3223,21 @@ model ShopBranch {
 
 // Staff sub-accounts with granular permissions
 model StaffAccount {
-  id              String         @id @default(uuid())
+  id              String    @id @default(uuid())
   shopId          String
   userId          String
   staffRole       StaffRole
-  permissions     Json           // e.g. { "inventory": true, "orders": true, "billing": false }
-  branchIds       String[]       // which branches this staff can access; empty = all
-  isActive        Boolean        @default(true)
+  permissions     Json // e.g. { "inventory": true, "orders": true, "billing": false }
+  branchIds       String[] // which branches this staff can access; empty = all
+  isActive        Boolean   @default(true)
   invitedByUserId String
-  invitedAt       DateTime       @default(now())
+  invitedAt       DateTime  @default(now())
   acceptedAt      DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  shop            Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([shopId, userId])
   @@index([shopId, isActive])
@@ -3049,30 +3245,30 @@ model StaffAccount {
 }
 
 enum StaffRole {
-  MANAGER       // Full access to branch operations
-  INVENTORY     // Inventory + catalogue management only
-  CASHIER       // POS + order processing only
-  VIEWER        // Read-only dashboard access
-  AUDITOR       // Read-only + audit log + reports
+  MANAGER // Full access to branch operations
+  INVENTORY // Inventory + catalogue management only
+  CASHIER // POS + order processing only
+  VIEWER // Read-only dashboard access
+  AUDITOR // Read-only + audit log + reports
 }
 
 // API key management for enterprise integrations
 model ShopApiKey {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   shopId          String
-  keyName         String   // e.g. "ERP Sync", "POS Integration"
-  keyHash         String   // sha256 hash of the API key (not the raw key)
-  keyPrefix       String   // first 8 chars to identify key: "ovrk_xxxx"
+  keyName         String // e.g. "ERP Sync", "POS Integration"
+  keyHash         String // sha256 hash of the API key (not the raw key)
+  keyPrefix       String // first 8 chars to identify key: "ovrk_xxxx"
   scopes          String[] // e.g. ["inventory:read", "orders:read", "orders:write"]
   expiresAt       DateTime?
   lastUsedAt      DateTime?
   lastUsedIp      String?
-  isActive        Boolean  @default(true)
+  isActive        Boolean   @default(true)
   createdByUserId String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([shopId, isActive])
   @@index([keyPrefix])
@@ -3080,20 +3276,20 @@ model ShopApiKey {
 
 // Webhook subscriptions for enterprise event push
 model WebhookSubscription {
-  id              String           @id @default(uuid())
+  id              String         @id @default(uuid())
   shopId          String
-  url             String           // HTTPS endpoint URL
-  secret          String           // HMAC secret for signature verification
-  events          WebhookEvent[]   // which events to fire
-  isActive        Boolean          @default(true)
-  failureCount    Int              @default(0) // consecutive failures; disabled after 10
+  url             String // HTTPS endpoint URL
+  secret          String // HMAC secret for signature verification
+  events          WebhookEvent[] // which events to fire
+  isActive        Boolean        @default(true)
+  failureCount    Int            @default(0) // consecutive failures; disabled after 10
   lastDeliveredAt DateTime?
   lastFailedAt    DateTime?
   lastHttpStatus  Int?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
-  shop            Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([shopId, isActive])
 }
@@ -3116,17 +3312,17 @@ enum WebhookEvent {
 model WhiteLabelConfig {
   id              String   @id @default(uuid())
   shopId          String   @unique
-  customDomain    String?  @unique  // e.g. "shop.mybrand.com"
+  customDomain    String?  @unique // e.g. "shop.mybrand.com"
   logoUrl         String?
   faviconUrl      String?
-  primaryColor    String?  // hex e.g. "#D4AF37"
+  primaryColor    String? // hex e.g. "#D4AF37"
   secondaryColor  String?
   accentColor     String?
-  fontFamily      String?  // Google Fonts name
-  headerHtml      String?  // custom HTML for storefront header
-  footerHtml      String?  // custom HTML for storefront footer
+  fontFamily      String? // Google Fonts name
+  headerHtml      String? // custom HTML for storefront header
+  footerHtml      String? // custom HTML for storefront footer
   hideOrivraa     Boolean  @default(false) // hide "Powered by OriVraa"
-  customCss       String?  // extra CSS overrides
+  customCss       String? // extra CSS overrides
   metaTitle       String?
   metaDescription String?
   ogImageUrl      String?
@@ -3134,26 +3330,26 @@ model WhiteLabelConfig {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }
 
 // Scheduled report config
 model ScheduledReport {
-  id              String         @id @default(uuid())
+  id              String          @id @default(uuid())
   shopId          String
   reportType      ReportType
   frequency       ReportFrequency
-  recipients      String[]       // email addresses
-  format          ReportFormat   @default(PDF)
-  filters         Json?          // date range, categories, branches, etc.
-  isActive        Boolean        @default(true)
+  recipients      String[] // email addresses
+  format          ReportFormat    @default(PDF)
+  filters         Json? // date range, categories, branches, etc.
+  isActive        Boolean         @default(true)
   lastSentAt      DateTime?
   nextRunAt       DateTime?
   createdByUserId String
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  shop            Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([shopId, isActive])
   @@index([nextRunAt])
@@ -3197,23 +3393,23 @@ enum ReportFormat {
 
 // Bulk import/export job tracking
 model BulkImportJob {
-  id              String           @id @default(uuid())
+  id              String         @id @default(uuid())
   shopId          String
   importType      BulkImportType
-  status          BulkJobStatus    @default(PENDING)
-  fileUrl         String           // R2 URL of uploaded file
+  status          BulkJobStatus  @default(PENDING)
+  fileUrl         String // R2 URL of uploaded file
   totalRows       Int?
-  processedRows   Int              @default(0)
-  successRows     Int              @default(0)
-  failedRows      Int              @default(0)
-  errorLog        Json?            // array of { row, field, message }
-  resultFileUrl   String?          // URL of result/error file
+  processedRows   Int            @default(0)
+  successRows     Int            @default(0)
+  failedRows      Int            @default(0)
+  errorLog        Json? // array of { row, field, message }
+  resultFileUrl   String? // URL of result/error file
   startedAt       DateTime?
   completedAt     DateTime?
   createdByUserId String
-  createdAt       DateTime         @default(now())
+  createdAt       DateTime       @default(now())
 
-  shop            Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([shopId, status])
   @@index([createdAt])
@@ -3239,15 +3435,15 @@ enum BulkJobStatus {
 model DemandForecast {
   id              String   @id @default(uuid())
   shopId          String
-  period          String   // "2026-03", "2026-Q1"
-  category        String   // jewellery type, karat, etc.
+  period          String // "2026-03", "2026-Q1"
+  category        String // jewellery type, karat, etc.
   predictedDemand Int
-  confidenceScore Float    // 0-1
-  factors         Json?    // { "seasonal": 0.3, "trend": 0.5, "promotion": 0.2 }
-  recommendation  String?  // AI-generated recommendation text
+  confidenceScore Float // 0-1
+  factors         Json? // { "seasonal": 0.3, "trend": 0.5, "promotion": 0.2 }
+  recommendation  String? // AI-generated recommendation text
   createdAt       DateTime @default(now())
 
-  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([shopId, period])
   @@index([category])
@@ -3255,73 +3451,73 @@ model DemandForecast {
 
 // Automated repricing rules
 model RepricingRule {
-  id              String           @id @default(uuid())
+  id              String        @id @default(uuid())
   shopId          String
   ruleName        String
   ruleType        RepricingType
-  conditions      Json             // e.g. { "metalType": "GOLD", "karat": 24, "marginMin": 3 }
-  action          Json             // e.g. { "adjustPercent": -2, "roundTo": 10 }
-  isActive        Boolean          @default(true)
-  priority        Int              @default(0)
+  conditions      Json // e.g. { "metalType": "GOLD", "karat": 24, "marginMin": 3 }
+  action          Json // e.g. { "adjustPercent": -2, "roundTo": 10 }
+  isActive        Boolean       @default(true)
+  priority        Int           @default(0)
   lastTriggeredAt DateTime?
-  triggerCount    Int              @default(0)
+  triggerCount    Int           @default(0)
   createdByUserId String
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  shop            Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([shopId, isActive])
 }
 
 enum RepricingType {
-  GOLD_RATE_CHANGE  // trigger when gold rate changes by X%
-  LOW_STOCK         // mark up when stock < threshold
-  COMPETITOR_MATCH  // match competitor pricing
-  TIME_BASED        // scheduled discounts (e.g. weekend sale)
-  DEMAND_BASED      // AI-driven demand elasticity
+  GOLD_RATE_CHANGE // trigger when gold rate changes by X%
+  LOW_STOCK // mark up when stock < threshold
+  COMPETITOR_MATCH // match competitor pricing
+  TIME_BASED // scheduled discounts (e.g. weekend sale)
+  DEMAND_BASED // AI-driven demand elasticity
 }
 
 // ─── Performance Monitoring ───
 
 // Stores periodic snapshots of Prometheus metrics for historical charts
 model MetricsSnapshot {
-  id          String   @id @default(uuid())
+  id            String   @id @default(uuid())
   // Core request metrics
-  requests    Int      @default(0)
-  errors      Int      @default(0)
-  errorRate   Float    @default(0)     // percentage
+  requests      Int      @default(0)
+  errors        Int      @default(0)
+  errorRate     Float    @default(0) // percentage
   // Latency in milliseconds
-  avgLatency  Float    @default(0)
-  p95Latency  Float    @default(0)
-  p99Latency  Float    @default(0)
+  avgLatency    Float    @default(0)
+  p95Latency    Float    @default(0)
+  p99Latency    Float    @default(0)
   // System metrics
-  memoryMB    Float    @default(0)
-  cpuSeconds  Float    @default(0)
+  memoryMB      Float    @default(0)
+  cpuSeconds    Float    @default(0)
   // Business metrics
-  rfqsCreated    Int   @default(0)
-  ordersCreated  Int   @default(0)
+  rfqsCreated   Int      @default(0)
+  ordersCreated Int      @default(0)
   // Connection metrics
-  wsConnections  Int   @default(0)
-  inFlight       Int   @default(0)
+  wsConnections Int      @default(0)
+  inFlight      Int      @default(0)
   // Uptime
-  uptime      Float    @default(0)     // seconds
-  createdAt   DateTime @default(now())
+  uptime        Float    @default(0) // seconds
+  createdAt     DateTime @default(now())
 
   @@index([createdAt])
 }
 
 // ─── Cron Job Metrics ──────────────────────────────────────
 model CronJobLog {
-  id            String   @id @default(cuid())
-  jobName       String   // e.g. "metrics-snapshot", "pos-expiry", "call-scheduler"
-  app           String   // "api" or "team-api"
-  frequency     String   // e.g. "EVERY_30_MINUTES", "DAILY_3AM"
-  status        String   // "success", "error", "skipped"
-  durationMs    Int      @default(0)
-  recordsProcessed Int   @default(0)
-  errorMessage  String?
-  createdAt     DateTime @default(now())
+  id               String   @id @default(cuid())
+  jobName          String // e.g. "metrics-snapshot", "pos-expiry", "call-scheduler"
+  app              String // "api" or "team-api"
+  frequency        String // e.g. "EVERY_30_MINUTES", "DAILY_3AM"
+  status           String // "success", "error", "skipped"
+  durationMs       Int      @default(0)
+  recordsProcessed Int      @default(0)
+  errorMessage     String?
+  createdAt        DateTime @default(now())
 
   @@index([jobName, createdAt])
   @@index([app, createdAt])
@@ -3331,14 +3527,14 @@ model CronJobLog {
 model CronJobConfig {
   id              String   @id @default(cuid())
   jobName         String   @unique // e.g. "call-scheduler", "metrics-snapshot"
-  app             String   // "api" or "team-api"
-  intervalMinutes Int      // current frequency in minutes
-  recommended     Int      // recommended frequency in minutes
-  minInterval     Int      @default(1)  // minimum allowed interval
+  app             String // "api" or "team-api"
+  intervalMinutes Int // current frequency in minutes
+  recommended     Int // recommended frequency in minutes
+  minInterval     Int      @default(1) // minimum allowed interval
   maxInterval     Int      @default(60) // maximum allowed interval
   enabled         Boolean  @default(true)
-  description     String?  // human-readable description
-  impact          String?  // impact description for the UI
+  description     String? // human-readable description
+  impact          String? // impact description for the UI
   category        String   @default("general") // "scheduling", "monitoring", "cache", "cleanup"
   updatedAt       DateTime @updatedAt
   createdAt       DateTime @default(now())
@@ -3422,12 +3618,12 @@ model SavingsMember {
 }
 
 model SavingsPayment {
-  id        String        @id @default(uuid())
-  memberId  String
-  clientId  String?       @unique // client-generated UUID for offline idempotency
-  amount    Float
-  paidAt    DateTime      @default(now())
-  member    SavingsMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  id       String        @id @default(uuid())
+  memberId String
+  clientId String?       @unique // client-generated UUID for offline idempotency
+  amount   Float
+  paidAt   DateTime      @default(now())
+  member   SavingsMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([memberId])
 }
@@ -3523,8 +3719,8 @@ model KarigarVaultReserve {
 // ─── Security Shield ───────────────────────────────────────
 model SecurityEvent {
   id        String   @id @default(cuid())
-  type      String   // AUTH_BRUTE_FORCE, INPUT_INJECTION, ENUM_SCRAPING, etc.
-  severity  String   // CRITICAL, HIGH, MEDIUM, LOW, INFO
+  type      String // AUTH_BRUTE_FORCE, INPUT_INJECTION, ENUM_SCRAPING, etc.
+  severity  String // CRITICAL, HIGH, MEDIUM, LOW, INFO
   ip        String
   userId    String?
   route     String
@@ -3556,7 +3752,7 @@ model WhitelistedIp {
   id        String   @id @default(cuid())
   ip        String   @unique
   label     String   @default("") // e.g. "Admin Home", "Office VPN"
-  addedBy   String?  // userId of admin who added it
+  addedBy   String? // userId of admin who added it
   createdAt DateTime @default(now())
 
   @@index([ip])
@@ -3564,25 +3760,25 @@ model WhitelistedIp {
 
 // ─── Crash Reports (client-side error reporting) ───────────
 model CrashReport {
-  id            String   @id @default(cuid())
-  errorMessage  String   @db.Text
-  errorStack    String?  @db.Text
-  page          String   // URL/path where the crash happened
-  userAction    String?  @db.Text // what the user was doing (button click, navigation, etc.)
-  platform      String   // "web" | "desktop"
-  userRole      String?  // ADMIN | CUSTOMER | SHOPKEEPER | guest
-  userId        String?  // if logged in
-  userAgent     String?  @db.Text
-  appVersion    String?  // desktop app version
-  ip            String?  // client IP address (recorded server-side)
+  id              String   @id @default(cuid())
+  errorMessage    String   @db.Text
+  errorStack      String?  @db.Text
+  page            String // URL/path where the crash happened
+  userAction      String?  @db.Text // what the user was doing (button click, navigation, etc.)
+  platform        String // "web" | "desktop"
+  userRole        String? // ADMIN | CUSTOMER | SHOPKEEPER | guest
+  userId          String? // if logged in
+  userAgent       String?  @db.Text
+  appVersion      String? // desktop app version
+  ip              String? // client IP address (recorded server-side)
   status          String   @default("new") // new | reviewed | resolved
   adminNotes      String?  @db.Text
   // User-initiated report fields
-  userTriggered   Boolean  @default(false)   // true = user manually clicked Report
-  userDescription String?  @db.Text          // user's own description of the issue
-  sessionToken    String?                    // link to WebSession
-  screenshotUrl   String?                    // user-opted-in screenshot (R2 URL)
-  frustrationType String?                    // "rage_click" | "api_error" | "manual" | "boundary"
+  userTriggered   Boolean  @default(false) // true = user manually clicked Report
+  userDescription String?  @db.Text // user's own description of the issue
+  sessionToken    String? // link to WebSession
+  screenshotUrl   String? // user-opted-in screenshot (R2 URL)
+  frustrationType String? // "rage_click" | "api_error" | "manual" | "boundary"
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -3594,14 +3790,14 @@ model CrashReport {
 
 // ─── App Releases & Desktop Tracking ───────────────────────
 model AppRelease {
-  id          String   @id @default(cuid())
-  version     String   // semver e.g. "0.2.0"
-  platform    String   // WINDOWS | MACOS | WEB
-  channel     String   @default("stable") // stable | beta
-  downloadUrl    String?  // direct download link (Windows/macOS installers)
-  fileSize       BigInt?  // bytes
-  fileName       String?  // e.g. "Orivraa_0.2.0_x64-setup.exe"
-  downloadCount  Int      @default(0) // incremented on each tracked click
+  id            String  @id @default(cuid())
+  version       String // semver e.g. "0.2.0"
+  platform      String // WINDOWS | MACOS | WEB
+  channel       String  @default("stable") // stable | beta
+  downloadUrl   String? // direct download link (Windows/macOS installers)
+  fileSize      BigInt? // bytes
+  fileName      String? // e.g. "Orivraa_0.2.0_x64-setup.exe"
+  downloadCount Int     @default(0) // incremented on each tracked click
 
   // Changelog — admin can override GitHub-sourced notes
   changelog       String? @db.Text // markdown
@@ -3609,14 +3805,14 @@ model AppRelease {
   changelogSource String  @default("github") // github | manual | merged
 
   // Version management
-  isLatest   Boolean  @default(false) // only ONE per platform should be true
-  isActive   Boolean  @default(true)  // false = hidden from download page
+  isLatest Boolean @default(false) // only ONE per platform should be true
+  isActive Boolean @default(true) // false = hidden from download page
 
   // System requirements
-  minOs         String?  // e.g. "Windows 10 (1809+)"
-  minRam        String?  // e.g. "4 GB"
-  minDisk       String?  // e.g. "200 MB"
-  architecture  String?  // x64 | arm64 | universal
+  minOs        String? // e.g. "Windows 10 (1809+)"
+  minRam       String? // e.g. "4 GB"
+  minDisk      String? // e.g. "200 MB"
+  architecture String? // x64 | arm64 | universal
 
   // Metadata
   publishedAt DateTime @default(now())
@@ -3631,17 +3827,17 @@ model AppRelease {
 model DesktopSession {
   id            String    @id @default(cuid())
   userId        String?
-  sessionToken  String    @unique           // generated by Tauri at launch
+  sessionToken  String    @unique // generated by Tauri at launch
   ipAddress     String
   appVersion    String
   os            String
   arch          String?
   startedAt     DateTime  @default(now())
   endedAt       DateTime?
-  durationSec   Int?                        // computed on close
+  durationSec   Int? // computed on close
   lastHeartbeat DateTime  @default(now())
   isActive      Boolean   @default(true)
-  closedBy      String?                     // "user_quit" | "heartbeat_timeout" | "crash"
+  closedBy      String? // "user_quit" | "heartbeat_timeout" | "crash"
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -3654,26 +3850,26 @@ model DesktopSession {
 // Tracks seller reviews left on external platforms (G2, SaaSHub, etc.)
 // for the "Review & Earn" programme — 1 approved review = 1 month Pro free.
 model PlatformReview {
-  id                String              @id @default(uuid())
-  shopId            String
-  platform          String              // "saashub" | "g2" | "crunchbase"
-  reviewUrl         String?             // optional link to the review
-  proofScreenshot   String              // uploaded image URL
-  status            PlatformReviewStatus @default(PENDING)
-  submittedAt       DateTime            @default(now())
-  reviewedAt        DateTime?
-  reviewedBy        String?             // admin user ID
-  adminNotes        String?
-  rewardGranted     Boolean             @default(false)
-  rewardGrantedAt   DateTime?
+  id              String               @id @default(uuid())
+  shopId          String
+  platform        String // "saashub" | "g2" | "crunchbase"
+  reviewUrl       String? // optional link to the review
+  proofScreenshot String // uploaded image URL
+  status          PlatformReviewStatus @default(PENDING)
+  submittedAt     DateTime             @default(now())
+  reviewedAt      DateTime?
+  reviewedBy      String? // admin user ID
+  adminNotes      String?
+  rewardGranted   Boolean              @default(false)
+  rewardGrantedAt DateTime?
 
   // Reminder tracking
-  lastRemindedAt    DateTime?
-  reminderCount     Int                 @default(0)
+  lastRemindedAt DateTime?
+  reminderCount  Int       @default(0)
 
-  shop              Shop                @relation(fields: [shopId], references: [id])
+  shop Shop @relation(fields: [shopId], references: [id])
 
-  @@unique([shopId, platform])          // one review per platform per shop
+  @@unique([shopId, platform]) // one review per platform per shop
   @@index([status])
   @@index([shopId])
 }
@@ -3686,23 +3882,23 @@ enum PlatformReviewStatus {
 
 // ── Referral Programme ──────────────────────────────────────────
 model Referral {
-  id                String          @id @default(uuid())
-  referrerShopId    String
-  refereeShopId     String?         // set once the referred seller creates a shop
-  refereeEmail      String          // email of the invited seller
-  referralCode      String          @unique
-  status            ReferralStatus  @default(PENDING)
-  referrerRewarded  Boolean         @default(false)
-  refereeRewarded   Boolean         @default(false)
+  id                 String         @id @default(uuid())
+  referrerShopId     String
+  refereeShopId      String? // set once the referred seller creates a shop
+  refereeEmail       String // email of the invited seller
+  referralCode       String         @unique
+  status             ReferralStatus @default(PENDING)
+  referrerRewarded   Boolean        @default(false)
+  refereeRewarded    Boolean        @default(false)
   referrerRewardedAt DateTime?
   refereeRewardedAt  DateTime?
-  invitedAt         DateTime        @default(now())
-  signedUpAt        DateTime?       // when the referee registered
-  planPurchasedAt   DateTime?       // when the referee bought a plan
-  completedAt       DateTime?       // when rewards were granted
+  invitedAt          DateTime       @default(now())
+  signedUpAt         DateTime? // when the referee registered
+  planPurchasedAt    DateTime? // when the referee bought a plan
+  completedAt        DateTime? // when rewards were granted
 
-  referrerShop      Shop            @relation("ShopReferralsMade", fields: [referrerShopId], references: [id])
-  refereeShop       Shop?           @relation("ShopReferralsReceived", fields: [refereeShopId], references: [id])
+  referrerShop Shop  @relation("ShopReferralsMade", fields: [referrerShopId], references: [id])
+  refereeShop  Shop? @relation("ShopReferralsReceived", fields: [refereeShopId], references: [id])
 
   @@unique([referrerShopId, refereeEmail])
   @@index([referralCode])
@@ -3712,55 +3908,55 @@ model Referral {
 }
 
 enum ReferralStatus {
-  PENDING           // invitation sent, awaiting sign-up
-  SIGNED_UP         // referee registered but not yet verified/plan purchased
-  PLAN_PURCHASED    // referee bought a plan — ready for auto-completion
-  COMPLETED         // both rewarded
-  EXPIRED           // invitation expired (e.g. 90 days)
+  PENDING // invitation sent, awaiting sign-up
+  SIGNED_UP // referee registered but not yet verified/plan purchased
+  PLAN_PURCHASED // referee bought a plan — ready for auto-completion
+  COMPLETED // both rewarded
+  EXPIRED // invitation expired (e.g. 90 days)
 }
 
 model ReferralSettings {
-  id                      String   @id @default("singleton")
-  freeMonths              Float    @default(1)      // extra months added to current plan for both parties
-  aiCreditsReward         Int      @default(50)     // AI credits granted to both parties
-  expirationDays          Int      @default(90)     // referral link validity
-  maxReferralsPerShop     Int      @default(50)     // anti-abuse cap
-  isActive                Boolean  @default(true)   // master switch
-  updatedAt               DateTime @updatedAt
+  id                  String   @id @default("singleton")
+  freeMonths          Float    @default(1) // extra months added to current plan for both parties
+  aiCreditsReward     Int      @default(50) // AI credits granted to both parties
+  expirationDays      Int      @default(90) // referral link validity
+  maxReferralsPerShop Int      @default(50) // anti-abuse cap
+  isActive            Boolean  @default(true) // master switch
+  updatedAt           DateTime @updatedAt
 }
 
 // ── Blog Posts ─────────────────────────────────────────────────
 model BlogPost {
-  id              String    @id @default(uuid())
-  slug            String    @unique
-  title           String
-  excerpt         String?   @db.Text   // Short summary for listing cards
-  content         String    @db.Text   // HTML content
-  coverImage      String?              // URL to a cover/hero image
+  id         String  @id @default(uuid())
+  slug       String  @unique
+  title      String
+  excerpt    String? @db.Text // Short summary for listing cards
+  content    String  @db.Text // HTML content
+  coverImage String? // URL to a cover/hero image
 
   // SEO fields
-  metaTitle       String?              // Override <title> tag
-  metaDescription String?   @db.Text
-  metaKeywords    String[]             // Array of keyword strings
+  metaTitle       String? // Override <title> tag
+  metaDescription String?  @db.Text
+  metaKeywords    String[] // Array of keyword strings
   canonicalUrl    String?
 
   // Categorisation
-  category        String    @default("General")
-  tags            String[]             // Freeform tags
+  category String   @default("General")
+  tags     String[] // Freeform tags
 
   // Authoring
-  author          String    @default("Orivraa Team")
-  authorRole      String?
-  readTime        String?              // e.g. "8 min read"
+  author     String  @default("Orivraa Team")
+  authorRole String?
+  readTime   String? // e.g. "8 min read"
 
   // Publishing
-  isPublished     Boolean   @default(false)
-  featured        Boolean   @default(false)
-  publishedAt     DateTime?
-  sortOrder       Int       @default(0)
+  isPublished Boolean   @default(false)
+  featured    Boolean   @default(false)
+  publishedAt DateTime?
+  sortOrder   Int       @default(0)
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isPublished, publishedAt])
   @@index([category])
@@ -3772,7 +3968,7 @@ model SupportContact {
   id          String   @id @default(uuid())
   country     String
   countryFlag String
-  type        String   // PHONE, WHATSAPP, EMAIL
+  type        String // PHONE, WHATSAPP, EMAIL
   value       String
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -3786,36 +3982,36 @@ model SupportContact {
 // One record per browser-tab chat session. Groups all AiChatLog
 // entries so you can replay full conversations and track leads.
 model BotSession {
-  id            String     @id              // UUID generated by client (sessionStorage)
-  ipAddress     String?
-  userAgent     String?
-  messageCount  Int        @default(0)      // counts user turns only
-  escalated     Boolean    @default(false)
-  leadIntents   String[]                    // e.g. ["pricing","trial","comparison"]
-  guestName     String?                     // populated on escalation or lead capture
-  guestEmail    String?                     // populated on escalation or lead capture
-  guestPhone    String?                     // populated when visitor shares phone number
-  contactCaptured Boolean  @default(false)  // true once any contact info is saved
-  startedAt     DateTime   @default(now())
-  lastMessageAt DateTime   @default(now())
-  expiresAt     DateTime                    // startedAt + 12 months (retention policy)
+  id              String   @id // UUID generated by client (sessionStorage)
+  ipAddress       String?
+  userAgent       String?
+  messageCount    Int      @default(0) // counts user turns only
+  escalated       Boolean  @default(false)
+  leadIntents     String[] // e.g. ["pricing","trial","comparison"]
+  guestName       String? // populated on escalation or lead capture
+  guestEmail      String? // populated on escalation or lead capture
+  guestPhone      String? // populated when visitor shares phone number
+  contactCaptured Boolean  @default(false) // true once any contact info is saved
+  startedAt       DateTime @default(now())
+  lastMessageAt   DateTime @default(now())
+  expiresAt       DateTime // startedAt + 12 months (retention policy)
 
-  logs          AiChatLog[]
+  logs AiChatLog[]
 
   @@index([startedAt])
   @@index([expiresAt])
 }
 
 model AiChatLog {
-  id           String      @id @default(uuid())
-  sessionId    String?
-  session      BotSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-  role         String      // user or assistant
-  content      String      @db.Text
-  actionTaken  String?
-  confidence   Float?
-  ipAddress    String?
-  createdAt    DateTime    @default(now())
+  id          String      @id @default(uuid())
+  sessionId   String?
+  session     BotSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  role        String // user or assistant
+  content     String      @db.Text
+  actionTaken String?
+  confidence  Float?
+  ipAddress   String?
+  createdAt   DateTime    @default(now())
 
   @@index([sessionId])
   @@index([createdAt])
@@ -3825,22 +4021,22 @@ model AiChatLog {
 // Tracks every browser session: open time, close time, duration, page views
 model WebSession {
   id           String    @id @default(cuid())
-  userId       String?                         // null = unauthenticated visitor
-  sessionToken String    @unique               // random uuid generated client-side
-  role         String?                         // CUSTOMER | SHOPKEEPER | ADMIN | guest
+  userId       String? // null = unauthenticated visitor
+  sessionToken String    @unique // random uuid generated client-side
+  role         String? // CUSTOMER | SHOPKEEPER | ADMIN | guest
   startedAt    DateTime  @default(now())
   endedAt      DateTime?
-  durationSec  Int?                            // computed when session closes
+  durationSec  Int? // computed when session closes
   pageViews    Int       @default(0)
   lastActive   DateTime  @default(now())
   ipAddress    String?
   country      String?
   userAgent    String?
   platform     String    @default("web")
-  referrer     String?                         // utm / referrer URL
-  closedBy     String?                         // "user_logout" | "timeout" | "beacon" | "pin_lock"
+  referrer     String? // utm / referrer URL
+  closedBy     String? // "user_logout" | "timeout" | "beacon" | "pin_lock"
 
-  user         User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user            User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   pageViewDetails SessionPageView[]
 
   @@index([userId])
@@ -3851,14 +4047,14 @@ model WebSession {
 
 /// Per-page visit record — one row per page the user navigated to within a session
 model SessionPageView {
-  id          String      @id @default(cuid())
+  id          String   @id @default(cuid())
   sessionId   String
-  path        String                          // e.g. "/dashboard/shop"
-  title       String?                         // document.title at visit time
-  durationSec Int?                            // seconds spent on this page before navigating away
-  visitedAt   DateTime    @default(now())
+  path        String // e.g. "/dashboard/shop"
+  title       String? // document.title at visit time
+  durationSec Int? // seconds spent on this page before navigating away
+  visitedAt   DateTime @default(now())
 
-  session     WebSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session WebSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([path])
@@ -3873,68 +4069,67 @@ model Survey {
   title       String
   description String?
   isActive    Boolean  @default(false)
-  targetRole  String?  // e.g., "CUSTOMER", "SHOPKEEPER", or null for everyone
+  targetRole  String? // e.g., "CUSTOMER", "SHOPKEEPER", or null for everyone
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  questions   SurveyQuestion[]
-  responses   SurveyResponse[]
+  questions SurveyQuestion[]
+  responses SurveyResponse[]
 
   @@index([isActive])
 }
 
 model SurveyQuestion {
-  id          String   @id @default(uuid())
-  surveyId    String
-  text        String
-  type        String   // "RATING", "TEXT", "MULTIPLE_CHOICE"
-  options     Json?    // Array of string options for multiple choice
-  isRequired  Boolean  @default(true)
-  orderIdx    Int      @default(0)
+  id         String  @id @default(uuid())
+  surveyId   String
+  text       String
+  type       String // "RATING", "TEXT", "MULTIPLE_CHOICE"
+  options    Json? // Array of string options for multiple choice
+  isRequired Boolean @default(true)
+  orderIdx   Int     @default(0)
 
-  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  answers     SurveyAnswer[]
+  survey  Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  answers SurveyAnswer[]
 
   @@index([surveyId])
   @@index([surveyId, orderIdx])
 }
 
 model SurveyResponse {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   surveyId    String
   userId      String
-  startedAt   DateTime @default(now())
+  startedAt   DateTime  @default(now())
   completedAt DateTime?
-  
-  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  answers     SurveyAnswer[]
+
+  survey  Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers SurveyAnswer[]
 
   @@unique([surveyId, userId]) // A user can only respond once per survey
   @@index([userId])
 }
 
 model SurveyAnswer {
-  id          String   @id @default(uuid())
-  responseId  String
-  questionId  String
-  value       String   // Stringified answer
-  
-  response    SurveyResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
-  question    SurveyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  id         String @id @default(uuid())
+  responseId String
+  questionId String
+  value      String // Stringified answer
+
+  response SurveyResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question SurveyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([responseId, questionId])
 }
 
 /// Support bot RAG — knowledge chunks embedded with gemini-embedding-001 (3072-dim)
 model KnowledgeChunk {
-  id        String                    @id @default(uuid())
-  topic     String                    // e.g. "pricing", "gst", "hallmark"
-  content   String                    // Raw text of the chunk
+  id        String                       @id @default(uuid())
+  topic     String // e.g. "pricing", "gst", "hallmark"
+  content   String // Raw text of the chunk
   embedding Unsupported("vector(3072)")?
-  createdAt DateTime                  @default(now())
-  updatedAt DateTime                  @updatedAt
+  createdAt DateTime                     @default(now())
+  updatedAt DateTime                     @updatedAt
 
   @@index([topic])
 }
-

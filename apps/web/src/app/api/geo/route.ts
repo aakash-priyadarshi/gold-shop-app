@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Map country codes to supported markets
 function mapToSupportedMarket(countryCode: string): string {
-  const supportedMarkets = ['NP', 'IN', 'US', 'UK', 'EU', 'AE'];
+  countryCode = countryCode.trim().toUpperCase();
+  const supportedMarkets = ['NP', 'IN', 'US', 'UK', 'EU', 'AE', 'LK'];
   
   if (supportedMarkets.includes(countryCode)) {
     return countryCode;
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
     rawCountry = urlCountry.toUpperCase();
   } else if (cookieCountry) {
     // Middleware-set cookie (most reliable)
-    detectedCountry = cookieCountry;
+    detectedCountry = mapToSupportedMarket(cookieCountry);
     source = cookieSource || 'cookie';
     rawCountry = cookieRaw || cookieCountry;
   } else if (cfCountry && cfCountry !== 'XX') {
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
     rawCountry = vercelCountry;
   } else if (middlewareCountry) {
     // Middleware header (shouldn't normally reach here)
-    detectedCountry = middlewareCountry;
+    detectedCountry = mapToSupportedMarket(middlewareCountry);
     source = 'middleware-header';
     rawCountry = middlewareCountry;
   }

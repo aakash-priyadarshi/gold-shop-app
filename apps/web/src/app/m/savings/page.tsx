@@ -10,6 +10,7 @@ import { getDB, type LocalSavingsMember } from "@/lib/offline/db";
 import {
   enrollMember,
   recordPayment as recordPaymentOffline,
+  redeemMember,
   refreshSavings,
 } from "@/lib/offline/savings";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -257,7 +258,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function MemberCard({ member, onRecord }: { member: SavingsMember; onRecord: () => void }) {
+function MemberCard({
+  member,
+  onRecord,
+  onRedeem,
+}: {
+  member: SavingsMember;
+  onRecord: () => void;
+  onRedeem: () => void;
+}) {
   const s = STATUS_CONFIG[member.status];
   const pct = Math.round((member.installmentsPaid / member.totalInstallments) * 100);
 
@@ -350,6 +359,14 @@ function MemberCard({ member, onRecord }: { member: SavingsMember; onRecord: () 
             <Plus className="h-3.5 w-3.5" /> <T>Record Payment</T>
           </button>
         )}
+        {(member.status === "MATURED" || member.status === "ACTIVE") && (
+          <button
+            onClick={onRedeem}
+            className="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5"
+          >
+            <Check className="h-3.5 w-3.5" /> <T>Redeem</T>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -397,6 +414,15 @@ export default function SavingsPage() {
       toast({ title: "Payment recorded!" });
     } catch {
       toast({ title: "Failed to record payment", variant: "destructive" });
+    }
+  };
+
+  const redeem = async (memberId: string) => {
+    try {
+      await redeemMember(memberId);
+      toast({ title: "Scheme redeemed!" });
+    } catch {
+      toast({ title: "Failed to redeem", variant: "destructive" });
     }
   };
 
@@ -475,6 +501,7 @@ export default function SavingsPage() {
                 key={m.id}
                 member={m}
                 onRecord={() => recordPayment(m.id)}
+                onRedeem={() => redeem(m.id)}
               />
             ))
           )}

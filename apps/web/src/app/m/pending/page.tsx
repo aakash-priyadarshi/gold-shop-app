@@ -45,7 +45,7 @@ interface PendingEntry {
 }
 
 const STORAGE_KEY = "orivraa_pending_payments";
-const CURRENCIES = ["NPR", "INR", "AED", "USD", "GBP", "EUR"];
+const CURRENCIES = ["NPR", "INR", "LKR", "AED", "USD", "GBP", "EUR"];
 
 function load(): PendingEntry[] {
   try {

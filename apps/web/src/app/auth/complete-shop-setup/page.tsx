@@ -46,7 +46,7 @@ import * as z from "zod";
 const shopSetupSchema = z.object({
   shopName: z.string().min(2, "Shop name must be at least 2 characters"),
   userPhone: z.string().min(10, "Please enter a valid phone number"),
-  country: z.enum(["NP", "IN", "US", "AE", "UK"], {
+  country: z.enum(["NP", "IN", "US", "AE", "UK", "EU", "LK"], {
     required_error: "Please select a country",
   }),
   city: z.string().min(2, "City must be at least 2 characters"),
@@ -59,9 +59,11 @@ type ShopSetupForm = z.infer<typeof shopSetupSchema>;
 const countryOptions = [
   { value: "NP", label: "Nepal", currency: "NPR" },
   { value: "IN", label: "India", currency: "INR" },
+  { value: "LK", label: "Sri Lanka", currency: "LKR" },
   { value: "US", label: "United States", currency: "USD" },
   { value: "AE", label: "UAE", currency: "AED" },
   { value: "UK", label: "United Kingdom", currency: "GBP" },
+  { value: "EU", label: "Europe", currency: "EUR" },
 ];
 
 // Country-specific placeholder data
@@ -109,6 +111,20 @@ const countryPlaceholders: Record<
     city: "Dubai",
     address: "Gold Souq, Deira, Dubai",
     shopPhone: "+971 4 XXX XXXX",
+  },
+  LK: {
+    phone: "+94 77 XXX XXXX",
+    shopName: "Perera Jewellers",
+    city: "Colombo",
+    address: "Sea Street, Colombo",
+    shopPhone: "+94 11 XXX XXXX",
+  },
+  EU: {
+    phone: "+49 1512 3456789",
+    shopName: "European Jewellery House",
+    city: "Berlin",
+    address: "Mitte, Berlin",
+    shopPhone: "+49 30 123456",
   },
 };
 

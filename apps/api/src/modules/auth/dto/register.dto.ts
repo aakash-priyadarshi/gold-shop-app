@@ -1,14 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { CurrencyCode } from "@prisma/client";
 import { Type } from "class-transformer";
 import {
   IsEmail,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
   MinLength,
   ValidateNested,
 } from "class-validator";
+import { SUPPORTED_MARKET_COUNTRIES } from "../../../common/market/country-currency";
 
 // Shop creation DTO for shopkeeper registration
 export class CreateShopDto {
@@ -19,19 +22,21 @@ export class CreateShopDto {
 
   @ApiProperty({
     example: "NP",
-    description: "Country code: NP, IN, AE, UK, EU, US",
+    enum: SUPPORTED_MARKET_COUNTRIES,
+    description: "Supported market country code",
   })
-  @IsString()
+  @IsIn(SUPPORTED_MARKET_COUNTRIES)
   @IsNotEmpty()
   country: string;
 
   @ApiProperty({
     example: "NPR",
-    description: "Currency code: NPR, INR, AED, GBP, EUR, USD",
+    enum: CurrencyCode,
+    description: "Supported billing currency code",
   })
-  @IsString()
+  @IsEnum(CurrencyCode)
   @IsNotEmpty()
-  currency: string;
+  currency: CurrencyCode;
 
   @ApiProperty({ example: "Kathmandu" })
   @IsString()

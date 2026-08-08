@@ -19,7 +19,7 @@ function mapToSupportedMarket(countryCode: string | null | undefined): string {
   }
 
   const code = countryCode.toUpperCase();
-  const supportedMarkets = ["NP", "IN", "US", "UK", "AE"];
+  const supportedMarkets = ["NP", "IN", "US", "UK", "EU", "AE", "LK"];
 
   // Direct match
   if (supportedMarkets.includes(code)) {
@@ -86,7 +86,7 @@ function mapToSupportedMarket(countryCode: string | null | undefined): string {
   }
 
   // South Asian neighbors of Nepal/India
-  const southAsianCountries = ["BD", "LK", "PK", "BT", "MV"];
+  const southAsianCountries = ["BD", "PK", "BT", "MV"];
   if (southAsianCountries.includes(code)) {
     return "IN"; // Default to India market for South Asia
   }

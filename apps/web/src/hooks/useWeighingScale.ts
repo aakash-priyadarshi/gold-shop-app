@@ -15,7 +15,7 @@
  *   - Live price calculation integration
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type WeightUnit = "g" | "oz" | "tola" | "dwt" | "kg";
 
@@ -174,10 +174,89 @@ export function useWeighingScale(
   const bufferRef = useRef("");
   const activeRef = useRef(false);
 
-  const scaleConfig: ScaleConfig = {
-    ...SCALE_PRESETS.default,
-    ...config,
-  };
+  const scaleConfig = useMemo<ScaleConfig>(
+    () => ({
+      baudRate: config?.baudRate ?? SCALE_PRESETS.default.baudRate,
+      dataBits: config?.dataBits ?? SCALE_PRESETS.default.dataBits,
+      stopBits: config?.stopBits ?? SCALE_PRESETS.default.stopBits,
+      parity: config?.parity ?? SCALE_PRESETS.default.parity,
+      flowControl: config?.flowControl ?? SCALE_PRESETS.default.flowControl,
+    }),
+    [
+      config?.baudRate,
+      config?.dataBits,
+      config?.flowControl,
+      config?.parity,
+      config?.stopBits,
+    ],
+  );
+
+  const displayUnitRef = useRef(displayUnit);
+  const tareOffsetRef = useRef(tareOffset);
+
+  useEffect(() => {
+    displayUnitRef.current = displayUnit;
+  }, [displayUnit]);
+
+  useEffect(() => {
+    tareOffsetRef.current = tareOffset;
+  }, [tareOffset]);
+
+  const readLoop = useCallback(async (port: any) => {
+    const decoder = new TextDecoderStream();
+    const readableStreamClosed = port.readable!.pipeTo(decoder.writable);
+    const reader = decoder.readable.getReader();
+    readerRef.current = reader;
+
+    try {
+      while (activeRef.current) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+
+        bufferRef.current += value;
+
+        // Process complete lines (delimited by \r\n or \n)
+        const lines = bufferRef.current.split(/\r?\n/);
+        bufferRef.current = lines.pop() || ""; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          const parsed = parseScaleOutput(line);
+          if (parsed) {
+            // Convert to display unit and apply tare
+            const weightInGrams =
+              parsed.weight * WEIGHT_TO_GRAMS[parsed.unit] -
+              tareOffsetRef.current;
+            const currentDisplayUnit = displayUnitRef.current;
+            const displayWeight =
+              weightInGrams / WEIGHT_TO_GRAMS[currentDisplayUnit];
+
+            const reading: ScaleReading = {
+              weight: Math.max(0, parseFloat(displayWeight.toFixed(3))),
+              unit: currentDisplayUnit,
+              stable: parsed.stable,
+              raw: line,
+              timestamp: Date.now(),
+            };
+
+            setState((s) => ({ ...s, lastReading: reading }));
+            setReadings((r) => [...r.slice(-99), reading]); // Keep last 100 readings
+          }
+        }
+      }
+    } catch (err: any) {
+      if (activeRef.current) {
+        setState((s) => ({ ...s, error: `Read error: ${err.message}` }));
+      }
+    } finally {
+      reader.releaseLock();
+      try {
+        await readableStreamClosed;
+      } catch {}
+    }
+  }, []);
 
   const connect = useCallback(async () => {
     if (!("serial" in navigator)) {
@@ -219,8 +298,8 @@ export function useWeighingScale(
         error: null,
       }));
 
-      // Start reading
-      readLoop(port);
+      // Start reading without blocking the connection action.
+      void readLoop(port);
     } catch (err: any) {
       if (err.name === "NotFoundError") {
         setState((s) => ({
@@ -236,60 +315,7 @@ export function useWeighingScale(
         }));
       }
     }
-  }, [scaleConfig]);
-
-  const readLoop = async (port: any) => {
-    const decoder = new TextDecoderStream();
-    const readableStreamClosed = port.readable!.pipeTo(decoder.writable);
-    const reader = decoder.readable.getReader();
-    readerRef.current = reader;
-
-    try {
-      while (activeRef.current) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        if (!value) continue;
-
-        bufferRef.current += value;
-
-        // Process complete lines (delimited by \r\n or \n)
-        const lines = bufferRef.current.split(/\r?\n/);
-        bufferRef.current = lines.pop() || ""; // Keep incomplete line in buffer
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-
-          const parsed = parseScaleOutput(line);
-          if (parsed) {
-            // Convert to display unit and apply tare
-            const weightInGrams =
-              parsed.weight * WEIGHT_TO_GRAMS[parsed.unit] - tareOffset;
-            const displayWeight = weightInGrams / WEIGHT_TO_GRAMS[displayUnit];
-
-            const reading: ScaleReading = {
-              weight: Math.max(0, parseFloat(displayWeight.toFixed(3))),
-              unit: displayUnit,
-              stable: parsed.stable,
-              raw: line,
-              timestamp: Date.now(),
-            };
-
-            setState((s) => ({ ...s, lastReading: reading }));
-            setReadings((r) => [...r.slice(-99), reading]); // Keep last 100 readings
-          }
-        }
-      }
-    } catch (err: any) {
-      if (activeRef.current) {
-        setState((s) => ({ ...s, error: `Read error: ${err.message}` }));
-      }
-    } finally {
-      reader.releaseLock();
-      try {
-        await readableStreamClosed;
-      } catch {}
-    }
-  };
+  }, [readLoop, scaleConfig]);
 
   const disconnect = useCallback(async () => {
     activeRef.current = false;
@@ -341,9 +367,9 @@ export function useWeighingScale(
   useEffect(() => {
     return () => {
       activeRef.current = false;
-      disconnect();
+      void disconnect();
     };
-  }, []);
+  }, [disconnect]);
 
   return {
     ...state,

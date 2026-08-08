@@ -11,6 +11,13 @@ export interface StateData {
 export interface CityData {
   name: string;
   state: string; // state code
+  district?: string; // district code where a country has a district layer
+}
+
+export interface DistrictData {
+  code: string;
+  name: string;
+  state: string; // parent state/province code
 }
 
 // ── India States & Union Territories ──────────────────────
@@ -72,6 +79,48 @@ export const UAE_STATES: StateData[] = [
   { code: "RAK", name: "Ras Al Khaimah" },
   { code: "SHJ", name: "Sharjah" },
   { code: "UAQ", name: "Umm Al Quwain" },
+];
+
+// ── Sri Lanka Provinces ─────────────────────────────
+export const SRI_LANKA_STATES: StateData[] = [
+  { code: "WP", name: "Western Province" },
+  { code: "CP", name: "Central Province" },
+  { code: "SP", name: "Southern Province" },
+  { code: "NP", name: "Northern Province" },
+  { code: "EP", name: "Eastern Province" },
+  { code: "NWP", name: "North Western Province" },
+  { code: "NCP", name: "North Central Province" },
+  { code: "UV", name: "Uva Province" },
+  { code: "SG", name: "Sabaragamuwa Province" },
+];
+
+// Sri Lanka's 25 districts, routed through their parent province.
+export const SRI_LANKA_DISTRICTS: DistrictData[] = [
+  { code: "COL", name: "Colombo", state: "WP" },
+  { code: "GAM", name: "Gampaha", state: "WP" },
+  { code: "KAL", name: "Kalutara", state: "WP" },
+  { code: "KAN", name: "Kandy", state: "CP" },
+  { code: "MAT", name: "Matale", state: "CP" },
+  { code: "NUW", name: "Nuwara Eliya", state: "CP" },
+  { code: "GAL", name: "Galle", state: "SP" },
+  { code: "MTR", name: "Matara", state: "SP" },
+  { code: "HAM", name: "Hambantota", state: "SP" },
+  { code: "JAF", name: "Jaffna", state: "NP" },
+  { code: "KIL", name: "Kilinochchi", state: "NP" },
+  { code: "MAN", name: "Mannar", state: "NP" },
+  { code: "MUL", name: "Mullaitivu", state: "NP" },
+  { code: "VAV", name: "Vavuniya", state: "NP" },
+  { code: "BAT", name: "Batticaloa", state: "EP" },
+  { code: "AMP", name: "Ampara", state: "EP" },
+  { code: "TRI", name: "Trincomalee", state: "EP" },
+  { code: "KUR", name: "Kurunegala", state: "NWP" },
+  { code: "PUT", name: "Puttalam", state: "NWP" },
+  { code: "ANU", name: "Anuradhapura", state: "NCP" },
+  { code: "POL", name: "Polonnaruwa", state: "NCP" },
+  { code: "BAD", name: "Badulla", state: "UV" },
+  { code: "MON", name: "Monaragala", state: "UV" },
+  { code: "RAT", name: "Ratnapura", state: "SG" },
+  { code: "KEG", name: "Kegalle", state: "SG" },
 ];
 
 // ── Major Cities by State (India) ──────────────────────
@@ -297,6 +346,38 @@ export const UAE_CITIES: CityData[] = [
   { name: "Al Ain", state: "AUH" },
 ];
 
+// ── Sri Lanka Major Cities ──────────────────────────
+export const SRI_LANKA_CITIES: CityData[] = [
+  { name: "Colombo", state: "WP", district: "COL" },
+  { name: "Sri Jayawardenepura Kotte", state: "WP", district: "COL" },
+  { name: "Dehiwala-Mount Lavinia", state: "WP", district: "COL" },
+  { name: "Moratuwa", state: "WP", district: "COL" },
+  { name: "Negombo", state: "WP", district: "GAM" },
+  { name: "Gampaha", state: "WP", district: "GAM" },
+  { name: "Kalutara", state: "WP", district: "KAL" },
+  { name: "Kandy", state: "CP", district: "KAN" },
+  { name: "Matale", state: "CP", district: "MAT" },
+  { name: "Nuwara Eliya", state: "CP", district: "NUW" },
+  { name: "Galle", state: "SP", district: "GAL" },
+  { name: "Matara", state: "SP", district: "MTR" },
+  { name: "Hambantota", state: "SP", district: "HAM" },
+  { name: "Jaffna", state: "NP", district: "JAF" },
+  { name: "Kilinochchi", state: "NP", district: "KIL" },
+  { name: "Vavuniya", state: "NP", district: "VAV" },
+  { name: "Batticaloa", state: "EP", district: "BAT" },
+  { name: "Kalmunai", state: "EP", district: "AMP" },
+  { name: "Trincomalee", state: "EP", district: "TRI" },
+  { name: "Kurunegala", state: "NWP", district: "KUR" },
+  { name: "Puttalam", state: "NWP", district: "PUT" },
+  { name: "Anuradhapura", state: "NCP", district: "ANU" },
+  { name: "Polonnaruwa", state: "NCP", district: "POL" },
+  { name: "Badulla", state: "UV", district: "BAD" },
+  { name: "Bandarawela", state: "UV", district: "BAD" },
+  { name: "Monaragala", state: "UV", district: "MON" },
+  { name: "Ratnapura", state: "SG", district: "RAT" },
+  { name: "Kegalle", state: "SG", district: "KEG" },
+];
+
 // ── Lookup helpers ──────────────────────
 
 /**
@@ -310,6 +391,8 @@ export function getStatesForCountry(countryCode: string): StateData[] {
       return NEPAL_STATES;
     case "AE":
       return UAE_STATES;
+    case "LK":
+      return SRI_LANKA_STATES;
     default:
       return [];
   }
@@ -333,6 +416,9 @@ export function getCitiesForCountry(
     case "AE":
       cities = UAE_CITIES;
       break;
+    case "LK":
+      cities = SRI_LANKA_CITIES;
+      break;
     default:
       return [];
   }
@@ -340,6 +426,19 @@ export function getCitiesForCountry(
     return cities.filter((c) => c.state === stateCode);
   }
   return cities;
+}
+
+/**
+ * Get districts for a country, optionally filtered by parent province/state.
+ * Sri Lanka currently uses this intermediate location layer.
+ */
+export function getDistrictsForCountry(
+  countryCode: string,
+  stateCode?: string,
+): DistrictData[] {
+  if (countryCode !== "LK") return [];
+  if (!stateCode) return SRI_LANKA_DISTRICTS;
+  return SRI_LANKA_DISTRICTS.filter((district) => district.state === stateCode);
 }
 
 /**
@@ -367,6 +466,7 @@ export function getCountryName(code: string): string {
     EU: "Europe",
     AU: "Australia",
     CA: "Canada",
+    LK: "Sri Lanka",
   };
   return map[code] || code;
 }

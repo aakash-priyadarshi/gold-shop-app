@@ -79,6 +79,36 @@ export default function CustomerMessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevConvRef = useRef<string | null>(null);
 
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await chatApi.listConversations();
+      setConversations(res.data);
+    } catch (e) {
+      console.error("Failed to load conversations", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadConversationsQuiet = useCallback(async () => {
+    try {
+      const res = await chatApi.listConversations();
+      setConversations(res.data);
+    } catch {
+      /* silent */
+    }
+  }, []);
+
+  const loadMessages = useCallback(async (conversationId: string) => {
+    try {
+      const res = await chatApi.getMessages(conversationId);
+      setMessages(res.data.messages);
+      void chatApi.markAsRead(conversationId);
+    } catch (e) {
+      console.error("Failed to load messages", e);
+    }
+  }, []);
+
   /* ── WebSocket callbacks ── */
   const handleNewMessage = useCallback(
     (msg: ChatSocketMessage) => {
@@ -89,9 +119,9 @@ export default function CustomerMessagesPage() {
             : [...prev, msg as unknown as Message],
         );
       }
-      loadConversationsQuiet();
+      void loadConversationsQuiet();
     },
-    [selectedConversation],
+    [loadConversationsQuiet, selectedConversation],
   );
 
   const handleMessageBlocked = useCallback(
@@ -133,8 +163,8 @@ export default function CustomerMessagesPage() {
   });
 
   useEffect(() => {
-    loadConversations();
-  }, []);
+    void loadConversations();
+  }, [loadConversations]);
 
   /* ── Join/leave WS rooms on conversation switch ── */
   useEffect(() => {
@@ -143,11 +173,18 @@ export default function CustomerMessagesPage() {
     }
     prevConvRef.current = selectedConversation;
     if (selectedConversation) {
-      loadMessages(selectedConversation);
+      void loadMessages(selectedConversation);
       joinConversation(selectedConversation);
       if (connected) wsMarkRead(selectedConversation);
     }
-  }, [selectedConversation, connected]);
+  }, [
+    connected,
+    joinConversation,
+    leaveConversation,
+    loadMessages,
+    selectedConversation,
+    wsMarkRead,
+  ]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -157,43 +194,18 @@ export default function CustomerMessagesPage() {
   useEffect(() => {
     const interval = setInterval(
       () => {
-        loadConversationsQuiet();
-        if (selectedConversation) loadMessages(selectedConversation);
+        void loadConversationsQuiet();
+        if (selectedConversation) void loadMessages(selectedConversation);
       },
       connected ? 60000 : 15000,
     );
     return () => clearInterval(interval);
-  }, [connected, selectedConversation]);
-
-  async function loadConversations() {
-    try {
-      const res = await chatApi.listConversations();
-      setConversations(res.data);
-    } catch (e) {
-      console.error("Failed to load conversations", e);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadConversationsQuiet() {
-    try {
-      const res = await chatApi.listConversations();
-      setConversations(res.data);
-    } catch {
-      /* silent */
-    }
-  }
-
-  async function loadMessages(conversationId: string) {
-    try {
-      const res = await chatApi.getMessages(conversationId);
-      setMessages(res.data.messages);
-      chatApi.markAsRead(conversationId);
-    } catch (e) {
-      console.error("Failed to load messages", e);
-    }
-  }
+  }, [
+    connected,
+    loadConversationsQuiet,
+    loadMessages,
+    selectedConversation,
+  ]);
 
   async function handleSend() {
     if (!newMessage.trim() || !selectedConversation) return;

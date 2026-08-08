@@ -23,7 +23,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface AnalyticsData {
   period: string;
@@ -67,13 +67,7 @@ export default function ShopAnalyticsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [period, setPeriod] = useState("30d");
 
-  useEffect(() => {
-    if (user?.shop?.id) {
-      loadAnalytics();
-    }
-  }, [user?.shop?.id, period]);
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await shopsApi.getAnalytics({ period });
@@ -88,7 +82,13 @@ export default function ShopAnalyticsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [period]);
+
+  useEffect(() => {
+    if (user?.shop?.id) {
+      void loadAnalytics();
+    }
+  }, [loadAnalytics, user?.shop?.id]);
 
   const formatCurrency = (amount: number) => {
     return `Rs. ${amount.toLocaleString()}`;

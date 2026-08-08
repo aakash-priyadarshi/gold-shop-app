@@ -1,6 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
-
 import {
     AiDesignStudio,
     type AiDesignVariation,
@@ -84,6 +82,7 @@ import {
     UserCheck,
     X,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -92,6 +91,7 @@ const API_URL = getApiUrl();
 const COUNTRY_CODES = [
   { code: "+91", country: "India", flagCode: "IN" as const },
   { code: "+977", country: "Nepal", flagCode: "NP" as const },
+  { code: "+94", country: "Sri Lanka", flagCode: "LK" as const },
   { code: "+1", country: "USA", flagCode: "US" as const },
   { code: "+44", country: "UK", flagCode: "GB" as const },
   { code: "+971", country: "UAE", flagCode: "AE" as const },
@@ -178,17 +178,37 @@ export default function CreateShopQuotePage() {
     country: shopCountry,
   } = useShopCurrency();
 
+  useEffect(() => {
+    const phoneCode = COUNTRY_CODES.find(
+      (entry) => entry.flagCode === shopCountry,
+    )?.code;
+    if (phoneCode) {
+      setCustomerDetails((previous) => ({
+        ...previous,
+        phoneCountryCode: phoneCode,
+      }));
+    }
+  }, [shopCountry]);
+
   // Tax
-  const [taxRate, setTaxRate] = useState(0.13);
-  const [taxLabel, setTaxLabel] = useState("Tax (13% VAT)");
+  const [taxRate, setTaxRate] = useState(0);
+  const [taxLabel, setTaxLabel] = useState("Tax");
 
   useEffect(() => {
-    const region = shopCountry || "NP";
+    const region = shopCountry;
+    if (!region) {
+      setTaxRate(0);
+      setTaxLabel("Tax unavailable");
+      return;
+    }
     fetchTaxRules(region).then((result) => {
       if (result?.rules) {
         const { rate, name } = lookupTaxRate(result.rules);
         setTaxRate(rate);
         setTaxLabel(`${name} (${(rate * 100).toFixed(1)}%)`);
+      } else {
+        setTaxRate(0);
+        setTaxLabel("Tax unavailable");
       }
     });
   }, [shopCountry]);
@@ -1349,7 +1369,7 @@ export default function CreateShopQuotePage() {
                                 {JEWELLERY_TYPE_IMAGES[
                                   formData.jewelleryType
                                 ] && (
-                                  <img
+                                  <Image
                                     src={
                                       JEWELLERY_TYPE_IMAGES[
                                         formData.jewelleryType
@@ -1357,6 +1377,9 @@ export default function CreateShopQuotePage() {
                                     }
                                     alt=""
                                     className="h-5 w-5 rounded object-cover"
+                                    width={20}
+                                    height={20}
+                                    unoptimized
                                   />
                                 )}
                                 {getJewelleryTypeLabel(formData.jewelleryType)}
@@ -1369,10 +1392,13 @@ export default function CreateShopQuotePage() {
                             <SelectItem key={type.value} value={type.value}>
                               <span className="flex items-center gap-2">
                                 {JEWELLERY_TYPE_IMAGES[type.value] && (
-                                  <img
+                                  <Image
                                     src={JEWELLERY_TYPE_IMAGES[type.value]}
                                     alt=""
                                     className="h-5 w-5 rounded object-cover"
+                                    width={20}
+                                    height={20}
+                                    unoptimized
                                   />
                                 )}
                                 {type.label}
@@ -1785,10 +1811,13 @@ export default function CreateShopQuotePage() {
                               }
                               className={`relative p-2 rounded-lg border-2 transition-all text-center ${formData.surfaceFinish === key ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}
                             >
-                              <img
+                              <Image
                                 src={info.image}
                                 alt={key.replace(/_/g, " ")}
                                 className="w-full h-12 object-cover rounded mb-1"
+                                width={240}
+                                height={48}
+                                unoptimized
                               />
                               <span className="text-xs font-medium block truncate">
                                 {key.replace(/_/g, " ")}
@@ -1880,10 +1909,13 @@ export default function CreateShopQuotePage() {
                       {designPreviewUrl ? (
                         <div className="space-y-3">
                           <div className="relative rounded-lg overflow-hidden border">
-                            <img
+                            <Image
                               src={designPreviewUrl}
                               alt="AI Generated Design"
                               className="w-full h-48 object-cover"
+                              width={800}
+                              height={192}
+                              unoptimized
                             />
                             <button
                               onClick={() => {
@@ -1961,10 +1993,13 @@ export default function CreateShopQuotePage() {
                           <div className="grid grid-cols-4 gap-2 mb-4">
                             {formData.referenceImages.map((url, idx) => (
                               <div key={idx} className="relative group">
-                                <img
+                                <Image
                                   src={getImageUrl(url)}
                                   alt={`Reference ${idx + 1}`}
                                   className="w-full h-20 object-cover rounded"
+                                  width={160}
+                                  height={80}
+                                  unoptimized
                                 />
                                 <button
                                   onClick={() => removeReferenceImage(url)}
@@ -2270,10 +2305,13 @@ export default function CreateShopQuotePage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <img
+                      <Image
                         src={designPreviewUrl}
                         alt="AI Design"
-                        className="w-full rounded-lg object-cover"
+                        className="w-full h-auto rounded-lg object-cover"
+                        width={800}
+                        height={600}
+                        unoptimized
                       />
                     </CardContent>
                   </Card>

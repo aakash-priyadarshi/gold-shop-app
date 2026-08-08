@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { BuyerEducation } from "@/components/pricing/BuyerEducation";
@@ -86,6 +85,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -442,6 +442,9 @@ interface MarketRates {
     source: string;
     updatedAt: string;
   };
+  fxSnapshot?: {
+    USD_NPR?: { rate: number; source: string; updatedAt: string };
+  };
   adjustments: {
     importDutyPct?: number;
     customsDutyPct?: number;
@@ -470,6 +473,27 @@ interface MarketRates {
     PLATINUM_PT900: number;
     PALLADIUM_PD950: number;
   };
+}
+
+function getNprPerDisplayCurrency(
+  currency: CurrencyCode,
+  rates: MarketRates | null,
+): number | null {
+  if (currency === "NPR") return 1;
+  if (!rates || rates.currency !== currency) return null;
+
+  const usdNpr = Number(rates.fxSnapshot?.USD_NPR?.rate);
+  const usdDisplay = currency === "USD" ? 1 : Number(rates.fx?.rate);
+  if (
+    !Number.isFinite(usdNpr) ||
+    usdNpr <= 0 ||
+    !Number.isFinite(usdDisplay) ||
+    usdDisplay <= 0
+  ) {
+    return null;
+  }
+
+  return usdNpr / usdDisplay;
 }
 
 export default function CreateRfqPage() {
@@ -548,8 +572,7 @@ export default function CreateRfqPage() {
   // For sellers: need phone verification only — KYC (shop verification) is NOT
   // a hard blocker, it's surfaced as a soft warning so new sellers can try the
   // feature. For customers: need phone only. Admins can always submit.
-  const canSubmitOrder =
-    mounted && isLoggedIn && (isAdmin || isPhoneVerified);
+  const canSubmitOrder = mounted && isLoggedIn && (isAdmin || isPhoneVerified);
 
   // Determine why submit is blocked (for tooltip)
   const getSubmitBlockReason = (): string | null => {
@@ -1096,7 +1119,9 @@ export default function CreateRfqPage() {
     );
 
     if (!isAuthenticated) {
-      router.push(`/auth/login?callbackUrl=${sanitizeRedirectUrl("/rfq/create")}`);
+      router.push(
+        `/auth/login?callbackUrl=${sanitizeRedirectUrl("/rfq/create")}`,
+      );
       return;
     }
 
@@ -1445,9 +1470,8 @@ export default function CreateRfqPage() {
         setMarketRatesLoading(false);
       }
     };
-    fetchMarketRates();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currency, country]);
+    void fetchMarketRates();
+  }, [country, currency, t]);
 
   // Fetch templates when jewellery type changes
   useEffect(() => {
@@ -1543,10 +1567,14 @@ export default function CreateRfqPage() {
           fallbackParams.append("jewelryType", formData.jewelleryType);
         }
 
-        const fallbackRes = await fetch(`${API_URL}/designs?${fallbackParams.toString()}`);
+        const fallbackRes = await fetch(
+          `${API_URL}/designs?${fallbackParams.toString()}`,
+        );
         if (fallbackRes.ok) {
           const fallbackData = await fallbackRes.json();
-          const fallbackDesigns = Array.isArray(fallbackData.designs) ? fallbackData.designs : [];
+          const fallbackDesigns = Array.isArray(fallbackData.designs)
+            ? fallbackData.designs
+            : [];
           if (fallbackDesigns.length > 0) {
             setSimilarDesigns(fallbackDesigns);
           }
@@ -2505,37 +2533,30 @@ export default function CreateRfqPage() {
         if (data.budgetMin) {
           updateFormData("budgetMin", String(data.budgetMin));
         } else if (data.budgetMinNpr) {
-          // Fallback: convert NPR to user's currency
-          const NPR_RATES: Record<string, number> = {
-            NPR: 1,
-            INR: 1.6,
-            USD: 133,
-            AED: 36,
-            GBP: 170,
-            EUR: 150,
-          };
-          const rate = NPR_RATES[currency] || 1;
-          updateFormData(
-            "budgetMin",
-            String(Math.round(data.budgetMinNpr / rate)),
+          const nprPerDisplayCurrency = getNprPerDisplayCurrency(
+            currency,
+            marketRates,
           );
+          if (nprPerDisplayCurrency) {
+            updateFormData(
+              "budgetMin",
+              String(Math.round(data.budgetMinNpr / nprPerDisplayCurrency)),
+            );
+          }
         }
         if (data.budgetMax) {
           updateFormData("budgetMax", String(data.budgetMax));
         } else if (data.budgetMaxNpr) {
-          const NPR_RATES: Record<string, number> = {
-            NPR: 1,
-            INR: 1.6,
-            USD: 133,
-            AED: 36,
-            GBP: 170,
-            EUR: 150,
-          };
-          const rate = NPR_RATES[currency] || 1;
-          updateFormData(
-            "budgetMax",
-            String(Math.round(data.budgetMaxNpr / rate)),
+          const nprPerDisplayCurrency = getNprPerDisplayCurrency(
+            currency,
+            marketRates,
           );
+          if (nprPerDisplayCurrency) {
+            updateFormData(
+              "budgetMax",
+              String(Math.round(data.budgetMaxNpr / nprPerDisplayCurrency)),
+            );
+          }
         }
 
         // ─── Step 3: Deadline ───
@@ -2690,7 +2711,9 @@ export default function CreateRfqPage() {
 
     if (!token && !isAuthenticated) {
       console.log("[RFQ Submit] Not authenticated, redirecting to login");
-      router.push(`/auth/login?callbackUrl=${sanitizeRedirectUrl("/rfq/create")}`);
+      router.push(
+        `/auth/login?callbackUrl=${sanitizeRedirectUrl("/rfq/create")}`,
+      );
       return;
     }
 
@@ -2706,6 +2729,28 @@ export default function CreateRfqPage() {
     setError("");
 
     const weight = getWeightFromTemplate();
+
+    const nprPerDisplayCurrency = getNprPerDisplayCurrency(
+      currency,
+      marketRates,
+    );
+    const hasBudget =
+      (parseFloat(formData.budgetMin) || 0) > 0 ||
+      (parseFloat(formData.budgetMax) || 0) > 0;
+    if (hasBudget && nprPerDisplayCurrency === null) {
+      setLoading(false);
+      setError(
+        t(
+          "A current exchange rate is required to save this budget. Refresh market rates and try again.",
+        ),
+      );
+      return;
+    }
+
+    const convertBudgetToNpr = (rawValue: string) => {
+      const value = parseFloat(rawValue) || 0;
+      return Math.round(value * (nprPerDisplayCurrency || 1));
+    };
 
     console.log("[RFQ Submit] Making API call to:", `${API_URL}/rfq`);
 
@@ -2765,32 +2810,8 @@ export default function CreateRfqPage() {
           designId: designId || undefined,
           targetTotalWeightG: weight,
           // Budget form values are in user's display currency — convert to NPR for submission
-          budgetMinNpr: (() => {
-            const val = parseFloat(formData.budgetMin) || 0;
-            if (currency === "NPR" || !currency) return val;
-            const CURRENCY_TO_NPR: Record<string, number> = {
-              NPR: 1,
-              INR: 1.6,
-              USD: 133,
-              AED: 36,
-              GBP: 170,
-              EUR: 150,
-            };
-            return Math.round(val * (CURRENCY_TO_NPR[currency] || 1));
-          })(),
-          budgetMaxNpr: (() => {
-            const val = parseFloat(formData.budgetMax) || 0;
-            if (currency === "NPR" || !currency) return val;
-            const CURRENCY_TO_NPR: Record<string, number> = {
-              NPR: 1,
-              INR: 1.6,
-              USD: 133,
-              AED: 36,
-              GBP: 170,
-              EUR: 150,
-            };
-            return Math.round(val * (CURRENCY_TO_NPR[currency] || 1));
-          })(),
+          budgetMinNpr: convertBudgetToNpr(formData.budgetMin),
+          budgetMaxNpr: convertBudgetToNpr(formData.budgetMax),
           preferredDeliveryDays: formData.deadline
             ? Math.ceil(
                 (new Date(formData.deadline).getTime() - Date.now()) /
@@ -3717,7 +3738,7 @@ export default function CreateRfqPage() {
                             }}
                           >
                             <div className="w-40 rounded-md border bg-white dark:bg-gray-900 shadow-lg overflow-hidden -translate-y-1/4">
-                              <img
+                              <Image
                                 src={JEWELLERY_TYPE_IMAGES[hoveredType]}
                                 alt={
                                   JEWELLERY_TYPES.find(
@@ -3725,6 +3746,9 @@ export default function CreateRfqPage() {
                                   )?.label || ""
                                 }
                                 className="w-full h-32 object-cover"
+                                width={160}
+                                height={128}
+                                unoptimized
                               />
                               <p className="text-xs p-2 text-center font-medium">
                                 {
@@ -4380,12 +4404,15 @@ export default function CreateRfqPage() {
                                       className="p-0 overflow-hidden"
                                     >
                                       <div className="w-44">
-                                        <img
+                                        <Image
                                           src={
                                             SURFACE_FINISH_IMAGES[type.id].image
                                           }
                                           alt={type.name}
                                           className="w-full h-32 object-cover"
+                                          width={176}
+                                          height={128}
+                                          unoptimized
                                         />
                                         <div className="p-2 bg-white dark:bg-gray-900">
                                           <p className="text-xs font-medium">
@@ -4418,12 +4445,15 @@ export default function CreateRfqPage() {
                                     className="p-0 overflow-hidden"
                                   >
                                     <div className="w-44">
-                                      <img
+                                      <Image
                                         src={
                                           SURFACE_FINISH_IMAGES.POLISHED.image
                                         }
                                         alt="Polished"
                                         className="w-full h-32 object-cover"
+                                        width={176}
+                                        height={128}
+                                        unoptimized
                                       />
                                       <div className="p-2 bg-white dark:bg-gray-900">
                                         <p className="text-xs font-medium">
@@ -4452,10 +4482,13 @@ export default function CreateRfqPage() {
                                     className="p-0 overflow-hidden"
                                   >
                                     <div className="w-44">
-                                      <img
+                                      <Image
                                         src={SURFACE_FINISH_IMAGES.MATTE.image}
                                         alt="Matte"
                                         className="w-full h-32 object-cover"
+                                        width={176}
+                                        height={128}
+                                        unoptimized
                                       />
                                       <div className="p-2 bg-white dark:bg-gray-900">
                                         <p className="text-xs font-medium">
@@ -4484,10 +4517,13 @@ export default function CreateRfqPage() {
                                     className="p-0 overflow-hidden"
                                   >
                                     <div className="w-44">
-                                      <img
+                                      <Image
                                         src={SURFACE_FINISH_IMAGES.SATIN.image}
                                         alt="Satin"
                                         className="w-full h-32 object-cover"
+                                        width={176}
+                                        height={128}
+                                        unoptimized
                                       />
                                       <div className="p-2 bg-white dark:bg-gray-900">
                                         <p className="text-xs font-medium">
@@ -4516,12 +4552,15 @@ export default function CreateRfqPage() {
                                     className="p-0 overflow-hidden"
                                   >
                                     <div className="w-44">
-                                      <img
+                                      <Image
                                         src={
                                           SURFACE_FINISH_IMAGES.HAMMERED.image
                                         }
                                         alt="Hammered"
                                         className="w-full h-32 object-cover"
+                                        width={176}
+                                        height={128}
+                                        unoptimized
                                       />
                                       <div className="p-2 bg-white dark:bg-gray-900">
                                         <p className="text-xs font-medium">
@@ -4550,12 +4589,15 @@ export default function CreateRfqPage() {
                                     className="p-0 overflow-hidden"
                                   >
                                     <div className="w-44">
-                                      <img
+                                      <Image
                                         src={
                                           SURFACE_FINISH_IMAGES.SANDBLAST.image
                                         }
                                         alt="Sandblasted"
                                         className="w-full h-32 object-cover"
+                                        width={176}
+                                        height={128}
+                                        unoptimized
                                       />
                                       <div className="p-2 bg-white dark:bg-gray-900">
                                         <p className="text-xs font-medium">
@@ -4584,12 +4626,15 @@ export default function CreateRfqPage() {
                                     className="p-0 overflow-hidden"
                                   >
                                     <div className="w-44">
-                                      <img
+                                      <Image
                                         src={
                                           SURFACE_FINISH_IMAGES.ANTIQUE.image
                                         }
                                         alt="Antique"
                                         className="w-full h-32 object-cover"
+                                        width={176}
+                                        height={128}
+                                        unoptimized
                                       />
                                       <div className="p-2 bg-white dark:bg-gray-900">
                                         <p className="text-xs font-medium">
@@ -4886,10 +4931,13 @@ export default function CreateRfqPage() {
                           <div className="flex flex-wrap gap-2 mt-3">
                             {formData.referenceImages.map((url, idx) => (
                               <div key={idx} className="relative group">
-                                <img
+                                <Image
                                   src={getImageUrl(url, "thumbnail")}
                                   alt={`Reference ${idx + 1}`}
                                   className="w-20 h-20 object-cover rounded-lg border"
+                                  width={80}
+                                  height={80}
+                                  unoptimized
                                 />
                                 <button
                                   type="button"
@@ -4994,10 +5042,13 @@ export default function CreateRfqPage() {
                                   }
                                   className="group relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-purple-400 transition-all cursor-pointer"
                                 >
-                                  <img
+                                  <Image
                                     src={design.imageUrl}
                                     alt={`${design.jewelryType} design`}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                    className="object-cover group-hover:scale-105 transition-transform"
+                                    fill
+                                    sizes="(min-width: 768px) 25vw, 50vw"
+                                    unoptimized
                                   />
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                                     <div className="absolute bottom-1 left-1 right-1">
@@ -5113,14 +5164,17 @@ export default function CreateRfqPage() {
                         {/* Preview Image Display */}
                         {designPreviewUrl ? (
                           <div className="relative w-full max-w-sm mx-auto">
-                            <img
+                            <Image
                               src={designPreviewUrl}
                               alt={
                                 fromDesign
                                   ? "Selected Design"
                                   : "AI Generated Design Preview"
                               }
-                              className="w-full rounded-lg shadow-md border"
+                              className="w-full h-auto rounded-lg shadow-md border"
+                              width={800}
+                              height={800}
+                              unoptimized
                             />
                             {/* Badge - Top Right: Different for selected vs generated */}
                             <div className="absolute top-2 right-2">
@@ -5140,10 +5194,13 @@ export default function CreateRfqPage() {
                             {/* Orivraa Logo Watermark - Bottom Right */}
                             <div className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm rounded-md px-2 py-1 shadow-sm">
                               <div className="flex items-center gap-1">
-                                <img
+                                <Image
                                   src="/brand/orivraa-icon.svg"
                                   alt="Orivraa"
                                   className="h-4 w-4"
+                                  width={16}
+                                  height={16}
+                                  unoptimized
                                 />
                                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
                                   Orivraa
@@ -5667,28 +5724,31 @@ export default function CreateRfqPage() {
                       {/* Soft, non-blocking KYC reminder for unverified sellers —
                           they can still submit; verification just unlocks full
                           seller features and removes trial limitations. */}
-                      {step === 3 && canSubmitOrder && isSeller && !isShopVerified && (
-                        <div className="border rounded-lg p-4 flex gap-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50">
-                          <ShieldCheck className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="font-medium text-sm text-amber-800 dark:text-amber-200">
-                              {t("Shop verification recommended")}
-                            </p>
-                            <p className="text-sm mt-1 text-amber-700 dark:text-amber-300">
-                              {t(
-                                "You can submit this request now. Completing your shop's KYC verification (ID card & tax details) builds buyer trust and unlocks the full seller experience.",
-                              )}
-                            </p>
-                            <Link
-                              href="/dashboard/shop/verification"
-                              className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 mt-2"
-                            >
-                              <T>Complete KYC verification</T>
-                              <ArrowRight className="h-4 w-4" />
-                            </Link>
+                      {step === 3 &&
+                        canSubmitOrder &&
+                        isSeller &&
+                        !isShopVerified && (
+                          <div className="border rounded-lg p-4 flex gap-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50">
+                            <ShieldCheck className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="font-medium text-sm text-amber-800 dark:text-amber-200">
+                                {t("Shop verification recommended")}
+                              </p>
+                              <p className="text-sm mt-1 text-amber-700 dark:text-amber-300">
+                                {t(
+                                  "You can submit this request now. Completing your shop's KYC verification (ID card & tax details) builds buyer trust and unlocks the full seller experience.",
+                                )}
+                              </p>
+                              <Link
+                                href="/dashboard/shop/verification"
+                                className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 mt-2"
+                              >
+                                <T>Complete KYC verification</T>
+                                <ArrowRight className="h-4 w-4" />
+                              </Link>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
                       {error && (
                         <div className="bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm border border-transparent dark:border-red-800/50">
@@ -5775,10 +5835,13 @@ export default function CreateRfqPage() {
                             </h3>
                             {designPreviewUrl ? (
                               <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                                <img
+                                <Image
                                   src={getImageUrl(designPreviewUrl)}
                                   alt="Your jewellery design"
-                                  className="w-full h-full object-cover"
+                                  className="object-cover"
+                                  fill
+                                  sizes="(min-width: 1024px) 25vw, 50vw"
+                                  unoptimized
                                 />
                               </div>
                             ) : (

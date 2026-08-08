@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 const COUNTRIES = [
   { code: "NP", name: "Nepal", currency: "NPR", flag: "🇳🇵" },
   { code: "IN", name: "India", currency: "INR", flag: "🇮🇳" },
+  { code: "LK", name: "Sri Lanka", currency: "LKR", flag: "🇱🇰" },
   { code: "AE", name: "UAE", currency: "AED", flag: "🇦🇪" },
   { code: "GB", name: "United Kingdom", currency: "GBP", flag: "🇬🇧" },
   { code: "US", name: "United States", currency: "USD", flag: "🇺🇸" },

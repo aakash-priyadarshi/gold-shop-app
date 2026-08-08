@@ -1,9 +1,9 @@
 {
   "apps/web/src/**/*.{ts,tsx}": [
-    "apps/web/node_modules/.bin/eslint --fix --max-warnings 0"
+    "pnpm --dir apps/web exec eslint --fix --max-warnings 0"
   ],
   "apps/api/src/**/*.ts": [
-    "apps/api/node_modules/.bin/eslint --fix --max-warnings 0"
+    "pnpm --dir apps/api exec eslint --fix --max-warnings 0"
   ],
   "*.{json,md,yml,yaml}": ["npx prettier --write"]
 }

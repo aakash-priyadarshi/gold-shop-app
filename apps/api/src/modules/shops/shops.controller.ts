@@ -21,6 +21,7 @@ import { CreateShopDto } from "./dto/create-shop.dto";
 import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
 import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
+import { UpdateVatRegistrationDto } from "./dto/update-vat-registration.dto";
 import { ShopsService } from "./shops.service";
 import { SkipSecurity } from "../security/security.guard";
 import { CacheTTL } from '../../common';
@@ -622,6 +623,19 @@ export class ShopsController {
     @Body() dto: UpdateShopDto,
   ) {
     return this.shopsService.adminUpdateShop(id, adminId, dto);
+  }
+
+  @Patch(":id/vat-registration")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Verify Sri Lankan VAT registration (Admin only)" })
+  async updateVatRegistration(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+    @Body() dto: UpdateVatRegistrationDto,
+  ) {
+    return this.shopsService.updateVatRegistration(id, adminId, dto);
   }
 
   @Delete(":id/admin")

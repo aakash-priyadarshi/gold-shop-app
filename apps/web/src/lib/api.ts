@@ -465,6 +465,11 @@ export const ordersApi = {
   createCustomOrder: (data: any) => api.post("/orders/custom", data),
   getMyOrders: (params?: any) => api.get("/orders/my-orders", { params }),
   getById: (id: string) => api.get(`/orders/${id}`),
+  payOrder: (
+    id: string,
+    preferredGateway: string | undefined,
+    idempotencyKey: string,
+  ) => api.post(`/orders/${id}/pay`, { preferredGateway, idempotencyKey }),
   cancel: (id: string, reason: string) =>
     api.post(`/orders/${id}/cancel`, { reason }),
   // For shopkeepers
@@ -1011,6 +1016,9 @@ export const taxReportsApi = {
   // UAE
   uaeVat201: (period: string) =>
     api.get("/tax-reports/uae/vat201", { params: { period } }),
+  // Sri Lanka
+  lkVat: (period: string) =>
+    api.get("/tax-reports/lk/vat", { params: { period } }),
   // UK
   ukMtd: (period: string) =>
     api.get("/tax-reports/uk/mtd", { params: { period } }),
@@ -1066,6 +1074,8 @@ export const adminTaxApi = {
     api.get("/tax-reports/admin/nepal/vat", { params: { shopId, period } }),
   uaeVat201: (shopId: string, period: string) =>
     api.get("/tax-reports/admin/uae/vat201", { params: { shopId, period } }),
+  lkVat: (shopId: string, period: string) =>
+    api.get("/tax-reports/admin/lk/vat", { params: { shopId, period } }),
   ukMtd: (shopId: string, period: string) =>
     api.get("/tax-reports/admin/uk/mtd", { params: { shopId, period } }),
   euOss: (shopId: string, period: string, format: "json" | "csv" = "json") =>
@@ -1533,8 +1543,6 @@ export const paymentGatewayApi = {
     metadata?: Record<string, string>;
     preferredGateway?: string;
   }) => api.post("/payment-gateway/initiate", data),
-  payOrder: (orderId: string, preferredGateway?: string) =>
-    api.post(`/orders/${orderId}/pay`, { preferredGateway }),
 };
 
 // ─── Metrics / Performance API ───

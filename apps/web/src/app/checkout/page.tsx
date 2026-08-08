@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { PaymentSheet } from "@/components/payment/PaymentSheet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,16 @@ import { useCart, type DeliveryAddress } from "@/contexts/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
-import { ordersApi, paymentsApi } from "@/lib/api";
+import { ordersApi } from "@/lib/api";
+import {
+  CHECKOUT_COUNTRIES,
+  COMPLETED_CHECKOUT_STORAGE_KEY,
+  createOrderPaymentAttemptKey,
+  getCheckoutPaymentMethods,
+  PENDING_CHECKOUT_STORAGE_KEY,
+  type PendingCheckoutOrder,
+  toPreferredGateway,
+} from "@/lib/checkout-market";
 import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { useT } from "@/providers/translation-provider";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
@@ -57,105 +67,13 @@ import { Banknote, CreditCard, Loader2, Store } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const COUNTRIES = [
-  { code: "NP", name: "Nepal" },
-  { code: "IN", name: "India" },
-  { code: "US", name: "United States" },
-  { code: "UK", name: "United Kingdom" },
-  { code: "AE", name: "UAE" },
-];
-
-// Payment methods available per country
-const PAYMENT_METHODS_BY_COUNTRY: Record<
-  string,
-  Array<{
-    id: string;
-    name: string;
-    icon: typeof CreditCard;
-    description: string;
-    available: boolean;
-  }>
-> = {
-  NP: [
-    {
-      id: "ESEWA",
-      name: "eSewa",
-      icon: Banknote,
-      description: "Pay via eSewa wallet",
-      available: true,
-    },
-    {
-      id: "KHALTI",
-      name: "Khalti",
-      icon: Banknote,
-      description: "Pay via Khalti wallet",
-      available: true,
-    },
-    {
-      id: "BANK_TRANSFER",
-      name: "Bank Transfer",
-      icon: Banknote,
-      description: "Direct bank transfer",
-      available: true,
-    },
-  ],
-  IN: [
-    {
-      id: "RAZORPAY",
-      name: "Razorpay",
-      icon: CreditCard,
-      description: "UPI, Cards, NetBanking",
-      available: true,
-    },
-    {
-      id: "BANK_TRANSFER",
-      name: "Bank Transfer",
-      icon: Banknote,
-      description: "Direct bank transfer",
-      available: true,
-    },
-  ],
-  US: [
-    {
-      id: "STRIPE",
-      name: "Credit/Debit Card",
-      icon: CreditCard,
-      description: "Visa, Mastercard, Amex",
-      available: true,
-    },
-  ],
-  UK: [
-    {
-      id: "STRIPE",
-      name: "Credit/Debit Card",
-      icon: CreditCard,
-      description: "Visa, Mastercard, Amex",
-      available: true,
-    },
-  ],
-  AE: [
-    {
-      id: "STRIPE",
-      name: "Credit/Debit Card",
-      icon: CreditCard,
-      description: "Visa, Mastercard",
-      available: true,
-    },
-    {
-      id: "BANK_TRANSFER",
-      name: "Bank Transfer",
-      icon: Banknote,
-      description: "Direct bank transfer",
-      available: true,
-    },
-  ],
-};
+const COUNTRIES = CHECKOUT_COUNTRIES;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CHECKOUT PAGE COMPONENT
@@ -182,14 +100,19 @@ function CheckoutPageContent() {
 
   // State
   const [mounted, setMounted] = useState(false);
-  const [step, setStep] = useState<"address" | "payment" | "confirm">(
-    "address",
-  );
+  const [step, setStep] = useState<
+    "address" | "payment" | "gateway" | "confirm"
+  >("address");
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<string>("");
   const [payAtShop, setPayAtShop] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderCreated, setOrderCreated] = useState<string | null>(null);
+  const [pendingOrders, setPendingOrders] = useState<PendingCheckoutOrder[]>(
+    [],
+  );
+  const [currentPaymentIndex, setCurrentPaymentIndex] = useState(0);
+  const [manualPayment, setManualPayment] = useState(false);
 
   // Address form state
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
@@ -228,12 +151,65 @@ function CheckoutPageContent() {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!mounted) return;
+
+    const returnState = searchParams.get("payment");
+    if (returnState === "completed") {
+      const rawCompleted = sessionStorage.getItem(
+        COMPLETED_CHECKOUT_STORAGE_KEY,
+      );
+      if (rawCompleted) {
+        try {
+          const completed = JSON.parse(rawCompleted) as {
+            orderNumbers?: string[];
+          };
+          setOrderCreated((completed.orderNumbers || []).join(", "));
+          setStep("confirm");
+          clearCart();
+          sessionStorage.removeItem(COMPLETED_CHECKOUT_STORAGE_KEY);
+        } catch {
+          sessionStorage.removeItem(COMPLETED_CHECKOUT_STORAGE_KEY);
+        }
+      }
+      return;
+    }
+
+    const rawPending = sessionStorage.getItem(PENDING_CHECKOUT_STORAGE_KEY);
+    if (!rawPending) return;
+    try {
+      const pending = JSON.parse(rawPending) as {
+        orders: PendingCheckoutOrder[];
+        currentIndex: number;
+      };
+      if (pending.orders?.length) {
+        setPendingOrders(pending.orders);
+        setCurrentPaymentIndex(
+          Math.min(pending.currentIndex || 0, pending.orders.length - 1),
+        );
+        setStep("gateway");
+      }
+    } catch {
+      sessionStorage.removeItem(PENDING_CHECKOUT_STORAGE_KEY);
+    }
+  }, [clearCart, mounted, searchParams]);
+
   // Redirect if cart is empty and not a custom order
   useEffect(() => {
-    if (mounted && items.length === 0 && orderType !== "CUSTOM") {
+    const isPaymentReturn = Boolean(searchParams.get("payment"));
+    const hasPendingCheckout =
+      typeof window !== "undefined" &&
+      Boolean(sessionStorage.getItem(PENDING_CHECKOUT_STORAGE_KEY));
+    if (
+      mounted &&
+      items.length === 0 &&
+      orderType !== "CUSTOM" &&
+      !isPaymentReturn &&
+      !hasPendingCheckout
+    ) {
       router.push("/cart");
     }
-  }, [mounted, items, orderType, router]);
+  }, [mounted, items, orderType, router, searchParams]);
 
   // Get selected address
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
@@ -247,10 +223,8 @@ function CheckoutPageContent() {
 
   // Get available payment methods for user's country
   const availablePaymentMethods = useMemo(() => {
-    const country = selectedAddress?.country || userCountry || "NP";
-    return (
-      PAYMENT_METHODS_BY_COUNTRY[country] || PAYMENT_METHODS_BY_COUNTRY["NP"]
-    );
+    const country = selectedAddress?.country || userCountry;
+    return getCheckoutPaymentMethods(country);
   }, [selectedAddress?.country, userCountry]);
 
   // Format price
@@ -271,16 +245,24 @@ function CheckoutPageContent() {
   };
 
   // Dynamic tax rate from admin-configured rules
-  const [taxRate, setTaxRate] = useState(0.13);
-  const [taxLabel, setTaxLabel] = useState("Tax (13%)");
+  const [taxRate, setTaxRate] = useState(0);
+  const [taxLabel, setTaxLabel] = useState("Tax");
 
   useEffect(() => {
-    const country = selectedAddress?.country || userCountry || "NP";
+    const country = selectedAddress?.country || userCountry;
+    if (!country) {
+      setTaxRate(0);
+      setTaxLabel("Tax");
+      return;
+    }
     fetchTaxRules(country).then((result) => {
       if (result?.rules) {
         const { rate, name } = lookupTaxRate(result.rules);
         setTaxRate(rate);
         setTaxLabel(`${name} (${(rate * 100).toFixed(1)}%)`);
+      } else {
+        setTaxRate(0);
+        setTaxLabel("Tax (calculated by seller)");
       }
     });
   }, [selectedAddress?.country, userCountry]);
@@ -326,7 +308,60 @@ function CheckoutPageContent() {
     }
   };
 
-  // Handle checkout submission
+  const persistPendingCheckout = useCallback(
+    (orders: PendingCheckoutOrder[], currentIndex: number) => {
+      sessionStorage.setItem(
+        PENDING_CHECKOUT_STORAGE_KEY,
+        JSON.stringify({ orders, currentIndex }),
+      );
+    },
+    [],
+  );
+
+  const finishCheckout = useCallback(
+    (orders: PendingCheckoutOrder[], gateway?: string) => {
+      sessionStorage.removeItem(PENDING_CHECKOUT_STORAGE_KEY);
+      setOrderCreated(orders.map((order) => order.orderNumber).join(", "));
+      setManualPayment(gateway === "manual");
+      setPendingOrders([]);
+      clearCart();
+      setStep("confirm");
+      toast({
+        title:
+          gateway === "manual" ? t("Order confirmed") : t("Payment confirmed"),
+        description:
+          gateway === "manual"
+            ? t("Complete the bank transfer using the seller's instructions.")
+            : t("Your payment and order have been confirmed."),
+      });
+    },
+    [clearCart, t],
+  );
+
+  const handlePaymentSuccess = useCallback(
+    (_paymentId: string, gateway: string) => {
+      const nextIndex = currentPaymentIndex + 1;
+      if (nextIndex < pendingOrders.length) {
+        setCurrentPaymentIndex(nextIndex);
+        persistPendingCheckout(pendingOrders, nextIndex);
+        toast({
+          title: t("Payment method confirmed"),
+          description: t("Continue with the next order in your cart."),
+        });
+        return;
+      }
+      finishCheckout(pendingOrders, gateway);
+    },
+    [
+      currentPaymentIndex,
+      finishCheckout,
+      pendingOrders,
+      persistPendingCheckout,
+      t,
+    ],
+  );
+
+  // Create orders first, then initiate each payment through POST /orders/:id/pay.
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       toast({
@@ -346,9 +381,25 @@ function CheckoutPageContent() {
       return;
     }
 
+    if (pendingOrders.length > 0 && !payAtShop) {
+      const preferredGateway = toPreferredGateway(selectedPaymentMethod);
+      const updatedOrders = pendingOrders.map((order) => ({
+        ...order,
+        preferredGateway,
+        idempotencyKey: createOrderPaymentAttemptKey(order.id),
+      }));
+      setPendingOrders(updatedOrders);
+      persistPendingCheckout(updatedOrders, currentPaymentIndex);
+      setStep("gateway");
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
+      const createdOrders: PendingCheckoutOrder[] = [];
+      const preferredGateway = toPreferredGateway(selectedPaymentMethod);
+
       // Create order(s) - one per shop for inventory orders
       if (orderType === "INVENTORY") {
         // For inventory orders, create one order per item
@@ -370,21 +421,20 @@ function CheckoutPageContent() {
 
           const response = await ordersApi.createInventoryOrder(orderData);
           const order = response.data;
-
-          // Initiate payment if not COD/Pay at shop
-          if (!payAtShop && selectedPaymentMethod) {
-            await paymentsApi.initiatePayment({
-              orderId: order.id,
-              paymentType: "FULL_PAYMENT",
-              method: selectedPaymentMethod,
-            });
-          }
-
-          setOrderCreated(order.orderNumber);
+          createdOrders.push({
+            id: order.id,
+            orderNumber: order.orderNumber,
+            amount: Number(
+              order.balanceDueNpr ?? order.totalNpr ?? order.totalAmountNpr,
+            ),
+            // This amount comes from canonical *Npr fields. The backend will
+            // independently quote and persist the actual gateway currency.
+            currency: "NPR",
+            country: order.marketCountry || selectedAddress.country,
+            preferredGateway,
+            idempotencyKey: createOrderPaymentAttemptKey(order.id),
+          });
         }
-
-        // Clear cart after successful order
-        clearCart();
       } else if (orderType === "CUSTOM" && rfqId && offerId) {
         // For custom orders from RFQ
         const orderData = {
@@ -405,25 +455,45 @@ function CheckoutPageContent() {
 
         const response = await ordersApi.createCustomOrder(orderData);
         const order = response.data;
-
-        // Initiate payment if not pay at shop
-        if (!payAtShop && selectedPaymentMethod) {
-          await paymentsApi.initiatePayment({
-            orderId: order.id,
-            paymentType: "BOOKING_FEE",
-            method: selectedPaymentMethod,
-          });
-        }
-
-        setOrderCreated(order.orderNumber);
+        createdOrders.push({
+          id: order.id,
+          orderNumber: order.orderNumber,
+          amount: Number(
+            order.balanceDueNpr ?? order.totalNpr ?? order.totalAmountNpr,
+          ),
+          currency: "NPR",
+          country: order.marketCountry || selectedAddress.country,
+          preferredGateway,
+          idempotencyKey: createOrderPaymentAttemptKey(order.id),
+        });
       }
 
-      toast({
-        title: t("Order Placed!"),
-        description: t("Your order has been placed successfully"),
-      });
+      if (!createdOrders.length) {
+        throw new Error(t("No order was created"));
+      }
 
-      setStep("confirm");
+      // Pay-at-shop is an explicit manual/COD outcome, so confirmation is safe.
+      if (payAtShop) {
+        setOrderCreated(
+          createdOrders.map((order) => order.orderNumber).join(", "),
+        );
+        setManualPayment(true);
+        setStep("confirm");
+        toast({
+          title: t("Order confirmed"),
+          description: t("Visit the shop to complete payment."),
+        });
+        return;
+      }
+
+      setPendingOrders(createdOrders);
+      setCurrentPaymentIndex(0);
+      persistPendingCheckout(createdOrders, 0);
+      setStep("gateway");
+      toast({
+        title: t("Order created"),
+        description: t("Complete payment to confirm the online order."),
+      });
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       toast({
@@ -435,6 +505,8 @@ function CheckoutPageContent() {
       setIsProcessing(false);
     }
   };
+
+  const currentPendingOrder = pendingOrders[currentPaymentIndex];
 
   // Loading state
   if (authLoading || !mounted) {
@@ -481,17 +553,29 @@ function CheckoutPageContent() {
                   email shortly.
                 </T>
               </p>
-              {payAtShop && (
+              {(payAtShop || manualPayment) && (
                 <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
                   <Store className="h-4 w-4 text-amber-600" />
                   <AlertTitle className="text-amber-800 dark:text-amber-400">
-                    <T>Pay at Shop Selected</T>
+                    <T>
+                      {payAtShop
+                        ? "Pay at Shop Selected"
+                        : "Bank Transfer Selected"}
+                    </T>
                   </AlertTitle>
                   <AlertDescription className="text-amber-700 dark:text-amber-300">
-                    <T>
-                      Please visit the shop to complete your payment. Your order
-                      will be held for 48 hours.
-                    </T>
+                    {payAtShop ? (
+                      <T>
+                        Please visit the shop to complete your payment. Your
+                        order will be held for 48 hours.
+                      </T>
+                    ) : (
+                      <T>
+                        Complete the transfer using the seller&apos;s bank
+                        instructions. The order remains unpaid until the
+                        transfer is verified.
+                      </T>
+                    )}
                   </AlertDescription>
                 </Alert>
               )}
@@ -555,14 +639,14 @@ function CheckoutPageContent() {
               <div className="flex-1 h-0.5 bg-gray-200 dark:bg-gray-700" />
               <div
                 className={`flex items-center gap-2 ${
-                  step === "payment"
+                  step === "payment" || step === "gateway"
                     ? "text-amber-600 font-semibold"
                     : "text-gray-500 dark:text-gray-400"
                 }`}
               >
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    step === "payment"
+                    step === "payment" || step === "gateway"
                       ? "bg-amber-600 text-white"
                       : "bg-gray-200 dark:bg-gray-700"
                   }`}
@@ -726,7 +810,8 @@ function CheckoutPageContent() {
                       className="space-y-3"
                     >
                       {availablePaymentMethods.map((method) => {
-                        const Icon = method.icon;
+                        const Icon =
+                          method.icon === "bank" ? Banknote : CreditCard;
                         return (
                           <div
                             key={method.id}
@@ -755,11 +840,11 @@ function CheckoutPageContent() {
                               <div className="flex items-center gap-2">
                                 <Icon className="h-5 w-5" />
                                 <span className="font-medium">
-                                  {method.name}
+                                  <T>{method.name}</T>
                                 </span>
                               </div>
                               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                {method.description}
+                                <T>{method.description}</T>
                               </p>
                             </label>
                           </div>
@@ -799,6 +884,34 @@ function CheckoutPageContent() {
                   </Button>
                 </CardFooter>
               </Card>
+            )}
+
+            {step === "gateway" && currentPendingOrder && (
+              <div className="space-y-4">
+                <div className="text-center text-sm text-muted-foreground">
+                  <T>Complete payment for order</T> {currentPaymentIndex + 1}{" "}
+                  <T>of</T> {pendingOrders.length}
+                </div>
+                <PaymentSheet
+                  type="order"
+                  resourceId={currentPendingOrder.id}
+                  amount={currentPendingOrder.amount}
+                  currency={currentPendingOrder.currency}
+                  country={currentPendingOrder.country}
+                  displayName={`${t("Order")} ${currentPendingOrder.orderNumber}`}
+                  preferredGateway={currentPendingOrder.preferredGateway}
+                  idempotencyKey={currentPendingOrder.idempotencyKey}
+                  onSuccess={handlePaymentSuccess}
+                  onError={(message) =>
+                    toast({
+                      variant: "destructive",
+                      title: t("Payment not confirmed"),
+                      description: message,
+                    })
+                  }
+                  onCancel={() => setStep("payment")}
+                />
+              </div>
             )}
           </div>
 

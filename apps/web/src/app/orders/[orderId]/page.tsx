@@ -40,6 +40,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { CreditCard, Loader2, Package, Store } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -402,13 +403,17 @@ export default function OrderTrackingPage() {
                       <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
                         {order.productSnapshot.images?.[0] ||
                         order.productSnapshot.referenceImages?.[0] ? (
-                          <img
+                          <Image
                             src={
                               order.productSnapshot.images?.[0] ||
-                              order.productSnapshot.referenceImages?.[0]
+                              order.productSnapshot.referenceImages?.[0] ||
+                              ""
                             }
                             alt={productName}
                             className="w-full h-full object-cover"
+                            width={80}
+                            height={80}
+                            unoptimized
                           />
                         ) : (
                           <Package className="h-8 w-8 text-gray-400" />
@@ -485,11 +490,14 @@ export default function OrderTrackingPage() {
                                 <div className="flex gap-2 mt-2">
                                   {(milestone.evidenceUrls || []).map(
                                     (url, i) => (
-                                      <img
+                                      <Image
                                         key={i}
                                         src={url}
                                         alt={`Evidence ${i + 1}`}
                                         className="w-16 h-16 object-cover rounded border"
+                                        width={64}
+                                        height={64}
+                                        unoptimized
                                       />
                                     ),
                                   )}

@@ -418,6 +418,7 @@ export function AdminSubscriptionPlansPanel() {
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="IN">India</SelectItem>
               <SelectItem value="NP">Nepal</SelectItem>
+              <SelectItem value="LK">Sri Lanka</SelectItem>
               <SelectItem value="AE">UAE</SelectItem>
               <SelectItem value="US">USA</SelectItem>
               <SelectItem value="UK">UK</SelectItem>

@@ -10,6 +10,7 @@ import { HttpClientModule } from "./common/http-client";
 import { RedisCacheInterceptor } from "./common/interceptors/cache.interceptor";
 import { RedisModule } from "./common/redis";
 import { AdminModule } from "./modules/admin/admin.module";
+import { AccountingModule } from "./modules/accounting/accounting.module";
 import { AiCreditsModule } from "./modules/core/ai-credits/ai-credits.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { AuthModule } from "./modules/auth/auth.module";
@@ -125,6 +126,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 
     // Feature modules
     AuthModule,
+    AccountingModule,
     UsersModule,
     ShopsModule,
     InventoryModule,

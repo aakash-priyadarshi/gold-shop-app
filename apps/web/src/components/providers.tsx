@@ -78,6 +78,7 @@ function MarketPreferencesSync({ children }: { children: React.ReactNode }) {
         "UK",
         "EU",
         "US",
+        "LK",
       ];
 
       // Currency map based on detected country
@@ -88,6 +89,7 @@ function MarketPreferencesSync({ children }: { children: React.ReactNode }) {
         UK: "GBP",
         EU: "EUR",
         AE: "AED",
+        LK: "LKR",
       };
 
       // Sync detected country to preferences if user hasn't explicitly chosen

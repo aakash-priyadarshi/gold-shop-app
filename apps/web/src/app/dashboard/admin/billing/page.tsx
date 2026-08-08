@@ -5,66 +5,66 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import {
-    aiCreditsApi,
-    paymentGatewayApi,
-    sellerSubscriptionsApi,
-    subscriptionPlansApi,
+  aiCreditsApi,
+  paymentGatewayApi,
+  sellerSubscriptionsApi,
+  subscriptionPlansApi,
 } from "@/lib/api";
 import {
-    AlertTriangle,
-    Calendar,
-    Check,
-    CheckCircle,
-    Copy,
-    Crown,
-    DollarSign,
-    Globe,
-    Link,
-    Loader2,
-    Pencil,
-    Play,
-    Plus,
-    RefreshCw,
-    Shield,
-    Sparkles,
-    Star,
-    TestTube2,
-    ToggleLeft,
-    ToggleRight,
-    Trash2,
-    UserPlus,
-    Users,
-    Wifi,
-    WifiOff,
-    XCircle,
-    Zap,
+  AlertTriangle,
+  Calendar,
+  Check,
+  CheckCircle,
+  Copy,
+  Crown,
+  DollarSign,
+  Globe,
+  Link,
+  Loader2,
+  Pencil,
+  Play,
+  Plus,
+  RefreshCw,
+  Shield,
+  Sparkles,
+  Star,
+  TestTube2,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  UserPlus,
+  Users,
+  Wifi,
+  WifiOff,
+  XCircle,
+  Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -618,6 +618,7 @@ function PlansTab() {
     { code: "", label: "All" },
     { code: "NP", label: "Nepal" },
     { code: "IN", label: "India" },
+    { code: "LK", label: "Sri Lanka" },
     { code: "AE", label: "UAE" },
     { code: "UK", label: "UK" },
     { code: "US", label: "US" },
@@ -1206,6 +1207,7 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
   const CURRENCY_MAP: Record<string, string> = {
     NP: "NPR",
     IN: "INR",
+    LK: "LKR",
     AE: "AED",
     UK: "GBP",
     US: "USD",
@@ -1280,6 +1282,7 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
           >
             <option value="NP">Nepal</option>
             <option value="IN">India</option>
+            <option value="LK">Sri Lanka</option>
             <option value="AE">UAE</option>
             <option value="UK">UK</option>
             <option value="US">US</option>
@@ -3230,6 +3233,7 @@ function StripeSandboxSection() {
                         <SelectItem value="EUR">EUR</SelectItem>
                         <SelectItem value="GBP">GBP</SelectItem>
                         <SelectItem value="INR">INR</SelectItem>
+                        <SelectItem value="LKR">LKR</SelectItem>
                         <SelectItem value="AED">AED</SelectItem>
                         <SelectItem value="NPR">NPR</SelectItem>
                       </SelectContent>
@@ -3319,6 +3323,7 @@ function StripeSandboxSection() {
                         <SelectItem value="EUR">EUR</SelectItem>
                         <SelectItem value="GBP">GBP</SelectItem>
                         <SelectItem value="INR">INR</SelectItem>
+                        <SelectItem value="LKR">LKR</SelectItem>
                         <SelectItem value="AED">AED</SelectItem>
                         <SelectItem value="NPR">NPR</SelectItem>
                       </SelectContent>

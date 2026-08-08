@@ -8,6 +8,11 @@ import {
 } from "@nestjs/common";
 import { UserRole, InventoryStatus, JewelleryType } from "@prisma/client";
 import { RedisService } from "../../common";
+import {
+  getDefaultCurrencyForMarket,
+  isCurrencySupportedForMarket,
+  normalizeMarketRegion,
+} from "../../common/market/country-currency";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
@@ -17,10 +22,23 @@ import { CreateShopDto } from "./dto/create-shop.dto";
 import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
 import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
+import { UpdateVatRegistrationDto } from "./dto/update-vat-registration.dto";
 
 @Injectable()
 export class ShopsService {
   private readonly logger = new Logger(ShopsService.name);
+
+  private assertValidVatNumber(country: string, vatNumber?: string | null) {
+    if (
+      normalizeMarketRegion(country) === "LK" &&
+      vatNumber &&
+      !/^\d{9}$/.test(vatNumber)
+    ) {
+      throw new BadRequestException(
+        "Sri Lankan TIN must contain exactly 9 digits",
+      );
+    }
+  }
 
   constructor(
     private prisma: PrismaService,
@@ -117,6 +135,13 @@ export class ShopsService {
 
     // Determine shop contact phone (use shop phone if provided, else user phone)
     const shopContactPhone = dto.shopPhone || dto.userPhone;
+    const marketCountry = normalizeMarketRegion(dto.country || "NP");
+    const currency = dto.currency || getDefaultCurrencyForMarket(marketCountry);
+    if (!isCurrencySupportedForMarket(marketCountry, currency)) {
+      throw new BadRequestException(
+        `${currency} is not supported for market ${marketCountry}`,
+      );
+    }
 
     // Create shop and update user phone in a transaction
     const [shop] = await this.prisma.$transaction([
@@ -124,7 +149,8 @@ export class ShopsService {
         data: {
           userId,
           shopName: dto.shopName,
-          country: dto.country || "NP",
+          country: marketCountry,
+          currency,
           city: dto.city,
           address: dto.address || "",
           contactPhone: shopContactPhone,
@@ -137,6 +163,8 @@ export class ShopsService {
         where: { id: userId },
         data: {
           phone: dto.userPhone,
+          preferredCountry: marketCountry,
+          preferredCurrency: currency,
           // Keep status as PENDING_VERIFICATION until admin approves the shop
         },
       }),
@@ -162,7 +190,7 @@ export class ShopsService {
     // Auto-activate FREE subscription plan
     await this.sellerSubscriptionsService.autoActivateFreePlan(
       shop.id,
-      dto.country || "NP",
+      marketCountry,
     );
 
     return shop;
@@ -172,6 +200,15 @@ export class ShopsService {
     // Multi-shop support: Allow multiple shops per user
     // No longer checking for existing shop
 
+    const marketCountry = normalizeMarketRegion(dto.country || "NP");
+    const currency = dto.currency || getDefaultCurrencyForMarket(marketCountry);
+    if (!isCurrencySupportedForMarket(marketCountry, currency)) {
+      throw new BadRequestException(
+        `${currency} is not supported for market ${marketCountry}`,
+      );
+    }
+    this.assertValidVatNumber(marketCountry, dto.vatNumber);
+
     const shop = await this.prisma.shop.create({
       data: {
         userId,
@@ -179,7 +216,10 @@ export class ShopsService {
         shopNameNe: dto.shopNameNe,
         shopNameHi: dto.shopNameHi,
         description: dto.description,
-        country: dto.country || "NP",
+        country: marketCountry,
+        currency,
+        vatNumber: dto.vatNumber,
+        vatRegistrationStatus: dto.vatNumber ? "PENDING" : "NOT_REGISTERED",
         state: dto.state,
         city: dto.city,
         address: dto.address,
@@ -208,7 +248,7 @@ export class ShopsService {
     // Auto-activate FREE subscription plan
     await this.sellerSubscriptionsService.autoActivateFreePlan(
       shop.id,
-      dto.country || "NP",
+      marketCountry,
     );
 
     return shop;
@@ -257,6 +297,7 @@ export class ShopsService {
           city: true,
           address: true,
           country: true,
+          currency: true,
           contactPhone: true,
           contactEmail: true,
           isVerified: true,
@@ -288,16 +329,7 @@ export class ShopsService {
         ...shop,
         owner: shop.user,
         user: undefined,
-        currency:
-          shop.country === "IN"
-            ? "INR"
-            : shop.country === "AE"
-              ? "AED"
-              : shop.country === "US"
-                ? "USD"
-                : shop.country === "UK"
-                  ? "GBP"
-                  : "NPR",
+        currency: shop.currency,
         averageRating:
           shop.ratings.length > 0
             ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) /
@@ -409,6 +441,7 @@ export class ShopsService {
         isVerified: true,
         city: true,
         country: true,
+        currency: true,
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
@@ -438,9 +471,32 @@ export class ShopsService {
 
     const previousValue = { ...shop };
 
+    const marketCountry = normalizeMarketRegion(dto.country || shop.country);
+    const currency = dto.currency || shop.currency;
+    if (!isCurrencySupportedForMarket(marketCountry, currency)) {
+      throw new BadRequestException(
+        `${currency} is not supported for market ${marketCountry}`,
+      );
+    }
+    this.assertValidVatNumber(marketCountry, dto.vatNumber ?? shop.vatNumber);
+
+    const vatNumberChanged =
+      dto.vatNumber !== undefined && dto.vatNumber !== shop.vatNumber;
     const updated = await this.prisma.shop.update({
       where: { id: shopId },
-      data: dto,
+      data: {
+        ...dto,
+        country: marketCountry,
+        currency,
+        ...(vatNumberChanged
+          ? {
+              vatRegistrationStatus: dto.vatNumber
+                ? "PENDING" as const
+                : "NOT_REGISTERED" as const,
+              vatRegistrationVerifiedAt: null,
+            }
+          : {}),
+      },
     });
 
     await this.auditService.log({
@@ -953,6 +1009,7 @@ export class ShopsService {
     if (!shop) {
       throw new NotFoundException("Shop not found for this user");
     }
+    this.assertValidVatNumber(shop.country, dto.vatNumber);
 
     // Merge new verification documents with existing ones
     const existingDocs =
@@ -972,7 +1029,13 @@ export class ShopsService {
       where: { id: shop.id },
       data: {
         ...(dto.panNumber !== undefined && { panNumber: dto.panNumber }),
-        ...(dto.vatNumber !== undefined && { vatNumber: dto.vatNumber }),
+        ...(dto.vatNumber !== undefined && {
+          vatNumber: dto.vatNumber,
+          vatRegistrationStatus: dto.vatNumber
+            ? "PENDING" as const
+            : "NOT_REGISTERED" as const,
+          vatRegistrationVerifiedAt: null,
+        }),
         ...(dto.bisLicenseNumber !== undefined && {
           bisLicenseNumber: dto.bisLicenseNumber,
         }),
@@ -983,6 +1046,8 @@ export class ShopsService {
         country: true,
         panNumber: true,
         vatNumber: true,
+        vatRegistrationStatus: true,
+        vatRegistrationVerifiedAt: true,
         bisLicenseNumber: true,
         verificationDocuments: true,
         isVerified: true,
@@ -1100,10 +1165,32 @@ export class ShopsService {
     }
 
     const previousValue = { ...shop };
+    const marketCountry = normalizeMarketRegion(dto.country || shop.country);
+    const currency = dto.currency || shop.currency;
+    if (!isCurrencySupportedForMarket(marketCountry, currency)) {
+      throw new BadRequestException(
+        `${currency} is not supported for market ${marketCountry}`,
+      );
+    }
+    this.assertValidVatNumber(marketCountry, dto.vatNumber ?? shop.vatNumber);
+    const vatNumberChanged =
+      dto.vatNumber !== undefined && dto.vatNumber !== shop.vatNumber;
 
     const updated = await this.prisma.shop.update({
       where: { id: shop.id },
-      data: dto,
+      data: {
+        ...dto,
+        country: marketCountry,
+        currency,
+        ...(vatNumberChanged
+          ? {
+              vatRegistrationStatus: dto.vatNumber
+                ? "PENDING" as const
+                : "NOT_REGISTERED" as const,
+              vatRegistrationVerifiedAt: null,
+            }
+          : {}),
+      },
     });
 
     await this.auditService.log({
@@ -1820,6 +1907,51 @@ export class ShopsService {
   /**
    * Admin: Update any shop
    */
+  async updateVatRegistration(
+    shopId: string,
+    adminId: string,
+    dto: UpdateVatRegistrationDto,
+  ) {
+    const shop = await this.prisma.shop.findUnique({ where: { id: shopId } });
+    if (!shop) throw new NotFoundException("Shop not found");
+    if (normalizeMarketRegion(shop.country) !== "LK") {
+      throw new BadRequestException(
+        "This VAT verification workflow currently applies only to Sri Lankan shops",
+      );
+    }
+
+    const vatNumber = dto.vatNumber || shop.vatNumber;
+    if (dto.status === "VERIFIED" && (!vatNumber || !/^\d{9}$/.test(vatNumber))) {
+      throw new BadRequestException(
+        "Verification requires a valid Sri Lankan 9-digit TIN",
+      );
+    }
+
+    const updated = await this.prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        vatNumber: dto.vatNumber ?? shop.vatNumber,
+        vatRegistrationStatus: dto.status,
+        vatRegistrationVerifiedAt:
+          dto.status === "VERIFIED" ? new Date() : null,
+      },
+    });
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: "UPDATE",
+      resourceType: "SHOP_VAT_REGISTRATION",
+      resourceId: shopId,
+      previousValue: {
+        status: shop.vatRegistrationStatus,
+        vatNumber: shop.vatNumber,
+      },
+      newValue: { status: dto.status, vatNumber: updated.vatNumber },
+    });
+    return updated;
+  }
+
   async adminUpdateShop(shopId: string, adminId: string, dto: UpdateShopDto) {
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },

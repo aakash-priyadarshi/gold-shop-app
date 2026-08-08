@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, MinLength } from "class-validator";
+import { CurrencyCode } from "@prisma/client";
+import { IsEnum, IsIn, IsOptional, IsString, MinLength } from "class-validator";
+import { SUPPORTED_MARKET_COUNTRIES } from "../../../common/market/country-currency";
 
 /**
  * DTO for completing shop setup for OAuth (Google) authenticated shopkeepers.
@@ -21,15 +23,15 @@ export class OAuthShopSetupDto {
   @MinLength(10)
   userPhone: string;
 
-  @ApiPropertyOptional({ enum: ["NP", "IN", "US", "AE", "UK"], default: "NP" })
+  @ApiPropertyOptional({ enum: SUPPORTED_MARKET_COUNTRIES, default: "NP" })
   @IsOptional()
-  @IsString()
+  @IsIn(SUPPORTED_MARKET_COUNTRIES)
   country?: string;
 
-  @ApiPropertyOptional({ example: "NPR", description: "Currency code" })
+  @ApiPropertyOptional({ enum: CurrencyCode, example: "NPR" })
   @IsOptional()
-  @IsString()
-  currency?: string;
+  @IsEnum(CurrencyCode)
+  currency?: CurrencyCode;
 
   @ApiProperty({
     example: "Kathmandu",

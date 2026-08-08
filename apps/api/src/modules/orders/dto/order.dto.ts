@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsEnum, ValidateNested, IsArray, IsBoolean, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsEnum, ValidateNested, IsArray, IsBoolean, Length, Matches } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -372,5 +372,28 @@ export class ShopkeeperPaidAtShopDto {
   @IsString()
   @IsOptional()
   notes?: string;
+}
+
+export class PayOrderDto {
+  @ApiProperty({
+    description: 'Client-generated idempotency key for this checkout attempt',
+    minLength: 8,
+    maxLength: 128,
+    example: 'checkout_01JABCDEF1234567890',
+  })
+  @IsString()
+  @Length(8, 128)
+  @Matches(/^[A-Za-z0-9:_-]+$/, {
+    message:
+      'idempotencyKey may contain only letters, numbers, colon, underscore, or hyphen',
+  })
+  idempotencyKey: string;
+
+  @ApiPropertyOptional({
+    description: 'Preferred configured gateway; Sri Lanka online checkout uses Stripe',
+  })
+  @IsString()
+  @IsOptional()
+  preferredGateway?: string;
 }
 

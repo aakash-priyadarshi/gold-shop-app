@@ -25,6 +25,7 @@ import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { inventoryApi, materialsApi } from "@/lib/api";
+import { printJewelleryTags } from "@/lib/jewelleryTagPrint";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import { Loader2 } from "lucide-react";
@@ -33,10 +34,12 @@ import {
   Coins,
   Package,
   Plus,
+  Printer,
   Search,
   Store,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "@/hooks/use-toast";
 
 export default function StockLedgerPage() {
   return (
@@ -510,7 +513,38 @@ function StockLedgerContent() {
                             {formatCurrency(calculateItemValuation(item))}
                           </td>
                           <td className="py-3.5 px-3 text-center">
-                            <Button
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title={t("Print Tag")}
+                                onClick={() => {
+                                  try {
+                                    printJewelleryTags([
+                                      {
+                                        sku: item.tag,
+                                        name: item.name,
+                                        purity: item.purity,
+                                        weightGrams: item.netWeight,
+                                        price: calculateItemValuation(item),
+                                        currency: goldRates.currency,
+                                        hallmark: item.huid,
+                                        shopName: user?.shop?.shopName,
+                                      },
+                                    ]);
+                                  } catch (err: any) {
+                                    toast({
+                                      title: t("Could not print tag"),
+                                      description: err?.message,
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                                className="h-8 w-8 text-muted-foreground hover:text-amber-500 dark:hover:text-amber-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              <Button
                               variant="ghost"
                               size="icon"
                               title={t("Transfer Location")}
@@ -522,6 +556,7 @@ function StockLedgerContent() {
                             >
                               <ArrowRightLeft className="h-4 w-4" />
                             </Button>
+                            </div>
                           </td>
                         </tr>
                       ))

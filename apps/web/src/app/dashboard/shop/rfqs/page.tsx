@@ -32,7 +32,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type SourceFilter = "ALL" | "ONLINE" | "WALK_IN";
 
@@ -100,13 +100,7 @@ export default function ShopRfqsPage() {
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("ALL");
   const t = useT();
 
-  useEffect(() => {
-    if (user?.shop?.id) {
-      loadRfqs();
-    }
-  }, [user?.shop?.id, sourceFilter]);
-
-  const loadRfqs = async () => {
+  const loadRfqs = useCallback(async () => {
     setIsLoading(true);
     try {
       const params: any = {};
@@ -128,7 +122,13 @@ export default function ShopRfqsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sourceFilter]);
+
+  useEffect(() => {
+    if (user?.shop?.id) {
+      void loadRfqs();
+    }
+  }, [loadRfqs, user?.shop?.id]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {

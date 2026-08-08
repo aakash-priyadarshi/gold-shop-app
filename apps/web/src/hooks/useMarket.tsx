@@ -16,8 +16,8 @@ import {
 } from '@/store/preferences';
 
 // Types matching backend MarketConfig
-export type MarketRegion = 'NP' | 'IN' | 'US' | 'UK' | 'EU' | 'AE';
-export type CurrencyCode = 'NPR' | 'INR' | 'USD' | 'GBP' | 'EUR' | 'AED';
+export type MarketRegion = 'NP' | 'IN' | 'US' | 'UK' | 'EU' | 'AE' | 'LK';
+export type CurrencyCode = 'NPR' | 'INR' | 'USD' | 'GBP' | 'EUR' | 'AED' | 'LKR';
 export type WeightUnit = 'GRAM' | 'KILOGRAM' | 'TOLA' | 'LAAL' | 'OUNCE' | 'POUND';
 
 export interface MarketConfig {
@@ -77,6 +77,7 @@ export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
   GBP: '£',
   EUR: '€',
   AED: 'د.إ',
+  LKR: 'Rs.',
 };
 
 // Weight unit symbols
@@ -97,6 +98,7 @@ export const COUNTRY_NAMES: Record<MarketRegion, string> = {
   UK: 'United Kingdom',
   EU: 'Europe',
   AE: 'UAE',
+  LK: 'Sri Lanka',
 };
 
 interface MarketProviderProps {
@@ -172,7 +174,7 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
 
       let detectedCountry: MarketRegion = 'US';
 
-      if (countryParam && ['NP', 'IN', 'US', 'UK', 'EU', 'AE'].includes(countryParam)) {
+      if (countryParam && ['NP', 'IN', 'US', 'UK', 'EU', 'AE', 'LK'].includes(countryParam)) {
         detectedCountry = countryParam;
       } else if (initialCountry) {
         detectedCountry = initialCountry;
@@ -180,7 +182,7 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
         // Priority 1: Read from middleware-set cookie (fastest - already set by edge middleware)
         const cookieCountry = getCookie('orivraa_geo_country') as MarketRegion | null;
 
-        if (cookieCountry && ['NP', 'IN', 'US', 'UK', 'EU', 'AE'].includes(cookieCountry)) {
+        if (cookieCountry && ['NP', 'IN', 'US', 'UK', 'EU', 'AE', 'LK'].includes(cookieCountry)) {
           detectedCountry = cookieCountry;
         } else {
           // Priority 2: Call API endpoint (fallback)

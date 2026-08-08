@@ -14,6 +14,7 @@ export type SupportedLocale =
   | 'gu'
   | 'mr'
   | 'ta'
+  | 'si'
   | 'te'
   | 'kn';
 
@@ -28,6 +29,7 @@ const locales: Record<SupportedLocale, any> = {
   gu: en,
   mr: en,
   ta: en,
+  si: en,
   te: en,
   kn: en,
 };
@@ -43,6 +45,7 @@ const intlLocaleMap: Record<SupportedLocale, string> = {
   gu: 'gu-IN',
   mr: 'mr-IN',
   ta: 'ta-IN',
+  si: 'si-LK',
   te: 'te-IN',
   kn: 'kn-IN',
 };
@@ -114,6 +117,7 @@ export class I18nService {
       gu: { name: 'Gujarati', nativeName: 'ગુજરાતી', direction: 'ltr' },
       mr: { name: 'Marathi', nativeName: 'मराठी', direction: 'ltr' },
       ta: { name: 'Tamil', nativeName: 'தமிழ்', direction: 'ltr' },
+      si: { name: 'Sinhala', nativeName: 'සිංහල', direction: 'ltr' },
       te: { name: 'Telugu', nativeName: 'తెలుగు', direction: 'ltr' },
       kn: { name: 'Kannada', nativeName: 'ಕನ್ನಡ', direction: 'ltr' },
     };

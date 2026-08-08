@@ -19,7 +19,7 @@ import {
   Star,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface TrustProfileData {
   shopId: string;
@@ -129,11 +129,7 @@ export function TrustProfileCard({
   const [data, setData] = useState<TrustProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadProfile();
-  }, [shopId]);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
       const res = await intelligenceApi.getTrustProfile(shopId);
@@ -143,7 +139,11 @@ export function TrustProfileCard({
     } finally {
       setLoading(false);
     }
-  };
+  }, [shopId]);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
 
   if (loading) {
     return (

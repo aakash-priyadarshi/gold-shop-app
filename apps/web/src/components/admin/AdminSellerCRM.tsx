@@ -60,6 +60,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 
 /* ─── TYPES ─── */
@@ -525,10 +526,13 @@ export function AdminSellerCRM() {
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                           {s.profileImage ? (
-                            <img
+                            <Image
                               src={s.profileImage}
                               alt=""
                               className="w-full h-full object-cover"
+                              width={32}
+                              height={32}
+                              unoptimized
                             />
                           ) : (
                             <Store className="h-4 w-4 text-muted-foreground" />

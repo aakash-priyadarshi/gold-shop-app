@@ -70,13 +70,14 @@ import { useEffect, useState } from "react";
 const supportedRegions = [
   { code: "NP", name: "Nepal", currency: "NPR" },
   { code: "IN", name: "India", currency: "INR" },
+  { code: "LK", name: "Sri Lanka", currency: "LKR" },
   { code: "US", name: "United States", currency: "USD" },
   { code: "UK", name: "United Kingdom", currency: "GBP" },
   { code: "AE", name: "UAE", currency: "AED" },
   { code: "EU", name: "European Union", currency: "EUR" },
 ];
 
-const supportedCurrencies = ["NPR", "INR", "USD", "GBP", "AED", "EUR"];
+const supportedCurrencies = ["NPR", "INR", "LKR", "USD", "GBP", "AED", "EUR"];
 
 export default function AdminSettingsPage() {
   const { user } = useAuth();

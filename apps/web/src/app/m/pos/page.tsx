@@ -80,6 +80,7 @@ const COUNTRY_PHONE_CODES: Record<string, string> = {
   NP: "+977",
   IN: "+91",
   AE: "+971",
+  LK: "+94",
   US: "+1",
   GB: "+44",
   AU: "+61",
@@ -117,21 +118,28 @@ function CartDrawer({
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [makingPct, setMakingPct] = useState(0); // making charge %
-  const [taxRate, setTaxRate] = useState(0.13);
-  const [taxLabel, setTaxLabel] = useState("VAT (13%)");
+  const [taxRate, setTaxRate] = useState(0);
+  const [taxLabel, setTaxLabel] = useState("Tax");
 
   // Load country-specific tax rate
   useEffect(() => {
     if (!shopCountry) return;
     fetchTaxRules(shopCountry).then((data) => {
-      if (!data) return;
+      if (!data) {
+        setTaxRate(0);
+        setTaxLabel("Tax unavailable");
+        return;
+      }
       const r = lookupTaxRate(data.rules, "ALL");
       setTaxRate(r.rate);
       setTaxLabel(`${r.name} (${Math.round(r.rate * 100)}%)`);
-    }).catch(() => { /* keep defaults */ });
+    }).catch(() => {
+      setTaxRate(0);
+      setTaxLabel("Tax unavailable");
+    });
   }, [shopCountry]);
 
-  const phoneCode = COUNTRY_PHONE_CODES[shopCountry] ?? "+977";
+  const phoneCode = COUNTRY_PHONE_CODES[shopCountry] ?? "";
 
   // Auto-fill customer name when phone matches an existing customer.
   // Same pattern as the PC quote builder (shopQuotesApi.lookupCustomer).

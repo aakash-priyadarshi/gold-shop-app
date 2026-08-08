@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { CurrencyCode } from "@prisma/client";
-import { IsEnum, IsOptional, IsString } from "class-validator";
+import { IsEnum, IsIn, IsOptional, IsString } from "class-validator";
 
 const SUPPORTED_UI_LANGUAGES = [
   "en",
@@ -13,6 +13,7 @@ const SUPPORTED_UI_LANGUAGES = [
   "gu",
   "mr",
   "ta",
+  "si",
   "te",
   "kn",
 ] as const;
@@ -35,11 +36,11 @@ export class UpdatePreferencesDto {
   preferredCurrency?: CurrencyCode;
 
   @ApiPropertyOptional({
-    enum: ["NP", "IN", "AE", "UK", "EU", "US"],
+    enum: ["NP", "IN", "AE", "UK", "EU", "US", "LK"],
     description: "Preferred country for tax jurisdiction",
   })
   @IsOptional()
-  @IsEnum(["NP", "IN", "AE", "UK", "EU", "US"])
+  @IsIn(["NP", "IN", "AE", "UK", "EU", "US", "LK"])
   preferredCountry?: string;
 
   @ApiPropertyOptional({ description: "Preferred state/province code" })

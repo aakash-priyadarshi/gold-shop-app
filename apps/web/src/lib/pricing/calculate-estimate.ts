@@ -362,11 +362,13 @@ const LEGACY_TAX_RATES: Record<string, { rate: number; name: string }> = {
   GB: { rate: 0.2, name: "VAT 20%" },
   EU: { rate: 0.19, name: "VAT 19%" },
   AU: { rate: 0.1, name: "GST 10%" },
+  LK: { rate: 0.18, name: "VAT 18%" },
 };
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   NPR: "₨",
   INR: "₹",
+  LKR: "Rs.",
   AED: "د.إ",
   USD: "$",
   GBP: "£",
@@ -845,8 +847,8 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
       error instanceof Error ? error.stack : "No stack",
     );
     const legacyInfo = LEGACY_TAX_RATES[request.country] || {
-      rate: 0.13,
-      name: "Tax",
+      rate: 0,
+      name: "Tax unavailable",
     };
     taxRate = legacyInfo.rate;
     taxAmount = subtotal * taxRate;

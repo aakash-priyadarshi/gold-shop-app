@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsEnum, Min } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsEnum, IsUUID, Max, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum PaymentMethod {
@@ -33,9 +33,15 @@ export class InitiatePaymentDto {
 
   @ApiPropertyOptional({ description: 'Amount to pay (for partial payments)' })
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
+  @Max(100000000)
   @IsOptional()
   amount?: number;
+
+  @ApiPropertyOptional({ description: 'Client-generated retry key' })
+  @IsOptional()
+  @IsUUID()
+  idempotencyKey?: string;
 }
 
 export class VerifyPaymentDto {
@@ -69,6 +75,11 @@ export class InitiateBookingPaymentDto {
   @ApiProperty({ description: 'Payment method' })
   @IsEnum(PaymentMethod)
   method: PaymentMethod;
+
+  @ApiPropertyOptional({ description: 'Client-generated retry key' })
+  @IsOptional()
+  @IsUUID()
+  idempotencyKey?: string;
 }
 
 export class RefundDto {
@@ -78,8 +89,14 @@ export class RefundDto {
 
   @ApiProperty({ description: 'Refund amount' })
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
+  @Max(100000000)
   amount: number;
+
+  @ApiPropertyOptional({ description: 'Client-generated refund retry key' })
+  @IsOptional()
+  @IsUUID()
+  idempotencyKey?: string;
 
   @ApiPropertyOptional({ description: 'Refund reason' })
   @IsString()

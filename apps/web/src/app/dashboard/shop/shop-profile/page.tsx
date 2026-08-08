@@ -52,6 +52,7 @@ import {
   TrendingUp,
   XCircle,
 } from "lucide-react";
+import Image from "next/image";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 // ── Types ────────────────────────────────────────────
@@ -196,13 +197,7 @@ export default function ShopPublicProfilePage() {
 
   const aboutCheckTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (user?.shop?.id) {
-      loadAll();
-    }
-  }, [user?.shop?.id]);
-
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     setIsLoading(true);
     try {
       const [settingsRes, reviewsRes, tierRes] = await Promise.all([
@@ -228,7 +223,13 @@ export default function ShopPublicProfilePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    if (user?.shop?.id) {
+      void loadAll();
+    }
+  }, [loadAll, user?.shop?.id]);
 
   // ── About Text Moderation (Live) ─────────────────
 
@@ -443,10 +444,13 @@ export default function ShopPublicProfilePage() {
           {/* ── Cover Image ──────────────────────────── */}
           <div className="relative rounded-xl overflow-hidden bg-gradient-to-r from-amber-100 to-yellow-50 h-48 md:h-56">
             {shop.coverImage ? (
-              <img
+              <Image
                 src={shop.coverImage}
                 alt="Cover"
-                className="w-full h-full object-cover"
+                className="object-cover"
+                fill
+                sizes="(min-width: 768px) 100vw, 768px"
+                unoptimized
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground">

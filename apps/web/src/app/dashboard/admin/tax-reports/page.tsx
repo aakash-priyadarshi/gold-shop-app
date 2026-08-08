@@ -33,6 +33,7 @@ const COUNTRY_TABS = [
   { code: "GB", name: "UK", flag: "🇬🇧" },
   { code: "EU", name: "EU OSS", flag: "🇪🇺" },
   { code: "US", name: "US", flag: "🇺🇸" },
+  { code: "LK", name: "Sri Lanka", flag: "🇱🇰" },
 ];
 
 function currentMonth() {
@@ -156,7 +157,7 @@ export default function AdminTaxReportsPage() {
             </div>
           ) : (
             <Tabs value={activeCountry} onValueChange={setActiveCountry}>
-              <TabsList className="grid grid-cols-3 md:grid-cols-6 w-full">
+              <TabsList className="grid grid-cols-3 md:grid-cols-7 w-full">
                 {COUNTRY_TABS.map((c) => (
                   <TabsTrigger key={c.code} value={c.code} className="text-xs md:text-sm">
                     <span className="mr-1">{c.flag}</span>
@@ -182,6 +183,9 @@ export default function AdminTaxReportsPage() {
               </TabsContent>
               <TabsContent value="US" className="mt-6">
                 <UsPanel shopId={selectedShopId} period={period} />
+              </TabsContent>
+              <TabsContent value="LK" className="mt-6">
+                <LkPanel shopId={selectedShopId} period={period} />
               </TabsContent>
             </Tabs>
           )}
@@ -289,8 +293,7 @@ function IndiaPanel({
       })
       .catch(() => toast({ variant: "destructive", title: "Failed to load India report" }))
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shopId, period]);
+  }, [period, shopId, toast]);
 
   const downloadCsv = async (kind: "gstr1" | "hsn") => {
     try {
@@ -435,6 +438,36 @@ function UaePanel({ shopId, period }: { shopId: string; period: string }) {
         <CardTitle>UAE VAT 201 (FTA)</CardTitle>
       </CardHeader>
       <CardContent>{loading ? <SkeletonGrid /> : <SummaryGrid data={data} />}</CardContent>
+    </Card>
+  );
+}
+
+// ─── SRI LANKA ────────────────────────────────────────────────────
+function LkPanel({ shopId, period }: { shopId: string; period: string }) {
+  const { toast } = useToast();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!shopId) return;
+    setLoading(true);
+    setData(null);
+    adminTaxApi
+      .lkVat(shopId, period)
+      .then((r) => setData(r.data))
+      .catch(() => toast({ variant: "destructive", title: "Failed to load Sri Lanka VAT" }))
+      .finally(() => setLoading(false));
+  }, [period, shopId, toast]);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Sri Lanka Output VAT Sales Summary</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Accountant export only; input VAT and direct IRD filing are not implemented.
+        </p>
+        {loading ? <SkeletonGrid /> : <SummaryGrid data={data} />}
+      </CardContent>
     </Card>
   );
 }

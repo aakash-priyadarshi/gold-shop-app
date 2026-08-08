@@ -7,8 +7,12 @@ import {
   IsObject,
   Min,
   Max,
+  IsEnum,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { CurrencyCode } from '@prisma/client';
+import { SUPPORTED_MARKET_COUNTRIES } from '../../../common/market/country-currency';
 
 export class CreateShopDto {
   @ApiProperty({ example: 'Golden Dreams Jewellers' })
@@ -30,10 +34,22 @@ export class CreateShopDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ enum: ['NP', 'IN'], default: 'NP' })
+  @ApiPropertyOptional({ enum: SUPPORTED_MARKET_COUNTRIES, default: 'NP' })
+  @IsOptional()
+  @IsIn(SUPPORTED_MARKET_COUNTRIES)
+  country?: string;
+
+  @ApiPropertyOptional({ enum: CurrencyCode, default: CurrencyCode.NPR })
+  @IsOptional()
+  @IsEnum(CurrencyCode)
+  currency?: CurrencyCode;
+
+  @ApiPropertyOptional({
+    description: 'Sri Lankan 9-digit TIN submitted for VAT verification',
+  })
   @IsOptional()
   @IsString()
-  country?: string;
+  vatNumber?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -289,6 +289,14 @@ describe("Market-specific weight units", () => {
     expect(units).toContain("OUNCE");
   });
 
+  test("Sri Lanka supports GRAM, TOLA, KILOGRAM", () => {
+    expect(getSupportedWeightUnits("LK")).toEqual([
+      "GRAM",
+      "TOLA",
+      "KILOGRAM",
+    ]);
+  });
+
   test("unknown country falls back to US defaults", () => {
     const units = getSupportedWeightUnits("XX");
     expect(units).toContain("OUNCE");
@@ -304,6 +312,10 @@ describe("Market-specific weight units", () => {
 
   test("US default = OUNCE", () => {
     expect(getDefaultWeightUnit("US")).toBe("OUNCE");
+  });
+
+  test("Sri Lanka default = GRAM", () => {
+    expect(getDefaultWeightUnit("LK")).toBe("GRAM");
   });
 
   test("unknown country default = GRAM", () => {

@@ -6,11 +6,24 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { MilestoneType, OrderStatus, OrderType, Prisma } from "@prisma/client";
+import {
+  CurrencyCode,
+  MarketRegion,
+  MilestoneType,
+  OrderStatus,
+  OrderType,
+  Prisma,
+} from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
+import {
+  getDefaultCurrencyForMarket,
+  isCurrencySupportedForMarket,
+  normalizeMarketRegion,
+} from "../../common/market/country-currency";
 import { MailService } from "../mail/mail.service";
 import { MarketplaceIntelligenceService } from "../core/marketplace-intelligence/marketplace-intelligence.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { AccountingService } from "../accounting/accounting.service";
 import {
   AdminCancelOrderDto,
   AdminOrderFilterDto,
@@ -34,6 +47,7 @@ export class OrdersService {
     private intelligenceService: MarketplaceIntelligenceService,
     private notificationsService: NotificationsService,
     private mailService: MailService,
+    private accounting: AccountingService,
   ) {}
 
   /**
@@ -82,6 +96,35 @@ export class OrdersService {
     return `ORD-${timestamp}-${random}`;
   }
 
+  private async resolveOrderMarketContext(
+    customerId: string,
+    shippingCountry?: string,
+    addressId?: string,
+  ): Promise<{ marketCountry: MarketRegion; displayCurrency: CurrencyCode }> {
+    const [customer, savedAddress] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: customerId },
+        select: { preferredCountry: true, preferredCurrency: true },
+      }),
+      addressId
+        ? this.prisma.customerAddress.findFirst({
+            where: { id: addressId, userId: customerId },
+            select: { country: true },
+          })
+        : Promise.resolve(null),
+    ]);
+    const marketCountry = normalizeMarketRegion(
+      shippingCountry || savedAddress?.country || customer?.preferredCountry,
+      MarketRegion.NP,
+    );
+    const displayCurrency =
+      customer?.preferredCurrency &&
+      isCurrencySupportedForMarket(marketCountry, customer.preferredCurrency)
+        ? customer.preferredCurrency
+        : getDefaultCurrencyForMarket(marketCountry);
+    return { marketCountry, displayCurrency };
+  }
+
   // Create inventory order
   async createInventoryOrder(customerId: string, dto: CreateInventoryOrderDto) {
     // Get inventory item
@@ -104,11 +147,11 @@ export class OrdersService {
       );
     }
 
-    // Get customer's preferred currency
-    const customer = await this.prisma.user.findUnique({
-      where: { id: customerId },
-      select: { preferredCurrency: true },
-    });
+    const marketContext = await this.resolveOrderMarketContext(
+      customerId,
+      dto.shippingAddress?.country,
+      dto.addressId,
+    );
 
     // Calculate totals
     const subtotal = item.totalPriceNpr * dto.quantity;
@@ -170,7 +213,8 @@ export class OrdersService {
           shippingNpr: 0,
           discountNpr: 0,
           totalNpr: total,
-          displayCurrency: customer?.preferredCurrency || "NPR",
+          displayCurrency: marketContext.displayCurrency,
+          marketCountry: marketContext.marketCountry,
           paymentMethod: "ONLINE",
           paymentStatus: "PENDING",
           balanceDueNpr: total,
@@ -299,11 +343,11 @@ export class OrdersService {
       }
     }
 
-    // Get customer's preferred currency
-    const customer = await this.prisma.user.findUnique({
-      where: { id: customerId },
-      select: { preferredCurrency: true },
-    });
+    const marketContext = await this.resolveOrderMarketContext(
+      customerId,
+      dto.shippingAddress?.country,
+      dto.addressId,
+    );
 
     // Create order
     const order = await this.prisma.$transaction(async (tx) => {
@@ -328,7 +372,8 @@ export class OrdersService {
           shippingNpr: 0,
           discountNpr: 0,
           totalNpr: offer.totalPriceNpr,
-          displayCurrency: customer?.preferredCurrency || "NPR",
+          displayCurrency: marketContext.displayCurrency,
+          marketCountry: marketContext.marketCountry,
           paymentMethod: allowPayAtShop ? "PAY_AT_SHOP" : "ONLINE",
           paymentStatus: allowPayAtShop ? "PENDING_AT_SHOP" : "PENDING",
           paidAtShopRequested: allowPayAtShop,
@@ -429,7 +474,7 @@ export class OrdersService {
     const where: any = { shopId };
     if (type) where.orderType = type;
     if (status) where.status = status;
-    
+
     if (dateFrom || dateTo) {
       where.createdAt = {};
       if (dateFrom) {
@@ -591,7 +636,7 @@ export class OrdersService {
     if (dto.status === "DELIVERED") {
       await this.updateCustomerPurchaseStats(
         order.customerId,
-        order.displayCurrency || "NPR",
+        CurrencyCode.NPR,
         order.totalNpr,
       );
 
@@ -1492,23 +1537,49 @@ export class OrdersService {
       );
     }
 
-    const updated = await this.prisma.order.update({
-      where: { id: orderId },
-      data: {
-        paymentStatusEnum: dto.paymentStatus,
-        paymentMethodEnum: dto.paymentMethod || null,
-        paymentStatus:
-          dto.paymentStatus === "PAID"
-            ? "COMPLETED"
-            : dto.paymentStatus === "PARTIAL"
-              ? "PARTIAL"
-              : "PENDING",
-        adminNotes: dto.adminNotes || order.adminNotes,
-        paymentVerifiedByAdmin: dto.paymentStatus === "PAID",
-        paymentVerifiedAt: dto.paymentStatus === "PAID" ? new Date() : null,
-        paymentVerifiedById: dto.paymentStatus === "PAID" ? adminId : null,
-        updatedAt: new Date(),
-      },
+    const amountNpr = Number(order.balanceDueNpr);
+    const context =
+      dto.paymentStatus === "PAID" && amountNpr > 0
+        ? await this.accounting.prepareMonetaryContext(
+            amountNpr,
+            CurrencyCode.NPR,
+          )
+        : null;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          paymentStatusEnum: dto.paymentStatus,
+          paymentMethodEnum: dto.paymentMethod || null,
+          paymentStatus:
+            dto.paymentStatus === "PAID"
+              ? "COMPLETED"
+              : dto.paymentStatus === "PARTIAL"
+                ? "PARTIAL"
+                : "PENDING",
+          ...(dto.paymentStatus === "PAID"
+            ? { balanceDueNpr: 0, bookingFeePaidNpr: order.totalNpr }
+            : {}),
+          adminNotes: dto.adminNotes || order.adminNotes,
+          paymentVerifiedByAdmin: dto.paymentStatus === "PAID",
+          paymentVerifiedAt: dto.paymentStatus === "PAID" ? new Date() : null,
+          paymentVerifiedById: dto.paymentStatus === "PAID" ? adminId : null,
+          updatedAt: new Date(),
+        },
+      });
+      if (context) {
+        await this.accounting.postOrderPayment(tx, {
+          ...context,
+          shopId: order.shopId,
+          orderId: order.id,
+          paymentReferenceId: `admin-payment:${order.id}`,
+          orderNumber: order.orderNumber,
+          method: dto.paymentMethod || "BANK_TRANSFER",
+          transactionDate: new Date(),
+          actorUserId: adminId,
+        });
+      }
+      return result;
     });
 
     return updated;
@@ -1636,6 +1707,11 @@ export class OrdersService {
       throw new ForbiddenException("This order does not belong to your shop");
     }
 
+    const paymentContext = await this.accounting.prepareMonetaryContext(
+      order.balanceDueNpr || order.totalNpr,
+      CurrencyCode.NPR,
+    );
+
     // Update order with paid at shop status
     const updated = await this.prisma.$transaction(async (tx) => {
       // Update order
@@ -1658,7 +1734,7 @@ export class OrdersService {
       const dueAt = new Date();
       dueAt.setDate(dueAt.getDate() + 21); // 21 days to settle
 
-      await tx.commissionLedger.upsert({
+      const commission = await tx.commissionLedger.upsert({
         where: { orderId },
         create: {
           orderId,
@@ -1666,7 +1742,7 @@ export class OrdersService {
           orderTotal: order.totalNpr,
           commissionRate,
           amount: commissionAmount,
-          currency: order.displayCurrency || "NPR",
+          currency: CurrencyCode.NPR,
           status: "PENDING",
           dueAt,
           notes: dto.notes,
@@ -1674,11 +1750,34 @@ export class OrdersService {
         update: {
           orderTotal: order.totalNpr,
           amount: commissionAmount,
+          currency: CurrencyCode.NPR,
           status: "PENDING",
           dueAt,
           notes: dto.notes,
           updatedAt: new Date(),
         },
+      });
+
+      await this.accounting.postOrderPayment(tx, {
+        ...paymentContext,
+        shopId: activeShop.id,
+        orderId: order.id,
+        paymentReferenceId: `paid-at-shop:${order.id}`,
+        orderNumber: order.orderNumber,
+        method: "PAID_AT_SHOP",
+        transactionDate: new Date(),
+        actorUserId: shopkeeperId,
+      });
+      const commissionContext = await this.accounting.prepareMonetaryContext(
+        commissionAmount,
+        CurrencyCode.NPR,
+      );
+      await this.accounting.postCommissionAccrual(tx, {
+        ...commissionContext,
+        shopId: activeShop.id,
+        commissionId: commission.id,
+        orderNumber: order.orderNumber,
+        transactionDate: new Date(),
       });
 
       return updatedOrder;
@@ -1695,6 +1794,42 @@ export class OrdersService {
   }
 
   // ─── Payment Gateway Webhook Handlers ────────────
+
+  private parseWebhookCharge(
+    metadata: Record<string, string>,
+    amountNpr: number,
+  ) {
+    const currency = Object.values(CurrencyCode).includes(
+      metadata.chargedCurrency as CurrencyCode,
+    )
+      ? (metadata.chargedCurrency as CurrencyCode)
+      : CurrencyCode.NPR;
+    const parsedAmount = Number(metadata.chargedAmount);
+    const parsedFxRate = Number(metadata.fxRate);
+    const parsedQuotedAt = metadata.fxQuotedAt
+      ? new Date(metadata.fxQuotedAt)
+      : null;
+    return {
+      chargedCurrency: currency,
+      chargedAmount:
+        Number.isFinite(parsedAmount) && parsedAmount > 0
+          ? parsedAmount
+          : currency === CurrencyCode.NPR
+            ? amountNpr
+            : null,
+      fxRate:
+        Number.isFinite(parsedFxRate) && parsedFxRate > 0
+          ? parsedFxRate
+          : currency === CurrencyCode.NPR
+            ? 1
+            : null,
+      fxSource: metadata.fxSource || null,
+      fxQuotedAt:
+        parsedQuotedAt && Number.isFinite(parsedQuotedAt.getTime())
+          ? parsedQuotedAt
+          : null,
+    };
+  }
 
   /**
    * Called by payment-gateway webhook when a payment_intent succeeds.
@@ -1713,48 +1848,103 @@ export class OrdersService {
       return;
     }
 
-    const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        customer: { select: { id: true } },
-        shop: { select: { id: true, userId: true } },
-      },
-    });
+    let order: any;
+    try {
+      order = await this.prisma.$transaction(async (tx) => {
+        const existing = await tx.payment.findUnique({
+          where: { gatewayPaymentId },
+        });
+        if (existing) return null;
+
+        const currentOrder = await tx.order.findUnique({
+          where: { id: orderId },
+          include: {
+            customer: { select: { id: true } },
+            shop: { select: { id: true, userId: true } },
+          },
+        });
+        if (!currentOrder || currentOrder.paymentStatus === "COMPLETED") {
+          return null;
+        }
+
+        const amountNpr = currentOrder.balanceDueNpr || currentOrder.totalNpr;
+        const charge = this.parseWebhookCharge(metadata, amountNpr);
+        if (!charge.chargedAmount || !charge.fxRate || !charge.fxQuotedAt) {
+          throw new BadRequestException(
+            "Webhook payment is missing charged amount or FX audit fields",
+          );
+        }
+        const paymentContext = await this.accounting.prepareMonetaryContext(
+          charge.chargedAmount,
+          charge.chargedCurrency,
+          charge.chargedCurrency === CurrencyCode.NPR
+            ? undefined
+            : {
+                canonicalAmountNpr: amountNpr,
+                fxRate: charge.fxRate,
+                fxSource: charge.fxSource || "",
+                fxQuotedAt: charge.fxQuotedAt,
+              },
+        );
+        const payment = await tx.payment.create({
+          data: {
+            orderId: currentOrder.id,
+            amountNpr,
+            currency: CurrencyCode.NPR,
+            ...charge,
+            paymentGateway: gateway,
+            gatewayPaymentId,
+            status: "COMPLETED" as any,
+            completedAt: new Date(),
+            metadata,
+          },
+        });
+
+        const updated = await tx.order.updateMany({
+          where: { id: orderId, paymentStatus: { not: "COMPLETED" } },
+          data: {
+            bookingFeePaidNpr: currentOrder.totalNpr,
+            paymentStatus: "COMPLETED",
+            paymentStatusEnum: "PAID" as any,
+            balanceDueNpr: 0,
+            status:
+              currentOrder.status === "CREATED"
+                ? ("PAID" as OrderStatus)
+                : currentOrder.status,
+          },
+        });
+        if (updated.count !== 1) {
+          throw new ConflictException(
+            "Order payment was completed concurrently",
+          );
+        }
+        await this.accounting.postOrderPayment(tx, {
+          ...paymentContext,
+          shopId: currentOrder.shopId,
+          orderId: currentOrder.id,
+          paymentReferenceId: payment.id,
+          orderNumber: currentOrder.orderNumber,
+          method: gateway,
+          transactionDate: payment.completedAt || new Date(),
+        });
+        return currentOrder;
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return;
+      }
+      throw error;
+    }
 
     if (!order) {
-      this.logger.warn(`handleOrderPaymentSuccess: order ${orderId} not found`);
+      this.logger.log(
+        `Order ${orderId} or payment ${gatewayPaymentId} already processed`,
+      );
       return;
     }
-
-    if (order.paymentStatus === "COMPLETED") {
-      this.logger.log(`Order ${orderId} already paid — skipping`);
-      return;
-    }
-
-    // Record the payment
-    await this.prisma.payment.create({
-      data: {
-        orderId: order.id,
-        amountNpr: order.totalNpr,
-        currency: order.displayCurrency || "NPR",
-        paymentGateway: gateway,
-        gatewayPaymentId,
-        status: "COMPLETED" as any,
-        completedAt: new Date(),
-      },
-    });
-
-    // Update order status
-    await this.prisma.order.update({
-      where: { id: orderId },
-      data: {
-        paymentStatus: "COMPLETED",
-        paymentStatusEnum: "PAID" as any,
-        balanceDueNpr: 0,
-        status:
-          order.status === "CREATED" ? ("PAID" as OrderStatus) : order.status,
-      },
-    });
 
     // Notify customer
     await this.notificationsService.create({
@@ -1799,35 +1989,49 @@ export class OrdersService {
     const orderId = metadata.resourceId;
     if (!orderId) return;
 
-    const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
-    });
-    if (!order) return;
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const existing = await tx.payment.findUnique({
+          where: { gatewayPaymentId },
+        });
+        if (existing) return;
+        const order = await tx.order.findUnique({ where: { id: orderId } });
+        if (!order || order.paymentStatus === "COMPLETED") return;
 
-    // Record failed payment
-    await this.prisma.payment.create({
-      data: {
-        orderId: order.id,
-        amountNpr: order.totalNpr,
-        currency: order.displayCurrency || "NPR",
-        paymentGateway: gateway,
-        gatewayPaymentId,
-        status: "FAILED" as any,
-        failureReason: reason || "Payment failed",
-      },
-    });
-
-    // Update order status
-    await this.prisma.order.update({
-      where: { id: orderId },
-      data: {
-        paymentStatus: "FAILED",
-        status:
-          order.status === "CREATED"
-            ? ("PAYMENT_PENDING" as OrderStatus)
-            : order.status,
-      },
-    });
+        const amountNpr = order.balanceDueNpr || order.totalNpr;
+        await tx.payment.create({
+          data: {
+            orderId: order.id,
+            amountNpr,
+            currency: CurrencyCode.NPR,
+            ...this.parseWebhookCharge(metadata, amountNpr),
+            paymentGateway: gateway,
+            gatewayPaymentId,
+            status: "FAILED" as any,
+            failureReason: reason || "Payment failed",
+            metadata,
+          },
+        });
+        await tx.order.updateMany({
+          where: { id: orderId, paymentStatus: { not: "COMPLETED" } },
+          data: {
+            paymentStatus: "FAILED",
+            status:
+              order.status === "CREATED"
+                ? ("PAYMENT_PENDING" as OrderStatus)
+                : order.status,
+          },
+        });
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return;
+      }
+      throw error;
+    }
 
     this.logger.warn(
       `Order ${orderId} payment failed via ${gateway}: ${reason}`,

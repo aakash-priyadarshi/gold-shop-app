@@ -58,4 +58,13 @@ export class SavingsController {
   ) {
     return this.savingsService.recordPayment(shopId, id, dto ?? {});
   }
+
+  @Post(":id/redeem")
+  @ApiOperation({ summary: "Mark a savings scheme as redeemed at the counter" })
+  async redeem(
+    @CurrentUser("shopId") shopId: string,
+    @Param("id") id: string,
+  ) {
+    return this.savingsService.redeem(shopId, id);
+  }
 }

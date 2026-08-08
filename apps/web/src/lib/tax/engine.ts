@@ -355,6 +355,10 @@ function getDefaultTaxConfig(country: string): CountryTaxConfig | null {
   if (country === 'US') {
     return getUsTaxConfig();
   }
+
+  if (country === 'LK') {
+    return getLkTaxConfig();
+  }
   
   return null;
 }
@@ -534,6 +538,37 @@ export function getEuTaxConfig(): CountryTaxConfig {
     metadata: {
       description: 'EU tax rates (investment gold VAT exempt)',
       source: 'EU VAT Directive',
+      lastUpdated: '2024-01-01',
+    },
+  };
+}
+
+/**
+ * Sri Lanka Tax Configuration
+ */
+export function getLkTaxConfig(): CountryTaxConfig {
+  return {
+    country: 'LK',
+    effectiveFrom: '2024-01-01',
+    rules: [
+      {
+        id: 'LK_VAT',
+        name: 'VAT',
+        displayName: 'VAT 18%',
+        rate: 0.18,
+        priority: 1,
+        applyWhen: {},
+        base: 'item_subtotal_excluding_tax',
+        includeInBase: {
+          makingCharge: true,
+          plating: true,
+          finish: true,
+        },
+      },
+    ],
+    metadata: {
+      description: 'Sri Lanka tax rates',
+      source: 'Sri Lanka Inland Revenue Department',
       lastUpdated: '2024-01-01',
     },
   };

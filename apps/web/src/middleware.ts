@@ -27,7 +27,7 @@ const MOBILE_TOP_SEGMENTS = new Set([
 
 function mapToSupportedMarket(countryCode: string): string {
   const country = countryCode.toUpperCase();
-  if (["NP", "IN", "US", "UK", "EU", "AE"].includes(country)) return country;
+  if (["NP", "IN", "US", "UK", "EU", "AE", "LK"].includes(country)) return country;
   if (country === "GB") return "UK";
 
   const europeanCountries = new Set([

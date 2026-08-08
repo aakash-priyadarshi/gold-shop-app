@@ -18,7 +18,7 @@ import {
   Star,
   Truck,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Stage {
   id: string;
@@ -91,11 +91,7 @@ export function OrderProtectionTimeline({
   const [data, setData] = useState<ProtectionData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadTimeline();
-  }, [orderId]);
-
-  const loadTimeline = async () => {
+  const loadTimeline = useCallback(async () => {
     try {
       setLoading(true);
       const res = await intelligenceApi.getOrderProtection(orderId);
@@ -105,7 +101,11 @@ export function OrderProtectionTimeline({
     } finally {
       setLoading(false);
     }
-  };
+  }, [orderId]);
+
+  useEffect(() => {
+    void loadTimeline();
+  }, [loadTimeline]);
 
   if (loading) {
     return (

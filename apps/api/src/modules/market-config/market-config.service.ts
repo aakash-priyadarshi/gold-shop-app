@@ -163,6 +163,23 @@ const DEFAULT_CONFIGS: Record<
     priceMultiplier: 1.02,
     codEnabled: true,
   },
+  LK: {
+    countryName: "Sri Lanka",
+    defaultCurrency: "LKR",
+    supportedCurrencies: ["LKR", "USD", "INR"],
+    defaultWeightUnit: "GRAM",
+    supportedWeightUnits: ["GRAM", "TOLA", "KILOGRAM"],
+    supportedPaymentMethods: ["CARD", "BANK_TRANSFER", "CASH", "PAID_AT_SHOP"],
+    heroHeadline: "Sri Lanka's Trusted Jewellery Platform",
+    heroSubheadline: "Billing, schemes, and inventory for local jewellers",
+    contactEmail: "srilanka@orivraa.com",
+    contactPhone: "+94-11-XXXXXXX",
+    contactAddress: "Colombo, Sri Lanka",
+    taxPercentage: 18,
+    taxName: "VAT",
+    priceMultiplier: 1.0,
+    codEnabled: true,
+  },
 };
 
 @Injectable()
@@ -245,7 +262,8 @@ export class MarketConfigService {
    * Map any country code to a supported market
    */
   mapToSupportedMarket(countryCode: string): string {
-    const supportedMarkets = ["NP", "IN", "US", "UK", "EU", "AE"];
+    countryCode = countryCode.trim().toUpperCase();
+    const supportedMarkets = ["NP", "IN", "US", "UK", "EU", "AE", "LK"];
 
     if (supportedMarkets.includes(countryCode)) {
       return countryCode;
@@ -306,7 +324,7 @@ export class MarketConfigService {
     });
 
     // Merge with defaults for any missing configs
-    const allMarkets = ["NP", "IN", "US", "UK", "EU", "AE"];
+    const allMarkets = ["NP", "IN", "US", "UK", "EU", "AE", "LK"];
     const result: any[] = [];
 
     for (const market of allMarkets) {

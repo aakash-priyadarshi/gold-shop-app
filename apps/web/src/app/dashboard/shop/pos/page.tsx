@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element -- product thumbnails use dynamic remote URLs */
-
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -515,9 +513,16 @@ function PosPageInner() {
                       onClick={() => handleAddItem(item.id)}
                       className="group relative border rounded-xl p-3 text-left hover:border-primary hover:shadow-md transition-all bg-card"
                     >
-                      <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-2">
+                      <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-2">
                         {item.images?.[0] ? (
-                          <img src={item.images[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                          <Image
+                            src={item.images[0]}
+                            alt=""
+                            className="object-cover group-hover:scale-105 transition-transform"
+                            fill
+                            sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
+                            unoptimized
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center"><Package className="h-8 w-8 text-muted-foreground/40" /></div>
                         )}
@@ -683,10 +688,13 @@ function PosPageInner() {
                             className="flex items-center gap-3 p-2 border rounded-lg hover:bg-accent/50 transition"
                           >
                             {pick.inventoryItem.images?.[0] ? (
-                              <img
+                              <Image
                                 src={pick.inventoryItem.images[0]}
                                 alt=""
                                 className="h-12 w-12 rounded object-cover"
+                                width={48}
+                                height={48}
+                                unoptimized
                               />
                             ) : (
                               <div className="h-12 w-12 bg-muted rounded flex items-center justify-center">
@@ -794,10 +802,13 @@ function PosPageInner() {
                                 <TableCell>
                                   <div className="flex items-center gap-2">
                                     {item.inventoryItem?.images?.[0] ? (
-                                      <img
+                                      <Image
                                         src={item.inventoryItem.images[0]}
                                         alt=""
                                         className="h-8 w-8 rounded object-cover"
+                                        width={32}
+                                        height={32}
+                                        unoptimized
                                       />
                                     ) : (
                                       <div className="h-8 w-8 bg-muted rounded" />
@@ -971,7 +982,7 @@ function PosPageInner() {
                         <p className="text-xs text-muted-foreground">
                           <T>Customer can scan to pay via UPI / PhonePe</T>
                         </p>
-                        <img
+                        <Image
                           src={buildQrImageUrl(
                             buildUpiPayUri({
                               upiId: shopUpiId,
@@ -983,6 +994,9 @@ function PosPageInner() {
                           )}
                           alt="UPI QR"
                           className="mx-auto h-36 w-36 rounded bg-white p-2"
+                          width={144}
+                          height={144}
+                          unoptimized
                         />
                         <p className="text-[11px] font-mono text-muted-foreground">{shopUpiId}</p>
                       </>

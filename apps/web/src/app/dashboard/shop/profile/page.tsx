@@ -59,6 +59,7 @@ import {
     User,
     XCircle,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 interface UserProfile {
@@ -975,11 +976,13 @@ export default function ShopkeeperProfilePage() {
                         {twoFactorSetup && (
                           <>
                             <div className="flex justify-center">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
+                              <Image
                                 src={twoFactorSetup.qrCode}
                                 alt="2FA QR Code"
                                 className="w-48 h-48 border rounded-lg"
+                                width={192}
+                                height={192}
+                                unoptimized
                               />
                             </div>
                             <div className="text-center">

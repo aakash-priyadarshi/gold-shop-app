@@ -4,7 +4,7 @@
  */
 
 // All supported currencies
-export type CurrencyCode = 'NPR' | 'INR' | 'AED' | 'USD' | 'GBP' | 'EUR';
+export type CurrencyCode = 'NPR' | 'INR' | 'AED' | 'USD' | 'GBP' | 'EUR' | 'LKR';
 
 // All FX pairs we track (USD is base currency)
 export type FxPair = 
@@ -13,6 +13,7 @@ export type FxPair =
   | 'USD_AED' 
   | 'USD_GBP' 
   | 'USD_EUR'
+  | 'USD_LKR'
   | 'USD_USD'  // Identity pair for USD
   | 'INR_NPR';
 
@@ -38,6 +39,7 @@ export interface ExtendedFxSnapshot extends FxSnapshot {
   USD_AED: FxRate;
   USD_GBP: FxRate;
   USD_EUR: FxRate;
+  USD_LKR: FxRate;
 }
 
 export interface FrankfurterResponse {
@@ -50,6 +52,7 @@ export interface FrankfurterResponse {
     AED?: number;
     GBP?: number;
     EUR?: number;
+    LKR?: number;
     [key: string]: number | undefined;
   };
 }
@@ -64,6 +67,7 @@ export interface ExchangeRateHostResponse {
     AED?: number;
     GBP?: number;
     EUR?: number;
+    LKR?: number;
     [key: string]: number | undefined;
   };
 }
@@ -75,6 +79,7 @@ export const DEFAULT_FX_RATES = {
   USD_AED: 3.67,   // 1 USD = 3.67 AED (pegged)
   USD_GBP: 0.79,   // 1 USD = 0.79 GBP
   USD_EUR: 0.92,   // 1 USD = 0.92 EUR
+  USD_LKR: 300.0,  // 1 USD ≈ 300 LKR (fallback)
   INR_NPR: 1.60,   // 1 INR = 1.60 NPR
 } as const;
 
@@ -86,6 +91,7 @@ export const CURRENCY_INFO: Record<CurrencyCode, { symbol: string; name: string;
   USD: { symbol: '$', name: 'US Dollar', locale: 'en-US' },
   GBP: { symbol: '£', name: 'British Pound', locale: 'en-GB' },
   EUR: { symbol: '€', name: 'Euro', locale: 'de-DE' },
+  LKR: { symbol: 'Rs.', name: 'Sri Lankan Rupee', locale: 'si-LK' },
 };
 
 // Sanity check thresholds
@@ -109,13 +115,13 @@ export const FRANKFURTER_CONFIG = {
   baseUrl: 'https://api.frankfurter.dev/v1',
   timeout: 10000, // 10 seconds
   // Currencies supported by Frankfurter (NPR is NOT supported by Frankfurter, we calculate it from INR)
-  supportedCurrencies: ['INR', 'AED', 'GBP', 'EUR'] as const,
+  supportedCurrencies: ['INR', 'AED', 'GBP', 'EUR', 'LKR'] as const,
 } as const;
 
 export const EXCHANGERATE_HOST_CONFIG = {
   baseUrl: 'https://api.exchangerate.host',
   timeout: 10000,
-  supportedCurrencies: ['INR', 'AED', 'GBP', 'EUR'] as const,
+  supportedCurrencies: ['INR', 'AED', 'GBP', 'EUR', 'LKR'] as const,
 } as const;
 
 // Environment fallback rates (used when all APIs are down)
@@ -125,5 +131,6 @@ export const FALLBACK_FX_RATES = {
   USD_AED: 3.67,
   USD_EUR: 0.92,
   USD_GBP: 0.79,
+  USD_LKR: 300.0,
   INR_NPR: 1.6024, // 133 / 83
 } as const;

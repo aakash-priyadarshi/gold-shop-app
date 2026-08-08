@@ -313,15 +313,18 @@ function getTaxRate(country: string): number {
     AE: 0.05,
     UK: 0.2,
     EU: 0.19,
-    US: 0.08,
+    US: 0,
+    LK: 0.18,
   };
-  return defaults[country] || 0.1;
+  return defaults[country] ?? 0;
 }
 
 function getTaxName(country: string): string {
   const cached = getCachedTaxRate(country);
   if (cached) return cached.name;
-  return country === "IN" ? "GST" : "VAT";
+  if (country === "IN") return "GST";
+  if (["NP", "AE", "UK", "EU", "LK"].includes(country)) return "VAT";
+  return "Tax";
 }
 
 // ═══════════════════════════════════════════

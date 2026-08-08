@@ -32,6 +32,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { Loader2, Package, Store } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
@@ -358,10 +359,13 @@ function MyOrdersPageContent() {
                         {/* Product image */}
                         <div className="w-full lg:w-32 h-32 bg-gray-100 dark:bg-gray-800 flex-shrink-0 flex items-center justify-center">
                           {productImage ? (
-                            <img
+                            <Image
                               src={productImage}
                               alt={productName}
                               className="w-full h-full object-cover"
+                              width={128}
+                              height={128}
+                              unoptimized
                             />
                           ) : (
                             <Package className="h-10 w-10 text-gray-400" />

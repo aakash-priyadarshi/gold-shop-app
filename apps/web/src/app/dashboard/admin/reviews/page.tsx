@@ -43,7 +43,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface ReviewSubmission {
   id: string;
@@ -82,11 +82,7 @@ export default function AdminReviewsPage() {
   const [adminNotes, setAdminNotes] = useState("");
   const [sendingReminders, setSendingReminders] = useState(false);
 
-  useEffect(() => {
-    loadReviews();
-  }, [statusFilter]);
-
-  const loadReviews = async () => {
+  const loadReviews = useCallback(async () => {
     setLoading(true);
     try {
       const res = await sellerPerformanceApi.getAdminReviews(
@@ -98,7 +94,11 @@ export default function AdminReviewsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  useEffect(() => {
+    void loadReviews();
+  }, [loadReviews]);
 
   const handleAction = async (action: "approve" | "reject") => {
     if (!selectedReview) return;
@@ -365,10 +365,13 @@ export default function AdminReviewsPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <img
+                      <Image
                         src={selectedReview.proofScreenshot}
                         alt="Review proof"
-                        className="w-full max-h-64 object-contain bg-gray-50"
+                        className="w-full h-auto max-h-64 object-contain bg-gray-50"
+                        width={1200}
+                        height={800}
+                        unoptimized
                       />
                     </a>
                   </div>

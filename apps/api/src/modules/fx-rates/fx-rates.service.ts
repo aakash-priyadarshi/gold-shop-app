@@ -8,7 +8,7 @@
  * Uses HttpClientService for robust retries and timeout handling.
  */
 
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { HttpClientService } from '../../common/http-client';
@@ -16,7 +16,6 @@ import {
   FxRate,
   FxSnapshot,
   FxPair,
-  FxSource,
   FrankfurterResponse,
   ExchangeRateHostResponse,
   DEFAULT_FX_RATES,
@@ -53,6 +52,8 @@ export class FxRatesService implements OnModuleInit {
   private readonly fallbackUsdAed: number;
   private readonly fallbackUsdGbp: number;
   private readonly fallbackUsdEur: number;
+  private readonly fallbackUsdLkr: number;
+  private readonly maxRateAgeMs: number;
 
   constructor(
     private readonly configService: ConfigService,
@@ -73,6 +74,13 @@ export class FxRatesService implements OnModuleInit {
     );
     this.fallbackUsdEur = parseFloat(
       this.configService.get<string>('DEFAULT_USD_EUR') || String(DEFAULT_FX_RATES.USD_EUR),
+    );
+    this.fallbackUsdLkr = parseFloat(
+      this.configService.get<string>('DEFAULT_USD_LKR') || String(DEFAULT_FX_RATES.USD_LKR),
+    );
+    this.maxRateAgeMs = parseInt(
+      this.configService.get<string>('FX_MAX_RATE_AGE_MS') || String(72 * 60 * 60 * 1000),
+      10,
     );
 
     this.logger.log(`FX fallback rates: USD_INR=${this.fallbackUsdInr}, USD_NPR=${this.fallbackUsdNpr}`);
@@ -190,6 +198,9 @@ export class FxRatesService implements OnModuleInit {
         case 'EUR':
           result.EUR = extSnapshot.USD_EUR;
           break;
+        case 'LKR':
+          result.LKR = extSnapshot.USD_LKR;
+          break;
       }
     }
 
@@ -203,9 +214,14 @@ export class FxRatesService implements OnModuleInit {
     amount: number,
     fromCurrency: CurrencyCode,
     toCurrency: CurrencyCode,
-  ): Promise<{ amount: number; rate: number; source: string }> {
+  ): Promise<{ amount: number; rate: number; source: string; quotedAt: string }> {
     if (fromCurrency === toCurrency) {
-      return { amount, rate: 1, source: 'identity' };
+      return {
+        amount,
+        rate: 1,
+        source: 'identity',
+        quotedAt: new Date().toISOString(),
+      };
     }
 
     const rates = await this.getUsdRates([fromCurrency, toCurrency]);
@@ -214,8 +230,20 @@ export class FxRatesService implements OnModuleInit {
     // If fromCurrency is USD: rate is 1
     // amount_usd = amount / from_rate
     // amount_to = amount_usd * to_rate
-    const fromRate = fromCurrency === 'USD' ? 1 : rates[fromCurrency]?.rate || 1;
-    const toRate = toCurrency === 'USD' ? 1 : rates[toCurrency]?.rate || 1;
+    const fromQuote =
+      fromCurrency === 'USD'
+        ? { rate: 1, source: 'derived', updatedAt: new Date().toISOString() }
+        : rates[fromCurrency];
+    const toQuote =
+      toCurrency === 'USD'
+        ? { rate: 1, source: 'derived', updatedAt: new Date().toISOString() }
+        : rates[toCurrency];
+
+    this.assertUsableRate(fromCurrency, fromQuote);
+    this.assertUsableRate(toCurrency, toQuote);
+
+    const fromRate = fromQuote.rate;
+    const toRate = toQuote.rate;
     
     const amountInUsd = amount / fromRate;
     const convertedAmount = amountInUsd * toRate;
@@ -224,8 +252,32 @@ export class FxRatesService implements OnModuleInit {
     return {
       amount: parseFloat(convertedAmount.toFixed(2)),
       rate: parseFloat(effectiveRate.toFixed(6)),
-      source: rates[toCurrency]?.source || 'derived',
+      source: `${fromQuote.source}->${toQuote.source}`,
+      quotedAt: new Date(
+        Math.min(
+          new Date(fromQuote.updatedAt).getTime(),
+          new Date(toQuote.updatedAt).getTime(),
+        ),
+      ).toISOString(),
     };
+  }
+
+  private assertUsableRate(
+    currency: CurrencyCode,
+    quote: Pick<FxRate, 'rate' | 'updatedAt'> | undefined,
+  ): asserts quote is FxRate {
+    const timestamp = quote ? new Date(quote.updatedAt).getTime() : NaN;
+    if (
+      !quote ||
+      !Number.isFinite(quote.rate) ||
+      quote.rate <= 0 ||
+      !Number.isFinite(timestamp) ||
+      Date.now() - timestamp > this.maxRateAgeMs
+    ) {
+      throw new ServiceUnavailableException(
+        `A current, valid ${currency} exchange rate is unavailable`,
+      );
+    }
   }
 
   /**
@@ -544,7 +596,7 @@ export class FxRatesService implements OnModuleInit {
 
     // Try Frankfurter first
     try {
-      const url = `${FRANKFURTER_CONFIG.baseUrl}/latest?base=USD&symbols=INR,AED,GBP,EUR`;
+      const url = `${FRANKFURTER_CONFIG.baseUrl}/latest?base=USD&symbols=INR,AED,GBP,EUR,LKR`;
       const response = await this.httpClient.get<FrankfurterResponse>(url, {
         timeout: FRANKFURTER_CONFIG.timeout,
         maxRetries: 3,
@@ -556,6 +608,7 @@ export class FxRatesService implements OnModuleInit {
       const usdAed = rates.AED || this.fallbackUsdAed;
       const usdGbp = rates.GBP || this.fallbackUsdGbp;
       const usdEur = rates.EUR || this.fallbackUsdEur;
+      const usdLkr = rates.LKR || this.fallbackUsdLkr;
 
       this.logger.log(
         `Extended Frankfurter: USD_AED=${usdAed.toFixed(2)}, USD_GBP=${usdGbp.toFixed(4)}, USD_EUR=${usdEur.toFixed(4)}`,
@@ -581,6 +634,12 @@ export class FxRatesService implements OnModuleInit {
           source: rates.EUR ? 'frankfurter' : 'fallback',
           updatedAt,
         },
+        USD_LKR: {
+          pair: 'USD_LKR',
+          rate: usdLkr,
+          source: rates.LKR ? 'frankfurter' : 'fallback',
+          updatedAt,
+        },
       };
     } catch (error) {
       this.logger.warn(`Extended Frankfurter fetch failed: ${error}`);
@@ -588,7 +647,7 @@ export class FxRatesService implements OnModuleInit {
 
     // Try ExchangeRate.host as fallback
     try {
-      const url = `${EXCHANGERATE_HOST_CONFIG.baseUrl}/latest?base=USD&symbols=INR,AED,GBP,EUR`;
+      const url = `${EXCHANGERATE_HOST_CONFIG.baseUrl}/latest?base=USD&symbols=INR,AED,GBP,EUR,LKR`;
       const response = await this.httpClient.get<ExchangeRateHostResponse>(url, {
         timeout: EXCHANGERATE_HOST_CONFIG.timeout,
         maxRetries: 2,
@@ -615,6 +674,12 @@ export class FxRatesService implements OnModuleInit {
           pair: 'USD_EUR',
           rate: rates.EUR || this.fallbackUsdEur,
           source: rates.EUR ? 'exchangerate_host' : 'fallback',
+          updatedAt,
+        },
+        USD_LKR: {
+          pair: 'USD_LKR',
+          rate: rates.LKR || this.fallbackUsdLkr,
+          source: rates.LKR ? 'exchangerate_host' : 'fallback',
           updatedAt,
         },
       };
@@ -650,6 +715,12 @@ export class FxRatesService implements OnModuleInit {
       USD_EUR: {
         pair: 'USD_EUR',
         rate: this.fallbackUsdEur,
+        source: 'fallback',
+        updatedAt,
+      },
+      USD_LKR: {
+        pair: 'USD_LKR',
+        rate: this.fallbackUsdLkr,
         source: 'fallback',
         updatedAt,
       },

@@ -1125,6 +1125,46 @@ async function main() {
     },
   });
 
+  // Sri Lanka
+  await prisma.marketConfig.upsert({
+    where: { countryCode: "LK" },
+    update: {
+      countryName: "Sri Lanka",
+      isActive: true,
+      defaultCurrency: "LKR",
+      supportedCurrencies: ["LKR", "USD", "INR"],
+      defaultWeightUnit: "GRAM",
+      supportedWeightUnits: ["GRAM", "TOLA", "KILOGRAM"],
+      supportedPaymentMethods: ["CARD", "BANK_TRANSFER", "CASH", "PAID_AT_SHOP"],
+      taxPercentage: 18,
+      taxName: "VAT",
+      priceMultiplier: 1.0,
+      codEnabled: true,
+      customOrdersEnabled: true,
+    },
+    create: {
+      countryCode: "LK",
+      countryName: "Sri Lanka",
+      isActive: true,
+      defaultCurrency: "LKR",
+      supportedCurrencies: ["LKR", "USD", "INR"],
+      defaultWeightUnit: "GRAM",
+      supportedWeightUnits: ["GRAM", "TOLA", "KILOGRAM"],
+      supportedPaymentMethods: ["CARD", "BANK_TRANSFER", "CASH", "PAID_AT_SHOP"],
+      heroHeadline: "Ceylon's Finest Gold & Gem Jewellery",
+      heroSubheadline:
+        "Discover handcrafted gold jewellery and gemstones from Sri Lanka's trusted goldsmiths.",
+      contactEmail: "srilanka@orivraa.com",
+      contactPhone: "+94 11 000 0000",
+      contactAddress: "Colombo, Sri Lanka",
+      taxPercentage: 18,
+      taxName: "VAT",
+      priceMultiplier: 1.0,
+      codEnabled: true,
+      customOrdersEnabled: true,
+    },
+  });
+
   console.log("✅ Created market configurations");
 
   // ═══════════════════════════════════════════
@@ -1246,6 +1286,16 @@ async function main() {
       rate: 0.0,
       priority: 1,
       description: "No federal sales tax (varies by state)",
+    },
+    // ── Sri Lanka ──
+    {
+      marketRegion: "LK",
+      taxType: "VAT",
+      taxName: "VAT",
+      category: "ALL",
+      rate: 0.18,
+      priority: 1,
+      description: "18% VAT on all components",
     },
   ];
 

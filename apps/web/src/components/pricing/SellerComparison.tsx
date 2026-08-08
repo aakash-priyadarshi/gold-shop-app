@@ -451,6 +451,7 @@ function getCurrencySymbol(currency: string): string {
     USD: "$",
     GBP: "£",
     EUR: "€",
+    LKR: "Rs.",
   };
   return symbols[currency] || currency;
 }
@@ -556,6 +557,22 @@ function getMockSellers(
         rating: 4.7,
         reviews: 2100,
         making: 12,
+      },
+    ],
+    LK: [
+      {
+        name: "Perera Jewellers",
+        city: "Colombo",
+        rating: 4.7,
+        reviews: 210,
+        making: 12,
+      },
+      {
+        name: "Sea Street Gold House",
+        city: "Colombo",
+        rating: 4.5,
+        reviews: 98,
+        making: 10,
       },
     ],
   };

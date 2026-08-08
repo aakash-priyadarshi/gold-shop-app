@@ -102,6 +102,7 @@ interface ShopData {
 const countries = [
   { code: "NP", name: "Nepal", currency: "NPR" },
   { code: "IN", name: "India", currency: "INR" },
+  { code: "LK", name: "Sri Lanka", currency: "LKR" },
   { code: "US", name: "United States", currency: "USD" },
   { code: "GB", name: "United Kingdom", currency: "GBP" },
   { code: "AU", name: "Australia", currency: "AUD" },
@@ -113,6 +114,7 @@ const countries = [
 const currencies = [
   { code: "NPR", name: "Nepali Rupee (रू)", symbol: "रू" },
   { code: "INR", name: "Indian Rupee (₹)", symbol: "₹" },
+  { code: "LKR", name: "Sri Lankan Rupee (Rs)", symbol: "Rs" },
   { code: "USD", name: "US Dollar ($)", symbol: "$" },
   { code: "GBP", name: "British Pound (£)", symbol: "£" },
   { code: "AUD", name: "Australian Dollar (A$)", symbol: "A$" },
@@ -340,6 +342,7 @@ export default function ShopSettingsPage() {
         const countryToCurrency: Record<string, string> = {
           NP: "NPR",
           IN: "INR",
+          LK: "LKR",
           US: "USD",
           GB: "GBP",
           UK: "GBP",
