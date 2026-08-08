@@ -19,6 +19,38 @@ export const COUNTER_PAYMENT_METHODS = [
 export type CounterPaymentMethod =
   (typeof COUNTER_PAYMENT_METHODS)[number]["value"];
 
+/** Manual counter methods — record payment by hand (no live wallet/QR rails). */
+const MANUAL_COUNTER_METHODS: CounterPaymentMethod[] = [
+  "CASH",
+  "CARD",
+  "BANK_TRANSFER",
+];
+
+const METHODS_BY_COUNTRY: Record<string, CounterPaymentMethod[]> = {
+  // Preference / invoice country drives which rails appear (same idea as tax).
+  IN: ["CASH", "UPI", "PHONEPE", "CARD", "BANK_TRANSFER"],
+  NP: ["CASH", "ESEWA", "KHALTI", "CARD", "BANK_TRANSFER"],
+  // Sri Lanka and other markets: no UPI/PhonePe/eSewa — manual only for now.
+  LK: MANUAL_COUNTER_METHODS,
+  AE: MANUAL_COUNTER_METHODS,
+  US: MANUAL_COUNTER_METHODS,
+  UK: MANUAL_COUNTER_METHODS,
+  GB: MANUAL_COUNTER_METHODS,
+  EU: MANUAL_COUNTER_METHODS,
+};
+
+/**
+ * Country-aware counter payment options.
+ * Pass the same country used for tax (invoice country / preference), not only shop KYC.
+ */
+export function getCounterPaymentMethods(
+  country?: string | null,
+): ReadonlyArray<(typeof COUNTER_PAYMENT_METHODS)[number]> {
+  const c = (country || "").trim().toUpperCase();
+  const allowed = METHODS_BY_COUNTRY[c] || MANUAL_COUNTER_METHODS;
+  return COUNTER_PAYMENT_METHODS.filter((m) => allowed.includes(m.value));
+}
+
 export function isDigitalWalletMethod(method?: string | null): boolean {
   const m = (method || "").toUpperCase();
   return m === "UPI" || m === "PHONEPE";

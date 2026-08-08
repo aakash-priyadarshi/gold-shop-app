@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   ForbiddenException,
   Get,
   Param,
+  Post,
   Query,
   UseGuards,
 } from "@nestjs/common";
@@ -13,6 +15,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { AccountingService } from "./accounting.service";
+import { OpeningBalanceDto } from "./dto/opening-balance.dto";
 
 @Controller("accounting")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -74,6 +77,18 @@ export class AccountingController {
     return this.accounting.getTrialBalance(shopId, this.range(from, to));
   }
 
+  @Get("shops/:shopId/profit-loss")
+  async profitLoss(
+    @Param("shopId") shopId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @CurrentUser("role") role: UserRole,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    this.authorizeShop(shopId, userShopId, role);
+    return this.accounting.getProfitAndLoss(shopId, this.range(from, to));
+  }
+
   @Get("shops/:shopId/ledger")
   async ledger(
     @Param("shopId") shopId: string,
@@ -121,5 +136,31 @@ export class AccountingController {
   ) {
     this.authorizeShop(shopId, userShopId, role);
     return this.accounting.getJournalDetail(shopId, journalId);
+  }
+
+  @Post("shops/:shopId/opening-balances")
+  async openingBalances(
+    @Param("shopId") shopId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @CurrentUser("role") role: UserRole,
+    @CurrentUser("id") userId: string,
+    @Body() dto: OpeningBalanceDto,
+  ) {
+    this.authorizeShop(shopId, userShopId, role);
+    return this.accounting.postOpeningBalance(shopId, {
+      ...dto,
+      actorUserId: userId,
+    });
+  }
+
+  @Post("shops/:shopId/backfill")
+  async backfill(
+    @Param("shopId") shopId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @CurrentUser("role") role: UserRole,
+    @CurrentUser("id") userId: string,
+  ) {
+    this.authorizeShop(shopId, userShopId, role);
+    return this.accounting.backfillShopLedger(shopId, userId);
   }
 }

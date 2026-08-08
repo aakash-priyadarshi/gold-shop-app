@@ -9,13 +9,17 @@ import {
     hasBarcodeDetector,
     hasCameraScanning,
     hasWebBluetooth,
+    hasWebSerial,
     hasWebUSB,
     kickCashDrawer,
     loadHardwareConfig,
+    pairLabelSerialPrinter,
     pairUsbPrinter,
     printReceiptBytes,
+    printZplJewelleryLabel,
     saveHardwareConfig,
     type HardwareConfig,
+    type LabelPrinterTransport,
     type PaperWidth,
     type PrinterTransport,
     type ScannerSource,
@@ -25,11 +29,13 @@ import {
     Bluetooth,
     Camera,
     Check,
+    Download,
     Keyboard,
     Loader2,
     Printer,
     Save,
     ScanLine,
+    Tag,
     Usb,
     Wifi,
     Wrench,
@@ -110,7 +116,9 @@ export default function HardwareSettingsPage() {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState<"idle" | "saving" | "saved">("idle");
   const [pairing, setPairing] = useState(false);
+  const [pairingLabel, setPairingLabel] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testingLabel, setTestingLabel] = useState(false);
 
   useEffect(() => {
     setCfg(loadHardwareConfig());
@@ -121,6 +129,9 @@ export default function HardwareSettingsPage() {
     setCfg((c) => ({ ...c, scanner: { ...c.scanner, ...patch } }));
   const updatePrinter = (patch: Partial<HardwareConfig["printer"]>) =>
     setCfg((c) => ({ ...c, printer: { ...c.printer, ...patch } }));
+  const updateLabelPrinter = (
+    patch: Partial<HardwareConfig["labelPrinter"]>,
+  ) => setCfg((c) => ({ ...c, labelPrinter: { ...c.labelPrinter, ...patch } }));
 
   const handleSave = () => {
     setSaving("saving");
@@ -203,6 +214,65 @@ export default function HardwareSettingsPage() {
     }
   };
 
+  const handlePairLabel = async () => {
+    setPairingLabel(true);
+    try {
+      const result = await pairLabelSerialPrinter(
+        cfg.labelPrinter.baudRate ?? 9600,
+      );
+      updateLabelPrinter({
+        enabled: true,
+        transport: "web-serial",
+        deviceLabel: result.label,
+      });
+      toast({ title: "Label printer paired", description: result.label });
+    } catch (e: any) {
+      toast({
+        title: "Label pairing failed",
+        description: e?.message ?? "Could not open serial port",
+        variant: "destructive",
+      });
+    } finally {
+      setPairingLabel(false);
+    }
+  };
+
+  const handleTestLabel = async () => {
+    setTestingLabel(true);
+    try {
+      // Persist current form values first so the test uses them
+      saveHardwareConfig(cfg);
+      const result = await printZplJewelleryLabel({
+        sku: "TEST-SKU-001",
+        name: "18K Gold Ring",
+        purity: "18K",
+        weightGrams: 3.25,
+        price: 12500,
+        currency: "LKR",
+        shopName: "Orivraa Test",
+        hallmark: "HUID-TEST",
+      });
+      toast({
+        title:
+          result.method === "web-serial"
+            ? "Test label sent to printer"
+            : "Test .zpl file downloaded",
+        description:
+          result.method === "download"
+            ? "Open the file with Zebra Setup Utilities or send to the printer"
+            : undefined,
+      });
+    } catch (e: any) {
+      toast({
+        title: "Label test failed",
+        description: e?.message ?? "Check label printer connection",
+        variant: "destructive",
+      });
+    } finally {
+      setTestingLabel(false);
+    }
+  };
+
   if (!loaded) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -227,7 +297,7 @@ export default function HardwareSettingsPage() {
               <T>POS Hardware</T>
             </h1>
             <p className="text-[11px] text-gray-400">
-              <T>Barcode scanner · Receipt printer · Cash drawer</T>
+              <T>Barcode scanner · Receipt printer · Label printer · Cash drawer</T>
             </p>
           </div>
           <MobileHelpButton
@@ -236,7 +306,8 @@ export default function HardwareSettingsPage() {
             tips={[
               "Any USB or Bluetooth scanner that types like a keyboard works without setup",
               "USB thermal printers (Epson TM, Star, generic 58/80mm) work directly from Chrome / Edge",
-              "Bluetooth & network printers are supported in the Orivraa Desktop app",
+              "Zebra jewellery tags: enable Label printer and use Web Serial (Chrome) or download a .zpl file",
+              "Bluetooth & network receipt printers are supported in the Orivraa Desktop app",
             ]}
           />
         </div>
@@ -480,6 +551,182 @@ export default function HardwareSettingsPage() {
               <T>Kick</T>
             </button>
           </div>
+        </section>
+
+        {/* Label printer (ZPL / Zebra) */}
+        <section className="bg-white rounded-2xl border border-gray-100 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-amber-600" />
+              <h2 className="text-sm font-bold text-gray-900">
+                <T>Jewellery label printer</T>
+              </h2>
+            </div>
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={cfg.labelPrinter.enabled}
+                onChange={(e) =>
+                  updateLabelPrinter({ enabled: e.target.checked })
+                }
+                className="h-4 w-4 accent-amber-500"
+              />
+              <T>Enabled</T>
+            </label>
+          </div>
+
+          <p className="text-[11px] text-gray-500 mb-3">
+            <T>
+              When enabled, Stock → Print Tag sends ZPL to a Zebra (or compatible)
+              printer. Otherwise the browser printable tag sheet is used.
+            </T>
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {(
+              [
+                {
+                  id: "web-serial" as LabelPrinterTransport,
+                  label: "Web Serial",
+                  Icon: Usb,
+                  hint: "USB Zebra over Chrome / Edge serial",
+                  available: hasWebSerial(),
+                },
+                {
+                  id: "download" as LabelPrinterTransport,
+                  label: "Download .zpl",
+                  Icon: Download,
+                  hint: "Save a .zpl file to send manually",
+                  available: true,
+                },
+              ] as const
+            ).map((t) => {
+              const active = cfg.labelPrinter.transport === t.id;
+              const Icon = t.Icon;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => updateLabelPrinter({ transport: t.id })}
+                  disabled={!t.available}
+                  className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-colors ${
+                    active
+                      ? "border-amber-400 bg-amber-50"
+                      : "border-gray-200 bg-white"
+                  } ${!t.available ? "opacity-40" : ""}`}
+                >
+                  <div className="flex items-center gap-2 w-full">
+                    <Icon
+                      className={`h-4 w-4 ${active ? "text-amber-600" : "text-gray-500"}`}
+                    />
+                    <span className="text-sm font-semibold text-gray-900 flex-1">
+                      {t.label}
+                    </span>
+                    {active && (
+                      <Check className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    )}
+                  </div>
+                  <span className="text-[10px] text-gray-500 leading-tight">
+                    {t.hint}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <label className="text-[11px] text-gray-600">
+              <T>Width mm</T>
+              <input
+                type="number"
+                min={20}
+                max={100}
+                value={cfg.labelPrinter.widthMm}
+                onChange={(e) =>
+                  updateLabelPrinter({
+                    widthMm: Number(e.target.value) || 50,
+                  })
+                }
+                className="mt-1 w-full px-2 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg"
+              />
+            </label>
+            <label className="text-[11px] text-gray-600">
+              <T>Height mm</T>
+              <input
+                type="number"
+                min={10}
+                max={80}
+                value={cfg.labelPrinter.heightMm}
+                onChange={(e) =>
+                  updateLabelPrinter({
+                    heightMm: Number(e.target.value) || 25,
+                  })
+                }
+                className="mt-1 w-full px-2 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg"
+              />
+            </label>
+            <label className="text-[11px] text-gray-600">
+              <T>DPI</T>
+              <select
+                value={cfg.labelPrinter.dpi}
+                onChange={(e) =>
+                  updateLabelPrinter({
+                    dpi: Number(e.target.value) === 300 ? 300 : 203,
+                  })
+                }
+                className="mt-1 w-full px-2 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg"
+              >
+                <option value={203}>203</option>
+                <option value={300}>300</option>
+              </select>
+            </label>
+          </div>
+
+          {cfg.labelPrinter.deviceLabel && (
+            <p className="text-[11px] text-gray-500 mb-3">
+              <T>Paired</T>:{" "}
+              <span className="text-gray-700 font-medium">
+                {cfg.labelPrinter.deviceLabel}
+              </span>
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handlePairLabel}
+              disabled={
+                pairingLabel ||
+                cfg.labelPrinter.transport !== "web-serial" ||
+                !hasWebSerial()
+              }
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-100 text-amber-800 text-xs font-semibold disabled:opacity-40"
+            >
+              {pairingLabel ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Usb className="h-3.5 w-3.5" />
+              )}
+              <T>Pair serial</T>
+            </button>
+            <button
+              onClick={handleTestLabel}
+              disabled={testingLabel || !cfg.labelPrinter.enabled}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-semibold disabled:opacity-40"
+            >
+              {testingLabel ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Printer className="h-3.5 w-3.5" />
+              )}
+              <T>Test label</T>
+            </button>
+          </div>
+
+          {!cfg.labelPrinter.enabled && (
+            <p className="text-[10px] text-gray-400 mt-2">
+              <T>Default tag size</T>: {cfg.labelPrinter.widthMm}×
+              {cfg.labelPrinter.heightMm}mm @ {cfg.labelPrinter.dpi} dpi
+            </p>
+          )}
         </section>
       </div>
 

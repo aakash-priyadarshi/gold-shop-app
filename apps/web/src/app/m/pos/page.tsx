@@ -10,6 +10,7 @@ import {
   type SupportedCurrencyCode,
 } from "@/lib/currency";
 import { loadHardwareConfig, printReceipt } from "@/lib/posHardware";
+import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import { useHaptics } from "@/hooks/useHaptics";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
@@ -57,15 +58,6 @@ interface CartItem {
   unitPrice: number;
 }
 
-const PAYMENT_METHODS = [
-  { value: "CASH", label: "Cash" },
-  { value: "UPI", label: "UPI / QR" },
-  { value: "CARD", label: "Card" },
-  { value: "ESEWA", label: "eSewa" },
-  { value: "KHALTI", label: "Khalti" },
-  { value: "BANK", label: "Bank Transfer" },
-];
-
 function formatMoney(amount: number, currency: SupportedCurrencyCode) {
   return formatCurrencyAmount(amount, currency);
 }
@@ -112,6 +104,17 @@ function CartDrawer({
 }) {
   const t = useT();
   const [method, setMethod] = useState("CASH");
+  const paymentMethods = useMemo(
+    () => getCounterPaymentMethods(shopCountry),
+    [shopCountry],
+  );
+
+  useEffect(() => {
+    if (!paymentMethods.some((m) => m.value === method)) {
+      setMethod(paymentMethods[0]?.value || "CASH");
+    }
+  }, [paymentMethods, method]);
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -340,7 +343,7 @@ function CartDrawer({
             <T>Select Payment Method</T>
           </label>
           <div className="grid grid-cols-2 gap-3">
-            {PAYMENT_METHODS.map((pm) => (
+            {paymentMethods.map((pm) => (
               <button
                 key={pm.value}
                 onClick={() => setMethod(pm.value)}

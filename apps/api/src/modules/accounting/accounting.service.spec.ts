@@ -322,4 +322,62 @@ describe("AccountingService", () => {
       "100.0000",
     );
   });
+
+  it("rejects opening balances with no cash or bank amount", async () => {
+    await expect(
+      service.postOpeningBalance("shop-1", {
+        asOfDate: "2026-01-01",
+        cashAmount: 0,
+        bankAmount: 0,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("derives a simple P&L from trial balance account movements", async () => {
+    jest.spyOn(service, "getTrialBalance").mockResolvedValue({
+      canonicalCurrency: CurrencyCode.NPR,
+      from: null,
+      to: null,
+      totalDebitNpr: "0",
+      totalCreditNpr: "0",
+      balanced: true,
+      accounts: [
+        {
+          systemKey: LedgerAccountKey.SALES_REVENUE,
+          debitNpr: "0",
+          creditNpr: "1000",
+          balanceNpr: "1000",
+        },
+        {
+          systemKey: LedgerAccountKey.SALES_RETURNS,
+          debitNpr: "50",
+          creditNpr: "0",
+          balanceNpr: "-50",
+        },
+        {
+          systemKey: LedgerAccountKey.TAX_PAYABLE,
+          debitNpr: "0",
+          creditNpr: "130",
+          balanceNpr: "130",
+        },
+        {
+          systemKey: LedgerAccountKey.PLATFORM_COMMISSION_EXPENSE,
+          debitNpr: "40",
+          creditNpr: "0",
+          balanceNpr: "40",
+        },
+      ],
+    } as any);
+
+    await expect(service.getProfitAndLoss("shop-1")).resolves.toEqual(
+      expect.objectContaining({
+        salesRevenueNpr: "1000.0000",
+        salesReturnsNpr: "50.0000",
+        netSalesNpr: "950.0000",
+        taxPayableIncreaseNpr: "130.0000",
+        commissionExpenseNpr: "40.0000",
+        netIncomeNpr: "910.0000",
+      }),
+    );
+  });
 });

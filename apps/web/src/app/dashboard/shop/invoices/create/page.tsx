@@ -31,7 +31,7 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { loadTradeInPayload } from "@/lib/oldGoldTradeIn";
 import { useCurrency } from "@/store/preferences";
 import { getApiUrl, invoicesApi, pricingApi, shopQuotesApi, shopsApi } from "@/lib/api";
-import { COUNTER_PAYMENT_METHODS } from "@/lib/counterPayments";
+import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
     canIssueSriLankaTaxInvoice,
@@ -1015,6 +1015,17 @@ export default function CreateInvoicePage() {
   );
   const [dueDate, setDueDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
+  // Same country selector as tax — payment rails follow invoice country / preference.
+  const availablePaymentMethods = useMemo(
+    () => getCounterPaymentMethods(invoiceCountry),
+    [invoiceCountry],
+  );
+
+  useEffect(() => {
+    if (!availablePaymentMethods.some((m) => m.value === paymentMethod)) {
+      setPaymentMethod(availablePaymentMethods[0]?.value || "CASH");
+    }
+  }, [availablePaymentMethods, paymentMethod]);
 
   // Prefill old-gold trade-in credit from calculator handoff
   useEffect(() => {
@@ -2683,7 +2694,7 @@ export default function CreateInvoicePage() {
                   <T>Payment Method</T>
                 </Label>
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {COUNTER_PAYMENT_METHODS.map((pm) => (
+                  {availablePaymentMethods.map((pm) => (
                     <button
                       key={pm.value}
                       type="button"

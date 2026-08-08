@@ -51,6 +51,7 @@ import { GoldLoansModule } from "./modules/gold-loans/gold-loans.module";
 import { KarigarModule } from "./modules/karigar/karigar.module";
 import { RfqModule } from "./modules/core/rfq/rfq.module";
 import { SavingsModule } from "./modules/savings/savings.module";
+import { ChitModule } from "./modules/chit/chit.module";
 import { SecurityModule } from "./modules/security/security.module";
 import { SellerPerformanceModule } from "./modules/core/seller-performance/seller-performance.module";
 import { ShopQuotesModule } from "./modules/core/shop-quotes/shop-quotes.module";
@@ -164,6 +165,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     ReleasesModule,
     RepairsModule,
     SavingsModule,
+    ChitModule,
     GoldLoansModule,
     KarigarModule,
     SupportModule,

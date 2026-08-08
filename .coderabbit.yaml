@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+early_access: false
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - master
+      - main
+  path_filters:
+    - "!**/pnpm-lock.yaml"
+    - "!**/package-lock.json"
+    - "!**/*.min.js"
+    - "!**/dist/**"
+    - "!**/.next/**"
+  path_instructions:
+    - path: "apps/api/**"
+      instructions: |
+        NestJS + Prisma API. Watch for production DB safety (no migrate reset),
+        auth/tenant scoping, tax/pricing correctness, and consistent API response shapes.
+    - path: "apps/web/**"
+      instructions: |
+        Next.js App Router. Prefer existing UI patterns, wrap user-facing strings with <T>,
+        keep weights in grams internally, and avoid breaking shop country/tax preference flows.
+    - path: "apps/api/prisma/**"
+      instructions: |
+        Schema and migrations are high risk. Flag destructive SQL, missing indexes on hot paths,
+        and any change that could reset or force-rewrite production data.
+chat:
+  auto_reply: true
+knowledge_base:
+  learnings: local
+  issues: local
+  pull_requests: local

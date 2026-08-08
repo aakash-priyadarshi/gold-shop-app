@@ -36,6 +36,7 @@ export interface ScannerConfig {
 
 export type PrinterTransport = "webusb" | "bluetooth" | "network" | "none";
 export type PaperWidth = 58 | 80;
+export type LabelPrinterTransport = "web-serial" | "download";
 
 export interface PrinterConfig {
   enabled: boolean;
@@ -52,9 +53,25 @@ export interface PrinterConfig {
   kickCashDrawer: boolean;
 }
 
+/** Zebra / ZPL jewellery tag printer (Web Serial or .zpl download). */
+export interface LabelPrinterConfig {
+  enabled: boolean;
+  transport: LabelPrinterTransport;
+  /** Label width in millimetres (default ~50mm jewellery tag). */
+  widthMm: number;
+  /** Label height in millimetres (default ~25mm jewellery tag). */
+  heightMm: number;
+  /** Printer DPI — 203 (common) or 300. */
+  dpi: 203 | 300;
+  /** Baud rate for Web Serial (Zebra defaults to 9600). */
+  baudRate?: number;
+  deviceLabel?: string;
+}
+
 export interface HardwareConfig {
   scanner: ScannerConfig;
   printer: PrinterConfig;
+  labelPrinter: LabelPrinterConfig;
 }
 
 const STORAGE_KEY = "orivraa.posHardware.v1";
@@ -74,6 +91,14 @@ export const defaultHardwareConfig: HardwareConfig = {
     autoPrint: false,
     kickCashDrawer: false,
   },
+  labelPrinter: {
+    enabled: false,
+    transport: "download",
+    widthMm: 50,
+    heightMm: 25,
+    dpi: 203,
+    baudRate: 9600,
+  },
 };
 
 export function loadHardwareConfig(): HardwareConfig {
@@ -85,6 +110,10 @@ export function loadHardwareConfig(): HardwareConfig {
     return {
       scanner: { ...defaultHardwareConfig.scanner, ...(parsed.scanner ?? {}) },
       printer: { ...defaultHardwareConfig.printer, ...(parsed.printer ?? {}) },
+      labelPrinter: {
+        ...defaultHardwareConfig.labelPrinter,
+        ...(parsed.labelPrinter ?? {}),
+      },
     };
   } catch {
     return defaultHardwareConfig;
@@ -410,9 +439,9 @@ export async function kickCashDrawer(): Promise<void> {
 }
 
 /**
- * Future: Zebra/ZPL jewellery label printer support.
- * Browser printable tags ship today via `jewelleryTagPrint.ts`.
- * This stub documents the intended hardware path without shipping a driver.
+ * Zebra / ZPL jewellery label printing (~50×25mm tag).
+ * Uses Web Serial (Chrome/Edge) when configured; otherwise downloads a .zpl file
+ * the shopkeeper can send to the printer via Zebra Setup Utilities / USB.
  */
 export interface ZplLabelPayload {
   sku: string;
@@ -422,19 +451,189 @@ export interface ZplLabelPayload {
   price?: number;
   currency?: string;
   hallmark?: string;
+  shopName?: string;
 }
 
-export function buildZplJewelleryLabel(_payload: ZplLabelPayload): string {
-  throw new Error(
-    "ZPL thermal label printing is not enabled yet. Use Print Tag (browser) from Stock.",
-  );
+function zplEscape(text: string): string {
+  // ZPL Field Data: escape ^ and ~ which start commands
+  return String(text ?? "")
+    .replace(/\^/g, " ")
+    .replace(/~/g, " ")
+    .replace(/[\r\n]+/g, " ")
+    .slice(0, 48);
 }
 
+function mmToDots(mm: number, dpi: number): number {
+  return Math.round((mm * dpi) / 25.4);
+}
+
+export function hasWebSerial(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return "serial" in navigator;
+}
+
+/** Build a single-label ZPL (^XA … ^XZ) for a jewellery hang-tag. */
+export function buildZplJewelleryLabel(
+  payload: ZplLabelPayload,
+  opts?: Partial<Pick<LabelPrinterConfig, "widthMm" | "heightMm" | "dpi">>,
+): string {
+  const cfg = loadHardwareConfig().labelPrinter;
+  const widthMm = opts?.widthMm ?? cfg.widthMm ?? 50;
+  const heightMm = opts?.heightMm ?? cfg.heightMm ?? 25;
+  const dpi = opts?.dpi ?? cfg.dpi ?? 203;
+
+  const pw = mmToDots(widthMm, dpi);
+  const ll = mmToDots(heightMm, dpi);
+  const sku = zplEscape(payload.sku || "SKU");
+  const shop = zplEscape(payload.shopName || "Orivraa");
+  const name = zplEscape(payload.name || "");
+  const purity = zplEscape(payload.purity || "");
+  const weight =
+    payload.weightGrams != null && Number.isFinite(payload.weightGrams)
+      ? `${Number(payload.weightGrams).toFixed(2)}g`
+      : "";
+  const price =
+    payload.price != null && Number.isFinite(payload.price)
+      ? `${payload.currency || ""} ${Number(payload.price).toLocaleString("en-IN", {
+          maximumFractionDigits: 0,
+        })}`.trim()
+      : "";
+  const meta = [purity, weight].filter(Boolean).join("  ");
+  const hallmark = payload.hallmark ? zplEscape(payload.hallmark) : "";
+
+  // Layout tuned for ~50×25mm at 203dpi (≈400×200 dots).
+  // Code128 barcode on SKU; human-readable fields for counter staff.
+  const lines = [
+    "^XA",
+    "^CI28", // UTF-8
+    `^PW${pw}`,
+    `^LL${ll}`,
+    "^LH0,0",
+    "^LT0",
+    // Shop name
+    `^FO20,12^A0N,18,18^FD${shop}^FS`,
+    // Product name
+    `^FO20,34^A0N,22,22^FD${name}^FS`,
+    // Purity + weight
+    meta ? `^FO20,60^A0N,18,18^FD${zplEscape(meta)}^FS` : "",
+    // Price
+    price ? `^FO20,82^A0N,22,22^FD${zplEscape(price)}^FS` : "",
+    // Code128 barcode (SKU) — height ~40 dots
+    `^FO20,108^BY1.5,2,40^BCN,40,Y,N,N^FD${sku}^FS`,
+    // Hallmark / HUID if present
+    hallmark ? `^FO20,168^A0N,14,14^FD${hallmark}^FS` : "",
+    "^XZ",
+  ].filter(Boolean);
+
+  return lines.join("\n");
+}
+
+function downloadZplFile(zpl: string, sku: string): void {
+  if (typeof window === "undefined") return;
+  const blob = new Blob([zpl], { type: "application/octet-stream" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `label-${(sku || "tag").replace(/[^\w.-]+/g, "_").slice(0, 40)}.zpl`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+let labelSerialPort: any = null;
+
+/**
+ * Pair / open a Zebra (or compatible) label printer over Web Serial.
+ * Returns a short device label for settings UI.
+ */
+export async function pairLabelSerialPrinter(
+  baudRate = 9600,
+): Promise<{ label: string }> {
+  if (!hasWebSerial()) {
+    throw new Error("Web Serial is not supported. Use Chrome or Edge, or switch to Download .zpl.");
+  }
+  const port = await (navigator as any).serial.requestPort({ filters: [] });
+  await port.open({
+    baudRate,
+    dataBits: 8,
+    stopBits: 1,
+    parity: "none",
+    flowControl: "none",
+  });
+  labelSerialPort = port;
+  const info = port.getInfo?.() ?? {};
+  const label = info.usbVendorId
+    ? `Serial (${info.usbVendorId}:${info.usbProductId ?? "?"})`
+    : "Serial label printer";
+  return { label };
+}
+
+async function writeZplToSerial(zpl: string, baudRate = 9600): Promise<void> {
+  if (!hasWebSerial()) {
+    throw new Error("Web Serial not available");
+  }
+
+  let port = labelSerialPort;
+  if (!port) {
+    // Re-request / use previously granted port
+    const ports = await (navigator as any).serial.getPorts?.();
+    port = ports?.[0] ?? null;
+    if (!port) {
+      const paired = await pairLabelSerialPrinter(baudRate);
+      void paired;
+      port = labelSerialPort;
+    } else {
+      if (!port.readable && !port.writable) {
+        await port.open({
+          baudRate,
+          dataBits: 8,
+          stopBits: 1,
+          parity: "none",
+          flowControl: "none",
+        });
+      }
+      labelSerialPort = port;
+    }
+  }
+
+  if (!port?.writable) {
+    throw new Error("Label printer serial port is not writable");
+  }
+
+  const writer = port.writable.getWriter();
+  try {
+    await writer.write(new TextEncoder().encode(zpl));
+  } finally {
+    writer.releaseLock();
+  }
+}
+
+/**
+ * Print a jewellery tag via ZPL.
+ * - transport `web-serial`: send over Web Serial (Chrome)
+ * - transport `download` (or serial unavailable): download .zpl file
+ */
 export async function printZplJewelleryLabel(
-  _payload: ZplLabelPayload,
-): Promise<void> {
-  throw new Error(
-    "ZPL thermal label printing is not enabled yet. Use Print Tag (browser) from Stock.",
-  );
+  payload: ZplLabelPayload,
+): Promise<{ method: "web-serial" | "download" }> {
+  const cfg = loadHardwareConfig().labelPrinter;
+  const zpl = buildZplJewelleryLabel(payload, {
+    widthMm: cfg.widthMm,
+    heightMm: cfg.heightMm,
+    dpi: cfg.dpi,
+  });
+
+  const preferSerial = cfg.transport === "web-serial" && hasWebSerial();
+  if (preferSerial) {
+    try {
+      await writeZplToSerial(zpl, cfg.baudRate ?? 9600);
+      return { method: "web-serial" };
+    } catch (err) {
+      // Fall through to download so the shopkeeper is never blocked
+      console.warn("ZPL serial print failed, falling back to download:", err);
+    }
+  }
+
+  downloadZplFile(zpl, payload.sku);
+  return { method: "download" };
 }
 

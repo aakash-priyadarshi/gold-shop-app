@@ -457,16 +457,67 @@ function LkPanel({ shopId, period }: { shopId: string; period: string }) {
       .catch(() => toast({ variant: "destructive", title: "Failed to load Sri Lanka VAT" }))
       .finally(() => setLoading(false));
   }, [period, shopId, toast]);
+
+  const downloadRegisterCsv = async () => {
+    try {
+      const res = await adminTaxApi.lkVatRegister(shopId, period, "csv");
+      downloadBlob(res.data, `LK-VAT-Register-${period}.csv`);
+    } catch {
+      toast({ variant: "destructive", title: "Failed to download VAT register" });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sri Lanka Output VAT Sales Summary</CardTitle>
+        <CardTitle className="flex items-center justify-between flex-wrap gap-2">
+          <span>Sri Lanka Output VAT Sales Summary</span>
+          <Button onClick={downloadRegisterCsv} variant="outline" size="sm" disabled={!shopId}>
+            <Download className="h-3 w-3 mr-1" /> VAT Register CSV
+          </Button>
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Accountant export only; input VAT and direct IRD filing are not implemented.
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Accountant export only; input VAT and direct IRD filing are not implemented. filingReady=false.
         </p>
+        {data?.shopTin != null && (
+          <p className="text-xs text-muted-foreground">
+            TIN: {data.shopTin || "—"} · VAT status:{" "}
+            {String(data.vatRegistrationStatus || "—").replace(/_/g, " ")}
+          </p>
+        )}
         {loading ? <SkeletonGrid /> : <SummaryGrid data={data} />}
+        {Array.isArray(data?.outputVatByRate) && data.outputVatByRate.length > 0 && (
+          <div className="overflow-x-auto text-sm">
+            <table className="w-full">
+              <thead className="text-left border-b">
+                <tr>
+                  <th className="py-1 px-2">Rate %</th>
+                  <th className="py-1 px-2">Taxable</th>
+                  <th className="py-1 px-2">Output VAT</th>
+                  <th className="py-1 px-2">Invoices</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.outputVatByRate.map((row: any, i: number) => (
+                  <tr key={i} className="border-b">
+                    <td className="py-1 px-2">{row.rate}%</td>
+                    <td className="py-1 px-2">{row.taxableSales?.toLocaleString()}</td>
+                    <td className="py-1 px-2">{row.outputVat?.toLocaleString()}</td>
+                    <td className="py-1 px-2">{row.invoiceCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {data?.excludedCurrencyRows?.count > 0 && (
+          <p className="text-xs text-amber-700">
+            Excluded non-LKR: {data.excludedCurrencyRows.count} (
+            {(data.excludedCurrencyRows.currencies || []).join(", ")})
+          </p>
+        )}
       </CardContent>
     </Card>
   );

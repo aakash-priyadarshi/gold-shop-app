@@ -37,7 +37,7 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi, invoicesApi, posApi, shopsApi } from "@/lib/api";
 import { printBill, type BillSettings } from "@/lib/billPrint";
 import {
-  COUNTER_PAYMENT_METHODS,
+  getCounterPaymentMethods,
   buildQrImageUrl,
   buildUpiPayUri,
   isDigitalWalletMethod,
@@ -175,7 +175,7 @@ function PosPageInner() {
   const [shopUpiId, setShopUpiId] = useState("");
 
   const shopCountry = user?.shop?.country || "NP";
-  const PAYMENT_METHODS = COUNTER_PAYMENT_METHODS;
+  const PAYMENT_METHODS = getCounterPaymentMethods(shopCountry);
   const TAX_PRESETS = shopCountry === "IN"
     ? [{ label: "GST 3%", value: 0.03 }, { label: "GST 5%", value: 0.05 }, { label: "Exempt", value: 0 }]
     : shopCountry === "NP"

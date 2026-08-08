@@ -326,8 +326,13 @@ export default function TaxAuditPage() {
         const res = await taxReportsApi.uaeVat201(period);
         jsonDown(res.data, `UAE_VAT201_${period}.json`);
       } else if (country === "LK") {
-        const res = await taxReportsApi.lkVat(period);
-        jsonDown(res.data, `LK_Output_VAT_${period}.json`);
+        if (type === "vat201" || type === "lk-summary") {
+          const res = await taxReportsApi.lkVat(period);
+          jsonDown(res.data, `LK_Output_VAT_${period}.json`);
+        } else if (type === "lk-register") {
+          const res = await taxReportsApi.lkVatRegister(period, "csv");
+          blobDown(res.data, `LK_VAT_Register_${period}.csv`);
+        }
       } else if (country === "GB") {
         const res = await taxReportsApi.ukMtd(period);
         jsonDown(res.data, `UK_MTD_${period}.json`);
@@ -550,13 +555,22 @@ export default function TaxAuditPage() {
           )}
 
           {country === "LK" && (
-            <DownloadRow
-              label="Output VAT Summary (JSON)"
-              desc="Accountant export; not an IRD return or direct filing"
-              icon={Receipt}
-              loading={downloading === "vat201"}
-              onPress={() => handleDownload("vat201")}
-            />
+            <>
+              <DownloadRow
+                label="Output VAT Summary (JSON)"
+                desc="Accountant export; not an IRD return or direct filing"
+                icon={Receipt}
+                loading={downloading === "vat201"}
+                onPress={() => handleDownload("vat201")}
+              />
+              <DownloadRow
+                label="VAT Register (CSV)"
+                desc="Invoice-level output VAT register for your accountant"
+                icon={FileSpreadsheet}
+                loading={downloading === "lk-register"}
+                onPress={() => handleDownload("lk-register")}
+              />
+            </>
           )}
 
           {country === "EU" && (

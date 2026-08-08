@@ -19,6 +19,7 @@ export const DEFAULT_LEDGER_ACCOUNTS: ReadonlyArray<{
   { code: "2000", name: "Customer Advances", type: LedgerAccountType.LIABILITY, systemKey: LedgerAccountKey.CUSTOMER_ADVANCES },
   { code: "2100", name: "Tax Payable", type: LedgerAccountType.LIABILITY, systemKey: LedgerAccountKey.TAX_PAYABLE },
   { code: "2200", name: "Platform Commission Payable", type: LedgerAccountType.LIABILITY, systemKey: LedgerAccountKey.PLATFORM_COMMISSION_PAYABLE },
+  { code: "3000", name: "Opening Balance Equity", type: LedgerAccountType.EQUITY, systemKey: LedgerAccountKey.OPENING_BALANCE_EQUITY },
   { code: "4000", name: "Sales Revenue", type: LedgerAccountType.REVENUE, systemKey: LedgerAccountKey.SALES_REVENUE },
   { code: "4010", name: "Sales Returns and Allowances", type: LedgerAccountType.REVENUE, systemKey: LedgerAccountKey.SALES_RETURNS },
   { code: "5000", name: "Platform Commission Expense", type: LedgerAccountType.EXPENSE, systemKey: LedgerAccountKey.PLATFORM_COMMISSION_EXPENSE },

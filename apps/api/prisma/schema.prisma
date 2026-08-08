@@ -440,6 +440,7 @@ model Shop {
   // Mobile shopkeeper tools (offline-first capable)
   repairJobs           RepairJob[]
   savingsMembers       SavingsMember[]
+  chitGroups           ChitGroup[]
   goldLoans            GoldLoan[]
   karigarWorkshops     KarigarWorkshop[]
   karigarJobs          KarigarJob[]
@@ -1671,6 +1672,7 @@ enum LedgerAccountKey {
   CUSTOMER_ADVANCES
   TAX_PAYABLE
   PLATFORM_COMMISSION_PAYABLE
+  OPENING_BALANCE_EQUITY
   SALES_REVENUE
   SALES_RETURNS
   PLATFORM_COMMISSION_EXPENSE
@@ -1691,6 +1693,7 @@ enum JournalReferenceType {
   COMMISSION_PAYMENT
   COMMISSION_REFUND_ADJUSTMENT
   COMMISSION_WAIVER
+  OPENING_BALANCE
   REVERSAL
 }
 
@@ -3625,6 +3628,92 @@ model SavingsPayment {
   paidAt   DateTime      @default(now())
   member   SavingsMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
+  @@index([memberId])
+}
+
+// ─── Committee chit fund (manual winner; separate from individual savings) ───
+// Rotating committee ledger for jewellers. Not a regulated auction chit platform.
+enum ChitGroupStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ChitCycleStatus {
+  OPEN
+  CLOSED
+}
+
+model ChitGroup {
+  id                        String          @id @default(uuid())
+  shopId                    String
+  name                      String
+  chitValue                 Float
+  memberSlots               Int
+  installmentAmount         Float
+  foremanCommissionPercent  Float           @default(0)
+  currency                  CurrencyCode    @default(NPR)
+  startDate                 DateTime
+  status                    ChitGroupStatus @default(ACTIVE)
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+  shop                      Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  members                   ChitMember[]
+  cycles                    ChitCycle[]
+
+  @@index([shopId])
+  @@index([shopId, status])
+}
+
+model ChitMember {
+  id             String             @id @default(uuid())
+  groupId        String
+  ticketNumber   Int
+  customerName   String
+  customerPhone  String?
+  hasWon         Boolean            @default(false)
+  wonCycleNumber Int?
+  createdAt      DateTime           @default(now())
+  group          ChitGroup          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payments       ChitCyclePayment[]
+  wonCycles      ChitCycle[]        @relation("ChitCycleWinner")
+
+  @@unique([groupId, ticketNumber])
+  @@index([groupId])
+}
+
+model ChitCycle {
+  id                 String             @id @default(uuid())
+  groupId            String
+  cycleNumber        Int
+  dueDate            DateTime
+  status             ChitCycleStatus    @default(OPEN)
+  winnerMemberId     String?
+  netPrize           Float?
+  foremanCommission  Float?
+  closedAt           DateTime?
+  createdAt          DateTime           @default(now())
+  group              ChitGroup          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  winner             ChitMember?        @relation("ChitCycleWinner", fields: [winnerMemberId], references: [id], onDelete: SetNull)
+  payments           ChitCyclePayment[]
+
+  @@unique([groupId, cycleNumber])
+  @@index([groupId, status])
+}
+
+model ChitCyclePayment {
+  id        String     @id @default(uuid())
+  cycleId   String
+  memberId  String
+  amount    Float
+  paidAt    DateTime   @default(now())
+  clientId  String?    @unique
+  createdAt DateTime   @default(now())
+  cycle     ChitCycle  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  member    ChitMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([cycleId, memberId])
+  @@index([cycleId])
   @@index([memberId])
 }
 

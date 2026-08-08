@@ -4,7 +4,7 @@ import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { inventoryApi, materialsApi } from "@/lib/api";
-import { printJewelleryTags } from "@/lib/jewelleryTagPrint";
+import { printStockJewelleryTags } from "@/lib/jewelleryTagPrint";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -381,9 +381,9 @@ export default function MobileStockPage() {
                       {formatCurrency(calculateItemValuation(item))}
                     </span>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         try {
-                          printJewelleryTags([
+                          await printStockJewelleryTags([
                             {
                               sku: item.tag,
                               name: item.name,
@@ -396,7 +396,7 @@ export default function MobileStockPage() {
                             },
                           ]);
                         } catch {
-                          // popup blocked
+                          // popup blocked / serial denied
                         }
                       }}
                       className="h-8 w-8 bg-gray-50 dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-950/20 text-gray-600 dark:text-gray-400 rounded-xl flex items-center justify-center active:scale-90 transition-transform"

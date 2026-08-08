@@ -513,6 +513,12 @@ const navItems: NavItem[] = [
     roles: ["SHOPKEEPER"],
   },
   {
+    label: "Accounting",
+    href: "/dashboard/shop/accounting",
+    icon: Calculator,
+    roles: ["SHOPKEEPER"],
+  },
+  {
     label: "Reviews",
     href: "/dashboard/shop/reviews",
     icon: Star,
@@ -564,6 +570,12 @@ const navItems: NavItem[] = [
     label: "Savings Schemes",
     href: "/dashboard/shop/savings",
     icon: PiggyBank,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Chit Committees",
+    href: "/dashboard/shop/chit",
+    icon: Users,
     roles: ["SHOPKEEPER"],
   },
   {
@@ -1048,6 +1060,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           "/dashboard/shop/stock",
           "/dashboard/shop/lending",
           "/dashboard/shop/savings",
+          "/dashboard/shop/chit",
           "/dashboard/shop/customers",
           "/dashboard/shop/messages",
           "/dashboard/shop/settings",

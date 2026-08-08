@@ -79,7 +79,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.orivraa.com https://challenges.cloudflare.com https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.orivraa.com https://challenges.cloudflare.com wss:; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.orivraa.com https://challenges.cloudflare.com https://va.vercel-scripts.com https://*.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.orivraa.com https://challenges.cloudflare.com https://*.sentry.io https://*.ingest.sentry.io wss:; worker-src 'self' blob:; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
       },
@@ -173,4 +173,24 @@ const withPWAConfigured = withPWA({
   },
 });
 
-module.exports = withPWAConfigured(nextConfig);
+module.exports = (() => {
+  const base = withPWAConfigured(nextConfig);
+  // Soft-wrap with Sentry when the SDK is installed. Source map upload runs only
+  // when SENTRY_AUTH_TOKEN is present (CI / Vercel), so local builds stay fast.
+  try {
+    const { withSentryConfig } = require("@sentry/nextjs");
+    return withSentryConfig(base, {
+      org: process.env.SENTRY_ORG || "aakash-priyadarshi",
+      project: process.env.SENTRY_PROJECT || "orivraa-web",
+      silent: true,
+      widenClientFileUpload: true,
+      disableLogger: true,
+      automaticVercelMonitors: true,
+      sourcemaps: {
+        disable: !process.env.SENTRY_AUTH_TOKEN,
+      },
+    });
+  } catch {
+    return base;
+  }
+})();

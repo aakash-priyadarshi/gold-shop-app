@@ -1,7 +1,8 @@
 /**
  * Browser jewellery tag / label printing.
  * Opens a popup with printable tags (small label + A4 multi-up).
- * Future ZPL thermal support is stubbed in posHardware.ts.
+ * When a Zebra/ZPL label printer is enabled in Hardware settings,
+ * Stock pages route to `printZplJewelleryLabel` instead.
  */
 
 export interface JewelleryTagItem {
@@ -164,4 +165,37 @@ export function printJewelleryTags(items: JewelleryTagItem[]): void {
 </body>
 </html>`);
   win.document.close();
+}
+
+/**
+ * Print jewellery tags using ZPL label printer when enabled in hardware
+ * settings; otherwise fall back to the browser printable sheet.
+ */
+export async function printStockJewelleryTags(
+  items: JewelleryTagItem[],
+): Promise<"zpl" | "browser"> {
+  if (!items.length) return "browser";
+
+  const { loadHardwareConfig, printZplJewelleryLabel } = await import(
+    "@/lib/posHardware"
+  );
+  const cfg = loadHardwareConfig().labelPrinter;
+  if (cfg.enabled) {
+    for (const item of items) {
+      await printZplJewelleryLabel({
+        sku: item.sku,
+        name: item.name,
+        purity: item.purity || undefined,
+        weightGrams: item.weightGrams ?? undefined,
+        price: item.price ?? undefined,
+        currency: item.currency || undefined,
+        hallmark: item.hallmark || undefined,
+        shopName: item.shopName || undefined,
+      });
+    }
+    return "zpl";
+  }
+
+  printJewelleryTags(items);
+  return "browser";
 }

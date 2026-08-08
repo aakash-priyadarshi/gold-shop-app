@@ -372,6 +372,39 @@ export const goldLoansApi = {
   ) => api.patch(`/gold-loans/${id}/status`, data),
 };
 
+export const chitApi = {
+  list: (status?: string) =>
+    api.get("/chit-groups", { params: status ? { status } : undefined }),
+  get: (id: string) => api.get(`/chit-groups/${id}`),
+  create: (data: {
+    name: string;
+    chitValue: number;
+    memberSlots: number;
+    installmentAmount?: number;
+    foremanCommissionPercent?: number;
+    currency?: string;
+    startDate?: string;
+  }) => api.post("/chit-groups", data),
+  addMember: (
+    id: string,
+    data: { customerName: string; customerPhone?: string; ticketNumber?: number },
+  ) => api.post(`/chit-groups/${id}/members`, data),
+  openCycle: (id: string, data?: { dueDate?: string }) =>
+    api.post(`/chit-groups/${id}/cycles`, data ?? {}),
+  listCycles: (id: string) => api.get(`/chit-groups/${id}/cycles`),
+  arrears: (id: string) => api.get(`/chit-groups/${id}/arrears`),
+  recordPayment: (
+    id: string,
+    cycleId: string,
+    data: { memberId: string; amount?: number; clientId?: string },
+  ) => api.post(`/chit-groups/${id}/cycles/${cycleId}/payments`, data),
+  declareWinner: (
+    id: string,
+    cycleId: string,
+    data: { winnerMemberId: string },
+  ) => api.post(`/chit-groups/${id}/cycles/${cycleId}/winner`, data),
+};
+
 // Karigar / supply-chain API (full-state snapshot)
 export const karigarApi = {
   getSnapshot: () => api.get("/karigar/snapshot"),
@@ -986,6 +1019,44 @@ export const invoicesApi = {
   updateSettings: (data: any) => api.patch("/invoices/settings", data),
 };
 
+// Shop double-entry ledger / accounting API
+export const accountingApi = {
+  accounts: (shopId: string, params?: { from?: string; to?: string }) =>
+    api.get(`/accounting/shops/${shopId}/accounts`, { params }),
+  trialBalance: (shopId: string, params?: { from?: string; to?: string }) =>
+    api.get(`/accounting/shops/${shopId}/trial-balance`, { params }),
+  profitLoss: (shopId: string, params?: { from?: string; to?: string }) =>
+    api.get(`/accounting/shops/${shopId}/profit-loss`, { params }),
+  ledger: (
+    shopId: string,
+    params?: { from?: string; to?: string; page?: number; limit?: number },
+  ) => api.get(`/accounting/shops/${shopId}/ledger`, { params }),
+  generalLedger: (
+    shopId: string,
+    params?: {
+      accountId?: string;
+      from?: string;
+      to?: string;
+      page?: number;
+      limit?: number;
+    },
+  ) => api.get(`/accounting/shops/${shopId}/general-ledger`, { params }),
+  journalDetail: (shopId: string, journalId: string) =>
+    api.get(`/accounting/shops/${shopId}/journals/${journalId}`),
+  openingBalances: (
+    shopId: string,
+    data: {
+      cashAmount?: number;
+      bankAmount?: number;
+      transactionCurrency?: string;
+      asOfDate: string;
+      description?: string;
+    },
+  ) => api.post(`/accounting/shops/${shopId}/opening-balances`, data),
+  backfill: (shopId: string) =>
+    api.post(`/accounting/shops/${shopId}/backfill`),
+};
+
 // Tax filing reports API (GSTR, VAT, MTD, OSS, US state, share)
 export const taxReportsApi = {
   summary: (country: string, period: string) =>
@@ -1019,6 +1090,11 @@ export const taxReportsApi = {
   // Sri Lanka
   lkVat: (period: string) =>
     api.get("/tax-reports/lk/vat", { params: { period } }),
+  lkVatRegister: (period: string, format: "json" | "csv" = "json") =>
+    api.get("/tax-reports/lk/vat-register", {
+      params: { period, format },
+      responseType: format === "csv" ? "blob" : "json",
+    }),
   // UK
   ukMtd: (period: string) =>
     api.get("/tax-reports/uk/mtd", { params: { period } }),
@@ -1076,6 +1152,15 @@ export const adminTaxApi = {
     api.get("/tax-reports/admin/uae/vat201", { params: { shopId, period } }),
   lkVat: (shopId: string, period: string) =>
     api.get("/tax-reports/admin/lk/vat", { params: { shopId, period } }),
+  lkVatRegister: (
+    shopId: string,
+    period: string,
+    format: "json" | "csv" = "json",
+  ) =>
+    api.get("/tax-reports/admin/lk/vat-register", {
+      params: { shopId, period, format },
+      responseType: format === "csv" ? "blob" : "json",
+    }),
   ukMtd: (shopId: string, period: string) =>
     api.get("/tax-reports/admin/uk/mtd", { params: { shopId, period } }),
   euOss: (shopId: string, period: string, format: "json" | "csv" = "json") =>

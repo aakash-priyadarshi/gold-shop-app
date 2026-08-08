@@ -25,7 +25,7 @@ import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { inventoryApi, materialsApi } from "@/lib/api";
-import { printJewelleryTags } from "@/lib/jewelleryTagPrint";
+import { printStockJewelleryTags } from "@/lib/jewelleryTagPrint";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import { Loader2 } from "lucide-react";
@@ -518,9 +518,9 @@ function StockLedgerContent() {
                                 variant="ghost"
                                 size="icon"
                                 title={t("Print Tag")}
-                                onClick={() => {
+                                onClick={async () => {
                                   try {
-                                    printJewelleryTags([
+                                    await printStockJewelleryTags([
                                       {
                                         sku: item.tag,
                                         name: item.name,

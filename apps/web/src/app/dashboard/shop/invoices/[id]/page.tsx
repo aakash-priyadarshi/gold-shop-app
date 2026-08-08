@@ -37,7 +37,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { invoicesApi, shopsApi } from "@/lib/api";
 import { printBill, type BillSettings } from "@/lib/billPrint";
 import {
-  COUNTER_PAYMENT_METHODS,
+  getCounterPaymentMethods,
   buildQrImageUrl,
   buildUpiPayUri,
   isDigitalWalletMethod,
@@ -168,6 +168,16 @@ export default function InvoiceDetailPage() {
       /^\d{9}$/.test(purchaserLkTin),
   );
   const isSriLankaInvoice = invoiceCountry === "LK";
+  const availablePaymentMethods = useMemo(
+    () => getCounterPaymentMethods(invoiceCountry || user?.shop?.country),
+    [invoiceCountry, user?.shop?.country],
+  );
+
+  useEffect(() => {
+    if (!availablePaymentMethods.some((m) => m.value === paymentMethod)) {
+      setPaymentMethod(availablePaymentMethods[0]?.value || "CASH");
+    }
+  }, [availablePaymentMethods, paymentMethod]);
 
   const loadInvoice = useCallback(async () => {
     setIsLoading(true);
@@ -845,7 +855,7 @@ export default function InvoiceDetailPage() {
                   <T>Payment Method</T>
                 </Label>
                 <div className="grid grid-cols-3 gap-2">
-                  {COUNTER_PAYMENT_METHODS.map((pm) => (
+                  {availablePaymentMethods.map((pm) => (
                     <button
                       key={pm.value}
                       type="button"

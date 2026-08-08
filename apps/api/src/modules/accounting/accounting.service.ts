@@ -1,10 +1,12 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import {
   CurrencyCode,
+  InvoicePaymentStatus,
   JournalEntryStatus,
   JournalReferenceType,
   LedgerAccountKey,
@@ -25,6 +27,8 @@ type DbClient = Prisma.TransactionClient | PrismaService;
 
 @Injectable()
 export class AccountingService {
+  private readonly logger = new Logger(AccountingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly fxRates: FxRatesService,
@@ -727,6 +731,315 @@ export class AccountingService {
       return LedgerAccountKey.BANK;
     }
     return LedgerAccountKey.GATEWAY_CLEARING;
+  }
+
+  /**
+   * Post shop opening balances: debit cash and/or bank, credit opening equity.
+   * Idempotent per shop + as-of date (OPENING_BALANCE reference).
+   */
+  async postOpeningBalance(
+    shopId: string,
+    input: {
+      cashAmount?: number;
+      bankAmount?: number;
+      transactionCurrency?: CurrencyCode;
+      asOfDate: string;
+      description?: string;
+      actorUserId?: string;
+    },
+  ) {
+    const cash = this.money(input.cashAmount || 0);
+    const bank = this.money(input.bankAmount || 0);
+    if (cash.isZero() && bank.isZero()) {
+      throw new BadRequestException(
+        "Provide a positive cashAmount and/or bankAmount for opening balances",
+      );
+    }
+    if (cash.lt(0) || bank.lt(0)) {
+      throw new BadRequestException("Opening balance amounts must not be negative");
+    }
+    const asOf = new Date(input.asOfDate);
+    if (!Number.isFinite(asOf.getTime())) {
+      throw new BadRequestException("Invalid opening balance as-of date");
+    }
+    // Normalize to date-only UTC for stable idempotency keys
+    const asOfKey = input.asOfDate.slice(0, 10);
+    const currency = input.transactionCurrency || CurrencyCode.NPR;
+    const total = cash.plus(bank);
+    const monetary = await this.prepareMonetaryContext(total, currency);
+
+    const scale = (part: Prisma.Decimal) => {
+      if (total.isZero()) {
+        return { transaction: this.money(0), npr: this.money(0) };
+      }
+      const transaction = part;
+      const npr = monetary.canonicalAmountNpr
+        .mul(part)
+        .div(total)
+        .toDecimalPlaces(4);
+      return { transaction, npr };
+    };
+    const cashScaled = scale(cash);
+    const bankScaled = scale(bank);
+    // Absorb rounding residue on the larger side so NPR lines still balance
+    const allocatedNpr = cashScaled.npr.plus(bankScaled.npr);
+    const residue = monetary.canonicalAmountNpr.minus(allocatedNpr);
+    if (!residue.isZero()) {
+      if (bank.gte(cash)) {
+        bankScaled.npr = bankScaled.npr.plus(residue);
+      } else {
+        cashScaled.npr = cashScaled.npr.plus(residue);
+      }
+    }
+
+    const lines: PostJournalEntryInput["lines"] = [];
+    if (cash.gt(0)) {
+      lines.push({
+        accountKey: LedgerAccountKey.CASH_ON_HAND,
+        debitNpr: cashScaled.npr,
+        transactionDebit: cashScaled.transaction,
+        description: "Opening cash",
+      });
+    }
+    if (bank.gt(0)) {
+      lines.push({
+        accountKey: LedgerAccountKey.BANK,
+        debitNpr: bankScaled.npr,
+        transactionDebit: bankScaled.transaction,
+        description: "Opening bank",
+      });
+    }
+    lines.push({
+      accountKey: LedgerAccountKey.OPENING_BALANCE_EQUITY,
+      creditNpr: monetary.canonicalAmountNpr,
+      transactionCredit: monetary.transactionAmount,
+      description: "Opening balance equity",
+    });
+
+    return this.prisma.$transaction(async (tx) => {
+      const result = await this.postEntry(tx, {
+        ...monetary,
+        shopId,
+        referenceType: JournalReferenceType.OPENING_BALANCE,
+        referenceId: `opening:${asOfKey}`,
+        idempotencyKey: `opening-balance:${shopId}:${asOfKey}`,
+        description:
+          input.description?.trim() ||
+          `Opening balances as of ${asOfKey}`,
+        transactionDate: asOf,
+        actorUserId: input.actorUserId,
+        metadata: {
+          cashAmount: cash.toFixed(4),
+          bankAmount: bank.toFixed(4),
+          asOfDate: asOfKey,
+        },
+        lines,
+      });
+      this.logger.log(
+        `Opening balance for shop ${shopId} as of ${asOfKey}: ` +
+          `idempotent=${result.idempotent} amount=${monetary.transactionAmount.toFixed(4)} ${currency}`,
+      );
+      return result;
+    });
+  }
+
+  /**
+   * Replay ISSUED/PAID/PARTIALLY_PAID invoices and RECEIVED payments into the GL.
+   * Safe to re-run: postInvoiceIssuance / postInvoicePayment are idempotent.
+   */
+  async backfillShopLedger(shopId: string, actorUserId?: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { id: true },
+    });
+    if (!shop) throw new NotFoundException("Shop not found");
+
+    await this.ensureDefaultAccounts(this.prisma, shopId);
+
+    const invoices = await this.prisma.invoice.findMany({
+      where: {
+        shopId,
+        status: { in: ["ISSUED", "PAID", "PARTIALLY_PAID"] },
+      },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        totalAmount: true,
+        taxAmount: true,
+        currency: true,
+        issuedAt: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const payments = await this.prisma.invoicePayment.findMany({
+      where: {
+        status: InvoicePaymentStatus.RECEIVED,
+        invoice: { shopId },
+      },
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        canonicalAmountNpr: true,
+        fxRate: true,
+        fxSource: true,
+        fxQuotedAt: true,
+        method: true,
+        receivedAt: true,
+        invoice: { select: { invoiceNumber: true } },
+      },
+      orderBy: { receivedAt: "asc" },
+    });
+
+    let invoicesPosted = 0;
+    let invoicesSkipped = 0;
+    let invoicesFailed = 0;
+    let paymentsPosted = 0;
+    let paymentsSkipped = 0;
+    let paymentsFailed = 0;
+
+    for (const invoice of invoices) {
+      try {
+        const total = this.money(invoice.totalAmount);
+        if (total.lte(0)) {
+          invoicesSkipped += 1;
+          continue;
+        }
+        const monetary = await this.prepareMonetaryContext(
+          total,
+          invoice.currency,
+        );
+        const result = await this.prisma.$transaction(async (tx) =>
+          this.postInvoiceIssuance(tx, {
+            ...monetary,
+            shopId,
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoiceNumber,
+            taxAmount: Math.max(0, invoice.taxAmount || 0),
+            transactionDate: invoice.issuedAt || invoice.createdAt,
+            actorUserId,
+          }),
+        );
+        if (result.idempotent) invoicesSkipped += 1;
+        else invoicesPosted += 1;
+      } catch (err) {
+        invoicesFailed += 1;
+        this.logger.warn(
+          `Backfill invoice ${invoice.id} failed: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    for (const payment of payments) {
+      try {
+        const amount = this.money(payment.amount);
+        if (amount.lte(0)) {
+          paymentsSkipped += 1;
+          continue;
+        }
+        const supplied =
+          payment.canonicalAmountNpr &&
+          payment.fxRate &&
+          payment.fxSource &&
+          payment.fxQuotedAt
+            ? {
+                canonicalAmountNpr: payment.canonicalAmountNpr,
+                fxRate: payment.fxRate,
+                fxSource: payment.fxSource,
+                fxQuotedAt: payment.fxQuotedAt,
+              }
+            : undefined;
+        const monetary = await this.prepareMonetaryContext(
+          amount,
+          payment.currency,
+          supplied,
+        );
+        const result = await this.prisma.$transaction(async (tx) =>
+          this.postInvoicePayment(tx, {
+            ...monetary,
+            shopId,
+            invoicePaymentId: payment.id,
+            invoiceNumber: payment.invoice.invoiceNumber,
+            method: payment.method,
+            transactionDate: payment.receivedAt,
+            actorUserId,
+          }),
+        );
+        if (result.idempotent) paymentsSkipped += 1;
+        else paymentsPosted += 1;
+      } catch (err) {
+        paymentsFailed += 1;
+        this.logger.warn(
+          `Backfill payment ${payment.id} failed: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    const summary = {
+      shopId,
+      invoicesScanned: invoices.length,
+      invoicesPosted,
+      invoicesSkipped,
+      invoicesFailed,
+      paymentsScanned: payments.length,
+      paymentsPosted,
+      paymentsSkipped,
+      paymentsFailed,
+    };
+    this.logger.log(
+      `Ledger backfill for shop ${shopId}: ` +
+        `invoices posted=${invoicesPosted} skipped=${invoicesSkipped} failed=${invoicesFailed}; ` +
+        `payments posted=${paymentsPosted} skipped=${paymentsSkipped} failed=${paymentsFailed}`,
+    );
+    return summary;
+  }
+
+  /**
+   * Simple P&L derived from posted trial-balance movements for a period.
+   * No inventory/COGS — demo-ready revenue / returns / tax / commission view.
+   */
+  async getProfitAndLoss(shopId: string, range: DateRange = {}) {
+    const trial = await this.getTrialBalance(shopId, range);
+    const byKey = new Map(
+      trial.accounts
+        .filter((a) => a.systemKey)
+        .map((a) => [a.systemKey as LedgerAccountKey, a]),
+    );
+
+    const pick = (key: LedgerAccountKey) => {
+      const row = byKey.get(key);
+      const debit = new Prisma.Decimal(row?.debitNpr || 0);
+      const credit = new Prisma.Decimal(row?.creditNpr || 0);
+      return { debit, credit, balance: new Prisma.Decimal(row?.balanceNpr || 0) };
+    };
+
+    const sales = pick(LedgerAccountKey.SALES_REVENUE);
+    const returns = pick(LedgerAccountKey.SALES_RETURNS);
+    const tax = pick(LedgerAccountKey.TAX_PAYABLE);
+    const commission = pick(LedgerAccountKey.PLATFORM_COMMISSION_EXPENSE);
+
+    // Revenue accounts are credit-normal; returns are often debited (contra).
+    const salesRevenueNpr = sales.credit.minus(sales.debit);
+    const salesReturnsNpr = returns.debit.minus(returns.credit);
+    const netSalesNpr = salesRevenueNpr.minus(salesReturnsNpr);
+    const taxPayableIncreaseNpr = tax.credit.minus(tax.debit);
+    const commissionExpenseNpr = commission.debit.minus(commission.credit);
+    const netIncomeNpr = netSalesNpr.minus(commissionExpenseNpr);
+
+    return {
+      canonicalCurrency: CurrencyCode.NPR,
+      from: range.from || null,
+      to: range.to || null,
+      salesRevenueNpr: salesRevenueNpr.toFixed(4),
+      salesReturnsNpr: salesReturnsNpr.toFixed(4),
+      netSalesNpr: netSalesNpr.toFixed(4),
+      taxPayableIncreaseNpr: taxPayableIncreaseNpr.toFixed(4),
+      commissionExpenseNpr: commissionExpenseNpr.toFixed(4),
+      netIncomeNpr: netIncomeNpr.toFixed(4),
+      note: "Demo P&L excludes inventory/COGS; tax payable is a liability movement, not P&L expense.",
+    };
   }
 
   async getChartOfAccounts(shopId: string, range: DateRange = {}) {

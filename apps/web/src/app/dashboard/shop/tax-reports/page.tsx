@@ -163,7 +163,7 @@ export default function TaxReportsPage() {
             <UsPanel period={period} canDownload={canDownload} canShare={canShare} />
           </TabsContent>
           <TabsContent value="LK" className="mt-6">
-            <LkPanel period={period} canShare={canShare} />
+            <LkPanel period={period} canDownload={canDownload} canShare={canShare} />
           </TabsContent>
         </Tabs>
       </div>
@@ -575,33 +575,262 @@ function UaePanel({ period, canShare }: { period: string; canShare: boolean }) {
 }
 
 // ─── SRI LANKA ────────────────────────────────────────────────────
-function LkPanel({ period, canShare }: { period: string; canShare: boolean }) {
+function LkPanel({
+  period,
+  canDownload,
+  canShare,
+}: {
+  period: string;
+  canDownload: boolean;
+  canShare: boolean;
+}) {
   const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     setLoading(true);
-    taxReportsApi.lkVat(period)
+    taxReportsApi
+      .lkVat(period)
       .then((r) => setData(r.data))
-      .catch(() => toast({ variant: "destructive", title: "Failed to load Sri Lanka VAT" }))
+      .catch(() =>
+        toast({ variant: "destructive", title: "Failed to load Sri Lanka VAT" }),
+      )
       .finally(() => setLoading(false));
   }, [period, toast]);
+
+  const downloadSummaryJson = () => {
+    if (!data) return;
+    downloadBlob(
+      JSON.stringify(data, null, 2),
+      `LK-Output-VAT-${period}.json`,
+      "application/json",
+    );
+  };
+
+  const downloadRegisterCsv = async () => {
+    try {
+      const res = await taxReportsApi.lkVatRegister(period, "csv");
+      downloadBlob(res.data, `LK-VAT-Register-${period}.csv`);
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Failed to download VAT register CSV",
+      });
+    }
+  };
+
+  const summaryCards = data
+    ? [
+        {
+          label: "Standard rated supplies",
+          value: data["Standard rated supplies"],
+          money: true,
+        },
+        {
+          label: "Output VAT collected",
+          value: data["Output VAT collected"],
+          money: true,
+        },
+        {
+          label: "Zero-rated supplies",
+          value: data["Zero-rated supplies"],
+          money: true,
+        },
+        {
+          label: "Exempt supplies",
+          value: data["Exempt supplies"],
+          money: true,
+        },
+        { label: "Total sales", value: data["Total sales"], money: true },
+        { label: "Invoices", value: data.invoiceCount, money: false },
+      ]
+    : [];
+
   return (
     <div className="space-y-4">
       <Card data-tour="lk-vat">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span><T>Sri Lanka Output VAT Sales Summary</T></span>
+          <CardTitle className="flex items-center justify-between flex-wrap gap-2">
+            <span>
+              <T>Sri Lanka Output VAT Sales Summary</T>
+            </span>
             <ShareWithCAButton country="LK" period={period} canShare={canShare} />
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="mb-4 text-sm text-muted-foreground">
-            <T>Accountant export only; input VAT and direct IRD filing are not implemented.</T>
-          </p>
-          {loading ? <SkeletonGrid /> : <SummaryGrid data={data} currency="LKR" />}
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 text-sm text-amber-900 dark:text-amber-200">
+            <p className="font-medium flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <T>Not filing-ready — IRD e-Services is not automated</T>
+            </p>
+            <p className="mt-1 text-xs text-amber-800/90 dark:text-amber-300/90">
+              <T>
+                This is an output-VAT sales summary and invoice register for your
+                accountant. Input VAT, adjustments, and direct Inland Revenue
+                Department filing are not implemented.
+              </T>
+            </p>
+          </div>
+
+          {loading ? (
+            <SkeletonGrid />
+          ) : data ? (
+            <>
+              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                <span>
+                  <T>Shop TIN</T>:{" "}
+                  <span className="font-medium text-foreground">
+                    {data.shopTin || "—"}
+                  </span>
+                </span>
+                <span>
+                  <T>VAT registration</T>:{" "}
+                  <span className="font-medium text-foreground">
+                    {String(data.vatRegistrationStatus || "—").replace(/_/g, " ")}
+                  </span>
+                </span>
+                <span>
+                  <T>Filing ready</T>:{" "}
+                  <span className="font-medium text-foreground">
+                    {data.filingReady ? "Yes" : "No"}
+                  </span>
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {summaryCards.map((card) => (
+                  <div
+                    key={card.label}
+                    className="rounded-lg border bg-white dark:bg-gray-900 p-3"
+                  >
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">
+                      {card.label}
+                    </div>
+                    <div className="text-lg font-semibold mt-1">
+                      {typeof card.value === "number"
+                        ? `${card.money ? "LKR " : ""}${card.value.toLocaleString()}`
+                        : String(card.value ?? "—")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {Array.isArray(data.outputVatByRate) &&
+                data.outputVatByRate.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">
+                      <T>Output VAT by rate</T>
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="text-left border-b">
+                          <tr>
+                            <th className="py-2 px-2">
+                              <T>Rate %</T>
+                            </th>
+                            <th className="py-2 px-2">
+                              <T>Taxable sales</T>
+                            </th>
+                            <th className="py-2 px-2">
+                              <T>Output VAT</T>
+                            </th>
+                            <th className="py-2 px-2">
+                              <T>Invoices</T>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.outputVatByRate.map(
+                            (
+                              row: {
+                                rate: number;
+                                taxableSales: number;
+                                outputVat: number;
+                                invoiceCount: number;
+                              },
+                              i: number,
+                            ) => (
+                              <tr key={i} className="border-b">
+                                <td className="py-2 px-2">{row.rate}%</td>
+                                <td className="py-2 px-2">
+                                  LKR {row.taxableSales.toLocaleString()}
+                                </td>
+                                <td className="py-2 px-2">
+                                  LKR {row.outputVat.toLocaleString()}
+                                </td>
+                                <td className="py-2 px-2">{row.invoiceCount}</td>
+                              </tr>
+                            ),
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+              {data.excludedCurrencyRows?.count > 0 && (
+                <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    <T>
+                      Excluded non-LKR invoices from this VAT summary
+                    </T>
+                    : {data.excludedCurrencyRows.count} (
+                    {(data.excludedCurrencyRows.currencies || []).join(", ")})
+                  </span>
+                </p>
+              )}
+            </>
+          ) : null}
         </CardContent>
       </Card>
+
+      <Card data-tour="lk-downloads">
+        <CardHeader>
+          <CardTitle>
+            <T>Downloads</T>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {canDownload ? (
+            <div className="grid md:grid-cols-2 gap-3">
+              <Button onClick={downloadSummaryJson} variant="outline" disabled={!data}>
+                <Download className="h-4 w-4 mr-2" />
+                <T>Summary (JSON)</T>
+              </Button>
+              <Button onClick={downloadRegisterCsv} variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                <T>VAT Register (CSV)</T>
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-lg border-2 border-dashed border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Lock className="h-5 w-5 text-amber-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">
+                    <T>Downloads require Pro plan</T>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    <T>Upgrade to export Sri Lanka VAT register CSV</T>
+                  </p>
+                </div>
+              </div>
+              <a href="/pricing" className="shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                >
+                  <Sparkles className="h-3 w-3 mr-1" /> <T>Upgrade</T>
+                </Button>
+              </a>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <PhaseCNote items={["Direct submission to Inland Revenue Department e-Services portal"]} />
     </div>
   );
