@@ -23,7 +23,10 @@ import {
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useCurrencyConversion } from "@/hooks/useCurrencyConversion";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { accountingApi } from "@/lib/api";
+import type { SupportedCurrencyCode } from "@/lib/currency";
 import {
   Calculator,
   Loader2,
@@ -109,6 +112,25 @@ interface ProfitLoss {
 export default function ShopAccountingPage() {
   const { user } = useAuth();
   const shopId = user?.shop?.id || "";
+  const { currencyCode, format: formatShopMoney } = useShopCurrency();
+  const { convertCurrency } = useCurrencyConversion();
+
+  const displayFromNpr = useCallback(
+    (amount: string | number | null | undefined): string => {
+      const n = Number(amount || 0);
+      if (!Number.isFinite(n)) return "—";
+      if (currencyCode === "NPR") {
+        return formatShopMoney(n);
+      }
+      const converted = convertCurrency(
+        n,
+        "NPR",
+        currencyCode as SupportedCurrencyCode,
+      );
+      return formatShopMoney(converted);
+    },
+    [convertCurrency, currencyCode, formatShopMoney],
+  );
 
   const [month, setMonth] = useState(currentMonth());
   const range = useMemo(() => monthRange(month), [month]);
@@ -327,7 +349,7 @@ export default function ShopAccountingPage() {
                       <T>Sales revenue</T>
                     </CardDescription>
                     <CardTitle className="text-xl">
-                      NPR {fmt(pnl?.salesRevenueNpr)}
+                      {displayFromNpr(pnl?.salesRevenueNpr)}
                     </CardTitle>
                   </CardHeader>
                 </Card>
@@ -337,7 +359,7 @@ export default function ShopAccountingPage() {
                       <T>Sales returns</T>
                     </CardDescription>
                     <CardTitle className="text-xl">
-                      NPR {fmt(pnl?.salesReturnsNpr)}
+                      {displayFromNpr(pnl?.salesReturnsNpr)}
                     </CardTitle>
                   </CardHeader>
                 </Card>
@@ -347,7 +369,7 @@ export default function ShopAccountingPage() {
                       <T>Commission expense</T>
                     </CardDescription>
                     <CardTitle className="text-xl">
-                      NPR {fmt(pnl?.commissionExpenseNpr)}
+                      {displayFromNpr(pnl?.commissionExpenseNpr)}
                     </CardTitle>
                   </CardHeader>
                 </Card>
@@ -357,12 +379,12 @@ export default function ShopAccountingPage() {
                       <T>Net income (excl. COGS)</T>
                     </CardDescription>
                     <CardTitle className="text-xl">
-                      NPR {fmt(pnl?.netIncomeNpr)}
+                      {displayFromNpr(pnl?.netIncomeNpr)}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0 text-xs text-muted-foreground">
-                    <T>Tax payable movement</T>: NPR{" "}
-                    {fmt(pnl?.taxPayableIncreaseNpr)}
+                    <T>Tax payable movement</T>:{" "}
+                    {displayFromNpr(pnl?.taxPayableIncreaseNpr)}
                   </CardContent>
                 </Card>
               </div>
@@ -375,7 +397,14 @@ export default function ShopAccountingPage() {
                         <T>Trial balance</T>
                       </CardTitle>
                       <CardDescription>
-                        <T>Canonical NPR for the selected month</T>
+                        {currencyCode === "NPR" ? (
+                          <T>Amounts in shop base currency for the selected month</T>
+                        ) : (
+                          <>
+                            <T>Displayed in</T> {currencyCode}{" "}
+                            <T>(ledger stored in NPR)</T>
+                          </>
+                        )}
                       </CardDescription>
                     </div>
                     {trial && (
@@ -421,13 +450,13 @@ export default function ShopAccountingPage() {
                             <td className="py-2 pr-2 font-mono text-xs">{a.code}</td>
                             <td className="py-2 pr-2">{a.name}</td>
                             <td className="py-2 pr-2 text-right tabular-nums">
-                              {fmt(a.debitNpr)}
+                              {displayFromNpr(a.debitNpr)}
                             </td>
                             <td className="py-2 pr-2 text-right tabular-nums">
-                              {fmt(a.creditNpr)}
+                              {displayFromNpr(a.creditNpr)}
                             </td>
                             <td className="py-2 text-right tabular-nums font-medium">
-                              {fmt(a.balanceNpr)}
+                              {displayFromNpr(a.balanceNpr)}
                             </td>
                           </tr>
                         ))}
@@ -438,10 +467,10 @@ export default function ShopAccountingPage() {
                             <T>Totals</T>
                           </td>
                           <td className="py-2 pr-2 text-right tabular-nums">
-                            {fmt(trial?.totalDebitNpr)}
+                            {displayFromNpr(trial?.totalDebitNpr)}
                           </td>
                           <td className="py-2 pr-2 text-right tabular-nums">
-                            {fmt(trial?.totalCreditNpr)}
+                            {displayFromNpr(trial?.totalCreditNpr)}
                           </td>
                           <td />
                         </tr>
@@ -547,8 +576,8 @@ export default function ShopAccountingPage() {
                           <p className="text-sm font-medium">{j.description}</p>
                           <p className="text-xs text-muted-foreground">
                             {new Date(j.transactionDate).toLocaleDateString()} ·{" "}
-                            {j.transactionCurrency} {fmt(j.transactionAmount)} · NPR{" "}
-                            {fmt(j.canonicalAmountNpr)}
+                            {j.transactionCurrency} {fmt(j.transactionAmount)} ·{" "}
+                            {displayFromNpr(j.canonicalAmountNpr)}
                           </p>
                         </div>
                       ))
@@ -609,9 +638,9 @@ export default function ShopAccountingPage() {
                             </div>
                             <div className="text-right tabular-nums shrink-0">
                               {Number(line.debitNpr) > 0 ? (
-                                <span>Dr {fmt(line.debitNpr)}</span>
+                                <span>Dr {displayFromNpr(line.debitNpr)}</span>
                               ) : (
-                                <span>Cr {fmt(line.creditNpr)}</span>
+                                <span>Cr {displayFromNpr(line.creditNpr)}</span>
                               )}
                             </div>
                           </div>

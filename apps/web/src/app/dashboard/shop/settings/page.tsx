@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { resolveShopCurrency } from "@gold-shop/shared";
 import api, { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import { getCitiesForCountry, getStatesForCountry } from "@gold-shop/shared";
@@ -65,6 +66,7 @@ interface ShopData {
   descriptionNe?: string;
   descriptionHi?: string;
   country: string;
+  currency?: string;
   state?: string;
   city: string;
   address: string;
@@ -316,11 +318,16 @@ export default function ShopSettingsPage() {
 
     setIsSaving(true);
     try {
+      const resolvedCurrency = resolveShopCurrency({
+        country: shopData.country,
+        currency: shopData.currency,
+      });
       await shopsApi.updateSettings({
         shopName: shopData.shopName,
         shopNameNe: shopData.shopNameNe,
         description: shopData.description,
         country: shopData.country,
+        currency: resolvedCurrency,
         state: shopData.state,
         city: shopData.city,
         address: shopData.address,
@@ -337,22 +344,11 @@ export default function ShopSettingsPage() {
         bankAccountDetails: shopData.bankAccountDetails,
       });
 
-      // Synchronize the user preferences so they match the shop country and currency
+      // Synchronize user preferences with shop country + currency
       try {
-        const countryToCurrency: Record<string, string> = {
-          NP: "NPR",
-          IN: "INR",
-          LK: "LKR",
-          US: "USD",
-          GB: "GBP",
-          UK: "GBP",
-          AE: "AED",
-          EU: "EUR",
-        };
-        const defaultCurrency = countryToCurrency[shopData.country.toUpperCase()] || "USD";
         await api.patch("/users/me/preferences", {
           preferredLanguage: user?.preferredLanguage || "en",
-          preferredCurrency: defaultCurrency,
+          preferredCurrency: resolvedCurrency,
           preferredCountry: shopData.country,
         });
       } catch (prefErr) {

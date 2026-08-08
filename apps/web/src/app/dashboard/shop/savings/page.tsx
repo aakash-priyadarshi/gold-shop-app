@@ -23,8 +23,8 @@ import {
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { api } from "@/lib/api";
-import { usePreferencesStore } from "@/store/preferences";
 import {
   CheckCircle2,
   Loader2,
@@ -60,7 +60,7 @@ const SCHEME_LABELS: Record<string, string> = {
 
 function SavingsSchemesPage() {
   const { user } = useAuth();
-  const shopCurrency = usePreferencesStore((s) => s.currency) || user?.shop?.currency || "NPR";
+  const { currencyCode: shopCurrency } = useShopCurrency();
   const [members, setMembers] = useState<SavingsMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

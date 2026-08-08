@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { shopQuotesApi } from "@/lib/api";
 import {
   formatCurrencyAmount,
-  getCurrencyForCountry,
+  getCurrencyForShop,
   type SupportedCurrencyCode,
 } from "@/lib/currency";
 import {
@@ -142,7 +142,7 @@ export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   // Derive the shop's local currency from its country setting (single source of truth).
   // *Npr DB fields store amounts in this local currency — no FX conversion needed.
-  const currency = getCurrencyForCountry(user?.shop?.country) as SupportedCurrencyCode;
+  const currency = getCurrencyForShop(user?.shop) as SupportedCurrencyCode;
 
   const load = useCallback(async () => {
     setLoading(true);

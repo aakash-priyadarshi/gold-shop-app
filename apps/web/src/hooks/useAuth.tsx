@@ -8,7 +8,9 @@ import {
     COUNTRIES,
     usePreferencesStore,
     type CountryCode,
+    type CurrencyCode,
 } from "@/store/preferences";
+import { resolveShopCurrency } from "@gold-shop/shared";
 import { usePathname, useRouter } from "next/navigation";
 import React, {
     createContext,
@@ -161,14 +163,16 @@ const SHOP_TO_PREF_COUNTRY: Record<string, CountryCode> = {
  * configured country/currency so that geo-detection never wins over the shop's
  * own locale setting (e.g. an Indian seller travelling abroad still sees INR).
  */
-function syncShopCountryToPreferences(shopCountry: string) {
-  const prefCountry = SHOP_TO_PREF_COUNTRY[shopCountry.toUpperCase()];
+function syncShopCountryToPreferences(
+  shop: { country: string; currency?: string | null },
+) {
+  const prefCountry = SHOP_TO_PREF_COUNTRY[shop.country.toUpperCase()];
   if (!prefCountry || !COUNTRIES[prefCountry]) return;
 
-  const defaultCurrency = COUNTRIES[prefCountry].defaultCurrency;
+  const resolvedCurrency = resolveShopCurrency(shop) as CurrencyCode;
   usePreferencesStore.setState({
     country: prefCountry,
-    currency: defaultCurrency,
+    currency: resolvedCurrency,
   });
 
   // Mark as an explicit choice so initializeFromGeo doesn't overwrite it
@@ -384,7 +388,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Shop's country/currency is the overriding factor for sellers.
       // Apply it now so geo-detection (which runs earlier) doesn't win.
       if (user.role === "SHOPKEEPER" && user.shop?.country) {
-        syncShopCountryToPreferences(user.shop.country);
+        syncShopCountryToPreferences(user.shop);
       }
     } catch (error: any) {
       console.error("Failed to fetch user:", error);

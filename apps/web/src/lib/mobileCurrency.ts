@@ -1,33 +1,12 @@
 /**
  * Resolves the country + currency to use for fetching market rates / billing
  * on the mobile interface. Priority:
- *   1. The shopkeeper's configured shop country/currency (most specific).
- *   2. The `orivraa_geo_country` cookie set by middleware from Cloudflare /
- *      Vercel geo headers (city-level accuracy).
- *   3. A safe default (NP / NPR).
- *
- * Currency is derived from country using the same mapping the desktop site uses
- * so that the mobile UI shows the same numbers as the desktop dashboard.
+ *   1. Shop settings (`resolveShopCurrency` on country + currency).
+ *   2. The `orivraa_geo_country` cookie from middleware geo headers.
+ *   3. Safe default (NP / NPR).
  */
 
-const COUNTRY_TO_CURRENCY: Record<string, string> = {
-  NP: "NPR",
-  IN: "INR",
-  US: "USD",
-  UK: "GBP",
-  GB: "GBP",
-  AE: "AED",
-  EU: "EUR",
-  LK: "LKR",
-  AT: "EUR",
-  BE: "EUR",
-  DE: "EUR",
-  ES: "EUR",
-  FR: "EUR",
-  IT: "EUR",
-  NL: "EUR",
-  PT: "EUR",
-};
+import { mapCountryToMarket, resolveShopCurrency } from "@gold-shop/shared";
 
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
@@ -52,19 +31,19 @@ export function getMobileMarketParams(shop?: {
   country?: string | null;
   currency?: string | null;
 } | null): MarketRatesParams {
-  const shopCountry = shop?.country?.toUpperCase();
-  const shopCurrency = shop?.currency?.toUpperCase();
+  const shopCountry = shop?.country?.trim().toUpperCase();
   if (shopCountry) {
     return {
       country: shopCountry,
-      currency: shopCurrency || COUNTRY_TO_CURRENCY[shopCountry] || "USD",
+      currency: resolveShopCurrency(shop),
     };
   }
   const geoCountry = (readCookie("orivraa_geo_country") || "").toUpperCase();
   if (geoCountry) {
+    const market = mapCountryToMarket(geoCountry);
     return {
       country: geoCountry,
-      currency: COUNTRY_TO_CURRENCY[geoCountry] || "USD",
+      currency: resolveShopCurrency({ country: market }),
     };
   }
   return { country: "NP", currency: "NPR" };

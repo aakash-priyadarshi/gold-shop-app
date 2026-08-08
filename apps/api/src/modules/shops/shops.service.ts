@@ -472,7 +472,14 @@ export class ShopsService {
     const previousValue = { ...shop };
 
     const marketCountry = normalizeMarketRegion(dto.country || shop.country);
-    const currency = dto.currency || shop.currency;
+    const countryChanged =
+      dto.country !== undefined &&
+      normalizeMarketRegion(dto.country) !== normalizeMarketRegion(shop.country);
+    const currency =
+      dto.currency ??
+      (countryChanged
+        ? getDefaultCurrencyForMarket(marketCountry)
+        : shop.currency);
     if (!isCurrencySupportedForMarket(marketCountry, currency)) {
       throw new BadRequestException(
         `${currency} is not supported for market ${marketCountry}`,
@@ -1166,7 +1173,14 @@ export class ShopsService {
 
     const previousValue = { ...shop };
     const marketCountry = normalizeMarketRegion(dto.country || shop.country);
-    const currency = dto.currency || shop.currency;
+    const countryChanged =
+      dto.country !== undefined &&
+      normalizeMarketRegion(dto.country) !== normalizeMarketRegion(shop.country);
+    const currency =
+      dto.currency ??
+      (countryChanged
+        ? getDefaultCurrencyForMarket(marketCountry)
+        : shop.currency);
     if (!isCurrencySupportedForMarket(marketCountry, currency)) {
       throw new BadRequestException(
         `${currency} is not supported for market ${marketCountry}`,

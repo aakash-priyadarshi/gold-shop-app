@@ -206,6 +206,51 @@ export function getDefaultCurrency(marketRegion: MarketRegion): CurrencyCode {
 }
 
 /**
+ * Whether a currency is valid for billing/display in a shop's market country.
+ */
+export function isCurrencySupportedForMarketCountry(
+  country: string,
+  currency: CurrencyCode,
+): boolean {
+  const market = mapCountryToMarket(country);
+  return getSupportedCurrencies(market).includes(currency);
+}
+
+/**
+ * Resolve the shop's base billing/display currency.
+ * Prefers an explicit `shop.currency` when it is valid for `shop.country`;
+ * otherwise falls back to the market default (e.g. IN → INR, LK → LKR).
+ */
+export function resolveShopCurrency(
+  shop?: { country?: string | null; currency?: string | null } | null,
+  fallback: CurrencyCode = 'NPR',
+): CurrencyCode {
+  const country = shop?.country?.trim();
+  const explicit = shop?.currency?.trim().toUpperCase() as
+    | CurrencyCode
+    | undefined;
+
+  if (country) {
+    const market = mapCountryToMarket(country);
+    const defaultCurrency = getDefaultCurrency(market);
+    if (
+      explicit &&
+      explicit in CURRENCY_CONFIG &&
+      isCurrencySupportedForMarketCountry(country, explicit)
+    ) {
+      return explicit;
+    }
+    return defaultCurrency;
+  }
+
+  if (explicit && explicit in CURRENCY_CONFIG) {
+    return explicit;
+  }
+
+  return fallback;
+}
+
+/**
  * Get supported currencies for a market
  */
 export function getSupportedCurrencies(marketRegion: MarketRegion): CurrencyCode[] {
@@ -239,6 +284,10 @@ export function getFallbackMarket(): MarketRegion {
  */
 export function mapCountryToMarket(countryCode: string): MarketRegion {
   const normalizedCountryCode = countryCode.trim().toUpperCase();
+
+  if (normalizedCountryCode === 'GB') {
+    return 'UK';
+  }
 
   // Direct mappings
   if (isSupportedMarket(normalizedCountryCode)) {

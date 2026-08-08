@@ -2,28 +2,11 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import { CURRENCIES, type CurrencyCode } from "@/store/preferences";
+import {
+  resolveShopCurrency,
+  type CurrencyCode as SharedCurrencyCode,
+} from "@gold-shop/shared";
 import { useMemo } from "react";
-
-/**
- * Country → Currency mapping for seller shops.
- * Used on the seller dashboard to display prices in the shop's local currency.
- */
-const COUNTRY_CURRENCY_MAP: Record<string, CurrencyCode> = {
-  NP: "NPR",
-  IN: "INR",
-  AE: "AED",
-  LK: "LKR",
-  US: "USD",
-  GB: "GBP",
-  UK: "GBP",
-  AU: "USD", // fallback
-  CA: "USD", // fallback
-  SG: "USD", // fallback
-  EU: "EUR",
-  DE: "EUR",
-  FR: "EUR",
-  IT: "EUR",
-};
 
 /**
  * Country-specific placeholder config for seller dashboard forms.
@@ -128,7 +111,7 @@ export const COUNTRY_PLACEHOLDERS: Record<
 const DEFAULT_PLACEHOLDERS = COUNTRY_PLACEHOLDERS.NP;
 
 /**
- * Hook: Derives currency/symbol from active shop's country.
+ * Hook: shop base currency from settings (country + stored currency).
  * Updates automatically when seller switches shop via ShopSwitcher.
  */
 export function useShopCurrency() {
@@ -136,8 +119,8 @@ export function useShopCurrency() {
 
   return useMemo(() => {
     const shopCountry = user?.shop?.country || "NP";
-    const currencyCode =
-      COUNTRY_CURRENCY_MAP[shopCountry] || ("NPR" as CurrencyCode);
+    const resolved = resolveShopCurrency(user?.shop);
+    const currencyCode = resolved as CurrencyCode;
     const currencyMeta = CURRENCIES[currencyCode] || CURRENCIES.NPR;
     const placeholders =
       COUNTRY_PLACEHOLDERS[shopCountry] || DEFAULT_PLACEHOLDERS;
@@ -172,5 +155,12 @@ export function useShopCurrency() {
         }
       },
     };
-  }, [user?.shop?.country]);
+  }, [user?.shop]);
+}
+
+/** Non-hook resolver for API helpers and mobile utilities. */
+export function getShopCurrencyFromUser(
+  shop?: { country?: string | null; currency?: string | null } | null,
+): SharedCurrencyCode {
+  return resolveShopCurrency(shop);
 }

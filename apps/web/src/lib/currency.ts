@@ -1,4 +1,5 @@
 import { CURRENCIES, type CurrencyCode } from "@/store/preferences";
+import { mapCountryToMarket, resolveShopCurrency } from "@gold-shop/shared";
 
 export type SupportedCurrencyCode = CurrencyCode | "AUD";
 
@@ -51,7 +52,16 @@ export function getCurrencyForCountry(
   fallback: SupportedCurrencyCode = "NPR",
 ): SupportedCurrencyCode {
   if (!country) return fallback;
-  return COUNTRY_TO_CURRENCY[country.toUpperCase()] ?? fallback;
+  return resolveShopCurrency({ country }) as SupportedCurrencyCode;
+}
+
+/** Resolve billing currency from shop settings (country + optional stored currency). */
+export function getCurrencyForShop(
+  shop?: { country?: string | null; currency?: string | null } | null,
+  fallback: SupportedCurrencyCode = "NPR",
+): SupportedCurrencyCode {
+  const base = fallback === "AUD" ? "USD" : fallback;
+  return resolveShopCurrency(shop, base as CurrencyCode) as SupportedCurrencyCode;
 }
 
 export async function fetchFreeFxRates(): Promise<Record<SupportedCurrencyCode, number>> {

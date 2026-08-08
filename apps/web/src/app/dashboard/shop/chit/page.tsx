@@ -16,8 +16,8 @@ import { Label } from "@/components/ui/label";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { chitApi } from "@/lib/api";
-import { usePreferencesStore } from "@/store/preferences";
 import {
   CheckCircle2,
   Loader2,
@@ -65,8 +65,7 @@ interface ChitGroup {
 
 function ChitCommitteesPage() {
   const { user } = useAuth();
-  const shopCurrency =
-    usePreferencesStore((s) => s.currency) || user?.shop?.currency || "NPR";
+  const { currencyCode: shopCurrency } = useShopCurrency();
   const [groups, setGroups] = useState<ChitGroup[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<{
