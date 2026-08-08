@@ -86,7 +86,13 @@ export class VectorMemoryService implements OnModuleInit {
     if (!this.isEnabled) return [];
     try {
       const vector = await this.getEmbedding(query);
-      return await this.qdrantClient!.search(this.MEMORY_COLLECTION, { vector, limit });
+      // @qdrant/js-client-rest >=1.17 removed .search — use .query
+      const result = await this.qdrantClient!.query(this.MEMORY_COLLECTION, {
+        query: vector,
+        limit,
+        with_payload: true,
+      });
+      return result.points ?? [];
     } catch (err: any) {
       this.logger.warn(`Failed to search knowledge: ${err.message}`);
       return [];
@@ -111,7 +117,14 @@ export class VectorMemoryService implements OnModuleInit {
     if (!this.isEnabled) return [];
     try {
       const vector = await this.getEmbedding(query);
-      return await this.qdrantClient!.search(this.TRANSCRIPTS_COLLECTION, { vector, limit, filter });
+      // @qdrant/js-client-rest >=1.17 removed .search — use .query
+      const result = await this.qdrantClient!.query(this.TRANSCRIPTS_COLLECTION, {
+        query: vector,
+        limit,
+        filter,
+        with_payload: true,
+      });
+      return result.points ?? [];
     } catch (err: any) {
       this.logger.warn(`Failed to search transcripts: ${err.message}`);
       return [];
