@@ -21,7 +21,7 @@ export function claimInitialAnimation(): boolean {
 // Uses its OWN flag (_hookLoaderPlayed) — independent of the
 // root overlay. Both play on first load (the overlay covers the
 // page-level loader visually). On SPA navigation both skip.
-export function useMinLoadingTime(isLoading: boolean, minMs = 4000): boolean {
+export function useMinLoadingTime(isLoading: boolean, minMs = 0): boolean {
   const [isFirstLoad] = useState(() => {
     if (_hookLoaderPlayed) return false;
     _hookLoaderPlayed = true;

@@ -8,6 +8,8 @@ interface HelpUIState {
   isTutorialShaking: boolean;
   /** True once the mobile onboarding tour has auto-launched for this user. */
   hasAutoLaunchedMobileTour: boolean;
+  /** True once the "Ask me if you need help" bubble has been shown this session/device. */
+  hasSeenTutorialBubble: boolean;
   dismissChat: () => void;
   dismissTutorial: () => void;
   recallChat: () => void;
@@ -15,6 +17,7 @@ interface HelpUIState {
   shakeChat: () => void;
   shakeTutorial: () => void;
   markMobileTourAutoLaunched: () => void;
+  markTutorialBubbleSeen: () => void;
 }
 
 export const useHelpUIStore = create<HelpUIState>()(
@@ -25,10 +28,11 @@ export const useHelpUIStore = create<HelpUIState>()(
       isChatShaking: false,
       isTutorialShaking: false,
       hasAutoLaunchedMobileTour: false,
+      hasSeenTutorialBubble: false,
       dismissChat: () => set({ isChatDismissed: true }),
       dismissTutorial: () => set({ isTutorialDismissed: true }),
       recallChat: () => set({ isChatDismissed: false }),
-      recallTutorial: () => set({ isTutorialDismissed: false }),
+      recallTutorial: () => set({ isTutorialDismissed: false, hasSeenTutorialBubble: false }),
       shakeChat: () => {
         set({ isChatShaking: true });
         setTimeout(() => set({ isChatShaking: false }), 1500);
@@ -38,6 +42,7 @@ export const useHelpUIStore = create<HelpUIState>()(
         setTimeout(() => set({ isTutorialShaking: false }), 1500);
       },
       markMobileTourAutoLaunched: () => set({ hasAutoLaunchedMobileTour: true }),
+      markTutorialBubbleSeen: () => set({ hasSeenTutorialBubble: true }),
     }),
     {
       name: "orivraa-help-ui",

@@ -408,3 +408,33 @@ export async function kickCashDrawer(): Promise<void> {
   const bytes = new Uint8Array([ESC, 0x70, 0x00, 0x32, 0x32]);
   await printReceiptBytes(bytes);
 }
+
+/**
+ * Future: Zebra/ZPL jewellery label printer support.
+ * Browser printable tags ship today via `jewelleryTagPrint.ts`.
+ * This stub documents the intended hardware path without shipping a driver.
+ */
+export interface ZplLabelPayload {
+  sku: string;
+  name: string;
+  purity?: string;
+  weightGrams?: number;
+  price?: number;
+  currency?: string;
+  hallmark?: string;
+}
+
+export function buildZplJewelleryLabel(_payload: ZplLabelPayload): string {
+  throw new Error(
+    "ZPL thermal label printing is not enabled yet. Use Print Tag (browser) from Stock.",
+  );
+}
+
+export async function printZplJewelleryLabel(
+  _payload: ZplLabelPayload,
+): Promise<void> {
+  throw new Error(
+    "ZPL thermal label printing is not enabled yet. Use Print Tag (browser) from Stock.",
+  );
+}
+

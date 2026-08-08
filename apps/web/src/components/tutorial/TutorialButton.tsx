@@ -23,7 +23,15 @@ export function TutorialButton({ className }: TutorialButtonProps) {
   const [running, setRunning] = useState(false);
   const [bubbleVisible, setBubbleVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const { isTutorialDismissed, dismissTutorial, isTutorialShaking, hasAutoLaunchedMobileTour, markMobileTourAutoLaunched } = useHelpUIStore();
+  const {
+    isTutorialDismissed,
+    dismissTutorial,
+    isTutorialShaking,
+    hasAutoLaunchedMobileTour,
+    markMobileTourAutoLaunched,
+    hasSeenTutorialBubble,
+    markTutorialBubbleSeen,
+  } = useHelpUIStore();
 
   // Drag-to-dismiss state (mobile only)
   const [isDragging, setIsDragging] = useState(false);
@@ -46,13 +54,14 @@ export function TutorialButton({ className }: TutorialButtonProps) {
     return dist < DISMISS_ZONE_RADIUS;
   }, [isMobile]);
 
-  /* Show bubble for 4.5 s on mount or when recalled, then on hover */
+  /* Show bubble once per device (persisted), not on every DashboardLayout remount */
   useEffect(() => {
-    if (!hasSteps || isTutorialDismissed) return;
+    if (!hasSteps || isTutorialDismissed || hasSeenTutorialBubble) return;
     setBubbleVisible(true);
+    markTutorialBubbleSeen();
     const timer = setTimeout(() => setBubbleVisible(false), 4500);
     return () => clearTimeout(timer);
-  }, [hasSteps, isTutorialDismissed]);
+  }, [hasSteps, isTutorialDismissed, hasSeenTutorialBubble, markTutorialBubbleSeen]);
 
   useEffect(() => {
     if (hovered) {

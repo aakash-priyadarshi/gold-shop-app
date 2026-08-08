@@ -3,7 +3,6 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
 import { Providers } from "@/components/providers";
 import { SupportBot } from "@/components/support/SupportBot";
-import InitialLoadScreen from "@/components/ui/InitialLoadScreen";
 import { Toaster } from "@/components/ui/toaster";
 import { BRAND } from "@/config/brand";
 import { SITE_URL, MOBILE_SITE_URL } from "@/config/site";
@@ -273,16 +272,14 @@ export default function RootLayout({
           </div>
         </noscript>
         <Providers>
-          <InitialLoadScreen>
-            <ErrorBoundary>
-              <GeoMismatchBanner />
-              {children}
-              <SupportBot />
-              <Toaster />
-              <SpeedInsights />
-              <AppTracking />
-            </ErrorBoundary>
-          </InitialLoadScreen>
+          <ErrorBoundary>
+            <GeoMismatchBanner />
+            {children}
+            <SupportBot />
+            <Toaster />
+            <SpeedInsights />
+            <AppTracking />
+          </ErrorBoundary>
         </Providers>
       </body>
     </html>
