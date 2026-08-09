@@ -1,4 +1,5 @@
 -- Inventory stock movement ledger (POS sales, void restores, adjustments)
+-- Applied via Deploy Guard with pre-migrate backup
 CREATE TABLE IF NOT EXISTS "InventoryStockMovement" (
     "id" TEXT NOT NULL,
     "shopId" TEXT NOT NULL,
