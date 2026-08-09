@@ -197,6 +197,25 @@ function LanguageSelector() {
 }
 
 /**
+ * Dashboard profile link from the header avatar menu (role → correct path segment).
+ */
+function getDashboardProfileHref(role: UserRole): string {
+  switch (role) {
+    case "ADMIN":
+      return "/dashboard/admin/profile";
+    case "SHOPKEEPER":
+      return "/dashboard/shop/profile";
+    case "SALES":
+      return "/dashboard/sales/profile";
+    case "SUPPORT":
+      return "/dashboard/support/profile";
+    case "CUSTOMER":
+    default:
+      return "/dashboard/customer/settings";
+  }
+}
+
+/**
  * Read-only shop currency badge. Sellers change currency in shop settings only.
  */
 function ShopCurrencyBadge({ compact = false }: { compact?: boolean }) {
@@ -205,7 +224,7 @@ function ShopCurrencyBadge({ compact = false }: { compact?: boolean }) {
   const hasShop = Boolean(user?.shop?.id);
   const href = hasShop
     ? "/dashboard/shop/settings"
-    : `/dashboard/${(user?.role || "customer").toLowerCase()}/settings`;
+    : getDashboardProfileHref((user?.role || "CUSTOMER") as UserRole);
 
   const badge = (
     <Link
@@ -1216,11 +1235,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/${user.role.toLowerCase()}/settings`}>
-                    <Settings className="h-4 w-4 mr-2" />
-                    <T>Settings</T>
+                  <Link href={getDashboardProfileHref(user.role)}>
+                    <UserCircle className="h-4 w-4 mr-2" />
+                    <T>Profile</T>
                   </Link>
                 </DropdownMenuItem>
+                {user.role === "SHOPKEEPER" && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/shop/settings">
+                      <Settings className="h-4 w-4 mr-2" />
+                      <T>Shop Settings</T>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link href="/">
                     <Store className="h-4 w-4 mr-2" />
@@ -1363,13 +1390,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link
-                      href={`/dashboard/${user.role.toLowerCase()}/settings`}
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      <T>Settings</T>
+                    <Link href={getDashboardProfileHref(user.role)}>
+                      <UserCircle className="h-4 w-4 mr-2" />
+                      <T>Profile</T>
                     </Link>
                   </DropdownMenuItem>
+                  {user.role === "SHOPKEEPER" && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/shop/settings">
+                        <Settings className="h-4 w-4 mr-2" />
+                        <T>Shop Settings</T>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link href="/">
                       <Store className="h-4 w-4 mr-2" />

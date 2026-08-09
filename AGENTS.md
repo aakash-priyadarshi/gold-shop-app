@@ -161,7 +161,25 @@ Cloudflare Turnstile blocks headless/API login on production. Use the server-sid
 
 For local agent runs, copy the same value into `apps/api/.env` as `TURNSTILE_BYPASS_SECRET=...` (gitignored).
 
-**API login (preferred for agents):**
+Also set your **production shop account** (demo seeds are not on prod):
+
+```
+E2E_SHOP_EMAIL=your-shop@email.com
+E2E_SHOP_PASSWORD=your-password
+```
+
+Then generate Playwright auth state:
+
+```bash
+cd apps/api && railway run node ../../e2e/scripts/api-login.mjs
+cd ../e2e && npx playwright test core-sales-pipeline --project=chromium --workers=1
+```
+
+API-only smoke (no browser):
+
+```bash
+cd e2e && node scripts/api-core-pipeline.mjs
+```
 
 ```bash
 curl -s -X POST https://api.orivraa.com/api/auth/login \
@@ -175,7 +193,7 @@ curl -s -X POST https://api.orivraa.com/api/auth/login \
 
 Pass the Railway secret as `turnstileToken` (not a real Turnstile widget token). Response includes `accessToken` and `refreshToken` — use `Authorization: Bearer <accessToken>` for authenticated API calls.
 
-**Test accounts (seeded on production):**
+**Test accounts (local/staging seeds — may not exist on production):**
 
 | Email                       | Password        | Role                   |
 | --------------------------- | --------------- | ---------------------- |
@@ -184,7 +202,7 @@ Pass the Railway secret as `turnstileToken` (not a real Turnstile widget token).
 | `pentest-shop@orivraa.com`  | `PenTest123!@#` | SHOPKEEPER             |
 | `pentest-admin@orivraa.com` | `PenTest123!@#` | ADMIN                  |
 
-**Browser UI testing:** Agents can also ask the user to log in manually at https://www.orivraa.com/auth/login — no bypass needed in the browser.
+**Browser UI testing:** Google OAuth users can log in manually at https://www.orivraa.com/auth/login (no password needed). For Playwright, run `cd e2e && npx ts-node auth-setup.ts` once while logged in via Google — session saves to `e2e/.auth/seller.json` for reuse.
 
 **Security rules for agents:**
 
