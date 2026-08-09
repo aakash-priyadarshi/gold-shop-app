@@ -937,6 +937,7 @@ export default function MobilePOSPage() {
           search: q ?? "",
           limit: 40,
           page: 1,
+          inStock: true,
         });
         setItems(res.data?.items ?? res.data ?? []);
       } catch {

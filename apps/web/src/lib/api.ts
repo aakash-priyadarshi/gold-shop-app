@@ -78,6 +78,7 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/support",
   "/terms",
   "/track/",
+  "/verify-bill/",
   "/tutorial",
   "/uae/",
   "/uk/",

@@ -400,6 +400,7 @@ model Shop {
   ledgerAccounts       LedgerAccount[]
   journalEntries       JournalEntry[]
   inventoryItems       InventoryItem[]
+  stockMovements       InventoryStockMovement[]
   orders               Order[]
   rfqOffers            RfqOffer[]
   shopQuotes           ShopQuote[]
@@ -560,11 +561,33 @@ model InventoryItem {
   wishlistItems     WishlistItem[]
   posSessionItems   PosSessionItem[]
   stockReservations StockReservation[]
+  stockMovements    InventoryStockMovement[]
 
   @@index([shopId, status])
   @@index([jewelleryType])
   @@index([buildMethod])
   @@index([visibility])
+}
+
+/// Immutable stock ledger for sales, voids, and adjustments.
+model InventoryStockMovement {
+  id              String   @id @default(uuid())
+  shopId          String
+  inventoryItemId String
+  variantId       String?
+  delta           Int // negative = sale/outbound, positive = restore/inbound
+  reason          String // POS_SALE, INVOICE_VOID_RESTORE, ADJUSTMENT, ORDER_SALE
+  referenceType   String? // PosSession, Invoice, Order
+  referenceId     String?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  shop          Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, createdAt])
+  @@index([inventoryItemId, createdAt])
+  @@index([referenceType, referenceId])
 }
 
 // Product size variants (rings, bracelets, etc.)

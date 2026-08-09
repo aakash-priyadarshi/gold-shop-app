@@ -823,16 +823,66 @@ export class InvoicesService {
   async voidInvoice(id: string, shopId: string) {
     const invoice = await this.findById(id, shopId);
 
-    if (roundMoney(invoice.paidAmount) > 0) {
-      throw new BadRequestException("Cannot void an invoice with payments");
+    if (invoice.status === "VOID" || invoice.status === "CANCELLED") {
+      throw new BadRequestException("Invoice is already voided or cancelled");
     }
 
     return this.prisma.$transaction(async (tx) => {
+      // Reverse any received payments in the ledger and mark them REVERSED.
+      const payments = await tx.invoicePayment.findMany({
+        where: { invoiceId: id, status: "RECEIVED" },
+        orderBy: { receivedAt: "asc" },
+      });
+
+      for (const payment of payments) {
+        await this.accounting.reverseReference(tx, {
+          shopId,
+          originalReferenceType: JournalReferenceType.INVOICE_PAYMENT,
+          originalReferenceId: payment.id,
+          reversalReferenceType: JournalReferenceType.REVERSAL,
+          reversalReferenceId: `invoice-payment-void:${payment.id}`,
+          reason: `Invoice ${invoice.invoiceNumber} voided — payment reversed`,
+        });
+        await tx.invoicePayment.update({
+          where: { id: payment.id },
+          data: {
+            status: "REVERSED",
+            voidedAt: new Date(),
+            voidReason: "Invoice voided",
+          },
+        });
+      }
+
+      // Restore stock for POS / product line items that carry inventory refs.
+      const lineItems = Array.isArray(invoice.lineItems)
+        ? (invoice.lineItems as Array<Record<string, any>>)
+        : [];
+      for (const li of lineItems) {
+        const inventoryItemId = li.inventoryItemId as string | undefined;
+        const qty = Math.max(0, Number(li.quantity) || 0);
+        if (!inventoryItemId || qty <= 0) continue;
+
+        await tx.inventoryItem.updateMany({
+          where: { id: inventoryItemId, shopId },
+          data: { stockQuantity: { increment: qty } },
+        });
+        if (li.variantId) {
+          await tx.productVariant.updateMany({
+            where: { id: li.variantId as string },
+            data: { stock: { increment: qty } },
+          });
+        }
+      }
+
       const updated = await tx.invoice.update({
         where: { id },
         data: {
           status: "VOID",
           voidedAt: new Date(),
+          paidAmount: 0,
+          balanceDue: invoice.totalAmount,
+          paymentStatus: "UNPAID",
+          paidAt: null,
         },
       });
       await this.accounting.reverseReference(tx, {
@@ -843,6 +893,28 @@ export class InvoicesService {
         reversalReferenceId: `invoice-void:${id}`,
         reason: "Invoice voided",
       });
+      return { updated, restoredStock: lineItems };
+    }).then(async ({ updated, restoredStock }) => {
+      for (const li of restoredStock) {
+        const inventoryItemId = li.inventoryItemId as string | undefined;
+        const qty = Math.max(0, Number(li.quantity) || 0);
+        if (!inventoryItemId || qty <= 0) continue;
+        try {
+          await this.prisma.inventoryStockMovement.create({
+            data: {
+              shopId,
+              inventoryItemId,
+              variantId: (li.variantId as string) || null,
+              delta: qty,
+              reason: "INVOICE_VOID_RESTORE",
+              referenceType: "Invoice",
+              referenceId: id,
+            },
+          });
+        } catch {
+          // Table may not exist until migrate deploy
+        }
+      }
       return updated;
     });
   }

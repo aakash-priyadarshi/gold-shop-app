@@ -19,14 +19,16 @@ import { useChatPopup } from "@/contexts/ChatPopupContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { chatApi, customerCrmApi } from "@/lib/api";
+import { chatApi, customerCrmApi, shopQuotesApi } from "@/lib/api";
 import {
   ArrowLeft,
   Calendar,
   DollarSign,
+  FileText,
   Loader2,
   MapPin,
   MessageSquare,
+  Receipt,
   Send,
   Shield,
   ShoppingCart,
@@ -73,6 +75,8 @@ export default function CustomerProfilePage() {
 
   const [profile, setProfile] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
+  const [walkInQuotes, setWalkInQuotes] = useState<any[]>([]);
+  const [walkInInvoices, setWalkInInvoices] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,6 +156,24 @@ export default function CustomerProfilePage() {
       setOrders(ordersRes.data.orders || []);
       setStats(statsRes.data);
       setNotes(Array.isArray(notesRes.data) ? notesRes.data : []);
+
+      const isWalkIn =
+        profileRes.data?.type === "WALK_IN" ||
+        profileRes.data?.customer?.type === "WALK_IN";
+      if (isWalkIn) {
+        try {
+          const historyRes = await shopQuotesApi.getCustomerHistory(customerId);
+          const data = historyRes.data;
+          setWalkInQuotes(data?.shopQuotes ?? []);
+          setWalkInInvoices(data?.invoices ?? []);
+        } catch {
+          setWalkInQuotes([]);
+          setWalkInInvoices([]);
+        }
+      } else {
+        setWalkInQuotes([]);
+        setWalkInInvoices([]);
+      }
     } catch {
       toast({ variant: "destructive", title: "Failed to load customer" });
     } finally {
@@ -423,13 +445,27 @@ export default function CustomerProfilePage() {
             {/* Right content - Tabs */}
             <div className="lg:col-span-2">
               <Tabs defaultValue="orders">
-                <TabsList className="w-full grid grid-cols-3">
+                <TabsList
+                  className={`w-full grid ${
+                    walkInQuotes.length > 0 || walkInInvoices.length > 0
+                      ? "grid-cols-4"
+                      : "grid-cols-3"
+                  }`}
+                >
                   <TabsTrigger
                     value="orders"
                     className="flex items-center gap-1"
                   >
                     <ShoppingCart className="h-4 w-4" /> Orders
                   </TabsTrigger>
+                  {(walkInQuotes.length > 0 || walkInInvoices.length > 0) && (
+                    <TabsTrigger
+                      value="history"
+                      className="flex items-center gap-1"
+                    >
+                      <Receipt className="h-4 w-4" /> History
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger
                     value="notes"
                     className="flex items-center gap-1"
@@ -464,7 +500,11 @@ export default function CustomerProfilePage() {
                     orders.map((order: any) => (
                       <Link
                         key={order.id}
-                        href={`/dashboard/shop/orders/${order.id}`}
+                        href={
+                          order.quoteNumber
+                            ? `/dashboard/shop/quotes/${order.id}`
+                            : `/dashboard/shop/orders/${order.id}`
+                        }
                       >
                         <Card className="hover:shadow-sm transition-shadow cursor-pointer">
                           <CardContent className="flex items-center justify-between p-4">
@@ -487,6 +527,93 @@ export default function CustomerProfilePage() {
                         </Card>
                       </Link>
                     ))
+                  )}
+                </TabsContent>
+
+                {/* Walk-in Quotes + Invoices History */}
+                <TabsContent value="history" className="space-y-4 mt-4">
+                  {walkInQuotes.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                        <FileText className="h-3.5 w-3.5" /> Quotes
+                      </p>
+                      {walkInQuotes.map((q: any) => (
+                        <Link
+                          key={q.id}
+                          href={`/dashboard/shop/quotes/${q.id}`}
+                        >
+                          <Card className="hover:shadow-sm transition-shadow cursor-pointer">
+                            <CardContent className="flex items-center justify-between p-4">
+                              <div>
+                                <p className="font-medium">{q.quoteNumber}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {q.jewelleryType?.replace(/_/g, " ")} ·{" "}
+                                  {new Date(q.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="text-right flex items-center gap-3">
+                                <Badge variant="outline" className="text-xs">
+                                  {q.status}
+                                </Badge>
+                                {q.totalPriceNpr != null && (
+                                  <p className="font-bold text-amber-600">
+                                    {currencySymbol}{" "}
+                                    {Number(q.totalPriceNpr).toLocaleString()}
+                                  </p>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  {walkInInvoices.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                        <Receipt className="h-3.5 w-3.5" /> Invoices
+                      </p>
+                      {walkInInvoices.map((inv: any) => (
+                        <Link
+                          key={inv.id}
+                          href={`/dashboard/shop/invoices/${inv.id}`}
+                        >
+                          <Card className="hover:shadow-sm transition-shadow cursor-pointer">
+                            <CardContent className="flex items-center justify-between p-4">
+                              <div>
+                                <p className="font-medium">
+                                  {inv.invoiceNumber}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(
+                                    inv.issuedAt || inv.createdAt,
+                                  ).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="text-right flex items-center gap-3">
+                                <Badge variant="outline" className="text-xs">
+                                  {inv.paymentStatus || inv.status}
+                                </Badge>
+                                <p className="font-bold text-amber-600">
+                                  {inv.currency || currencySymbol}{" "}
+                                  {Number(inv.totalAmount || 0).toLocaleString()}
+                                </p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  {walkInQuotes.length === 0 && walkInInvoices.length === 0 && (
+                    <Card>
+                      <CardContent className="flex flex-col items-center py-8 text-center">
+                        <Receipt className="h-10 w-10 text-muted-foreground opacity-30 mb-2" />
+                        <p className="text-muted-foreground">
+                          No quotes or invoices yet
+                        </p>
+                      </CardContent>
+                    </Card>
                   )}
                 </TabsContent>
 

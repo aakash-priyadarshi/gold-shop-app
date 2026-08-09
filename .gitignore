@@ -46,6 +46,9 @@ credentials/
 *secret*
 *.secret
 *token*
+!**/token/
+!apps/web/src/app/verify-bill/
+!apps/web/src/app/track/
 !*.ts
 !*.tsx
 !*.js

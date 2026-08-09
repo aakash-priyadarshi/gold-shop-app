@@ -263,10 +263,9 @@ function StockLedgerContent() {
         totalWeightGrams: gross,
         metalValueNpr: 0,
         makingChargeNpr: 0,
-        totalPriceNpr: 0,
+        gemstoneValueNpr: 0,
         labels: [addForm.location],
         hallmarkNumber: addForm.huid.toUpperCase(),
-        status: "AVAILABLE"
       });
 
       setAddForm({

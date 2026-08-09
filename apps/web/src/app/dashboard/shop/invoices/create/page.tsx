@@ -454,6 +454,10 @@ export default function CreateInvoicePage() {
   // ── Market rates for live metal pricing ──
   const [marketRates, setMarketRates] = useState<LiveRateData | null>(null);
   const [marketRatesLoading, setMarketRatesLoading] = useState(false);
+  // Shop rates from Pricing Setup (Inventory) — preferred over live market
+  const [shopPrices, setShopPrices] = useState<{
+    baseMetalPrices?: Record<string, number>;
+  } | null>(null);
 
   // ── Weight unit helpers (based on shop's country, not buyer's market) ──
   const supportedWeightUnits = getSupportedWeightUnits(shopCountry);
@@ -515,6 +519,26 @@ export default function CreateInvoicePage() {
   useEffect(() => {
     fetchMarketRates();
   }, [fetchMarketRates]);
+
+  // Load shop component pricing (same source as walk-in quotes / inventory page)
+  useEffect(() => {
+    let cancelled = false;
+    shopsApi
+      .getComponentPricing()
+      .then((res) => {
+        if (cancelled) return;
+        const cp = res.data;
+        if (cp?.baseMetalPrices && Object.keys(cp.baseMetalPrices).length > 0) {
+          setShopPrices({ baseMetalPrices: cp.baseMetalPrices });
+        }
+      })
+      .catch(() => {
+        /* optional — fall back to market rates */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Refresh user data on mount to get the latest KYC approval status from the server.
   useEffect(() => {
@@ -692,6 +716,7 @@ export default function CreateInvoicePage() {
   const [selectedWalkInCustomerId, setSelectedWalkInCustomerId] = useState<
     string | null
   >(null);
+  const [importedQuoteId, setImportedQuoteId] = useState<string | null>(null);
   const phoneDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -818,16 +843,9 @@ export default function CreateInvoicePage() {
     setLineItems(updated);
   };
 
-  // Autofill metal cost from live rate: cost = weight(g) × rate per gram
+  // Autofill metal cost: prefer shop Pricing Setup rates, else live market
   const autofillMetalCost = useCallback(
     (idx: number) => {
-      if (!marketRates?.metals) {
-        toast({
-          title: t("Live rates unavailable"),
-          description: t("Market rates are still loading. Please try again in a moment."),
-        });
-        return;
-      }
       const item = lineItems[idx];
       if (!item || !item.metalWeightG || !item.metalType) {
         toast({
@@ -839,36 +857,53 @@ export default function CreateInvoicePage() {
       const weightGrams = parseFloat(item.metalWeightG);
       if (!weightGrams || weightGrams <= 0) return;
 
-      // Try exact metal type match, then base metal fallback
-      let ratePerGram = marketRates.metals[item.metalType] ||
-        marketRates.metals[item.metalType.toLowerCase()];
-      if (!ratePerGram) {
-        const isGold = item.metalType.startsWith("GOLD");
-        const isSilver = item.metalType.startsWith("SILVER");
-        const isPlatinum = item.metalType.startsWith("PLATINUM");
-        const baseKey = isGold ? "GOLD" : isSilver ? "SILVER" : isPlatinum ? "PLATINUM" : null;
-        if (baseKey) {
-          ratePerGram = marketRates.metals[baseKey] || marketRates.metals[baseKey.toLowerCase()];
-        }
+      const isGold = item.metalType.startsWith("GOLD");
+      const isSilver = item.metalType.startsWith("SILVER");
+      const isPlatinum = item.metalType.startsWith("PLATINUM");
+      const baseKey = isGold
+        ? "GOLD"
+        : isSilver
+          ? "SILVER"
+          : isPlatinum
+            ? "PLATINUM"
+            : null;
+
+      const shopRate =
+        shopPrices?.baseMetalPrices?.[item.metalType] ??
+        (baseKey ? shopPrices?.baseMetalPrices?.[baseKey] : undefined);
+
+      let ratePerGram =
+        shopRate && shopRate > 0
+          ? shopRate
+          : marketRates?.metals?.[item.metalType] ||
+            marketRates?.metals?.[item.metalType.toLowerCase()];
+      if (!ratePerGram && baseKey && marketRates?.metals) {
+        ratePerGram =
+          marketRates.metals[baseKey] ||
+          marketRates.metals[baseKey.toLowerCase()];
       }
 
       if (!ratePerGram || ratePerGram <= 0) {
         toast({
           title: t("Rate not available"),
-          description: t("No live rate found for this metal type."),
+          description: t(
+            "Set a metal rate in Pricing Setup (Inventory), or wait for live market rates.",
+          ),
         });
         return;
       }
 
+      const source =
+        shopRate && shopRate > 0 ? t("shop rate") : t("live market");
       const calculatedCost = weightGrams * ratePerGram;
       updateLineItem(idx, "metalCost", calculatedCost.toFixed(2));
       toast({
         title: t("Metal cost autofilled"),
-        description: `${weightGrams.toFixed(3)}g × ${currencySymbol}${ratePerGram.toFixed(2)}/g = ${currencySymbol}${calculatedCost.toFixed(2)}`,
+        description: `${weightGrams.toFixed(3)}g × ${currencySymbol}${ratePerGram.toFixed(2)}/g (${source}) = ${currencySymbol}${calculatedCost.toFixed(2)}`,
       });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [marketRates, lineItems, currencySymbol, t],
+    [marketRates, shopPrices, lineItems, currencySymbol, t],
   );
 
   // ── Gemstone helpers ──
@@ -912,8 +947,15 @@ export default function CreateInvoicePage() {
   const loadShopQuotes = async () => {
     setQuotesLoading(true);
     try {
-      const res = await shopQuotesApi.getAll({ status: "APPROVED" });
-      setShopQuotes(res.data?.quotes || res.data || []);
+      const res = await shopQuotesApi.getAll();
+      const all = res.data?.quotes || res.data || [];
+      // Importable = not invoiced yet and not cancelled
+      setShopQuotes(
+        all.filter(
+          (q: any) =>
+            !q.invoiceNumber && !["CANCELLED", "COMPLETED"].includes(q.status),
+        ),
+      );
     } catch {
       toast({ variant: "destructive", title: "Failed to load quotes" });
     } finally {
@@ -922,12 +964,15 @@ export default function CreateInvoicePage() {
   };
 
   const handleImportQuote = (quote: any) => {
-    if (quote.customerName) setCustomerName(quote.customerName);
-    if (quote.customerPhone) {
-      setCustomerPhone(quote.customerPhone);
-      setPhoneCountryCode(quote.phoneCountryCode || "");
+    const customer = quote.walkInCustomer;
+    if (customer?.name) setCustomerName(customer.name);
+    if (customer?.phone) {
+      setCustomerPhone(customer.phone);
+      setPhoneCountryCode(customer.phoneCountryCode || phoneCountryCode);
     }
-    if (quote.customerEmail) setCustomerEmail(quote.customerEmail);
+    if (customer?.email) setCustomerEmail(customer.email);
+    if (customer?.id) setSelectedWalkInCustomerId(customer.id);
+    setImportedQuoteId(quote.id);
 
     const metalLabel =
       quote.jewelleryType || quote.metalType || "Jewellery Item";
@@ -937,17 +982,21 @@ export default function CreateInvoicePage() {
       (c) => c.value === quote.jewelleryType || c.label === quote.jewelleryType,
     );
     item.category = matchingCat?.value || "OTHER";
-    item.metalType = quote.metalType || quote.alloyConfig?.baseMetal || "";
-    item.metalWeightG = quote.targetTotalWeightG || "";
+    item.metalType =
+      quote.metalType || quote.alloyConfig?.baseMetal || quote.composition?.baseAlloy?.metal || "";
+    item.metalWeightG = String(quote.targetTotalWeightG || "");
     item.metalCost = String(
-      quote.metalCostOverride || quote.estimatedTotal?.metalCost || "",
+      quote.metalCostNpr ?? quote.metalCostOverride ?? quote.estimatedTotal?.metalCost ?? "",
     );
     item.makingCost = String(
-      quote.makingChargeOverride || quote.estimatedTotal?.makingCharge || "",
+      quote.makingChargeNpr ?? quote.makingChargeOverride ?? quote.estimatedTotal?.makingCharge ?? "",
     );
 
     const gcVal =
-      quote.gemstoneCostOverride || quote.estimatedTotal?.gemstoneCost || 0;
+      quote.gemstoneCostNpr ??
+      quote.gemstoneCostOverride ??
+      quote.estimatedTotal?.gemstoneCost ??
+      0;
     if (gcVal) {
       item.gemstones = [{ ...emptyGemstone(), cost: String(gcVal) }];
     }
@@ -958,7 +1007,7 @@ export default function CreateInvoicePage() {
     setShowQuoteImport(false);
     toast({
       title: "Quote imported",
-      description: `Imported "${metalLabel}" from walk-in quote`,
+      description: `Imported ${quote.quoteNumber || metalLabel} from walk-in quote`,
     });
   };
 
@@ -1260,6 +1309,7 @@ export default function CreateInvoicePage() {
 
       const response = await invoicesApi.create({
         walkInCustomerId: selectedWalkInCustomerId || undefined,
+        shopQuoteId: importedQuoteId || undefined,
         customerName,
         customerPhone: customerPhone
           ? `${phoneCountryCode}${customerPhone}`
@@ -1404,7 +1454,7 @@ export default function CreateInvoicePage() {
                   </Button>
                 </div>
                 <CardDescription>
-                  Select an approved quote to pre-fill invoice details
+                  Select a walk-in quote to pre-fill invoice details
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1415,7 +1465,7 @@ export default function CreateInvoicePage() {
                   </div>
                 ) : shopQuotes.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">
-                    No approved quotes found
+                    No open quotes found
                   </p>
                 ) : (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -1428,11 +1478,14 @@ export default function CreateInvoicePage() {
                         <div>
                           <p className="font-medium text-sm">
                             {quote.jewelleryType || "Jewellery"} —{" "}
-                            {quote.customerName || "Unknown"}
+                            {quote.walkInCustomer?.name || "Walk-in customer"}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {quote.metalType} • {quote.targetTotalWeightG}g •{" "}
-                            {new Date(quote.createdAt).toLocaleDateString()}
+                            {quote.quoteNumber} • {quote.status} •{" "}
+                            {quote.targetTotalWeightG
+                              ? `${quote.targetTotalWeightG}g`
+                              : "—"}{" "}
+                            • {new Date(quote.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                         <Button variant="ghost" size="sm">

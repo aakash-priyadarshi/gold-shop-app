@@ -1,233 +1,267 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
-import { shopQuotesApi } from "@/lib/api";
+import { getApiUrl } from "@/lib/api";
 import {
-    AlertCircle,
-    CheckCircle2,
-    Clock,
-    Gem,
-    Receipt,
-    Store,
+  CheckCircle2,
+  Circle,
+  Loader2,
+  Package,
+  XCircle,
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type TrackData = {
+interface TrackData {
   quoteNumber: string;
-  invoiceNumber: string | null;
-  jewelleryType: string;
+  invoiceNumber?: string | null;
+  jewelleryType?: string;
   status: string;
-  estimatedDays: number | null;
+  estimatedDays?: number | null;
   createdAt: string;
-  confirmedAt: string | null;
-  startedAt: string | null;
-  readyAt: string | null;
-  completedAt: string | null;
-  cancelledAt: string | null;
-  cancelReason: string | null;
-  shop: { shopName: string; city: string | null; country: string } | null;
-  customerName: string;
-  totalAmount: number | null;
-  paidAmount: number;
-  balanceDue: number | null;
-  currency: string;
-};
+  confirmedAt?: string | null;
+  startedAt?: string | null;
+  readyAt?: string | null;
+  completedAt?: string | null;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
+  customerName?: string;
+  totalAmount?: number | null;
+  paidAmount?: number | null;
+  balanceDue?: number | null;
+  currency?: string;
+  shop?: {
+    shopName?: string;
+    city?: string;
+    country?: string;
+  } | null;
+}
 
-const STATUS_STEPS = [
-  { key: "QUOTED", label: "Quote sent" },
-  { key: "CONFIRMED", label: "Order confirmed" },
-  { key: "IN_PROGRESS", label: "Being crafted" },
-  { key: "READY", label: "Ready for pickup" },
-  { key: "COMPLETED", label: "Completed" },
-];
+const STEPS = [
+  { key: "QUOTED", label: "Quoted", at: "createdAt" },
+  { key: "CONFIRMED", label: "Confirmed", at: "confirmedAt" },
+  { key: "IN_PROGRESS", label: "In Progress", at: "startedAt" },
+  { key: "READY", label: "Ready", at: "readyAt" },
+  { key: "COMPLETED", label: "Completed", at: "completedAt" },
+] as const;
 
 export default function TrackQuotePage() {
-  const { token } = useParams<{ token: string }>();
+  const params = useParams<{ token: string }>();
+  const token = params?.token;
+  const [loading, setLoading] = useState(true);
   const [data, setData] = useState<TrackData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!token) return;
-    shopQuotesApi
-      .trackByToken(token)
-      .then((r: any) => setData(r.data))
-      .catch(() => setError("invalid"))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          `${getApiUrl()}/shop-quotes/track/${encodeURIComponent(token)}`,
+        );
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(
+            body.message || "Invalid or expired tracking link",
+          );
+        }
+        if (!cancelled) setData(body.data ?? body);
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setData(null);
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Could not load tracking info",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
-  const activeIdx = data
-    ? STATUS_STEPS.findIndex((s) => s.key === data.status)
+  const fmt = (amount?: number | null, currency?: string) => {
+    if (amount == null) return "—";
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: currency || "INR",
+        maximumFractionDigits: 0,
+      }).format(amount);
+    } catch {
+      return `${currency || ""} ${amount}`;
+    }
+  };
+
+  const statusOrder = STEPS.map((s) => s.key);
+  const currentIdx = data
+    ? statusOrder.indexOf(data.status as (typeof statusOrder)[number])
     : -1;
+  const isCancelled = data?.status === "CANCELLED";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white dark:from-gray-950 dark:to-gray-900 py-10 px-4">
-      <div className="mx-auto max-w-xl space-y-6">
-        <div className="text-center">
-          <Gem className="h-10 w-10 text-amber-600 mx-auto" />
-          <h1 className="text-2xl font-bold mt-2">
-            <T>Track your order</T>
+    <div className="min-h-screen bg-gradient-to-b from-amber-50/80 to-white dark:from-[#0d1117] dark:to-[#161b22]">
+      <div className="max-w-lg mx-auto px-4 py-10">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 mb-4">
+            <Package className="h-7 w-7 text-amber-600" />
+          </div>
+          <h1 className="text-2xl font-bold">
+            <T>Order Tracking</T>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            <T>Live status of your custom jewellery order</T>
+            <T>Powered by Orivraa</T>
           </p>
         </div>
 
         {loading ? (
-          <Card>
-            <CardContent className="p-6 space-y-3">
-              <div className="h-6 w-1/3 rounded bg-gray-200 dark:bg-gray-800 animate-pulse" />
-              <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-800 animate-pulse" />
-              <div className="h-20 w-full rounded bg-gray-200 dark:bg-gray-800 animate-pulse" />
-            </CardContent>
-          </Card>
-        ) : error || !data ? (
-          <Card className="border-red-200">
-            <CardContent className="p-6 text-center">
-              <AlertCircle className="h-8 w-8 text-red-500 mx-auto" />
-              <p className="mt-3 font-medium text-red-700">
-                <T>Tracking link is invalid or has expired</T>
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <CardTitle className="text-lg">
-                    {data.jewelleryType.replace(/_/g, " ")}
-                  </CardTitle>
-                  <Badge
-                    className={
-                      data.status === "CANCELLED"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-amber-100 text-amber-700"
-                    }
-                  >
-                    {data.status.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {data.quoteNumber}
-                  {data.invoiceNumber && (
-                    <>
-                      {" · "}
-                      <Receipt className="inline h-3.5 w-3.5 -mt-0.5" />{" "}
-                      {data.invoiceNumber}
-                    </>
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+            <p className="text-sm text-muted-foreground">
+              <T>Loading order status…</T>
+            </p>
+          </div>
+        ) : error ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900 p-6 text-center">
+            <XCircle className="h-10 w-10 text-red-500 mx-auto mb-3" />
+            <h2 className="font-semibold text-red-800 dark:text-red-300">
+              <T>Link invalid</T>
+            </h2>
+            <p className="text-sm text-red-700 dark:text-red-400 mt-2">
+              {error}
+            </p>
+          </div>
+        ) : data ? (
+          <div className="space-y-4">
+            <div className="rounded-2xl border bg-white dark:bg-[#161b22] shadow-sm overflow-hidden">
+              {data.shop?.shopName && (
+                <div className="px-5 py-4 border-b bg-muted/30">
+                  <p className="font-semibold">{data.shop.shopName}</p>
+                  {(data.shop.city || data.shop.country) && (
+                    <p className="text-xs text-muted-foreground">
+                      {[data.shop.city, data.shop.country]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
                   )}
+                </div>
+              )}
+
+              <div className="px-5 py-4 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    <T>Quote #</T>
+                  </span>
+                  <span className="font-mono font-semibold">
+                    {data.invoiceNumber || data.quoteNumber}
+                  </span>
+                </div>
+                {data.customerName && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      <T>Customer</T>
+                    </span>
+                    <span>{data.customerName}</span>
+                  </div>
+                )}
+                {data.jewelleryType && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      <T>Item</T>
+                    </span>
+                    <span>{data.jewelleryType.replace(/_/g, " ")}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm border-t pt-3">
+                  <span className="font-medium">
+                    <T>Total</T>
+                  </span>
+                  <span className="font-bold">
+                    {fmt(data.totalAmount, data.currency)}
+                  </span>
+                </div>
+                {(data.paidAmount ?? 0) > 0 && (
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>
+                      <T>Paid</T>
+                    </span>
+                    <span>{fmt(data.paidAmount, data.currency)}</span>
+                  </div>
+                )}
+                {(data.balanceDue ?? 0) > 0 && (
+                  <div className="flex justify-between text-sm text-amber-700">
+                    <span>
+                      <T>Balance due</T>
+                    </span>
+                    <span>{fmt(data.balanceDue, data.currency)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {isCancelled ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 dark:bg-red-950/20 p-5 text-center">
+                <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                <p className="font-semibold text-red-800 dark:text-red-300">
+                  <T>Order cancelled</T>
                 </p>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                {/* Timeline */}
-                {data.status !== "CANCELLED" && (
-                  <ol className="relative border-l border-amber-200 ml-2 space-y-4">
-                    {STATUS_STEPS.map((step, i) => {
-                      const done = i <= activeIdx;
-                      const time =
-                        i === 0
-                          ? data.createdAt
-                          : step.key === "CONFIRMED"
-                            ? data.confirmedAt
-                            : step.key === "IN_PROGRESS"
-                              ? data.startedAt
-                              : step.key === "READY"
-                                ? data.readyAt
-                                : data.completedAt;
-                      return (
-                        <li key={step.key} className="ml-4">
-                          <span
-                            className={`absolute -left-2 flex h-4 w-4 items-center justify-center rounded-full ${
-                              done ? "bg-amber-500" : "bg-gray-300"
-                            }`}
-                          >
-                            {done && (
-                              <CheckCircle2 className="h-3 w-3 text-white" />
-                            )}
-                          </span>
-                          <p
-                            className={`text-sm font-medium ${
-                              done ? "text-gray-900 dark:text-gray-100" : "text-muted-foreground"
-                            }`}
-                          >
-                            <T>{step.label}</T>
-                          </p>
-                          {time && (
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(time).toLocaleDateString()}
-                            </p>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ol>
-                )}
-                {data.status === "CANCELLED" && (
-                  <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
-                    <T>Cancelled</T>
-                    {data.cancelReason && `: ${data.cancelReason}`}
-                  </div>
-                )}
-
-                {/* Amounts */}
-                {data.totalAmount != null && (
-                  <div className="rounded-lg border p-4 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground"><T>Total</T></span>
-                      <span className="font-semibold">
-                        {data.currency} {data.totalAmount.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground"><T>Paid</T></span>
-                      <span className="text-emerald-600 font-medium">
-                        {data.currency} {(data.paidAmount || 0).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-t pt-2">
-                      <span className="text-muted-foreground"><T>Balance</T></span>
-                      <span className="font-semibold">
-                        {data.currency} {(data.balanceDue ?? 0).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {data.estimatedDays != null && data.status !== "COMPLETED" && data.status !== "CANCELLED" && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
-                    <T>Estimated completion</T>: {data.estimatedDays}{" "}
-                    <T>days</T>
+                {data.cancelReason && (
+                  <p className="text-sm text-red-700 mt-1">
+                    {data.cancelReason}
                   </p>
                 )}
-
-                {/* Shop */}
-                {data.shop && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground border-t pt-3">
-                    <Store className="h-4 w-4 text-amber-600" />
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
-                      {data.shop.shopName}
-                    </span>
-                    {data.shop.city && <span>· {data.shop.city}</span>}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <p className="text-center text-xs text-muted-foreground">
-              <T>Powered by</T> <span className="font-semibold text-amber-700">Orivraa</span>
-            </p>
-          </>
-        )}
-        {loading && (
-          <p className="text-center text-xs text-muted-foreground">
-            <T>Loading…</T>
-          </p>
-        )}
+              </div>
+            ) : (
+              <div className="rounded-2xl border bg-white dark:bg-[#161b22] p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+                  <T>Status</T>
+                </p>
+                <ol className="space-y-4">
+                  {STEPS.map((step, i) => {
+                    const done = currentIdx >= i;
+                    const active = currentIdx === i;
+                    const atKey = step.at as keyof TrackData;
+                    const atVal = data[atKey];
+                    return (
+                      <li key={step.key} className="flex items-start gap-3">
+                        {done ? (
+                          <CheckCircle2
+                            className={`h-5 w-5 shrink-0 mt-0.5 ${
+                              active ? "text-amber-500" : "text-green-600"
+                            }`}
+                          />
+                        ) : (
+                          <Circle className="h-5 w-5 shrink-0 mt-0.5 text-gray-300" />
+                        )}
+                        <div>
+                          <p
+                            className={`text-sm font-medium ${
+                              done ? "" : "text-muted-foreground"
+                            }`}
+                          >
+                            {step.label}
+                          </p>
+                          {typeof atVal === "string" && (
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(atVal).toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );

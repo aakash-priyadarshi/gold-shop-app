@@ -41,6 +41,15 @@ export class InvoiceLineItemDto {
   @IsOptional()
   @IsString()
   details?: string;
+
+  /** POS / stock restore: inventory item this line was sold from */
+  @IsOptional()
+  @IsUUID()
+  inventoryItemId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  variantId?: string;
 }
 
 export class CreateInvoiceDto {
@@ -191,8 +200,9 @@ export class UpdatePaymentDto {
   @IsString()
   reference?: string;
 
+  @IsOptional()
   @IsUUID()
-  idempotencyKey: string;
+  idempotencyKey?: string;
 
   @IsOptional()
   @IsDateString()

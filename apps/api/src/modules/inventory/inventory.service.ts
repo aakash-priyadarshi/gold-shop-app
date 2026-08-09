@@ -397,6 +397,7 @@ export class InventoryService {
       search,
       status,
       jewelleryType,
+      inStock,
       sortBy = "createdAt",
       sortOrder = "desc",
       page = 1,
@@ -418,6 +419,10 @@ export class InventoryService {
 
     if (jewelleryType) {
       where.jewelleryType = jewelleryType as JewelleryType;
+    }
+
+    if (inStock === true || String(inStock) === "true") {
+      where.stockQuantity = { gt: 0 };
     }
 
     const [items, total] = await Promise.all([

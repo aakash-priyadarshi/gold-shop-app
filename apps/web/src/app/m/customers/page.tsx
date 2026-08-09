@@ -4,12 +4,14 @@ import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
 
 import { T } from "@/components/ui/T";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { customerCrmApi } from "@/lib/api";
+import { customerCrmApi, shopQuotesApi } from "@/lib/api";
 import Link from "next/link";
 import {
     ChevronRight,
+    FileText,
     Loader2,
     Phone,
+    Receipt,
     Search,
     User,
     Users
@@ -110,6 +112,8 @@ function ProfileDrawer({
   onClose: () => void;
 }) {
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [walkInQuotes, setWalkInQuotes] = useState<any[]>([]);
+  const [walkInInvoices, setWalkInInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -120,11 +124,24 @@ function ProfileDrawer({
           customerCrmApi.getCustomerStats(customerId),
           customerCrmApi.getCustomerOrders(customerId),
         ]);
+        const customer = pRes.data?.customer ?? pRes.data;
         setProfile({
-          customer: pRes.data?.customer ?? pRes.data,
+          customer,
           stats: sRes.data,
           recentOrders: oRes.data?.orders ?? oRes.data ?? [],
         });
+        const isWalkIn =
+          customer?.type === "WALK_IN" || pRes.data?.type === "WALK_IN";
+        if (isWalkIn) {
+          try {
+            const h = await shopQuotesApi.getCustomerHistory(customerId);
+            setWalkInQuotes(h.data?.shopQuotes ?? []);
+            setWalkInInvoices(h.data?.invoices ?? []);
+          } catch {
+            setWalkInQuotes([]);
+            setWalkInInvoices([]);
+          }
+        }
       } catch {
         setProfile(null);
       } finally {
@@ -222,6 +239,59 @@ function ProfileDrawer({
                     </div>
                     <p className="text-sm font-bold text-amber-700">
                       {format(o.totalNpr ?? 0)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {walkInQuotes.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  <T>Quotes</T>
+                </p>
+                {walkInQuotes.slice(0, 5).map((q) => (
+                  <Link
+                    key={q.id}
+                    href={`/m/orders/${q.id}`}
+                    className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {q.quoteNumber}
+                      </p>
+                      <p className="text-xs text-gray-500">{q.status}</p>
+                    </div>
+                    <p className="text-sm font-bold text-amber-700">
+                      {format(q.totalPriceNpr ?? 0)}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {walkInInvoices.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                  <Receipt className="h-3 w-3" />
+                  <T>Invoices</T>
+                </p>
+                {walkInInvoices.slice(0, 5).map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {inv.invoiceNumber}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {inv.paymentStatus || inv.status}
+                      </p>
+                    </div>
+                    <p className="text-sm font-bold text-amber-700">
+                      {format(inv.totalAmount ?? 0)}
                     </p>
                   </div>
                 ))}

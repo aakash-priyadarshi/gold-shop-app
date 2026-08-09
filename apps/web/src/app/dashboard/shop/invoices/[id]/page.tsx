@@ -250,6 +250,7 @@ export default function InvoiceDetailPage() {
       await invoicesApi.updatePaymentStatus(invoiceId, {
         amount,
         paymentMethod,
+        idempotencyKey: crypto.randomUUID(),
       });
       toast({
         title: t("Payment Recorded"),
@@ -467,32 +468,36 @@ export default function InvoiceDetailPage() {
               <Button variant="outline" size="sm" onClick={handlePrint}>
                 <Printer className="h-4 w-4 mr-2" /> <T>Print</T>
               </Button>
-              {invoice.status !== "PAID" && invoice.status !== "VOID" && (
+              {invoice.status !== "VOID" && invoice.status !== "CANCELLED" && (
                 <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-green-300 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-950/30"
-                    onClick={() => {
-                      setPaymentMethod("CASH");
-                      setPaymentAmount(String(invoice.balanceDue));
-                      setPaymentDialogOpen(true);
-                    }}
-                  >
-                    <Banknote className="h-4 w-4 mr-2" /> <T>Pay Cash</T>
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={() => {
-                      setPaymentMethod("UPI");
-                      setPaymentAmount(String(invoice.balanceDue));
-                      setPaymentDialogOpen(true);
-                    }}
-                  >
-                    <CreditCard className="h-4 w-4 mr-2" />{" "}
-                    <T>Record Payment</T>
-                  </Button>
+                  {invoice.status !== "PAID" && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-green-300 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-950/30"
+                        onClick={() => {
+                          setPaymentMethod("CASH");
+                          setPaymentAmount(String(invoice.balanceDue));
+                          setPaymentDialogOpen(true);
+                        }}
+                      >
+                        <Banknote className="h-4 w-4 mr-2" /> <T>Pay Cash</T>
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => {
+                          setPaymentMethod("UPI");
+                          setPaymentAmount(String(invoice.balanceDue));
+                          setPaymentDialogOpen(true);
+                        }}
+                      >
+                        <CreditCard className="h-4 w-4 mr-2" />{" "}
+                        <T>Record Payment</T>
+                      </Button>
+                    </>
+                  )}
                   <Button
                     variant="destructive"
                     size="sm"
@@ -969,9 +974,13 @@ export default function InvoiceDetailPage() {
                 <T>Void Invoice</T>
               </DialogTitle>
               <DialogDescription>
-                {t(
-                  `This will void invoice ${invoice.invoiceNumber}. This action cannot be undone.`,
-                )}
+                {invoice.paidAmount > 0
+                  ? t(
+                      `This will void invoice ${invoice.invoiceNumber}, reverse ${invoice.currency} ${Number(invoice.paidAmount).toLocaleString()} in payments in the ledger, and restore any linked stock. This cannot be undone.`,
+                    )
+                  : t(
+                      `This will void invoice ${invoice.invoiceNumber}. This action cannot be undone.`,
+                    )}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
