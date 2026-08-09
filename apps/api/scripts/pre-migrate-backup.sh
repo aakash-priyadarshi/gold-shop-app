@@ -30,11 +30,21 @@ trap cleanup EXIT
 
 echo "::notice::Creating pre-migration backup: ${FILE_NAME}"
 
-# Prefer pg_dump from PATH; install PG 17 client if missing or too old for Neon (PG 17)
+# Neon production runs PostgreSQL 17 — ensure pg_dump major version matches.
+sudo apt-get update -qq
+sudo apt-get install -y -qq postgresql-client-17 2>/dev/null || \
+  sudo apt-get install -y -qq postgresql-client-17 2>/dev/null || true
+if [[ -x /usr/lib/postgresql/17/bin/pg_dump ]]; then
+  export PATH="/usr/lib/postgresql/17/bin:${PATH}"
+fi
 if ! command -v pg_dump >/dev/null 2>&1; then
-  echo "::notice::Installing postgresql-client-17 for pg_dump..."
-  sudo apt-get update -qq
-  sudo apt-get install -y -qq postgresql-client-17 || sudo apt-get install -y -qq postgresql-client
+  echo "::error::pg_dump not found after installing postgresql-client-17"
+  exit 1
+fi
+PG_DUMP_VERSION="$(pg_dump --version | grep -oE '[0-9]+' | head -1)"
+if [[ "${PG_DUMP_VERSION}" -lt 17 ]]; then
+  echo "::error::pg_dump version ${PG_DUMP_VERSION} is too old for PostgreSQL 17 server"
+  exit 1
 fi
 
 pg_dump --clean --if-exists --no-owner --dbname="$DATABASE_URL" > "$FILE_PATH"
