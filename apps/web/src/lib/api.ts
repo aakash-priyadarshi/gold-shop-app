@@ -341,6 +341,28 @@ export const inventoryApi = {
     api.get(`/inventory/shop/${shopId}/lookup`, { params: { code } }),
   updateVisibility: (itemId: string, visibility: string) =>
     api.patch(`/catalogues/inventory/${itemId}/visibility`, { visibility }),
+  // Storage locations
+  getStorageLocations: (shopId: string) =>
+    api.get(`/inventory/shop/${shopId}/storage-locations`),
+  createStorageLocation: (shopId: string, data: any) =>
+    api.post(`/inventory/shop/${shopId}/storage-locations`, data),
+  updateStorageLocation: (shopId: string, locationId: string, data: any) =>
+    api.patch(`/inventory/shop/${shopId}/storage-locations/${locationId}`, data),
+  archiveStorageLocation: (shopId: string, locationId: string) =>
+    api.delete(`/inventory/shop/${shopId}/storage-locations/${locationId}`),
+  transferLocation: (
+    shopId: string,
+    data: { itemIds: string[]; locationId?: string | null },
+  ) => api.post(`/inventory/shop/${shopId}/transfer-location`, data),
+  // Sets
+  createSet: (shopId: string, data: any) =>
+    api.post(`/inventory/shop/${shopId}/sets`, data),
+  getSet: (shopId: string, setId: string) =>
+    api.get(`/inventory/shop/${shopId}/sets/${setId}`),
+  updateSet: (shopId: string, setId: string, data: any) =>
+    api.patch(`/inventory/shop/${shopId}/sets/${setId}`, data),
+  breakSet: (shopId: string, setId: string) =>
+    api.post(`/inventory/shop/${shopId}/sets/${setId}/break`),
 };
 
 // Girvi / Gold Loan (pawn lending) API

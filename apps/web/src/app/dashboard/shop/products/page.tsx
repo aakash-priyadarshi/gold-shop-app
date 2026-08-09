@@ -48,6 +48,7 @@ import { useImageUpload } from "@/hooks/useImageUpload";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi } from "@/lib/api";
 import { getImageUrl } from "@/lib/image-upload";
+import { SetBuilderDialog } from "@/components/shop/SetBuilderDialog";
 import { useT } from "@/providers/translation-provider";
 import {
     Edit,
@@ -59,6 +60,7 @@ import {
     Scale,
     Search,
     Trash2,
+    Unlink,
 } from "lucide-react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -81,6 +83,8 @@ interface InventoryItem {
   status: string;
   stockQuantity: number;
   hallmarkNumber?: string;
+  locationId?: string | null;
+  setComponents?: any[];
   createdAt: string;
 }
 
@@ -219,6 +223,7 @@ interface ProductFormData {
   images: string[];
   gemstones: GemstoneData[];
   hallmarkNumber: string;
+  locationId: string;
 }
 
 const emptyForm: ProductFormData = {
@@ -237,6 +242,7 @@ const emptyForm: ProductFormData = {
   images: [],
   gemstones: [],
   hallmarkNumber: "",
+  locationId: "",
 };
 
 // Currency from hook (replaces inline mapping)
@@ -261,6 +267,8 @@ export default function ShopProductsPage() {
 
   // Form state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSetDialogOpen, setIsSetDialogOpen] = useState(false);
+  const [storageLocations, setStorageLocations] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<InventoryItem | null>(
     null,
@@ -326,6 +334,13 @@ export default function ShopProductsPage() {
   useEffect(() => {
     if (user?.shop?.id) {
       loadProducts();
+      inventoryApi
+        .getStorageLocations(user.shop.id)
+        .then((res) => {
+          const data = res.data?.data ?? res.data;
+          setStorageLocations(data?.flat || []);
+        })
+        .catch(() => undefined);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.shop?.id, statusFilter]);
@@ -334,7 +349,7 @@ export default function ShopProductsPage() {
     if (!user?.shop?.id) return;
     setIsLoading(true);
     try {
-      const params: any = {};
+      const params: any = { excludeSetComponents: true, limit: 100 };
       if (statusFilter !== "all") {
         params.status = statusFilter;
       }
@@ -399,6 +414,7 @@ export default function ShopProductsPage() {
           }))
         : [],
       hallmarkNumber: product.hallmarkNumber || "",
+      locationId: product.locationId || "",
     });
     setIsDialogOpen(true);
   };
@@ -523,6 +539,7 @@ export default function ShopProductsPage() {
         stockQuantity: parseInt(formData.stockQuantity) || 1,
         images: formData.images,
         hallmarkNumber: formData.hallmarkNumber.trim() || undefined,
+        locationId: formData.locationId || null,
       };
 
       if (editingProduct) {
@@ -617,10 +634,20 @@ export default function ShopProductsPage() {
                 <T>Pre-built items you can add to catalogues, sell via POS, and invoice. Vault & Tags shows the physical location view.</T>
               </p>
             </div>
-            <Button data-tour="inventory-add" onClick={openAddDialog}>
-              <Plus className="h-4 w-4 mr-2" />
-              <T>Add Product</T>
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                data-tour="inventory-add-set"
+                onClick={() => setIsSetDialogOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                <T>Add Set</T>
+              </Button>
+              <Button data-tour="inventory-add" onClick={openAddDialog}>
+                <Plus className="h-4 w-4 mr-2" />
+                <T>Add Product</T>
+              </Button>
+            </div>
           </div>
 
           {/* Filters */}
@@ -735,7 +762,17 @@ export default function ShopProductsPage() {
                               )}
                             </div>
                             <div>
-                              <p className="font-medium">{product.nameEn}</p>
+                              <p className="font-medium flex items-center gap-2">
+                                {product.nameEn}
+                                {product.jewelleryType === "SET" && (
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    <T>Set</T>
+                                    {product.setComponents?.length
+                                      ? ` · ${product.setComponents.length}`
+                                      : ""}
+                                  </Badge>
+                                )}
+                              </p>
                               <p className="text-xs text-muted-foreground">
                                 {product.sku}
                               </p>
@@ -787,6 +824,41 @@ export default function ShopProductsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            {product.jewelleryType === "SET" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title={t("Break set — release pieces for individual sale")}
+                                onClick={async () => {
+                                  if (!user?.shop?.id) return;
+                                  if (
+                                    !confirm(
+                                      t(
+                                        "Break this set? Components become sellable individually and the set SKU is discontinued.",
+                                      ),
+                                    )
+                                  )
+                                    return;
+                                  try {
+                                    await inventoryApi.breakSet(
+                                      user.shop.id,
+                                      product.id,
+                                    );
+                                    toast({ title: t("Set broken") });
+                                    loadProducts();
+                                  } catch (err: any) {
+                                    toast({
+                                      variant: "destructive",
+                                      title: t("Failed to break set"),
+                                      description:
+                                        err?.response?.data?.message,
+                                    });
+                                  }
+                                }}
+                              >
+                                <Unlink className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="ghost"
@@ -897,6 +969,36 @@ export default function ShopProductsPage() {
                     )}
                   </p>
                 </div>
+                {storageLocations.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>
+                      <T>Storage location</T>
+                    </Label>
+                    <Select
+                      value={formData.locationId || "__none__"}
+                      onValueChange={(v) =>
+                        setFormData({
+                          ...formData,
+                          locationId: v === "__none__" ? "" : v,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("Optional")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">
+                          <T>Unassigned</T>
+                        </SelectItem>
+                        {storageLocations.map((l) => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="jewelleryType">
                     <T>Jewellery Type</T> *
@@ -1509,6 +1611,21 @@ export default function ShopProductsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {user?.shop?.id && (
+          <SetBuilderDialog
+            open={isSetDialogOpen}
+            onOpenChange={setIsSetDialogOpen}
+            shopId={user.shop.id}
+            currencySymbol={currency.symbol}
+            formatCurrency={(n) =>
+              `${currency.symbol} ${n.toLocaleString(undefined, {
+                maximumFractionDigits: 0,
+              })}`
+            }
+            onCreated={loadProducts}
+          />
+        )}
 
         {/* Delete Confirmation */}
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

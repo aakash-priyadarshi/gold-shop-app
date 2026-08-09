@@ -12,6 +12,8 @@ import {
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { InventoryService } from "./inventory.service";
+import { InventorySetsService, InventoryLocationTransferService } from "./inventory-sets.service";
+import { StorageLocationsService } from "./storage-locations.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
@@ -21,12 +23,24 @@ import {
   UpdateInventoryItemDto,
   InventoryFilterDto,
 } from "./dto/inventory.dto";
+import {
+  CreateSetDto,
+  CreateStorageLocationDto,
+  TransferLocationDto,
+  UpdateSetDto,
+  UpdateStorageLocationDto,
+} from "./dto/sets-locations.dto";
 import { SkipSecurity } from "../security/security.guard";
 
 @ApiTags("inventory")
 @Controller("inventory")
 export class InventoryController {
-  constructor(private inventoryService: InventoryService) {}
+  constructor(
+    private inventoryService: InventoryService,
+    private setsService: InventorySetsService,
+    private locationsService: StorageLocationsService,
+    private transferService: InventoryLocationTransferService,
+  ) {}
 
   // Public endpoints
   @Get()
@@ -36,11 +50,151 @@ export class InventoryController {
     return this.inventoryService.findAll(filters);
   }
 
-  @Get(":id")
-  @SkipSecurity()
-  @ApiOperation({ summary: "Get inventory item details" })
-  async findOne(@Param("id") id: string) {
-    return this.inventoryService.findOne(id);
+  // ── Storage locations ──────────────────────────────────────────
+  @Get("shop/:shopId/storage-locations")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  async listStorageLocations(
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only access your own shop");
+    }
+    return this.locationsService.listTree(shopId, userId);
+  }
+
+  @Post("shop/:shopId/storage-locations")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  async createStorageLocation(
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body() dto: CreateStorageLocationDto,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only manage your own shop");
+    }
+    return this.locationsService.create(shopId, userId, dto);
+  }
+
+  @Patch("shop/:shopId/storage-locations/:locationId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  async updateStorageLocation(
+    @Param("shopId") shopId: string,
+    @Param("locationId") locationId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body() dto: UpdateStorageLocationDto,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only manage your own shop");
+    }
+    return this.locationsService.update(shopId, userId, locationId, dto);
+  }
+
+  @Delete("shop/:shopId/storage-locations/:locationId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  async archiveStorageLocation(
+    @Param("shopId") shopId: string,
+    @Param("locationId") locationId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only manage your own shop");
+    }
+    return this.locationsService.archive(shopId, userId, locationId);
+  }
+
+  @Post("shop/:shopId/transfer-location")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  async transferLocation(
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body() dto: TransferLocationDto,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only manage your own shop");
+    }
+    return this.transferService.transfer(shopId, userId, dto);
+  }
+
+  // ── Sets ───────────────────────────────────────────────────────
+  @Post("shop/:shopId/sets")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  async createSet(
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body() dto: CreateSetDto,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only manage your own shop");
+    }
+    return this.setsService.createSet(shopId, userId, dto);
+  }
+
+  @Get("shop/:shopId/sets/:setId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  async getSet(
+    @Param("shopId") shopId: string,
+    @Param("setId") setId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only access your own shop");
+    }
+    return this.setsService.getSet(shopId, userId, setId);
+  }
+
+  @Patch("shop/:shopId/sets/:setId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  async updateSet(
+    @Param("shopId") shopId: string,
+    @Param("setId") setId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body() dto: UpdateSetDto,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only manage your own shop");
+    }
+    return this.setsService.updateSet(shopId, userId, setId, dto);
+  }
+
+  @Post("shop/:shopId/sets/:setId/break")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  async breakSet(
+    @Param("shopId") shopId: string,
+    @Param("setId") setId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only manage your own shop");
+    }
+    return this.setsService.breakSet(shopId, userId, setId);
   }
 
   // Protected endpoints for shopkeepers
@@ -61,28 +215,6 @@ export class InventoryController {
     return this.inventoryService.create(shopId, userId, dto);
   }
 
-  @Patch(":id")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("SHOPKEEPER")
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Update inventory item" })
-  async update(
-    @Param("id") id: string,
-    @CurrentUser("id") userId: string,
-    @Body() dto: UpdateInventoryItemDto,
-  ) {
-    return this.inventoryService.update(id, userId, dto);
-  }
-
-  @Delete(":id")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("SHOPKEEPER")
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Delete inventory item" })
-  async delete(@Param("id") id: string, @CurrentUser("id") userId: string) {
-    return this.inventoryService.delete(id, userId);
-  }
-
   @Get("shop/:shopId/items")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("SHOPKEEPER")
@@ -97,7 +229,19 @@ export class InventoryController {
     if (shopId !== userShopId) {
       throw new ForbiddenException("You can only access your own shop inventory");
     }
-    return this.inventoryService.findShopInventory(shopId, userId, filters);
+    let locationIds: string[] | undefined;
+    if (filters.locationId && filters.includeSubtree) {
+      locationIds = await this.locationsService.collectSubtreeIds(
+        shopId,
+        filters.locationId,
+      );
+    }
+    return this.inventoryService.findShopInventory(
+      shopId,
+      userId,
+      filters,
+      locationIds,
+    );
   }
 
   @Get("shop/:shopId/stats")
@@ -146,5 +290,34 @@ export class InventoryController {
       throw new ForbiddenException("You can only update your own shop prices");
     }
     return this.inventoryService.bulkUpdatePrices(shopId, userId, updates);
+  }
+
+  @Get(":id")
+  @SkipSecurity()
+  @ApiOperation({ summary: "Get inventory item details" })
+  async findOne(@Param("id") id: string) {
+    return this.inventoryService.findOne(id);
+  }
+
+  @Patch(":id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update inventory item" })
+  async update(
+    @Param("id") id: string,
+    @CurrentUser("id") userId: string,
+    @Body() dto: UpdateInventoryItemDto,
+  ) {
+    return this.inventoryService.update(id, userId, dto);
+  }
+
+  @Delete(":id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Delete inventory item" })
+  async delete(@Param("id") id: string, @CurrentUser("id") userId: string) {
+    return this.inventoryService.delete(id, userId);
   }
 }

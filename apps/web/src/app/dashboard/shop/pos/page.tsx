@@ -247,6 +247,7 @@ function PosPageInner() {
           limit: 30,
           page: 1,
           inStock: true,
+          excludeSetComponents: true,
         });
         setCounterItems(res.data?.items ?? res.data ?? []);
       } catch { setCounterItems([]); }

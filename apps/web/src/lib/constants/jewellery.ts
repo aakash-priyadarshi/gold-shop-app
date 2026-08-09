@@ -24,6 +24,7 @@ export const JEWELLERY_TYPES = [
   { value: "NOSE_PIN", label: "Nose Pin" },
   { value: "MANGALSUTRA", label: "Mangalsutra" },
   { value: "MAANG_TIKKA", label: "Maang Tikka" },
+  { value: "SET", label: "Set" },
   { value: "OTHER", label: "Other" },
 ] as const;
 
@@ -42,6 +43,7 @@ export const JEWELLERY_TYPE_IMAGES: Record<string, string> = {
   NOSE_PIN: "https://images.orivraa.com/product/1770654801812-rx6d93j5.png",
   MANGALSUTRA: "https://images.orivraa.com/product/1770658985031-60d4dogq.png",
   MAANG_TIKKA: "https://images.orivraa.com/product/1770654756626-gmaz323x.png",
+  SET: "https://images.orivraa.com/product/1769445053991-4ytp6cgd.png",
   OTHER: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
 };
 

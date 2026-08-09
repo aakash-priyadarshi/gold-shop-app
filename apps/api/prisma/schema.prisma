@@ -401,6 +401,7 @@ model Shop {
   journalEntries       JournalEntry[]
   inventoryItems       InventoryItem[]
   stockMovements       InventoryStockMovement[]
+  storageLocations     StorageLocation[]
   orders               Order[]
   rfqOffers            RfqOffer[]
   shopQuotes           ShopQuote[]
@@ -521,6 +522,28 @@ model Material {
   @@index([code])
 }
 
+model StorageLocation {
+  id        String              @id @default(uuid())
+  shopId    String
+  name      String
+  code      String?
+  parentId  String?
+  kind      StorageLocationKind @default(AREA)
+  sortOrder Int                 @default(0)
+  isActive  Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  shop     Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  parent   StorageLocation?  @relation("StorageLocationTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children StorageLocation[] @relation("StorageLocationTree")
+  items    InventoryItem[]
+
+  @@index([shopId, isActive])
+  @@index([shopId, parentId])
+  @@index([parentId])
+}
+
 model InventoryItem {
   id                String              @id @default(uuid())
   shopId            String
@@ -542,6 +565,9 @@ model InventoryItem {
   gemstoneValueNpr  Float               @default(0)
   taxNpr            Float               @default(0)
   totalPriceNpr     Float
+  /// Set pricing: PERCENT or FIXED off sum of component prices
+  setDiscountType   String?
+  setDiscountValue  Float?
   images            String[]
   videos            String[]
   certificateUrl    String?
@@ -549,6 +575,7 @@ model InventoryItem {
   hallmarkDate      DateTime?
   purityCertUrl     String?
   labels            String[]
+  locationId        String?
   status            InventoryStatus     @default(AVAILABLE)
   stockQuantity     Int                 @default(1)
   hasSizes          Boolean             @default(false)
@@ -556,17 +583,36 @@ model InventoryItem {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   shop              Shop                @relation(fields: [shopId], references: [id])
+  location          StorageLocation?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
   variants          ProductVariant[]
   catalogueItems    CatalogueItem[]
   wishlistItems     WishlistItem[]
   posSessionItems   PosSessionItem[]
   stockReservations StockReservation[]
   stockMovements    InventoryStockMovement[]
+  setComponents     InventorySetComponent[] @relation("SetParent")
+  memberOfSet       InventorySetComponent?  @relation("SetComponent")
 
   @@index([shopId, status])
   @@index([jewelleryType])
   @@index([buildMethod])
   @@index([visibility])
+  @@index([locationId])
+}
+
+/// Links a sellable SET InventoryItem to its component pieces.
+model InventorySetComponent {
+  id              String   @id @default(uuid())
+  setItemId       String
+  componentItemId String   @unique
+  role            String? // EARRING, MAANG_TIKKA, NECKLACE, NATHUNI, etc.
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  setItem       InventoryItem @relation("SetParent", fields: [setItemId], references: [id], onDelete: Cascade)
+  componentItem InventoryItem @relation("SetComponent", fields: [componentItemId], references: [id], onDelete: Cascade)
+
+  @@index([setItemId])
 }
 
 /// Immutable stock ledger for sales, voids, and adjustments.
@@ -1960,7 +2006,14 @@ enum JewelleryType {
   NOSE_PIN
   MANGALSUTRA
   MAANG_TIKKA
+  SET
   OTHER
+}
+
+enum StorageLocationKind {
+  AREA
+  CABINET
+  BIN
 }
 
 enum InventoryStatus {

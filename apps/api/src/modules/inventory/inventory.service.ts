@@ -104,11 +104,13 @@ export class InventoryService {
         hallmarkNumber: dto.hallmarkNumber,
         purityCertUrl: dto.purityCertUrl,
         labels: dto.labels || [],
+        locationId: dto.locationId || null,
         stockQuantity: dto.stockQuantity || 1,
         status: InventoryStatus.AVAILABLE,
       },
       include: {
         shop: { select: { id: true, shopName: true } },
+        location: true,
       },
         });
       },
@@ -157,6 +159,7 @@ export class InventoryService {
     if (dto.images !== undefined) updateData.images = dto.images;
     if (dto.videos !== undefined) updateData.videos = dto.videos;
     if (dto.labels !== undefined) updateData.labels = dto.labels;
+    if (dto.locationId !== undefined) updateData.locationId = dto.locationId;
     if (dto.metalValueNpr !== undefined)
       updateData.metalValueNpr = dto.metalValueNpr;
     if (dto.makingChargeNpr !== undefined)
@@ -183,6 +186,7 @@ export class InventoryService {
     const updatedItem = await this.prisma.inventoryItem.update({
       where: { id: itemId },
       data: updateData,
+      include: { location: true },
     });
 
     return updatedItem;
@@ -383,6 +387,7 @@ export class InventoryService {
     shopId: string,
     userId: string,
     filters: InventoryFilterDto,
+    locationIds?: string[],
   ) {
     // Verify shop ownership
     const shop = await this.prisma.shop.findFirst({
@@ -398,6 +403,7 @@ export class InventoryService {
       status,
       jewelleryType,
       inStock,
+      excludeSetComponents,
       sortBy = "createdAt",
       sortOrder = "desc",
       page = 1,
@@ -410,6 +416,7 @@ export class InventoryService {
       where.OR = [
         { nameEn: { contains: search, mode: "insensitive" } },
         { sku: { contains: search, mode: "insensitive" } },
+        { hallmarkNumber: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -425,12 +432,47 @@ export class InventoryService {
       where.stockQuantity = { gt: 0 };
     }
 
+    if (locationIds?.length) {
+      where.locationId = { in: locationIds };
+    } else if (filters.locationId) {
+      where.locationId = filters.locationId;
+    }
+
+    if (excludeSetComponents === true || String(excludeSetComponents) === "true") {
+      where.memberOfSet = null;
+    }
+
     const [items, total] = await Promise.all([
       this.prisma.inventoryItem.findMany({
         where,
         orderBy: { [sortBy]: sortOrder },
         skip: (page - 1) * limit,
         take: limit,
+        include: {
+          location: true,
+          setComponents: {
+            orderBy: { sortOrder: "asc" },
+            include: {
+              componentItem: {
+                select: {
+                  id: true,
+                  sku: true,
+                  nameEn: true,
+                  jewelleryType: true,
+                  totalWeightGrams: true,
+                  totalPriceNpr: true,
+                  images: true,
+                },
+              },
+            },
+          },
+          memberOfSet: {
+            select: {
+              setItemId: true,
+              setItem: { select: { id: true, sku: true, nameEn: true } },
+            },
+          },
+        },
       }),
       this.prisma.inventoryItem.count({ where }),
     ]);

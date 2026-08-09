@@ -137,6 +137,7 @@ export enum JewelleryType {
   NOSE_PIN = 'NOSE_PIN',
   MANGALSUTRA = 'MANGALSUTRA',
   MAANG_TIKKA = 'MAANG_TIKKA',
+  SET = 'SET',
   OTHER = 'OTHER',
 }
 

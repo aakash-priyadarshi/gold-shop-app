@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,23 +25,36 @@ import {
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
+import { toast } from "@/hooks/use-toast";
 import { inventoryApi, materialsApi } from "@/lib/api";
 import { printStockJewelleryTags } from "@/lib/jewelleryTagPrint";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
-import { Loader2 } from "lucide-react";
-import Link from "next/link";
 import {
   ArrowRightLeft,
-  Coins,
+  ChevronDown,
+  ChevronRight,
+  FolderPlus,
+  Layers,
+  Loader2,
+  MapPin,
   Package,
   Plus,
   Printer,
   Search,
-  Store,
+  Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "@/hooks/use-toast";
+import Link from "next/link";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+type LocNode = {
+  id: string;
+  name: string;
+  kind: string;
+  parentId: string | null;
+  children: LocNode[];
+  _count?: { items: number };
+};
 
 export default function StockLedgerPage() {
   return (
@@ -56,46 +70,35 @@ function StockLedgerContent() {
   const { user } = useAuth();
   const { hasFeature, planName, loading: featuresLoading } = useFeatures();
   const t = useT();
+  const shopId = user?.shop?.id;
 
-  // Tickers and Live Market Rates State
   const [goldRates, setGoldRates] = useState({
     rate24k: 7250,
     rate22k: 6645,
     rate18k: 5437,
     silver: 85,
     currency: "INR",
-    updatedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    changePercent: 0.85,
   });
   const ratesRef = useRef(false);
 
-  // Stock State (Database backed)
+  const [locations, setLocations] = useState<LocNode[]>([]);
+  const [flatLocations, setFlatLocations] = useState<any[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | "ALL" | "UNASSIGNED">("ALL");
   const [stock, setStock] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [locationFilter, setLocationFilter] = useState("ALL");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [expandedSets, setExpandedSets] = useState<Set<string>>(new Set());
 
-  // Transfer Modal State
-  const [transferModalOpen, setTransferModalOpen] = useState(false);
-  const [transferForm, setTransferForm] = useState({
-    tag: "",
-    newLocation: "Showcase-A",
-  });
-
-  // Add Item Modal State
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [addForm, setAddForm] = useState({
-    tag: "",
-    huid: "",
+  const [addLocOpen, setAddLocOpen] = useState(false);
+  const [addLocForm, setAddLocForm] = useState({
     name: "",
-    purity: "22K (916)",
-    grossWeight: "",
-    netWeight: "",
-    stoneWeight: "0",
-    location: "Showcase-A",
+    kind: "AREA",
+    parentId: "",
   });
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferTarget, setTransferTarget] = useState("");
 
-  // Read metal rate function
   const readMetalRate = (data: any, codes: string[]): number => {
     const metals = data?.metals;
     if (Array.isArray(metals)) {
@@ -106,7 +109,8 @@ function StockLedgerContent() {
       for (const code of codes) {
         const value = metals[code];
         if (typeof value === "number") return value;
-        if (value && typeof value === "object") return Number(value.ratePerGram ?? value.rate ?? 0);
+        if (value && typeof value === "object")
+          return Number(value.ratePerGram ?? value.rate ?? 0);
       }
     }
     return 0;
@@ -122,69 +126,82 @@ function StockLedgerContent() {
       const rate24k = readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]) || 7250;
       setGoldRates({
         rate24k: Math.round(rate24k),
-        rate22k: Math.round(readMetalRate(data, ["GOLD_22K"]) || rate24k * (22 / 24)),
-        rate18k: Math.round(readMetalRate(data, ["GOLD_18K"]) || rate24k * (18 / 24)),
-        silver: Math.round(readMetalRate(data, ["SILVER_999", "SILVER_925", "XAG", "SILVER"]) || 85),
+        rate22k: Math.round(
+          readMetalRate(data, ["GOLD_22K"]) || rate24k * (22 / 24),
+        ),
+        rate18k: Math.round(
+          readMetalRate(data, ["GOLD_18K"]) || rate24k * (18 / 24),
+        ),
+        silver: Math.round(
+          readMetalRate(data, ["SILVER_999", "SILVER_925", "XAG", "SILVER"]) ||
+            85,
+        ),
         currency: data?.currency ?? params.currency ?? "INR",
-        updatedAt: data?.updatedAt
-          ? new Date(data.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-          : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        changePercent: data?.changePercent ?? 0.85,
       });
     } catch {
-      // safe fallback remains
+      /* keep fallback */
     } finally {
       ratesRef.current = false;
     }
   }, [user?.shop]);
 
-  const fetchStock = useCallback(async () => {
-    if (!user?.shop?.id) return;
-    setLoading(true);
+  const fetchLocations = useCallback(async () => {
+    if (!shopId) return;
     try {
-      const res = await inventoryApi.getShopInventory(user.shop.id);
-      const items = res.data?.items || res.data || [];
-      const mapped = items.map((item: any) => {
-        const location = item.labels?.find((l: string) => l.includes("Showcase") || l.includes("Safe") || l.includes("Vault") || l.includes("Workbench")) || "Showcase-A";
-        const status = location.includes("Safe") || location.includes("Vault") ? "IN_VAULT" : "ON_DISPLAY";
-        
-        let purity = "22K (916)";
-        if (item.composition?.baseAlloy?.purity) {
-          purity = item.composition.baseAlloy.purity;
-        } else if (item.composition?.purity) {
-          purity = item.composition.purity;
-        }
-
-        return {
-          id: item.id,
-          tag: item.sku,
-          huid: item.hallmarkNumber || "HUID-UNTG-" + Math.floor(Math.random() * 9000 + 1000),
-          name: item.nameEn,
-          purity: purity,
-          grossWeight: item.totalWeightGrams,
-          netWeight: item.totalWeightGrams,
-          stoneWeight: 0,
-          location: location,
-          status: status,
-          rawItem: item
-        };
-      });
-      setStock(mapped);
+      const res = await inventoryApi.getStorageLocations(shopId);
+      const data = res.data?.data ?? res.data;
+      setLocations(data?.locations || []);
+      setFlatLocations(data?.flat || []);
     } catch (err) {
       console.error(err);
+    }
+  }, [shopId]);
+
+  const fetchStock = useCallback(async () => {
+    if (!shopId) return;
+    setLoading(true);
+    try {
+      const params: any = {
+        limit: 200,
+        excludeSetComponents: true,
+      };
+      if (selectedLocationId === "UNASSIGNED") {
+        // client filter — API has no null filter; fetch all and filter
+      } else if (selectedLocationId !== "ALL") {
+        params.locationId = selectedLocationId;
+        params.includeSubtree = true;
+      }
+      const res = await inventoryApi.getShopInventory(shopId, params);
+      let items = res.data?.items || res.data?.data?.items || res.data || [];
+      if (!Array.isArray(items)) items = [];
+      if (selectedLocationId === "UNASSIGNED") {
+        items = items.filter((i: any) => !i.locationId);
+      }
+      setStock(items);
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: t("Failed to load stock"),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, [user?.shop?.id]);
+  }, [shopId, selectedLocationId, t]);
 
   useEffect(() => {
     fetchRates();
     const interval = setInterval(() => {
       ratesRef.current = false;
       fetchRates();
-    }, 60 * 1000);
+    }, 60_000);
     return () => clearInterval(interval);
   }, [fetchRates]);
+
+  useEffect(() => {
+    fetchLocations();
+  }, [fetchLocations]);
 
   useEffect(() => {
     fetchStock();
@@ -192,543 +209,609 @@ function StockLedgerContent() {
 
   const formatCurrency = (amount: number): string => {
     try {
-      return new Intl.NumberFormat(goldRates.currency === "NPR" ? "ne-NP" : "en-IN", {
-        style: "currency",
-        currency: goldRates.currency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amount);
+      return new Intl.NumberFormat(
+        goldRates.currency === "NPR" ? "ne-NP" : "en-IN",
+        {
+          style: "currency",
+          currency: goldRates.currency,
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        },
+      ).format(amount);
     } catch {
       return `${goldRates.currency} ${amount.toLocaleString()}`;
     }
   };
 
-  // Calculate physical valuation based on metal rates
   const calculateItemValuation = (item: any): number => {
-    let rate = goldRates.rate22k; // default
-    if (item.purity.includes("24K")) rate = goldRates.rate24k;
-    else if (item.purity.includes("18K")) rate = goldRates.rate18k;
-    else if (item.purity.includes("Sterling") || item.purity.includes("Silver")) rate = goldRates.silver;
-
-    const metalVal = item.netWeight * rate;
-    const craftVal = metalVal * 0.12; // 12% making charge estimation
-    const stoneVal = item.stoneWeight * (rate * 4.5); 
-
-    return metalVal + craftVal + stoneVal;
+    const purity =
+      item.composition?.baseAlloy?.purity ||
+      item.composition?.purity ||
+      "22K";
+    let rate = goldRates.rate22k;
+    if (String(purity).includes("24K")) rate = goldRates.rate24k;
+    else if (String(purity).includes("18K")) rate = goldRates.rate18k;
+    else if (
+      String(purity).toLowerCase().includes("silver") ||
+      String(purity).includes("925")
+    )
+      rate = goldRates.silver;
+    const metalVal = (item.totalWeightGrams || 0) * rate;
+    return metalVal + metalVal * 0.12;
   };
 
-  const grandValuation = stock.reduce((sum, item) => sum + calculateItemValuation(item), 0);
-  const totalItemsCount = stock.length;
-  const vaultItemsCount = stock.filter((s) => s.status === "IN_VAULT").length;
-  const showcaseItemsCount = stock.filter((s) => s.status === "ON_DISPLAY").length;
+  const filteredStock = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return stock;
+    return stock.filter(
+      (s) =>
+        s.nameEn?.toLowerCase().includes(q) ||
+        s.sku?.toLowerCase().includes(q) ||
+        s.hallmarkNumber?.toLowerCase().includes(q),
+    );
+  }, [stock, searchQuery]);
 
-  // Location transfer handler
-  const handleTransfer = async () => {
-    const targetItem = stock.find((s) => s.tag === transferForm.tag);
-    if (!targetItem || !user?.shop?.id) return;
-    
+  const grandValuation = filteredStock.reduce(
+    (sum, item) => sum + calculateItemValuation(item),
+    0,
+  );
+
+  const handleCreateLocation = async () => {
+    if (!shopId || !addLocForm.name.trim()) return;
     try {
-      // Remove other location labels
-      const otherLabels = targetItem.rawItem.labels?.filter((l: string) => !l.includes("Showcase") && !l.includes("Safe") && !l.includes("Vault") && !l.includes("Workbench")) || [];
-      const updatedLabels = [...otherLabels, transferForm.newLocation];
-      
-      await inventoryApi.update(targetItem.id, {
-        labels: updatedLabels
+      await inventoryApi.createStorageLocation(shopId, {
+        name: addLocForm.name.trim(),
+        kind: addLocForm.kind,
+        parentId: addLocForm.parentId || undefined,
       });
-      setTransferModalOpen(false);
-      await fetchStock();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to update stock location!");
+      setAddLocOpen(false);
+      setAddLocForm({ name: "", kind: "AREA", parentId: "" });
+      await fetchLocations();
+      toast({ title: t("Location created") });
+    } catch (err: any) {
+      toast({
+        title: t("Failed to create location"),
+        description: err?.response?.data?.message || err.message,
+        variant: "destructive",
+      });
     }
   };
 
-  // Add Item handler
-  const handleAddItem = async () => {
-    const gross = parseFloat(addForm.grossWeight);
-    const net = parseFloat(addForm.netWeight);
-    const stone = parseFloat(addForm.stoneWeight);
-    if (!addForm.tag || !addForm.name || isNaN(gross) || isNaN(net) || !user?.shop?.id) {
-      alert("Please fill all required fields correctly!");
+  const handleArchiveLocation = async (id: string) => {
+    if (!shopId) return;
+    if (!confirm(t("Archive this location? Items will become unassigned.")))
       return;
-    }
-
     try {
-      await inventoryApi.create(user.shop.id, {
-        sku: addForm.tag.toUpperCase(),
-        nameEn: addForm.name,
-        jewelleryType: "RING",
-        buildMethod: "METHOD_B",
-        composition: { baseAlloy: { metal: "GOLD", purity: addForm.purity } },
-        totalWeightGrams: gross,
-        metalValueNpr: 0,
-        makingChargeNpr: 0,
-        gemstoneValueNpr: 0,
-        labels: [addForm.location],
-        hallmarkNumber: addForm.huid.toUpperCase(),
-      });
-
-      setAddForm({
-        tag: "",
-        huid: "",
-        name: "",
-        purity: "22K (916)",
-        grossWeight: "",
-        netWeight: "",
-        stoneWeight: "0",
-        location: "Showcase-A",
-      });
-      setAddModalOpen(false);
+      await inventoryApi.archiveStorageLocation(shopId, id);
+      if (selectedLocationId === id) setSelectedLocationId("ALL");
+      await fetchLocations();
       await fetchStock();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to inward stock piece!");
+    } catch (err: any) {
+      toast({
+        title: t("Failed to archive location"),
+        description: err?.response?.data?.message,
+        variant: "destructive",
+      });
     }
   };
 
-  const filteredStock = stock.filter((s) => {
-    const matchesSearch =
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.tag.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.huid.toLowerCase().includes(searchQuery.toLowerCase());
+  const handleTransfer = async () => {
+    if (!shopId || selectedIds.size === 0) return;
+    try {
+      await inventoryApi.transferLocation(shopId, {
+        itemIds: Array.from(selectedIds),
+        locationId: transferTarget || null,
+      });
+      setTransferOpen(false);
+      setTransferTarget("");
+      await fetchStock();
+      await fetchLocations();
+      toast({ title: t("Location updated") });
+    } catch (err: any) {
+      toast({
+        title: t("Transfer failed"),
+        description: err?.response?.data?.message,
+        variant: "destructive",
+      });
+    }
+  };
 
-    const matchesLocation =
-      locationFilter === "ALL" ||
-      (locationFilter === "VAULT" && s.status === "IN_VAULT") ||
-      (locationFilter === "SHOWCASE" && s.status === "ON_DISPLAY");
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
-    return matchesSearch && matchesLocation;
-  });
+  const parentOptionsForKind = (kind: string) => {
+    if (kind === "AREA") return [];
+    if (kind === "CABINET")
+      return flatLocations.filter((l) => l.kind === "AREA");
+    return flatLocations.filter((l) => l.kind === "CABINET");
+  };
+
+  const renderLocTree = (nodes: LocNode[], depth = 0) =>
+    nodes.map((node) => (
+      <div key={node.id}>
+        <button
+          type="button"
+          data-tour={depth === 0 ? "stock-location-tree" : undefined}
+          onClick={() => setSelectedLocationId(node.id)}
+          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left hover:bg-muted/80 ${
+            selectedLocationId === node.id
+              ? "bg-amber-500/15 text-amber-800 dark:text-amber-300 font-medium"
+              : ""
+          }`}
+          style={{ paddingLeft: 8 + depth * 12 }}
+        >
+          <MapPin className="h-3.5 w-3.5 shrink-0 opacity-60" />
+          <span className="truncate flex-1">{node.name}</span>
+          <span className="text-[10px] text-muted-foreground">
+            {node._count?.items ?? 0}
+          </span>
+          <button
+            type="button"
+            className="opacity-40 hover:opacity-100 p-0.5"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleArchiveLocation(node.id);
+            }}
+            title={t("Archive")}
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </button>
+        {node.children?.length > 0 && renderLocTree(node.children, depth + 1)}
+      </div>
+    ));
+
+  if (featuresLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
+    <FeatureGate
+      feature="karigarSupplyChain"
+      featureLabel="Vault & Tags"
+      hasFeature={hasFeature}
+      planName={planName}
+      loading={featuresLoading}
+    >
     <div className="space-y-6">
-      {/* Rate Feed Banner */}
-      <div className="bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/20 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-4 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              <T>Stock Valuation Live Feed</T>
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              <T>Market Conversion Rate</T>: 1g 24K = {formatCurrency(goldRates.rate24k)}
-            </p>
-          </div>
+      <div
+        data-tour="stock-valuation"
+        className="bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/20 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-4"
+      >
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+            <T>Stock Valuation Live Feed</T>
+          </p>
+          <p className="text-2xl font-bold mt-1">
+            {formatCurrency(grandValuation)}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {filteredStock.length} <T>pieces in view</T>
+          </p>
         </div>
-
-        <div className="flex items-center gap-6">
-          <div className="text-right text-xs">
-            <span className="text-muted-foreground">Gold 22K: </span>
-            <span className="font-bold text-yellow-600 dark:text-yellow-400">
+        <div className="flex items-center gap-4 text-xs">
+          <div>
+            <span className="text-muted-foreground">22K: </span>
+            <span className="font-bold text-yellow-600">
               {formatCurrency(goldRates.rate22k)}
             </span>
           </div>
-          <div className="text-right text-xs">
-            <span className="text-muted-foreground">Gold 18K: </span>
-            <span className="font-bold text-yellow-600/80 dark:text-yellow-400/80">
-              {formatCurrency(goldRates.rate18k)}
-            </span>
-          </div>
-          <div className="text-right text-xs">
-            <span className="text-muted-foreground">Silver 999: </span>
-            <span className="font-bold text-slate-400">
-              {formatCurrency(goldRates.silver)}
-            </span>
+          <div>
+            <span className="text-muted-foreground">18K: </span>
+            <span className="font-bold">{formatCurrency(goldRates.rate18k)}</span>
           </div>
         </div>
       </div>
 
-      {/* Header and Buttons */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Package className="h-6 w-6 text-amber-500" />
+          <h1 className="text-2xl font-bold tracking-tight">
             <T>Vault & Tags</T>
           </h1>
-          <p className="text-muted-foreground mt-0.5">
-            <T>Physical view of your Product Catalog — track locations, valuation, and print tags. Add sellable items in Product Catalog first.</T>
+          <p className="text-sm text-muted-foreground">
+            <T>Manage where each piece lives in your shop</T>
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/dashboard/shop/products?create=1">
-            <Button
-              className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
-            >
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/shop/products?create=1">
               <Plus className="h-4 w-4 mr-1" />
-              <T>Inward Finished Piece</T>
+              <T>Inward piece</T>
+            </Link>
+          </Button>
+          {selectedIds.size > 0 && (
+            <Button onClick={() => setTransferOpen(true)}>
+              <ArrowRightLeft className="h-4 w-4 mr-1" />
+              <T>Transfer</T> ({selectedIds.size})
             </Button>
-          </Link>
+          )}
         </div>
       </div>
 
-      <FeatureGate
-        feature="karigarSupplyChain"
-        featureLabel="Stock Ledger"
-        hasFeature={hasFeature}
-        planName={planName}
-        loading={featuresLoading}
-      >
-        {loading ? (
-          <div className="flex flex-col items-center justify-center p-12 space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-            <p className="text-xs text-muted-foreground"><T>Loading database inventory...</T></p>
-          </div>
-        ) : (
-          <>
-            {/* Core Valuation Cards */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card data-tour="stock-valuation" className="bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-gray-900 border-amber-200/50 dark:border-gray-800">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <CardDescription className="uppercase tracking-wider text-xs font-semibold text-amber-600 dark:text-amber-400">
-                      <T>Finished Stock Valuation</T>
-                    </CardDescription>
-                    <Coins className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <CardTitle className="text-2xl font-bold text-amber-700 dark:text-amber-300">
-                    {formatCurrency(grandValuation)}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">
-                    <T>Dynamic valuation of display and safe stock calculated with live market metal rates + craftsmanship markup.</T>
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <CardDescription className="uppercase tracking-wider text-xs font-semibold text-gray-500 dark:text-gray-400">
-                      <T>Display Showcase Items</T>
-                    </CardDescription>
-                    <Store className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {showcaseItemsCount} <span className="text-xs text-muted-foreground">items</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">
-                    <T>Finished pieces placed on showcase counters for customer walk-in sales.</T>
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <CardDescription className="uppercase tracking-wider text-xs font-semibold text-gray-500 dark:text-gray-400">
-                      <T>Main Vault Reserves</T>
-                    </CardDescription>
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {vaultItemsCount} <span className="text-xs text-muted-foreground">items</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">
-                    <T>High-value pieces and coins stored inside the strong-room safe vault.</T>
-                  </p>
-                </CardContent>
-              </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4 min-h-[480px]">
+        {/* Location tree */}
+        <Card className="h-fit">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">
+                <T>Locations</T>
+              </CardTitle>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setAddLocOpen(true)}
+                data-tour="stock-add-location"
+              >
+                <FolderPlus className="h-4 w-4" />
+              </Button>
             </div>
+            <CardDescription className="text-xs">
+              <T>Area → Cabinet → Bin (optional nesting)</T>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-1 max-h-[60vh] overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setSelectedLocationId("ALL")}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left hover:bg-muted/80 ${
+                selectedLocationId === "ALL" ? "bg-muted font-medium" : ""
+              }`}
+            >
+              <Package className="h-3.5 w-3.5 opacity-60" />
+              <T>All locations</T>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedLocationId("UNASSIGNED")}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left hover:bg-muted/80 ${
+                selectedLocationId === "UNASSIGNED"
+                  ? "bg-muted font-medium"
+                  : ""
+              }`}
+            >
+              <Layers className="h-3.5 w-3.5 opacity-60" />
+              <T>Unassigned</T>
+            </button>
+            <div className="border-t my-2" />
+            {locations.length === 0 ? (
+              <p className="text-xs text-muted-foreground px-2 py-4">
+                <T>No locations yet. Add an Area to get started.</T>
+              </p>
+            ) : (
+              renderLocTree(locations)
+            )}
+          </CardContent>
+        </Card>
 
-            {/* Dynamic Ledger search and filtration */}
-            <Card data-tour="stock-table" className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
-              <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4 border-b dark:border-gray-800 pb-4">
+        {/* Pieces table */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex flex-wrap items-center gap-3 justify-between">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  placeholder={t("Search tag, HUID, name…")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  data-tour="stock-search"
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent data-tour="stock-table">
+            {loading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : filteredStock.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground text-sm">
+                <T>No pieces in this location</T>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="pb-2 w-8" />
+                      <th className="pb-2 font-medium">
+                        <T>Tag</T>
+                      </th>
+                      <th className="pb-2 font-medium">
+                        <T>Name</T>
+                      </th>
+                      <th className="pb-2 font-medium">
+                        <T>Type</T>
+                      </th>
+                      <th className="pb-2 font-medium">
+                        <T>Location</T>
+                      </th>
+                      <th className="pb-2 font-medium text-right">
+                        <T>Weight</T>
+                      </th>
+                      <th className="pb-2 font-medium text-right">
+                        <T>Value</T>
+                      </th>
+                      <th className="pb-2 w-20" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStock.map((item) => {
+                      const isSet = item.jewelleryType === "SET";
+                      const expanded = expandedSets.has(item.id);
+                      return (
+                        <Fragment key={item.id}>
+                          <tr
+                            className="border-b border-border/50 hover:bg-muted/30"
+                          >
+                            <td className="py-2">
+                              <Checkbox
+                                checked={selectedIds.has(item.id)}
+                                onCheckedChange={() => toggleSelect(item.id)}
+                              />
+                            </td>
+                            <td className="py-2 font-mono text-xs">
+                              <div className="flex items-center gap-1">
+                                {isSet && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setExpandedSets((prev) => {
+                                        const n = new Set(prev);
+                                        if (n.has(item.id)) n.delete(item.id);
+                                        else n.add(item.id);
+                                        return n;
+                                      })
+                                    }
+                                  >
+                                    {expanded ? (
+                                      <ChevronDown className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <ChevronRight className="h-3.5 w-3.5" />
+                                    )}
+                                  </button>
+                                )}
+                                {item.sku}
+                              </div>
+                            </td>
+                            <td className="py-2">
+                              <div className="flex items-center gap-2">
+                                {item.nameEn}
+                                {isSet && (
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    <T>Set</T>
+                                    {item.setComponents?.length
+                                      ? ` · ${item.setComponents.length}`
+                                      : ""}
+                                  </Badge>
+                                )}
+                              </div>
+                              {item.hallmarkNumber && (
+                                <div className="text-[10px] text-muted-foreground">
+                                  HUID {item.hallmarkNumber}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2 text-xs">
+                              {item.jewelleryType}
+                            </td>
+                            <td className="py-2">
+                              <Badge variant="outline" className="text-[10px]">
+                                {item.location?.name || t("Unassigned")}
+                              </Badge>
+                            </td>
+                            <td className="py-2 text-right tabular-nums">
+                              {(item.totalWeightGrams || 0).toFixed(2)}g
+                            </td>
+                            <td className="py-2 text-right tabular-nums font-medium">
+                              {formatCurrency(calculateItemValuation(item))}
+                            </td>
+                            <td className="py-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  printStockJewelleryTags([
+                                    {
+                                      sku: item.sku,
+                                      name: item.nameEn,
+                                      hallmark: item.hallmarkNumber,
+                                      purity:
+                                        item.composition?.baseAlloy?.purity ||
+                                        "",
+                                      weightGrams: item.totalWeightGrams,
+                                      price: item.totalPriceNpr,
+                                      currency: goldRates.currency,
+                                    },
+                                  ])
+                                }
+                              >
+                                <Printer className="h-3.5 w-3.5" />
+                              </Button>
+                            </td>
+                          </tr>
+                          {isSet &&
+                            expanded &&
+                            item.setComponents?.map((c: any) => (
+                              <tr
+                                key={c.componentItemId}
+                                className="border-b border-border/30 bg-muted/20 text-muted-foreground"
+                              >
+                                <td />
+                                <td className="py-1.5 pl-8 font-mono text-xs">
+                                  {c.componentItem?.sku}
+                                </td>
+                                <td className="py-1.5 text-xs">
+                                  {c.role ? `${c.role}: ` : ""}
+                                  {c.componentItem?.nameEn}
+                                </td>
+                                <td className="py-1.5 text-xs">
+                                  {c.componentItem?.jewelleryType}
+                                </td>
+                                <td colSpan={4} />
+                              </tr>
+                            ))}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Add location modal */}
+      {addLocOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>
+                <T>Add location</T>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>
+                  <T>Name</T>
+                </Label>
+                <Input
+                  value={addLocForm.name}
+                  onChange={(e) =>
+                    setAddLocForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  placeholder={t("e.g. Showcase A, Main Safe")}
+                />
+              </div>
+              <div>
+                <Label>
+                  <T>Kind</T>
+                </Label>
+                <Select
+                  value={addLocForm.kind}
+                  onValueChange={(v) =>
+                    setAddLocForm((f) => ({
+                      ...f,
+                      kind: v,
+                      parentId: "",
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AREA">
+                      <T>Area</T>
+                    </SelectItem>
+                    <SelectItem value="CABINET">
+                      <T>Cabinet / Shelf</T>
+                    </SelectItem>
+                    <SelectItem value="BIN">
+                      <T>Bin / Tray</T>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {addLocForm.kind !== "AREA" && (
                 <div>
-                  <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100"><T>Finished Vault Stock Ledger</T></CardTitle>
-                  <CardDescription><T>Real-time physical asset logs. Scan barcodes or filter locations.</T></CardDescription>
-                </div>
-                
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="relative w-64">
-                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      placeholder={t("Search by name, tag, or HUID...")}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-8 text-xs h-9 rounded-lg border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-
-                  <Select value={locationFilter} onValueChange={setLocationFilter}>
-                    <SelectTrigger className="w-36 h-9 text-xs border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-                      <SelectValue />
+                  <Label>
+                    <T>Parent</T>
+                  </Label>
+                  <Select
+                    value={addLocForm.parentId}
+                    onValueChange={(v) =>
+                      setAddLocForm((f) => ({ ...f, parentId: v }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("Select parent")} />
                     </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
-                      <SelectItem value="ALL">All Items</SelectItem>
-                      <SelectItem value="SHOWCASE">Showcase Stock</SelectItem>
-                      <SelectItem value="VAULT">Vault Stock</SelectItem>
+                    <SelectContent>
+                      {parentOptionsForKind(addLocForm.kind).map((l) => (
+                        <SelectItem key={l.id} value={l.id}>
+                          {l.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-4 overflow-x-auto">
-                <table className="w-full text-sm border-collapse text-left">
-                  <thead>
-                    <tr className="border-b dark:border-gray-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50">
-                      <th className="py-2.5 px-3 font-semibold"><T>Item Details & Unique HUID</T></th>
-                      <th className="py-2.5 px-3 font-semibold"><T>Barcode Tag</T></th>
-                      <th className="py-2.5 px-3 font-semibold"><T>Purity / Weight</T></th>
-                      <th className="py-2.5 px-3 font-semibold"><T>Physical Location</T></th>
-                      <th className="py-2.5 px-3 font-semibold text-right"><T>Rate Valuation</T></th>
-                      <th className="py-2.5 px-3 font-semibold text-center"><T>Action</T></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y dark:divide-gray-800">
-                    {filteredStock.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="py-8 text-center text-xs text-muted-foreground">
-                          <T>No items in stock. Click Inward Finished Piece to register finished assets.</T>
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredStock.map((item) => (
-                        <tr key={item.tag} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300">
-                          <td className="py-3.5 px-3">
-                            <p className="font-semibold text-gray-900 dark:text-gray-100">{item.name}</p>
-                            <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-400/10 px-2 py-0.5 rounded border border-amber-500/20 dark:border-amber-400/20">
-                              {item.huid}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-3 font-mono text-xs">{item.tag}</td>
-                          <td className="py-3.5 px-3">
-                            <p className="font-medium text-xs text-gray-900 dark:text-gray-100">{item.purity}</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {item.grossWeight.toFixed(2)}g G / {item.netWeight.toFixed(2)}g N
-                              {item.stoneWeight > 0 && ` / ${item.stoneWeight.toFixed(1)}ct St`}
-                            </p>
-                          </td>
-                          <td className="py-3.5 px-3">
-                            <Badge variant={item.status === "ON_DISPLAY" ? "outline" : "secondary"} className={item.status === "ON_DISPLAY" ? "border-sky-500/25 bg-sky-500/5 text-sky-600 dark:text-sky-400" : ""}>
-                              {item.location}
-                            </Badge>
-                          </td>
-                          <td className="py-3.5 px-3 font-bold text-right text-gray-900 dark:text-gray-100">
-                            {formatCurrency(calculateItemValuation(item))}
-                          </td>
-                          <td className="py-3.5 px-3 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title={t("Print Tag")}
-                                onClick={async () => {
-                                  try {
-                                    await printStockJewelleryTags([
-                                      {
-                                        sku: item.tag,
-                                        name: item.name,
-                                        purity: item.purity,
-                                        weightGrams: item.netWeight,
-                                        price: calculateItemValuation(item),
-                                        currency: goldRates.currency,
-                                        hallmark: item.huid,
-                                        shopName: user?.shop?.shopName,
-                                      },
-                                    ]);
-                                  } catch (err: any) {
-                                    toast({
-                                      title: t("Could not print tag"),
-                                      description: err?.message,
-                                      variant: "destructive",
-                                    });
-                                  }
-                                }}
-                                className="h-8 w-8 text-muted-foreground hover:text-amber-500 dark:hover:text-amber-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                              >
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                              <Button
-                              variant="ghost"
-                              size="icon"
-                              title={t("Transfer Location")}
-                              onClick={() => {
-                                setTransferForm({ tag: item.tag, newLocation: item.location });
-                                setTransferModalOpen(true);
-                              }}
-                              className="h-8 w-8 text-muted-foreground hover:text-amber-500 dark:hover:text-amber-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                            >
-                              <ArrowRightLeft className="h-4 w-4" />
-                            </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </FeatureGate>
-
-      {/* ─── MODALS ─── */}
-      {/* 1. Location Transfer Modal */}
-      {transferModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100"><T>Transfer Finished Stock Location</T></h3>
-            <p className="text-xs text-muted-foreground">
-              <T>Safely transfer the finished piece between safe vaults and showcases.</T>
-            </p>
-
-            <div className="space-y-3 pt-2">
-              <div className="space-y-1">
-                <Label className="text-gray-700 dark:text-gray-300"><T>Target Item Tag</T></Label>
-                <Input value={transferForm.tag} disabled className="bg-gray-50 dark:bg-gray-950 font-mono text-gray-900 dark:text-gray-100" />
+              )}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setAddLocOpen(false)}>
+                  <T>Cancel</T>
+                </Button>
+                <Button onClick={handleCreateLocation}>
+                  <T>Create</T>
+                </Button>
               </div>
-
-              <div className="space-y-1">
-                <Label className="text-gray-700 dark:text-gray-300"><T>New Physical Location</T></Label>
-                <Select
-                  value={transferForm.newLocation}
-                  onValueChange={(val) => setTransferForm((p) => ({ ...p, newLocation: val }))}
-                >
-                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
-                    <SelectItem value="Showcase-A">Showcase A (Counters)</SelectItem>
-                    <SelectItem value="Showcase-B">Showcase B (Counters)</SelectItem>
-                    <SelectItem value="Main-Safe">Main Vault Safe (Strongroom)</SelectItem>
-                    <SelectItem value="Artisan-Workbench">Karigar Workbench (Manufacturing)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" size="sm" onClick={() => setTransferModalOpen(false)} className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
-              <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleTransfer}><T>Confirm Transfer</T></Button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* 2. Inward Item Modal */}
-      {addModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100"><T>Inward Finished Jewelry Piece</T></h3>
-            <p className="text-xs text-muted-foreground">
-              <T>Register a fully completed manufacturing piece into active catalogued stock.</T>
-            </p>
-
-            <div className="grid gap-3 grid-cols-1 md:grid-cols-2 pt-2">
-              <div className="space-y-1">
-                <Label className="text-gray-700 dark:text-gray-300"><T>Unique Barcode Tag</T> *</Label>
-                <Input
-                  placeholder="e.g. TAG-G-406"
-                  value={addForm.tag}
-                  onChange={(e) => setAddForm((p) => ({ ...p, tag: e.target.value }))}
-                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-gray-700 dark:text-gray-300"><T>Hallmarked HUID Code</T></Label>
-                <Input
-                  placeholder="e.g. HUID-8X4W3P"
-                  value={addForm.huid}
-                  onChange={(e) => setAddForm((p) => ({ ...p, huid: e.target.value }))}
-                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
-                />
-              </div>
-
-              <div className="space-y-1 md:col-span-2">
-                <Label className="text-gray-700 dark:text-gray-300"><T>Product Display Name</T> *</Label>
-                <Input
-                  placeholder="e.g. 22K Solid Gold Bangle"
-                  value={addForm.name}
-                  onChange={(e) => setAddForm((p) => ({ ...p, name: e.target.value }))}
-                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-gray-700 dark:text-gray-300"><T>Metal Purity Tier</T></Label>
+      {/* Transfer modal */}
+      {transferOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>
+                <T>Transfer location</T>
+              </CardTitle>
+              <CardDescription>
+                {selectedIds.size} <T>piece(s) selected</T>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>
+                  <T>Move to</T>
+                </Label>
                 <Select
-                  value={addForm.purity}
-                  onValueChange={(val) => setAddForm((p) => ({ ...p, purity: val }))}
+                  value={transferTarget || "__none__"}
+                  onValueChange={(v) =>
+                    setTransferTarget(v === "__none__" ? "" : v)
+                  }
                 >
-                  <SelectTrigger className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800">
-                    <SelectValue />
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("Select location")} />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
-                    <SelectItem value="24K (999)">24K (999 Fine Gold)</SelectItem>
-                    <SelectItem value="22K (916)">22K (916 Standard Gold)</SelectItem>
-                    <SelectItem value="18K (750)">18K (750 Jewelry Gold)</SelectItem>
-                    <SelectItem value="92.5 Sterling">92.5 Sterling Silver</SelectItem>
+                  <SelectContent>
+                    <SelectItem value="__none__">
+                      <T>Unassigned</T>
+                    </SelectItem>
+                    {flatLocations.map((l) => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {l.name} ({l.kind})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="space-y-1">
-                <Label className="text-gray-700 dark:text-gray-300"><T>Physical Location</T></Label>
-                <Select
-                  value={addForm.location}
-                  onValueChange={(val) => setAddForm((p) => ({ ...p, location: val }))}
-                >
-                  <SelectTrigger className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
-                    <SelectItem value="Showcase-A">Showcase A</SelectItem>
-                    <SelectItem value="Showcase-B">Showcase B</SelectItem>
-                    <SelectItem value="Main-Safe">Main Vault Safe</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setTransferOpen(false)}>
+                  <T>Cancel</T>
+                </Button>
+                <Button onClick={handleTransfer}>
+                  <T>Transfer</T>
+                </Button>
               </div>
-
-              <div className="space-y-1">
-                <Label className="text-gray-700 dark:text-gray-300"><T>Gross Weight (grams)</T> *</Label>
-                <Input
-                  type="number"
-                  placeholder="e.g. 15.5"
-                  value={addForm.grossWeight}
-                  onChange={(e) => setAddForm((p) => ({ ...p, grossWeight: e.target.value }))}
-                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-gray-700 dark:text-gray-300"><T>Net Gold/Silver Weight (g)</T> *</Label>
-                <Input
-                  type="number"
-                  placeholder="e.g. 14.8"
-                  value={addForm.netWeight}
-                  onChange={(e) => setAddForm((p) => ({ ...p, netWeight: e.target.value }))}
-                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-gray-700 dark:text-gray-300"><T>Stones/Diamond weight (carats)</T></Label>
-                <Input
-                  type="number"
-                  placeholder="e.g. 1.2"
-                  value={addForm.stoneWeight}
-                  onChange={(e) => setAddForm((p) => ({ ...p, stoneWeight: e.target.value }))}
-                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" size="sm" onClick={() => setAddModalOpen(false)} className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><T>Cancel</T></Button>
-              <Button className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700" size="sm" onClick={handleAddItem}><T>Inward Piece</T></Button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
+    </FeatureGate>
   );
 }

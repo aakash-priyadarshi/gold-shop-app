@@ -129,6 +129,11 @@ export class CreateInventoryItemDto {
   @IsString({ each: true })
   @IsOptional()
   labels?: string[];
+
+  @ApiPropertyOptional({ description: 'Storage location ID' })
+  @IsString()
+  @IsOptional()
+  locationId?: string;
 }
 
 export class UpdateInventoryItemDto {
@@ -260,6 +265,11 @@ export class UpdateInventoryItemDto {
   @IsString()
   @IsOptional()
   purityCertUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Storage location ID' })
+  @IsString()
+  @IsOptional()
+  locationId?: string | null;
 }
 
 export class InventoryFilterDto {
@@ -341,4 +351,21 @@ export class InventoryFilterDto {
   @IsOptional()
   @Type(() => Number)
   limit?: number;
+
+  @ApiPropertyOptional({ description: 'Filter by storage location (includes subtree when includeSubtree=true)' })
+  @IsString()
+  @IsOptional()
+  locationId?: string;
+
+  @ApiPropertyOptional({ description: 'When filtering by locationId, include child locations' })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  @IsBoolean()
+  includeSubtree?: boolean;
+
+  @ApiPropertyOptional({ description: 'Exclude pieces that are bound as set components' })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  @IsBoolean()
+  excludeSetComponents?: boolean;
 }

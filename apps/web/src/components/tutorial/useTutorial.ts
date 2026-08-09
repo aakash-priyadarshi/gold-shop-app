@@ -52,11 +52,31 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='stock-location-tree']",
+      popover: {
+        title: "Shop locations",
+        description:
+          "Build your own Area → Cabinet → Bin tree (Showcase, Main Safe, trays). Nesting is optional — small shops can use Areas only.",
+        side: "right",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='stock-add-location']",
+      popover: {
+        title: "Add a location",
+        description:
+          "Create named places in your shop so every tagged piece has a clear home. Transfer pieces between locations in bulk from the table.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
       element: "[data-tour='stock-table']",
       popover: {
-        title: "Finished Stock Ledger",
+        title: "Pieces in this location",
         description:
-          "Real-time records of finished jewelry. Search by tag or HUID code, view weights, and manage display showcase vs strong-room vault locations.",
+          "Search by tag or HUID, multi-select to transfer, print tags, and expand Sets to see component pieces.",
         side: "top",
         align: "center",
       },
@@ -171,7 +191,17 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Add Product",
         description:
-          "Click here to add a new jewellery item with live metal-weight pricing.",
+          "Click here to add a single jewellery piece with live metal-weight pricing and optional storage location.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='inventory-add-set']",
+      popover: {
+        title: "Add Set",
+        description:
+          "Build a bridal or matching set with its own SKU. Attach earrings, maang tikka, necklace, nathuni, and apply a set discount when buying together.",
         side: "bottom",
         align: "start",
       },
@@ -190,7 +220,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Product List",
         description:
-          "All your products. Click a row to edit details, pricing, or stock levels.",
+          "All your products and sets. Sets show a badge with component count. Break a set to sell pieces individually.",
         side: "top",
         align: "center",
       },

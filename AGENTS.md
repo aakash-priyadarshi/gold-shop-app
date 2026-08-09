@@ -297,6 +297,20 @@ cd e2e && npx playwright install chromium && npx ts-node auth-setup.ts
 - Supports: line items with metal/gemstone/making breakdown, tax per category, discounts, currency converter, live market rates with autofill, weight unit selector (tola/gram/etc.), weighing scale integration, quote import.
 - Invoice country can differ from shop country (for export invoices).
 
+## Jewelry Sets
+
+- **UI:** Product Catalog → **Add Set** (`apps/web/src/components/shop/SetBuilderDialog.tsx`)
+- **API:** `POST/PATCH /inventory/shop/:shopId/sets`, `POST .../sets/:id/break`
+- Set is its own `InventoryItem` with `jewelleryType=SET` and optional `setDiscountType` / `setDiscountValue`
+- Components linked via `InventorySetComponent`; hidden from separate sale until the set is broken
+- POS sells the set as one line and cascades components to SOLD
+
+## Vault & Tags (storage locations)
+
+- **UI:** `/dashboard/shop/stock` — location tree (Area → Cabinet → Bin) + pieces table
+- **API:** `/inventory/shop/:shopId/storage-locations`, `POST .../transfer-location`
+- `InventoryItem.locationId` → `StorageLocation`; replaces the old `labels[]` location hack
+
 ## Walk-in Customer / Quote Feature
 
 - **Create page:** `apps/web/src/app/dashboard/shop/quotes/create/page.tsx`

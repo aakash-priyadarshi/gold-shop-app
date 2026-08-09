@@ -938,6 +938,7 @@ export default function MobilePOSPage() {
           limit: 40,
           page: 1,
           inStock: true,
+          excludeSetComponents: true,
         });
         setItems(res.data?.items ?? res.data ?? []);
       } catch {
