@@ -75,6 +75,50 @@ export function detectTaxIdKind(country: string): TaxIdKind {
   return "GENERIC";
 }
 
+/**
+ * Customer-facing tax ID depends on B2C vs B2B:
+ * - B2B → business VAT/GST/TRN/TIN (filing ID)
+ * - B2C → optional personal ID where relevant (e.g. India PAN); none for most markets
+ */
+export function detectTaxIdKindForCustomer(
+  country: string,
+  customerType: "B2C" | "B2B",
+): TaxIdKind | null {
+  const c = country.trim().toUpperCase();
+  if (customerType === "B2B") {
+    return detectTaxIdKind(c);
+  }
+  // B2C — personal IDs only where shops commonly collect them
+  if (c === "IN") return "PAN_IN";
+  if (c === "NP") return "PAN_NP"; // optional consumer PAN
+  // Most markets: no tax ID for walk-in consumers
+  return null;
+}
+
+export function taxIdLabelForKind(kind: TaxIdKind | null): string {
+  switch (kind) {
+    case "GSTIN":
+      return "GSTIN";
+    case "PAN_IN":
+      return "PAN";
+    case "TRN_AE":
+      return "TRN";
+    case "VAT_GB":
+    case "VAT_EU":
+      return "VAT Number";
+    case "PAN_NP":
+      return "PAN / VAT";
+    case "TIN_LK":
+      return "IRD TIN";
+    case "EIN_US":
+      return "EIN";
+    case "GENERIC":
+      return "Tax ID";
+    default:
+      return "Tax ID";
+  }
+}
+
 export function validateTaxId(
   value: string | null | undefined,
   kindOrCountry: TaxIdKind | string,

@@ -35,7 +35,8 @@ import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
     canIssueSriLankaTaxInvoice,
-    detectTaxIdKind,
+    detectTaxIdKindForCustomer,
+    taxIdLabelForKind,
     TAX_EXEMPT_REASONS,
     validateTaxId,
 } from "@/lib/tax/validators";
@@ -611,11 +612,11 @@ export default function CreateInvoicePage() {
       String((user?.shop as any)?.vatRegistrationStatus || "NOT_REGISTERED"),
     );
 
+  const taxIdKind = detectTaxIdKindForCustomer(invoiceCountry, customerType);
   const taxIdValidation = useMemo(() => {
-    if (!customerTaxId) return null;
-    return validateTaxId(customerTaxId, invoiceCountry);
-  }, [customerTaxId, invoiceCountry]);
-  const taxIdKind = detectTaxIdKind(invoiceCountry);
+    if (!customerTaxId || !taxIdKind) return null;
+    return validateTaxId(customerTaxId, taxIdKind);
+  }, [customerTaxId, taxIdKind]);
   const sellerHasValidLkTin = /^\d{9}$/.test(sellerLkTaxId.trim());
   const sellerLkVatVerified = sellerVatRegistrationStatus === "VERIFIED";
   const lkVatChargeBlocked =
@@ -688,6 +689,9 @@ export default function CreateInvoicePage() {
     CustomerSuggestion[]
   >([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedWalkInCustomerId, setSelectedWalkInCustomerId] = useState<
+    string | null
+  >(null);
   const phoneDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -719,6 +723,7 @@ export default function CreateInvoicePage() {
 
   const handlePhoneChange = (phone: string) => {
     setCustomerPhone(phone);
+    setSelectedWalkInCustomerId(null);
     if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current);
     phoneDebounceRef.current = setTimeout(() => {
       searchCustomers(phoneCountryCode, phone);
@@ -726,9 +731,16 @@ export default function CreateInvoicePage() {
   };
 
   const handleSelectCustomer = (customer: CustomerSuggestion) => {
+    const cc = customer.phoneCountryCode || phoneCountryCode;
+    let localPhone = customer.phone || "";
+    if (cc && localPhone.startsWith(cc)) {
+      localPhone = localPhone.slice(cc.length);
+    } else if (localPhone.startsWith("+") && cc) {
+      localPhone = localPhone.replace(cc, "");
+    }
     setCustomerName(customer.name);
-    setPhoneCountryCode(customer.phoneCountryCode);
-    setCustomerPhone(customer.phone.replace(customer.phoneCountryCode, ""));
+    setPhoneCountryCode(cc);
+    setCustomerPhone(localPhone);
     setCustomerEmail(customer.email || "");
     if (customer.address) {
       const parts = customer.address.split(", ");
@@ -737,7 +749,12 @@ export default function CreateInvoicePage() {
     }
     setCustomerCity(customer.city || "");
     setCustomerCountry(customer.country || "");
+    // Only walk-in customers have a WalkInCustomer id we can link on the invoice
+    setSelectedWalkInCustomerId(
+      customer.isRegistered ? null : customer.id || null,
+    );
     setShowSuggestions(false);
+    setCustomerSuggestions([]);
     toast({
       title: "Customer details filled",
       description: `Welcome back, ${customer.name}!`,
@@ -1204,43 +1221,33 @@ export default function CreateInvoicePage() {
     try {
       const apiLineItems = lineItems
         .filter((li) => li.label && lineItemTotal(li) > 0)
-        .map((li) => ({
-          label: li.label,
-          category: li.category,
-          quantity: li.quantity,
-          unitPrice: lineItemTotal(li) / li.quantity,
-          amount: lineItemTotal(li),
-          details: li.details,
-          metalType: li.metalType || undefined,
-          metalWeightG: li.metalWeightG
-            ? parseFloat(li.metalWeightG)
-            : undefined,
-          // First gemstone for backward compat
-          gemstoneType: li.gemstones[0]?.type || undefined,
-          gemstoneCut: li.gemstones[0]?.cut || undefined,
-          gemstoneClarity: li.gemstones[0]?.clarity || undefined,
-          gemstoneCaratWeight: li.gemstones[0]?.caratWeight
-            ? parseFloat(li.gemstones[0].caratWeight)
-            : undefined,
-          gemstoneColor: li.gemstones[0]?.color || undefined,
-          metalCost: li.metalCost ? parseFloat(li.metalCost) : undefined,
-          gemstoneCost: gemstoneTotal(li) || undefined,
-          makingCost: li.makingCost ? parseFloat(li.makingCost) : undefined,
-          // Full gemstone list as extra data
-          gemstones:
+        .map((li) => {
+          const detailParts = [
+            li.details,
+            li.metalType ? `Metal: ${li.metalType}` : null,
+            li.metalWeightG ? `Weight: ${li.metalWeightG}g` : null,
             li.gemstones.length > 0
-              ? li.gemstones.map((g) => ({
-                  type: g.type,
-                  cut: g.cut,
-                  clarity: g.clarity,
-                  caratWeight: g.caratWeight
-                    ? parseFloat(g.caratWeight)
-                    : undefined,
-                  color: g.color,
-                  cost: g.cost ? parseFloat(g.cost) : undefined,
-                }))
-              : undefined,
-        }));
+              ? `Gemstones: ${li.gemstones
+                  .map((g) =>
+                    [g.type, g.cut, g.caratWeight ? `${g.caratWeight}ct` : null]
+                      .filter(Boolean)
+                      .join(" "),
+                  )
+                  .join("; ")}`
+              : null,
+          ].filter(Boolean);
+
+          // Only send DTO-whitelisted fields — ValidationPipe rejects extras
+          // like metalType / metalWeightG / makingCharge.
+          return {
+            label: li.label,
+            category: li.category,
+            quantity: li.quantity,
+            unitPrice: lineItemTotal(li) / li.quantity,
+            amount: lineItemTotal(li),
+            details: detailParts.length ? detailParts.join(" · ") : undefined,
+          };
+        });
 
       const fullAddress = [
         addressLine1,
@@ -1252,6 +1259,7 @@ export default function CreateInvoicePage() {
         .join(", ");
 
       const response = await invoicesApi.create({
+        walkInCustomerId: selectedWalkInCustomerId || undefined,
         customerName,
         customerPhone: customerPhone
           ? `${phoneCountryCode}${customerPhone}`
@@ -1292,7 +1300,7 @@ export default function CreateInvoicePage() {
         invoiceCountry,
         placeOfSupply: placeOfSupply || undefined,
         supplyDate: invoiceCountry === "LK" ? supplyDate : undefined,
-        makingCharge: makingChargeAmount || undefined,
+        makingChargesAmt: makingChargeAmount || undefined,
         discountAmount: discountAmount || undefined,
         dueDate: dueDate || undefined,
         notes: notes || undefined,
@@ -1506,7 +1514,7 @@ export default function CreateInvoicePage() {
 
               {/* ── Tax filing controls ───────────────────────────── */}
               <div className="mt-4 pt-4 border-t space-y-4">
-                {/* B2B/B2C selector */}
+                {/* B2B/B2C selector + country-aware tax ID */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label><T>Customer Type</T></Label>
@@ -1518,6 +1526,8 @@ export default function CreateInvoicePage() {
                           onClick={() => {
                             setCustomerType(t);
                             if (t === "B2C") setRequestTaxInvoice(false);
+                            // Clear tax ID when switching type — GSTIN ≠ PAN etc.
+                            setCustomerTaxId("");
                           }}
                           className={`flex-1 px-3 py-2 text-sm rounded-md border transition ${
                             customerType === t
@@ -1536,59 +1546,98 @@ export default function CreateInvoicePage() {
                       ))}
                     </div>
                   </div>
-                  <div>
-                    <Label>
+                  {taxIdKind ? (
+                    <div>
+                      <Label>
+                        <T>
+                          {customerType === "B2B"
+                            ? `${taxIdLabelForKind(taxIdKind)} (business)`
+                            : `${taxIdLabelForKind(taxIdKind)} (optional)`}
+                        </T>
+                        {invoiceCountry === "LK" && requestTaxInvoice && (
+                          <span className="text-xs text-amber-600 ml-1">
+                            <T>— required for TAX INVOICE</T>
+                          </span>
+                        )}
+                      </Label>
+                      <Input
+                        value={customerTaxId}
+                        onChange={(e) => setCustomerTaxId(e.target.value.toUpperCase())}
+                        placeholder={
+                          taxIdKind === "GSTIN"
+                            ? "22AAAAA0000A1Z5"
+                            : taxIdKind === "PAN_IN"
+                              ? "ABCDE1234F"
+                              : taxIdKind === "TRN_AE"
+                                ? "100123456700003"
+                                : taxIdKind === "VAT_GB"
+                                  ? "GB123456789"
+                                  : taxIdKind === "PAN_NP"
+                                    ? "123456789"
+                                    : taxIdKind === "TIN_LK"
+                                      ? "123456789"
+                                      : taxIdKind === "EIN_US"
+                                        ? "12-3456789"
+                                        : "Tax ID"
+                        }
+                        inputMode={
+                          taxIdKind === "TIN_LK" || taxIdKind === "PAN_NP"
+                            ? "numeric"
+                            : undefined
+                        }
+                        maxLength={
+                          taxIdKind === "TIN_LK" || taxIdKind === "PAN_NP"
+                            ? 9
+                            : taxIdKind === "PAN_IN"
+                              ? 10
+                              : taxIdKind === "GSTIN"
+                                ? 15
+                                : undefined
+                        }
+                        className={
+                          taxIdValidation && !taxIdValidation.valid
+                            ? "border-red-400 focus-visible:ring-red-400"
+                            : taxIdValidation?.valid
+                              ? "border-green-400"
+                              : ""
+                        }
+                      />
+                      {customerType === "B2C" && taxIdKind === "PAN_IN" && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <T>
+                            Consumers use PAN. GSTIN is only for B2B businesses.
+                          </T>
+                        </p>
+                      )}
+                      {customerType === "B2B" && taxIdKind === "GSTIN" && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <T>
+                            Enter the buyer&apos;s GSTIN for B2B / GST filing.
+                          </T>
+                        </p>
+                      )}
+                      {taxIdValidation && (
+                        <p
+                          className={`text-xs mt-1 ${
+                            taxIdValidation.valid
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {taxIdValidation.valid
+                            ? `✓ Valid${taxIdValidation.stateCode ? ` · State ${taxIdValidation.stateCode}` : ""}`
+                            : taxIdValidation.message}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground flex items-center">
                       <T>
-                        {invoiceCountry === "LK"
-                          ? requestTaxInvoice
-                            ? "Purchaser TIN (9 digits)"
-                            : "Purchaser TIN (optional for ordinary invoice)"
-                          : "Customer Tax ID"}
+                        No customer tax ID needed for B2C in this market. Switch
+                        to B2B to enter a business VAT / tax registration.
                       </T>
-                      <span className="text-xs text-gray-500 ml-1">
-                        ({taxIdKind.replace("_", " ")})
-                      </span>
-                    </Label>
-                    <Input
-                      value={customerTaxId}
-                      onChange={(e) => setCustomerTaxId(e.target.value.toUpperCase())}
-                      placeholder={
-                        taxIdKind === "GSTIN"
-                          ? "22AAAAA0000A1Z5"
-                          : taxIdKind === "TRN_AE"
-                            ? "100123456700003"
-                            : taxIdKind === "VAT_GB"
-                              ? "GB123456789"
-                              : taxIdKind === "PAN_NP"
-                                ? "123456789"
-                                : taxIdKind === "TIN_LK"
-                                  ? "123456789"
-                                : "Tax ID"
-                      }
-                      inputMode={taxIdKind === "TIN_LK" ? "numeric" : undefined}
-                      maxLength={taxIdKind === "TIN_LK" ? 9 : undefined}
-                      className={
-                        taxIdValidation && !taxIdValidation.valid
-                          ? "border-red-400 focus-visible:ring-red-400"
-                          : taxIdValidation?.valid
-                            ? "border-green-400"
-                            : ""
-                      }
-                    />
-                    {taxIdValidation && (
-                      <p
-                        className={`text-xs mt-1 ${
-                          taxIdValidation.valid
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {taxIdValidation.valid
-                          ? `✓ Valid${taxIdValidation.stateCode ? ` · State ${taxIdValidation.stateCode}` : ""}`
-                          : taxIdValidation.message}
-                      </p>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {invoiceCountry === "LK" && (
@@ -1798,12 +1847,21 @@ export default function CreateInvoicePage() {
                     )}
                   </div>
                   {showSuggestions && customerSuggestions.length > 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-[#161B22] border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <div
+                      className="absolute z-50 w-full mt-1 bg-white dark:bg-[#161B22] border rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                      onMouseDown={(e) => e.preventDefault()}
+                    >
                       {customerSuggestions.map((cust) => (
-                        <div
+                        <button
+                          type="button"
                           key={cust.id}
-                          className="flex items-center justify-between px-3 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/30 cursor-pointer border-b last:border-b-0 transition-colors"
-                          onClick={() => handleSelectCustomer(cust)}
+                          className="flex w-full items-center justify-between px-3 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/30 cursor-pointer border-b last:border-b-0 transition-colors text-left"
+                          onMouseDown={(e) => {
+                            // Prevent input blur from closing before selection lands
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleSelectCustomer(cust);
+                          }}
                         >
                           <div>
                             <p className="text-sm font-medium flex items-center gap-1.5">
@@ -1820,7 +1878,7 @@ export default function CreateInvoicePage() {
                             </p>
                           </div>
                           <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        </div>
+                        </button>
                       ))}
                     </div>
                   )}
