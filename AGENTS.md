@@ -149,6 +149,50 @@ cd apps/api && npm run start:dev
 - **When adding tax tests:** Update both `apps/api/src/modules/core/pricing/services/backend-tax-engine.service.spec.ts`
   AND `apps/web/src/lib/tax/__tests__/engine.test.ts` to keep frontend and backend in sync.
 
+### Production E2E Login (AI Agents & CI)
+
+Cloudflare Turnstile blocks headless/API login on production. Use the server-side bypass instead of solving CAPTCHA in the browser.
+
+**Setup (one-time, already on Railway production API):**
+
+| Variable                  | Where                    | Purpose                                                    |
+| ------------------------- | ------------------------ | ---------------------------------------------------------- |
+| `TURNSTILE_BYPASS_SECRET` | Railway `@gold-shop/api` | 32+ char random secret; never commit or expose to frontend |
+
+For local agent runs, copy the same value into `apps/api/.env` as `TURNSTILE_BYPASS_SECRET=...` (gitignored).
+
+**API login (preferred for agents):**
+
+```bash
+curl -s -X POST https://api.orivraa.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "demo-shop@orivraa.com",
+    "password": "Demo@2026",
+    "turnstileToken": "<TURNSTILE_BYPASS_SECRET>"
+  }'
+```
+
+Pass the Railway secret as `turnstileToken` (not a real Turnstile widget token). Response includes `accessToken` and `refreshToken` — use `Authorization: Bearer <accessToken>` for authenticated API calls.
+
+**Test accounts (seeded on production):**
+
+| Email                       | Password        | Role                   |
+| --------------------------- | --------------- | ---------------------- |
+| `demo-shop@orivraa.com`     | `Demo@2026`     | SHOPKEEPER (demo shop) |
+| `demo-customer@orivraa.com` | `Demo@2026`     | CUSTOMER               |
+| `pentest-shop@orivraa.com`  | `PenTest123!@#` | SHOPKEEPER             |
+| `pentest-admin@orivraa.com` | `PenTest123!@#` | ADMIN                  |
+
+**Browser UI testing:** Agents can also ask the user to log in manually at https://www.orivraa.com/auth/login — no bypass needed in the browser.
+
+**Security rules for agents:**
+
+- Never print or commit `TURNSTILE_BYPASS_SECRET`
+- Never add `NEXT_PUBLIC_*` bypass vars (would leak to clients)
+- Bypass only applies to `POST /api/auth/login` and `POST /api/auth/register` when token matches the env secret
+- Implementation: `apps/api/src/modules/auth/turnstile.service.ts`
+
 ## Tax Engine
 
 - **Backend tax engine:** `apps/api/src/modules/core/pricing/services/backend-tax-engine.service.ts`
