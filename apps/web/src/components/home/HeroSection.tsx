@@ -22,14 +22,17 @@ import {
     Zap
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 interface HeroSectionProps {
   /** CDN URL to the geo-resolved hero video (passed from server component). */
   videoSrc?: string;
+  /** Geo market from server headers — keeps hero copy stable for hydration. */
+  serverCountry?: MarketRegion;
 }
 
-export function HeroSection({ videoSrc }: HeroSectionProps) {
+export function HeroSection({ videoSrc, serverCountry = "US" }: HeroSectionProps) {
   const { config, selectedCountry, isLoading } = useMarket();
   const { features: platformFeatures } = usePlatformFeatures();
   const t = useT();
@@ -37,7 +40,7 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
 
   // Seller-first hero (default — buyer marketplace is hidden by default)
   if (!customerFlowEnabled) {
-    return <SellerHero videoSrc={videoSrc} />;
+    return <SellerHero videoSrc={videoSrc} serverCountry={serverCountry} />;
   }
 
   // Default content for server rendering / loading state
@@ -273,9 +276,21 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
 /*  Repositions homepage as a CRM/POS SaaS for jewellery shops.  */
 /* ───────────────────────────────────────────────────────────── */
 
-function SellerHero({ videoSrc }: { videoSrc?: string }) {
+function SellerHero({
+  videoSrc,
+  serverCountry,
+}: {
+  videoSrc?: string;
+  serverCountry: MarketRegion;
+}) {
   const { selectedCountry } = useMarket();
   const t = useT();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  // SSR + first client paint use server geo; after mount respect user preferences.
+  const displayCountry = mounted ? selectedCountry : serverCountry;
 
   // Dynamic country-specific copywriting optimized for local jewellers
   const regionalConfig: Record<MarketRegion, { badge: string; headline: string; subheadline: string; trustFooter: string }> = {
@@ -330,7 +345,7 @@ function SellerHero({ videoSrc }: { videoSrc?: string }) {
     trustFooter: "Trusted by professional jewellers across Nepal, India & global markets"
   };
 
-  const currentCopy = regionalConfig[selectedCountry as MarketRegion] || defaultRegion;
+  const currentCopy = regionalConfig[displayCountry as MarketRegion] || defaultRegion;
 
   return (
     <section className="relative min-h-[600px] lg:min-h-[700px] py-12 lg:py-24 overflow-hidden border-b border-gray-150 dark:border-gray-900/60">

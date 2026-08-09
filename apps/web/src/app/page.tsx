@@ -14,7 +14,7 @@ import { T } from "@/components/ui/T";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { BRAND } from "@/config/brand";
 import { SITE_URL } from "@/config/site";
-import { resolveHeroVideo } from "@/lib/geo";
+import { resolveHeroVideo, mapCountryToMarket } from "@/lib/geo";
 import dynamic from "next/dynamic";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -50,6 +50,7 @@ export default function HomePage() {
   const headersList = headers();
   const country = headersList.get("cf-ipcountry");
   const { videoSrc } = resolveHeroVideo(country);
+  const serverCountry = mapCountryToMarket(country);
 
   const softwareSchema = {
     "@context": "https://schema.org",
@@ -85,7 +86,7 @@ export default function HomePage() {
 
         <main className="flex-1">
           {/* 1 & 2: Dynamic Hero Section with geo-based video & Trust badges row */}
-          <HeroSection videoSrc={videoSrc} />
+          <HeroSection videoSrc={videoSrc} serverCountry={serverCountry} />
 
           {/* 3: For Jewellery Shop Owners features section */}
           <SellerFeaturesSection />

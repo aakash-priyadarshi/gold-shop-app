@@ -2,10 +2,12 @@ import { AppTracking } from "@/components/AppTracking";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
 import { Providers } from "@/components/providers";
+import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { SupportBot } from "@/components/support/SupportBot";
 import { Toaster } from "@/components/ui/toaster";
 import { BRAND } from "@/config/brand";
 import { SITE_URL, MOBILE_SITE_URL } from "@/config/site";
+import { mapCountryToMarket } from "@/lib/geo";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
@@ -115,6 +117,10 @@ export default function RootLayout({
 
   const host = headersList.get("host") || "";
   const isMobileDomain = host.startsWith("m.");
+  const initialCountry = mapCountryToMarket(
+    headersList.get("cf-ipcountry") ||
+      headersList.get("x-vercel-ip-country"),
+  );
 
   // Build absolute URLs
   const canonicalUrl = `${SITE_URL}${pathname || "/"}`;
@@ -271,7 +277,7 @@ export default function RootLayout({
             </div>
           </div>
         </noscript>
-        <Providers>
+        <Providers initialCountry={initialCountry}>
           <ErrorBoundary>
             <GeoMismatchBanner />
             {children}
@@ -279,6 +285,7 @@ export default function RootLayout({
             <Toaster />
             <SpeedInsights />
             <AppTracking />
+            <ServiceWorkerRegistrar />
           </ErrorBoundary>
         </Providers>
       </body>

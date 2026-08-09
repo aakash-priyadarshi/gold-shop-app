@@ -378,6 +378,21 @@ export async function middleware(request: NextRequest) {
     .toLowerCase()
     .split(":")[0];
   const pathname = request.nextUrl.pathname;
+  const userAgent = request.headers.get("user-agent") || "";
+  const isCrawlerBot = /bot|crawl|spider|slurp|ia_archiver|prerender/i.test(
+    userAgent,
+  );
+  const isMobileSubdomain = hostname === "m" || hostname.startsWith("m.");
+
+  // Crawlers on marketing/SEO pages do not need geo cookies or mobile redirects.
+  if (
+    isCrawlerBot &&
+    !pathname.startsWith("/dashboard") &&
+    !pathname.startsWith("/m") &&
+    !isMobileSubdomain
+  ) {
+    return NextResponse.next();
+  }
 
   // Skip static files, API routes, and Next.js internals
   if (
@@ -415,7 +430,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Detect mobile subdomain: m.orivraa.com or m.localhost
-  const isMobileSubdomain = hostname === "m" || hostname.startsWith("m.");
+  // (isMobileSubdomain declared at top of middleware)
 
   // Role cookie to gate mobile subdomain redirection.
   // Only SHOPKEEPER and SALES roles (or guests/logged-out users) should be on the mobile subdomain.
@@ -450,12 +465,11 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-pathname", pathname);
 
   if (!isMobileSubdomain) {
-    const userAgent = request.headers.get("user-agent") || "";
     const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
     const forceDesktop = request.cookies.get("orivraa_force_desktop")?.value === "true";
     // Never redirect crawlers/bots to the mobile subdomain — Googlebot's smartphone
     // crawler uses a mobile UA (Android/iPhone) but should index the canonical www version.
-    const isCrawlerBot = /bot|crawl|spider|slurp|ia_archiver|prerender/i.test(userAgent);
+    // (isCrawlerBot declared at top of middleware)
 
     const isDashboardPath = pathname.startsWith("/dashboard");
     const isMobilePath = pathname === "/m" || pathname.startsWith("/m/");
@@ -585,10 +599,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Skip static / PWA / SEO assets so Fluid Active CPU is not spent on them.
+  // Skip static / PWA / SEO / data / API assets so Fluid Active CPU is not spent on them.
   // Keep HTML app routes for geo cookies, m.orivraa.com rewrites, consumer lockout.
   matcher: [
-    "/((?!_next/static|_next/image|favicon\\.ico|monitoring|robots\\.txt|sitemap\\.xml|manifest\\.json|manifest-pos\\.json|sw\\.js|workbox-.*|worker-.*|brand/|patterns/|catalog/|favicon/|flags/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|txt|xml|json|woff2?|ttf|eot)$).*)",
+    "/((?!_next/static|_next/image|_next/data|api/|favicon\\.ico|monitoring|robots\\.txt|sitemap\\.xml|manifest\\.json|manifest-pos\\.json|sw\\.js|workbox-.*|worker-.*|brand/|patterns/|catalog/|favicon/|flags/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|txt|xml|json|woff2?|ttf|eot)$).*)",
   ],
 };
 

@@ -4,7 +4,7 @@ import { ThemeSyncProvider } from "@/components/ThemeSyncProvider";
 import { CartProvider } from "@/contexts/CartContext";
 import { ChatPopupProvider } from "@/contexts/ChatPopupContext";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { MarketProvider, useMarket } from "@/hooks/useMarket";
+import { MarketProvider, useMarket, type MarketRegion } from "@/hooks/useMarket";
 import { TranslationProvider } from "@/providers/translation-provider";
 import {
   LANGUAGES,
@@ -174,7 +174,13 @@ function DirectionSync({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  initialCountry,
+}: {
+  children: React.ReactNode;
+  initialCountry?: MarketRegion;
+}) {
   return (
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
@@ -182,7 +188,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <AuthProvider>
             <ThemeSyncProvider>
               <CartProvider>
-                <MarketProvider>
+                <MarketProvider initialCountry={initialCountry}>
                   <ChatPopupProvider>
                     <TranslationProvider>
                       <DirectionSync>

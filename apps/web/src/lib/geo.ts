@@ -22,6 +22,44 @@ const HERO_VIDEOS: Record<string, string> = {
 
 const DEFAULT_VIDEO = "EU-woman.mp4";
 
+export type GeoMarketRegion = "NP" | "IN" | "US" | "UK" | "EU" | "AE" | "LK";
+
+const SUPPORTED_MARKETS: GeoMarketRegion[] = [
+  "NP",
+  "IN",
+  "US",
+  "UK",
+  "EU",
+  "AE",
+  "LK",
+];
+
+const EUROPEAN_COUNTRIES = new Set([
+  "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
+  "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL",
+  "PL", "PT", "RO", "SK", "SI", "ES", "SE", "CH", "NO",
+]);
+
+const MIDDLE_EAST_COUNTRIES = new Set(["BH", "KW", "OM", "QA", "SA"]);
+
+/** Map a raw ISO country code to a supported market region (shared by middleware + pages). */
+export function mapCountryToMarket(
+  countryCode: string | null | undefined,
+): GeoMarketRegion {
+  if (!countryCode || countryCode === "XX" || countryCode === "T1") {
+    return "US";
+  }
+
+  const code = countryCode.toUpperCase();
+  if (SUPPORTED_MARKETS.includes(code as GeoMarketRegion)) {
+    return code as GeoMarketRegion;
+  }
+  if (code === "GB") return "UK";
+  if (EUROPEAN_COUNTRIES.has(code)) return "EU";
+  if (MIDDLE_EAST_COUNTRIES.has(code)) return "AE";
+  return "US";
+}
+
 /**
  * Return the full CDN URL for the hero video that matches the given
  * ISO-3166 alpha-2 country code (upper-cased).

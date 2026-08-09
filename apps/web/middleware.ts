@@ -183,9 +183,9 @@ export function middleware(request: NextRequest) {
   return response;
 }
 
-// Run middleware on HTML/app routes only — skip static/PWA/SEO assets (Active CPU).
+// Run middleware on HTML/app routes only — skip static/PWA/SEO/data/API assets (Active CPU).
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon\\.ico|monitoring|robots\\.txt|sitemap\\.xml|manifest\\.json|manifest-pos\\.json|sw\\.js|workbox-.*|worker-.*|brand/|patterns/|catalog/|favicon/|flags/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|txt|xml|json|woff2?|ttf|eot)$).*)",
+    "/((?!_next/static|_next/image|_next/data|api/|favicon\\.ico|monitoring|robots\\.txt|sitemap\\.xml|manifest\\.json|manifest-pos\\.json|sw\\.js|workbox-.*|worker-.*|brand/|patterns/|catalog/|favicon/|flags/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|txt|xml|json|woff2?|ttf|eot)$).*)",
   ],
 };

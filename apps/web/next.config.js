@@ -131,7 +131,7 @@ const nextConfig = {
 const withPWAConfigured = withPWA({
   dest: 'public',
   disable: isTauriBuild || process.env.NODE_ENV === 'development',
-  register: true,
+  register: false,
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
