@@ -30,13 +30,20 @@ trap cleanup EXIT
 
 echo "::notice::Creating pre-migration backup: ${FILE_NAME}"
 
-# Neon production runs PostgreSQL 17 — ensure pg_dump major version matches.
-sudo apt-get update -qq
-sudo apt-get install -y -qq postgresql-client-17 2>/dev/null || \
-  sudo apt-get install -y -qq postgresql-client-17 2>/dev/null || true
-if [[ -x /usr/lib/postgresql/17/bin/pg_dump ]]; then
-  export PATH="/usr/lib/postgresql/17/bin:${PATH}"
+# Neon production runs PostgreSQL 17 — install matching client from PGDG.
+if [[ ! -x /usr/lib/postgresql/17/bin/pg_dump ]]; then
+  echo "::notice::Installing postgresql-client-17 from PGDG..."
+  sudo apt-get update -qq
+  sudo apt-get install -y -qq curl ca-certificates lsb-release gnupg
+  sudo install -d /usr/share/postgresql-common/pgdg
+  sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+    https://www.postgresql.org/media/keys/ACCC4CF8.asc
+  echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+    | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+  sudo apt-get update -qq
+  sudo apt-get install -y -qq postgresql-client-17
 fi
+export PATH="/usr/lib/postgresql/17/bin:${PATH}"
 if ! command -v pg_dump >/dev/null 2>&1; then
   echo "::error::pg_dump not found after installing postgresql-client-17"
   exit 1
