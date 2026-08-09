@@ -30,11 +30,11 @@ trap cleanup EXIT
 
 echo "::notice::Creating pre-migration backup: ${FILE_NAME}"
 
-# Prefer pg_dump from PATH; install if missing on GitHub runners
+# Prefer pg_dump from PATH; install PG 17 client if missing or too old for Neon (PG 17)
 if ! command -v pg_dump >/dev/null 2>&1; then
-  echo "::notice::Installing postgresql-client for pg_dump..."
+  echo "::notice::Installing postgresql-client-17 for pg_dump..."
   sudo apt-get update -qq
-  sudo apt-get install -y -qq postgresql-client
+  sudo apt-get install -y -qq postgresql-client-17 || sudo apt-get install -y -qq postgresql-client
 fi
 
 pg_dump --clean --if-exists --no-owner --dbname="$DATABASE_URL" > "$FILE_PATH"
