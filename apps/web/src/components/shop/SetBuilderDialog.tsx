@@ -28,6 +28,7 @@ import { useEffect, useMemo, useState } from "react";
 
 const SET_ROLES = [
   { value: "EARRING", label: "Earrings" },
+  { value: "RING", label: "Ring" },
   { value: "MAANG_TIKKA", label: "Maang Tikka" },
   { value: "NECKLACE", label: "Necklace" },
   { value: "NATHUNI", label: "Nathuni / Nose pin" },
@@ -36,18 +37,39 @@ const SET_ROLES = [
   { value: "OTHER", label: "Other" },
 ];
 
-const PIECE_TYPES = [
-  "EARRING",
-  "NECKLACE",
-  "MAANG_TIKKA",
-  "NOSE_PIN",
-  "MANGALSUTRA",
-  "BANGLE",
-  "RING",
-  "PENDANT",
-  "BRACELET",
-  "OTHER",
+const GEMSTONE_TYPES = [
+  { code: "DIAMOND", name: "Diamond" },
+  { code: "RUBY", name: "Ruby" },
+  { code: "EMERALD", name: "Emerald" },
+  { code: "SAPPHIRE", name: "Sapphire" },
+  { code: "PEARL", name: "Pearl" },
+  { code: "AMETHYST", name: "Amethyst" },
+  { code: "TOPAZ", name: "Topaz" },
+  { code: "OPAL", name: "Opal" },
+  { code: "GARNET", name: "Garnet" },
+  { code: "OTHER", name: "Other" },
 ];
+
+const GEMSTONE_CUTS = [
+  "Round",
+  "Princess",
+  "Oval",
+  "Marquise",
+  "Pear",
+  "Cushion",
+  "Emerald Cut",
+  "Cabochon",
+  "Other",
+];
+
+type GemstoneData = {
+  type: string;
+  cut: string;
+  caratWeight: number;
+  color?: string;
+  clarity?: string;
+  valueNpr: number;
+};
 
 type CompRow = {
   key: string;
@@ -61,9 +83,27 @@ type CompRow = {
   metalValueNpr: string;
   makingChargeNpr: string;
   gemstoneValueNpr: string;
+  gemstones: GemstoneData[];
   /** Display price when picking existing */
   totalPriceNpr?: number;
 };
+
+function sumGemstoneValue(gems: GemstoneData[]) {
+  return gems.reduce((sum, g) => sum + (g.valueNpr || 0), 0);
+}
+
+const PIECE_TYPES = [
+  "EARRING",
+  "NECKLACE",
+  "MAANG_TIKKA",
+  "NOSE_PIN",
+  "MANGALSUTRA",
+  "BANGLE",
+  "RING",
+  "PENDANT",
+  "BRACELET",
+  "OTHER",
+];
 
 type Props = {
   open: boolean;
@@ -114,6 +154,7 @@ export function SetBuilderDialog({
         metalValueNpr: "",
         makingChargeNpr: "",
         gemstoneValueNpr: "0",
+        gemstones: [],
       },
     ]);
 
@@ -168,6 +209,49 @@ export function SetBuilderDialog({
     );
   };
 
+  const addGemstoneToRow = (rowKey: string) => {
+    setComponents((rows) =>
+      rows.map((r) => {
+        if (r.key !== rowKey) return r;
+        return {
+          ...r,
+          gemstones: [
+            ...r.gemstones,
+            { type: "", cut: "", caratWeight: 0, valueNpr: 0 },
+          ],
+        };
+      }),
+    );
+  };
+
+  const updateGemstoneInRow = (
+    rowKey: string,
+    gemIndex: number,
+    field: keyof GemstoneData,
+    value: string | number,
+  ) => {
+    setComponents((rows) =>
+      rows.map((r) => {
+        if (r.key !== rowKey) return r;
+        const gemstones = [...r.gemstones];
+        gemstones[gemIndex] = { ...gemstones[gemIndex], [field]: value };
+        const gemstoneValueNpr = sumGemstoneValue(gemstones).toString();
+        return { ...r, gemstones, gemstoneValueNpr };
+      }),
+    );
+  };
+
+  const removeGemstoneFromRow = (rowKey: string, gemIndex: number) => {
+    setComponents((rows) =>
+      rows.map((r) => {
+        if (r.key !== rowKey) return r;
+        const gemstones = r.gemstones.filter((_, i) => i !== gemIndex);
+        const gemstoneValueNpr = sumGemstoneValue(gemstones).toString();
+        return { ...r, gemstones, gemstoneValueNpr };
+      }),
+    );
+  };
+
   const addRow = () => {
     setComponents((rows) => [
       ...rows,
@@ -182,6 +266,7 @@ export function SetBuilderDialog({
         metalValueNpr: "",
         makingChargeNpr: "",
         gemstoneValueNpr: "0",
+        gemstones: [],
       },
     ]);
   };
@@ -220,6 +305,11 @@ export function SetBuilderDialog({
         metalValueNpr: parseFloat(c.metalValueNpr) || 0,
         makingChargeNpr: parseFloat(c.makingChargeNpr) || 0,
         gemstoneValueNpr: parseFloat(c.gemstoneValueNpr) || 0,
+        gemstones: c.gemstones.filter((g) => g.type),
+        composition: {
+          baseAlloy: { metal: "GOLD", purity: "22K" },
+          gemstones: c.gemstones.filter((g) => g.type),
+        },
       };
     });
 
@@ -425,6 +515,7 @@ export function SetBuilderDialog({
                     </SelectContent>
                   </Select>
                 ) : (
+                  <>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                     <div className="col-span-2">
                       <Label className="text-xs">
@@ -506,7 +597,136 @@ export function SetBuilderDialog({
                         }
                       />
                     </div>
+                    <div>
+                      <Label className="text-xs">
+                        <T>Gemstone value</T>
+                      </Label>
+                      <Input
+                        type="number"
+                        value={c.gemstoneValueNpr}
+                        onChange={(e) =>
+                          updateRow(c.key, { gemstoneValueNpr: e.target.value })
+                        }
+                        readOnly={c.gemstones.length > 0}
+                      />
+                    </div>
                   </div>
+
+                  <div className="space-y-2 border-t pt-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">
+                        <T>Gemstones</T>
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => addGemstoneToRow(c.key)}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        <T>Add gemstone</T>
+                      </Button>
+                    </div>
+                    {c.gemstones.map((gem, gemIdx) => (
+                      <div
+                        key={gemIdx}
+                        className="grid grid-cols-2 md:grid-cols-5 gap-2 items-end rounded border p-2 bg-background"
+                      >
+                        <div>
+                          <Label className="text-[10px]">
+                            <T>Type</T>
+                          </Label>
+                          <Select
+                            value={gem.type}
+                            onValueChange={(v) =>
+                              updateGemstoneInRow(c.key, gemIdx, "type", v)
+                            }
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder={t("Type")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {GEMSTONE_TYPES.map((ty) => (
+                                <SelectItem key={ty.code} value={ty.code}>
+                                  {ty.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-[10px]">
+                            <T>Cut</T>
+                          </Label>
+                          <Select
+                            value={gem.cut}
+                            onValueChange={(v) =>
+                              updateGemstoneInRow(c.key, gemIdx, "cut", v)
+                            }
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder={t("Cut")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {GEMSTONE_CUTS.map((cut) => (
+                                <SelectItem key={cut} value={cut}>
+                                  {cut}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-[10px]">
+                            <T>Carat</T>
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            className="h-8"
+                            value={gem.caratWeight || ""}
+                            onChange={(e) =>
+                              updateGemstoneInRow(
+                                c.key,
+                                gemIdx,
+                                "caratWeight",
+                                parseFloat(e.target.value) || 0,
+                              )
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[10px]">
+                            <T>Value</T> ({currencySymbol})
+                          </Label>
+                          <Input
+                            type="number"
+                            className="h-8"
+                            value={gem.valueNpr || ""}
+                            onChange={(e) =>
+                              updateGemstoneInRow(
+                                c.key,
+                                gemIdx,
+                                "valueNpr",
+                                parseFloat(e.target.value) || 0,
+                              )
+                            }
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => removeGemstoneFromRow(c.key, gemIdx)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  </>
                 )}
               </div>
             ))}

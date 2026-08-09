@@ -146,6 +146,13 @@ export class SetComponentInputDto {
   @IsOptional()
   gemstoneValueNpr?: number;
 
+  @ApiPropertyOptional({
+    description: "Gemstone line items (type, cut, caratWeight, valueNpr, etc.)",
+  })
+  @IsArray()
+  @IsOptional()
+  gemstones?: Record<string, unknown>[];
+
   @ApiPropertyOptional()
   @IsObject()
   @IsOptional()

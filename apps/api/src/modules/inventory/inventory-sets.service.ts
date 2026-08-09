@@ -286,6 +286,17 @@ export class InventorySetsService {
     const gem = input.gemstoneValueNpr || 0;
     const total = metal + making + gem;
 
+    const comp = (input.composition || {}) as Record<string, unknown>;
+    const gemstones = Array.isArray(comp.gemstones)
+      ? comp.gemstones
+      : Array.isArray(input.gemstones)
+        ? input.gemstones
+        : [];
+    const baseAlloy =
+      comp.baseAlloy && typeof comp.baseAlloy === "object"
+        ? comp.baseAlloy
+        : { metal: "GOLD", purity: "22K" };
+
     return tx.inventoryItem.create({
       data: {
         shopId,
@@ -293,9 +304,10 @@ export class InventorySetsService {
         nameEn: input.nameEn,
         jewelleryType: input.jewelleryType as JewelleryType,
         buildMethod: "METHOD_A",
-        composition: (input.composition as object) || {
-          baseAlloy: { metal: "GOLD", purity: "22K" },
-          gemstones: [],
+        composition: {
+          ...comp,
+          baseAlloy,
+          gemstones,
         },
         totalWeightGrams: input.totalWeightGrams || 0.01,
         metalValueNpr: metal,
