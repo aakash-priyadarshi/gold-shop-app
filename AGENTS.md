@@ -202,7 +202,26 @@ Pass the Railway secret as `turnstileToken` (not a real Turnstile widget token).
 | `pentest-shop@orivraa.com`  | `PenTest123!@#` | SHOPKEEPER             |
 | `pentest-admin@orivraa.com` | `PenTest123!@#` | ADMIN                  |
 
-**Browser UI testing:** Google OAuth users can log in manually at https://www.orivraa.com/auth/login (no password needed). For Playwright, run `cd e2e && npx ts-node auth-setup.ts` once while logged in via Google — session saves to `e2e/.auth/seller.json` for reuse.
+**Browser UI testing:** Google OAuth users can log in manually at https://www.orivraa.com/auth/login (no password needed).
+
+**Import Edge/Chrome session (no Playwright browser install needed):**
+
+1. In Edge while logged in: **F12 → Application → Local Storage → `https://www.orivraa.com`**
+2. Copy `token` and `refreshToken` values
+3. Run:
+
+```powershell
+cd e2e
+$env:E2E_TOKEN="paste-token-here"
+$env:E2E_REFRESH_TOKEN="paste-refreshToken-here"
+node scripts/import-session.mjs
+```
+
+**Or use Playwright auth-setup** (requires `npx playwright install chromium` first):
+
+```bash
+cd e2e && npx playwright install chromium && npx ts-node auth-setup.ts
+```
 
 **Security rules for agents:**
 

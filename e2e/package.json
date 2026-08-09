@@ -9,7 +9,9 @@
     "test:debug": "playwright test --debug",
     "report": "playwright show-report",
     "demo:setup": "ts-node auth-setup.ts",
-    "demo": "playwright test seller-demo --project=chromium --headed --workers=1"
+    "demo": "playwright test seller-demo --project=chromium --headed --workers=1",
+    "auth:import": "node scripts/import-session.mjs",
+    "postinstall": "playwright install chromium"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",

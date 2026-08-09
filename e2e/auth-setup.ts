@@ -24,8 +24,8 @@ async function main() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
 
-  console.log(`\nOpening ${BASE_URL}/login — log in with Google in the browser window.`);
-  await page.goto(`${BASE_URL}/login`);
+  console.log(`\nOpening ${BASE_URL}/auth/login — log in with Google in the browser window.`);
+  await page.goto(`${BASE_URL}/auth/login`);
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   await new Promise<void>((resolve) =>

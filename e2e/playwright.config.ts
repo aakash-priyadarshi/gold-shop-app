@@ -40,7 +40,7 @@ export default defineConfig({
       : undefined,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    video: process.env.CI ? "retain-on-failure" : "off",
   },
 
   projects: [
@@ -53,6 +53,13 @@ export default defineConfig({
     },
     ...(!process.env.CI
       ? [
+          {
+            name: "msedge",
+            use: {
+              ...devices["Desktop Edge"],
+              channel: "msedge",
+            },
+          },
           {
             name: "firefox",
             use: { ...devices["Desktop Firefox"] },
