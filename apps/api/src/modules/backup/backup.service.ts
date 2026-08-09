@@ -191,6 +191,59 @@ export class BackupService implements OnModuleInit {
     await this.createBackupAndNotify();
   }
 
+  /**
+   * Mandatory safety backup before applying Prisma migrations.
+   * Same R2 destination + 7-backup retention as scheduled backups.
+   */
+  async createPreMigrationBackup(): Promise<{ filename: string }> {
+    if (!this.s3Client) {
+      throw new Error('S3 Client is not initialized. Check R2 credentials before migrating.');
+    }
+
+    const dbUrl = this.configService.get<string>('DATABASE_URL');
+    if (!dbUrl) {
+      throw new Error('DATABASE_URL is not configured for pg_dump.');
+    }
+
+    const backupDir = path.join(process.cwd(), 'tmp_backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    const dateStr = new Date().toISOString().replace(/:/g, '-').split('.')[0];
+    const fileName = `pre-migrate-db-backup-${dateStr}.sql`;
+    const filePath = path.join(backupDir, fileName);
+    const command = `pg_dump --clean --if-exists --no-owner "${dbUrl}" > "${filePath}"`;
+
+    try {
+      this.logger.log(`Pre-migration backup: executing pg_dump to ${filePath}`);
+      await execAsync(command);
+      const fileContent = fs.readFileSync(filePath);
+      if (fileContent.length < 1000) {
+        throw new Error(`Pre-migration backup looks empty/corrupt (${fileContent.length} bytes)`);
+      }
+
+      await this.s3Client.send(
+        new PutObjectCommand({
+          Bucket: this.bucketName,
+          Key: fileName,
+          Body: fileContent,
+          ContentType: 'application/sql',
+        }),
+      );
+      this.logger.log(`Pre-migration backup uploaded: ${fileName}`);
+      fs.unlinkSync(filePath);
+      await this.cleanupOldBackups();
+      return { filename: fileName };
+    } catch (error: any) {
+      this.logger.error(`Pre-migration backup failed: ${error.message}`);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      throw error;
+    }
+  }
+
   async deleteBackup(filename: string) {
     if (!this.s3Client) throw new NotFoundException('S3 client not initialized');
 
@@ -210,19 +263,31 @@ export class BackupService implements OnModuleInit {
   private async cleanupOldBackups() {
     if (!this.s3Client) return;
     const MAX_BACKUPS = 7;
+    const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
     try {
       const backups = await this.getAvailableBackups();
-      if (backups.length > MAX_BACKUPS) {
-        // Since backups are sorted descending, the first 7 are the newest
-        const toDelete = backups.slice(MAX_BACKUPS);
-        for (const backup of toDelete) {
-          try {
-            await this.deleteBackup(backup.filename);
-            this.logger.log(`Deleted stale backup from R2: ${backup.filename}`);
-          } catch (err) {
-            this.logger.error(`Failed to delete stale backup ${backup.filename}`);
-          }
+      const now = Date.now();
+      const staleByAge = backups.filter(
+        (b) => now - new Date(b.createdAt).getTime() > MAX_AGE_MS,
+      );
+      const excessByCount =
+        backups.length - staleByAge.length > MAX_BACKUPS
+          ? backups
+              .filter((b) => !staleByAge.includes(b))
+              .slice(MAX_BACKUPS)
+          : [];
+
+      const toDelete = [...staleByAge, ...excessByCount];
+      const seen = new Set<string>();
+      for (const backup of toDelete) {
+        if (seen.has(backup.filename)) continue;
+        seen.add(backup.filename);
+        try {
+          await this.deleteBackup(backup.filename);
+          this.logger.log(`Deleted stale backup from R2: ${backup.filename}`);
+        } catch (err) {
+          this.logger.error(`Failed to delete stale backup ${backup.filename}`);
         }
       }
     } catch (e: any) {

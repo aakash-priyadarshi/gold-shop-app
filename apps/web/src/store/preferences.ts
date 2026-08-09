@@ -429,9 +429,11 @@ export const usePreferencesStore = create<PreferencesState>()(
       // On rehydrate, always run geo-detection to populate detectedCountry
       onRehydrateStorage: () => () => {
         if (typeof window !== "undefined") {
-          // Always detect geo on every visit — this populates detectedCountry
-          // but will only auto-set country/currency if user never chose explicitly
-          initializeFromGeo();
+          // Defer past store/module initialization so we never hit a TDZ from
+          // circular imports during the first hydration tick (React #418/#422).
+          queueMicrotask(() => {
+            void initializeFromGeo();
+          });
         }
       },
     },

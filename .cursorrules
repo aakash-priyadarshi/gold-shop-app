@@ -14,8 +14,14 @@ This is a LIVE PRODUCTION application hosted at:
 
 ### SAFE DATABASE COMMANDS:
 - `prisma generate` - Just generates the client, safe
-- `prisma migrate deploy` - Safe for production, only applies pending migrations
 - `prisma studio` - Read-only browsing, safe
+
+### MIGRATIONS (STRICT — backup first):
+- NEVER run `prisma migrate deploy` against production without a successful DB backup first
+- CI path: `.github/workflows/main-deploy-guard.yml` runs `apps/api/scripts/pre-migrate-backup.sh` before migrate
+- Manual path: `cd apps/api && ./scripts/pre-migrate-backup.sh` then `npx prisma migrate deploy`
+- Backups go to Cloudflare R2; retention keeps the newest 7 and deletes anything older than 7 days
+- Admin API: `POST /api/backups/pre-migrate` creates a named pre-migration dump
 
 ## Tech Stack Reference
 

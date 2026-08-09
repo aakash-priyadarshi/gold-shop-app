@@ -593,9 +593,15 @@ function LkPanel({
     taxReportsApi
       .lkVat(period)
       .then((r) => setData(r.data))
-      .catch(() =>
-        toast({ variant: "destructive", title: "Failed to load Sri Lanka VAT" }),
-      )
+      .catch((err: any) => {
+        const status = err?.response?.status;
+        const msg =
+          err?.response?.data?.message ||
+          (status === 403
+            ? "Sri Lanka VAT is only available for shops registered in Sri Lanka"
+            : "Failed to load Sri Lanka VAT");
+        toast({ variant: "destructive", title: String(msg) });
+      })
       .finally(() => setLoading(false));
   }, [period, toast]);
 

@@ -31,6 +31,24 @@ export class BackupController {
     }
   }
 
+  @Post('pre-migrate')
+  @ApiOperation({
+    summary:
+      'Create a mandatory pre-migration database backup (must succeed before prisma migrate deploy)',
+  })
+  async preMigrateBackup() {
+    try {
+      const result = await this.backupService.createPreMigrationBackup();
+      return {
+        success: true,
+        message: 'Pre-migration backup created. Safe to run migrate deploy.',
+        filename: result.filename,
+      };
+    } catch (e: any) {
+      throw new InternalServerErrorException(e.message);
+    }
+  }
+
   @Delete(':filename')
   @ApiOperation({ summary: 'Delete a specific backup file' })
   deleteBackup(@Param('filename') filename: string) {

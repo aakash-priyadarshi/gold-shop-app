@@ -108,6 +108,24 @@ jobs:
         working-directory: apps/api
         run: npx prisma generate
 
+      - name: Install AWS CLI (for R2 upload)
+        run: |
+          if ! command -v aws >/dev/null 2>&1; then
+            pip install --quiet awscli
+          fi
+
+      - name: Pre-migration database backup (required)
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DATABASE_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME || 'backups' }}
+        run: |
+          chmod +x scripts/pre-migrate-backup.sh
+          ./scripts/pre-migrate-backup.sh
+
       - name: Run Migrations
         working-directory: apps/api
         run: npx prisma migrate deploy
