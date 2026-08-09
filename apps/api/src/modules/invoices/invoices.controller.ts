@@ -128,3 +128,17 @@ export class InvoicesController {
     return this.invoicesService.voidInvoice(id, shopId);
   }
 }
+
+/**
+ * Public, no-auth bill verification (QR on printed invoice → /verify-bill).
+ * Exposes only safe, display-only fields.
+ */
+@Controller("invoices/public")
+export class InvoicesPublicController {
+  constructor(private readonly invoicesService: InvoicesService) {}
+
+  @Get("verify/:token")
+  async verify(@Param("token") token: string) {
+    return this.invoicesService.verifyByToken(token);
+  }
+}

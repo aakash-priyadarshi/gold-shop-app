@@ -1017,6 +1017,8 @@ export const invoicesApi = {
   getStats: () => api.get("/invoices/stats"),
   getSettings: () => api.get("/invoices/settings"),
   updateSettings: (data: any) => api.patch("/invoices/settings", data),
+  // Public: verify bill by QR token (no auth)
+  verifyBill: (token: string) => api.get(`/invoices/public/verify/${token}`),
 };
 
 // Shop double-entry ledger / accounting API

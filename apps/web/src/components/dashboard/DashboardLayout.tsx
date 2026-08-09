@@ -480,19 +480,19 @@ const navItems: NavItem[] = [
     roles: ["SHOPKEEPER"],
   },
   {
-    label: "Products",
+    label: "Product Catalog",
     href: "/dashboard/shop/products",
     icon: Store,
     roles: ["SHOPKEEPER"],
   },
   {
-    label: "Inventory",
+    label: "Pricing Setup",
     href: "/dashboard/shop/inventory",
     icon: Package,
     roles: ["SHOPKEEPER"],
   },
   {
-    label: "Stock",
+    label: "Vault & Tags",
     href: "/dashboard/shop/stock",
     icon: ClipboardList,
     roles: ["SHOPKEEPER"],

@@ -677,6 +677,16 @@ function LkPanel({
             <SkeletonGrid />
           ) : data ? (
             <>
+              {data.notLkShop && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50/60 dark:bg-blue-950/20 p-3 text-sm text-blue-900 dark:text-blue-200 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    <T>
+                      Sri Lanka VAT reports are only available for shops registered in Sri Lanka.
+                    </T>
+                  </span>
+                </div>
+              )}
               <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                 <span>
                   <T>Shop TIN</T>:{" "}

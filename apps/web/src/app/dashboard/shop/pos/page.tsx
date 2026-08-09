@@ -170,6 +170,7 @@ function PosPageInner() {
     paymentMethod?: string;
     customerName?: string;
     customerPhone?: string;
+    verificationToken?: string;
   } | null>(null);
   const [billSettings, setBillSettings] = useState<BillSettings | null>(null);
   const [shopUpiId, setShopUpiId] = useState("");
@@ -369,6 +370,7 @@ function PosPageInner() {
         paymentMethod,
         customerName,
         customerPhone,
+        verificationToken: inv?.verificationToken,
       });
       toast({
         title: t("Checkout complete!"),
@@ -1159,6 +1161,7 @@ function PosPageInner() {
                       balanceDue: 0,
                       currency: currencySymbol,
                       paymentMethod: checkoutSuccess.paymentMethod,
+                      verificationToken: checkoutSuccess.verificationToken,
                     });
                     if (!ok) {
                       toast({

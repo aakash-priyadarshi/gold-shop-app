@@ -52,6 +52,10 @@ export class CreateInvoiceDto {
   @IsString()
   shopQuoteId?: string;
 
+  @IsOptional()
+  @IsString()
+  walkInCustomerId?: string;
+
   @IsString()
   customerName: string;
 

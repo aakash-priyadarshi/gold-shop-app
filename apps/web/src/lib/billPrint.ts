@@ -69,6 +69,8 @@ export interface BillPrintPayload {
   paymentMethod?: string | null;
   notes?: string | null;
   watermark?: boolean;
+  /** Public QR verification token — renders a scannable code on the bill. */
+  verificationToken?: string | null;
 }
 
 function safe(value: unknown): string {
@@ -299,6 +301,14 @@ ${
 ${paid > 0 ? `<div class="row" style="padding-top:8px"><span class="label">Paid</span><span class="amt-paid">${safe(fmt(paid, currency))}</span></div>` : ""}
 ${balance > 0.009 ? `<div class="row"><span class="label">Balance due</span><span class="amt-due">${safe(fmt(balance, currency))}</span></div>` : ""}
 ${payload.notes ? `<p class="muted" style="margin-top:12px">${safe(payload.notes)}</p>` : ""}
+${
+  payload.verificationToken
+    ? `<div style="text-align:center;margin-top:14px;padding-top:10px;border-top:1px dashed #e5e7eb">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=4&data=${encodeURIComponent(`https://www.orivraa.com/verify-bill/${payload.verificationToken}`)}" alt="Verify bill" style="width:88px;height:88px;margin:0 auto" />
+        <p class="tiny" style="margin-top:4px">Scan to verify this bill is genuine</p>
+      </div>`
+    : ""
+}
 ${bottomBrand || '<p class="footer">Thank you for your business!</p>'}
 <script>setTimeout(function(){window.print();},350);</script></body></html>`;
 }

@@ -29,6 +29,7 @@ import { printStockJewelleryTags } from "@/lib/jewelleryTagPrint";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import {
   ArrowRightLeft,
   Coins,
@@ -346,20 +347,21 @@ function StockLedgerContent() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <Package className="h-6 w-6 text-amber-500" />
-            <T>Stock Ledger</T>
+            <T>Vault & Tags</T>
           </h1>
           <p className="text-muted-foreground mt-0.5">
-            <T>Search and manage hallmarked finished jewelry assets across showcases and safe vaults.</T>
+            <T>Physical view of your Product Catalog — track locations, valuation, and print tags. Add sellable items in Product Catalog first.</T>
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
-            onClick={() => setAddModalOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            <T>Inward Finished Piece</T>
-          </Button>
+          <Link href="/dashboard/shop/products?create=1">
+            <Button
+              className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              <T>Inward Finished Piece</T>
+            </Button>
+          </Link>
         </div>
       </div>
 

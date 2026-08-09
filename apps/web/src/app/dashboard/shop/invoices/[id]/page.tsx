@@ -111,6 +111,7 @@ interface InvoiceDetail {
   supplierPhone?: string;
   supplierTaxId?: string;
   taxBreakdown?: any;
+  verificationToken?: string;
 }
 
 const statusColors: Record<string, string> = {
@@ -324,6 +325,7 @@ export default function InvoiceDetailPage() {
       paymentMethod: invoice.paymentMethod,
       notes: invoice.notes,
       watermark: shouldShowWatermark,
+      verificationToken: invoice.verificationToken,
     });
     if (!ok) {
       toast({

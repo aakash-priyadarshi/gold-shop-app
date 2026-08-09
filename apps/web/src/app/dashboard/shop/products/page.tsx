@@ -61,6 +61,7 @@ import {
     Trash2,
 } from "lucide-react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 interface InventoryItem {
@@ -299,6 +300,15 @@ export default function ShopProductsPage() {
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const t = useT();
+
+  // Open create dialog when landing from Vault & Tags (or any ?create=1 link)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      openAddDialog();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Weight conversion helpers
   const gramsToTola = (grams: number) => grams / TOLA_TO_GRAM;
@@ -601,10 +611,10 @@ export default function ShopProductsPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold">
-                <T>Products</T>
+                <T>Product Catalog</T>
               </h1>
               <p className="text-muted-foreground">
-                <T>Manage your jewellery inventory and listings</T>
+                <T>Pre-built items you can add to catalogues, sell via POS, and invoice. Vault & Tags shows the physical location view.</T>
               </p>
             </div>
             <Button data-tour="inventory-add" onClick={openAddDialog}>
@@ -645,8 +655,8 @@ export default function ShopProductsPage() {
                     <SelectItem value="RESERVED">
                       <T>Reserved</T>
                     </SelectItem>
-                    <SelectItem value="UNAVAILABLE">
-                      <T>Unavailable</T>
+                    <SelectItem value="DISCONTINUED">
+                      <T>Discontinued</T>
                     </SelectItem>
                   </SelectContent>
                 </Select>

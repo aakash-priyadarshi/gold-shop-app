@@ -728,6 +728,7 @@ model WalkInCustomer {
 
   createdByShop Shop        @relation(fields: [createdByShopId], references: [id])
   shopQuotes    ShopQuote[]
+  invoices      Invoice[]
 
   @@index([phone])
   @@index([createdByShopId])
@@ -2335,6 +2336,10 @@ model Invoice {
   shopId        String
   orderId       String?
   shopQuoteId   String?
+  walkInCustomerId String? // walk-in CRM link (via quote/POS/manual)
+
+  // Public bill verification token for QR on printed invoices
+  verificationToken String @default(uuid()) @unique
 
   // Idempotency key for offline-replayed POS sales (client-generated UUID).
   // A replayed sale with the same key returns the existing invoice instead of
@@ -2404,8 +2409,9 @@ model Invoice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  shop     Shop             @relation(fields: [shopId], references: [id])
-  payments InvoicePayment[]
+  shop           Shop            @relation(fields: [shopId], references: [id])
+  walkInCustomer WalkInCustomer? @relation(fields: [walkInCustomerId], references: [id])
+  payments       InvoicePayment[]
 
   @@index([shopId])
   @@index([orderId])
@@ -2413,6 +2419,7 @@ model Invoice {
   @@index([invoiceNumber])
   @@index([shopId, issuedAt])
   @@index([invoiceCountry])
+  @@index([walkInCustomerId])
 }
 
 enum InvoicePaymentStatus {

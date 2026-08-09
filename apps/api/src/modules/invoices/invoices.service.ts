@@ -399,6 +399,7 @@ export class InvoicesService {
       shopId,
       orderId: dto.orderId || null,
       shopQuoteId: dto.shopQuoteId || null,
+      walkInCustomerId: dto.walkInCustomerId || null,
       customerName: dto.customerName,
       customerPhone: dto.customerPhone || null,
       customerEmail: dto.customerEmail || null,
@@ -771,6 +772,52 @@ export class InvoicesService {
 
       return { ...finalInvoice, recordedPayment: payment };
     });
+  }
+
+  /**
+   * Public bill verification by QR token. Returns only safe display fields so
+   * anyone scanning the printed QR can confirm the bill is genuine.
+   */
+  async verifyByToken(token: string) {
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { verificationToken: token },
+      include: {
+        shop: {
+          select: { shopName: true, city: true, country: true, profileImage: true },
+        },
+      },
+    });
+    if (!invoice) {
+      throw new NotFoundException("Bill not found or verification link invalid");
+    }
+    const lineItems = Array.isArray(invoice.lineItems)
+      ? (invoice.lineItems as Array<Record<string, any>>)
+      : [];
+    return {
+      verified: true,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceTitle: invoice.invoiceTitle,
+      issuedAt: invoice.issuedAt,
+      status: invoice.status,
+      paymentStatus: invoice.paymentStatus,
+      totalAmount: invoice.totalAmount,
+      paidAmount: invoice.paidAmount,
+      balanceDue: invoice.balanceDue,
+      currency: invoice.currency,
+      supplierName: invoice.supplierName,
+      supplierPhone: invoice.supplierPhone,
+      supplierTaxId: invoice.supplierTaxId,
+      customerName: invoice.customerName,
+      lineItems: lineItems.slice(0, 50).map((li) => ({
+        label: li.label,
+        category: li.category,
+        amount: li.amount,
+        details: li.details,
+      })),
+      shop: invoice.shop
+        ? { ...invoice.shop, logo: (invoice.shop as any).profileImage ?? null }
+        : null,
+    };
   }
 
   async voidInvoice(id: string, shopId: string) {

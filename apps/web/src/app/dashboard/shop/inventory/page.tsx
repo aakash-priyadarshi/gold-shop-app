@@ -842,9 +842,9 @@ export default function ShopInventoryPage() {
         <div className="space-y-6">
           {/* Header */}
           <div>
-            <h1 className="text-2xl font-bold"><T>Inventory & Capabilities</T></h1>
+            <h1 className="text-2xl font-bold"><T>Pricing Setup & Capabilities</T></h1>
             <p className="text-muted-foreground">
-              <T>Manage your materials, jewellery types, and build methods</T>
+              <T>Configure materials, making charges, and jewellery types. Item-level stock lives in Product Catalog and Vault & Tags.</T>
             </p>
           </div>
 
