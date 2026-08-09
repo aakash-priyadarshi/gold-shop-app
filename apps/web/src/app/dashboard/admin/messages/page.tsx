@@ -74,6 +74,8 @@ interface BotStats {
   avgMessagesPerSession: string;
   intentBreakdown: { intent: string; count: number }[];
   dailySessions: { day: string; count: number }[];
+  newLeadsCount?: number;
+  capturedLeadsCount?: number;
 }
 
 interface EmailTrigger {
@@ -1692,6 +1694,17 @@ export default function AdminMessagesPage() {
             </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
+              {(botStats?.newLeadsCount ?? 0) > 0 && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    {botStats?.newLeadsCount} new AI lead
+                    {(botStats?.newLeadsCount || 0) === 1 ? "" : "s"} waiting for follow-up
+                  </p>
+                  <Button size="sm" asChild>
+                    <a href="/dashboard/admin/leads?status=NEW">Open Leads inbox</a>
+                  </Button>
+                </div>
+              )}
               <div className="grid gap-4 md:grid-cols-4">
                 <Card>
                   <CardHeader className="pb-2">

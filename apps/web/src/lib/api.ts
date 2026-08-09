@@ -1403,6 +1403,23 @@ export const ticketsApi = {
   getBotSessions: (page = 1, limit = 20) =>
     api.get("/tickets/ai-chat/sessions", { params: { page, limit } }),
   getBotStats: () => api.get("/tickets/ai-chat/stats"),
+  getLeads: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+    session?: string;
+  }) => api.get("/tickets/ai-chat/leads", { params }),
+  updateLead: (
+    sessionId: string,
+    data: { leadStatus?: string; leadNotes?: string | null },
+  ) => api.patch(`/tickets/ai-chat/leads/${sessionId}`, data),
+  getLeadAlertSettings: () =>
+    api.get("/tickets/ai-chat/leads/alert-settings"),
+  updateLeadAlertSettings: (data: {
+    emails: string[];
+    digestEnabled?: boolean;
+  }) => api.patch("/tickets/ai-chat/leads/alert-settings", data),
   // Public contacts
   getPublicContacts: () => api.get("/tickets/contacts"),
 };

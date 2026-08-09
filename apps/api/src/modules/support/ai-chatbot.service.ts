@@ -136,6 +136,99 @@ export class AiChatbotService {
     return intents;
   }
 
+  private static readonly FOUNDER_EMAIL = "aakashm301@gmail.com";
+  private static readonly FOUNDER_WHATSAPP = "+91 62039 65557";
+
+  /** Detect visitor providing their own email or phone. */
+  private extractContactFromMessage(
+    message: string,
+  ): { contactType: "email" | "phone"; contactValue: string } | null {
+    const trimmed = message.trim();
+    const emailMatch = trimmed.match(
+      /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/,
+    );
+    if (emailMatch) {
+      return { contactType: "email", contactValue: emailMatch[0] };
+    }
+
+    // Strip common wrappers: "whatsapp:", "my number is", etc.
+    const cleaned = trimmed
+      .replace(
+        /^(?:my\s+)?(?:whatsapp|wa|phone|mobile|number|contact)(?:\s*(?:number|no\.?))?\s*(?:is|:)?\s*/i,
+        "",
+      )
+      .trim();
+
+    const digitCount = (cleaned.match(/\d/g) || []).length;
+    const looksLikePhone =
+      digitCount >= 8 &&
+      digitCount <= 15 &&
+      /^[\d\s+\-().]+$/.test(cleaned) &&
+      !/[a-zA-Z]{3,}/.test(cleaned);
+
+    if (looksLikePhone) {
+      return { contactType: "phone", contactValue: cleaned.replace(/\s+/g, " ").trim() };
+    }
+
+    // Digit-only message (common bare WhatsApp numbers)
+    const digitsOnly = trimmed.replace(/\D/g, "");
+    if (/^\d{8,15}$/.test(digitsOnly) && trimmed.length <= 20) {
+      return { contactType: "phone", contactValue: digitsOnly };
+    }
+
+    return null;
+  }
+
+  /** Visitor asking for Orivraa's / founder's WhatsApp or contact. */
+  private isAskingForOurContact(message: string): boolean {
+    const msg = message.toLowerCase().trim();
+
+    // Clarifying that THEY are sharing a number — not asking for ours
+    if (
+      /^(this|that|it)\s+is\s+(my\s+)?(whatsapp|wa|phone|mobile|number)/i.test(
+        msg,
+      ) ||
+      /^(my\s+)?(whatsapp|wa|phone|mobile|number)/i.test(msg)
+    ) {
+      return false;
+    }
+
+    // Bare digits = providing contact
+    if (/^\+?[\d\s\-().]{8,20}$/.test(msg)) return false;
+
+    return (
+      /^(whatsapp|wa)\s*(number|no\.?|num)?\s*(plz|please|pls)?\??$/.test(msg) ||
+      /(your|ur|orivraa'?s?|founder'?s?|aakash'?s?)\s*(whatsapp|wa|phone|mobile|number|contact)/.test(
+        msg,
+      ) ||
+      /(give|share|send|need|want)\s+(me\s+)?(your\s+)?(whatsapp|wa|phone|contact|number)/.test(
+        msg,
+      ) ||
+      /how\s+(can|do)\s+i\s+(contact|reach|call|whatsapp)/.test(msg) ||
+      /contact\s+(number|details|info)\s*(plz|please|pls)?/.test(msg)
+    );
+  }
+
+  private looksLikeContactAskInReply(reply: string): boolean {
+    return /(?:email|whatsapp|phone|wa)\s*(?:number|no\.?)?|drop your|reach you|best way to reach|grab your email|ping you/i.test(
+      reply,
+    );
+  }
+
+  private leadCaptureConfirmation(
+    contactType: "email" | "phone",
+    contactValue: string,
+    guestName?: string,
+  ): string {
+    const label = contactType === "email" ? "email" : "WhatsApp";
+    const nameBit = guestName ? `, ${guestName}` : "";
+    return `Got it${nameBit} — I've saved your ${label} (${contactValue}). Aakash will reach out personally. Anything else I can help with?`;
+  }
+
+  private founderContactReply(): string {
+    return `You can reach Aakash (our founder) directly:\n• WhatsApp / Call: ${AiChatbotService.FOUNDER_WHATSAPP}\n• Email: ${AiChatbotService.FOUNDER_EMAIL}\nHe replies personally within a few hours. Happy to keep answering questions here too!`;
+  }
+
   async chat(
     message: string,
     conversationHistory: Array<{
@@ -172,6 +265,71 @@ export class AiChatbotService {
         undefined,
         ipAddress,
       );
+
+      // Guest lead-capture helpers — skip for logged-in staff/customers
+      const isGuest = !viewerRole || viewerRole === "GUEST";
+      if (isGuest) {
+        // 1) Visitor asking for OUR WhatsApp / contact
+        if (this.isAskingForOurContact(message)) {
+          const reply = this.founderContactReply();
+          await this.supportService.logAiChat(
+            sessionId ?? null,
+            "assistant",
+            reply,
+            "founderContact",
+            1.0,
+            ipAddress,
+          );
+          return { reply, shouldEscalate: false, confidence: 1.0 };
+        }
+
+        const extracted = this.extractContactFromMessage(message);
+        if (extracted && sessionId) {
+          await this.supportService.saveLeadContact(
+            sessionId,
+            extracted.contactType,
+            extracted.contactValue,
+          );
+          const reply = this.leadCaptureConfirmation(
+            extracted.contactType,
+            extracted.contactValue,
+          );
+          await this.supportService.logAiChat(
+            sessionId,
+            "assistant",
+            reply,
+            "captureLeadContact",
+            1.0,
+            ipAddress,
+          );
+          return { reply, shouldEscalate: false, confidence: 1.0 };
+        }
+
+        // Digit-only while awaiting but extract failed — still try digits
+        const awaiting =
+          !!sessionId &&
+          (await this.supportService.getSessionAwaitingContact(sessionId));
+        if (awaiting && sessionId) {
+          const digits = message.replace(/\D/g, "");
+          if (/^\d{8,15}$/.test(digits)) {
+            await this.supportService.saveLeadContact(
+              sessionId,
+              "phone",
+              digits,
+            );
+            const reply = this.leadCaptureConfirmation("phone", digits);
+            await this.supportService.logAiChat(
+              sessionId,
+              "assistant",
+              reply,
+              "captureLeadContact",
+              1.0,
+              ipAddress,
+            );
+            return { reply, shouldEscalate: false, confidence: 1.0 };
+          }
+        }
+      }
 
       // Enrich context with pgvector RAG (gracefully skipped if not configured)
       const knowledgeContext = await this.searchKnowledge(message);
@@ -276,7 +434,7 @@ export class AiChatbotService {
             tools,
             generationConfig: {
               temperature: 0.3,
-              maxOutputTokens: 500,
+              maxOutputTokens: 1024,
               topP: 0.8,
             },
           }),
@@ -289,11 +447,55 @@ export class AiChatbotService {
       }
 
       const data = await response.json();
-      const { functionCall, text } = this.extractGeminiResponseParts(data);
+      const { functionCall, text, finishReason, blockReason } =
+        this.extractGeminiResponseParts(data);
+
+      if (!text && !functionCall) {
+        this.logger.warn(
+          `Gemini empty response finishReason=${finishReason || "?"} blockReason=${blockReason || "?"} messageLen=${message.length}`,
+        );
+      }
 
       // Check if Gemini invoked a function
       if (functionCall) {
         return this.handleFunctionCall(functionCall, ipAddress, sessionId);
+      }
+
+      // Contact-like message with empty Gemini text — never show generic apology
+      if (!text?.trim() && isGuest) {
+        const recovered = this.extractContactFromMessage(message);
+        if (recovered && sessionId) {
+          await this.supportService.saveLeadContact(
+            sessionId,
+            recovered.contactType,
+            recovered.contactValue,
+          );
+          const reply = this.leadCaptureConfirmation(
+            recovered.contactType,
+            recovered.contactValue,
+          );
+          await this.supportService.logAiChat(
+            sessionId,
+            "assistant",
+            reply,
+            "captureLeadContact",
+            1.0,
+            ipAddress,
+          );
+          return { reply, shouldEscalate: false, confidence: 1.0 };
+        }
+        if (this.isAskingForOurContact(message)) {
+          const reply = this.founderContactReply();
+          await this.supportService.logAiChat(
+            sessionId ?? null,
+            "assistant",
+            reply,
+            "founderContact",
+            1.0,
+            ipAddress,
+          );
+          return { reply, shouldEscalate: false, confidence: 1.0 };
+        }
       }
 
       // Fallback manual parsing if Gemini responded as JSON string instead of function structure
@@ -306,6 +508,16 @@ export class AiChatbotService {
         parsed.confidence,
         ipAddress,
       );
+
+      // Track when the bot asked for contact so bare numbers can be captured next
+      if (
+        isGuest &&
+        sessionId &&
+        this.looksLikeContactAskInReply(parsed.reply)
+      ) {
+        await this.supportService.setAwaitingContact(sessionId, true);
+      }
+
       return parsed;
     } catch (error) {
       this.logger.error("AI chatbot error:", error);
@@ -379,24 +591,38 @@ export class AiChatbotService {
           contactValue: string;
           guestName?: string;
         };
-        if (sessionId) {
-          await this.supportService.saveLeadContact(
-            sessionId,
-            contactType,
-            contactValue,
-            guestName,
-          );
+        if (!sessionId) {
+          return {
+            reply:
+              "I could not save your contact because this chat session is missing. Please refresh the page and share it again.",
+            shouldEscalate: false,
+            confidence: 0.5,
+          };
         }
-        const replyVariants = [
-          `Perfect, got it! 🙌 Aakash will personally reach out to you${guestName ? `, ${guestName}` : ""} — he loves chatting with jewellers about their workflow. In the meantime, feel free to keep asking me anything!`,
-          `Awesome sauce! 🎉 I've noted that down. Aakash (our founder) will personally ping you — he's the real human behind Orivraa and loves these conversations. Anything else I can help with?`,
-          `You're in! ✨ Aakash will be in touch personally${guestName ? `, ${guestName}` : ""}. He responds to every message himself — no bots on that end, promise 😄 Keep the questions coming!`,
-          `Noted and saved! 💎 Aakash will reach out personally — he genuinely enjoys these conversations with jewellers. Got more questions? Fire away!`,
-        ];
-        const reply =
-          replyVariants[Math.floor(Math.random() * replyVariants.length)];
+        if (
+          !contactValue ||
+          (contactType !== "email" && contactType !== "phone")
+        ) {
+          return {
+            reply:
+              "Please share a valid email or WhatsApp number and I'll save it for Aakash.",
+            shouldEscalate: false,
+            confidence: 0.7,
+          };
+        }
+        await this.supportService.saveLeadContact(
+          sessionId,
+          contactType,
+          contactValue,
+          guestName,
+        );
+        const reply = this.leadCaptureConfirmation(
+          contactType,
+          contactValue,
+          guestName,
+        );
         await this.supportService.logAiChat(
-          sessionId ?? null,
+          sessionId,
           "assistant",
           reply,
           "captureLeadContact",
@@ -775,10 +1001,16 @@ AVAILABLE TOOLS:
   private extractGeminiResponseParts(data: any): {
     functionCall?: any;
     text: string;
+    finishReason?: string;
+    blockReason?: string;
   } {
+    const finishReason = data?.candidates?.[0]?.finishReason;
+    const blockReason =
+      data?.promptFeedback?.blockReason ||
+      data?.candidates?.[0]?.finishMessage;
     const parts = data?.candidates?.[0]?.content?.parts;
     if (!Array.isArray(parts) || parts.length === 0) {
-      return { text: "" };
+      return { text: "", finishReason, blockReason };
     }
 
     const functionCall = parts.find((part) => part?.functionCall)?.functionCall;
@@ -787,7 +1019,7 @@ AVAILABLE TOOLS:
       .join("")
       .trim();
 
-    return { functionCall, text };
+    return { functionCall, text, finishReason, blockReason };
   }
 
   private fallbackResponse(_message?: string): AiChatResponse {

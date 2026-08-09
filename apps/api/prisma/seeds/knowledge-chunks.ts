@@ -131,7 +131,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "contact",
     content:
-      "To speak with a human, contact Aakash (founder) directly. Email: aakashm301@gmail.com. WhatsApp or call: +91 62039 65557. Replies personally within a few hours.",
+      "To speak with a human, contact Aakash (founder) directly. Email: aakashm301@gmail.com. WhatsApp or call: +91 62039 65557. Replies personally within a few hours. If you ask the AI chatbot for a WhatsApp number or contact details, it will share these same founder contact details. If you share your own email or phone with the bot, Aakash will personally follow up.",
   },
   {
     topic: "repairs",

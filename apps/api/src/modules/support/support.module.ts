@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { MailModule } from "../mail/mail.module";
 import { SubscriptionPlansModule } from "../core/subscriptions/subscription-plans.module";
 import { AiChatbotService } from "./ai-chatbot.service";
 import { SupportController } from "./support.controller";
@@ -15,6 +16,7 @@ import { HealthModule } from "../health/health.module";
 @Module({
   imports: [
     NotificationsModule,
+    MailModule,
     SubscriptionPlansModule,
     AuthModule,
     HealthModule,

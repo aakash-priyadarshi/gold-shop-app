@@ -93,6 +93,7 @@ import {
     MessageCircle,
     HelpCircle,
     Store,
+    Target,
     Ticket,
     TrendingUp,
     UserCircle,
@@ -284,6 +285,12 @@ const navItems: NavItem[] = [
     label: "Messages",
     href: "/dashboard/admin/messages",
     icon: MessageSquare,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Leads",
+    href: "/dashboard/admin/leads",
+    icon: Target,
     roles: ["ADMIN"],
   },
   {

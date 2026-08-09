@@ -1,4 +1,5 @@
 import {
+    BadRequestException,
     Body,
     Controller,
     DefaultValuePipe,
@@ -12,7 +13,7 @@ import {
     UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { TicketPriority, TicketStatus, TicketType } from "@prisma/client";
+import { LeadStatus, TicketPriority, TicketStatus, TicketType } from "@prisma/client";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -20,6 +21,7 @@ import { RolesGuard } from "../auth/guards/roles.guard";
 import { SkipSecurity } from "../security/security.guard";
 import { AiChatbotService } from "./ai-chatbot.service";
 import { SupportService } from "./support.service";
+import { UpdateLeadAlertSettingsDto } from "./dto/lead-alert-settings.dto";
 import {
     AddTicketMessageDto,
     CreateTicketDto,
@@ -59,12 +61,17 @@ export class TicketsController {
       userName?: string;
     },
   ) {
+    if (!body.sessionId?.trim()) {
+      throw new BadRequestException(
+        "sessionId is required for guest AI chat so leads can be saved",
+      );
+    }
     const userAgent = req.headers?.["user-agent"] as string | undefined;
     return this.aiChatbot.chat(
       body.message,
       body.history || [],
       req.ip,
-      body.sessionId,
+      body.sessionId.trim(),
       userAgent,
       { botName: body.botName, userName: body.userName },
     );
@@ -184,6 +191,76 @@ export class TicketsController {
     @Query("limit", new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
     return this.supportService.getBotSessions(page, limit);
+  }
+
+  // ─── Admin: AI chat leads inbox ───
+  @Get("ai-chat/leads")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin — paginated AI chat leads with contact info" })
+  async getLeads(
+    @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query("limit", new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query("status") status?: string,
+    @Query("search") search?: string,
+    @Query("session") sessionId?: string,
+  ) {
+    const leadStatus =
+      status && status !== "ALL" && Object.values(LeadStatus).includes(status as LeadStatus)
+        ? (status as LeadStatus)
+        : status === "ALL"
+          ? "ALL"
+          : undefined;
+    return this.supportService.getLeads({
+      page,
+      limit,
+      status: leadStatus,
+      search,
+      sessionId,
+    });
+  }
+
+  @Get("ai-chat/leads/alert-settings")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin — get AI lead alert email settings" })
+  async getLeadAlertSettings() {
+    const settings = await this.supportService.getLeadAlertSettings();
+    return { data: settings };
+  }
+
+  @Patch("ai-chat/leads/alert-settings")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin — update AI lead alert email settings" })
+  async updateLeadAlertSettings(
+    @Body() body: UpdateLeadAlertSettingsDto,
+    @CurrentUser("id") adminId: string,
+  ) {
+    const settings = await this.supportService.updateLeadAlertSettings(
+      {
+        emails: body.emails,
+        digestEnabled: body.digestEnabled ?? true,
+      },
+      adminId,
+    );
+    return { data: settings, message: "Lead alert settings saved" };
+  }
+
+  @Patch("ai-chat/leads/:sessionId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin — update lead status / notes" })
+  async updateLead(
+    @Param("sessionId") sessionId: string,
+    @Body()
+    body: { leadStatus?: LeadStatus; leadNotes?: string | null },
+  ) {
+    return this.supportService.updateLead(sessionId, body);
   }
 
   // ─── Admin: Bot conversation stats (for investor dashboard) ───

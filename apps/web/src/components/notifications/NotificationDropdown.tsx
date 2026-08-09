@@ -649,6 +649,10 @@ export function NotificationDropdown() {
           : isShopkeeper
             ? `/dashboard/shop/support`
             : `/dashboard/customer/support`;
+      case "AI_CHAT":
+        return user?.role === "ADMIN"
+          ? `/dashboard/admin/leads?session=${notification.referenceId}`
+          : null;
       case "USER":
         return user?.role === "ADMIN"
           ? `/dashboard/admin/users?id=${notification.referenceId}`

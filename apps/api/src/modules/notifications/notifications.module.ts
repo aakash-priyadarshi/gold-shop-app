@@ -18,6 +18,6 @@ import { SmsService } from './sms.service';
   ],
   controllers: [NotificationsController],
   providers: [NotificationsService, NotificationsGateway, SmsService],
-  exports: [NotificationsService],
+  exports: [NotificationsService, SmsService],
 })
 export class NotificationsModule {}
