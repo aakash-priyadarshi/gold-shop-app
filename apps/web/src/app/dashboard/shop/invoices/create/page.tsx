@@ -28,8 +28,14 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import {
+  CURRENCY_SYMBOLS,
+  convertCurrencyAmount,
+  DEFAULT_USD_FX_RATES,
+  fetchFreeFxRates,
+  type SupportedCurrencyCode,
+} from "@/lib/currency";
 import { loadTradeInPayload } from "@/lib/oldGoldTradeIn";
-import { useCurrency } from "@/store/preferences";
 import { getApiUrl, invoicesApi, pricingApi, shopQuotesApi, shopsApi } from "@/lib/api";
 import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
@@ -445,8 +451,11 @@ function ModeToggle({
 export default function CreateInvoicePage() {
   const router = useRouter();
   const { user, refreshUser } = useAuth();
-  const { symbol: currencySymbol, country: shopCountry } = useShopCurrency();
-  const { currency: selectedCurrency, currencyInfo } = useCurrency();
+  const {
+    symbol: currencySymbol,
+    country: shopCountry,
+    currencyCode: shopCurrencyCode,
+  } = useShopCurrency();
   const t = useT();
   const [loading, setLoading] = useState(false);
   const [isMockInsured, setIsMockInsured] = useState(false);
@@ -502,7 +511,7 @@ export default function CreateInvoicePage() {
     setMarketRatesLoading(true);
     try {
       const res = await fetch(
-        `${getApiUrl()}/market-rates?country=${shopCountry}&currency=${selectedCurrency}`,
+        `${getApiUrl()}/market-rates?country=${shopCountry}&currency=${shopCurrencyCode}`,
       );
       if (res.ok) {
         const data = await res.json();
@@ -513,7 +522,7 @@ export default function CreateInvoicePage() {
     } finally {
       setMarketRatesLoading(false);
     }
-  }, [shopCountry, selectedCurrency]);
+  }, [shopCountry, shopCurrencyCode]);
 
   // Fetch market rates on mount and when country/currency changes
   useEffect(() => {
@@ -574,8 +583,9 @@ export default function CreateInvoicePage() {
     return Math.max(0, Math.ceil(diffDays));
   }, [user]);
 
-  // ── Country ──
-  const [invoiceCountry, setInvoiceCountry] = useState(
+  // ── Country (tax jurisdiction) — defaults to shop country, user can override ──
+  const invoiceCountryTouched = useRef(false);
+  const [invoiceCountry, setInvoiceCountry] = useState(() =>
     normalizeInvoiceCountryCode(shopCountry),
   );
   const [countryTax, setCountryTax] = useState<CountryTaxConfig>(() =>
@@ -583,8 +593,10 @@ export default function CreateInvoicePage() {
   );
 
   useEffect(() => {
-    setInvoiceCountry(normalizeInvoiceCountryCode(shopCountry));
-  }, [shopCountry]);
+    if (!invoiceCountryTouched.current && user?.shop?.country) {
+      setInvoiceCountry(normalizeInvoiceCountryCode(user.shop.country));
+    }
+  }, [user?.shop?.country]);
 
   useEffect(() => {
     const fallback = getFallbackCountryTax(invoiceCountry);
@@ -1023,33 +1035,24 @@ export default function CreateInvoicePage() {
   // per-category bifurcation (metal / gemstone / making) on demand.
   const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
 
-  // ── Currency converter (Frankfurter API) ──
+  // ── Currency converter (shop base currency → display currency) ──
   const [showConverter, setShowConverter] = useState(false);
-  const [convertToCurrency, setConvertToCurrency] = useState("USD");
-  const [fxRates, setFxRates] = useState<Record<string, number>>({});
+  const defaultConvertTarget = useMemo<SupportedCurrencyCode>(
+    () => (shopCurrencyCode === "USD" ? "EUR" : "USD"),
+    [shopCurrencyCode],
+  );
+  const [convertToCurrency, setConvertToCurrency] =
+    useState<SupportedCurrencyCode>("USD");
+  const [fxRates, setFxRates] =
+    useState<Record<SupportedCurrencyCode, number>>(DEFAULT_USD_FX_RATES);
   const [fxLoading, setFxLoading] = useState(false);
   const [fxError, setFxError] = useState("");
-
-  // Determine the shop's base currency code
-  const shopCurrencyCode =
-    COUNTRIES.find((c) => c.code === shopCountry)?.currency || "NPR";
 
   const fetchFxRates = useCallback(async () => {
     setFxLoading(true);
     setFxError("");
     try {
-      // Frankfurter API — free, no key needed
-      // NPR is not supported by Frankfurter, so we fetch USD base and derive NPR from INR
-      const resp = await fetch(
-        "https://api.frankfurter.dev/v1/latest?base=USD",
-      );
-      if (!resp.ok) throw new Error("Frankfurter API error");
-      const data = await resp.json();
-      const rates: Record<string, number> = { USD: 1, ...data.rates };
-      // Derive NPR from INR (fixed ratio ~1.6)
-      if (rates.INR && !rates.NPR) {
-        rates.NPR = rates.INR * 1.6;
-      }
+      const rates = await fetchFreeFxRates();
       setFxRates(rates);
     } catch {
       setFxError("Failed to load exchange rates");
@@ -1059,18 +1062,25 @@ export default function CreateInvoicePage() {
   }, []);
 
   useEffect(() => {
-    if (showConverter && Object.keys(fxRates).length === 0) {
+    if (showConverter) {
       fetchFxRates();
     }
-  }, [showConverter, fxRates, fetchFxRates]);
+  }, [showConverter, fetchFxRates]);
 
-  // Convert amount from shop currency to target
+  useEffect(() => {
+    setConvertToCurrency((prev) =>
+      prev === shopCurrencyCode ? defaultConvertTarget : prev,
+    );
+  }, [shopCurrencyCode, defaultConvertTarget]);
+
   const convertAmount = useCallback(
-    (amount: number, toCurrency: string): number => {
-      if (!fxRates[shopCurrencyCode] || !fxRates[toCurrency]) return amount;
-      const amountInUsd = amount / fxRates[shopCurrencyCode];
-      return amountInUsd * fxRates[toCurrency];
-    },
+    (amount: number, toCurrency: SupportedCurrencyCode): number =>
+      convertCurrencyAmount(
+        amount,
+        shopCurrencyCode as SupportedCurrencyCode,
+        toCurrency,
+        fxRates,
+      ),
     [fxRates, shopCurrencyCode],
   );
 
@@ -1200,9 +1210,7 @@ export default function CreateInvoicePage() {
     return convertAmount(total, convertToCurrency);
   }, [showConverter, fxRates, convertToCurrency, total, convertAmount]);
 
-  const convertedSymbol =
-    CONVERTIBLE_CURRENCIES.find((c) => c.code === convertToCurrency)?.symbol ||
-    convertToCurrency;
+  const convertedSymbol = CURRENCY_SYMBOLS[convertToCurrency] || convertToCurrency;
 
   // ── Submit ──
   const handleSubmit = async () => {
@@ -1516,7 +1524,10 @@ export default function CreateInvoicePage() {
                   <Label><T>Invoice Country</T></Label>
                   <select
                     value={invoiceCountry}
-                    onChange={(e) => setInvoiceCountry(e.target.value)}
+                    onChange={(e) => {
+                      invoiceCountryTouched.current = true;
+                      setInvoiceCountry(e.target.value);
+                    }}
                     className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   >
                     {COUNTRIES.map((c) => (
@@ -2693,7 +2704,9 @@ export default function CreateInvoicePage() {
                           <select
                             value={convertToCurrency}
                             onChange={(e) =>
-                              setConvertToCurrency(e.target.value)
+                              setConvertToCurrency(
+                                e.target.value as SupportedCurrencyCode,
+                              )
                             }
                             className="flex-1 h-8 px-2 text-xs border rounded-md bg-background"
                           >
@@ -2866,7 +2879,7 @@ export default function CreateInvoicePage() {
               <LiveRatesWidget
                 rates={marketRates}
                 loading={marketRatesLoading}
-                currencySymbol={currencyInfo.symbol}
+                currencySymbol={currencySymbol}
                 onRefresh={fetchMarketRates}
               />
             </div>

@@ -82,6 +82,10 @@ export async function fetchFreeFxRates(): Promise<Record<SupportedCurrencyCode, 
   if (rates.INR && !data.rates?.NPR) {
     rates.NPR = rates.INR * 1.6;
   }
+  if (!data.rates?.LKR) {
+    // Frankfurter often omits LKR — derive from INR (~3.6 LKR per INR)
+    rates.LKR = rates.INR ? rates.INR * 3.6 : DEFAULT_USD_FX_RATES.LKR;
+  }
 
   fxCache = {
     rates,

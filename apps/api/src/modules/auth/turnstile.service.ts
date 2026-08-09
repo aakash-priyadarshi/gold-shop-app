@@ -15,6 +15,8 @@ interface TurnstileVerifyResponse {
 export class TurnstileService {
   private readonly logger = new Logger(TurnstileService.name);
   private readonly secretKey: string;
+  /** Optional server-side bypass for E2E/CI — pass as turnstileToken in login body */
+  private readonly bypassSecret: string;
   private readonly verifyUrl =
     "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
@@ -24,11 +26,16 @@ export class TurnstileService {
   ) {
     this.secretKey =
       this.configService.get<string>("TURNSTILE_SECRET_KEY") || "";
+    this.bypassSecret =
+      this.configService.get<string>("TURNSTILE_BYPASS_SECRET") || "";
 
     if (!this.secretKey) {
       this.logger.warn(
         "TURNSTILE_SECRET_KEY not configured - Turnstile verification disabled"
       );
+    }
+    if (this.bypassSecret) {
+      this.logger.log("TURNSTILE_BYPASS_SECRET configured for E2E testing");
     }
   }
 
@@ -49,6 +56,17 @@ export class TurnstileService {
     // If Turnstile is not configured, skip verification (for development)
     if (!this.secretKey) {
       this.logger.debug("Turnstile verification skipped - not configured");
+      return true;
+    }
+
+    // E2E/CI bypass — set TURNSTILE_BYPASS_SECRET on API, pass as turnstileToken
+    if (
+      this.bypassSecret &&
+      token &&
+      token.length >= 32 &&
+      token === this.bypassSecret
+    ) {
+      this.logger.debug("Turnstile bypassed via TURNSTILE_BYPASS_SECRET");
       return true;
     }
 
