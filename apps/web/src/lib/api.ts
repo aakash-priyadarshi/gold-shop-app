@@ -363,6 +363,31 @@ export const inventoryApi = {
     api.patch(`/inventory/shop/${shopId}/sets/${setId}`, data),
   breakSet: (shopId: string, setId: string) =>
     api.post(`/inventory/shop/${shopId}/sets/${setId}/break`),
+  repricePreview: (
+    shopId: string,
+    data: {
+      itemIds?: string[];
+      metalTypes?: string[];
+      mode?: "FROM_SHOP_RATES" | "FROM_MARKET_RATES";
+      makingChargeMode?: "KEEP" | "RECALC_PERCENT";
+      makingChargePercent?: number;
+    },
+  ) => api.post(`/inventory/shop/${shopId}/reprice/preview`, data),
+  repriceApply: (
+    shopId: string,
+    data: {
+      updates: Array<{
+        itemId: string;
+        metalValueNpr: number;
+        makingChargeNpr: number;
+        gemstoneValueNpr?: number;
+        taxNpr?: number;
+        totalPriceNpr: number;
+      }>;
+      reason?: string;
+      rateSnapshot?: Record<string, number>;
+    },
+  ) => api.post(`/inventory/shop/${shopId}/reprice/apply`, data),
 };
 
 // Girvi / Gold Loan (pawn lending) API
@@ -1489,6 +1514,7 @@ export const posApi = {
       paymentMethod?: string;
       makingChargeRate?: number;
       makingChargesNpr?: number;
+      invoiceCountry?: string;
     },
   ) => api.post(`/pos/session/${sessionId}/checkout`, data),
   cancelSession: (sessionId: string) => api.delete(`/pos/session/${sessionId}`),
@@ -1514,6 +1540,8 @@ export interface PosSalePayload {
   paymentMethod?: string;
   makingChargeRate?: number;
   makingChargesNpr?: number;
+  /** Tax regime country for this sale (defaults to shop.country on server). */
+  invoiceCountry?: string;
   notes?: string;
   occurredOffline?: boolean;
   soldAt?: string;

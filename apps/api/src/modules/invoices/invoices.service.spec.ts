@@ -31,6 +31,10 @@ const mockAccounting = {
   postInvoicePayment: jest.fn(),
   postOrderAdvanceApplied: jest.fn(),
 };
+const mockStockCommit = {
+  commit: jest.fn(),
+  restoreForVoid: jest.fn(),
+};
 
 describe("InvoicesService Sri Lanka invoice compliance", () => {
   let service: InvoicesService;
@@ -53,6 +57,7 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
       mockPlanLimits as unknown as PlanLimitsService,
       mockTaxEngine as unknown as BackendTaxEngineService,
       mockAccounting as any,
+      mockStockCommit as any,
     );
     mockPlanLimits.checkInvoiceLimit.mockResolvedValue(undefined);
     mockAccounting.prepareMonetaryContext.mockResolvedValue({

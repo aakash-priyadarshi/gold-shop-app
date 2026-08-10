@@ -36,7 +36,7 @@ import {
   type SupportedCurrencyCode,
 } from "@/lib/currency";
 import { loadTradeInPayload } from "@/lib/oldGoldTradeIn";
-import { getApiUrl, invoicesApi, pricingApi, shopQuotesApi, shopsApi } from "@/lib/api";
+import { getApiUrl, inventoryApi, invoicesApi, pricingApi, shopQuotesApi, shopsApi } from "@/lib/api";
 import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
@@ -55,10 +55,12 @@ import {
     FileDown,
     Globe,
     Loader2,
+    Package,
     Phone,
     Plus,
     RefreshCw,
     Scale,
+    Search,
     Trash2,
     User,
     X,
@@ -66,6 +68,14 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 
 type TaxCategoryKey =
   | "PRECIOUS_METAL"
@@ -367,6 +377,10 @@ interface RichLineItem {
   gemstones: GemstoneEntry[];
   // Making
   makingCost: string;
+  /** Catalog linkage for stock commit */
+  inventoryItemId?: string;
+  variantId?: string;
+  source?: "MANUAL" | "CATALOG" | "QUOTE" | "POS";
 }
 
 const emptyLineItem = (): RichLineItem => ({
@@ -379,6 +393,7 @@ const emptyLineItem = (): RichLineItem => ({
   metalCost: "",
   gemstones: [],
   makingCost: "",
+  source: "MANUAL",
 });
 
 // Compute total for a line item
@@ -815,6 +830,147 @@ export default function CreateInvoicePage() {
   const [lineItems, setLineItems] = useState<RichLineItem[]>([emptyLineItem()]);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([0]));
   const [scaleItemIdx, setScaleItemIdx] = useState<number | null>(null);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogItems, setCatalogItems] = useState<any[]>([]);
+  const [catalogUseLiveRate, setCatalogUseLiveRate] = useState(false);
+
+  const searchCatalog = useCallback(async (q: string) => {
+    const shopId = user?.shop?.id;
+    if (!shopId) return;
+    setCatalogLoading(true);
+    try {
+      const res = await inventoryApi.getShopInventory(shopId, {
+        search: q || undefined,
+        status: "AVAILABLE",
+        inStock: true,
+        excludeSetComponents: true,
+        limit: 30,
+      });
+      const data = res.data?.data ?? res.data;
+      setCatalogItems(data?.items || data || []);
+    } catch {
+      setCatalogItems([]);
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, [user?.shop?.id]);
+
+  useEffect(() => {
+    if (!catalogOpen) return;
+    const t = setTimeout(() => searchCatalog(catalogSearch.trim()), 250);
+    return () => clearTimeout(t);
+  }, [catalogOpen, catalogSearch, searchCatalog]);
+
+  const addFromCatalog = (item: any) => {
+    if (lineItems.some((li) => li.inventoryItemId === item.id)) {
+      toast({
+        title: t("Already added"),
+        description: t("This catalog piece is already on the invoice."),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const composition = item.composition || {};
+    const metalType =
+      composition.preciousMetal ||
+      composition.metal ||
+      composition.primaryMetal ||
+      "";
+    let metalCost = String(item.metalValueNpr ?? "");
+    const makingCost = String(item.makingChargeNpr ?? "");
+    const gemCost = item.gemstoneValueNpr || 0;
+
+    // Optional: recalculate metal from today's shop/live rate
+    if (catalogUseLiveRate && item.totalWeightGrams > 0 && metalType) {
+      const isGold = String(metalType).startsWith("GOLD");
+      const isSilver = String(metalType).startsWith("SILVER");
+      const isPlatinum = String(metalType).startsWith("PLATINUM");
+      const baseKey = isGold
+        ? "GOLD"
+        : isSilver
+          ? "SILVER"
+          : isPlatinum
+            ? "PLATINUM"
+            : null;
+      const shopRate =
+        shopPrices?.baseMetalPrices?.[metalType] ??
+        (baseKey ? shopPrices?.baseMetalPrices?.[baseKey] : undefined);
+      let liveRate =
+        marketRates?.metals?.[metalType] ||
+        marketRates?.metals?.[String(metalType).toLowerCase()];
+      if (!liveRate && baseKey && marketRates?.metals) {
+        liveRate =
+          marketRates.metals[baseKey] ||
+          marketRates.metals[baseKey.toLowerCase()];
+      }
+      const rate = shopRate ?? liveRate;
+      if (rate) {
+        metalCost = String(Math.round(item.totalWeightGrams * Number(rate)));
+      }
+    }
+
+    const gemstones =
+      gemCost > 0
+        ? [
+            {
+              type: "GEMSTONE",
+              cut: "",
+              clarity: "",
+              caratWeight: "",
+              color: "",
+              cost: String(gemCost),
+            },
+          ]
+        : [];
+
+    // If only total is set without breakdown, put total into metalCost
+    if (
+      !(parseFloat(metalCost) || 0) &&
+      !(parseFloat(makingCost) || 0) &&
+      gemCost === 0 &&
+      item.totalPriceNpr
+    ) {
+      metalCost = String(item.totalPriceNpr);
+    }
+
+    const next: RichLineItem = {
+      label: item.nameEn || item.sku || "Catalog item",
+      category: item.jewelleryType || "RING",
+      quantity: 1,
+      details: item.sku || "",
+      metalType: String(metalType || ""),
+      metalWeightG: item.totalWeightGrams
+        ? String(item.totalWeightGrams)
+        : "",
+      metalCost,
+      gemstones,
+      makingCost,
+      inventoryItemId: item.id,
+      source: "CATALOG",
+    };
+
+    // Replace empty first line if unused
+    const onlyEmpty =
+      lineItems.length === 1 &&
+      !lineItems[0].label &&
+      lineItemTotal(lineItems[0]) === 0 &&
+      !lineItems[0].inventoryItemId;
+
+    if (onlyEmpty) {
+      setLineItems([next]);
+      setExpandedItems(new Set([0]));
+    } else {
+      setLineItems([...lineItems, next]);
+      setExpandedItems(
+        (prev) => new Set([...Array.from(prev), lineItems.length]),
+      );
+    }
+    setCatalogOpen(false);
+    toast({ title: t("Added from catalog"), description: next.label });
+  };
 
   const addLineItem = () => {
     setLineItems([...lineItems, emptyLineItem()]);
@@ -1303,8 +1459,24 @@ export default function CreateInvoicePage() {
             unitPrice: lineItemTotal(li) / li.quantity,
             amount: lineItemTotal(li),
             details: detailParts.length ? detailParts.join(" · ") : undefined,
+            inventoryItemId: li.inventoryItemId || undefined,
+            variantId: li.variantId || undefined,
           };
         });
+
+      // Reject duplicate catalog refs client-side
+      const catalogIds = apiLineItems
+        .map((l) => l.inventoryItemId)
+        .filter(Boolean) as string[];
+      if (new Set(catalogIds).size !== catalogIds.length) {
+        toast({
+          variant: "destructive",
+          title: t("Duplicate catalog items"),
+          description: t("Each catalog piece can only appear once on an invoice."),
+        });
+        setLoading(false);
+        return;
+      }
 
       const fullAddress = [
         addressLine1,
@@ -1325,6 +1497,7 @@ export default function CreateInvoicePage() {
         customerEmail: customerEmail || undefined,
         customerAddress: fullAddress || undefined,
         lineItems: apiLineItems,
+        currency: shopCurrencyCode,
         taxRate: isTaxExempt || lkVatChargeBlocked
           ? 0
           : useCustomTaxRate
@@ -1521,12 +1694,30 @@ export default function CreateInvoicePage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label><T>Invoice Country</T></Label>
+                  <Label>
+                    <T>Invoice Country</T>
+                    <span className="ml-1 text-xs text-muted-foreground font-normal">
+                      (<T>
+                        Controls GST/VAT on this bill and which tax report it
+                        appears in
+                      </T>
+                    </span>
+                  </Label>
                   <select
+                    data-tour="invoice-create-country"
                     value={invoiceCountry}
                     onChange={(e) => {
+                      const next = e.target.value;
+                      if (next !== invoiceCountry && lineItems.some((li) => lineItemTotal(li) > 0)) {
+                        const ok = window.confirm(
+                          t(
+                            "Changing invoice country recalculates tax. Continue?",
+                          ),
+                        );
+                        if (!ok) return;
+                      }
                       invoiceCountryTouched.current = true;
-                      setInvoiceCountry(e.target.value);
+                      setInvoiceCountry(next);
                     }}
                     className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   >
@@ -2045,6 +2236,11 @@ export default function CreateInvoicePage() {
                           placeholder="Item name (e.g. Gold Necklace)"
                           className="text-sm"
                         />
+                        {item.inventoryItemId ? (
+                          <span className="inline-block mt-1 text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded">
+                            <T>Catalog</T>
+                          </span>
+                        ) : null}
                       </div>
                       <select
                         value={item.category}
@@ -2521,9 +2717,92 @@ export default function CreateInvoicePage() {
                 );
               })}
 
-              <Button variant="outline" size="sm" onClick={addLineItem}>
-                <Plus className="h-4 w-4 mr-2" /> <T>Add Line Item</T>
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  data-tour="invoice-add-from-catalog"
+                  onClick={() => setCatalogOpen(true)}
+                >
+                  <Package className="h-4 w-4 mr-2" /> <T>Add from catalog</T>
+                </Button>
+                <Button variant="outline" size="sm" onClick={addLineItem}>
+                  <Plus className="h-4 w-4 mr-2" /> <T>Add Line Item</T>
+                </Button>
+              </div>
+
+              <Dialog open={catalogOpen} onOpenChange={setCatalogOpen}>
+                <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+                  <DialogHeader>
+                    <DialogTitle><T>Add from catalog</T></DialogTitle>
+                    <DialogDescription>
+                      <T>
+                        Pick an available product. Stock will be deducted when
+                        the invoice is created.
+                      </T>
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        className="pl-8"
+                        placeholder={t("Search name, SKU, HUID…")}
+                        value={catalogSearch}
+                        onChange={(e) => setCatalogSearch(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 py-1">
+                    <Label htmlFor="catalog-live-rate" className="text-sm cursor-pointer">
+                      <T>Recalculate metal from today&apos;s rate</T>
+                    </Label>
+                    <Switch
+                      id="catalog-live-rate"
+                      checked={catalogUseLiveRate}
+                      onCheckedChange={setCatalogUseLiveRate}
+                    />
+                  </div>
+                  <div className="flex-1 overflow-y-auto min-h-[200px] space-y-1 border rounded-md p-1">
+                    {catalogLoading ? (
+                      <div className="flex justify-center py-8 text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      </div>
+                    ) : catalogItems.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        <T>No available items found</T>
+                      </p>
+                    ) : (
+                      catalogItems.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="w-full text-left px-3 py-2 rounded-md hover:bg-muted flex justify-between gap-2"
+                          onClick={() => addFromCatalog(item)}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {item.nameEn}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {item.sku}
+                              {item.jewelleryType ? ` · ${item.jewelleryType}` : ""}
+                              {item.totalWeightGrams
+                                ? ` · ${item.totalWeightGrams}g`
+                                : ""}
+                            </p>
+                          </div>
+                          <span className="text-sm font-medium shrink-0">
+                            {currencySymbol}
+                            {(item.totalPriceNpr ?? 0).toLocaleString()}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
 
               <Separator />
 

@@ -292,6 +292,59 @@ export class InventoryController {
     return this.inventoryService.bulkUpdatePrices(shopId, userId, updates);
   }
 
+  @Post("shop/:shopId/reprice/preview")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Preview catalog reprice from shop metal rates" })
+  async repricePreview(
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body()
+    body: {
+      itemIds?: string[];
+      metalTypes?: string[];
+      mode?: "FROM_SHOP_RATES" | "FROM_MARKET_RATES";
+      makingChargeMode?: "KEEP" | "RECALC_PERCENT";
+      makingChargePercent?: number;
+    },
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only reprice your own shop");
+    }
+    return this.inventoryService.repricePreview(shopId, userId, body || {});
+  }
+
+  @Post("shop/:shopId/reprice/apply")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Apply catalog reprice and write price history" })
+  async repriceApply(
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body()
+    body: {
+      updates: Array<{
+        itemId: string;
+        metalValueNpr: number;
+        makingChargeNpr: number;
+        gemstoneValueNpr?: number;
+        taxNpr?: number;
+        totalPriceNpr: number;
+      }>;
+      reason?: string;
+      rateSnapshot?: Record<string, number>;
+    },
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only reprice your own shop");
+    }
+    return this.inventoryService.repriceApply(shopId, userId, body);
+  }
+
   @Get(":id")
   @SkipSecurity()
   @ApiOperation({ summary: "Get inventory item details" })

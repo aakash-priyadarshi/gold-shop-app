@@ -401,6 +401,7 @@ model Shop {
   journalEntries       JournalEntry[]
   inventoryItems       InventoryItem[]
   stockMovements       InventoryStockMovement[]
+  priceHistory         InventoryPriceHistory[]
   storageLocations     StorageLocation[]
   orders               Order[]
   rfqOffers            RfqOffer[]
@@ -592,6 +593,7 @@ model InventoryItem {
   stockMovements    InventoryStockMovement[]
   setComponents     InventorySetComponent[] @relation("SetParent")
   memberOfSet       InventorySetComponent?  @relation("SetComponent")
+  priceHistory      InventoryPriceHistory[]
 
   @@index([shopId, status])
   @@index([jewelleryType])
@@ -634,6 +636,25 @@ model InventoryStockMovement {
   @@index([shopId, createdAt])
   @@index([inventoryItemId, createdAt])
   @@index([referenceType, referenceId])
+}
+
+/// Audit log when catalog prices are repriced from metal rates
+model InventoryPriceHistory {
+  id            String   @id @default(uuid())
+  shopId        String
+  inventoryItemId String
+  oldValues     Json // { metalValueNpr, makingChargeNpr, gemstoneValueNpr, taxNpr, totalPriceNpr }
+  newValues     Json
+  reason        String?
+  rateSnapshot  Json? // rates used for the reprice
+  userId        String?
+  createdAt     DateTime @default(now())
+
+  shop          Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, createdAt])
+  @@index([inventoryItemId, createdAt])
 }
 
 // Product size variants (rings, bracelets, etc.)

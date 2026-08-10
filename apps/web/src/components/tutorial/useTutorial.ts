@@ -197,6 +197,16 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='inventory-reprice']",
+      popover: {
+        title: "Reprice from rates",
+        description:
+          "When gold rates move, preview and apply new catalog prices from your Pricing Setup metal rates. Making charges can stay fixed or recalculate. Prices use your shop currency.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
       element: "[data-tour='inventory-add-set']",
       popover: {
         title: "Add Set",
@@ -404,7 +414,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Country & Tax",
         description:
-          "Select the country for this invoice. Tax rates auto-apply per category: India charges 3% GST on gold value + 5% on making charges; Nepal applies 0.5% Skill Promotion Fee on jewellery sale value (replaces the old 2% luxury tax per FY 2083/84) and 13% VAT on gemstones. You can also override the rate or mark the invoice tax-exempt for export sales.",
+          "Select the country for this invoice. Tax rates auto-apply per category, and this also controls which Tax Reports tab the bill appears under (India GSTR, Nepal, UAE VAT, etc.). Defaults to your shop country; change it for export bills. Changing country recalculates tax on existing lines.",
         side: "bottom",
         align: "start",
       },
@@ -418,13 +428,22 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
         side: "bottom",
         align: "start",
       },
-    },
-    {
+    },    {
       element: "[data-tour='invoice-create-items']",
       popover: {
         title: "Line Items",
         description:
-          "Add each jewellery item with metal type, weight, metal cost, gemstone details, and making charge separately. Switch between weight units (grams, tola, laal) using the unit selector — useful for Nepali and traditional Indian jewellers. Click the 'Live' button next to Metal Cost to autofill cost from live market rates (weight × rate per gram). Tax is split and calculated per component. Expand any row to enter gemstone carat weight, cut, and clarity.",
+          "Add each jewellery item manually, or click Add from catalog to pull an available product (stock is deducted when you create the invoice). Enter metal type, weight, metal cost, gemstones, and making charge. Switch weight units (grams, tola, laal) and use Live metal autofill. Tax is calculated per component for tax reports.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='invoice-add-from-catalog']",
+      popover: {
+        title: "Add from catalog",
+        description:
+          "Search your Product Catalog and add pieces with prices already filled. Optionally recalculate metal from today's rate. Each piece can appear once per invoice.",
         side: "top",
         align: "start",
       },

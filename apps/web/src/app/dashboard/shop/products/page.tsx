@@ -57,6 +57,7 @@ import {
     Loader2,
     Package,
     Plus,
+    RefreshCw,
     Scale,
     Search,
     Trash2,
@@ -269,6 +270,12 @@ export default function ShopProductsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSetDialogOpen, setIsSetDialogOpen] = useState(false);
   const [storageLocations, setStorageLocations] = useState<any[]>([]);
+  const [repriceOpen, setRepriceOpen] = useState(false);
+  const [repriceLoading, setRepriceLoading] = useState(false);
+  const [repriceApplying, setRepriceApplying] = useState(false);
+  const [repricePreview, setRepricePreview] = useState<any>(null);
+  const [repriceSelected, setRepriceSelected] = useState<Set<string>>(new Set());
+  const [makingChargeMode, setMakingChargeMode] = useState<"KEEP" | "RECALC_PERCENT">("KEEP");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<InventoryItem | null>(
     null,
@@ -637,6 +644,38 @@ export default function ShopProductsPage() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
+                data-tour="inventory-reprice"
+                onClick={async () => {
+                  if (!user?.shop?.id) return;
+                  setRepriceOpen(true);
+                  setRepriceLoading(true);
+                  setRepricePreview(null);
+                  try {
+                    const res = await inventoryApi.repricePreview(user.shop.id, {
+                      makingChargeMode,
+                    });
+                    const data = res.data?.data ?? res.data;
+                    setRepricePreview(data);
+                    setRepriceSelected(
+                      new Set((data?.items || []).map((i: any) => i.id)),
+                    );
+                  } catch (err: any) {
+                    toast({
+                      title: t("Reprice preview failed"),
+                      description:
+                        err?.response?.data?.message || err?.message,
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setRepriceLoading(false);
+                  }
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                <T>Reprice from rates</T>
+              </Button>
+              <Button
+                variant="outline"
                 data-tour="inventory-add-set"
                 onClick={() => setIsSetDialogOpen(true)}
               >
@@ -649,6 +688,191 @@ export default function ShopProductsPage() {
               </Button>
             </div>
           </div>
+
+          <Dialog open={repriceOpen} onOpenChange={setRepriceOpen}>
+            <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+              <DialogHeader>
+                <DialogTitle><T>Reprice catalog from rates</T></DialogTitle>
+                <DialogDescription>
+                  <T>
+                    Preview new metal values from your Pricing Setup rates.
+                    Making charges stay as-is unless you choose recalculate.
+                    Amounts are in your shop currency
+                  </T>
+                  {` (${currency.code}).`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-wrap items-center gap-3">
+                <Label className="text-sm"><T>Making charges</T></Label>
+                <Select
+                  value={makingChargeMode}
+                  onValueChange={async (v: "KEEP" | "RECALC_PERCENT") => {
+                    setMakingChargeMode(v);
+                    if (!user?.shop?.id) return;
+                    setRepriceLoading(true);
+                    try {
+                      const res = await inventoryApi.repricePreview(user.shop.id, {
+                        makingChargeMode: v,
+                      });
+                      const data = res.data?.data ?? res.data;
+                      setRepricePreview(data);
+                      setRepriceSelected(
+                        new Set((data?.items || []).map((i: any) => i.id)),
+                      );
+                    } finally {
+                      setRepriceLoading(false);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="KEEP"><T>Keep existing</T></SelectItem>
+                    <SelectItem value="RECALC_PERCENT">
+                      <T>Recalc from shop %</T>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1 overflow-y-auto border rounded-md min-h-[200px]">
+                {repriceLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : !repricePreview?.items?.length ? (
+                  <p className="text-sm text-muted-foreground text-center py-8 px-4">
+                    <T>
+                      No items could be repriced. Set base metal rates in Inventory
+                      → Pricing Setup and ensure products have weight + metal type.
+                    </T>
+                    {repricePreview?.skipped?.length ? (
+                      <span className="block mt-2">
+                        {repricePreview.skipped.length} <T>skipped</T>
+                      </span>
+                    ) : null}
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10" />
+                        <TableHead><T>Product</T></TableHead>
+                        <TableHead className="text-right"><T>Old</T></TableHead>
+                        <TableHead className="text-right"><T>New</T></TableHead>
+                        <TableHead className="text-right"><T>Δ%</T></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {repricePreview.items.map((row: any) => (
+                        <TableRow key={row.id}>
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={repriceSelected.has(row.id)}
+                              onChange={(e) => {
+                                setRepriceSelected((prev) => {
+                                  const next = new Set(prev);
+                                  if (e.target.checked) next.add(row.id);
+                                  else next.delete(row.id);
+                                  return next;
+                                });
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm font-medium">{row.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {row.sku} · {row.metalType} · {row.weightG}g
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
+                            {currency.symbol}
+                            {row.old.totalPriceNpr.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right text-sm font-medium">
+                            {currency.symbol}
+                            {row.new.totalPriceNpr.toLocaleString()}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right text-sm ${
+                              row.deltaPct > 0
+                                ? "text-green-600"
+                                : row.deltaPct < 0
+                                  ? "text-red-600"
+                                  : ""
+                            }`}
+                          >
+                            {row.deltaPct > 0 ? "+" : ""}
+                            {row.deltaPct}%
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setRepriceOpen(false)}>
+                  <T>Cancel</T>
+                </Button>
+                <Button
+                  disabled={
+                    repriceApplying ||
+                    repriceLoading ||
+                    repriceSelected.size === 0
+                  }
+                  onClick={async () => {
+                    if (!user?.shop?.id || !repricePreview) return;
+                    setRepriceApplying(true);
+                    try {
+                      const updates = repricePreview.items
+                        .filter((i: any) => repriceSelected.has(i.id))
+                        .map((i: any) => ({
+                          itemId: i.id,
+                          metalValueNpr: i.new.metalValueNpr,
+                          makingChargeNpr: i.new.makingChargeNpr,
+                          gemstoneValueNpr: i.new.gemstoneValueNpr,
+                          taxNpr: i.new.taxNpr,
+                          totalPriceNpr: i.new.totalPriceNpr,
+                        }));
+                      await inventoryApi.repriceApply(user.shop.id, {
+                        updates,
+                        reason: "REPRICE_FROM_RATES",
+                        rateSnapshot: repricePreview.rateSnapshot,
+                      });
+                      toast({
+                        title: t("Prices updated"),
+                        description: `${updates.length} ${t("products repriced")}`,
+                      });
+                      setRepriceOpen(false);
+                      // reload list
+                      const res = await inventoryApi.getShopInventory(
+                        user.shop.id,
+                        { limit: 100 },
+                      );
+                      const data = res.data?.data ?? res.data;
+                      setProducts(data?.items || data || []);
+                    } catch (err: any) {
+                      toast({
+                        title: t("Apply failed"),
+                        description:
+                          err?.response?.data?.message || err?.message,
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setRepriceApplying(false);
+                    }
+                  }}
+                >
+                  {repriceApplying ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  <T>Apply</T> ({repriceSelected.size})
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Filters */}
           <Card data-tour="inventory-search">

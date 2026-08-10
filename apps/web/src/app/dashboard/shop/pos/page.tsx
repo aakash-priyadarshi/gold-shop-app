@@ -361,6 +361,7 @@ function PosPageInner() {
         discountAmount,
         paymentMethod,
         makingChargeRate: makingChargeRate || undefined,
+        invoiceCountry: shopCountry || undefined,
       });
       const inv = res.data?.invoice;
       setSession(null);

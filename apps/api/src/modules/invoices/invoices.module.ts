@@ -5,6 +5,8 @@ import { SubscriptionPlansModule } from "../core/subscriptions/subscription-plan
 import { PricingModule } from "../core/pricing/pricing.module";
 import { InvoicesController, InvoicesPublicController } from "./invoices.controller";
 import { InvoicesService } from "./invoices.service";
+import { SaleBuilderService } from "./sale-builder.service";
+import { StockCommitService } from "./stock-commit.service";
 
 @Module({
   imports: [
@@ -14,7 +16,7 @@ import { InvoicesService } from "./invoices.service";
     PricingModule,
   ],
   controllers: [InvoicesController, InvoicesPublicController],
-  providers: [InvoicesService],
-  exports: [InvoicesService],
+  providers: [InvoicesService, SaleBuilderService, StockCommitService],
+  exports: [InvoicesService, SaleBuilderService, StockCommitService],
 })
 export class InvoicesModule {}

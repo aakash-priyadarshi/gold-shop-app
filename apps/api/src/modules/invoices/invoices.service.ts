@@ -25,6 +25,12 @@ import {
 } from "../core/pricing/services/backend-tax-engine.service";
 import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
 import { AccountingService } from "../accounting/accounting.service";
+import { StockCommitService } from "./stock-commit.service";
+
+export interface CreateInvoiceOptions {
+  /** When true, caller commits stock itself (POS checkout path). */
+  skipStockCommit?: boolean;
+}
 
 // Map a shop's registered country to its default display/billing currency.
 // Used so invoices are not blindly defaulted to NPR when no currency is supplied.
@@ -49,6 +55,7 @@ export class InvoicesService {
     private planLimitsService: PlanLimitsService,
     private backendTaxEngine: BackendTaxEngineService,
     private accounting: AccountingService,
+    private stockCommit: StockCommitService,
   ) {}
 
   /**
@@ -190,7 +197,11 @@ export class InvoicesService {
     return number;
   }
 
-  async create(shopId: string, dto: CreateInvoiceDto) {
+  async create(
+    shopId: string,
+    dto: CreateInvoiceDto,
+    options: CreateInvoiceOptions = {},
+  ) {
     await this.planLimitsService.checkInvoiceLimit(shopId);
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
@@ -210,6 +221,47 @@ export class InvoicesService {
       },
     });
     if (!shop) throw new NotFoundException("Shop not found");
+
+    // Reject duplicate catalog lines on the same invoice
+    const stockLines = StockCommitService.linesFromInvoiceItems(dto.lineItems);
+    const seenIds = new Set<string>();
+    for (const line of stockLines) {
+      if (seenIds.has(line.inventoryItemId)) {
+        throw new BadRequestException(
+          `Duplicate catalog item on invoice: ${line.label || line.inventoryItemId}`,
+        );
+      }
+      seenIds.add(line.inventoryItemId);
+    }
+
+    if (stockLines.length > 0 && !options.skipStockCommit) {
+      for (const line of stockLines) {
+        const item = await this.prisma.inventoryItem.findFirst({
+          where: { id: line.inventoryItemId, shopId },
+          select: {
+            id: true,
+            nameEn: true,
+            stockQuantity: true,
+            status: true,
+          },
+        });
+        if (!item) {
+          throw new NotFoundException(
+            `Inventory item ${line.inventoryItemId} not found in your shop`,
+          );
+        }
+        if (item.status !== "AVAILABLE") {
+          throw new BadRequestException(
+            `"${item.nameEn}" is not available for sale`,
+          );
+        }
+        if (item.stockQuantity < line.quantity) {
+          throw new BadRequestException(
+            `Insufficient stock for "${item.nameEn}" (have ${item.stockQuantity}, need ${line.quantity})`,
+          );
+        }
+      }
+    }
 
     const invoiceCountry = dto.invoiceCountry || shop.country;
     const region = resolveMarketRegion(invoiceCountry);
@@ -452,7 +504,7 @@ export class InvoicesService {
       ? null
       : await this.generateInvoiceNumber();
 
-    return this.prisma.$transaction(async (tx) => {
+    const invoice = await this.prisma.$transaction(async (tx) => {
       let invoiceNumber = ordinaryInvoiceNumber!;
       let serialSequence: number | undefined;
       if (isLkTaxInvoice) {
@@ -582,6 +634,25 @@ export class InvoicesService {
       }
       return finalInvoice;
     });
+
+    // Commit stock for catalog-linked lines (POS uses skipStockCommit)
+    if (stockLines.length > 0 && !options.skipStockCommit) {
+      try {
+        await this.stockCommit.commit({
+          shopId,
+          lines: stockLines,
+          reason: "INVOICE_SALE",
+          referenceType: "Invoice",
+          referenceId: invoice.id,
+          notes: `Invoice ${invoice.invoiceNumber}`,
+        });
+      } catch (err) {
+        await this.voidInvoice(invoice.id, shopId).catch(() => undefined);
+        throw err;
+      }
+    }
+
+    return invoice;
   }
 
   async findAll(
@@ -857,22 +928,7 @@ export class InvoicesService {
       const lineItems = Array.isArray(invoice.lineItems)
         ? (invoice.lineItems as Array<Record<string, any>>)
         : [];
-      for (const li of lineItems) {
-        const inventoryItemId = li.inventoryItemId as string | undefined;
-        const qty = Math.max(0, Number(li.quantity) || 0);
-        if (!inventoryItemId || qty <= 0) continue;
-
-        await tx.inventoryItem.updateMany({
-          where: { id: inventoryItemId, shopId },
-          data: { stockQuantity: { increment: qty } },
-        });
-        if (li.variantId) {
-          await tx.productVariant.updateMany({
-            where: { id: li.variantId as string },
-            data: { stock: { increment: qty } },
-          });
-        }
-      }
+      await this.stockCommit.restoreForVoid(tx, shopId, id, lineItems);
 
       const updated = await tx.invoice.update({
         where: { id },

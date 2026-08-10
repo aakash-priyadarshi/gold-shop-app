@@ -153,6 +153,16 @@ const CHUNKS: { topic: string; content: string }[] = [
     content:
       "Orivraa has a karigar (goldsmith/artisan) supply-chain module to issue metal to karigars, track work-in-progress orders, record metal given vs returned and wastage, and settle making charges. Keeps your karigar accounts transparent. Available on PRO and higher plans across India, Nepal and other regions.",
   },
+  {
+    topic: "catalog_currency_reprice",
+    content:
+      "Product catalog prices are stored in your shop's base currency (INR for India, NPR for Nepal, AED for UAE, etc.) even if older field names mention NPR. When gold rates change, use Product Catalog → Reprice from rates to preview and apply new metal values from your Pricing Setup rates. Making charges can stay as-is or recalculate from your shop making %. Every reprice is audited.",
+  },
+  {
+    topic: "invoice_catalog_and_tax_country",
+    content:
+      "On Create Invoice use Add from catalog to pull available products into the bill with metal, making and gemstone breakdown. Catalog pieces are stock-linked and marked sold when the invoice is created. The Invoice Country selector at the top controls which tax regime applies (India GST, Nepal skill fee, UAE VAT, etc.) and which Tax Reports tab the invoice appears under. It defaults to your shop country and can differ for export bills. POS counter sales also use your shop currency and country for tax reporting.",
+  },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

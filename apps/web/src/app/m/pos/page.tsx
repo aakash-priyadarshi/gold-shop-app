@@ -1078,6 +1078,7 @@ export default function MobilePOSPage() {
       const taxAmount = Math.round((cartTotal + makingCharges) * (taxRate / 100));
       const total = cartTotal + makingCharges + taxAmount;
 
+      const shopCountry = user?.shop?.country || undefined;
       const { clientId, queuedOffline } = await createOfflineSale({
         items: cart.map((c) => ({
           inventoryItemId: c.item.id,
@@ -1090,6 +1091,7 @@ export default function MobilePOSPage() {
         taxRate,
         paymentMethod: method,
         makingChargeRate: makingPct || undefined,
+        invoiceCountry: shopCountry,
       });
 
       const billId = clientId;
