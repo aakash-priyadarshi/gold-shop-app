@@ -30,9 +30,10 @@ trap cleanup EXIT
 
 echo "::notice::Creating pre-migration backup: ${FILE_NAME}"
 
-# Neon production runs PostgreSQL 17 — install matching client from PGDG.
-if [[ ! -x /usr/lib/postgresql/17/bin/pg_dump ]]; then
-  echo "::notice::Installing postgresql-client-17 from PGDG..."
+# Railway production runs PostgreSQL 18 — install matching client from PGDG.
+PG_CLIENT_MAJOR=18
+if [[ ! -x "/usr/lib/postgresql/${PG_CLIENT_MAJOR}/bin/pg_dump" ]]; then
+  echo "::notice::Installing postgresql-client-${PG_CLIENT_MAJOR} from PGDG..."
   sudo apt-get update -qq
   sudo apt-get install -y -qq curl ca-certificates lsb-release gnupg
   sudo install -d /usr/share/postgresql-common/pgdg
@@ -41,16 +42,16 @@ if [[ ! -x /usr/lib/postgresql/17/bin/pg_dump ]]; then
   echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
     | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
   sudo apt-get update -qq
-  sudo apt-get install -y -qq postgresql-client-17
+  sudo apt-get install -y -qq "postgresql-client-${PG_CLIENT_MAJOR}"
 fi
-export PATH="/usr/lib/postgresql/17/bin:${PATH}"
+export PATH="/usr/lib/postgresql/${PG_CLIENT_MAJOR}/bin:${PATH}"
 if ! command -v pg_dump >/dev/null 2>&1; then
-  echo "::error::pg_dump not found after installing postgresql-client-17"
+  echo "::error::pg_dump not found after installing postgresql-client-${PG_CLIENT_MAJOR}"
   exit 1
 fi
 PG_DUMP_VERSION="$(pg_dump --version | grep -oE '[0-9]+' | head -1)"
-if [[ "${PG_DUMP_VERSION}" -lt 17 ]]; then
-  echo "::error::pg_dump version ${PG_DUMP_VERSION} is too old for PostgreSQL 17 server"
+if [[ "${PG_DUMP_VERSION}" -lt 18 ]]; then
+  echo "::error::pg_dump version ${PG_DUMP_VERSION} is too old for PostgreSQL 18 server"
   exit 1
 fi
 
