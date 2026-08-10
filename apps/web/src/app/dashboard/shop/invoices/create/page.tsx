@@ -377,6 +377,8 @@ interface RichLineItem {
   gemstones: GemstoneEntry[];
   // Making
   makingCost: string;
+  /** Snapshot of catalog/quote making when imported — used for merge math + “was” display */
+  baseMakingCost?: string;
   /** Catalog linkage for stock commit */
   inventoryItemId?: string;
   variantId?: string;
@@ -419,6 +421,113 @@ function isBlankLine(li: RichLineItem): boolean {
 // Gemstone cost total for a line item
 function gemstoneTotal(item: RichLineItem): number {
   return item.gemstones.reduce((s, g) => s + (parseFloat(g.cost) || 0), 0);
+}
+
+/** Metal + gemstone value (before making) — base for making %. */
+function lineMakingPercentBase(item: RichLineItem): number {
+  return (
+    ((parseFloat(item.metalCost) || 0) + gemstoneTotal(item)) * item.quantity
+  );
+}
+
+function lineMakingAmount(item: RichLineItem): number {
+  return (parseFloat(item.makingCost) || 0) * item.quantity;
+}
+
+function lineBaseMakingAmount(item: RichLineItem): number {
+  return (parseFloat(item.baseMakingCost || "") || 0) * item.quantity;
+}
+
+/** Lines whose making is managed by the invoice totals control (catalog/quote). */
+function isMakingManagedLine(li: RichLineItem): boolean {
+  return (
+    li.source === "CATALOG" ||
+    li.source === "QUOTE" ||
+    (parseFloat(li.baseMakingCost || "") || 0) > 0
+  );
+}
+
+function roundMoney2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+/**
+ * Apply invoice making control to managed lines (merge, never stack).
+ * % mode: making = (metal + gemstones) × pct / 100, split by line weight.
+ * Unit mode: total making amount, split by the same weights.
+ */
+function applyMakingToLines(
+  items: RichLineItem[],
+  mode: "left" | "right",
+  rawValue: string,
+): RichLineItem[] {
+  const managed = items.filter(isMakingManagedLine);
+  if (managed.length === 0) return items;
+
+  const weights = managed.map((li) => {
+    const base = lineMakingPercentBase(li);
+    return base > 0 ? base : 1;
+  });
+  const weightSum = weights.reduce((a, b) => a + b, 0) || 1;
+  const percentBase = managed.reduce(
+    (s, li) => s + lineMakingPercentBase(li),
+    0,
+  );
+  const val = parseFloat(rawValue) || 0;
+  const targetTotal =
+    mode === "left" ? percentBase * (val / 100) : Math.max(0, val);
+
+  let remaining = roundMoney2(targetTotal);
+  return items.map((li) => {
+    const idx = managed.indexOf(li);
+    if (idx < 0) return li;
+    const isLast = idx === managed.length - 1;
+    const share = isLast
+      ? remaining
+      : roundMoney2(targetTotal * (weights[idx] / weightSum));
+    if (!isLast) remaining = roundMoney2(remaining - share);
+    const perUnit = li.quantity > 0 ? roundMoney2(share / li.quantity) : share;
+    return {
+      ...li,
+      makingCost: perUnit > 0 ? String(perUnit) : "",
+    };
+  });
+}
+
+function makingControlSnapshot(items: RichLineItem[]): {
+  managed: boolean;
+  percentBase: number;
+  makingTotal: number;
+  baseMakingTotal: number;
+  impliedPercent: number;
+  originalPercent: number;
+} {
+  const managedItems = items.filter(isMakingManagedLine);
+  const managed = managedItems.length > 0;
+  const percentBase = managedItems.reduce(
+    (s, li) => s + lineMakingPercentBase(li),
+    0,
+  );
+  const makingTotal = managedItems.reduce(
+    (s, li) => s + lineMakingAmount(li),
+    0,
+  );
+  const baseMakingTotal = managedItems.reduce(
+    (s, li) => s + lineBaseMakingAmount(li),
+    0,
+  );
+  const impliedPercent =
+    percentBase > 0 ? roundMoney2((makingTotal / percentBase) * 100) : 0;
+  const originalPercent =
+    percentBase > 0 ? roundMoney2((baseMakingTotal / percentBase) * 100) : 0;
+  return {
+    managed,
+    percentBase,
+    makingTotal,
+    baseMakingTotal,
+    impliedPercent,
+    originalPercent,
+  };
 }
 
 interface CustomerSuggestion {
@@ -956,6 +1065,7 @@ export default function CreateInvoicePage() {
         : null,
     ].filter(Boolean);
 
+    const makingNum = parseFloat(makingCost) || 0;
     const next: RichLineItem = {
       label: item.nameEn || item.sku || "Catalog item",
       category: item.jewelleryType || "RING",
@@ -968,6 +1078,7 @@ export default function CreateInvoicePage() {
       metalCost,
       gemstones,
       makingCost,
+      baseMakingCost: makingNum > 0 ? String(makingNum) : undefined,
       inventoryItemId: item.id,
       source: "CATALOG",
     };
@@ -977,6 +1088,16 @@ export default function CreateInvoicePage() {
     const newItems = [...kept, next];
     setLineItems(newItems);
     setExpandedItems(new Set([newItems.length - 1]));
+
+    // Seed totals making control from catalog making (merge, don't stack)
+    if (makingNum > 0) {
+      const snap = makingControlSnapshot(newItems);
+      setMakingChargeMode("left");
+      setMakingChargeValue(
+        snap.impliedPercent > 0 ? String(snap.impliedPercent) : "",
+      );
+    }
+
     setCatalogOpen(false);
     toast({ title: t("Added from catalog"), description: next.label });
   };
@@ -1165,9 +1286,14 @@ export default function CreateInvoicePage() {
     item.metalCost = String(
       quote.metalCostNpr ?? quote.metalCostOverride ?? quote.estimatedTotal?.metalCost ?? "",
     );
-    item.makingCost = String(
-      quote.makingChargeNpr ?? quote.makingChargeOverride ?? quote.estimatedTotal?.makingCharge ?? "",
-    );
+    const makingRaw =
+      quote.makingChargeNpr ??
+      quote.makingChargeOverride ??
+      quote.estimatedTotal?.makingCharge ??
+      "";
+    item.makingCost = String(makingRaw);
+    const makingNum = parseFloat(String(makingRaw)) || 0;
+    if (makingNum > 0) item.baseMakingCost = String(makingNum);
 
     const gcVal =
       quote.gemstoneCostNpr ??
@@ -1177,11 +1303,35 @@ export default function CreateInvoicePage() {
     if (gcVal) {
       item.gemstones = [{ ...emptyGemstone(), cost: String(gcVal) }];
     }
-    item.details = quote.specialInstructions || "";
+
+    const finishVal =
+      quote.finishCostNpr ??
+      quote.finishCostOverride ??
+      quote.estimatedTotal?.finishCost ??
+      0;
+    const detailParts = [
+      quote.specialInstructions || null,
+      finishVal > 0 ? `Finish: ${finishVal}` : null,
+    ].filter(Boolean);
+    item.details = detailParts.join(" · ");
+    // Fold finish into metal for create-page line shape
+    if (finishVal > 0) {
+      const metalNum = parseFloat(item.metalCost) || 0;
+      item.metalCost = String(metalNum + Number(finishVal));
+    }
     item.source = "QUOTE";
 
     setLineItems([item]);
     setExpandedItems(new Set([0]));
+    if (makingNum > 0) {
+      const snap = makingControlSnapshot([item]);
+      setMakingChargeMode("left");
+      setMakingChargeValue(
+        snap.impliedPercent > 0 ? String(snap.impliedPercent) : "",
+      );
+    } else {
+      setMakingChargeValue("");
+    }
     setShowQuoteImport(false);
     toast({
       title: "Quote imported",
@@ -1201,18 +1351,77 @@ export default function CreateInvoicePage() {
   // per-category bifurcation (metal / gemstone / making) on demand.
   const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
 
-  // Catalog / quote lines already embed making — invoice-level making would double-charge.
-  const lineMakingEmbedded = useMemo(
-    () =>
-      lineItems.some((li) => (parseFloat(li.makingCost) || 0) > 0),
+  // Catalog / quote lines embed making — totals control MERGES into those lines
+  // (never stacks a second making charge).
+  const makingSnap = useMemo(
+    () => makingControlSnapshot(lineItems),
     [lineItems],
   );
+  const lineMakingEmbedded = makingSnap.managed;
 
-  useEffect(() => {
-    if (lineMakingEmbedded && makingChargeValue) {
-      setMakingChargeValue("");
-    }
-  }, [lineMakingEmbedded, makingChargeValue]);
+  const applyMakingControl = useCallback(
+    (mode: "left" | "right", value: string) => {
+      setMakingChargeMode(mode);
+      setMakingChargeValue(value);
+      setLineItems((prev) => {
+        if (!prev.some(isMakingManagedLine)) return prev;
+        return applyMakingToLines(prev, mode, value);
+      });
+    },
+    [],
+  );
+
+  const handleMakingModeChange = useCallback(
+    (mode: "left" | "right") => {
+      if (lineMakingEmbedded) {
+        const snap = makingControlSnapshot(lineItems);
+        const nextValue =
+          mode === "left"
+            ? snap.impliedPercent > 0
+              ? String(snap.impliedPercent)
+              : ""
+            : snap.makingTotal > 0
+              ? String(snap.makingTotal)
+              : "";
+        applyMakingControl(mode, nextValue);
+      } else {
+        // Convert display value when switching % ↔ amount for additive making
+        const currentSubtotal = lineItems.reduce(
+          (sum, item) => sum + lineItemTotal(item),
+          0,
+        );
+        const val = parseFloat(makingChargeValue) || 0;
+        if (mode === "left" && makingChargeMode === "right" && currentSubtotal > 0) {
+          setMakingChargeMode(mode);
+          setMakingChargeValue(
+            val > 0
+              ? String(roundMoney2((val / currentSubtotal) * 100))
+              : "",
+          );
+        } else if (
+          mode === "right" &&
+          makingChargeMode === "left" &&
+          currentSubtotal > 0
+        ) {
+          setMakingChargeMode(mode);
+          setMakingChargeValue(
+            val > 0
+              ? String(roundMoney2(currentSubtotal * (val / 100)))
+              : "",
+          );
+        } else {
+          setMakingChargeMode(mode);
+        }
+      }
+    },
+    [
+      lineMakingEmbedded,
+      lineItems,
+      applyMakingControl,
+      makingChargeValue,
+      makingChargeMode,
+    ],
+  );
 
   // ── Currency converter (shop base currency → display currency) ──
   const [showConverter, setShowConverter] = useState(false);
@@ -1323,10 +1532,68 @@ export default function CreateInvoicePage() {
   );
 
   const makingChargeAmount = useMemo(() => {
+    // When making is on lines (catalog/quote), it is already inside subtotal —
+    // never add a second invoice-level making amount.
     if (lineMakingEmbedded) return 0;
     const val = parseFloat(makingChargeValue) || 0;
     return makingChargeMode === "left" ? subtotal * (val / 100) : val;
   }, [subtotal, makingChargeMode, makingChargeValue, lineMakingEmbedded]);
+
+  const makingCalcExplanation = useMemo(() => {
+    if (!lineMakingEmbedded) {
+      const val = parseFloat(makingChargeValue) || 0;
+      if (val <= 0) return null;
+      if (makingChargeMode === "left") {
+        return {
+          lines: [
+            `Subtotal ${currencySymbol} ${roundMoney2(subtotal).toLocaleString()} × ${val}%`,
+            `= Making ${currencySymbol} ${roundMoney2(makingChargeAmount).toLocaleString()}`,
+          ],
+        };
+      }
+      return {
+        lines: [
+          `Making (fixed) ${currencySymbol} ${roundMoney2(makingChargeAmount).toLocaleString()}`,
+        ],
+      };
+    }
+
+    const snap = makingSnap;
+    const val = parseFloat(makingChargeValue) || 0;
+    const delta = roundMoney2(snap.makingTotal - snap.baseMakingTotal);
+    const lines: string[] = [
+      `Metal + gemstones = ${currencySymbol} ${roundMoney2(snap.percentBase).toLocaleString()}`,
+    ];
+    if (makingChargeMode === "left") {
+      lines.push(
+        `Making ${val || snap.impliedPercent}% × base = ${currencySymbol} ${roundMoney2(snap.makingTotal).toLocaleString()}`,
+      );
+    } else {
+      lines.push(
+        `Making (fixed) = ${currencySymbol} ${roundMoney2(snap.makingTotal).toLocaleString()}`,
+        `Implied ${snap.impliedPercent}% of metal + gemstones`,
+      );
+    }
+    if (snap.baseMakingTotal > 0) {
+      lines.push(
+        `Was ${currencySymbol} ${roundMoney2(snap.baseMakingTotal).toLocaleString()} (${snap.originalPercent}%)`,
+      );
+      if (delta !== 0) {
+        lines.push(
+          `Adjusted ${delta > 0 ? "+" : ""}${currencySymbol} ${delta.toLocaleString()}`,
+        );
+      }
+    }
+    return { lines };
+  }, [
+    lineMakingEmbedded,
+    makingChargeValue,
+    makingChargeMode,
+    currencySymbol,
+    subtotal,
+    makingChargeAmount,
+    makingSnap,
+  ]);
 
   const taxBreakdown = useMemo(() => {
     if (isTaxExempt || lkVatChargeBlocked) {
@@ -2518,7 +2785,7 @@ export default function CreateInvoicePage() {
                           </div>
                         </div>
 
-                        {/* Making cost (per line — catalog/quote embed this) */}
+                        {/* Making cost (per line — catalog/quote managed via totals) */}
                         <div>
                           <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">
                             <T>Making Charge</T>
@@ -2540,7 +2807,36 @@ export default function CreateInvoicePage() {
                                 }
                                 placeholder="0"
                                 className="h-9 text-xs"
+                                readOnly={
+                                  item.source === "CATALOG" ||
+                                  item.source === "QUOTE"
+                                }
+                                disabled={
+                                  item.source === "CATALOG" ||
+                                  item.source === "QUOTE"
+                                }
                               />
+                              {(item.source === "CATALOG" ||
+                                item.source === "QUOTE") && (
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                  <T>
+                                    Adjust with Making Charge in totals below —
+                                    % and amount merge with this piece.
+                                  </T>
+                                </p>
+                              )}
+                              {(parseFloat(item.baseMakingCost || "") || 0) >
+                                0 &&
+                                (parseFloat(item.makingCost) || 0) !==
+                                  (parseFloat(item.baseMakingCost || "") ||
+                                    0) && (
+                                  <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">
+                                    <T>Was</T> {currencySymbol}{" "}
+                                    {(
+                                      parseFloat(item.baseMakingCost || "") || 0
+                                    ).toLocaleString()}
+                                  </p>
+                                )}
                             </div>
                           </div>
                         </div>
@@ -2887,38 +3183,57 @@ export default function CreateInvoicePage() {
                     </span>
                   </div>
 
-                  {/* Making Charge — pill toggle (locked when lines embed making) */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-blue-600 dark:text-blue-400 w-28 flex-shrink-0">
-                      <T>Making Charge</T>
-                    </span>
-                    {lineMakingEmbedded ? (
-                      <span className="text-xs text-muted-foreground">
-                        <T>Included in line items</T>
+                  {/* Making Charge — % / unit; merges into catalog/quote making */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-blue-600 dark:text-blue-400 w-28 flex-shrink-0">
+                        <T>Making Charge</T>
                       </span>
-                    ) : (
-                      <>
-                        <ModeToggle
-                          value={makingChargeMode}
-                          onChange={setMakingChargeMode}
-                          leftLabel="%"
-                          rightLabel={currencySymbol}
-                          activeColor="bg-blue-600"
-                        />
-                        <Input
-                          className="w-24 text-xs"
-                          type="number"
-                          value={makingChargeValue}
-                          onChange={(e) => setMakingChargeValue(e.target.value)}
-                          placeholder="0"
-                        />
-                        {makingChargeAmount > 0 && (
-                          <span className="text-sm ml-auto">
-                            +{currencySymbol}{" "}
-                            {makingChargeAmount.toLocaleString()}
-                          </span>
-                        )}
-                      </>
+                      <ModeToggle
+                        value={makingChargeMode}
+                        onChange={handleMakingModeChange}
+                        leftLabel="%"
+                        rightLabel={currencySymbol}
+                        activeColor="bg-blue-600"
+                      />
+                      <Input
+                        className="w-24 text-xs"
+                        type="number"
+                        value={makingChargeValue}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (lineMakingEmbedded) {
+                            applyMakingControl(makingChargeMode, v);
+                          } else {
+                            setMakingChargeValue(v);
+                          }
+                        }}
+                        placeholder="0"
+                      />
+                      {(lineMakingEmbedded
+                        ? makingSnap.makingTotal
+                        : makingChargeAmount) > 0 && (
+                        <span className="text-sm ml-auto">
+                          {lineMakingEmbedded ? "" : "+"}
+                          {currencySymbol}{" "}
+                          {(lineMakingEmbedded
+                            ? makingSnap.makingTotal
+                            : makingChargeAmount
+                          ).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    {makingCalcExplanation && (
+                      <div className="pl-1 ml-0.5 border-l-2 border-blue-200 dark:border-blue-900/50 space-y-0.5">
+                        {makingCalcExplanation.lines.map((line, i) => (
+                          <p
+                            key={i}
+                            className="text-[11px] text-muted-foreground leading-snug"
+                          >
+                            {line}
+                          </p>
+                        ))}
+                      </div>
                     )}
                   </div>
 

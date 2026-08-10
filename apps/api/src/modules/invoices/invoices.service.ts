@@ -355,9 +355,22 @@ export class InvoicesService {
     // Expand collapsed jewellery lines (RING/PRODUCT + breakdown) into
     // METAL / MAKING / GEMSTONE, drop $0 PRODUCT headers, and fold
     // invoice-level makingChargesAmt into a MAKING line when needed.
+    const hasLineMaking = validated.some(
+      (li) => Math.max(0, Number(li.makingCost) || 0) > 0,
+    );
+    if (
+      hasLineMaking &&
+      dto.makingChargesAmt != null &&
+      Number(dto.makingChargesAmt) > 0
+    ) {
+      throw new BadRequestException(
+        "Invoice-level makingChargesAmt cannot be combined with line makingCost — adjust line making instead",
+      );
+    }
+
     const normalized = this.saleBuilder.normalizeInvoiceLines(validated, {
-      makingChargesAmt: dto.makingChargesAmt,
-      makingChargeRate: dto.makingChargeRate,
+      makingChargesAmt: hasLineMaking ? 0 : dto.makingChargesAmt,
+      makingChargeRate: hasLineMaking ? undefined : dto.makingChargeRate,
     });
     if (normalized.length === 0) {
       throw new BadRequestException("Invoice must have at least one priced line item");
