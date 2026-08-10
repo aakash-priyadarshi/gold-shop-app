@@ -129,6 +129,7 @@ export function AiDesignStudio({
   const [variations, setVariations] = useState<AiDesignVariation[]>([]);
   const [planLocked, setPlanLocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const reset = () => {
     setVariations([]);
@@ -192,6 +193,7 @@ export function AiDesignStudio({
         throw new Error(body?.message || `Request failed (${res.status})`);
       }
       const data = await res.json();
+      console.log("[AI Design Studio] variations response:", data);
       const list: AiDesignVariation[] = Array.isArray(data?.variations)
         ? data.variations
         : [];
@@ -421,9 +423,34 @@ export function AiDesignStudio({
                     variation={v}
                     fmtMoney={fmtMoney}
                     onPick={handlePick}
+                    onPreviewImage={setPreviewImageUrl}
                   />
                 ))}
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!previewImageUrl}
+        onOpenChange={(open) => !open && setPreviewImageUrl(null)}
+      >
+        <DialogContent className="max-w-3xl p-2">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Design preview</DialogTitle>
+            <DialogDescription>Full-size AI design image</DialogDescription>
+          </DialogHeader>
+          {previewImageUrl && (
+            <div className="flex max-h-[85vh] w-full items-center justify-center">
+              <Image
+                src={previewImageUrl}
+                alt="AI design preview"
+                className="max-h-[85vh] w-auto max-w-full object-contain rounded-lg"
+                width={1600}
+                height={1600}
+                unoptimized
+              />
             </div>
           )}
         </DialogContent>
@@ -436,10 +463,12 @@ function VariationCard({
   variation: v,
   fmtMoney,
   onPick,
+  onPreviewImage,
 }: {
   variation: AiDesignVariation;
   fmtMoney: (n: number) => string;
   onPick: (v: AiDesignVariation) => void;
+  onPreviewImage: (url: string) => void;
 }) {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -447,14 +476,21 @@ function VariationCard({
     <div className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
       <div className="relative aspect-square w-full bg-gradient-to-br from-amber-50 to-rose-50 dark:from-gray-800 dark:to-gray-900">
         {v.imageUrl ? (
-          <Image
-            src={v.imageUrl}
-            alt={v.title}
-            className="object-cover"
-            fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-            unoptimized
-          />
+          <button
+            type="button"
+            className="absolute inset-0 cursor-zoom-in"
+            onClick={() => onPreviewImage(v.imageUrl!)}
+            aria-label={`View full-size preview of ${v.title}`}
+          >
+            <Image
+              src={v.imageUrl}
+              alt={v.title}
+              className="object-contain"
+              fill
+              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+              unoptimized
+            />
+          </button>
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center text-muted-foreground">
             <ImageOff className="mb-2 h-8 w-8" />

@@ -61,9 +61,17 @@ interface GenerationResult {
 // Metal color descriptions for prompt
 const METAL_COLOR_DESCRIPTIONS: Record<string, string> = {
   YELLOW: "warm rich yellow gold",
-  WHITE: "bright silvery white gold",
+  WHITE: "white gold alloy with a silvery-pink hue (NOT sterling silver)",
   ROSE: "soft pinkish rose gold",
 };
+
+function isGoldMetalType(metalType?: string): boolean {
+  return !!metalType?.toUpperCase().startsWith("GOLD_");
+}
+
+function isSilverMetalType(metalType?: string): boolean {
+  return !!metalType?.toUpperCase().startsWith("SILVER_");
+}
 
 // Metal type descriptions for prompt
 const METAL_TYPE_DESCRIPTIONS: Record<string, string> = {
@@ -150,7 +158,7 @@ const JEWELRY_TYPE_DESCRIPTIONS: Record<string, string> = {
 };
 
 // Increment this version any time the prompt template changes to bust the image cache
-const PROMPT_VERSION = 2;
+const PROMPT_VERSION = 3;
 
 // Surface finish descriptions
 const SURFACE_FINISH_DESCRIPTIONS: Record<string, string> = {
@@ -325,6 +333,16 @@ export class ImageGenerationService {
       specLines.push(`- Metal: ${metalDescription}`);
     }
 
+    if (isGoldMetalType(specs.metalType)) {
+      specLines.push(
+        "- Color: Rich warm yellow/rose gold tone — the piece MUST look like gold, NOT silver, NOT platinum, NOT chrome",
+      );
+    } else if (isSilverMetalType(specs.metalType)) {
+      specLines.push(
+        "- Color: Sterling/fine silver tone — cool grey-white metal, NOT yellow gold",
+      );
+    }
+
     // Surface finish
     if (surfaceFinish) {
       specLines.push(`- Finish: ${surfaceFinish}`);
@@ -451,6 +469,14 @@ export class ImageGenerationService {
       forbiddenItems.push(
         "No gemstones, diamonds, crystals, or stones of any kind - this is a plain metal piece only",
       );
+    }
+
+    if (isGoldMetalType(specs.metalType)) {
+      forbiddenItems.push(
+        "NOT silver, NOT sterling silver, NOT white/chrome metal — must be clearly gold colored",
+      );
+    } else if (isSilverMetalType(specs.metalType)) {
+      forbiddenItems.push("NOT yellow gold — must be silver colored");
     }
 
     // Add user's custom description if provided

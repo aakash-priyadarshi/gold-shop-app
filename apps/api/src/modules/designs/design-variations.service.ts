@@ -248,9 +248,25 @@ export class DesignVariationsService {
 
       if (!arr.length) throw new Error("No variations in response");
 
-      return arr.slice(0, 5).map((v: Record<string, unknown>, idx: number) =>
-        this.normalizeSpec(v, idx, currency, dto),
-      );
+      const metalConstraint = this.detectMetalConstraint(dto.prompt);
+      return arr.slice(0, 5).map((v: Record<string, unknown>, idx: number) => {
+        const spec = this.normalizeSpec(v, idx, currency, dto);
+        if (metalConstraint?.label.includes("gold")) {
+          const mt = spec.metalType?.toUpperCase() || "";
+          if (mt.startsWith("SILVER_") || mt.startsWith("PLATINUM_")) {
+            spec.metalType = metalConstraint.label.startsWith("22")
+              ? "GOLD_22K"
+              : "GOLD_22K";
+            spec.metalColor = "YELLOW";
+            if (spec.alloyDetails) {
+              spec.alloyDetails.baseMetal = "GOLD";
+              spec.alloyDetails.karat = "22K";
+              spec.alloyDetails.alloyFamily = "YELLOW_GOLD";
+            }
+          }
+        }
+        return spec;
+      });
     } catch (err: unknown) {
       this.logger.error(
         `Gemini variations call failed: ${(err as Error).message}`,
@@ -268,7 +284,12 @@ export class DesignVariationsService {
         ? `Budget: ${dto.budgetMin ?? 0} – ${dto.budgetMax ?? "no upper limit"} ${currency}`
         : "Budget: not specified";
 
-    return `You are a master jewellery designer for a global online marketplace. Produce exactly 5 DISTINCT, beautiful, production-ready jewellery design variations from the customer's description. Each variation must be different in style, material mix, or stone choice — never duplicates.
+    const metalConstraint = this.detectMetalConstraint(dto.prompt);
+    const metalConstraintRule = metalConstraint
+      ? `\n- METAL CONSTRAINT (mandatory): Customer asked for ${metalConstraint.label}. ALL 5 variations MUST use ${metalConstraint.allowedMetals}. Do NOT use ${metalConstraint.forbiddenMetals}. You may vary style, finish, weight, and gemstones — but NOT the base metal family.`
+      : "";
+
+    return `You are a master jewellery designer for a global online marketplace. Produce exactly 5 DISTINCT, beautiful, production-ready jewellery design variations from the customer's description. Each variation must be different in style, finish, weight, or stone choice — never duplicates.
 
 Customer request: "${dto.prompt}"
 ${budgetText}
@@ -314,6 +335,7 @@ Return STRICT JSON of shape:
     /* …5 total… */
   ]
 }
+${metalConstraintRule}
 
 RULES:
 - Only include alloyDetails when buildMethod=METHOD_B; only platingDetails for METHOD_C; only italianMachineDetails for METHOD_D. Omit the others.
@@ -321,8 +343,46 @@ RULES:
 - Estimated total cost MUST stay within the budget when given. Use realistic 2026 market prices.
 - All numeric fields are plain numbers (no currency symbols, no commas).
 - jewelryType, buildMethod, metalType, weightCategory, surfaceFinish must be exact enum values (UPPER_SNAKE_CASE).
-- Be creative: vary metal colour, stone choice, finish, build method across the 5.
+- Be creative: vary finish, stone choice, weight, and design style across the 5.${metalConstraint ? " Respect the METAL CONSTRAINT above — do not swap gold for silver or vice versa." : " You may vary metal colour and build method only when the customer did not specify a metal."}
 `;
+  }
+
+  /** When the customer names a metal in their prompt, lock variations to that family. */
+  private detectMetalConstraint(prompt: string): {
+    label: string;
+    allowedMetals: string;
+    forbiddenMetals: string;
+  } | null {
+    const p = prompt.toLowerCase();
+    const mentionsGold = /\bgold\b/.test(p);
+    const mentionsSilver = /\bsilver\b|\bsterling\b|\b925\b/.test(p);
+    const mentionsPlatinum = /\bplatinum\b/.test(p);
+
+    if (mentionsGold && !mentionsSilver && !mentionsPlatinum) {
+      const karat = p.match(/\b(10|14|18|22|24)\s*k(?:t|arat)?\b/)?.[1];
+      return {
+        label: karat ? `${karat}K gold` : "gold",
+        allowedMetals: karat
+          ? `GOLD_${karat}K (you may also use adjacent karats GOLD_18K/GOLD_22K/GOLD_24K)`
+          : "gold types only (GOLD_22K, GOLD_18K, GOLD_24K, GOLD_14K)",
+        forbiddenMetals: "silver, sterling silver, platinum, or palladium",
+      };
+    }
+    if (mentionsSilver && !mentionsGold) {
+      return {
+        label: "silver",
+        allowedMetals: "SILVER_925 or SILVER_999",
+        forbiddenMetals: "gold or platinum",
+      };
+    }
+    if (mentionsPlatinum && !mentionsGold && !mentionsSilver) {
+      return {
+        label: "platinum",
+        allowedMetals: "PLATINUM_PT950 or PLATINUM_900",
+        forbiddenMetals: "gold or silver",
+      };
+    }
+    return null;
   }
 
   private normalizeSpec(

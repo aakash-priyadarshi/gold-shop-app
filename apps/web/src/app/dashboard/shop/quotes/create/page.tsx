@@ -21,6 +21,13 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FlagImage } from "@/components/ui/phone-input";
@@ -51,6 +58,7 @@ import {
     getJewelleryTypeLabel,
 } from "@/lib/constants/jewellery";
 import { getImageUrl } from "@/lib/image-upload";
+import { buildDesignSpecsPayload } from "@/lib/design/build-design-specs";
 import type { GoldKarat } from "@/lib/pricing/alloy-constants";
 import type {
     BaseMetalType,
@@ -304,6 +312,10 @@ export default function CreateShopQuotePage() {
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [designId, setDesignId] = useState<string | null>(null);
   const [regenerationFeedback, setRegenerationFeedback] = useState("");
+  const [designImagePreviewOpen, setDesignImagePreviewOpen] = useState(false);
+  const [lastGenerationPrompt, setLastGenerationPrompt] = useState<string | null>(
+    null,
+  );
 
   const { selectedWeightUnit, setWeightUnit, config: marketConfig } = useMarket();
 
@@ -334,7 +346,7 @@ export default function CreateShopQuotePage() {
   const [formData, setFormData] = useState({
     jewelleryType: "",
     buildMethod: "METHOD_A" as BuildMethod,
-    metalType: "GOLD_24K",
+    metalType: "GOLD_22K",
     composition: {} as Record<string, unknown>,
     targetTotalWeightG: "",
     targetGoldWeightG: "",
@@ -649,48 +661,24 @@ export default function CreateShopQuotePage() {
     setGeneratingPreview(true);
     setError("");
     try {
+      const weightG = parseFloat(formData.targetTotalWeightG) || 0;
+      const designSpecs = buildDesignSpecsPayload(formData, {
+        regenerationFeedback: regenerationFeedback || undefined,
+        jewelleryTypeLabel: getJewelleryTypeLabel(formData.jewelleryType),
+        weightDisplay: weightG
+          ? `weighing approximately ${gramsToDisplay(weightG).toFixed(2)}${weightUnitSymbol} (${weightG}g)`
+          : undefined,
+      });
+
+      console.log("[AI Design] POST /designs specs:", designSpecs);
+
       const response = await fetch(`${API_URL}/designs`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          jewelryType: formData.jewelleryType,
-          buildMethod: formData.buildMethod,
-          metalType: formData.metalType,
-          surfaceFinish:
-            formData.surfaceFinish ||
-            (formData.composition as any)?.surfaceFinish ||
-            "",
-          additionalSpecs: {
-            description: [
-              formData.description,
-              formData.specialInstructions,
-              `A ${getJewelleryTypeLabel(formData.jewelleryType)}`,
-              formData.buildMethod === "METHOD_B" && formData.alloyConfig?.karat
-                ? `made in ${formData.alloyConfig.karat} ${formData.alloyConfig.alloyFamily?.replace("_", " ").toLowerCase() || "gold"}`
-                : formData.buildMethod === "METHOD_A"
-                  ? `made in ${formData.metalType.replace(/_/g, " ").toLowerCase()}`
-                  : formData.buildMethod === "METHOD_C"
-                    ? `${formData.methodCConfig.platingType.replace(/_/g, " ").toLowerCase()} on ${formData.methodCConfig.baseMetal.toLowerCase()}`
-                    : "",
-              formData.targetTotalWeightG
-                ? `weighing approximately ${gramsToDisplay(parseFloat(formData.targetTotalWeightG) || 0).toFixed(2)}${weightUnitSymbol} (${formData.targetTotalWeightG}g)`
-                : "",
-              formData.surfaceFinish
-                ? `with ${formData.surfaceFinish.replace(/_/g, " ").toLowerCase()} finish`
-                : "",
-              formData.hasGemstones && formData.gemstonesV2.length > 0
-                ? `with ${formData.gemstonesV2.map((g) => `${g.count}x ${g.stoneType.replace(/_/g, " ").toLowerCase()}`).join(", ")}`
-                : "",
-            ]
-              .filter(Boolean)
-              .join(". "),
-            regenerationFeedback: regenerationFeedback || undefined,
-          },
-          shareToGallery: false,
-        }),
+        body: JSON.stringify(designSpecs),
       });
       if (!response.ok) {
         const data = await response.json();
@@ -698,6 +686,14 @@ export default function CreateShopQuotePage() {
       }
       const result = await response.json();
       if (!result.design) throw new Error("Invalid response from API");
+
+      const prompt =
+        result.design.generationPrompt ||
+        designSpecs.additionalSpecs?.description;
+      setLastGenerationPrompt(prompt || null);
+      console.log("[AI Design] Imagen prompt:", prompt);
+      console.log("[AI Design] Image URL:", result.design.imageUrl);
+
       setDesignPreviewUrl(result.design.imageUrl);
       setDesignId(result.design.id);
       toast({
@@ -1908,25 +1904,49 @@ export default function CreateShopQuotePage() {
                       </div>
                       {designPreviewUrl ? (
                         <div className="space-y-3">
-                          <div className="relative rounded-lg overflow-hidden border">
-                            <Image
-                              src={designPreviewUrl}
-                              alt="AI Generated Design"
-                              className="w-full h-48 object-cover"
-                              width={800}
-                              height={192}
-                              unoptimized
-                            />
+                          <div className="relative w-full rounded-lg overflow-hidden border">
                             <button
+                              type="button"
+                              className="block w-full cursor-zoom-in"
+                              onClick={() => setDesignImagePreviewOpen(true)}
+                              aria-label={t("View full-size AI preview")}
+                            >
+                              <Image
+                                src={designPreviewUrl}
+                                alt="AI Generated Design"
+                                className="w-full h-auto max-h-72 object-contain bg-white"
+                                width={800}
+                                height={800}
+                                unoptimized
+                              />
+                            </button>
+                            <span className="pointer-events-none absolute bottom-2 right-2 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                              <T>Click to enlarge</T>
+                            </span>
+                            <button
+                              type="button"
                               onClick={() => {
                                 setDesignPreviewUrl(null);
                                 setDesignId(null);
+                                setLastGenerationPrompt(null);
                               }}
                               className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1"
+                              aria-label={t("Remove preview")}
                             >
                               <X className="h-4 w-4" />
                             </button>
                           </div>
+                          {process.env.NODE_ENV === "development" &&
+                            lastGenerationPrompt && (
+                              <details className="text-xs text-muted-foreground">
+                                <summary className="cursor-pointer">
+                                  <T>Imagen prompt (dev)</T>
+                                </summary>
+                                <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-muted p-2">
+                                  {lastGenerationPrompt}
+                                </pre>
+                              </details>
+                            )}
                           <div className="flex gap-2">
                             <Input
                               placeholder={t("Want changes? Enter feedback...")}
@@ -2305,14 +2325,21 @@ export default function CreateShopQuotePage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <Image
-                        src={designPreviewUrl}
-                        alt="AI Design"
-                        className="w-full h-auto rounded-lg object-cover"
-                        width={800}
-                        height={600}
-                        unoptimized
-                      />
+                      <button
+                        type="button"
+                        className="w-full cursor-zoom-in"
+                        onClick={() => setDesignImagePreviewOpen(true)}
+                        aria-label={t("View full-size AI preview")}
+                      >
+                        <Image
+                          src={designPreviewUrl}
+                          alt="AI Design"
+                          className="w-full h-auto rounded-lg object-contain bg-white"
+                          width={800}
+                          height={800}
+                          unoptimized
+                        />
+                      </button>
                     </CardContent>
                   </Card>
                 )}
@@ -2398,6 +2425,30 @@ export default function CreateShopQuotePage() {
             </Card>
           )}
         </div>
+
+        <Dialog
+          open={designImagePreviewOpen}
+          onOpenChange={setDesignImagePreviewOpen}
+        >
+          <DialogContent className="max-w-3xl p-2">
+            <DialogHeader className="sr-only">
+              <DialogTitle><T>AI Design Preview</T></DialogTitle>
+              <DialogDescription><T>Full-size image preview</T></DialogDescription>
+            </DialogHeader>
+            {designPreviewUrl && (
+              <div className="relative flex max-h-[85vh] w-full items-center justify-center">
+                <Image
+                  src={designPreviewUrl}
+                  alt="AI Design Preview"
+                  className="max-h-[85vh] w-auto max-w-full rounded-lg object-contain"
+                  width={1600}
+                  height={1600}
+                  unoptimized
+                />
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </DashboardLayout>
     </ShopGuard>
   );
