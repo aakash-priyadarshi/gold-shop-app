@@ -297,6 +297,169 @@ const METAL_TYPES = [
   { value: "PLATINUM_900", label: "Platinum 900" },
 ];
 
+/** Normalize catalog metal+purity (GOLD + 22K) into invoice codes (GOLD_22K). */
+function normalizeMetalCode(metal: string, purity?: string): string {
+  const m = String(metal || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
+  if (!m) return "";
+  if (/^(GOLD|SILVER|PLATINUM|PALLADIUM)_\w+/.test(m)) return m;
+
+  const p = String(purity || "")
+    .toUpperCase()
+    .replace(/\s+/g, "");
+  if (m === "GOLD" || m.startsWith("GOLD")) {
+    if (p.includes("24") || p === "999") return "GOLD_24K";
+    if (p.includes("22") || p === "916") return "GOLD_22K";
+    if (p.includes("18") || p === "750") return "GOLD_18K";
+    if (p.includes("14") || p === "585") return "GOLD_14K";
+    if (p.includes("10")) return "GOLD_10K";
+    return "GOLD_22K";
+  }
+  if (m === "SILVER" || m.startsWith("SILVER")) {
+    if (p.includes("999")) return "SILVER_999";
+    return "SILVER_925";
+  }
+  if (m === "PLATINUM" || m.startsWith("PLATINUM")) {
+    if (p.includes("900")) return "PLATINUM_900";
+    return "PLATINUM_950";
+  }
+  return m;
+}
+
+/** Read metal type from inventory composition (product form, RFQ, Method A–D). */
+function extractMetalTypeFromComposition(composition: unknown): string {
+  if (!composition || typeof composition !== "object") return "";
+  const c = composition as Record<string, unknown>;
+
+  for (const key of [
+    "preciousMetal",
+    "metal",
+    "primaryMetal",
+    "alloy",
+    "coreMetal",
+    "standardAlloy",
+  ]) {
+    if (typeof c[key] === "string" && c[key]) {
+      return normalizeMetalCode(
+        c[key] as string,
+        typeof c.purity === "string" ? (c.purity as string) : undefined,
+      );
+    }
+  }
+
+  const baseAlloy = c.baseAlloy;
+  if (baseAlloy && typeof baseAlloy === "object") {
+    const ba = baseAlloy as Record<string, unknown>;
+    if (typeof ba.metal === "string" && ba.metal) {
+      return normalizeMetalCode(
+        ba.metal,
+        typeof ba.purity === "string" ? ba.purity : undefined,
+      );
+    }
+  }
+
+  return "";
+}
+
+type MetalPart = { metalType: string; weightG: number; label?: string };
+
+/** Build per-metal weight parts for a catalog item (expands sets). */
+function buildMetalPartsFromCatalogItem(item: any): MetalPart[] {
+  const links = Array.isArray(item?.setComponents) ? item.setComponents : [];
+  if (
+    (item?.jewelleryType === "SET" || item?.composition?.kind === "SET") &&
+    links.length > 0
+  ) {
+    return links
+      .map((link: any) => {
+        const comp = link.componentItem || link;
+        return {
+          metalType: extractMetalTypeFromComposition(comp.composition),
+          weightG: Number(comp.totalWeightGrams) || 0,
+          label: comp.nameEn || comp.sku || "Component",
+        };
+      })
+      .filter((p: MetalPart) => p.weightG > 0);
+  }
+
+  const metalType = extractMetalTypeFromComposition(item?.composition);
+  const weightG = Number(item?.totalWeightGrams) || 0;
+  if (weightG > 0) {
+    return [{ metalType, weightG, label: item?.nameEn || item?.sku }];
+  }
+  return [];
+}
+
+function metalRateBaseKey(metalType: string): string | null {
+  const m = String(metalType || "").toUpperCase();
+  if (m.startsWith("GOLD")) return "GOLD";
+  if (m.startsWith("SILVER")) return "SILVER";
+  if (m.startsWith("PLATINUM")) return "PLATINUM";
+  return null;
+}
+
+function resolveMetalRatePerGram(
+  metalType: string,
+  shopPrices: { baseMetalPrices?: Record<string, number> } | null,
+  marketRates: LiveRateData | null,
+): number | null {
+  if (!metalType) return null;
+  const baseKey = metalRateBaseKey(metalType);
+  const shopRate =
+    shopPrices?.baseMetalPrices?.[metalType] ??
+    (baseKey ? shopPrices?.baseMetalPrices?.[baseKey] : undefined);
+  if (shopRate && shopRate > 0) return Number(shopRate);
+
+  let live =
+    marketRates?.metals?.[metalType] ||
+    marketRates?.metals?.[metalType.toLowerCase()];
+  if (!live && baseKey && marketRates?.metals) {
+    live =
+      marketRates.metals[baseKey] ||
+      marketRates.metals[baseKey.toLowerCase()];
+  }
+  return live && Number(live) > 0 ? Number(live) : null;
+}
+
+function calcMetalCostFromParts(
+  parts: MetalPart[],
+  shopPrices: { baseMetalPrices?: Record<string, number> } | null,
+  marketRates: LiveRateData | null,
+): { cost: number; missing: string[]; detailLines: string[] } {
+  let cost = 0;
+  const missing: string[] = [];
+  const detailLines: string[] = [];
+  for (const part of parts) {
+    if (!part.metalType) {
+      missing.push(part.label || "unknown metal");
+      detailLines.push(
+        `${part.label || "Piece"}: ${part.weightG.toFixed(3)}g — metal type missing`,
+      );
+      continue;
+    }
+    const rate = resolveMetalRatePerGram(
+      part.metalType,
+      shopPrices,
+      marketRates,
+    );
+    if (!rate) {
+      missing.push(part.metalType);
+      detailLines.push(
+        `${part.label || part.metalType}: ${part.weightG.toFixed(3)}g — no rate for ${part.metalType}`,
+      );
+      continue;
+    }
+    const lineCost = part.weightG * rate;
+    cost += lineCost;
+    detailLines.push(
+      `${part.label || part.metalType}: ${part.weightG.toFixed(3)}g × ${rate.toFixed(2)}/g (${part.metalType}) = ${lineCost.toFixed(2)}`,
+    );
+  }
+  return { cost: Math.round(cost * 100) / 100, missing, detailLines };
+}
+
 const GEMSTONE_TYPES = [
   "Diamond",
   "Ruby",
@@ -379,6 +542,11 @@ interface RichLineItem {
   makingCost: string;
   /** Snapshot of catalog/quote making when imported — used for merge math + “was” display */
   baseMakingCost?: string;
+  /**
+   * Per-metal weight parts (sets with mixed metals, or single piece).
+   * Used by live-rate recalculation so each metal gets its own rate.
+   */
+  metalParts?: MetalPart[];
   /** Catalog linkage for stock commit */
   inventoryItemId?: string;
   variantId?: string;
@@ -994,42 +1162,64 @@ export default function CreateInvoicePage() {
       return;
     }
 
-    const composition = item.composition || {};
-    const metalType =
-      composition.preciousMetal ||
-      composition.metal ||
-      composition.primaryMetal ||
-      "";
+    const metalParts = buildMetalPartsFromCatalogItem(item);
+    const uniqueMetals = Array.from(
+      new Set(metalParts.map((p) => p.metalType).filter(Boolean)),
+    );
+    // Primary metal for the form select: sole metal, or heaviest part if mixed
+    let metalType = "";
+    if (uniqueMetals.length === 1) {
+      metalType = uniqueMetals[0];
+    } else if (metalParts.length > 0) {
+      const heaviest = [...metalParts].sort(
+        (a, b) => b.weightG - a.weightG,
+      )[0];
+      metalType = heaviest?.metalType || "";
+    } else {
+      metalType = extractMetalTypeFromComposition(item.composition);
+    }
+
+    const totalWeightG =
+      metalParts.reduce((s, p) => s + p.weightG, 0) ||
+      Number(item.totalWeightGrams) ||
+      0;
+
     let metalCost = String(item.metalValueNpr ?? "");
     const makingCost = String(item.makingChargeNpr ?? "");
     const gemCost = item.gemstoneValueNpr || 0;
 
-    // Optional: recalculate metal from today's shop/live rate
-    if (catalogUseLiveRate && item.totalWeightGrams > 0 && metalType) {
-      const isGold = String(metalType).startsWith("GOLD");
-      const isSilver = String(metalType).startsWith("SILVER");
-      const isPlatinum = String(metalType).startsWith("PLATINUM");
-      const baseKey = isGold
-        ? "GOLD"
-        : isSilver
-          ? "SILVER"
-          : isPlatinum
-            ? "PLATINUM"
-            : null;
-      const shopRate =
-        shopPrices?.baseMetalPrices?.[metalType] ??
-        (baseKey ? shopPrices?.baseMetalPrices?.[baseKey] : undefined);
-      let liveRate =
-        marketRates?.metals?.[metalType] ||
-        marketRates?.metals?.[String(metalType).toLowerCase()];
-      if (!liveRate && baseKey && marketRates?.metals) {
-        liveRate =
-          marketRates.metals[baseKey] ||
-          marketRates.metals[baseKey.toLowerCase()];
-      }
-      const rate = shopRate ?? liveRate;
-      if (rate) {
-        metalCost = String(Math.round(item.totalWeightGrams * Number(rate)));
+    // Optional: recalculate metal from today's shop/live rate (per-metal for sets)
+    let liveRateNote = "";
+    if (catalogUseLiveRate) {
+      if (metalParts.length === 0 || !metalParts.some((p) => p.metalType)) {
+        toast({
+          variant: "destructive",
+          title: t("Cannot recalculate metal"),
+          description: t(
+            "This catalog piece has no metal type stored. Edit the product composition (metal + purity), then try again.",
+          ),
+        });
+      } else {
+        const { cost, missing, detailLines } = calcMetalCostFromParts(
+          metalParts,
+          shopPrices,
+          marketRates,
+        );
+        if (cost > 0) {
+          metalCost = String(cost);
+          liveRateNote = detailLines.join(" · ");
+        }
+        if (missing.length > 0) {
+          toast({
+            title: t("Some metal rates missing"),
+            description: `${t("Could not price")}: ${missing.join(", ")}. ${t("Set rates in Pricing Setup or wait for live market rates.")}`,
+          });
+        } else if (cost > 0) {
+          toast({
+            title: t("Metal recalculated from today's rate"),
+            description: liveRateNote.slice(0, 180),
+          });
+        }
       }
     }
 
@@ -1057,12 +1247,24 @@ export default function CreateInvoicePage() {
       metalCost = String(item.totalPriceNpr);
     }
 
+    const setMetalSummary =
+      uniqueMetals.length > 1
+        ? metalParts
+            .map(
+              (p) =>
+                `${p.label || "Piece"}: ${p.metalType || "?"} ${p.weightG.toFixed(3)}g`,
+            )
+            .join(" · ")
+        : null;
+
     const detailBits = [
       item.sku || null,
       item.hallmarkNumber ? `Hallmark: ${item.hallmarkNumber}` : null,
       (item as any).assayOffice
         ? `Assay: ${(item as any).assayOffice}`
         : null,
+      setMetalSummary ? `Metals: ${setMetalSummary}` : null,
+      uniqueMetals.length > 1 ? "Mixed-metal set" : null,
     ].filter(Boolean);
 
     const makingNum = parseFloat(makingCost) || 0;
@@ -1072,18 +1274,17 @@ export default function CreateInvoicePage() {
       quantity: 1,
       details: detailBits.join(" · ") || "",
       metalType: String(metalType || ""),
-      metalWeightG: item.totalWeightGrams
-        ? String(item.totalWeightGrams)
-        : "",
+      metalWeightG: totalWeightG > 0 ? String(totalWeightG) : "",
       metalCost,
       gemstones,
       makingCost,
       baseMakingCost: makingNum > 0 ? String(makingNum) : undefined,
+      metalParts: metalParts.length > 0 ? metalParts : undefined,
       inventoryItemId: item.id,
       source: "CATALOG",
     };
 
-    // Strip leftover blank rows, then append (or replace if only blanks existed)
+    // Strip leftover blank rows, then append
     const kept = lineItems.filter((li) => !isBlankLine(li));
     const newItems = [...kept, next];
     setLineItems(newItems);
@@ -1099,7 +1300,9 @@ export default function CreateInvoicePage() {
     }
 
     setCatalogOpen(false);
-    toast({ title: t("Added from catalog"), description: next.label });
+    if (!catalogUseLiveRate || !liveRateNote) {
+      toast({ title: t("Added from catalog"), description: next.label });
+    }
   };
 
   const addLineItem = () => {
@@ -1110,7 +1313,6 @@ export default function CreateInvoicePage() {
   };
 
   const removeLineItem = (index: number) => {
-    if (lineItems.length <= 1) return;
     setLineItems(lineItems.filter((_, i) => i !== index));
     setExpandedItems((prev) => {
       const next = new Set<number>();
@@ -1141,47 +1343,49 @@ export default function CreateInvoicePage() {
     setLineItems(updated);
   };
 
-  // Autofill metal cost: prefer shop Pricing Setup rates, else live market
+  // Autofill metal cost: prefer shop Pricing Setup rates, else live market.
+  // Sets with metalParts recalculate each component metal separately.
   const autofillMetalCost = useCallback(
     (idx: number) => {
       const item = lineItems[idx];
-      if (!item || !item.metalWeightG || !item.metalType) {
+      if (!item) return;
+
+      const parts: MetalPart[] =
+        item.metalParts && item.metalParts.length > 0
+          ? item.metalParts
+          : item.metalWeightG && item.metalType
+            ? [
+                {
+                  metalType: item.metalType,
+                  weightG: parseFloat(item.metalWeightG) || 0,
+                  label: item.label,
+                },
+              ]
+            : [];
+
+      if (parts.length === 0 || !parts.some((p) => p.weightG > 0)) {
         toast({
           title: t("Missing weight or metal type"),
           description: t("Enter the weight and select a metal type first."),
         });
         return;
       }
-      const weightGrams = parseFloat(item.metalWeightG);
-      if (!weightGrams || weightGrams <= 0) return;
-
-      const isGold = item.metalType.startsWith("GOLD");
-      const isSilver = item.metalType.startsWith("SILVER");
-      const isPlatinum = item.metalType.startsWith("PLATINUM");
-      const baseKey = isGold
-        ? "GOLD"
-        : isSilver
-          ? "SILVER"
-          : isPlatinum
-            ? "PLATINUM"
-            : null;
-
-      const shopRate =
-        shopPrices?.baseMetalPrices?.[item.metalType] ??
-        (baseKey ? shopPrices?.baseMetalPrices?.[baseKey] : undefined);
-
-      let ratePerGram =
-        shopRate && shopRate > 0
-          ? shopRate
-          : marketRates?.metals?.[item.metalType] ||
-            marketRates?.metals?.[item.metalType.toLowerCase()];
-      if (!ratePerGram && baseKey && marketRates?.metals) {
-        ratePerGram =
-          marketRates.metals[baseKey] ||
-          marketRates.metals[baseKey.toLowerCase()];
+      if (!parts.some((p) => p.metalType)) {
+        toast({
+          title: t("Missing metal type"),
+          description: t(
+            "Select a metal type (or re-add from catalog after setting product composition).",
+          ),
+        });
+        return;
       }
 
-      if (!ratePerGram || ratePerGram <= 0) {
+      const { cost, missing, detailLines } = calcMetalCostFromParts(
+        parts,
+        shopPrices,
+        marketRates,
+      );
+      if (cost <= 0) {
         toast({
           title: t("Rate not available"),
           description: t(
@@ -1191,13 +1395,14 @@ export default function CreateInvoicePage() {
         return;
       }
 
-      const source =
-        shopRate && shopRate > 0 ? t("shop rate") : t("live market");
-      const calculatedCost = weightGrams * ratePerGram;
-      updateLineItem(idx, "metalCost", calculatedCost.toFixed(2));
+      updateLineItem(idx, "metalCost", cost.toFixed(2));
       toast({
         title: t("Metal cost autofilled"),
-        description: `${weightGrams.toFixed(3)}g × ${currencySymbol}${ratePerGram.toFixed(2)}/g (${source}) = ${currencySymbol}${calculatedCost.toFixed(2)}`,
+        description:
+          detailLines.slice(0, 3).join(" · ") +
+          (missing.length
+            ? ` · ${t("Missing rates")}: ${missing.join(", ")}`
+            : ""),
       });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1640,6 +1845,58 @@ export default function CreateInvoicePage() {
     isTaxExempt,
     lkVatChargeBlocked,
   ]);
+
+  const createBlockers = useMemo(() => {
+    const missing: string[] = [];
+    if (!customerName.trim()) missing.push(t("Customer name"));
+
+    const pricedItems = lineItems.filter(
+      (li) => li.label?.trim() && lineItemTotal(li) > 0,
+    );
+    if (pricedItems.length === 0) {
+      missing.push(t("Add at least one item with a price"));
+    } else {
+      lineItems.forEach((li, idx) => {
+        if (!li.label?.trim() && lineItemTotal(li) === 0 && isBlankLine(li)) {
+          return;
+        }
+        if (!li.label?.trim() && lineItemTotal(li) > 0) {
+          missing.push(t(`Item ${idx + 1}: name`));
+        }
+        if (li.label?.trim() && lineItemTotal(li) <= 0) {
+          missing.push(t(`Item ${idx + 1}: metal / making / gemstone cost`));
+        }
+      });
+    }
+
+    if (invoiceCountry === "LK" && requestTaxInvoice) {
+      if (!customerTaxId?.trim()) missing.push(t("Purchaser TIN"));
+      if (!addressLine1?.trim()) {
+        missing.push(t("Purchaser address"));
+      }
+      if (!supplyDate) missing.push(t("Date of supply"));
+    }
+
+    if (isTaxExempt && !taxExemptReason) {
+      missing.push(t("Tax exempt reason"));
+    }
+
+    // Unique while preserving order
+    return Array.from(new Set(missing));
+  }, [
+    customerName,
+    lineItems,
+    invoiceCountry,
+    requestTaxInvoice,
+    customerTaxId,
+    addressLine1,
+    supplyDate,
+    isTaxExempt,
+    taxExemptReason,
+    t,
+  ]);
+
+  const canCreateInvoice = createBlockers.length === 0 && !loading;
 
   const discountAmount = useMemo(() => {
     const val = parseFloat(discountValue) || 0;
@@ -2527,6 +2784,13 @@ export default function CreateInvoicePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {lineItems.length === 0 && (
+                <div className="rounded-lg border border-dashed p-6 text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    <T>No line items yet. Add a manual item or pick from catalog.</T>
+                  </p>
+                </div>
+              )}
               {lineItems.map((item, idx) => {
                 const itemAmount = lineItemTotal(item);
                 return (
@@ -2591,8 +2855,8 @@ export default function CreateInvoicePage() {
                           e.stopPropagation();
                           removeLineItem(idx);
                         }}
-                        disabled={lineItems.length <= 1}
                         className="flex-shrink-0"
+                        title={t("Remove item")}
                       >
                         <Trash2 className="h-4 w-4 text-red-400" />
                       </Button>
@@ -2753,20 +3017,23 @@ export default function CreateInvoicePage() {
                                 <Label className="text-xs">
                                   {t("Metal Cost")} ({currencySymbol})
                                 </Label>
-                                <button
-                                  type="button"
-                                  onClick={() => autofillMetalCost(idx)}
-                                  disabled={marketRatesLoading || !marketRates}
-                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full border transition-colors ${
-                                    marketRates
-                                      ? "bg-emerald-100 border-emerald-400 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
-                                      : "bg-muted border-border text-muted-foreground"
-                                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                                  title={t("Autofill from live market rate")}
-                                >
-                                  <Zap className="h-3 w-3" />
-                                  {marketRatesLoading ? "..." : t("Live")}
-                                </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => autofillMetalCost(idx)}
+                                    disabled={
+                                      marketRatesLoading ||
+                                      (!marketRates && !shopPrices?.baseMetalPrices)
+                                    }
+                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full border transition-colors ${
+                                      marketRates || shopPrices?.baseMetalPrices
+                                        ? "bg-emerald-100 border-emerald-400 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
+                                        : "bg-muted border-border text-muted-foreground"
+                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                    title={t("Autofill from live market rate")}
+                                  >
+                                    <Zap className="h-3 w-3" />
+                                    {marketRatesLoading ? "..." : t("Live")}
+                                  </button>
                               </div>
                               <Input
                                 type="number"
@@ -2783,6 +3050,23 @@ export default function CreateInvoicePage() {
                               />
                             </div>
                           </div>
+                          {item.metalParts && item.metalParts.length > 1 && (
+                            <div className="mt-2 rounded-md border border-amber-200/60 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 p-2 space-y-1">
+                              <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-200">
+                                <T>Set metal breakdown</T>
+                              </p>
+                              {item.metalParts.map((part, pIdx) => (
+                                <p
+                                  key={pIdx}
+                                  className="text-[10px] text-muted-foreground"
+                                >
+                                  {part.label || t("Component")}:{" "}
+                                  {part.metalType || t("Unknown metal")} ·{" "}
+                                  {part.weightG.toFixed(3)}g
+                                </p>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {/* Making cost (per line — catalog/quote managed via totals) */}
@@ -3528,23 +3812,35 @@ export default function CreateInvoicePage() {
             </CardContent>
           </Card>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-2 pb-8">
-            <Button variant="outline" onClick={() => router.back()}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="bg-amber-500 hover:bg-amber-600"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4 mr-2" />
-              )}
-              <T>Create Invoice</T>
-            </Button>
+                          {/* Submit */}
+          <div className="flex flex-col items-end gap-2 pb-8">
+            {createBlockers.length > 0 && (
+              <p className="text-xs text-amber-700 dark:text-amber-300 text-right max-w-md">
+                <T>Fill required fields</T>: {createBlockers.join(" · ")}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => router.back()}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!canCreateInvoice}
+                title={
+                  createBlockers.length > 0
+                    ? `${t("Fill required fields")}: ${createBlockers.join(", ")}`
+                    : undefined
+                }
+                className="bg-amber-500 hover:bg-amber-600 disabled:opacity-60"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4 mr-2" />
+                )}
+                <T>Create Invoice</T>
+              </Button>
+            </div>
           </div>
         </div>
           {/* Sticky live rates sidebar — invoice page only */}

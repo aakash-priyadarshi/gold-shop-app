@@ -458,6 +458,33 @@ export class SaleBuilderService {
     if (typeof c.preciousMetal === "string") return c.preciousMetal;
     if (typeof c.metal === "string") return c.metal;
     if (typeof c.primaryMetal === "string") return c.primaryMetal;
+    if (typeof c.alloy === "string") return c.alloy;
+    if (typeof c.coreMetal === "string") return c.coreMetal;
+    const baseAlloy = c.baseAlloy;
+    if (baseAlloy && typeof baseAlloy === "object") {
+      const ba = baseAlloy as Record<string, unknown>;
+      if (typeof ba.metal === "string" && ba.metal) {
+        const metal = ba.metal.toUpperCase();
+        if (/^(GOLD|SILVER|PLATINUM|PALLADIUM)_\w+/.test(metal)) return metal;
+        const p = String(ba.purity || "")
+          .toUpperCase()
+          .replace(/\s+/g, "");
+        if (metal === "GOLD" || metal.startsWith("GOLD")) {
+          if (p.includes("24") || p === "999") return "GOLD_24K";
+          if (p.includes("22") || p === "916") return "GOLD_22K";
+          if (p.includes("18") || p === "750") return "GOLD_18K";
+          if (p.includes("14") || p === "585") return "GOLD_14K";
+          return "GOLD_22K";
+        }
+        if (metal === "SILVER" || metal.startsWith("SILVER")) {
+          return p.includes("999") ? "SILVER_999" : "SILVER_925";
+        }
+        if (metal === "PLATINUM" || metal.startsWith("PLATINUM")) {
+          return p.includes("900") ? "PLATINUM_900" : "PLATINUM_950";
+        }
+        return metal;
+      }
+    }
     return undefined;
   }
 }

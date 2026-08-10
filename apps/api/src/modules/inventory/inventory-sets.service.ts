@@ -79,6 +79,7 @@ export class InventorySetsService {
             sku: true,
             nameEn: true,
             jewelleryType: true,
+            composition: true,
             totalWeightGrams: true,
             metalValueNpr: true,
             makingChargeNpr: true,
