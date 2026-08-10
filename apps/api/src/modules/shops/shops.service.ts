@@ -944,9 +944,15 @@ export class ShopsService {
     }
 
     const { passwordHash, googleId, ...shopUser } = shop.user as any;
+    const { managerPinHash, ...safeShop } = shop as any;
 
     return {
-      shop: { ...shop, user: shopUser },
+      shop: {
+        ...safeShop,
+        user: shopUser,
+        hasManagerPin: !!managerPinHash,
+        managerPinDiscountThreshold: shop.managerPinDiscountThreshold ?? 0,
+      },
       user: {
         ...shopUser,
         hasPassword: !!passwordHash && passwordHash !== "",
@@ -3289,5 +3295,114 @@ export class ShopsService {
     });
 
     return { success: true, ...dto };
+  }
+
+  /**
+   * Manager PIN status (never returns the hash).
+   */
+  async getManagerPinStatus(userId: string) {
+    const shop = await this.getOwnedShop(userId);
+    return {
+      hasPin: !!shop.managerPinHash,
+      pinSetAt: shop.managerPinSetAt,
+      discountThreshold: shop.managerPinDiscountThreshold ?? 0,
+    };
+  }
+
+  async setupManagerPin(
+    userId: string,
+    pin: string,
+    discountThreshold?: number,
+  ) {
+    if (!/^\d{4,8}$/.test(pin)) {
+      throw new BadRequestException("Manager PIN must be 4–8 digits");
+    }
+    const shop = await this.getOwnedShop(userId);
+    const bcrypt = await import("bcryptjs");
+    const managerPinHash = await bcrypt.hash(pin, 10);
+    await this.prisma.shop.update({
+      where: { id: shop.id },
+      data: {
+        managerPinHash,
+        managerPinSetAt: new Date(),
+        ...(discountThreshold !== undefined
+          ? { managerPinDiscountThreshold: discountThreshold }
+          : {}),
+      },
+    });
+    await this.auditService.log({
+      userId,
+      actorType: "USER",
+      action: "UPDATE",
+      resourceType: "SHOP_MANAGER_PIN",
+      resourceId: shop.id,
+      newValue: { set: true },
+    });
+    return { success: true, message: "Manager PIN set" };
+  }
+
+  async removeManagerPin(userId: string, pin: string) {
+    const shop = await this.getOwnedShop(userId);
+    if (!shop.managerPinHash) {
+      throw new BadRequestException("No manager PIN is set");
+    }
+    const bcrypt = await import("bcryptjs");
+    const ok = await bcrypt.compare(pin, shop.managerPinHash);
+    if (!ok) {
+      throw new ForbiddenException("Incorrect manager PIN");
+    }
+    await this.prisma.shop.update({
+      where: { id: shop.id },
+      data: {
+        managerPinHash: null,
+        managerPinSetAt: null,
+      },
+    });
+    return { success: true, message: "Manager PIN removed" };
+  }
+
+  async verifyManagerPin(userId: string, pin: string) {
+    const shop = await this.getOwnedShop(userId);
+    if (!shop.managerPinHash) {
+      // No PIN configured — allow action (shop has not enabled gates)
+      return { verified: true, pinRequired: false };
+    }
+    if (!pin) {
+      throw new ForbiddenException("Manager PIN required");
+    }
+    const bcrypt = await import("bcryptjs");
+    const ok = await bcrypt.compare(pin, shop.managerPinHash);
+    if (!ok) {
+      throw new ForbiddenException("Incorrect manager PIN");
+    }
+    return { verified: true, pinRequired: true };
+  }
+
+  async updateManagerPinThreshold(userId: string, threshold: number) {
+    if (threshold < 0) {
+      throw new BadRequestException("Threshold must be >= 0");
+    }
+    const shop = await this.getOwnedShop(userId);
+    await this.prisma.shop.update({
+      where: { id: shop.id },
+      data: { managerPinDiscountThreshold: threshold },
+    });
+    return { success: true, discountThreshold: threshold };
+  }
+
+  private async getOwnedShop(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeShopId: true },
+    });
+    const shop = await this.prisma.shop.findFirst({
+      where: user?.activeShopId
+        ? { id: user.activeShopId, userId }
+        : { userId },
+    });
+    if (!shop) {
+      throw new NotFoundException("Shop not found for this user");
+    }
+    return shop;
   }
 }

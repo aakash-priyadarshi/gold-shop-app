@@ -29,6 +29,21 @@ const CHUNKS: { topic: string; content: string }[] = [
       "Vault & Tags lets jewellers define shop storage locations (Showcase, Main Safe, trays) in a hierarchy: Area, optional Cabinet/Shelf, optional Bin/Tray. Assign locations when creating products or sets, or transfer pieces in bulk from the Vault & Tags page. Location history is recorded as LOCATION_TRANSFER stock movements.",
   },
   {
+    topic: "stock-audit-rfid",
+    content:
+      "RFID / barcode stock audit: From Vault & Tags open Stock Audit. Start a session and scan pieces with a keyboard-wedge RFID gun or barcode scanner (SKU, HUID, or barcode). Completing the audit compares scanned items to available stock and produces a shrinkage report of missing pieces. Manager PIN can be required to finalize the audit (Shop Settings → Security).",
+  },
+  {
+    topic: "manager-pin",
+    content:
+      "Manager PIN clearance gates: In Shop Settings → Security, set a 4–8 digit manager PIN. Discounts at or above the configured threshold on POS require the PIN. Completing a stock audit also prompts for the PIN when enabled. This is staff clearance control — not fingerprint biometrics.",
+  },
+  {
+    topic: "uk-assay-office",
+    content:
+      "UK assay office fields: On products, set Hallmark/HUID and Assay Office (London, Birmingham, Sheffield, Edinburgh). When items are added to invoices or POS from catalog, hallmark and assay office appear in line details and on printed bills for UK hallmark compliance.",
+  },
+  {
     topic: "about",
     content:
       "Orivraa is an all-in-one CRM, POS and ERP built specifically for jewellery shops. It handles billing, inventory, GST/VAT tax compliance, customer management, WhatsApp catalogues, and AI-powered sales agents. Used by jewellers across India, Nepal, UAE, UK, and Europe.",

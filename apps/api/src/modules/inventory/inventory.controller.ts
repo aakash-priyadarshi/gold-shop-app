@@ -14,6 +14,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { InventoryService } from "./inventory.service";
 import { InventorySetsService, InventoryLocationTransferService } from "./inventory-sets.service";
 import { StorageLocationsService } from "./storage-locations.service";
+import { StockAuditService } from "./stock-audit.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
@@ -40,6 +41,7 @@ export class InventoryController {
     private setsService: InventorySetsService,
     private locationsService: StorageLocationsService,
     private transferService: InventoryLocationTransferService,
+    private stockAuditService: StockAuditService,
   ) {}
 
   // Public endpoints
@@ -273,6 +275,109 @@ export class InventoryController {
       throw new ForbiddenException("You can only scan your own shop inventory");
     }
     return this.inventoryService.findByCode(shopId, code);
+  }
+
+  // ── Stock audit (RFID / barcode keyboard-wedge) ───────────────
+  @Post("shop/:shopId/stock-audits")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Start RFID/barcode stock audit session" })
+  async startStockAudit(
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body() body?: { notes?: string },
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only audit your own shop");
+    }
+    return this.stockAuditService.start(shopId, userId, body?.notes);
+  }
+
+  @Get("shop/:shopId/stock-audits")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "List recent stock audits" })
+  async listStockAudits(
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only audit your own shop");
+    }
+    return this.stockAuditService.list(shopId, userId);
+  }
+
+  @Get("shop/:shopId/stock-audits/:auditId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get stock audit detail" })
+  async getStockAudit(
+    @Param("shopId") shopId: string,
+    @Param("auditId") auditId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only audit your own shop");
+    }
+    return this.stockAuditService.get(shopId, userId, auditId);
+  }
+
+  @Post("shop/:shopId/stock-audits/:auditId/scan")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Record a barcode/RFID scan in an audit" })
+  async scanStockAudit(
+    @Param("shopId") shopId: string,
+    @Param("auditId") auditId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body() body: { code: string },
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only audit your own shop");
+    }
+    return this.stockAuditService.scan(shopId, userId, auditId, body.code);
+  }
+
+  @Post("shop/:shopId/stock-audits/:auditId/complete")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Complete stock audit and compute shrinkage report" })
+  async completeStockAudit(
+    @Param("shopId") shopId: string,
+    @Param("auditId") auditId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only audit your own shop");
+    }
+    return this.stockAuditService.complete(shopId, userId, auditId);
+  }
+
+  @Post("shop/:shopId/stock-audits/:auditId/cancel")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Cancel an in-progress stock audit" })
+  async cancelStockAudit(
+    @Param("shopId") shopId: string,
+    @Param("auditId") auditId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only audit your own shop");
+    }
+    return this.stockAuditService.cancel(shopId, userId, auditId);
   }
 
   @Patch("shop/:shopId/bulk-prices")

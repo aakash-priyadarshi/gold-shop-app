@@ -1157,7 +1157,7 @@ export const BLOG_POSTS: BlogPost[] = [
 <li><strong>MTD for Income Tax Self-Assessment (ITSA):</strong> Phased rollout from April 2026 for self-employed people with business or property income above &pound;50,000.</li>
 </ul>
 
-<p>Jewellers still filing manually risk penalties. Using MTD-compatible jewellery management software handles this automatically, keeping digital VAT records and submitting returns in the correct format.</p>
+<p>Jewellers still filing manually risk penalties. Using MTD-compatible jewellery management software keeps digital VAT records and produces MTD-ready exports you can hand to your accountant for submission.</p>
 
 <h2>Anti-Money Laundering: High Value Dealer (HVD) Registration</h2>
 
@@ -1187,7 +1187,7 @@ export const BLOG_POSTS: BlogPost[] = [
 
 <ul>
 <li>20% VAT on all jewellery invoices; zero-rating for qualifying investment gold</li>
-<li>MTD-compatible digital record-keeping for HMRC VAT submissions</li>
+<li>MTD-ready digital record-keeping and VAT return exports for accountant handoff</li>
 <li>Hallmark reference fields per item (London / Birmingham / Sheffield / Edinburgh)</li>
 <li>GBP pricing with multi-currency support for international buyers</li>
 <li>High-value transaction flags for AML compliance records</li>
@@ -1205,7 +1205,7 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: "jewellery-billing-software-nepal-tax-guide",
     title: "Jewellery Billing Software for Nepal: Gold Shop Management & Tax Guide (2025–2026)",
     description:
-      "Complete guide for Nepalese jewellers: billing software in NPR, Nepal Rastra Bank gold rates, 13% VAT on jewellery, IRD and PAN registration, tola-based pricing, and how Orivraa supports Nepal gold shops and jewellery businesses.",
+      "Complete guide for Nepalese jewellers: billing software in NPR, Nepal Rastra Bank gold rates, 0.5% Skill Promotion Fee on jewellery and 13% VAT on gemstones, IRD and PAN registration, tola-based pricing, and how Orivraa supports Nepal gold shops and jewellery businesses.",
     date: "2026-05-18",
     author: "Orivraa Team",
     authorRole: "Product & Market Research",
@@ -1244,19 +1244,18 @@ export const BLOG_POSTS: BlogPost[] = [
 <li><strong>Weight unit:</strong> Nepal uses <strong>tola</strong> as the primary gold weight unit. <em>1 tola = 11.6638 grams.</em> Jewellery billing software for Nepal must support tola alongside grams.</li>
 </ul>
 
-<h2>VAT on Jewellery in Nepal</h2>
+<h2>Tax on Jewellery in Nepal (FY 2083/84)</h2>
 
-<p>Nepal&apos;s standard VAT rate is <strong>13%</strong>, administered by the Inland Revenue Department (IRD) under the Value Added Tax Act, 2052 (1995).</p>
+<p>From FY 2083/84, Nepal applies a <strong>0.5% Skill Promotion Fee</strong> on jewellery sale value (metal + making + finish) to final consumers. The old 2% luxury tax on jewellery has been abolished. <strong>13% VAT</strong> still applies to gemstones, diamonds, and related services — administered by the Inland Revenue Department (IRD).</p>
 
 <table>
 <thead>
-<tr><th>Product Type</th><th>VAT Treatment</th></tr>
+<tr><th>Product Type</th><th>Tax Treatment</th></tr>
 </thead>
 <tbody>
-<tr><td>Raw gold / silver bullion (unworked bars)</td><td>VAT-exempt</td></tr>
-<tr><td>Worked gold jewellery (necklaces, rings, bangles, tika sets)</td><td>13% VAT (standard rate)</td></tr>
-<tr><td>Silver jewellery</td><td>13% VAT</td></tr>
-<tr><td>Gemstone and diamond jewellery</td><td>13% VAT</td></tr>
+<tr><td>Raw gold / silver bullion (unworked bars)</td><td>Generally VAT-exempt</td></tr>
+<tr><td>Worked gold &amp; silver jewellery (necklaces, rings, bangles)</td><td>0.5% Skill Promotion Fee on sale value</td></tr>
+<tr><td>Gemstone and diamond jewellery / services</td><td>13% VAT</td></tr>
 </tbody>
 </table>
 

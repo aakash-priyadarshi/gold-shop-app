@@ -165,7 +165,7 @@ export default function OrivraaVsJewel360Page() {
                 {
                   icon: Globe,
                   title: "Built for 6+ countries, not just North America",
-                  desc: "Orivraa supports India (GST), Nepal (13% VAT), UAE (5% FTA VAT), UK (20% HMRC VAT), USA (sales tax), and EU. Jewel360 supports only USD/CAD with US sales tax.",
+                  desc: "Orivraa supports India (GST), Nepal (Skill Promotion Fee + gem VAT), UAE (5% FTA VAT), UK (20% HMRC VAT), USA (sales tax), and EU. Jewel360 supports only USD/CAD with US sales tax.",
                 },
                 {
                   icon: Zap,

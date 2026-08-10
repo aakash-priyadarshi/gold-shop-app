@@ -19,15 +19,15 @@ import {
 
 export const metadata: Metadata = {
   title:
-    "Jewellery Shop Software Nepal | Tola Billing, NRB Gold Rate & 13% VAT | Orivraa",
+    "Jewellery Shop Software Nepal | Tola Billing, NRB Gold Rate & Skill Promotion Fee | Orivraa",
   description:
-    "Jewellery billing software for Nepal. Nepal Rastra Bank (NRB) daily gold rate integration, tola and gram weight billing, NPR currency, 13% VAT with IRD-compatible invoices, PAN-linked records, and mobile POS that works on any Android phone. Pro from NPR 399/month. Free plan available — better than Tally, Marg ERP, or Vyapar.",
+    "Jewellery billing software for Nepal. Nepal Rastra Bank (NRB) daily gold rate integration, tola and gram weight billing, NPR currency, Skill Promotion Fee (0.5% on jewellery) and 13% VAT on gemstones with IRD-compatible invoices, PAN-linked records, and mobile POS that works on any Android phone. Pro from NPR 399/month. Free plan available — better than Tally, Marg ERP, or Vyapar.",
   alternates: {
     canonical: "https://www.orivraa.com/np/jewellery-shop-software",
   },
   openGraph: {
     title:
-      "Jewellery Software Nepal | NRB Rate, Tola Billing & 13% VAT | Orivraa",
+      "Jewellery Software Nepal | NRB Rate, Tola Billing & Skill Promotion Fee | Orivraa",
     description:
       "Nepal jewellery billing software with NRB gold rates, tola weight, NPR billing, mobile POS, and IRD VAT compliance. Better than Tally. Free to start.",
     url: "https://www.orivraa.com/np/jewellery-shop-software",
@@ -94,7 +94,7 @@ const jsonLd = {
           name: "Is Orivraa compatible with Nepal IRD VAT requirements?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Orivraa generates IRD-compatible invoices with PAN number, 13% VAT breakdown, and all mandatory fields required by the Inland Revenue Department of Nepal. VAT return data can be exported for your accountant.",
+            text: "Yes. Orivraa generates IRD-compatible invoices with PAN number, 0.5% Skill Promotion Fee on jewellery sale value, 13% VAT on gemstones and services, and all mandatory fields required by the Inland Revenue Department of Nepal (FY 2083/84). Tax return data can be exported for your accountant.",
           },
         },
         {
@@ -139,8 +139,8 @@ const FEATURES = [
   },
   {
     icon: FileText,
-    title: "13% VAT & IRD Compliance — from NPR 399/month",
-    desc: "Orivraa generates IRD-compatible invoices with PAN number, 13% VAT calculation, and all mandatory fields. Export VAT return data for your accountant. Pro plan from NPR 399/month (NPR 3,990/year).",
+    title: "Skill Promotion Fee & IRD Compliance — from NPR 399/month",
+    desc: "Orivraa generates IRD-compatible invoices with PAN number, 0.5% Skill Promotion Fee on jewellery, 13% VAT on gemstones, and all mandatory fields per FY 2083/84. Export tax return data for your accountant. Pro plan from NPR 399/month (NPR 3,990/year).",
   },
 ];
 
@@ -204,7 +204,7 @@ const COMPARISON_ROWS = [
     vyapar: "✓ Mobile app",
   },
   {
-    feature: "13% VAT / IRD Invoices",
+    feature: "Skill Promotion Fee / IRD Invoices",
     orivraa: "✓ IRD-compliant",
     tally: "✓ With setup",
     marg: "~ India GST focused",
@@ -251,7 +251,7 @@ const FAQS = [
   },
   {
     q: "Is Orivraa IRD and VAT compliant for Nepal jewellery shops?",
-    a: "Yes. Orivraa generates IRD-compatible VAT invoices with PAN number, 13% VAT amount, taxable base, and all mandatory fields required by the Inland Revenue Department of Nepal. VAT return data can be exported quarterly for filing.",
+    a: "Yes. Orivraa generates IRD-compatible invoices with PAN number, 0.5% Skill Promotion Fee on jewellery (metal + making), 13% VAT on gemstones and services, and all mandatory fields per FY 2083/84. Tax return data can be exported quarterly for filing.",
   },
   {
     q: "What is the price for Nepal jewellery shops in NPR?",
@@ -296,7 +296,8 @@ export default function NepalJewelleryShopSoftwarePage() {
               <T>
                 Cloud-based jewellery billing software for Nepal. Nepal Rastra
                 Bank (NRB) daily gold rate integration, tola and gram weight
-                billing, NPR currency, 13% VAT with IRD-compatible invoices,
+                billing, NPR currency, Skill Promotion Fee (0.5% on jewellery) and
+                13% VAT on gemstones with IRD-compatible invoices,
                 and mobile POS that works on any Android phone — no PC needed.
                 Pro from NPR 399/month. Free to start.
               </T>
@@ -618,7 +619,7 @@ export default function NepalJewelleryShopSoftwarePage() {
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               {[
-                "13% VAT on worked jewellery with IRD-compatible invoices",
+                "0.5% Skill Promotion Fee on jewellery + 13% VAT on gemstones (FY 2083/84)",
                 "PAN number on all customer invoices",
                 "NPR (Nepalese Rupee) currency support",
                 "Tola weight (1 tola = 11.664g) + gram billing",
@@ -699,8 +700,9 @@ export default function NepalJewelleryShopSoftwarePage() {
             </h2>
             <p className="text-lg text-amber-100 mb-8">
               <T>
-                NRB gold rates, tola billing, and 13% VAT compliance — all
-                included. No credit card needed. Works on your Android phone.
+                NRB gold rates, tola billing, and Skill Promotion Fee + gemstone
+                VAT compliance — all included. No credit card needed. Works on
+                your Android phone.
               </T>
             </p>
             <Link

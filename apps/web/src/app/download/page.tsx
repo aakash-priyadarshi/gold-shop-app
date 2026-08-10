@@ -569,7 +569,7 @@ function DesktopAppMockup() {
 // ─── Compact Feature Strip ────────────────────────────────
 function FeatureStrip() {
   const features = [
-    { icon: CloudArrowUpIcon, label: "Offline billing with cloud sync" },
+    { icon: CloudArrowUpIcon, label: "Offline billing with catalog sync" },
     { icon: CircleStackIcon, label: "USB scale & barcode hardware sync" },
     { icon: ArrowPathIcon, label: "Silent background auto-updates" },
     { icon: BoltIcon, label: "Regional tax engine built-in" },
@@ -891,7 +891,10 @@ export default function DownloadPage() {
                 <ScrollReveal direction="up" delay={0.2} spring once>
                   <p className="text-base text-gray-600 dark:text-gray-300 max-w-lg mb-8 leading-relaxed">
                     <T>
-                      Bill clients instantly even when your network goes dark. USB weight scale syncing, native barcode parsing, and silent cloud updates — directly at the shop counter.
+                      Bill clients instantly even when your network goes dark.
+                      Catalog-linked POS and invoices stay in sync when you
+                      reconnect. USB scale syncing, barcode parsing, and silent
+                      updates — directly at the shop counter.
                     </T>
                   </p>
                 </ScrollReveal>

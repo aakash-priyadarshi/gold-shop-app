@@ -254,6 +254,70 @@ export class ShopsController {
     return this.shopsService.updateShopSettings(userId, dto);
   }
 
+  @Get("my-shop/manager-pin")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get manager PIN status" })
+  async getManagerPinStatus(@CurrentUser("id") userId: string) {
+    return this.shopsService.getManagerPinStatus(userId);
+  }
+
+  @Post("my-shop/manager-pin")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Set or change manager PIN" })
+  async setupManagerPin(
+    @CurrentUser("id") userId: string,
+    @Body() body: { pin: string; discountThreshold?: number },
+  ) {
+    return this.shopsService.setupManagerPin(
+      userId,
+      body.pin,
+      body.discountThreshold,
+    );
+  }
+
+  @Post("my-shop/manager-pin/verify")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Verify manager PIN for a clearance action" })
+  async verifyManagerPin(
+    @CurrentUser("id") userId: string,
+    @Body() body: { pin: string },
+  ) {
+    return this.shopsService.verifyManagerPin(userId, body.pin);
+  }
+
+  @Post("my-shop/manager-pin/remove")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Remove manager PIN (requires current PIN)" })
+  async removeManagerPin(
+    @CurrentUser("id") userId: string,
+    @Body() body: { pin: string },
+  ) {
+    return this.shopsService.removeManagerPin(userId, body.pin);
+  }
+
+  @Patch("my-shop/manager-pin/threshold")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update discount threshold that requires manager PIN" })
+  async updateManagerPinThreshold(
+    @CurrentUser("id") userId: string,
+    @Body() body: { discountThreshold: number },
+  ) {
+    return this.shopsService.updateManagerPinThreshold(
+      userId,
+      body.discountThreshold,
+    );
+  }
+
   @Get("my-shop/analytics")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)

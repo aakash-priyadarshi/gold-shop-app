@@ -113,7 +113,7 @@ export default function HomePage() {
                       <T>Uncompromising Bank-Grade Security</T>
                     </h4>
                     <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                      <T>We shield your precious commodities with AES-256 databases, staff biometric fingerprint gates, Cloudflare WAF Shielding, and daily automated backups. Fully audit-ready.</T>
+                      <T>We shield your precious commodities with AES-256 databases, staff PIN clearance gates, Cloudflare WAF Shielding, and daily automated backups. Fully audit-ready.</T>
                     </p>
                   </div>
                   <Link href="/security">

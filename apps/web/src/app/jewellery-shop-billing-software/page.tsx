@@ -153,7 +153,7 @@ const jsonLd = {
           name: "Can Nepal jewellers use Orivraa for billing and VAT compliance?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Orivraa supports Nepal natively: NPR currency, tola weight calculations, Nepal Rastra Bank daily gold rate integration, and 13% VAT on worked jewellery. IRD-compatible invoices include PAN number for registered businesses. The Nepal Pro plan starts at NPR 399/month.",
+            text: "Yes. Orivraa supports Nepal natively: NPR currency, tola weight calculations, Nepal Rastra Bank daily gold rate integration, 0.5% Skill Promotion Fee on jewellery sale value, and 13% VAT on gemstones. IRD-compatible invoices include PAN number for registered businesses. The Nepal Pro plan starts at NPR 399/month.",
           },
         },
         {
@@ -170,6 +170,16 @@ const jsonLd = {
 };
 
 const FEATURES = [
+  {
+    icon: ScanBarcode,
+    title: "Add from Catalog",
+    desc: "Pull live catalog items into invoices with one click — weight, purity, making charges, and tax populate automatically from your product master.",
+  },
+  {
+    icon: RefreshCw,
+    title: "Stock-Linked Invoices",
+    desc: "When an invoice line is tied to inventory, the piece moves to sold on commit — no double-selling from the showcase.",
+  },
   {
     icon: Scale,
     title: "Weight-Based Invoice Lines",
@@ -213,7 +223,7 @@ const FEATURES = [
   {
     icon: BarChart3,
     title: "Tax Reports & Filing",
-    desc: "Generate GST-ready reports (GSTR-1, GSTR-3B format) for India. Sales summaries, tax collected, input credit tracking, and export for CA filing.",
+    desc: "Generate GST-ready reports (GSTR-1, GSTR-3B) for India, Skill Promotion Fee and gemstone VAT summaries for Nepal, and VAT exports for UAE, UK, and EU.",
   },
 ];
 
@@ -382,9 +392,9 @@ export default function JewellerBillingSoftwarePage() {
                 {
                   flag: "🇳🇵",
                   country: "Nepal",
-                  tax: "VAT",
+                  tax: "Skill Promotion Fee + VAT",
                   details:
-                    "13% VAT on jewellery sales. Proper invoicing with PAN and VAT registration numbers.",
+                    "0.5% Skill Promotion Fee on jewellery sale value (FY 2083/84). 13% VAT on gemstones and related services. IRD invoices with PAN.",
                 },
                 {
                   flag: "🇦🇪",
@@ -471,7 +481,7 @@ export default function JewellerBillingSoftwarePage() {
                 },
                 {
                   q: "Can Nepal jewellers use Orivraa with NPR and tola weights?",
-                  a: "Yes. Orivraa is built for the Nepal market: NPR pricing, tola weight calculations alongside grams, Nepal Rastra Bank daily gold rate integration, and 13% VAT on worked jewellery with IRD-compatible invoices and PAN support. Nepal Pro plan from NPR 399/month.",
+                  a: "Yes. Orivraa is built for the Nepal market: NPR pricing, tola weight calculations alongside grams, Nepal Rastra Bank daily gold rate integration, 0.5% Skill Promotion Fee on jewellery and 13% VAT on gemstones with IRD-compatible invoices and PAN support. Nepal Pro plan from NPR 399/month.",
                 },
                 {
                   q: "Can I handle advance payments and layaway?",

@@ -31,7 +31,7 @@ const ROWS: {
   { feature: "Free plan", orivraa: true, marg: false },
   { feature: "Weight-based billing (gram, tola, ounce)", orivraa: true, marg: true },
   { feature: "Purity / hallmark / HUID tracking", orivraa: true, marg: true },
-  { feature: "Karigar (artisan) management", orivraa: "Coming soon", marg: true, note: "Marg is strong here" },
+  { feature: "Karigar (artisan) management", orivraa: true, marg: true, note: "Marg is strong here" },
   { feature: "Old gold exchange & buy-back", orivraa: true, marg: true },
   { feature: "Live gold/silver rates auto-update", orivraa: true, marg: "Manual" },
   { feature: "Built-in customer chat & RFQ", orivraa: true, marg: false },

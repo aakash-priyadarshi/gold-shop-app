@@ -44,7 +44,7 @@ const COUNTRY_CONFIGS: CountryConfig[] = [
     filingFreq: "Monthly (by 25th)",
     portalLabel: "IRD Portal",
     portalUrl: "https://ird.gov.np",
-    note: "Jewellery is subject to 13% VAT in Nepal. Registration required if annual turnover > NPR 5M.",
+    note: "Jewellery is taxed with 0.5% Skill Promotion Fee on metal and making, and 13% VAT on gemstones and services (FY 2083/84). VAT registration required if annual turnover > NPR 5M.",
   },
   {
     code: "IN",
@@ -547,7 +547,7 @@ export default function TaxAuditPage() {
           {country === "GB" && (
             <DownloadRow
               label="MTD VAT Return (JSON)"
-              desc="HMRC Making Tax Digital — quarterly filing"
+              desc="HMRC Making Tax Digital — MTD-ready 9-box export"
               icon={FileText}
               loading={downloading === "mtd"}
               onPress={() => handleDownload("mtd")}

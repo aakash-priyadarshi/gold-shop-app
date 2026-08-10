@@ -224,6 +224,7 @@ interface ProductFormData {
   images: string[];
   gemstones: GemstoneData[];
   hallmarkNumber: string;
+  assayOffice: string;
   locationId: string;
 }
 
@@ -243,6 +244,7 @@ const emptyForm: ProductFormData = {
   images: [],
   gemstones: [],
   hallmarkNumber: "",
+  assayOffice: "",
   locationId: "",
 };
 
@@ -421,6 +423,7 @@ export default function ShopProductsPage() {
           }))
         : [],
       hallmarkNumber: product.hallmarkNumber || "",
+      assayOffice: (product as any).assayOffice || "",
       locationId: product.locationId || "",
     });
     setIsDialogOpen(true);
@@ -546,6 +549,7 @@ export default function ShopProductsPage() {
         stockQuantity: parseInt(formData.stockQuantity) || 1,
         images: formData.images,
         hallmarkNumber: formData.hallmarkNumber.trim() || undefined,
+        assayOffice: formData.assayOffice || null,
         locationId: formData.locationId || null,
       };
 
@@ -1191,6 +1195,38 @@ export default function ShopProductsPage() {
                         {`${formData.hallmarkNumber.length}/6 characters`}
                       </span>
                     )}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="assayOffice">
+                    <T>UK Assay Office</T>
+                  </Label>
+                  <Select
+                    value={formData.assayOffice || "none"}
+                    onValueChange={(v) =>
+                      setFormData({
+                        ...formData,
+                        assayOffice: v === "none" ? "" : v,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="assayOffice">
+                      <SelectValue placeholder="Select assay office" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <T>None</T>
+                      </SelectItem>
+                      <SelectItem value="LONDON">London</SelectItem>
+                      <SelectItem value="BIRMINGHAM">Birmingham</SelectItem>
+                      <SelectItem value="SHEFFIELD">Sheffield</SelectItem>
+                      <SelectItem value="EDINBURGH">Edinburgh</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">
+                    <T>
+                      Optional. Carried onto invoices for UK hallmark compliance.
+                    </T>
                   </p>
                 </div>
                 {storageLocations.length > 0 && (

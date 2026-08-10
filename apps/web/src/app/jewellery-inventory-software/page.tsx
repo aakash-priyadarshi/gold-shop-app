@@ -12,11 +12,13 @@ import {
     BarChart3,
     Database,
     Layers,
+    MapPin,
     Scale,
     Search,
     Tag,
     Upload,
     Users,
+    RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -186,6 +188,21 @@ const FEATURES = [
     desc: "When an item is billed from the mobile POS, stock can update back to inventory so online catalogues, reports, and staff views stay aligned.",
   },
   {
+    icon: MapPin,
+    title: "Vault & Storage Locations",
+    desc: "Organise pieces in vault areas, cabinets, and bins. Transfer stock between locations and see exactly where each item sits before billing.",
+  },
+  {
+    icon: Layers,
+    title: "Jewellery Sets",
+    desc: "Bundle necklaces, earrings, and bangles into sellable sets with optional discounts. Components stay hidden from separate sale until the set is broken.",
+  },
+  {
+    icon: RefreshCw,
+    title: "Bulk Catalog Reprice",
+    desc: "Preview price changes when gold moves and apply updates by metal type, purity, or making charges — with price history for audit trails.",
+  },
+  {
     icon: Search,
     title: "Advanced Search & Filters",
     desc: "Find any item instantly by name, barcode, HUID, weight range, purity, category, or price range. Powerful filters for large inventories.",
@@ -245,9 +262,10 @@ export default function JewelleryInventorySoftwarePage() {
               <T>
                 Stop using spreadsheets to track gold. Orivraa's inventory
                 management tracks your gold, silver, diamond, and gemstone
-                inventory by weight, purity, and category with automatic stock
-                alerts, bulk upload, and real-time valuation. Used by jewellers
-                across Nepal, India, Dubai, UK and USA.
+                inventory by weight, purity, and category — with vault
+                locations, jewellery sets, bulk reprice, and stock-linked POS
+                sales. Used by jewellers across Nepal, India, Dubai, UK, USA,
+                EU, and Sri Lanka.
               </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

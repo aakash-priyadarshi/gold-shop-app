@@ -283,6 +283,15 @@ export const shopsApi = {
   hydrateDemoStore: () => api.post("/shops/my-shop/demo-hydrate"),
   getSettings: () => api.get("/shops/my-shop/settings"),
   updateSettings: (data: any) => api.patch("/shops/my-shop/settings", data),
+  getManagerPinStatus: () => api.get("/shops/my-shop/manager-pin"),
+  setupManagerPin: (data: { pin: string; discountThreshold?: number }) =>
+    api.post("/shops/my-shop/manager-pin", data),
+  verifyManagerPin: (pin: string) =>
+    api.post("/shops/my-shop/manager-pin/verify", { pin }),
+  removeManagerPin: (pin: string) =>
+    api.post("/shops/my-shop/manager-pin/remove", { pin }),
+  updateManagerPinThreshold: (discountThreshold: number) =>
+    api.patch("/shops/my-shop/manager-pin/threshold", { discountThreshold }),
   getAnalytics: (params?: any) =>
     api.get("/shops/my-shop/analytics", { params }),
   // Inventory materials management
@@ -363,6 +372,19 @@ export const inventoryApi = {
     api.patch(`/inventory/shop/${shopId}/sets/${setId}`, data),
   breakSet: (shopId: string, setId: string) =>
     api.post(`/inventory/shop/${shopId}/sets/${setId}/break`),
+  // Stock audit (RFID / barcode)
+  startStockAudit: (shopId: string, data?: { notes?: string }) =>
+    api.post(`/inventory/shop/${shopId}/stock-audits`, data || {}),
+  listStockAudits: (shopId: string) =>
+    api.get(`/inventory/shop/${shopId}/stock-audits`),
+  getStockAudit: (shopId: string, auditId: string) =>
+    api.get(`/inventory/shop/${shopId}/stock-audits/${auditId}`),
+  scanStockAudit: (shopId: string, auditId: string, code: string) =>
+    api.post(`/inventory/shop/${shopId}/stock-audits/${auditId}/scan`, { code }),
+  completeStockAudit: (shopId: string, auditId: string) =>
+    api.post(`/inventory/shop/${shopId}/stock-audits/${auditId}/complete`),
+  cancelStockAudit: (shopId: string, auditId: string) =>
+    api.post(`/inventory/shop/${shopId}/stock-audits/${auditId}/cancel`),
   repricePreview: (
     shopId: string,
     data: {

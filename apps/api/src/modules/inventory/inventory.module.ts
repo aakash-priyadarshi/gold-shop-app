@@ -8,6 +8,7 @@ import {
   InventoryLocationTransferService,
 } from "./inventory-sets.service";
 import { StorageLocationsService } from "./storage-locations.service";
+import { StockAuditService } from "./stock-audit.service";
 
 @Module({
   imports: [PrismaModule, SubscriptionPlansModule],
@@ -17,7 +18,8 @@ import { StorageLocationsService } from "./storage-locations.service";
     InventorySetsService,
     InventoryLocationTransferService,
     StorageLocationsService,
+    StockAuditService,
   ],
-  exports: [InventoryService, InventorySetsService, StorageLocationsService],
+  exports: [InventoryService, InventorySetsService, StorageLocationsService, StockAuditService],
 })
 export class InventoryModule {}

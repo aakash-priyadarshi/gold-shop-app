@@ -439,6 +439,13 @@ model Shop {
   bulkImportJobs       BulkImportJob[]
   demandForecasts      DemandForecast[]
   repricingRules       RepricingRule[]
+  stockAudits          StockAudit[]
+
+  /// Manager PIN (bcrypt) — gates discounts, voids, stock adjustments, audit complete
+  managerPinHash       String?
+  managerPinSetAt      DateTime?
+  /// Discount amount above this requires manager PIN (shop currency units)
+  managerPinDiscountThreshold Float?  @default(0)
 
   // Mobile shopkeeper tools (offline-first capable)
   repairJobs           RepairJob[]
@@ -574,6 +581,8 @@ model InventoryItem {
   certificateUrl    String?
   hallmarkNumber    String?
   hallmarkDate      DateTime?
+  /// UK assay office (London / Birmingham / Sheffield / Edinburgh)
+  assayOffice       AssayOffice?
   purityCertUrl     String?
   labels            String[]
   locationId        String?
@@ -594,6 +603,7 @@ model InventoryItem {
   setComponents     InventorySetComponent[] @relation("SetParent")
   memberOfSet       InventorySetComponent?  @relation("SetComponent")
   priceHistory      InventoryPriceHistory[]
+  stockAuditScans   StockAuditScan[]
 
   @@index([shopId, status])
   @@index([jewelleryType])
@@ -636,6 +646,43 @@ model InventoryStockMovement {
   @@index([shopId, createdAt])
   @@index([inventoryItemId, createdAt])
   @@index([referenceType, referenceId])
+}
+
+/// RFID / barcode stock count session (keyboard-wedge scanners supported)
+model StockAudit {
+  id              String    @id @default(uuid())
+  shopId          String
+  status          String    @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED | CANCELLED
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  startedByUserId String?
+  notes           String?
+  /// { expectedCount, scannedUnique, matchedCount, missingCount, unmatchedScans }
+  summary         Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  shop  Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  scans StockAuditScan[]
+
+  @@index([shopId, status])
+  @@index([shopId, startedAt])
+}
+
+model StockAuditScan {
+  id              String   @id @default(uuid())
+  auditId         String
+  code            String
+  inventoryItemId String?
+  matched         Boolean  @default(false)
+  scannedAt       DateTime @default(now())
+
+  audit         StockAudit     @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+
+  @@index([auditId, scannedAt])
+  @@index([auditId, inventoryItemId])
+  @@index([code])
 }
 
 /// Audit log when catalog prices are repriced from metal rates
@@ -2035,6 +2082,13 @@ enum StorageLocationKind {
   AREA
   CABINET
   BIN
+}
+
+enum AssayOffice {
+  LONDON
+  BIRMINGHAM
+  SHEFFIELD
+  EDINBURGH
 }
 
 enum InventoryStatus {

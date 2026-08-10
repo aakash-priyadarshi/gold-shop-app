@@ -76,8 +76,20 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Pieces in this location",
         description:
-          "Search by tag or HUID, multi-select to transfer, print tags, and expand Sets to see component pieces.",
+          "Search by tag or HUID, multi-select to transfer, print tags, and expand Sets to see component pieces. Use RFID / Barcode stock audit to run a full count with a wedge scanner.",
         side: "top",
+        align: "center",
+      },
+    },
+  ],
+  "/dashboard/shop/stock/audit": [
+    {
+      element: "body",
+      popover: {
+        title: "RFID / Barcode stock audit",
+        description:
+          "Start a session and scan every piece with a keyboard-wedge RFID gun or barcode scanner. Complete the audit to see missing stock (shrinkage). Manager PIN may be required to finalize.",
+        side: "bottom",
         align: "center",
       },
     },

@@ -173,7 +173,7 @@ export default function OrivraaVsLightspeedPage() {
                 {
                   icon: Globe,
                   title: "Built-in international tax compliance",
-                  desc: "GST for India, 13% VAT for Nepal, 5% FTA VAT for UAE, 20% HMRC VAT for UK — no extra apps, no extra cost.",
+                  desc: "GST for India, Nepal Skill Promotion Fee + gem VAT, 5% FTA VAT for UAE, 20% HMRC VAT for UK — no extra apps, no extra cost.",
                 },
                 {
                   icon: Cloud,

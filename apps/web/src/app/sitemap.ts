@@ -215,6 +215,14 @@ const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
     changeFrequency: "monthly",
     priority: 0.85,
   },
+  "/eu/jewellery-shop-software": {
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
+  "/lk/jewellery-shop-software": {
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
   "/us/jewelry-store-software": {
     changeFrequency: "monthly",
     priority: 0.85,

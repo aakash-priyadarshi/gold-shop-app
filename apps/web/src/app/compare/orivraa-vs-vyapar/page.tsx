@@ -179,7 +179,7 @@ export default function OrivraaVsVyaparPage() {
                 {
                   icon: Globe,
                   title: "Works beyond India",
-                  desc: "Sell to customers in Nepal (NPR, 13% VAT), UAE (AED, 5% VAT), UK (GBP, 20% VAT) or USA (USD) — all from the same Orivraa account. Vyapar is India-only.",
+                  desc: "Sell to customers in Nepal (NPR, Skill Promotion Fee + gem VAT), UAE (AED, 5% VAT), UK (GBP, 20% VAT) or USA (USD) — all from the same Orivraa account. Vyapar is India-only.",
                 },
               ].map((p) => {
                 const Icon = p.icon;

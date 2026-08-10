@@ -4,13 +4,13 @@ const BASE_URL = "https://www.orivraa.com";
 
 export const metadata: Metadata = {
   title: "Security, Encryption & Regulatory Compliance | Orivraa",
-  description: "Discover Orivraa's bank-grade security systems. Learn how we protect retail gold and jewelry stores with AES-256 at rest, TLS 1.3 in-transit, biometric finger scanning, RFID, and automated cloud backups.",
+  description: "Discover Orivraa's bank-grade security systems. Learn how we protect retail gold and jewelry stores with AES-256 at rest, TLS 1.3 in-transit, staff PIN clearance gates, RFID, and automated cloud backups.",
   alternates: {
     canonical: `${BASE_URL}/security`,
   },
   openGraph: {
     title: "Security, Encryption & Regulatory Compliance | Orivraa",
-    description: "Learn how Orivraa establishes elite safety for modern jewelers through advanced encryption, biometrics, RFID stock tracking, and isolated regional hosting.",
+    description: "Learn how Orivraa establishes elite safety for modern jewelers through advanced encryption, staff PIN clearance gates, RFID stock tracking, and isolated regional hosting.",
     url: `${BASE_URL}/security`,
     type: "website",
     siteName: "Orivraa",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Security & Trust Compliance | Orivraa Gold Shop Software",
-    description: "AES-256 data protection, RFID stock shrink protection, and biometric point of sale staff logins.",
+    description: "AES-256 data protection, RFID stock shrink protection, and staff PIN clearance gates at point of sale.",
   },
 };
 
@@ -44,7 +44,7 @@ function generateJsonLd() {
       "@context": "https://schema.org",
       "@type": "WebPage",
       "name": "Security & Regulatory Compliance Proof - Orivraa",
-      "description": "Official documentation and structural proof regarding Orivraa's cybersecurity protocols, BIS HUID validation tracking, and regional server isolation.",
+      "description": "Official documentation and structural proof regarding Orivraa's cybersecurity protocols, local HUID/hallmark tracking, and regional server isolation.",
       "url": `${BASE_URL}/security`,
       "isPartOf": {
         "@type": "WebSite",

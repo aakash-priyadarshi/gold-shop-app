@@ -102,6 +102,7 @@ export class InventoryService {
         videos: dto.videos || [],
         certificateUrl: dto.certificateUrl,
         hallmarkNumber: dto.hallmarkNumber,
+        assayOffice: dto.assayOffice || null,
         purityCertUrl: dto.purityCertUrl,
         labels: dto.labels || [],
         locationId: dto.locationId || null,
@@ -167,6 +168,14 @@ export class InventoryService {
     if (dto.gemstoneValueNpr !== undefined)
       updateData.gemstoneValueNpr = dto.gemstoneValueNpr;
     if (dto.taxNpr !== undefined) updateData.taxNpr = dto.taxNpr;
+    if (dto.hallmarkNumber !== undefined)
+      updateData.hallmarkNumber = dto.hallmarkNumber;
+    if (dto.assayOffice !== undefined)
+      updateData.assayOffice = dto.assayOffice;
+    if (dto.certificateUrl !== undefined)
+      updateData.certificateUrl = dto.certificateUrl;
+    if (dto.purityCertUrl !== undefined)
+      updateData.purityCertUrl = dto.purityCertUrl;
 
     // Recalculate total if any price component changed
     if (

@@ -41,6 +41,7 @@ import {
   Package,
   Plus,
   Printer,
+  Radio,
   Search,
   Trash2,
 } from "lucide-react";
@@ -418,6 +419,14 @@ function StockLedgerContent() {
           <h1 className="text-2xl font-bold tracking-tight">
             <T>Vault & Tags</T>
           </h1>
+          <div className="flex flex-wrap gap-2 mt-3">
+            <Link href="/dashboard/shop/stock/audit">
+              <Button variant="outline" size="sm">
+                <Radio className="h-4 w-4 mr-1.5" />
+                <T>RFID / Barcode stock audit</T>
+              </Button>
+            </Link>
+          </div>
           <p className="text-sm text-muted-foreground">
             <T>Manage where each piece lives in your shop</T>
           </p>

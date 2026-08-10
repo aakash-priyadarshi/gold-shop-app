@@ -295,7 +295,7 @@ function SellerHero({
   // Dynamic country-specific copywriting optimized for local jewellers
   const regionalConfig: Record<MarketRegion, { badge: string; headline: string; subheadline: string; trustFooter: string }> = {
     NP: {
-      badge: "🇳🇵 Nepal's Premier IRD-Approved Jewellery ERP & Billing System",
+      badge: "🇳🇵 Nepal's Premier IRD tax-report ready Jewellery ERP & Billing System",
       headline: "The premium IRD-approved ERP & POS software for Nepalese gold shops",
       subheadline: "Tola & Laal weight conversions, live gold rates, VAT-compliant invoicing, Karigar raw-metal ledgers, and offline billing synced instantly to the cloud.",
       trustFooter: "Trusted by gold & silver merchants across Kathmandu, Pokhara, Lalitpur & Biratnagar"
@@ -321,7 +321,7 @@ function SellerHero({
     US: {
       badge: "🇺🇸 America's Leading Cloud POS & Jewelry Store ERP Platform",
       headline: "The premium cloud POS & inventory software for US jewelry stores",
-      subheadline: "Sales tax auto-computation, pennyweight (dwt) & troy ounce conversions, staff biometric fingerprint safety, integrated RFID stock count, and mobile billing.",
+      subheadline: "Sales tax auto-computation, pennyweight (dwt) & troy ounce conversions, staff PIN clearance gates, integrated RFID stock count, and mobile billing.",
       trustFooter: "Trusted by retail jewelers and design studios across New York, California & Texas"
     },
     EU: {

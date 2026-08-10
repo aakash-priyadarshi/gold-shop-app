@@ -154,7 +154,7 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
     category: "Analytics & Reports",
   },
   taxReports: {
-    label: "Multi-country tax filing (GSTR, VAT, MTD, OSS, US)",
+    label: "Multi-country tax report exports (GSTR, VAT, MTD, OSS, US)",
     category: "Analytics & Reports",
   },
   taxReportsDownload: {

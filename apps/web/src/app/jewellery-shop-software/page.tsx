@@ -23,6 +23,7 @@ import {
     Globe,
     LayoutDashboard,
     Loader2,
+    MapPin,
     MessageSquare,
     Monitor,
     Package,
@@ -275,7 +276,7 @@ const softwareJsonLd = {
           name: "Does Orivraa support GST and VAT for jewellery billing?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Orivraa handles tax compliance for jewellery businesses in multiple countries: GST for India (3% on gold), VAT for Nepal (13%), VAT for UAE (5%), VAT for UK (20%), and Sales Tax for USA. Tax rates are automatically applied based on the seller's and buyer's location.",
+            text: "Yes. Orivraa handles tax compliance for jewellery businesses in multiple countries: GST for India (3% on gold), Skill Promotion Fee (0.5%) and gemstone VAT (13%) for Nepal, VAT for UAE (5%), VAT for UK (20%), and Sales Tax for USA. Tax rates are automatically applied based on the seller's and buyer's location.",
           },
         },
         {
@@ -479,6 +480,39 @@ const USE_CASES = [
   },
 ];
 
+const WHATS_NEW = [
+  {
+    icon: Package,
+    title: "Catalog → invoice in one click",
+    desc: "Add live catalog items to invoices and POS with stock-linked lines — sold pieces update inventory automatically.",
+    href: "/jewellery-shop-billing-software",
+  },
+  {
+    icon: TrendingUp,
+    title: "Bulk catalog reprice",
+    desc: "Preview and apply price changes when gold moves — by metal, purity, or making charges — without editing every SKU manually.",
+    href: "/jewellery-inventory-software",
+  },
+  {
+    icon: MapPin,
+    title: "Vault locations & jewellery sets",
+    desc: "Track stock in vault areas, cabinets, and bins. Sell bundled sets as one line while components stay linked until the set is broken.",
+    href: "/jewellery-inventory-software",
+  },
+  {
+    icon: Receipt,
+    title: "Country tax reports",
+    desc: "Monthly summaries for GST, Nepal Skill Promotion Fee, gemstone VAT, UAE/UK VAT — exportable for your accountant.",
+    href: "/jewellery-shop-billing-software",
+  },
+  {
+    icon: Monitor,
+    title: "Desktop app for the counter",
+    desc: "Windows and macOS installers with offline billing and silent sync — same catalog, POS, and invoices as the cloud.",
+    href: "/download",
+  },
+];
+
 const SOFTWARE_WORKFLOWS = [
   {
     icon: Smartphone,
@@ -493,7 +527,7 @@ const SOFTWARE_WORKFLOWS = [
   {
     icon: Package,
     title: "Inventory that updates as you sell",
-    desc: "Every POS sale, online order, and custom quote can update stock by product, branch, weight, purity, and SKU so the dashboard stays reliable.",
+    desc: "Invoices and POS with catalog-linked lines commit stock automatically — by product, weight, purity, and SKU — so showcase counts stay trustworthy.",
   },
   {
     icon: MessageSquare,
@@ -521,7 +555,7 @@ const FAQS = [
   },
   {
     q: "Does Orivraa support GST billing for jewellery?",
-    a: "Yes. Orivraa handles GST compliance for Indian jewellers (3% on gold, 5% on making charges), VAT for Nepal (13%), UAE (5%), and UK (20%), and varying Sales Tax for USA. Tax is automatically calculated based on the seller and buyer locations.",
+    a: "Yes. Orivraa handles GST compliance for Indian jewellers (3% on gold, 5% on making charges), Skill Promotion Fee (0.5%) and gemstone VAT (13%) for Nepal, UAE (5%), and UK (20%), and varying Sales Tax for USA. Tax is automatically calculated based on the seller and buyer locations.",
   },
   {
     q: "Can I use Orivraa for multiple branches?",
@@ -541,7 +575,7 @@ const FAQS = [
   },
   {
     q: "Does Orivraa have karigar (artisan) management?",
-    a: "Orivraa supports custom order management where you can track orders from request through manufacturing to delivery. While it doesn't have a dedicated karigar ledger like traditional ERPs, the RFQ and order tracking system covers the workflow for jewellery manufacturing and custom designs.",
+    a: "Yes. Orivraa includes karigar (artisan) metal and wastage tracking, job cards, and supply-chain workflows alongside POS and inventory — so gold issued to karigars and returned wastage stay audit-ready without a separate ERP.",
   },
 ];
 
@@ -778,6 +812,39 @@ export default function JewelleryShopSoftwarePage() {
                 <Check className="h-4 w-4 text-amber-500" />
                 <T>Annual plans and full feature comparisons stay on the pricing page.</T>
               </span>
+            </div>
+          </div>
+        </section>
+
+        {/* ── What's New ─────────────────────────────────── */}
+        <section className="bg-gradient-to-b from-amber-50/80 to-white dark:from-gray-900 dark:to-gray-950 border-b border-gray-200 dark:border-gray-800">
+          <div className="max-w-6xl mx-auto px-4 py-16">
+            <div className="text-center mb-10">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
+                <T>What&apos;s new</T>
+              </p>
+              <h2 className="mt-2 text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+                <T>Shipped for jewellers — catalog, stock, tax, and desktop</T>
+              </h2>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {WHATS_NEW.map((item) => (
+                <Link
+                  key={item.title}
+                  href={item.href}
+                  className="group rounded-2xl border border-gray-200 bg-white p-5 transition-all hover:border-amber-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-950 dark:hover:border-amber-700"
+                >
+                  <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
+                    <item.icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400">
+                    <T>{item.title}</T>
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+                    <T>{item.desc}</T>
+                  </p>
+                </Link>
+              ))}
             </div>
           </div>
         </section>

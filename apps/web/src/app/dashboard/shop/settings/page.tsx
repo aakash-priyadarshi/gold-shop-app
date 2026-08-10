@@ -501,6 +501,9 @@ export default function ShopSettingsPage() {
               <TabsTrigger value="payments">
                 <T>Payment Methods</T>
               </TabsTrigger>
+              <TabsTrigger value="security">
+                <T>Security</T>
+              </TabsTrigger>
             </TabsList>
 
             {/* Profile Tab */}
@@ -1174,9 +1177,202 @@ export default function ShopSettingsPage() {
               </Card>
             </TabsContent>
 
+            {/* Manager PIN clearance */}
+            <TabsContent value="security" className="space-y-4">
+              <ManagerPinSettingsCard />
+            </TabsContent>
+
           </Tabs>
         </div>
       </DashboardLayout>
     </ShopGuard>
+  );
+}
+
+function ManagerPinSettingsCard() {
+  const t = useT();
+  const [hasPin, setHasPin] = useState(false);
+  const [threshold, setThreshold] = useState("0");
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [removePin, setRemovePin] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await shopsApi.getManagerPinStatus();
+        const data = res.data?.data ?? res.data;
+        setHasPin(!!data?.hasPin);
+        setThreshold(String(data?.discountThreshold ?? 0));
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
+
+  const savePin = async () => {
+    if (pin !== confirmPin) {
+      toast({
+        variant: "destructive",
+        title: t("PINs do not match"),
+      });
+      return;
+    }
+    if (!/^\d{4,8}$/.test(pin)) {
+      toast({
+        variant: "destructive",
+        title: t("PIN must be 4–8 digits"),
+      });
+      return;
+    }
+    setLoading(true);
+    try {
+      await shopsApi.setupManagerPin({
+        pin,
+        discountThreshold: parseFloat(threshold) || 0,
+      });
+      setHasPin(true);
+      setPin("");
+      setConfirmPin("");
+      toast({ title: t("Manager PIN saved") });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: t("Could not save PIN"),
+        description: e?.response?.data?.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearPin = async () => {
+    setLoading(true);
+    try {
+      await shopsApi.removeManagerPin(removePin);
+      setHasPin(false);
+      setRemovePin("");
+      toast({ title: t("Manager PIN removed") });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: t("Could not remove PIN"),
+        description: e?.response?.data?.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveThreshold = async () => {
+    setLoading(true);
+    try {
+      await shopsApi.updateManagerPinThreshold(parseFloat(threshold) || 0);
+      toast({ title: t("Threshold updated") });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: t("Update failed"),
+        description: e?.response?.data?.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5" />
+          <T>Manager PIN / clearance gates</T>
+        </CardTitle>
+        <CardDescription>
+          <T>
+            Require a manager PIN before large POS discounts, stock audit
+            completion, and other high-clearance actions.
+          </T>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center gap-2 text-sm">
+          <Badge variant={hasPin ? "default" : "outline"}>
+            {hasPin ? <T>PIN enabled</T> : <T>PIN not set</T>}
+          </Badge>
+        </div>
+
+        <div className="grid gap-3 max-w-sm">
+          <div className="space-y-2">
+            <Label>
+              <T>Discount threshold (requires PIN above this amount)</T>
+            </Label>
+            <Input
+              type="number"
+              min="0"
+              value={threshold}
+              onChange={(e) => setThreshold(e.target.value)}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={saveThreshold}
+              disabled={loading || !hasPin}
+            >
+              <T>Save threshold</T>
+            </Button>
+          </div>
+        </div>
+
+        <div className="border-t pt-4 grid gap-3 max-w-sm">
+          <Label>
+            {hasPin ? <T>Change manager PIN</T> : <T>Set manager PIN</T>}
+          </Label>
+          <Input
+            type="password"
+            inputMode="numeric"
+            maxLength={8}
+            placeholder={t("New PIN (4–8 digits)")}
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+          />
+          <Input
+            type="password"
+            inputMode="numeric"
+            maxLength={8}
+            placeholder={t("Confirm PIN")}
+            value={confirmPin}
+            onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
+          />
+          <Button onClick={savePin} disabled={loading || pin.length < 4}>
+            {loading && <SpinnerIcon className="h-4 w-4 animate-spin mr-2" />}
+            <T>Save PIN</T>
+          </Button>
+        </div>
+
+        {hasPin && (
+          <div className="border-t pt-4 grid gap-3 max-w-sm">
+            <Label>
+              <T>Remove manager PIN</T>
+            </Label>
+            <Input
+              type="password"
+              inputMode="numeric"
+              maxLength={8}
+              placeholder={t("Current PIN")}
+              value={removePin}
+              onChange={(e) => setRemovePin(e.target.value.replace(/\D/g, ""))}
+            />
+            <Button
+              variant="destructive"
+              onClick={clearPin}
+              disabled={loading || removePin.length < 4}
+            >
+              <T>Remove PIN</T>
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

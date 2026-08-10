@@ -119,6 +119,14 @@ export class CreateInventoryItemDto {
   @IsOptional()
   hallmarkNumber?: string;
 
+  @ApiPropertyOptional({
+    description: 'UK assay office',
+    enum: ['LONDON', 'BIRMINGHAM', 'SHEFFIELD', 'EDINBURGH'],
+  })
+  @IsString()
+  @IsOptional()
+  assayOffice?: 'LONDON' | 'BIRMINGHAM' | 'SHEFFIELD' | 'EDINBURGH' | null;
+
   @ApiPropertyOptional({ description: 'Purity certificate URL' })
   @IsString()
   @IsOptional()
@@ -260,6 +268,14 @@ export class UpdateInventoryItemDto {
   @IsString()
   @IsOptional()
   hallmarkNumber?: string;
+
+  @ApiPropertyOptional({
+    description: 'UK assay office',
+    enum: ['LONDON', 'BIRMINGHAM', 'SHEFFIELD', 'EDINBURGH'],
+  })
+  @IsString()
+  @IsOptional()
+  assayOffice?: 'LONDON' | 'BIRMINGHAM' | 'SHEFFIELD' | 'EDINBURGH' | null;
 
   @ApiPropertyOptional({ description: 'Purity certificate URL' })
   @IsString()

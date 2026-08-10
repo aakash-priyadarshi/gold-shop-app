@@ -163,8 +163,8 @@ export function middleware(request: NextRequest) {
     "connect-src 'self' https://api.orivraa.com https://*.vercel-insights.com https://va.vercel-scripts.com https://vercel.live https://*.stripe.com https://vitals.vercel-insights.com http://127.0.0.1:* http://localhost:*",
     // Frames: self + Stripe (for 3D Secure)
     "frame-src 'self' https://*.stripe.com https://vercel.live",
-    // Media
-    "media-src 'self' blob:",
+    // Media: hero videos + local blobs from images CDN
+    "media-src 'self' blob: https://images.orivraa.com",
     // Objects: none (no Flash/Java)
     "object-src 'none'",
     // Base URI restriction

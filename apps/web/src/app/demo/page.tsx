@@ -15,7 +15,7 @@ const videoSchema = {
   description:
     "Quick 30-second visual demo of Orivraa jewellery shop software showing the live dashboard, smart inventory by weight & purity, lightning POS, GST/VAT invoices, digital catalogues, business analytics, and AI insights.",
   thumbnailUrl: "https://www.orivraa.com/og-image.png",
-  uploadDate: "2026-05-15",
+  uploadDate: "2026-01-15",
   duration: "PT30S",
   contentUrl: SHORT_DEMO_URL,
   embedUrl: "https://www.orivraa.com/demo",

@@ -16,8 +16,10 @@ import {
     CreditCard,
     Gem,
     Globe,
+    MapPin,
     MessageSquare,
-    Package,
+    Receipt,
+    RefreshCw,
     ShieldCheck,
     Smartphone,
     Store,
@@ -95,9 +97,9 @@ const shopFeatures = [
     desc: "Run monthly gold-savings and committee (chit) plans, auto-track instalments, and remind customers — loyalty that brings them back.",
   },
   {
-    icon: Package,
-    title: "Inventory, Barcode & HUID",
-    desc: "Photos, weight-based pricing, barcode/SKU and HUID/hallmark tracking — know exactly what's in your showcase at all times.",
+    icon: MapPin,
+    title: "Vault Locations & Jewellery Sets",
+    desc: "Organise stock in vault areas, cabinets, and bins. Bundle pieces into sets with discounts — sell as one line while components stay linked until the set is broken.",
   },
   {
     icon: Smartphone,
@@ -105,14 +107,14 @@ const shopFeatures = [
     desc: "Bill from any phone at the counter, at an exhibition, or at home. Scan, share the receipt on WhatsApp, and stay synced.",
   },
   {
-    icon: BarChart3,
-    title: "Dashboard & Sales Analytics",
-    desc: "See today's sales, best-selling designs, dead stock, and profit at a glance — run your shop on numbers, not guesswork.",
+    icon: Receipt,
+    title: "Tax Reports & Filing Summaries",
+    desc: "Monthly and annual tax summaries — GST, Skill Promotion Fee, gemstone VAT, UAE/UK VAT — exportable for your accountant or CA in one click.",
   },
   {
-    icon: Globe,
-    title: "Sell to the World",
-    desc: "Reach buyers across India, Nepal, Dubai, UK & USA with multi-currency pricing handled for you. Your shop, global.",
+    icon: RefreshCw,
+    title: "Catalog Reprice with Live Rates",
+    desc: "Preview and apply catalogue price updates when gold moves — reprice by metal type, purity, or making charges without editing every SKU by hand.",
   },
 ];
 
@@ -248,10 +250,10 @@ export function SellerFeaturesSection() {
               "Artisan Metal & Wastage Tracking": "https://images.orivraa.com/images/public/subham-hait-fVeujn3i5ZE-unsplash.jpg",
               "Old Gold Exchange & Buy-Back": "https://images.orivraa.com/images/public/hasan-mrad-9Foi-h8zmIU-unsplash.jpg",
               "Savings & Committee Schemes": "https://images.orivraa.com/images/public/luxury-gold-globe.png",
-              "Inventory, Barcode & HUID": "https://images.orivraa.com/images/public/carlos-esteves-1MWbwTaeJIA-unsplash.jpg",
+              "Vault Locations & Jewellery Sets": "https://images.orivraa.com/images/public/carlos-esteves-1MWbwTaeJIA-unsplash.jpg",
               "Mobile POS — Sell Anywhere": "https://images.orivraa.com/images/public/sayan-bhaskar-U0nWBqGsTMk-unsplash.jpg",
-              "Dashboard & Sales Analytics": "https://images.orivraa.com/images/public/vaibhav-nagare-G3Hrl6WzQYQ-unsplash.jpg",
-              "Sell to the World": "https://images.orivraa.com/images/public/luxury-gold-globe.png",
+              "Tax Reports & Filing Summaries": "https://images.orivraa.com/images/public/vaibhav-nagare-G3Hrl6WzQYQ-unsplash.jpg",
+              "Catalog Reprice with Live Rates": "https://images.orivraa.com/images/public/luxury-gold-globe.png",
             };
             const bgImage = featureImages[feature.title];
 
@@ -370,8 +372,10 @@ const comparisonLinks = [
 const countryHubLinks = [
   { href: "/us/jewelry-store-software", label: "🇺🇸 USA — jewelry store software" },
   { href: "/uk/jewellery-shop-software", label: "🇬🇧 UK — jewellery shop software" },
+  { href: "/eu/jewellery-shop-software", label: "🇪🇺 EU — jewellery shop software" },
   { href: "/uae/jewellery-shop-software", label: "🇦🇪 UAE / Dubai — jewellery software" },
   { href: "/np/jewellery-shop-software", label: "🇳🇵 Nepal — jewellery billing software" },
+  { href: "/lk/jewellery-shop-software", label: "🇱🇰 Sri Lanka — jewellery shop software" },
 ];
 
 const countryGuideLinks = [
@@ -658,7 +662,7 @@ export function MobilePosSpotlight() {
             <ScrollReveal direction="assemble" delay={0.05} spring>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-500/10 text-gold-400 text-xs font-semibold uppercase tracking-wide border border-gold-500/20">
                 <Zap className="h-3.5 w-3.5 text-gold-400 animate-pulse" />
-                <T>New feature</T>
+                <T>Stock-linked billing</T>
               </div>
             </ScrollReveal>
             <ScrollReveal direction="assemble" delay={0.12} spring>

@@ -54,7 +54,7 @@ const OBJECTIONS = [
   },
   {
     q: "I'm based outside India — does Orivraa work for my shop?",
-    a: "Yes. Orivraa supports jewellers in Nepal (NPR, 13% VAT, NRB gold rates), UAE/Dubai (AED, 5% VAT, FTA-compliant invoices), UK (GBP, 20% VAT, hallmark fields), and USA (USD, state-level sales tax). Your pricing, tax rates, and invoice format automatically match your country.",
+    a: "Yes. Orivraa supports jewellers in Nepal (NPR, 0.5% Skill Promotion Fee on jewellery + 13% VAT on gemstones, NRB gold rates), UAE/Dubai (AED, 5% VAT, FTA-compliant invoices), UK (GBP, 20% VAT, hallmark fields), and USA (USD, state-level sales tax). Your pricing, tax rates, and invoice format automatically match your country.",
   },
 ];
 
@@ -86,8 +86,8 @@ const FEATURES = [
   },
   {
     icon: ShieldCheck,
-    title: "Escrow Payment Protection",
-    desc: "When a buyer places an order, their payment is held securely until you confirm delivery. You get paid — no payment disputes, no chasing.",
+    title: "Secure Quotes & Invoicing",
+    desc: "Send professional GST/VAT invoices and quotes from your dashboard. Buyers can pay in person at your counter today; integrated online payment collection is rolling out soon.",
   },
 ];
 

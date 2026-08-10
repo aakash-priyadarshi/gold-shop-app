@@ -35,6 +35,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi, invoicesApi, posApi, shopsApi } from "@/lib/api";
+import { ManagerPinDialog } from "@/components/shop/ManagerPinDialog";
 import { printBill, type BillSettings } from "@/lib/billPrint";
 import {
   getCounterPaymentMethods,
@@ -162,6 +163,9 @@ function PosPageInner() {
   const [notes, setNotes] = useState("");
   const [taxRate, setTaxRate] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [pinOpen, setPinOpen] = useState(false);
+  const [discountThreshold, setDiscountThreshold] = useState(0);
+  const [hasManagerPin, setHasManagerPin] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [makingChargeRate, setMakingChargeRate] = useState(0);
   const [checkoutSuccess, setCheckoutSuccess] = useState<{
@@ -348,7 +352,7 @@ function PosPageInner() {
 
   // ─── Checkout ───
 
-  const handleCheckout = async () => {
+  const runCheckout = async () => {
     if (!session) return;
     setCheckoutLoading(true);
     try {
@@ -388,6 +392,28 @@ function PosPageInner() {
     } finally {
       setCheckoutLoading(false);
     }
+  };
+
+  const handleCheckout = async () => {
+    if (!session) return;
+    try {
+      const res = await shopsApi.getManagerPinStatus();
+      const data = res.data?.data ?? res.data;
+      const threshold = Number(data?.discountThreshold ?? 0);
+      setDiscountThreshold(threshold);
+      setHasManagerPin(!!data?.hasPin);
+      if (
+        data?.hasPin &&
+        discountAmount > 0 &&
+        discountAmount >= threshold
+      ) {
+        setPinOpen(true);
+        return;
+      }
+    } catch {
+      // If PIN status fails, proceed (don't block sales offline)
+    }
+    await runCheckout();
   };
 
   // ─── Cancel Session ───
@@ -1195,6 +1221,21 @@ function PosPageInner() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <ManagerPinDialog
+          open={pinOpen}
+          onOpenChange={setPinOpen}
+          title="Authorize discount"
+          description={
+            hasManagerPin
+              ? `Manager PIN required for discounts of ${discountThreshold}+ ${currencySymbol}.`
+              : "Manager PIN required for this discount."
+          }
+          onVerified={async () => {
+            setPinOpen(false);
+            await runCheckout();
+          }}
+        />
       </DashboardLayout>
     </ShopGuard>
   );

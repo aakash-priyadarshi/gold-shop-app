@@ -43,6 +43,8 @@ type InventoryLike = Pick<
   | "taxNpr"
   | "totalPriceNpr"
   | "composition"
+  | "hallmarkNumber"
+  | "assayOffice"
 > & {
   variants?: Pick<ProductVariant, "id" | "sizeLabel" | "sku" | "priceOverride">[];
 };
@@ -84,7 +86,13 @@ export class SaleBuilderService {
 
     const label =
       item.nameEn + (variant?.sizeLabel ? ` (${variant.sizeLabel})` : "");
-    const details = variant?.sku || item.sku || undefined;
+    const details = [
+      variant?.sku || item.sku || null,
+      item.hallmarkNumber ? `Hallmark: ${item.hallmarkNumber}` : null,
+      item.assayOffice ? `Assay: ${item.assayOffice}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || undefined;
 
     const metalCost = item.metalValueNpr || 0;
     const makingCost = item.makingChargeNpr || 0;

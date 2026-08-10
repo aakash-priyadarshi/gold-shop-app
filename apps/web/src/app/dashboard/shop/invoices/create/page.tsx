@@ -936,11 +936,19 @@ export default function CreateInvoicePage() {
       metalCost = String(item.totalPriceNpr);
     }
 
+    const detailBits = [
+      item.sku || null,
+      item.hallmarkNumber ? `Hallmark: ${item.hallmarkNumber}` : null,
+      (item as any).assayOffice
+        ? `Assay: ${(item as any).assayOffice}`
+        : null,
+    ].filter(Boolean);
+
     const next: RichLineItem = {
       label: item.nameEn || item.sku || "Catalog item",
       category: item.jewelleryType || "RING",
       quantity: 1,
-      details: item.sku || "",
+      details: detailBits.join(" · ") || "",
       metalType: String(metalType || ""),
       metalWeightG: item.totalWeightGrams
         ? String(item.totalWeightGrams)

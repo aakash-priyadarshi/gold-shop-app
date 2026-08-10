@@ -32,10 +32,10 @@ import Image from "next/image";
 import Link from "next/link";
 
 const stats = [
-  { label: "Verified jewellery network", value: "500+", icon: BuildingStorefrontIcon },
-  { label: "Customers and shop teams", value: "10K+", icon: UserGroupIcon },
+  { label: "Jewellery shops on Orivraa", value: "Growing", icon: BuildingStorefrontIcon },
   { label: "Markets supported", value: "15+", icon: GlobeAltIcon },
-  { label: "Custom and POS workflows", value: "5K+", icon: SparklesIcon },
+  { label: "Languages & tutorials", value: "12+", icon: UserGroupIcon },
+  { label: "POS & billing workflows", value: "Unified", icon: SparklesIcon },
 ];
 
 const values = [
@@ -495,7 +495,7 @@ export default function AboutPage() {
                       <p className="text-xs text-gray-400"><T>Profiles being prepared for launch and review collection.</T></p>
                     </div>
                     <span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300 ring-1 ring-amber-300/20">
-                      <T>Coming soon</T>
+                      <T>In preparation</T>
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

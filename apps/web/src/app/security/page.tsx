@@ -10,7 +10,7 @@ import {
   Lock, 
   Database, 
   Scan, 
-  Fingerprint, 
+  KeyRound, 
   Cpu, 
   FileCheck2, 
   ServerCrash, 
@@ -86,7 +86,7 @@ export default function SecurityTrustPage() {
               </div>
               <h3 className="font-bold text-lg"><T>Daily Automated Backups</T></h3>
               <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                <T>Never worry about system failure or data loss. Orivraa runs hourly database snapshots with redundant cloud backups, permitting point-in-time recovery for business resilience.</T>
+                <T>Never worry about system failure or data loss. Orivraa runs daily database snapshots with redundant cloud backups, permitting point-in-time recovery for business resilience.</T>
               </p>
             </CardContent>
           </Card>
@@ -129,17 +129,17 @@ export default function SecurityTrustPage() {
               <T>📟 POS Hardware Safety</T>
             </Badge>
             <h2 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white">
-              <T>Biometrics, Barcodes &amp; RFID Stock Security</T>
+              <T>Staff PIN, Barcodes &amp; RFID Stock Security</T>
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
               <T>Safeguarding high-value assets requires more than virtual firewalls. Orivraa integrates seamlessly with hardware security layers right at the checkout counter:</T>
             </p>
             <ul className="space-y-3 text-xs md:text-sm text-gray-700 dark:text-gray-300">
               <li className="flex items-start gap-2.5 font-medium">
-                <Fingerprint className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+                <KeyRound className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
                 <span>
-                  <strong><T>Biometric Staff Scan:</T></strong>{" "}
-                  <T>Restricts high-clearance actions like inventory adjustments, discount approvals, or daily registers to verified fingerprint scans.</T>
+                  <strong><T>Staff PIN / Clearance Gates:</T></strong>{" "}
+                  <T>Restricts high-clearance actions like inventory adjustments, discount approvals, or daily registers to verified staff PIN clearance.</T>
                 </span>
               </li>
               <li className="flex items-start gap-2.5 font-medium">
@@ -152,8 +152,8 @@ export default function SecurityTrustPage() {
               <li className="flex items-start gap-2.5 font-medium">
                 <Cpu className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong><T>BIS Hallmark &amp; HUID Tracking:</T></strong>{" "}
-                  <T>Every piece is bound to its unique Government Hallmark ID, protecting you against counterfeit stock.</T>
+                  <strong><T>Local HUID / Hallmark Tracker:</T></strong>{" "}
+                  <T>Every piece can be bound to its HUID or hallmark reference in your inventory, helping you track purity and provenance in-shop.</T>
                 </span>
               </li>
             </ul>
@@ -182,10 +182,10 @@ export default function SecurityTrustPage() {
                   </div>
                   <div className="flex items-center justify-between text-xs border-b dark:border-gray-850 pb-1.5">
                     <span className="text-gray-500 dark:text-gray-400"><T>ISO 27001 Ready</T></span>
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[9px] px-1.5 py-0 font-bold"><T>Certified</T></Badge>
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[9px] px-1.5 py-0 font-bold"><T>Ready</T></Badge>
                   </div>
                   <div className="flex items-center justify-between text-xs border-b dark:border-gray-850 pb-1.5">
-                    <span className="text-gray-500 dark:text-gray-400"><T>Biometric Staff Auth</T></span>
+                    <span className="text-gray-500 dark:text-gray-400"><T>Staff PIN / Clearance Gates</T></span>
                     <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 text-[9px] px-1.5 py-0 font-bold"><T>Supported</T></Badge>
                   </div>
                   <div className="flex items-center justify-between text-xs pb-1">
@@ -216,16 +216,16 @@ export default function SecurityTrustPage() {
             <Card className="border border-gray-100 dark:border-gray-850 bg-white dark:bg-gray-900/50 hover:shadow-lg transition-all duration-300 h-full gold-glow-hover">
               <CardContent className="pt-6 space-y-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-champagne-300"><T>Cloud Storage</T></span>
-                <h4 className="font-bold text-sm text-gray-900 dark:text-white"><T>AWS Shield &amp; KMS</T></h4>
+                <h4 className="font-bold text-sm text-gray-900 dark:text-white"><T>Neon, Railway &amp; Cloudflare</T></h4>
                 <p className="text-[11px] md:text-xs text-gray-500 dark:text-gray-450 leading-relaxed">
-                  <T>All client inventory databases are hosted inside highly secure, multi-zone virtual clouds. Data at rest is encrypted via hardware security modules aligned with</T>{" "}
+                  <T>Client inventory databases run on Neon PostgreSQL, with the API hosted on Railway and edge protection via Cloudflare. Data at rest is encrypted, and traffic is shielded at the edge — aligned with our</T>{" "}
                   <a
-                    href="https://aws.amazon.com/security/"
+                    href="https://neon.tech/docs/security/security-overview"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-champagne-300 hover:underline font-bold transition-colors"
                   >
-                    <T>AWS Cryptographic Security</T>
+                    <T>managed cloud security stack</T>
                   </a>.
                 </p>
               </CardContent>
@@ -255,10 +255,10 @@ export default function SecurityTrustPage() {
           <ScrollReveal direction="up" delay={0.2} className="h-full">
             <Card className="border border-gray-100 dark:border-gray-850 bg-white dark:bg-gray-900/50 hover:shadow-lg transition-all duration-300 h-full gold-glow-hover">
               <CardContent className="pt-6 space-y-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-purple-400"><T>Government Sync</T></span>
-                <h4 className="font-bold text-sm text-gray-900 dark:text-white"><T>BIS Hallmark HUID APIs</T></h4>
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-400"><T>Hallmark Tracking</T></span>
+                <h4 className="font-bold text-sm text-gray-900 dark:text-white"><T>Local HUID / Hallmark Tracker</T></h4>
                 <p className="text-[11px] md:text-xs text-gray-500 dark:text-gray-450 leading-relaxed">
-                  <T>Counterfeit commodities are blocked at entry. Orivraa queries government HUID registration APIs in real-time, matching transaction lines directly with official hallmark records for total trade legitimacy.</T>
+                  <T>Record and look up HUID and hallmark references against each SKU in your inventory. Orivraa helps you keep local purity and provenance records audit-ready — without claiming a live government API connection.</T>
                 </p>
               </CardContent>
             </Card>
