@@ -50,6 +50,35 @@ export class InvoiceLineItemDto {
   @IsOptional()
   @IsUUID()
   variantId?: string;
+
+  /**
+   * Optional pricing breakdown — when present on a collapsed jewellery line
+   * (RING, PRODUCT, etc.), InvoicesService expands into METAL / MAKING / GEMSTONE
+   * before tax calculation so reports and accounting stay accurate.
+   */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  metalCost?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  makingCost?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  gemstoneCost?: number;
+
+  @IsOptional()
+  @IsString()
+  metalType?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  metalWeightG?: number;
 }
 
 export class CreateInvoiceDto {

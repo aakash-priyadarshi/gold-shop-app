@@ -26,6 +26,7 @@ import {
 import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
 import { AccountingService } from "../accounting/accounting.service";
 import { StockCommitService } from "./stock-commit.service";
+import { SaleBuilderService } from "./sale-builder.service";
 
 export interface CreateInvoiceOptions {
   /** When true, caller commits stock itself (POS checkout path). */
@@ -56,6 +57,7 @@ export class InvoicesService {
     private backendTaxEngine: BackendTaxEngineService,
     private accounting: AccountingService,
     private stockCommit: StockCommitService,
+    private saleBuilder: SaleBuilderService,
   ) {}
 
   /**
@@ -340,7 +342,7 @@ export class InvoicesService {
       }
     }
 
-    const lineItems = dto.lineItems.map((item) => {
+    const validated = dto.lineItems.map((item) => {
       const authoritativeAmount = roundMoney(item.quantity * item.unitPrice);
       if (Math.abs(authoritativeAmount - item.amount) > 0.01) {
         throw new BadRequestException(
@@ -349,7 +351,38 @@ export class InvoicesService {
       }
       return { ...item, amount: authoritativeAmount };
     });
+
+    // Expand collapsed jewellery lines (RING/PRODUCT + breakdown) into
+    // METAL / MAKING / GEMSTONE, drop $0 PRODUCT headers, and fold
+    // invoice-level makingChargesAmt into a MAKING line when needed.
+    const normalized = this.saleBuilder.normalizeInvoiceLines(validated, {
+      makingChargesAmt: dto.makingChargesAmt,
+      makingChargeRate: dto.makingChargeRate,
+    });
+    if (normalized.length === 0) {
+      throw new BadRequestException("Invoice must have at least one priced line item");
+    }
+
+    const lineItems = normalized.map((item) => ({
+      label: item.label,
+      category: item.category,
+      quantity: item.quantity,
+      unitPrice: roundMoney(item.unitPrice),
+      amount: roundMoney(item.amount),
+      details: item.details,
+      inventoryItemId: item.inventoryItemId,
+      variantId: item.variantId,
+      taxTreatment: item.taxTreatment,
+      metalType: item.metalType,
+      metalWeightG: item.metalWeightG,
+      metalCost: item.metalCost,
+      makingCost: item.makingCost,
+      gemstoneCost: item.gemstoneCost,
+    }));
+
     const subtotal = sumMoney(lineItems.map((item) => item.amount));
+    // makingChargesAmt is already folded into a MAKING line when applicable;
+    // keep the field on the invoice row for POS/metadata only.
     const discountAmount = roundMoney(dto.discountAmount || 0);
     if (discountAmount > subtotal) {
       throw new BadRequestException("Discount cannot exceed the invoice subtotal");
@@ -426,6 +459,46 @@ export class InvoicesService {
     const supplierAddress = [shop.address, shop.city, shop.state]
       .filter(Boolean)
       .join(", ");
+
+    // Aggregate tax lines for Nepal audit / UI (skill fee, VAT, metal/making GST)
+    const taxLines = shouldChargeTax ? tax.lines || [] : [];
+    const sumTaxBy = (
+      pred: (line: { type?: string; name?: string; category?: string; taxAmount?: number }) => boolean,
+    ) =>
+      roundMoney(
+        taxLines
+          .filter(pred)
+          .reduce((s: number, l: any) => s + (Number(l.taxAmount) || 0), 0),
+      );
+
+    const skillPromotionFee = sumTaxBy(
+      (l) =>
+        String(l.type || "").toUpperCase().includes("SKILL") ||
+        String(l.name || "").toUpperCase().includes("SKILL PROMOTION"),
+    );
+    const vatCollected = sumTaxBy(
+      (l) =>
+        String(l.type || "").toUpperCase() === "VAT" ||
+        (String(l.name || "").toUpperCase().includes("VAT") &&
+          !String(l.name || "").toUpperCase().includes("SKILL")),
+    );
+    const metalTax = sumTaxBy(
+      (l) =>
+        String(l.category || "").toUpperCase().includes("METAL") ||
+        String(l.name || "").toUpperCase().includes("ON METAL"),
+    );
+    const makingTax = sumTaxBy(
+      (l) =>
+        String(l.category || "").toUpperCase().includes("MAKING") ||
+        String(l.name || "").toUpperCase().includes("ON MAKING"),
+    );
+    const gemstoneTax = sumTaxBy(
+      (l) =>
+        String(l.category || "").toUpperCase().includes("GEM") ||
+        String(l.category || "").toUpperCase().includes("DIAMOND") ||
+        String(l.name || "").toUpperCase().includes("STONE"),
+    );
+
     const taxBreakdown = {
       region,
       source: isTaxExempt
@@ -434,7 +507,21 @@ export class InvoicesService {
           ? "NOT_VAT_REGISTERED"
           : tax.source,
       taxableAmount,
-      lines: shouldChargeTax ? tax.lines : [],
+      lines: taxLines,
+      // Report-friendly aggregates (Nepal audit, create-page preview parity)
+      skillPromotionFee: skillPromotionFee || undefined,
+      metalTax: metalTax || skillPromotionFee || undefined,
+      makingTax: makingTax || undefined,
+      gemstoneTax: gemstoneTax || undefined,
+      vat: vatCollected || undefined,
+      totalTax: taxAmount,
+      // LK / filing flags from DTO (server overwrites client taxBreakdown)
+      lkTaxInvoice: isLkTaxInvoice || undefined,
+      supplyDate: dto.supplyDate || undefined,
+      placeOfSupply: dto.placeOfSupply || undefined,
+      purchaserVatRegistered:
+        dto.purchaserVatRegistered ??
+        (dto.customerType === "B2B" ? true : undefined),
     };
 
     const invoiceTitle = isLkTaxInvoice

@@ -107,6 +107,12 @@ export class SaleBuilderService {
 
     if (hasBreakdown && opts.expandBreakdown === true) {
       const lines: BuiltSaleLine[] = [];
+      let stockAttached = false;
+      const attachStock = () => {
+        if (stockAttached) return undefined;
+        stockAttached = true;
+        return item.id;
+      };
       if (metalCost > 0) {
         lines.push({
           label: `${label} — Metal`,
@@ -115,7 +121,7 @@ export class SaleBuilderService {
           unitPrice: metalCost,
           amount: metalCost * qty,
           details,
-          inventoryItemId: item.id,
+          inventoryItemId: attachStock(),
           variantId: variant?.id,
           source,
           metalType,
@@ -131,7 +137,7 @@ export class SaleBuilderService {
           unitPrice: makingCost,
           amount: makingCost * qty,
           details,
-          inventoryItemId: item.id,
+          inventoryItemId: attachStock(),
           variantId: variant?.id,
           source,
           makingCost,
@@ -145,7 +151,7 @@ export class SaleBuilderService {
           unitPrice: gemstoneCost,
           amount: gemstoneCost * qty,
           details,
-          inventoryItemId: item.id,
+          inventoryItemId: attachStock(),
           variantId: variant?.id,
           source,
           gemstoneCost,
@@ -226,6 +232,224 @@ export class SaleBuilderService {
       amount,
       source: "POS",
     };
+  }
+
+  /**
+   * Categories that already map cleanly to the tax engine / Nepal reports.
+   * Jewellery types (RING, NECKLACE, PRODUCT, SET, …) are NOT tax categories.
+   */
+  static isTaxCategory(category: string): boolean {
+    const v = (category || "").trim().toUpperCase();
+    return [
+      "METAL",
+      "MAKING",
+      "GEMSTONE",
+      "DIAMOND",
+      "FINISH",
+      "PLATING",
+      "DISCOUNT",
+      "TAX",
+      "GOLD_METAL",
+      "GOLD_MAKING",
+      "SILVER_METAL",
+      "SILVER_MAKING",
+    ].includes(v);
+  }
+
+  /**
+   * Expand a collapsed jewellery / PRODUCT line into METAL / MAKING / GEMSTONE
+   * when breakdown amounts are present. Otherwise remap jewellery categories to
+   * METAL so NP/IN tax engines don't treat the amount as untaxed OTHER.
+   *
+   * Stock-safe: inventoryItemId is attached only to the first emitted line so
+   * StockCommitService.linesFromInvoiceItems does not over-decrement.
+   */
+  expandCollapsedLine(input: {
+    label: string;
+    category: string;
+    quantity: number;
+    unitPrice: number;
+    amount: number;
+    details?: string;
+    inventoryItemId?: string;
+    variantId?: string;
+    metalCost?: number;
+    makingCost?: number;
+    gemstoneCost?: number;
+    metalType?: string;
+    metalWeightG?: number;
+    source?: SaleLineSource;
+    taxTreatment?: "TAXABLE" | "EXEMPT";
+  }): Array<
+    BuiltSaleLine & { taxTreatment?: "TAXABLE" | "EXEMPT" }
+  > {
+    const qty = Math.max(1, input.quantity || 1);
+    const source = input.source ?? "MANUAL";
+    const cat = (input.category || "").trim().toUpperCase();
+
+    // Already a tax-category line — keep as-is (drop zero PRODUCT headers upstream).
+    if (SaleBuilderService.isTaxCategory(cat)) {
+      return [
+        {
+          label: input.label,
+          category: cat as SaleLineCategory,
+          quantity: qty,
+          unitPrice: input.unitPrice,
+          amount: input.amount,
+          details: input.details,
+          inventoryItemId: input.inventoryItemId,
+          variantId: input.variantId,
+          source,
+          metalType: input.metalType,
+          metalWeightG: input.metalWeightG,
+          metalCost: input.metalCost,
+          makingCost: input.makingCost,
+          gemstoneCost: input.gemstoneCost,
+          taxTreatment: input.taxTreatment,
+        },
+      ];
+    }
+
+    const metalCost = Math.max(0, Number(input.metalCost) || 0);
+    const makingCost = Math.max(0, Number(input.makingCost) || 0);
+    const gemstoneCost = Math.max(0, Number(input.gemstoneCost) || 0);
+    const hasBreakdown = metalCost > 0 || makingCost > 0 || gemstoneCost > 0;
+
+    if (hasBreakdown) {
+      const lines: Array<BuiltSaleLine & { taxTreatment?: "TAXABLE" | "EXEMPT" }> =
+        [];
+      let stockAttached = false;
+      const attachStock = () => {
+        if (stockAttached || !input.inventoryItemId) return undefined;
+        stockAttached = true;
+        return input.inventoryItemId;
+      };
+
+      if (metalCost > 0) {
+        lines.push({
+          label: `${input.label} — Metal`,
+          category: "METAL",
+          quantity: qty,
+          unitPrice: metalCost,
+          amount: metalCost * qty,
+          details: input.details,
+          inventoryItemId: attachStock(),
+          variantId: input.variantId,
+          source,
+          metalType: input.metalType,
+          metalWeightG: input.metalWeightG,
+          metalCost,
+          taxTreatment: input.taxTreatment,
+        });
+      }
+      if (makingCost > 0) {
+        lines.push({
+          label: `${input.label} — Making`,
+          category: "MAKING",
+          quantity: qty,
+          unitPrice: makingCost,
+          amount: makingCost * qty,
+          details: input.details,
+          inventoryItemId: attachStock(),
+          variantId: input.variantId,
+          source,
+          makingCost,
+          taxTreatment: input.taxTreatment,
+        });
+      }
+      if (gemstoneCost > 0) {
+        lines.push({
+          label: `${input.label} — Gemstone`,
+          category: "GEMSTONE",
+          quantity: qty,
+          unitPrice: gemstoneCost,
+          amount: gemstoneCost * qty,
+          details: input.details,
+          inventoryItemId: attachStock(),
+          variantId: input.variantId,
+          source,
+          gemstoneCost,
+          taxTreatment: input.taxTreatment,
+        });
+      }
+      if (lines.length > 0) return lines;
+    }
+
+    // No breakdown: treat full jewellery amount as METAL for tax engines
+    // (NP skill fee / IN metal GST). PRODUCT/SET/RING/OTHER → METAL.
+    return [
+      {
+        label: input.label,
+        category: "METAL",
+        quantity: qty,
+        unitPrice: input.unitPrice,
+        amount: input.amount,
+        details: input.details,
+        inventoryItemId: input.inventoryItemId,
+        variantId: input.variantId,
+        source,
+        metalType: input.metalType,
+        metalWeightG: input.metalWeightG,
+        taxTreatment: input.taxTreatment,
+      },
+    ];
+  }
+
+  /**
+   * Normalize a full invoice line list: drop $0 PRODUCT headers, expand
+   * collapsed jewellery lines, fold invoice-level makingChargesAmt.
+   */
+  normalizeInvoiceLines(
+    lines: Array<{
+      label: string;
+      category: string;
+      quantity: number;
+      unitPrice: number;
+      amount: number;
+      details?: string;
+      inventoryItemId?: string;
+      variantId?: string;
+      metalCost?: number;
+      makingCost?: number;
+      gemstoneCost?: number;
+      metalType?: string;
+      metalWeightG?: number;
+      taxTreatment?: "TAXABLE" | "EXEMPT";
+    }>,
+    opts: {
+      makingChargesAmt?: number;
+      makingChargeRate?: number;
+    } = {},
+  ): Array<
+    BuiltSaleLine & { taxTreatment?: "TAXABLE" | "EXEMPT" }
+  > {
+    const expanded = lines.flatMap((li) => {
+      // Drop zero-amount PRODUCT headers (quote convert legacy)
+      if (
+        (li.category || "").toUpperCase() === "PRODUCT" &&
+        (li.amount || 0) <= 0
+      ) {
+        return [];
+      }
+      return this.expandCollapsedLine({
+        ...li,
+        source: li.inventoryItemId ? "CATALOG" : "MANUAL",
+      });
+    });
+
+    const hasMakingLine = expanded.some(
+      (l) => (l.category || "").toUpperCase() === "MAKING" && l.amount > 0,
+    );
+    const invoiceMaking = Math.max(0, Number(opts.makingChargesAmt) || 0);
+    if (invoiceMaking > 0 && !hasMakingLine) {
+      const making = this.makingChargeLine(
+        invoiceMaking,
+        opts.makingChargeRate,
+      );
+      if (making) expanded.push(making);
+    }
+
+    return expanded;
   }
 
   private extractMetalType(composition: unknown): string | undefined {

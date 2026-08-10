@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { BackendTaxEngineService } from "../core/pricing/services/backend-tax-engine.service";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import { InvoicesService } from "./invoices.service";
+import { SaleBuilderService } from "./sale-builder.service";
 
 const invoiceCreate = jest.fn();
 const invoiceSequenceUpsert = jest.fn();
@@ -35,6 +36,7 @@ const mockStockCommit = {
   commit: jest.fn(),
   restoreForVoid: jest.fn(),
 };
+const saleBuilder = new SaleBuilderService();
 
 describe("InvoicesService Sri Lanka invoice compliance", () => {
   let service: InvoicesService;
@@ -58,6 +60,7 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
       mockTaxEngine as unknown as BackendTaxEngineService,
       mockAccounting as any,
       mockStockCommit as any,
+      saleBuilder,
     );
     mockPlanLimits.checkInvoiceLimit.mockResolvedValue(undefined);
     mockAccounting.prepareMonetaryContext.mockResolvedValue({

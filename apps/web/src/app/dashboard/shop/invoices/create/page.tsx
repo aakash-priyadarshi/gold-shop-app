@@ -404,6 +404,18 @@ function lineItemTotal(item: RichLineItem): number {
   return (mc + gc + mk) * item.quantity;
 }
 
+/** True when a row is unused starter / leftover blank (safe to strip on catalog/quote add). */
+function isBlankLine(li: RichLineItem): boolean {
+  return (
+    !li.inventoryItemId &&
+    !li.label?.trim() &&
+    lineItemTotal(li) === 0 &&
+    !li.details?.trim() &&
+    !li.metalType &&
+    !li.metalWeightG
+  );
+}
+
 // Gemstone cost total for a line item
 function gemstoneTotal(item: RichLineItem): number {
   return item.gemstones.reduce((s, g) => s + (parseFloat(g.cost) || 0), 0);
@@ -960,22 +972,11 @@ export default function CreateInvoicePage() {
       source: "CATALOG",
     };
 
-    // Replace empty first line if unused
-    const onlyEmpty =
-      lineItems.length === 1 &&
-      !lineItems[0].label &&
-      lineItemTotal(lineItems[0]) === 0 &&
-      !lineItems[0].inventoryItemId;
-
-    if (onlyEmpty) {
-      setLineItems([next]);
-      setExpandedItems(new Set([0]));
-    } else {
-      setLineItems([...lineItems, next]);
-      setExpandedItems(
-        (prev) => new Set([...Array.from(prev), lineItems.length]),
-      );
-    }
+    // Strip leftover blank rows, then append (or replace if only blanks existed)
+    const kept = lineItems.filter((li) => !isBlankLine(li));
+    const newItems = [...kept, next];
+    setLineItems(newItems);
+    setExpandedItems(new Set([newItems.length - 1]));
     setCatalogOpen(false);
     toast({ title: t("Added from catalog"), description: next.label });
   };
@@ -1177,6 +1178,7 @@ export default function CreateInvoicePage() {
       item.gemstones = [{ ...emptyGemstone(), cost: String(gcVal) }];
     }
     item.details = quote.specialInstructions || "";
+    item.source = "QUOTE";
 
     setLineItems([item]);
     setExpandedItems(new Set([0]));
@@ -1198,6 +1200,19 @@ export default function CreateInvoicePage() {
   // Tax is shown as a single line by default; jewellers can expand the
   // per-category bifurcation (metal / gemstone / making) on demand.
   const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
+
+  // Catalog / quote lines already embed making — invoice-level making would double-charge.
+  const lineMakingEmbedded = useMemo(
+    () =>
+      lineItems.some((li) => (parseFloat(li.makingCost) || 0) > 0),
+    [lineItems],
+  );
+
+  useEffect(() => {
+    if (lineMakingEmbedded && makingChargeValue) {
+      setMakingChargeValue("");
+    }
+  }, [lineMakingEmbedded, makingChargeValue]);
 
   // ── Currency converter (shop base currency → display currency) ──
   const [showConverter, setShowConverter] = useState(false);
@@ -1308,9 +1323,10 @@ export default function CreateInvoicePage() {
   );
 
   const makingChargeAmount = useMemo(() => {
+    if (lineMakingEmbedded) return 0;
     const val = parseFloat(makingChargeValue) || 0;
     return makingChargeMode === "left" ? subtotal * (val / 100) : val;
-  }, [subtotal, makingChargeMode, makingChargeValue]);
+  }, [subtotal, makingChargeMode, makingChargeValue, lineMakingEmbedded]);
 
   const taxBreakdown = useMemo(() => {
     if (isTaxExempt || lkVatChargeBlocked) {
@@ -1458,8 +1474,14 @@ export default function CreateInvoicePage() {
               : null,
           ].filter(Boolean);
 
-          // Only send DTO-whitelisted fields — ValidationPipe rejects extras
-          // like metalType / metalWeightG / makingCharge.
+          const metalCost = parseFloat(li.metalCost) || 0;
+          const makingCost = parseFloat(li.makingCost) || 0;
+          const gemstoneCost = gemstoneTotal(li);
+          const hasBreakdown =
+            metalCost > 0 || makingCost > 0 || gemstoneCost > 0;
+
+          // Send breakdown so InvoicesService.normalizeInvoiceLines expands
+          // into METAL / MAKING / GEMSTONE for tax reports + accounting.
           return {
             label: li.label,
             category: li.category,
@@ -1469,6 +1491,17 @@ export default function CreateInvoicePage() {
             details: detailParts.length ? detailParts.join(" · ") : undefined,
             inventoryItemId: li.inventoryItemId || undefined,
             variantId: li.variantId || undefined,
+            ...(hasBreakdown
+              ? {
+                  metalCost: metalCost || undefined,
+                  makingCost: makingCost || undefined,
+                  gemstoneCost: gemstoneCost || undefined,
+                  metalType: li.metalType || undefined,
+                  metalWeightG: li.metalWeightG
+                    ? parseFloat(li.metalWeightG) || undefined
+                    : undefined,
+                }
+              : {}),
           };
         });
 
@@ -1539,7 +1572,10 @@ export default function CreateInvoicePage() {
         invoiceCountry,
         placeOfSupply: placeOfSupply || undefined,
         supplyDate: invoiceCountry === "LK" ? supplyDate : undefined,
-        makingChargesAmt: makingChargeAmount || undefined,
+        makingChargesAmt:
+          lineMakingEmbedded || !makingChargeAmount
+            ? undefined
+            : makingChargeAmount,
         discountAmount: discountAmount || undefined,
         dueDate: dueDate || undefined,
         notes: notes || undefined,
@@ -2482,6 +2518,33 @@ export default function CreateInvoicePage() {
                           </div>
                         </div>
 
+                        {/* Making cost (per line — catalog/quote embed this) */}
+                        <div>
+                          <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">
+                            <T>Making Charge</T>
+                          </p>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <Label className="text-xs">
+                                {t("Making Cost")} ({currencySymbol})
+                              </Label>
+                              <Input
+                                type="number"
+                                value={item.makingCost}
+                                onChange={(e) =>
+                                  updateLineItem(
+                                    idx,
+                                    "makingCost",
+                                    e.target.value,
+                                  )
+                                }
+                                placeholder="0"
+                                className="h-9 text-xs"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
                         {/* Gemstones (multiple) */}
                         <div>
                           <div className="flex items-center justify-between mb-2">
@@ -2824,29 +2887,38 @@ export default function CreateInvoicePage() {
                     </span>
                   </div>
 
-                  {/* Making Charge — pill toggle */}
+                  {/* Making Charge — pill toggle (locked when lines embed making) */}
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-blue-600 dark:text-blue-400 w-28 flex-shrink-0">
                       <T>Making Charge</T>
                     </span>
-                    <ModeToggle
-                      value={makingChargeMode}
-                      onChange={setMakingChargeMode}
-                      leftLabel="%"
-                      rightLabel={currencySymbol}
-                      activeColor="bg-blue-600"
-                    />
-                    <Input
-                      className="w-24 text-xs"
-                      type="number"
-                      value={makingChargeValue}
-                      onChange={(e) => setMakingChargeValue(e.target.value)}
-                      placeholder="0"
-                    />
-                    {makingChargeAmount > 0 && (
-                      <span className="text-sm ml-auto">
-                        +{currencySymbol} {makingChargeAmount.toLocaleString()}
+                    {lineMakingEmbedded ? (
+                      <span className="text-xs text-muted-foreground">
+                        <T>Included in line items</T>
                       </span>
+                    ) : (
+                      <>
+                        <ModeToggle
+                          value={makingChargeMode}
+                          onChange={setMakingChargeMode}
+                          leftLabel="%"
+                          rightLabel={currencySymbol}
+                          activeColor="bg-blue-600"
+                        />
+                        <Input
+                          className="w-24 text-xs"
+                          type="number"
+                          value={makingChargeValue}
+                          onChange={(e) => setMakingChargeValue(e.target.value)}
+                          placeholder="0"
+                        />
+                        {makingChargeAmount > 0 && (
+                          <span className="text-sm ml-auto">
+                            +{currencySymbol}{" "}
+                            {makingChargeAmount.toLocaleString()}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
 
