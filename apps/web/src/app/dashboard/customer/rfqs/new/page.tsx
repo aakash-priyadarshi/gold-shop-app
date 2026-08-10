@@ -132,7 +132,21 @@ export default function NewRFQPage() {
           : null,
       };
 
-      await api.post("/rfq", payload);
+      const res = await api.post("/rfq", payload);
+      const rfqId = res?.data?.id;
+      if (rfqId) {
+        const token = localStorage.getItem("token");
+        if (token) {
+          try {
+            const { broadcastRfqToEligibleShops } = await import(
+              "@/lib/rfq/broadcast-rfq"
+            );
+            await broadcastRfqToEligibleShops(rfqId, token);
+          } catch {
+            /* broadcast optional */
+          }
+        }
+      }
 
       toast({
         title: "Request Submitted",

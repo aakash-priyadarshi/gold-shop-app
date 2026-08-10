@@ -36,7 +36,7 @@ import {
   type SupportedCurrencyCode,
 } from "@/lib/currency";
 import { loadTradeInPayload } from "@/lib/oldGoldTradeIn";
-import { getApiUrl, inventoryApi, invoicesApi, pricingApi, shopQuotesApi, shopsApi } from "@/lib/api";
+import { getApiUrl, inventoryApi, invoicesApi, ordersApi, pricingApi, shopQuotesApi, shopsApi } from "@/lib/api";
 import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
@@ -66,7 +66,7 @@ import {
     X,
     Zap,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
@@ -754,6 +754,8 @@ function ModeToggle({
 
 export default function CreateInvoicePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const linkedOrderId = searchParams.get("orderId");
   const { user, refreshUser } = useAuth();
   const {
     symbol: currencySymbol,
@@ -1035,6 +1037,24 @@ export default function CreateInvoicePage() {
   const [importedQuoteId, setImportedQuoteId] = useState<string | null>(null);
   const phoneDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!linkedOrderId) return;
+    ordersApi
+      .getById(linkedOrderId)
+      .then((res) => {
+        const o = res.data;
+        const customer = o?.customer;
+        if (customer) {
+          setCustomerName(
+            `${customer.firstName || ""} ${customer.lastName || ""}`.trim(),
+          );
+          if (customer.phone) setCustomerPhone(customer.phone);
+          if (customer.email) setCustomerEmail(customer.email);
+        }
+      })
+      .catch(() => undefined);
+  }, [linkedOrderId]);
 
   const searchCustomers = useCallback(async (pcc: string, phone: string) => {
     if (phone.length < 3) {
@@ -2053,6 +2073,7 @@ export default function CreateInvoicePage() {
         .join(", ");
 
       const response = await invoicesApi.create({
+        orderId: linkedOrderId || undefined,
         walkInCustomerId: selectedWalkInCustomerId || undefined,
         shopQuoteId: importedQuoteId || undefined,
         customerName,

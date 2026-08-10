@@ -22,9 +22,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { getStoredAuthToken } from "@/hooks/useAuth";
 import { getApiUrl } from "@/lib/api";
+import { variationToDesignPayload } from "@/lib/design/variation-to-design-payload";
 import {
     AlertCircle,
     Check,
@@ -98,6 +100,7 @@ export interface AiDesignVariation {
   highlights: string[];
   imageUrl?: string;
   designId?: string;
+  imageLoading?: boolean;
 }
 
 interface Props {
@@ -131,6 +134,8 @@ export function AiDesignStudio({
   const [error, setError] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
+  const [renderingImages, setRenderingImages] = useState(false);
+
   const reset = () => {
     setVariations([]);
     setError(null);
@@ -157,28 +162,31 @@ export function AiDesignStudio({
       return;
     }
 
+    const requestBody = {
+      prompt: prompt.trim(),
+      budgetMin: budgetMin ? Number(budgetMin) : undefined,
+      budgetMax: budgetMax ? Number(budgetMax) : undefined,
+      currency,
+      jewelryType: defaultJewelryType,
+      occasion: occasion || undefined,
+    };
+
     setLoading(true);
+    setRenderingImages(false);
     setError(null);
     setPlanLocked(false);
     try {
-      const res = await fetch(`${API_URL}/designs/variations`, {
+      const specsRes = await fetch(`${API_URL}/designs/variations/specs`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          prompt: prompt.trim(),
-          budgetMin: budgetMin ? Number(budgetMin) : undefined,
-          budgetMax: budgetMax ? Number(budgetMax) : undefined,
-          currency,
-          jewelryType: defaultJewelryType,
-          occasion: occasion || undefined,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
-      if (res.status === 403) {
-        const body = await res.json().catch(() => ({}));
+      if (specsRes.status === 403) {
+        const body = await specsRes.json().catch(() => ({}));
         if (
           body?.error === "FEATURE_NOT_ENABLED" ||
           /plan|pro\+|upgrade/i.test(body?.message || "")
@@ -188,17 +196,69 @@ export function AiDesignStudio({
         }
         throw new Error(body?.message || "Access denied");
       }
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.message || `Request failed (${res.status})`);
+      if (!specsRes.ok) {
+        const body = await specsRes.json().catch(() => ({}));
+        throw new Error(body?.message || `Request failed (${specsRes.status})`);
       }
-      const data = await res.json();
-      console.log("[AI Design Studio] variations response:", data);
-      const list: AiDesignVariation[] = Array.isArray(data?.variations)
-        ? data.variations
+
+      const specsData = await specsRes.json();
+      const specs: AiDesignVariation[] = Array.isArray(specsData?.variations)
+        ? specsData.variations
         : [];
-      if (!list.length) throw new Error("AI returned no variations. Try again.");
-      setVariations(list);
+      if (!specs.length) throw new Error("AI returned no variations. Try again.");
+
+      const placeholders = specs.map((s, idx) => ({
+        ...s,
+        id: s.id || `var-${idx}`,
+        imageLoading: true,
+      }));
+      setVariations(placeholders);
+      setLoading(false);
+      setRenderingImages(true);
+
+      const trimmedPrompt = prompt.trim();
+      await Promise.all(
+        specs.map(async (spec, idx) => {
+          try {
+            const designRes = await fetch(`${API_URL}/designs`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(
+                variationToDesignPayload(
+                  { ...spec, id: spec.id || `var-${idx}` },
+                  trimmedPrompt,
+                  idx,
+                ),
+              ),
+            });
+            if (!designRes.ok) return;
+            const designData = await designRes.json();
+            const imageUrl = designData?.design?.imageUrl;
+            const designId = designData?.design?.id;
+            setVariations((prev) =>
+              prev.map((v, i) =>
+                i === idx
+                  ? {
+                      ...v,
+                      imageUrl,
+                      designId,
+                      imageLoading: false,
+                    }
+                  : v,
+              ),
+            );
+          } catch {
+            setVariations((prev) =>
+              prev.map((v, i) =>
+                i === idx ? { ...v, imageLoading: false } : v,
+              ),
+            );
+          }
+        }),
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Generation failed";
       setError(msg);
@@ -209,6 +269,7 @@ export function AiDesignStudio({
       });
     } finally {
       setLoading(false);
+      setRenderingImages(false);
     }
   };
 
@@ -256,15 +317,16 @@ export function AiDesignStudio({
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  AI Design Studio
+                  <T>AI Design Studio</T>
                 </h3>
                 <Badge className="border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100">
                   <Crown className="mr-1 h-3 w-3" /> Pro+
                 </Badge>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Tell us your budget &amp; vision — get 5 ready-to-order designs
-                in seconds.
+                <T>
+                  Tell us your budget and vision — get 5 ready-to-order designs.
+                </T>
               </p>
             </div>
             <div className="rounded-lg bg-white/70 px-3 py-2 text-xs font-medium text-amber-900 shadow-sm backdrop-blur dark:bg-gray-900/40 dark:text-amber-200">
@@ -383,12 +445,13 @@ export function AiDesignStudio({
               >
                 {loading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Designing
-                    5 variations… (~30s)
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <T>Designing 5 variations…</T>
                   </>
                 ) : (
                   <>
-                    <Wand2 className="mr-2 h-4 w-4" /> Generate 5 designs
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    <T>Generate 5 designs</T>
                   </>
                 )}
               </Button>
@@ -401,8 +464,14 @@ export function AiDesignStudio({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Showing <strong>{variations.length}</strong> AI-designed
-                  variations for &ldquo;{prompt}&rdquo;
+                  <T>Showing</T> <strong>{variations.length}</strong>{" "}
+                  <T>AI-designed variations</T>
+                  {renderingImages && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-amber-600">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <T>Rendering previews…</T>
+                    </span>
+                  )}
                 </p>
                 <Button
                   variant="outline"
@@ -475,7 +544,14 @@ function VariationCard({
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
       <div className="relative aspect-square w-full bg-gradient-to-br from-amber-50 to-rose-50 dark:from-gray-800 dark:to-gray-900">
-        {v.imageUrl ? (
+        {v.imageLoading ? (
+          <div className="flex h-full w-full flex-col items-center justify-center text-muted-foreground">
+            <Loader2 className="mb-2 h-8 w-8 animate-spin text-amber-500" />
+            <span className="text-xs">
+              <T>Rendering preview…</T>
+            </span>
+          </div>
+        ) : v.imageUrl ? (
           <button
             type="button"
             className="absolute inset-0 cursor-zoom-in"
@@ -645,9 +721,11 @@ function VariationCard({
 
         <Button
           onClick={() => onPick(v)}
+          disabled={v.imageLoading}
           className="mt-auto w-full bg-gradient-to-r from-amber-500 to-rose-500 text-white hover:from-amber-600 hover:to-rose-600"
         >
-          <Check className="mr-2 h-4 w-4" /> Select &amp; auto-fill
+          <Check className="mr-2 h-4 w-4" />
+          <T>Select and auto-fill</T>
         </Button>
       </div>
     </div>

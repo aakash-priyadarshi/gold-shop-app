@@ -1,268 +1,266 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
-import { getApiUrl } from "@/lib/api";
+import { shopQuotesApi } from "@/lib/api";
+import { formatCurrencyAmount } from "@/lib/currency";
 import {
   CheckCircle2,
   Circle,
   Loader2,
-  Package,
+  MapPin,
+  Store,
   XCircle,
 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-interface TrackData {
+interface TrackPayload {
   quoteNumber: string;
   invoiceNumber?: string | null;
   jewelleryType?: string;
   status: string;
   estimatedDays?: number | null;
   createdAt: string;
+  updatedAt: string;
   confirmedAt?: string | null;
   startedAt?: string | null;
   readyAt?: string | null;
   completedAt?: string | null;
   cancelledAt?: string | null;
   cancelReason?: string | null;
-  customerName?: string;
-  totalAmount?: number | null;
-  paidAmount?: number | null;
-  balanceDue?: number | null;
-  currency?: string;
   shop?: {
-    shopName?: string;
-    city?: string;
-    country?: string;
-  } | null;
+    shopName: string;
+    city?: string | null;
+    country?: string | null;
+  };
+  customerName?: string;
+  totalAmount?: number;
+  paidAmount?: number;
+  balanceDue?: number;
+  currency?: string;
 }
 
 const STEPS = [
-  { key: "QUOTED", label: "Quoted", at: "createdAt" },
-  { key: "CONFIRMED", label: "Confirmed", at: "confirmedAt" },
-  { key: "IN_PROGRESS", label: "In Progress", at: "startedAt" },
-  { key: "READY", label: "Ready", at: "readyAt" },
-  { key: "COMPLETED", label: "Completed", at: "completedAt" },
+  { key: "QUOTED", label: "Quote sent" },
+  { key: "CONFIRMED", label: "Confirmed" },
+  { key: "IN_PROGRESS", label: "In progress" },
+  { key: "READY", label: "Ready for pickup" },
+  { key: "COMPLETED", label: "Completed" },
 ] as const;
 
-export default function TrackQuotePage() {
-  const params = useParams<{ token: string }>();
-  const token = params?.token;
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<TrackData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+function stepIndex(status: string): number {
+  const idx = STEPS.findIndex((s) => s.key === status);
+  return idx >= 0 ? idx : 0;
+}
 
-  useEffect(() => {
+export default function PublicTrackPage() {
+  const { token } = useParams<{ token: string }>();
+  const [data, setData] = useState<TrackPayload | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
     if (!token) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(
-          `${getApiUrl()}/shop-quotes/track/${encodeURIComponent(token)}`,
-        );
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(
-            body.message || "Invalid or expired tracking link",
-          );
-        }
-        if (!cancelled) setData(body.data ?? body);
-      } catch (err: unknown) {
-        if (!cancelled) {
-          setData(null);
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Could not load tracking info",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await shopQuotesApi.trackByToken(token);
+      setData(res.data as TrackPayload);
+    } catch {
+      setError("This tracking link is invalid or has expired.");
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
 
-  const fmt = (amount?: number | null, currency?: string) => {
-    if (amount == null) return "—";
-    try {
-      return new Intl.NumberFormat(undefined, {
-        style: "currency",
-        currency: currency || "INR",
-        maximumFractionDigits: 0,
-      }).format(amount);
-    } catch {
-      return `${currency || ""} ${amount}`;
-    }
-  };
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const statusOrder = STEPS.map((s) => s.key);
-  const currentIdx = data
-    ? statusOrder.indexOf(data.status as (typeof statusOrder)[number])
-    : -1;
-  const isCancelled = data?.status === "CANCELLED";
+  const currency = (data?.currency || "NPR") as "NPR" | "INR";
+  const activeIdx =
+    data?.status === "CANCELLED" ? -1 : stepIndex(data?.status || "QUOTED");
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/80 to-white dark:from-[#0d1117] dark:to-[#161b22]">
-      <div className="max-w-lg mx-auto px-4 py-10">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 mb-4">
-            <Package className="h-7 w-7 text-amber-600" />
-          </div>
-          <h1 className="text-2xl font-bold">
-            <T>Order Tracking</T>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            <T>Powered by Orivraa</T>
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      <header className="border-b bg-white/80 backdrop-blur dark:bg-gray-900/80">
+        <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-4">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/brand/orivraa-icon.svg"
+              alt="Orivraa"
+              width={28}
+              height={28}
+              unoptimized
+            />
+            <span className="font-semibold text-gray-900 dark:text-gray-100">
+              Orivraa
+            </span>
+          </Link>
+          <Badge variant="outline" className="text-xs">
+            <T>Order tracking</T>
+          </Badge>
         </div>
+      </header>
 
+      <main className="mx-auto max-w-lg px-4 py-8">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <div className="flex flex-col items-center gap-3 py-20 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-            <p className="text-sm text-muted-foreground">
-              <T>Loading order status…</T>
-            </p>
+            <T>Loading your order status…</T>
           </div>
-        ) : error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900 p-6 text-center">
-            <XCircle className="h-10 w-10 text-red-500 mx-auto mb-3" />
-            <h2 className="font-semibold text-red-800 dark:text-red-300">
-              <T>Link invalid</T>
-            </h2>
-            <p className="text-sm text-red-700 dark:text-red-400 mt-2">
-              {error}
-            </p>
-          </div>
-        ) : data ? (
-          <div className="space-y-4">
-            <div className="rounded-2xl border bg-white dark:bg-[#161b22] shadow-sm overflow-hidden">
-              {data.shop?.shopName && (
-                <div className="px-5 py-4 border-b bg-muted/30">
-                  <p className="font-semibold">{data.shop.shopName}</p>
-                  {(data.shop.city || data.shop.country) && (
-                    <p className="text-xs text-muted-foreground">
-                      {[data.shop.city, data.shop.country]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="px-5 py-4 space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    <T>Quote #</T>
-                  </span>
-                  <span className="font-mono font-semibold">
-                    {data.invoiceNumber || data.quoteNumber}
-                  </span>
-                </div>
-                {data.customerName && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      <T>Customer</T>
-                    </span>
-                    <span>{data.customerName}</span>
-                  </div>
+        ) : error || !data ? (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+              <XCircle className="h-10 w-10 text-red-400" />
+              <p className="text-sm text-muted-foreground">{error}</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            <div className="text-center space-y-1">
+              <p className="text-sm text-muted-foreground">
+                {data.invoiceNumber ? (
+                  <T>Invoice</T>
+                ) : (
+                  <T>Quote</T>
+                )}{" "}
+                #
+                {data.invoiceNumber || data.quoteNumber}
+              </p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {data.jewelleryType?.replace(/_/g, " ") || (
+                  <T>Custom jewellery</T>
                 )}
-                {data.jewelleryType && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      <T>Item</T>
-                    </span>
-                    <span>{data.jewelleryType.replace(/_/g, " ")}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm border-t pt-3">
-                  <span className="font-medium">
-                    <T>Total</T>
-                  </span>
-                  <span className="font-bold">
-                    {fmt(data.totalAmount, data.currency)}
-                  </span>
-                </div>
-                {(data.paidAmount ?? 0) > 0 && (
-                  <div className="flex justify-between text-sm text-green-700">
-                    <span>
-                      <T>Paid</T>
-                    </span>
-                    <span>{fmt(data.paidAmount, data.currency)}</span>
-                  </div>
-                )}
-                {(data.balanceDue ?? 0) > 0 && (
-                  <div className="flex justify-between text-sm text-amber-700">
-                    <span>
-                      <T>Balance due</T>
-                    </span>
-                    <span>{fmt(data.balanceDue, data.currency)}</span>
-                  </div>
-                )}
-              </div>
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                <T>Hi</T> {data.customerName}
+              </p>
             </div>
 
-            {isCancelled ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 dark:bg-red-950/20 p-5 text-center">
-                <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-                <p className="font-semibold text-red-800 dark:text-red-300">
-                  <T>Order cancelled</T>
-                </p>
-                {data.cancelReason && (
-                  <p className="text-sm text-red-700 mt-1">
-                    {data.cancelReason}
+            {data.shop && (
+              <Card>
+                <CardContent className="flex items-center gap-3 py-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                    <Store className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{data.shop.shopName}</p>
+                    {(data.shop.city || data.shop.country) && (
+                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        {[data.shop.city, data.shop.country]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">
+                  <T>Status</T>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {data.status === "CANCELLED" ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+                    <p className="font-medium">
+                      <T>Cancelled</T>
+                    </p>
+                    {data.cancelReason && (
+                      <p className="mt-1">{data.cancelReason}</p>
+                    )}
+                  </div>
+                ) : (
+                  <ol className="space-y-4">
+                    {STEPS.map((step, idx) => {
+                      const done = idx < activeIdx;
+                      const current = idx === activeIdx;
+                      return (
+                        <li key={step.key} className="flex items-start gap-3">
+                          {done ? (
+                            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                          ) : current ? (
+                            <span className="mt-1 h-3 w-3 shrink-0 rounded-full bg-amber-500 ring-4 ring-amber-100" />
+                          ) : (
+                            <Circle className="mt-0.5 h-5 w-5 shrink-0 text-gray-300" />
+                          )}
+                          <div>
+                            <p
+                              className={`text-sm font-medium ${
+                                current
+                                  ? "text-amber-700 dark:text-amber-400"
+                                  : done
+                                    ? "text-gray-900 dark:text-gray-100"
+                                    : "text-muted-foreground"
+                              }`}
+                            >
+                              <T>{step.label}</T>
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+                {data.estimatedDays != null && data.status !== "COMPLETED" && (
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    <T>Estimated turnaround</T>: {data.estimatedDays}{" "}
+                    <T>days</T>
                   </p>
                 )}
-              </div>
-            ) : (
-              <div className="rounded-2xl border bg-white dark:bg-[#161b22] p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-                  <T>Status</T>
-                </p>
-                <ol className="space-y-4">
-                  {STEPS.map((step, i) => {
-                    const done = currentIdx >= i;
-                    const active = currentIdx === i;
-                    const atKey = step.at as keyof TrackData;
-                    const atVal = data[atKey];
-                    return (
-                      <li key={step.key} className="flex items-start gap-3">
-                        {done ? (
-                          <CheckCircle2
-                            className={`h-5 w-5 shrink-0 mt-0.5 ${
-                              active ? "text-amber-500" : "text-green-600"
-                            }`}
-                          />
-                        ) : (
-                          <Circle className="h-5 w-5 shrink-0 mt-0.5 text-gray-300" />
-                        )}
-                        <div>
-                          <p
-                            className={`text-sm font-medium ${
-                              done ? "" : "text-muted-foreground"
-                            }`}
-                          >
-                            {step.label}
-                          </p>
-                          {typeof atVal === "string" && (
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(atVal).toLocaleString()}
-                            </p>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ol>
-              </div>
-            )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">
+                  <T>Payment summary</T>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    <T>Total</T>
+                  </span>
+                  <span className="font-medium">
+                    {formatCurrencyAmount(data.totalAmount ?? 0, currency)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    <T>Paid</T>
+                  </span>
+                  <span className="font-medium text-green-600">
+                    {formatCurrencyAmount(data.paidAmount ?? 0, currency)}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-medium">
+                    <T>Balance due</T>
+                  </span>
+                  <span className="font-bold text-amber-700">
+                    {formatCurrencyAmount(data.balanceDue ?? 0, currency)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <p className="text-center text-xs text-muted-foreground">
+              <T>Questions? Contact the shop directly with your quote number.</T>
+            </p>
           </div>
-        ) : null}
-      </div>
+        )}
+      </main>
     </div>
   );
 }

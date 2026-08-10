@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useCurrencyConversion } from "@/hooks/useCurrencyConversion";
-import api from "@/lib/api";
+import api, { ordersApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 interface OrderDetail {
@@ -45,6 +45,8 @@ interface OrderDetail {
   detailedStatus: string;
   totalNpr: number;
   subtotalNpr: number;
+  balanceDueNpr?: number;
+  paymentStatus?: string;
   taxNpr: number;
   shippingNpr: number;
   discountNpr: number;
@@ -115,9 +117,11 @@ const statusSteps = [
 
 export default function CustomerOrderDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const t = useT();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPaying, setIsPaying] = useState(false);
   const { formatWithConversion, selectedCurrency, currencySymbol } =
     useCurrencyConversion();
 
@@ -143,6 +147,44 @@ export default function CustomerOrderDetailPage() {
       void loadOrder();
     }
   }, [loadOrder, params.id]);
+
+  const handlePayNow = async () => {
+    if (!order?.id) return;
+    setIsPaying(true);
+    try {
+      const idempotencyKey =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}`;
+      const res = await ordersApi.payOrder(order.id, undefined, idempotencyKey);
+      const paymentUrl =
+        res.data?.paymentUrl || res.data?.checkoutUrl || res.data?.url;
+      if (paymentUrl) {
+        window.location.href = paymentUrl;
+        return;
+      }
+      toast({
+        title: t("Payment initiated"),
+        description: t("Complete payment to confirm your order."),
+      });
+      void loadOrder();
+    } catch (error: unknown) {
+      toast({
+        variant: "destructive",
+        title: t("Payment failed"),
+        description:
+          error instanceof Error ? error.message : t("Could not start payment"),
+      });
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
+  const needsPayment =
+    order &&
+    (order.balanceDueNpr ?? order.totalNpr) > 0 &&
+    order.paymentStatus !== "PAID" &&
+    order.paymentStatus !== "COMPLETED";
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -276,6 +318,18 @@ export default function CustomerOrderDetailPage() {
                 {t(`Placed ${new Date(order.createdAt).toLocaleDateString()}`)}
               </p>
             </div>
+            {needsPayment && (
+              <Button
+                onClick={handlePayNow}
+                disabled={isPaying}
+                className="bg-amber-500 hover:bg-amber-600"
+              >
+                {isPaying ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                <T>Pay now</T>
+              </Button>
+            )}
           </div>
 
           {/* Progress Tracker - Using new animated OrderStepper */}

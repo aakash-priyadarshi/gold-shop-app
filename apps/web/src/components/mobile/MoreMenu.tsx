@@ -63,7 +63,7 @@ const sections = [
     title: "More",
     items: [
       { href: "/m/catalogue", icon: Send, label: "Catalogue Share" },
-      { href: "/m/quotes", icon: Gem, label: "Custom RFQ" },
+      { href: "/m/quotes", icon: Gem, label: "Walk-in Quotes" },
       { href: "/m/savings", icon: FileText, label: "Savings Schemes" },
       { href: "/m/occasions", icon: Cake, label: "Occasions" },
     ],

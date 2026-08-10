@@ -200,12 +200,17 @@ export default function CustomerRFQDetailPage() {
     setActionLoading(offerId);
     try {
       const response = await api.post(`/offers/${offerId}/accept`);
+      const order = response.data?.order;
       toast({
         title: "Offer Accepted!",
-        description: response.data.order
-          ? `Order ${response.data.order.orderNumber} has been created.`
+        description: order
+          ? `Order ${order.orderNumber} has been created.`
           : "The offer has been accepted.",
       });
+      if (order?.id) {
+        router.push(`/dashboard/customer/orders/${order.id}`);
+        return;
+      }
       loadRFQ();
     } catch (error: any) {
       toast({

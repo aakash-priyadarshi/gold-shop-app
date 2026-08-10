@@ -36,7 +36,7 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import api from "@/lib/api";
+import api, { invoicesApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
   AlertTriangle,
@@ -50,11 +50,13 @@ import {
   MapPin,
   Package,
   Phone,
+  Receipt,
   Sparkles,
   Store,
   User,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -163,6 +165,9 @@ export default function ShopOrderDetailPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isPaidAtShopDialogOpen, setIsPaidAtShopDialogOpen] = useState(false);
   const [isMarkingPaidAtShop, setIsMarkingPaidAtShop] = useState(false);
+  const [linkedInvoices, setLinkedInvoices] = useState<
+    Array<{ id: string; invoiceNumber: string }>
+  >([]);
   const t = useT();
 
   const loadOrder = useCallback(async () => {
@@ -185,6 +190,18 @@ export default function ShopOrderDetailPage() {
   useEffect(() => {
     if (orderId) {
       void loadOrder();
+      invoicesApi
+        .getByOrder(orderId)
+        .then((res) => {
+          const list = Array.isArray(res.data) ? res.data : [];
+          setLinkedInvoices(
+            list.map((inv: { id: string; invoiceNumber: string }) => ({
+              id: inv.id,
+              invoiceNumber: inv.invoiceNumber,
+            })),
+          );
+        })
+        .catch(() => setLinkedInvoices([]));
     }
   }, [loadOrder, orderId]);
 
@@ -597,6 +614,44 @@ export default function ShopOrderDetailPage() {
                       <T>Updating...</T>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Invoice */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Receipt className="h-5 w-5" />
+                    <T>Invoice</T>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {linkedInvoices.length > 0 ? (
+                    linkedInvoices.map((inv) => (
+                      <Link
+                        key={inv.id}
+                        href={`/dashboard/shop/invoices/${inv.id}`}
+                        className="flex items-center justify-between rounded-lg border p-3 text-sm hover:bg-muted/50"
+                      >
+                        <span className="font-medium">#{inv.invoiceNumber}</span>
+                        <span className="text-amber-600">
+                          <T>View</T> →
+                        </span>
+                      </Link>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      <T>No invoice linked to this order yet.</T>
+                    </p>
+                  )}
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link
+                      href={`/dashboard/shop/invoices/create?orderId=${orderId}`}
+                    >
+                      <Receipt className="h-4 w-4 mr-2" />
+                      <T>Create invoice from order</T>
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
 

@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  AiDesignStudio,
+  type AiDesignVariation,
+} from "@/components/ai/AiDesignStudio";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { BuyerEducation } from "@/components/pricing/BuyerEducation";
@@ -124,6 +128,7 @@ import {
   type MethodCConfig,
 } from "@/components/pricing/MethodCSelector";
 import { getApiUrl, intelligenceApi, shopsApi } from "@/lib/api";
+import { resolveMetalTypeFromDescription } from "@/lib/design/build-design-specs";
 import {
   calculateEstimate,
   CHAIN_STYLE_OPTIONS,
@@ -1198,7 +1203,12 @@ export default function CreateRfqPage() {
       const designSpecs = {
         jewelryType: formData.jewelleryType,
         buildMethod: formData.buildMethod,
-        metalType: formData.metalType,
+        metalType: resolveMetalTypeFromDescription(
+          [formData.description, formData.specialInstructions]
+            .filter(Boolean)
+            .join(" "),
+          formData.metalType,
+        ),
         metalDescription, // Enhanced description with alloy/plating details
         weightCategory: formData.weightCategory,
         estimatedWeight: weight,
@@ -2834,6 +2844,20 @@ export default function CreateRfqPage() {
 
       const data = await response.json();
       console.log("[RFQ Submit] Success! RFQ ID:", data.id);
+
+      // Broadcast to eligible shops so sellers can respond
+      try {
+        const { broadcastRfqToEligibleShops } = await import(
+          "@/lib/rfq/broadcast-rfq"
+        );
+        const { shopCount } = await broadcastRfqToEligibleShops(
+          data.id,
+          token!,
+        );
+        console.log(`[RFQ Submit] Broadcast to ${shopCount} shops`);
+      } catch (broadcastErr) {
+        console.error("[RFQ Submit] Broadcast failed:", broadcastErr);
+      }
 
       // Clear draft after successful submission
       clearDraft();
@@ -5073,6 +5097,29 @@ export default function CreateRfqPage() {
                           )}
                         </div>
                       )}
+
+                      <AiDesignStudio
+                        currency={currency}
+                        defaultJewelryType={formData.jewelleryType || undefined}
+                        compact
+                        triggerLabel={t("Explore 5 AI designs (Pro+)")}
+                        onSelect={(v: AiDesignVariation) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            jewelleryType: v.jewelryType || prev.jewelleryType,
+                            buildMethod: v.buildMethod as typeof prev.buildMethod,
+                            metalType: v.metalType,
+                            weightCategory: v.weightCategory || prev.weightCategory,
+                            surfaceFinish: v.surfaceFinish || prev.surfaceFinish,
+                            description: v.description || prev.description,
+                            hasGemstones: v.hasGemstones,
+                          }));
+                          if (v.imageUrl) {
+                            setDesignPreviewUrl(v.imageUrl);
+                            if (v.designId) setDesignId(v.designId);
+                          }
+                        }}
+                      />
 
                       {/* AI Design Preview Section - At top of Step 3 */}
                       <div className="space-y-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 rounded-lg border border-amber-200 dark:border-amber-800/50">

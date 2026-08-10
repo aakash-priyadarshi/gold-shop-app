@@ -107,6 +107,36 @@ export class DesignVariationsService {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
   }
 
+  /**
+   * Gemini specs only — no Imagen rendering (for progressive client-side image gen).
+   */
+  async generateSpecsOnly(
+    userId: string,
+    dto: DesignVariationRequest,
+  ): Promise<{
+    variations: DesignVariationSpec[];
+    prompt: string;
+    budgetMin?: number;
+    budgetMax?: number;
+    currency: string;
+  }> {
+    void userId;
+    if (!dto.prompt || dto.prompt.trim().length < 5) {
+      throw new BadRequestException(
+        "Please describe what jewellery you would like (at least a few words).",
+      );
+    }
+    const currency = (dto.currency || "INR").toUpperCase();
+    const specs = await this.callGeminiForSpecs(dto, currency);
+    return {
+      variations: specs,
+      prompt: dto.prompt,
+      budgetMin: dto.budgetMin,
+      budgetMax: dto.budgetMax,
+      currency,
+    };
+  }
+
   async generateVariations(
     userId: string,
     dto: DesignVariationRequest,

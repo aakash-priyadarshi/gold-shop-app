@@ -102,9 +102,9 @@ function readMetalRate(data: any, codes: string[]): number {
 }
 
 const BOTTOM_TABS = [
-  { href: "/m/pos", icon: ScanLine, label: "Bill" },
+  { href: "/m/pos", icon: ScanLine, label: "New Sale" },
   { href: "/m/quotes", icon: Calculator, label: "Quote" },
-  { href: "/m/orders", icon: ShoppingBag, label: "Orders" },
+  { href: "/m/orders", icon: ShoppingBag, label: "Quotes" },
   { href: "/m/customers", icon: Users, label: "Customers" },
   { href: "/m/more", icon: Package, label: "More" },
 ];
@@ -181,12 +181,16 @@ export default function MobileLayout({
     }
   }, [isLoading, isAuthenticated, router, pathname]);
 
-  // Shopkeeper-only guard
+  // Shopkeeper-only guard (customer mobile routes under /m/customer are exempt)
+  const isCustomerMobileRoute = pathname.startsWith("/m/customer");
   useEffect(() => {
-    if (!isLoading && user && user.role !== "SHOPKEEPER") {
+    if (!isLoading && user && !isCustomerMobileRoute && user.role !== "SHOPKEEPER") {
       router.push("/dashboard");
     }
-  }, [isLoading, user, router]);
+    if (!isLoading && user && isCustomerMobileRoute && user.role !== "CUSTOMER") {
+      router.push("/dashboard");
+    }
+  }, [isLoading, user, router, isCustomerMobileRoute]);
 
   useEffect(() => {
     if (!isAuthenticated || user?.role !== "SHOPKEEPER") return;
@@ -274,7 +278,10 @@ export default function MobileLayout({
     return <MobileLayoutLoader />;
   }
 
-  if (!isAuthenticated || (user && user.role !== "SHOPKEEPER")) {
+  if (!isAuthenticated || (!isCustomerMobileRoute && user && user.role !== "SHOPKEEPER")) {
+    return null;
+  }
+  if (isCustomerMobileRoute && user && user.role !== "CUSTOMER") {
     return null;
   }
 
@@ -287,6 +294,8 @@ export default function MobileLayout({
   return (
     <OfflineProvider>
     <div className="flex flex-col h-dvh bg-gray-50 dark:bg-gray-950 overflow-hidden">
+      {!isCustomerMobileRoute && (
+      <>
       {/* Top bar */}
       <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
         <div className="flex items-center justify-between px-4 py-3">
@@ -414,6 +423,8 @@ export default function MobileLayout({
         </div>
         <GoldPriceBar rates={rates} />
       </header>
+      </>
+      )}
 
       {/* Page content — keyed on pathname for fade transition between routes */}
       <main
@@ -424,6 +435,8 @@ export default function MobileLayout({
         {children}
       </main>
 
+      {!isCustomerMobileRoute && (
+      <>
       {/* Bottom navigation */}
       <nav
         data-tour="m-bottom-nav"
@@ -489,6 +502,8 @@ export default function MobileLayout({
 
       {/* Floating tutorial ? button — uses the /m/* tour steps */}
       <TutorialButton />
+      </>
+      )}
 
       {/* NOTE: <SupportBot /> is rendered globally in app/layout.tsx so do not
           add another instance here — doing so causes two overlapping chat

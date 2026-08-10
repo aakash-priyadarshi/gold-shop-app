@@ -11,6 +11,8 @@ const MOBILE_TOP_SEGMENTS = new Set([
   "rate-card",
   "orders",
   "quotes",
+  "customer",
+  "rfq",
   "repairs",
   "customers",
   "savings",

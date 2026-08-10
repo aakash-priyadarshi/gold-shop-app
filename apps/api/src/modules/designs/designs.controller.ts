@@ -307,6 +307,27 @@ export class DesignsController {
    * Generate 5 AI design variations from a natural-language prompt + budget.
    * Pro+ plan feature — gated by `aiDesignVariations`.
    */
+  @Post("variations/specs")
+  @UseGuards(JwtAuthGuard, FeatureGateGuard)
+  @RequireFeature("aiDesignVariations")
+  async generateVariationSpecs(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: GenerateVariationsDto,
+  ) {
+    try {
+      return await this.designVariationsService.generateSpecsOnly(
+        req.user!.id,
+        dto,
+      );
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException(
+        error.message || "Failed to generate design specs",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Post("variations")
   @UseGuards(JwtAuthGuard, FeatureGateGuard)
   @RequireFeature("aiDesignVariations")

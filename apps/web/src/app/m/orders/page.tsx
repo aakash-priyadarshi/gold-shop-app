@@ -180,7 +180,7 @@ export default function OrdersPage() {
   const displayed = searchFiltered.filter(TAB_FILTERS[activeFilterIdx].filterFn);
 
   return (
-    <MobileFeatureGate feature="mobileOrders" featureName="Orders">
+    <MobileFeatureGate feature="mobileOrders" featureName="Walk-in Quotes">
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 pt-4 pb-0">
