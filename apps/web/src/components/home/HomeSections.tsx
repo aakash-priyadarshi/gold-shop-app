@@ -79,7 +79,7 @@ const shopFeatures = [
   {
     icon: CreditCard,
     title: "Weight Billing + Making Charges",
-    desc: "Bill by gram or tola with making charges, wastage, stone value, and GST/VAT added automatically. A flawless invoice in seconds.",
+    desc: "Bill by gram, tola, or ounce with live gold and silver rates, making charges, customer wastage (jarti), and stone value — each tax component calculated for your country automatically.",
   },
   {
     icon: Gem,
@@ -99,7 +99,7 @@ const shopFeatures = [
   {
     icon: MapPin,
     title: "Vault Locations & Jewellery Sets",
-    desc: "Organise stock in vault areas, cabinets, and bins. Bundle pieces into sets with discounts — sell as one line while components stay linked until the set is broken.",
+    desc: "Bundle necklace, bangles, and earrings into jewellery sets with a set discount. Sell as one line at POS; components stay in vault stock until the set is broken.",
   },
   {
     icon: Smartphone,
@@ -640,11 +640,12 @@ export function SellerCtaSection() {
 }
 
 const mobilePosPoints = [
-  "GST/VAT-ready bills with making charges and item-level tax",
+  "Live gold and silver rates applied at checkout — gram, tola, or ounce",
+  "Making charges and wastage (jarti) on separate invoice lines",
+  "Sell jewellery sets as one bundled line from mobile POS",
+  "Country-aware tax — GST, Skill Promotion Fee, VAT, and more",
   "Barcode scanner support to add inventory items instantly",
-  "7-day live gold and silver rate history before checkout",
   "Inventory, orders, and analytics sync with the shop dashboard",
-  "Offline PWA mode saves sales when the connection drops",
 ];
 
 export function MobilePosSpotlight() {

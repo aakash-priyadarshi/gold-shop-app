@@ -297,43 +297,43 @@ function SellerHero({
     NP: {
       badge: "🇳🇵 Nepal's Premier IRD tax-report ready Jewellery ERP & Billing System",
       headline: "The premium IRD-approved ERP & POS software for Nepalese gold shops",
-      subheadline: "Tola & Laal weight conversions, live gold rates, VAT-compliant invoicing, Karigar raw-metal ledgers, and offline billing synced instantly to the cloud.",
+      subheadline: "Tola & Laal weight conversions, live gold and silver rate billing, making charges and wastage (jarti) on every bill, Skill Promotion Fee and gemstone VAT, Karigar ledgers, and offline billing synced to the cloud.",
       trustFooter: "Trusted by gold & silver merchants across Kathmandu, Pokhara, Lalitpur & Biratnagar"
     },
     IN: {
       badge: "🇮🇳 India's #1 GST-Ready Jewellery ERP & Mobile POS",
       headline: "The premium GST/VAT-ready ERP & billing software for Indian jewellers",
-      subheadline: "Automated live rate cards, GSTR-1 ready reports, BIS Hallmarking & HUID tracker, Karigar metal ledgers, and fast counter billing on any mobile or desktop.",
+      subheadline: "Live gold and silver rate billing, making charges, wastage (jarti), split GST on metal vs making, BIS hallmarking & HUID tracker, Karigar metal ledgers, and fast counter billing on any mobile or desktop.",
       trustFooter: "Trusted by retail jewellers across Mumbai, Delhi, Jaipur, Chennai & Kolkata"
     },
     AE: {
       badge: "🇦🇪 UAE's Luxury Gold Bullion & Retail Jewellery POS System",
       headline: "The premium cloud ERP & multi-currency billing software for UAE jewellers",
-      subheadline: "Dubai FTA VAT compliance, live Kilo/Tola gold rate feeds, multi-currency invoicing, RFID stock count, and elite Karigar wastage ledgers.",
+      subheadline: "Dubai FTA VAT on every receipt, live Kilo/Tola gold rate billing, making charges and wastage lines, multi-currency invoicing, RFID stock count, and Karigar wastage ledgers.",
       trustFooter: "Trusted by major gold souk merchants in Dubai, Abu Dhabi & Sharjah"
     },
     UK: {
       badge: "🇬🇧 UK's Premier MTD-Compliant Jewellery ERP & Counter Billing",
       headline: "The premium cloud ERP & billing software for British jewellers",
-      subheadline: "Making Tax Digital (MTD) VAT reporting, UK Assay Office hallmarking integrations, carat tracking, RFID stock audit, and tablet POS billing.",
+      subheadline: "Making Tax Digital VAT reporting, live rate billing, making charges and wastage on itemised invoices, UK Assay Office hallmarking, RFID stock audit, and tablet POS billing.",
       trustFooter: "Trusted by high-street brands and independent boutiques in London, Birmingham & Edinburgh"
     },
     US: {
       badge: "🇺🇸 America's Leading Cloud POS & Jewelry Store ERP Platform",
       headline: "The premium cloud POS & inventory software for US jewelry stores",
-      subheadline: "Sales tax auto-computation, pennyweight (dwt) & troy ounce conversions, staff PIN clearance gates, integrated RFID stock count, and mobile billing.",
+      subheadline: "Live gold and silver rate billing, making charges and wastage lines, pennyweight (dwt) and troy ounce support, state sales tax itemisation, staff PIN clearance gates, and mobile billing.",
       trustFooter: "Trusted by retail jewelers and design studios across New York, California & Texas"
     },
     EU: {
       badge: "🇪🇺 Europe's Premium OSS-Compliant Jewellery Shop Software",
       headline: "The premium cloud ERP & POS software for European jewellers",
-      subheadline: "EU One Stop Shop (OSS) VAT compliance, multi-lingual client invoicing, carat weight management, RFID counter scanning, and daily cloud backup.",
+      subheadline: "EU OSS VAT compliance, live rate billing with making and wastage lines, multi-lingual invoicing, carat weight management, RFID counter scanning, and jewellery set bundles.",
       trustFooter: "Trusted by fine jewellery manufacturers and boutiques across France, Italy & Germany"
     },
     LK: {
       badge: "🇱🇰 Sri Lanka's Easy Jewellery Billing, Schemes & Tag Printing",
       headline: "The simple cloud POS & billing software for Sri Lankan jewellers",
-      subheadline: "LKR invoicing, 18% output VAT sales summaries for accountant review, gold savings schemes, jewellery tag printing, and walk-in quotes — built for busy shop counters.",
+      subheadline: "LKR invoicing with live gold rate billing, making charges and wastage, 18% VAT sales summaries, gold savings schemes, jewellery sets, jewellery tag printing, and walk-in quotes — built for busy shop counters.",
       trustFooter: "Built for jewellers across Colombo, Kandy, Galle & Jaffna"
     }
   };
@@ -341,7 +341,7 @@ function SellerHero({
   const defaultRegion = {
     badge: "Jewellery ERP · Mobile POS · Bullion & Karigar Wastage Tracker",
     headline: "The premium cloud ERP & POS software for jewellery shops",
-    subheadline: "Live rate card feeds, Karigar metal ledgers, bullion inventory tracking, mobile counter POS billing, and GST/VAT-ready invoices — all on one modern dashboard.",
+    subheadline: "Live gold and silver rate billing, making charges, wastage (jarti), jewellery sets, and GST/VAT-ready invoices for India, Nepal, UAE, UK, Europe, USA, and Sri Lanka — plus Karigar metal ledgers and mobile counter POS.",
     trustFooter: "Trusted by professional jewellers across Nepal, India & global markets"
   };
 

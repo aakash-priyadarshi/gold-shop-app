@@ -7,6 +7,7 @@ import {
     SellerFeaturesSection,
   SellerResourceHubSection,
 } from "@/components/home/HomeSections";
+import { BillingCalculationSpotlight } from "@/components/home/BillingCalculationSpotlight";
 import { Header } from "@/components/layout/header";
 import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
 import { TrustSignals } from "@/components/marketing/TrustSignals";
@@ -59,8 +60,17 @@ export default function HomePage() {
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web, Android, iOS",
     description:
-      "Cloud POS, billing, inventory, and ERP software for jewellery shops — with live gold & silver rate cards, GST/VAT-ready invoices, artisan (karigar) metal tracking, and mobile counter billing.",
+      "Cloud POS and jewellery billing software with live gold and silver rate billing, making charges, wastage (jarti), jewellery sets, and country-aware tax — GST, Skill Promotion Fee, UAE/UK/EU VAT, US sales tax, and Sri Lanka VAT — plus inventory, karigar tracking, and mobile counter POS.",
     url: SITE_URL,
+    featureList: [
+      "Live gold and silver rate billing",
+      "Making charges and wastage (jarti) on separate invoice lines",
+      "Jewellery sets with set discount sold as one POS line",
+      "GST, Skill Promotion Fee, gemstone VAT, and multi-country tax breakdown",
+      "Weight-based billing in gram, tola, ounce, and laal",
+      "GST/VAT-ready invoices and mobile POS",
+      "Artisan (karigar) metal and wastage tracking",
+    ],
     offers: {
       "@type": "Offer",
       price: "0",
@@ -93,6 +103,8 @@ export default function HomePage() {
 
           {/* 3b: Mobile POS spotlight - newly launched */}
           <MobilePosSpotlight />
+
+          <BillingCalculationSpotlight />
 
           {/* 4: Resource hub linking demo, tutorial, support, and comparison pages */}
           <SellerResourceHubSection />

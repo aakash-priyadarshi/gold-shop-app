@@ -113,7 +113,7 @@ const softwareJsonLd = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web, Windows, macOS, Android, iOS",
       description:
-        "Free cloud-based jewellery shop management software with inventory management, mobile POS billing, 7-day live gold rate trends, customer chat, digital catalogues, tax-ready invoices, and analytics. Manage gold, silver & diamond inventory by weight and purity.",
+        "Free cloud-based jewellery shop management software with live gold and silver rate billing, making charges, wastage (jarti), jewellery sets, mobile POS, inventory by weight and purity, digital catalogues, country-aware tax for India, Nepal, UAE, UK, Europe, USA, and Sri Lanka, and analytics.",
       url: "https://www.orivraa.com/jewellery-shop-software",
       downloadUrl: "https://www.orivraa.com/download",
       screenshot: "https://www.orivraa.com/brand/orivraa-icon.svg",
@@ -211,20 +211,19 @@ const softwareJsonLd = {
         worstRating: "1",
       },
       featureList: [
+        "Live gold and silver rate billing",
+        "Making charges and wastage (jarti) on separate invoice lines",
+        "Jewellery sets with set discount sold as one POS line",
         "Inventory management by weight & purity",
+        "Country-aware tax — GST, Skill Promotion Fee, VAT, US sales tax, Sri Lanka VAT",
         "Digital catalogue creation",
-        "Multi-currency pricing",
+        "Multi-currency pricing (NPR, INR, AED, GBP, USD, EUR, LKR)",
         "Built-in customer chat & RFQ",
         "Sales analytics dashboard",
         "AI product descriptions",
-        "GST/VAT tax compliance",
         "Barcode/SKU support",
-        "Multi-branch management",
-        "International marketplace",
         "Mobile POS for smartphone counter billing",
         "7-day live gold and silver rate trends",
-        "Barcode scanning and WhatsApp receipt sharing",
-        "Offline PWA mode for counter sales",
         "Desktop & mobile app",
       ],
     },
@@ -276,7 +275,23 @@ const softwareJsonLd = {
           name: "Does Orivraa support GST and VAT for jewellery billing?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Orivraa handles tax compliance for jewellery businesses in multiple countries: GST for India (3% on gold), Skill Promotion Fee (0.5%) and gemstone VAT (13%) for Nepal, VAT for UAE (5%), VAT for UK (20%), and Sales Tax for USA. Tax rates are automatically applied based on the seller's and buyer's location.",
+            text: "Yes. Orivraa handles tax compliance for jewellery businesses in seven markets: India (3% GST on metal, 5% on making), Nepal (0.5% Skill Promotion Fee + 13% gemstone VAT), UAE (5% VAT), UK (20% VAT), Europe (OSS VAT), USA (state sales tax), and Sri Lanka (18% VAT). Tax rates are automatically applied with each component shown on the invoice.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "How does Orivraa calculate making charges, wastage (jarti), and tax on a jewellery bill?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Each invoice line starts from weight × live gold or silver rate × purity. Making charges (per gram, piece, or %) and customer wastage (jarti) are separate lines that recalculate when weight or rate changes. Tax then applies per country — split GST on metal vs making in India, Skill Promotion Fee and gemstone VAT in Nepal, VAT in UAE/UK/EU, state sales tax in USA, and 18% VAT in Sri Lanka.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Can I sell jewellery sets as one line at POS?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. Bundle necklace, bangles, earrings, or other components into a jewellery set with an optional set discount. Sell as one line at POS or on an invoice while each piece stays linked in vault stock until the set is broken.",
           },
         },
         {
@@ -300,7 +315,7 @@ const softwareJsonLd = {
           name: "Which countries does Orivraa support?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Orivraa is available for jewellery businesses in Nepal, India, UAE (Dubai), United Kingdom, United States, and Europe. The platform supports local currencies (NPR, INR, AED, GBP, USD, EUR), local payment methods, and country-specific tax compliance.",
+            text: "Orivraa is available for jewellery businesses in India, Nepal, UAE (Dubai), United Kingdom, Europe, United States, and Sri Lanka. The platform supports local currencies (INR, NPR, AED, GBP, EUR, USD, LKR), local weight units (gram, tola, laal, ounce, dwt), and country-specific tax compliance on every bill.",
           },
         },
       ],
@@ -335,7 +350,7 @@ const CORE_FEATURES = [
   },
   {
     title: "Billing & Invoicing",
-    desc: "Generate professional invoices with automatic tax calculation (GST, VAT). Support for making charges, stone charges, old gold exchange, and custom line items.",
+    desc: "Live gold and silver rate billing with making charges, wastage (jarti), and country-aware tax on separate lines. Jewellery sets, old gold exchange, and GST/VAT-ready invoices for India, Nepal, UAE, UK, Europe, USA, and Sri Lanka.",
     icon: Receipt,
   },
   {
@@ -555,7 +570,15 @@ const FAQS = [
   },
   {
     q: "Does Orivraa support GST billing for jewellery?",
-    a: "Yes. Orivraa handles GST compliance for Indian jewellers (3% on gold, 5% on making charges), Skill Promotion Fee (0.5%) and gemstone VAT (13%) for Nepal, UAE (5%), and UK (20%), and varying Sales Tax for USA. Tax is automatically calculated based on the seller and buyer locations.",
+    a: "Yes. Orivraa handles country-aware tax for all seven supported markets: India (3% GST on metal, 5% on making), Nepal (0.5% Skill Promotion Fee + 13% gemstone VAT), UAE (5% VAT), UK (20% VAT), Europe (OSS VAT), USA (state sales tax), and Sri Lanka (18% VAT). Making, wastage, and tax each appear on separate invoice lines.",
+  },
+  {
+    q: "How does Orivraa bill wastage (jarti) and making charges?",
+    a: "Making charges are labour fees (per gram, piece, or %). Wastage (jarti) is customer-facing metal loss on its own line, calculated from weight × live gold or silver rate. Tax applies on top per country rules. Change weight or rate and the whole bill recalculates — no end-of-day spreadsheet.",
+  },
+  {
+    q: "Can I sell jewellery sets as one line?",
+    a: "Yes. Bundle necklace, bangles, earrings, or other pieces into a set with an optional set discount. Sell as one line at POS or on an invoice; components stay linked in vault stock until the set is broken.",
   },
   {
     q: "Can I use Orivraa for multiple branches?",
@@ -571,7 +594,7 @@ const FAQS = [
   },
   {
     q: "Can I sell jewellery internationally using Orivraa?",
-    a: "Yes. Every product you list is visible to buyers in Nepal, India, UAE, UK, USA, and Europe. Orivraa handles multi-currency pricing (NPR, INR, AED, GBP, USD, EUR) and international tax compliance automatically. You can also create digital catalogues to share with international buyers on WhatsApp or social media.",
+    a: "Yes. Every product you list can reach buyers across supported markets. Orivraa handles multi-currency pricing (NPR, INR, AED, GBP, USD, EUR, LKR) and country-specific tax on invoices. Digital catalogues can be shared on WhatsApp or social media.",
   },
   {
     q: "Does Orivraa have karigar (artisan) management?",

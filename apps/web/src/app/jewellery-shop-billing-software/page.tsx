@@ -6,6 +6,7 @@ import {
     BUYER_COUNTRY_COUNT,
     RegionalPricingSnapshot,
 } from "@/components/marketing/RegionalPricingSnapshot";
+import { SampleBillByMarket } from "@/components/marketing/SampleBillByMarket";
 import { T } from "@/components/ui/T";
 import {
     ArrowRight,
@@ -30,13 +31,14 @@ const jsonLd = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web, Windows, macOS, Android, iOS",
       description:
-        "Professional billing software for jewellery shops with mobile POS receipts, 7-day live gold rate context, GST/VAT-compliant invoicing, making charges, old gold exchange, weight-based pricing, and barcode scanning.",
+        "Professional billing software for jewellery shops with live gold and silver rate billing, making charges, wastage (jarti), jewellery sets, and country-aware tax — GST, Skill Promotion Fee, UAE/UK/EU VAT, US sales tax, and Sri Lanka VAT — plus mobile POS, old gold exchange, and barcode scanning.",
       url: "https://www.orivraa.com/jewellery-shop-billing-software",
       featureList: [
+        "Live gold and silver rate billing",
+        "Making charges and wastage (jarti) on separate lines",
+        "Jewellery sets with set discount",
+        "GST, Skill Promotion Fee, and multi-country VAT",
         "Mobile POS receipts",
-        "7-day live gold rate context",
-        "GST/VAT-compliant invoices",
-        "Making charges and wastage",
         "Old gold exchange",
         "Barcode and HUID quick billing",
         "Tax reports and filing exports",
@@ -129,7 +131,7 @@ const jsonLd = {
           name: "Is Orivraa's billing software GST-compliant?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Orivraa generates GST-compliant invoices for India (3% on gold, 5% on making charges), VAT-compliant invoices for UK/EU/UAE, and supports tax structures for Nepal and the USA.",
+            text: "Yes. Orivraa generates GST-compliant invoices for India (3% on gold, 5% on making charges), Skill Promotion Fee and gemstone VAT for Nepal, 5% VAT for UAE, 20% VAT for UK and EU, state sales tax for USA, 18% VAT for Sri Lanka, with each component shown on separate lines.",
           },
         },
         {
@@ -164,10 +166,53 @@ const jsonLd = {
             text: "Yes. Enter the weight and purity of old gold, and Orivraa calculates the exchange value based on current rates. The exchange amount is deducted from the invoice total automatically.",
           },
         },
+        {
+          "@type": "Question",
+          name: "What is the difference between making charges, wastage (jarti), and tax on a jewellery bill?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Making charges are labour fees (per gram, per piece, or percentage) for crafting the piece. Wastage (jarti) is the customer-facing metal loss percentage added to the bill — calculated on metal value, not mixed into making. Tax applies on top of the taxable components: India splits 3% GST on metal vs 5% on making; Nepal applies 0.5% Skill Promotion Fee on jewellery sale value plus 13% VAT on gemstones; UAE, UK, and EU apply VAT on worked jewellery; USA uses state sales tax; Sri Lanka applies 18% VAT. Orivraa shows each line separately on the printed invoice.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Does Orivraa support jewellery billing for USA and Sri Lanka?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. US jewellers bill in USD with pennyweight or troy ounce support and state sales tax itemisation on metal, making, and stones. Sri Lankan jewellers bill in LKR with live gold rates, making charges, wastage lines, and 18% VAT on tax invoices and receipts.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "How do jewellery sets work on invoices and at POS?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Bundle necklace, bangles, and earrings into a jewellery set with an optional set discount (e.g. −5%). Sell the set as one line at POS or on an invoice while each component stays linked in vault stock until the set is broken. Metal, making, wastage, and tax still calculate correctly for the bundled sale.",
+          },
+        },
       ],
     },
   ],
 };
+
+const BILLING_FAQS = [
+  {
+    q: "What is the difference between making charges, wastage (jarti), and tax?",
+    a: "Making charges are labour fees for crafting the piece — per gram, per piece, or as a percentage. Wastage (jarti) is customer-facing metal loss added as its own line, calculated on metal value. Tax sits on top of the taxable components: India splits 3% GST on metal vs 5% on making; Nepal adds 0.5% Skill Promotion Fee plus 13% gemstone VAT; UAE/UK/EU apply VAT; USA uses state sales tax; Sri Lanka applies 18% VAT. Every line prints separately — no lump-sum guesswork.",
+  },
+  {
+    q: "How does Orivraa calculate wastage (jarti) on a gold invoice?",
+    a: "Set a wastage percentage on the line item. Orivraa multiplies it against the metal value (weight × live gold or silver rate × purity) and shows wastage as its own invoice row. Change weight or rate and wastage recalculates instantly — the same in India, Nepal, UAE, UK, Europe, USA, and Sri Lanka.",
+  },
+  {
+    q: "How do jewellery sets work at billing and POS?",
+    a: "Create a set from necklace, bangles, earrings, or other components with an optional set discount. Sell as one bundled line at POS or on a tax invoice. Components stay linked in vault stock until the set is broken, so you never lose track of individual pieces.",
+  },
+  {
+    q: "Which countries does Orivraa billing support?",
+    a: "India (GST split on metal vs making), Nepal (Skill Promotion Fee + gemstone VAT, tola/laal), UAE (5% VAT), UK (20% VAT, MTD-ready), Europe (OSS VAT), USA (state sales tax, dwt/ounce), and Sri Lanka (18% VAT, LKR). Switch markets in the sample bill above to see each breakdown.",
+  },
+];
 
 const FEATURES = [
   {
@@ -227,20 +272,6 @@ const FEATURES = [
   },
 ];
 
-const INVOICE_COMPONENTS = [
-  { label: "Gold Rate Today", value: "₹7,200/gram (22K)" },
-  { label: "Weight", value: "15.3 grams" },
-  { label: "Gold Value", value: "₹1,10,160" },
-  { label: "Making Charges (₹800/g)", value: "₹12,240" },
-  { label: "Stone Charges", value: "₹5,500" },
-  { label: "Sub-Total", value: "₹1,27,900" },
-  { label: "GST (3% on gold)", value: "₹3,305" },
-  { label: "GST (5% on making)", value: "₹612" },
-  { label: "Grand Total", value: "₹1,31,817" },
-  { label: "Old Gold Exchange (8.5g 22K)", value: "−₹61,200" },
-  { label: "Amount Payable", value: "₹70,617" },
-];
-
 export default function JewellerBillingSoftwarePage() {
   return (
     <>
@@ -264,10 +295,11 @@ export default function JewellerBillingSoftwarePage() {
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
               <T>
-                Generate professional GST/VAT-compliant invoices with making
-                charges, old gold exchange, weight-based pricing, and barcode
-                scanning. Designed specifically for gold, silver, and diamond
-                jewellery shops.
+                Generate professional invoices with live gold and silver rates,
+                making charges, wastage (jarti), jewellery sets, and
+                country-aware tax — GST, Skill Promotion Fee, UAE/UK/EU VAT, US
+                sales tax, and Sri Lanka VAT. Old gold exchange and barcode
+                scanning included.
               </T>{" "}
               <T>{`Built for jewellers serving buyers across ${BUYER_COUNTRY_COUNT} countries. Starts free.`}</T>
             </p>
@@ -298,40 +330,16 @@ export default function JewellerBillingSoftwarePage() {
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-xl mx-auto mb-10">
               <T>
-                Here's a real example of a 22K gold necklace invoice — this is
-                what Orivraa generates automatically.
+                Switch between markets to see how Orivraa builds each bill — live
+                rates, making charges, wastage, stones, and local tax on
+                separate lines.
               </T>
             </p>
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="bg-amber-600 text-white px-6 py-3 text-sm font-semibold">
-                <T>Sample Invoice — 22K Gold Necklace</T>
-              </div>
-              <div className="p-6 space-y-3">
-                {INVOICE_COMPONENTS.map((row, i) => (
-                  <div
-                    key={row.label}
-                    className={`flex justify-between items-center py-2 ${
-                      i === INVOICE_COMPONENTS.length - 1
-                        ? "border-t-2 border-amber-500 pt-3 font-bold text-lg text-amber-700 dark:text-gold-400"
-                        : i === INVOICE_COMPONENTS.length - 2
-                          ? "text-red-600 dark:text-red-400"
-                          : i === 5
-                            ? "border-t border-gray-300 dark:border-gray-600 pt-2 font-semibold"
-                            : "text-gray-700 dark:text-gray-300"
-                    }`}
-                  >
-                    <span className="text-sm">
-                      <T>{row.label}</T>
-                    </span>
-                    <span className="text-sm font-mono">{row.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <SampleBillByMarket />
             <p className="text-xs text-center text-gray-400 mt-4">
               <T>
-                Orivraa calculates all of this automatically — just scan the
-                product and enter old gold details.
+                Orivraa calculates all of this automatically — scan the product,
+                adjust weight or wastage, and print.
               </T>
             </p>
           </div>
@@ -422,7 +430,14 @@ export default function JewellerBillingSoftwarePage() {
                   country: "USA",
                   tax: "Sales Tax",
                   details:
-                    "State-level sales tax on jewellery. Tax-exempt resale supported with proper documentation.",
+                    "State-level sales tax on jewellery. Metal, making, and stones itemised. Tax-exempt resale supported with proper documentation.",
+                },
+                {
+                  flag: "🇱🇰",
+                  country: "Sri Lanka",
+                  tax: "VAT",
+                  details:
+                    "18% VAT on jewellery sales. LKR invoicing with live gold rate billing, making charges, and wastage on separate lines.",
                 },
               ].map((c) => (
                 <div
@@ -447,6 +462,39 @@ export default function JewellerBillingSoftwarePage() {
           </div>
         </section>
 
+        {/* ── How We Calculate ─────────────────────────────── */}
+        <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
+          <div className="container mx-auto px-4 max-w-4xl text-center">
+            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              <T>How We Calculate Your Bill</T>
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8 leading-relaxed">
+              <T>
+                Every Orivraa invoice starts from weight and today&apos;s live
+                gold or silver rate, then adds making charges, wastage (jarti),
+                stone value, and your country&apos;s tax rules — India, Nepal,
+                UAE, UK, Europe, USA, and Sri Lanka. Nothing is hidden in one
+                lump total.
+              </T>
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/#jewellery-billing-calculation"
+                className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold text-sm transition-all shadow-md flex items-center gap-2"
+              >
+                <T>See bill breakdown on homepage</T>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/demo"
+                className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-sm hover:bg-white dark:hover:bg-gray-800 transition-all"
+              >
+                <T>Watch billing demo</T>
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* ── FAQ ─────────────────────────────────────────── */}
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-3xl">
@@ -455,6 +503,7 @@ export default function JewellerBillingSoftwarePage() {
             </h2>
             <div className="space-y-4">
               {[
+                ...BILLING_FAQS,
                 {
                   q: "What makes jewellery billing different from regular billing?",
                   a: "Jewellery billing involves weight × rate × purity calculations, making charges (per gram or per piece), stone charges, old gold exchange deductions, and jewellery-specific tax rules. Regular billing software can't handle these calculations.",

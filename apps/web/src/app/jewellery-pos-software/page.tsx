@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import {
     RegionalPricingSnapshot,
 } from "@/components/marketing/RegionalPricingSnapshot";
+import { SampleBillByMarket } from "@/components/marketing/SampleBillByMarket";
 import { FaqSection } from "@/components/ui/FaqSection";
 import { T } from "@/components/ui/T";
 import {
@@ -21,6 +22,8 @@ import {
     ScanBarcode,
     Smartphone,
     CheckCircle2,
+    Gem,
+    Layers,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -33,16 +36,17 @@ const jsonLd = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web, Windows, macOS, Android, iOS",
       description:
-        "Mobile and cloud-based POS software for jewellery shops with 7-day live gold rate history, weight-based billing, making charges, old gold exchange, barcode scanning, receipt sharing, and GST/VAT compliance.",
+        "Mobile and cloud-based POS for jewellery shops with live gold and silver rate billing, making charges, wastage (jarti), jewellery sets, country-aware tax (GST, Skill Promotion Fee, UAE/UK/EU VAT, US sales tax, Sri Lanka VAT), old gold exchange, barcode scanning, and receipt sharing.",
       url: "https://www.orivraa.com/jewellery-pos-software",
       featureList: [
+        "Live gold and silver rate billing at checkout",
+        "Making charges and wastage (jarti) on separate lines",
+        "Jewellery sets sold as one bundled POS line",
+        "Country-aware tax — India, Nepal, UAE, UK, EU, USA, Sri Lanka",
         "Mobile POS billing from any smartphone",
-        "7-day live gold and silver rate history",
-        "Weight-based jewellery billing",
-        "Making charges and stone charges",
+        "Weight-based billing in gram, tola, ounce, and laal",
         "Old gold exchange",
         "Barcode and HUID scanning",
-        "GST/VAT-compliant receipts",
         "WhatsApp receipt sharing",
       ],
       offers: [
@@ -144,6 +148,22 @@ const jsonLd = {
             text: "Orivraa's mobile POS is designed for shop counters where connectivity can drop. Offline PWA mode can keep sales locally and sync when connectivity returns, while full real-time dashboard updates require an internet connection.",
           },
         },
+        {
+          "@type": "Question",
+          name: "How does Orivraa POS handle wastage (jarti) and making charges?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Making charges and customer wastage (jarti) appear as separate lines on every POS receipt. Making can be per gram, per piece, or a percentage; wastage recalculates when weight or live gold/silver rate changes. Tax then applies per country — e.g. split GST on metal vs making in India, Skill Promotion Fee in Nepal, 5% VAT in UAE, 20% VAT in UK/EU, state sales tax in USA, 18% VAT in Sri Lanka.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Can I sell jewellery sets as one line at POS?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. Bundle necklace, bangles, and earrings into a set with an optional set discount. Checkout sells the set as one POS line while components stay linked in vault stock until the set is broken.",
+          },
+        },
       ],
     },
   ],
@@ -152,13 +172,28 @@ const jsonLd = {
 const POS_FEATURES = [
   {
     icon: Scale,
-    title: "Weight-Based Billing",
-    desc: "Bill customers from phone or desktop using exact gold/silver weight, making charges, and live metal rate context. Supports grams, tola, ounce, and laal.",
+    title: "Live Rate Weight Billing",
+    desc: "Today's gold and silver rates flow into every POS line — bill by gram, tola, ounce, or laal. Metal value updates when rates move, without retyping each SKU.",
   },
   {
     icon: Calculator,
-    title: "Making Charges & Stone Charges",
-    desc: "Add making charges per gram, per piece, or as a percentage. Separate stone/gem charges with detailed breakdowns on the invoice.",
+    title: "Making + Wastage (Jarti)",
+    desc: "Making charges (per gram, piece, or %) and customer wastage stay separate receipt lines. Change weight or rate and the whole bill recalculates at the counter.",
+  },
+  {
+    icon: Layers,
+    title: "Jewellery Sets at POS",
+    desc: "Sell a bridal set — necklace, bangles, earrings — as one bundled line with an optional set discount. Components stay in vault stock until the set is broken.",
+  },
+  {
+    icon: Gem,
+    title: "Stone & Gem Charges",
+    desc: "Diamond, ruby, and gemstone values on their own lines with country-correct tax — e.g. 13% gemstone VAT in Nepal, VAT on stones in UAE/UK/EU.",
+  },
+  {
+    icon: Receipt,
+    title: "Country-Aware Tax Receipts",
+    desc: "GST split (India), Skill Promotion Fee + gemstone VAT (Nepal), 5% VAT (UAE), 20% VAT (UK/EU), state sales tax (USA), 18% VAT (Sri Lanka) — each shown on the receipt.",
   },
   {
     icon: RefreshCw,
@@ -169,11 +204,6 @@ const POS_FEATURES = [
     icon: ScanBarcode,
     title: "Barcode & HUID Scanning",
     desc: "Scan product barcodes or HUID (Hallmark Unique Identification) numbers for instant product lookup and fast billing at the counter.",
-  },
-  {
-    icon: Receipt,
-    title: "GST/VAT-Compliant Invoicing",
-    desc: "Generate professional invoices with proper tax breakdowns. Supports GST (India), VAT (UK/EU/UAE), and other tax structures automatically.",
   },
   {
     icon: CreditCard,
@@ -188,7 +218,7 @@ const POS_FEATURES = [
   {
     icon: Globe,
     title: "Multi-Currency Support",
-    desc: "Bill in NPR, INR, AED, GBP, USD, or EUR with automatic tax and conversion calculations for each market.",
+    desc: "Bill in NPR, INR, AED, GBP, USD, EUR, or LKR with automatic tax rules for India, Nepal, UAE, UK, Europe, USA, and Sri Lanka.",
   },
   {
     icon: BarChart3,
@@ -201,12 +231,12 @@ const WORKFLOW = [
   {
     step: "1",
     title: "Scan or Search Product",
-    desc: "Scan a barcode, search by name, or browse categories to add items to the bill. Product weight and purity auto-populate.",
+    desc: "Scan a barcode, pick a catalogue item, or add a jewellery set. Weight, purity, and live gold/silver rate auto-populate on the line.",
   },
   {
     step: "2",
-    title: "Apply Charges & Discounts",
-    desc: "Making charges, stone charges, and any discounts are calculated automatically. Adjust as needed for custom orders.",
+    title: "Making, Wastage & Stones",
+    desc: "Making charges and customer wastage (jarti) calculate as separate lines. Add stone value; tax splits per your country — GST, Skill Promotion Fee, VAT, or sales tax.",
   },
   {
     step: "3",
@@ -215,8 +245,8 @@ const WORKFLOW = [
   },
   {
     step: "4",
-    title: "Collect Payment & Print Invoice",
-    desc: "Accept payment via cash, card, or UPI. Generate a GST/VAT-compliant invoice and print or share digitally.",
+    title: "Collect Payment & Print",
+    desc: "Accept cash, card, UPI, or split payment. Print or WhatsApp a receipt with every line — metal, making, wastage, tax — visible.",
   },
 ];
 
@@ -243,11 +273,11 @@ export default function JewelleryPosSoftwarePage() {
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
               <T>
-                Stop struggling with generic POS systems. Orivraa's mobile
-                point-of-sale module handles 7-day live gold rate context,
-                weight-based billing, making charges, old gold exchange,
-                barcode scanning, and GST/VAT-compliant receipts for jewellery
-                counters.
+                Mobile point-of-sale built for jewellery counters — live gold
+                and silver rates, making charges, wastage (jarti), jewellery
+                sets, and country-aware tax for India, Nepal, UAE, UK, Europe,
+                USA, and Sri Lanka. Old gold exchange, barcode scanning, and
+                WhatsApp receipts included.
               </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -355,10 +385,10 @@ export default function JewelleryPosSoftwarePage() {
                   </p>
                   <ul className="space-y-4 pt-2">
                     {[
-                      "Scan product barcodes using your phone's camera",
-                      "Check live gold/silver rates instantly",
-                      "Send digital GST/VAT invoices via WhatsApp or SMS",
-                      "No expensive thermal printers required",
+                      "Live gold and silver rates at checkout — gram, tola, or ounce",
+                      "Making charges and wastage (jarti) on separate receipt lines",
+                      "Sell jewellery sets as one bundled POS line",
+                      "Send digital tax invoices via WhatsApp or SMS",
                     ].map((item, i) => (
                       <li key={i} className="flex items-center gap-3">
                         <div className="h-6 w-6 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
@@ -458,8 +488,24 @@ export default function JewelleryPosSoftwarePage() {
           </div>
         </section>
 
-        {/* ── POS Features ────────────────────────────────── */}
+        {/* ── Sample POS Bill by Market ───────────────────── */}
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
+          <div className="container mx-auto px-4 max-w-3xl">
+            <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
+              <T>What Your POS Receipt Looks Like</T>
+            </h2>
+            <p className="text-center text-gray-500 dark:text-gray-400 max-w-xl mx-auto mb-10">
+              <T>
+                Every market gets the right tax breakdown — switch between
+                India, Nepal, UAE, UK, Europe, USA, and Sri Lanka.
+              </T>
+            </p>
+            <SampleBillByMarket />
+          </div>
+        </section>
+
+        {/* ── POS Features ────────────────────────────────── */}
+        <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-6xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
               <T>POS Features Designed for Jewellers</T>
@@ -490,7 +536,7 @@ export default function JewelleryPosSoftwarePage() {
         </section>
 
         {/* ── Billing Workflow ─────────────────────────────── */}
-        <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
+        <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-12">
               <T>How Jewellery Billing Works in Orivraa</T>
@@ -514,7 +560,7 @@ export default function JewelleryPosSoftwarePage() {
         </section>
 
         {/* ── Comparison ──────────────────────────────────── */}
-        <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
+        <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
               <T>Orivraa POS vs Generic POS Systems</T>
@@ -542,12 +588,15 @@ export default function JewelleryPosSoftwarePage() {
                 </thead>
                 <tbody>
                   {[
+                    ["Live gold and silver rate billing", true, false],
                     ["Weight-based pricing", true, false],
                     ["Purity calculations (24K/22K/18K)", true, false],
                     ["Making charges per gram", true, false],
+                    ["Customer wastage (jarti) line", true, false],
+                    ["Jewellery sets as one POS line", true, false],
+                    ["Country-aware tax (7 markets)", true, false],
                     ["Old gold exchange", true, false],
                     ["Barcode & HUID scanning", true, true],
-                    ["GST/VAT jewellery tax rules", true, false],
                     ["Multi-currency billing", true, false],
                     ["Stone & gem charges", true, false],
                     ["Split payments", true, true],
@@ -591,7 +640,19 @@ export default function JewelleryPosSoftwarePage() {
                 faqs={[
                   {
                     q: "What makes jewellery POS different from regular POS?",
-                    a: "Jewellery POS handles weight-based pricing, purity calculations, making charges per gram, old gold exchange, and jewellery-specific tax rules (e.g., 3% GST on gold in India). Regular POS systems only support fixed-price billing.",
+                    a: "Jewellery POS handles live gold/silver rates, weight-based pricing, making charges, wastage (jarti), jewellery sets, and country-specific tax — e.g. split GST in India, Skill Promotion Fee in Nepal, VAT in UAE/UK/EU, state sales tax in USA, 18% VAT in Sri Lanka. Regular POS systems only support fixed-price billing.",
+                  },
+                  {
+                    q: "How does wastage (jarti) work at the POS counter?",
+                    a: "Wastage is a separate line on the receipt, calculated as a percentage of metal value (weight × live rate × purity). It is not buried inside making charges. When weight or today's rate changes, wastage recalculates automatically before you take payment.",
+                  },
+                  {
+                    q: "Can I sell a jewellery set as one line at POS?",
+                    a: "Yes. Bundle components into a set with an optional discount and checkout as one line. Vault stock keeps each piece linked until the set is broken.",
+                  },
+                  {
+                    q: "Which countries does Orivraa POS support for tax?",
+                    a: "India, Nepal, UAE, UK, Europe, USA, and Sri Lanka — each with the correct tax labels on the printed receipt (GST, Skill Promotion Fee, gemstone VAT, FTA/HMRC VAT, OSS VAT, state sales tax, or Sri Lanka VAT).",
                   },
                   {
                     q: "Can I use Orivraa POS on a tablet at the counter?",
