@@ -183,6 +183,11 @@ const CHUNKS: { topic: string; content: string }[] = [
     content:
       "Billing wastage (also called jarti) is the customer-facing manufacturing-loss charge on Create Invoice — separate from karigar workshop wastage. Three pipelines: (1) Catalog — each product has a required Wastage % (can be 0). Add from catalog fetches that % onto the invoice. One editable % field that recalculates live (no Calculate button); caption shows e.g. '5% from catalog' and if you raise to 6% shows '+1% adjusted' plus the price. (2) Walk-in quote — set wastage when Mark Ready (built); it carries to the final invoice as 'from walk-in ready'. If left 0, change it on the invoice. (3) Manual invoice — enter % only; nothing is fetched; amount updates live. Weight % mode: wastage grams = net weight × (wastage % ÷ 100); amount = wastage grams × (metal cost ÷ net weight). Metal value % mode: wastage = metal cost × %. Shop defaults: Settings → Preferences → Billing Wastage.",
   },
+  {
+    topic: "invoice_share_and_bluetooth",
+    content:
+      "After creating an invoice, the invoice detail page shows Print, Record Payment, WhatsApp, Share, Email, SMS, and Bluetooth print. Email and SMS are plan features you enable in Admin → Billing (SMS typically Pro+ / Enterprise). Bluetooth thermal printing works with SEZNIK Josh and similar 58mm BLE printers: open Mobile Settings → Hardware, choose Bluetooth, Pair, then Test or print from the invoice. Each printed bill includes a verification QR; customers can scan it to open /verify-bill and confirm the bill is genuine on Orivraa.",
+  },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

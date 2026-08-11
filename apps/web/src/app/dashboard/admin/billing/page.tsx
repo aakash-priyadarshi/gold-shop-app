@@ -429,6 +429,30 @@ const ALL_FEATURE_KEYS: {
     category: "Mobile POS",
     enforced: false,
   },
+  {
+    key: "invoiceShareWhatsApp",
+    label: "Invoice WhatsApp share",
+    category: "Sharing & Hardware",
+    enforced: true,
+  },
+  {
+    key: "invoiceShareEmail",
+    label: "Invoice email delivery",
+    category: "Sharing & Hardware",
+    enforced: true,
+  },
+  {
+    key: "invoiceShareSms",
+    label: "Invoice SMS delivery",
+    category: "Sharing & Hardware",
+    enforced: true,
+  },
+  {
+    key: "bluetoothThermalPrinter",
+    label: "Bluetooth thermal printer",
+    category: "Sharing & Hardware",
+    enforced: true,
+  },
 ];
 
 const FEATURE_CATEGORIES = Array.from(

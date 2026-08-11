@@ -1091,6 +1091,10 @@ export const invoicesApi = {
   updateSettings: (data: any) => api.patch("/invoices/settings", data),
   // Public: verify bill by QR token (no auth)
   verifyBill: (token: string) => api.get(`/invoices/public/verify/${token}`),
+  shareEmail: (id: string, data: { to?: string; message?: string }) =>
+    api.post(`/invoices/${id}/share/email`, data),
+  shareSms: (id: string, data: { to?: string; message?: string }) =>
+    api.post(`/invoices/${id}/share/sms`, data),
 };
 
 // Shop double-entry ledger / accounting API

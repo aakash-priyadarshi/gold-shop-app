@@ -382,6 +382,182 @@ async function getPairedUsbPrinter(): Promise<UsbDevice | null> {
   return devices[0] ?? null;
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Web Bluetooth (SEZNIK Josh / MiniX / D1-compatible 58mm thermal)
+// GATT write characteristic 0000ff02-… with D1 wake + ESC/POS chunked writes.
+// Requires Chrome/Edge on HTTPS. Classic SPP is not available in browsers.
+// ────────────────────────────────────────────────────────────────────────────
+
+const BLE_WRITE_UUID = "0000ff02-0000-1000-8000-00805f9b34fb";
+const BLE_SERVICE_CANDIDATES = [
+  "0000ff00-0000-1000-8000-00805f9b34fb",
+  "0000ffe0-0000-1000-8000-00805f9b34fb",
+  "000018f0-0000-1000-8000-00805f9b34fb",
+];
+const BLE_CHUNK = 512;
+
+type BleDevice = BluetoothDevice;
+let bleDeviceCache: BleDevice | null = null;
+let bleWriteChar: BluetoothRemoteGATTCharacteristic | null = null;
+
+function d1EnableSequence(): Uint8Array[] {
+  return [
+    new Uint8Array([0x10, 0xff, 0x40]),
+    new Uint8Array([0x10, 0xff, 0xf1, 0x03]),
+  ];
+}
+
+function d1EndSequence(): Uint8Array[] {
+  return [
+    new Uint8Array([0x1b, 0x4a, 0x64]),
+    new Uint8Array([0x10, 0xff, 0xf1, 0x45]),
+  ];
+}
+
+async function writeBleChunks(
+  characteristic: BluetoothRemoteGATTCharacteristic,
+  bytes: Uint8Array,
+): Promise<void> {
+  for (let i = 0; i < bytes.length; i += BLE_CHUNK) {
+    const slice = bytes.slice(i, i + BLE_CHUNK);
+    const buffer = slice.buffer.slice(
+      slice.byteOffset,
+      slice.byteOffset + slice.byteLength,
+    ) as ArrayBuffer;
+    if (characteristic.properties.writeWithoutResponse) {
+      await characteristic.writeValueWithoutResponse(buffer);
+    } else {
+      await characteristic.writeValue(buffer);
+    }
+    // Small delay helps cheap BLE printers flush
+    await new Promise((r) => setTimeout(r, 20));
+  }
+}
+
+async function resolveWritableCharacteristic(
+  server: BluetoothRemoteGATTServer,
+): Promise<BluetoothRemoteGATTCharacteristic> {
+  for (const serviceUuid of BLE_SERVICE_CANDIDATES) {
+    try {
+      const service = await server.getPrimaryService(serviceUuid);
+      try {
+        return await service.getCharacteristic(BLE_WRITE_UUID);
+      } catch {
+        const chars = await service.getCharacteristics();
+        const writable = chars.find(
+          (c) =>
+            c.properties.write ||
+            c.properties.writeWithoutResponse,
+        );
+        if (writable) return writable;
+      }
+    } catch {
+      // try next service
+    }
+  }
+
+  // Last resort: scan all primary services for a writable characteristic
+  const services = await server.getPrimaryServices();
+  for (const service of services) {
+    try {
+      const chars = await service.getCharacteristics();
+      const writable = chars.find(
+        (c) => c.properties.write || c.properties.writeWithoutResponse,
+      );
+      if (writable) return writable;
+    } catch {
+      // continue
+    }
+  }
+  throw new Error(
+    "Could not find a writable BLE characteristic on this printer",
+  );
+}
+
+/**
+ * Pair a SEZNIK Josh / MiniX / D1-class Bluetooth thermal printer via Web Bluetooth.
+ */
+export async function pairBluetoothPrinter(): Promise<{
+  device: BleDevice;
+  label: string;
+} | null> {
+  if (!navigator.bluetooth) {
+    throw new Error(
+      "Web Bluetooth is not supported. Use Chrome or Edge on HTTPS.",
+    );
+  }
+
+  let device: BleDevice;
+  try {
+    device = await navigator.bluetooth.requestDevice({
+      filters: [
+        { namePrefix: "SEZNIK" },
+        { namePrefix: "Seznik" },
+        { namePrefix: "Josh" },
+        { namePrefix: "D1" },
+        { namePrefix: "MiniX" },
+        { namePrefix: "Mini" },
+        { namePrefix: "Printer" },
+        { namePrefix: "MTP" },
+      ],
+      optionalServices: [
+        ...BLE_SERVICE_CANDIDATES,
+        "battery_service",
+        "device_information",
+      ],
+    });
+  } catch (err: any) {
+    // User cancelled or filter matched nothing — offer acceptAllDevices
+    if (err?.name === "NotFoundError" || err?.name === "NetworkError") {
+      device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [
+          ...BLE_SERVICE_CANDIDATES,
+          "battery_service",
+          "device_information",
+        ],
+      });
+    } else {
+      throw err;
+    }
+  }
+
+  if (!device.gatt) throw new Error("Printer has no GATT server");
+  const server = await device.gatt.connect();
+  bleWriteChar = await resolveWritableCharacteristic(server);
+  bleDeviceCache = device;
+  const label = device.name || "Bluetooth Thermal Printer";
+  return { device, label };
+}
+
+async function ensureBleConnection(): Promise<BluetoothRemoteGATTCharacteristic> {
+  if (bleWriteChar && bleDeviceCache?.gatt?.connected) {
+    return bleWriteChar;
+  }
+  if (bleDeviceCache?.gatt) {
+    const server = await bleDeviceCache.gatt.connect();
+    bleWriteChar = await resolveWritableCharacteristic(server);
+    return bleWriteChar;
+  }
+  throw new Error(
+    "No paired Bluetooth printer. Pair one in Settings → Hardware.",
+  );
+}
+
+/** Send raw ESC/POS (with D1 wake/end) over the paired BLE printer. */
+export async function printBluetoothReceiptBytes(
+  bytes: Uint8Array,
+): Promise<void> {
+  const characteristic = await ensureBleConnection();
+  for (const cmd of d1EnableSequence()) {
+    await writeBleChunks(characteristic, cmd);
+  }
+  await writeBleChunks(characteristic, bytes);
+  for (const cmd of d1EndSequence()) {
+    await writeBleChunks(characteristic, cmd);
+  }
+}
+
 /** Send raw ESC/POS bytes to the currently paired printer. */
 export async function printReceiptBytes(bytes: Uint8Array<ArrayBuffer>): Promise<void> {
   const device = await getPairedUsbPrinter();
@@ -426,9 +602,8 @@ export async function printReceipt(
     );
   }
   if (cfg.printer.transport === "bluetooth") {
-    throw new Error(
-      "Bluetooth printing is supported in the Orivraa Desktop app.",
-    );
+    await printBluetoothReceiptBytes(bytes);
+    return;
   }
 }
 

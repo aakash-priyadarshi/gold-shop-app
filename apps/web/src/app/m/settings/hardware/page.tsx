@@ -13,8 +13,10 @@ import {
     hasWebUSB,
     kickCashDrawer,
     loadHardwareConfig,
+    pairBluetoothPrinter,
     pairLabelSerialPrinter,
     pairUsbPrinter,
+    printBluetoothReceiptBytes,
     printReceiptBytes,
     printZplJewelleryLabel,
     saveHardwareConfig,
@@ -68,7 +70,7 @@ const TRANSPORTS: {
     id: "bluetooth",
     label: "Bluetooth",
     Icon: Bluetooth,
-    hint: "Pair via the Orivraa desktop app",
+    hint: "SEZNIK Josh / MiniX / D1 — Chrome or Edge on HTTPS",
     available: () => hasWebBluetooth(),
   },
   {
@@ -145,6 +147,21 @@ export default function HardwareSettingsPage() {
   const handlePair = async () => {
     setPairing(true);
     try {
+      if (cfg.printer.transport === "bluetooth") {
+        const result = await pairBluetoothPrinter();
+        if (result) {
+          updatePrinter({
+            enabled: true,
+            transport: "bluetooth",
+            deviceLabel: result.label,
+          });
+          toast({
+            title: "Bluetooth printer paired",
+            description: result.label,
+          });
+        }
+        return;
+      }
       const result = await pairUsbPrinter();
       if (result) {
         updatePrinter({
@@ -188,7 +205,11 @@ export default function HardwareSettingsPage() {
         cfg.printer.paperWidth,
         { kickDrawer: cfg.printer.kickCashDrawer },
       );
-      await printReceiptBytes(bytes);
+      if (cfg.printer.transport === "bluetooth") {
+        await printBluetoothReceiptBytes(bytes);
+      } else {
+        await printReceiptBytes(bytes);
+      }
       toast({ title: "Test receipt sent" });
     } catch (e: any) {
       toast({
@@ -306,8 +327,9 @@ export default function HardwareSettingsPage() {
             tips={[
               "Any USB or Bluetooth scanner that types like a keyboard works without setup",
               "USB thermal printers (Epson TM, Star, generic 58/80mm) work directly from Chrome / Edge",
+              "Bluetooth thermal (SEZNIK Josh / MiniX): select Bluetooth, tap Pair, then Test — Chrome/Edge on HTTPS only",
               "Zebra jewellery tags: enable Label printer and use Web Serial (Chrome) or download a .zpl file",
-              "Bluetooth & network receipt printers are supported in the Orivraa Desktop app",
+              "Network receipt printers need the Orivraa Desktop app or a local print agent",
             ]}
           />
         </div>
@@ -520,15 +542,25 @@ export default function HardwareSettingsPage() {
           <div className="grid grid-cols-3 gap-2">
             <button
               onClick={handlePair}
-              disabled={pairing || cfg.printer.transport !== "webusb"}
+              disabled={
+                pairing ||
+                (cfg.printer.transport !== "webusb" &&
+                  cfg.printer.transport !== "bluetooth")
+              }
               className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-100 text-amber-800 text-xs font-semibold disabled:opacity-40"
             >
               {pairing ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : cfg.printer.transport === "bluetooth" ? (
+                <Bluetooth className="h-3.5 w-3.5" />
               ) : (
                 <Usb className="h-3.5 w-3.5" />
               )}
-              <T>Pair USB</T>
+              <T>
+                {cfg.printer.transport === "bluetooth"
+                  ? "Pair BT"
+                  : "Pair USB"}
+              </T>
             </button>
             <button
               onClick={handleTestPrint}

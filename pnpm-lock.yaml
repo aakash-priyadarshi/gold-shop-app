@@ -719,6 +719,9 @@ importers:
       next-themes:
         specifier: ^0.2.1
         version: 0.2.1(next@14.2.35(@opentelemetry/api@1.9.0)(@playwright/test@1.59.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      qrcode:
+        specifier: ^1.5.4
+        version: 1.5.4
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -768,12 +771,18 @@ importers:
       "@types/node":
         specifier: ^20.11.16
         version: 20.19.27
+      "@types/qrcode":
+        specifier: ^1.5.6
+        version: 1.5.6
       "@types/react":
         specifier: ^18.2.52
         version: 18.3.27
       "@types/react-dom":
         specifier: ^18.2.18
         version: 18.3.7(@types/react@18.3.27)
+      "@types/web-bluetooth":
+        specifier: ^0.0.21
+        version: 0.0.21
       "@vitejs/plugin-react":
         specifier: 4.3.4
         version: 4.3.4(vite@5.4.21(@types/node@20.19.27)(terser@5.44.1))
@@ -6508,6 +6517,12 @@ packages:
     resolution:
       {
         integrity: sha512-T8L6i7wCuyoK8A/ZeLYt1+q0ty3Zb9+qbSSvrIVitzT3YjZqkTZ40IbRsPanlB4h1QB3JVL1SYCdR6ngtFYcuA==,
+      }
+
+  "@types/web-bluetooth@0.0.21":
+    resolution:
+      {
+        integrity: sha512-oIQLCGWtcFZy2JW77j9k8nHzAOpqMHLQejDA48XXMWH6tjCQHz5RCFz1bzsmROyL6PUm+LLnUiI4BCn221inxA==,
       }
 
   "@types/ws@8.18.1":
@@ -19901,6 +19916,8 @@ snapshots:
   "@types/uuid@9.0.8": {}
 
   "@types/validator@13.15.10": {}
+
+  "@types/web-bluetooth@0.0.21": {}
 
   "@types/ws@8.18.1":
     dependencies:

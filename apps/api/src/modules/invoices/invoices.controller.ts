@@ -13,7 +13,13 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { FeatureGateGuard } from "../core/subscriptions/feature-gate.guard";
+import { RequireFeature } from "../core/subscriptions/require-feature.decorator";
 import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
+import {
+  ShareInvoiceEmailDto,
+  ShareInvoiceSmsDto,
+} from "./dto/share-invoice.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { InvoicesService } from "./invoices.service";
 
@@ -126,6 +132,34 @@ export class InvoicesController {
       throw new Error("No shop associated with this user");
     }
     return this.invoicesService.voidInvoice(id, shopId);
+  }
+
+  @Post(":id/share/email")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("invoiceShareEmail")
+  async shareEmail(
+    @CurrentUser("shopId") shopId: string,
+    @Param("id") id: string,
+    @Body() dto: ShareInvoiceEmailDto,
+  ) {
+    if (!shopId) {
+      throw new Error("No shop associated with this user");
+    }
+    return this.invoicesService.shareViaEmail(id, shopId, dto);
+  }
+
+  @Post(":id/share/sms")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("invoiceShareSms")
+  async shareSms(
+    @CurrentUser("shopId") shopId: string,
+    @Param("id") id: string,
+    @Body() dto: ShareInvoiceSmsDto,
+  ) {
+    if (!shopId) {
+      throw new Error("No shop associated with this user");
+    }
+    return this.invoicesService.shareViaSms(id, shopId, dto);
   }
 }
 

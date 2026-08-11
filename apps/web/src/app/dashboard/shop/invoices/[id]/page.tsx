@@ -2,6 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { InvoiceShareActions } from "@/components/shop/InvoiceShareActions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,11 +39,11 @@ import { invoicesApi, shopsApi } from "@/lib/api";
 import { printBill, type BillSettings } from "@/lib/billPrint";
 import {
   getCounterPaymentMethods,
-  buildQrImageUrl,
   buildUpiPayUri,
   isDigitalWalletMethod,
   paymentMethodLabel,
 } from "@/lib/counterPayments";
+import { toQrDataUrl, verifyBillUrl } from "@/lib/qrCode";
 import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
@@ -150,6 +151,8 @@ export default function InvoiceDetailPage() {
   const [showCreatedBanner, setShowCreatedBanner] = useState(justCreated);
   const [billSettings, setBillSettings] = useState<BillSettings | null>(null);
   const [shopUpiId, setShopUpiId] = useState<string>("");
+  const [verifyQrDataUrl, setVerifyQrDataUrl] = useState<string | null>(null);
+  const [upiQrDataUrl, setUpiQrDataUrl] = useState<string | null>(null);
 
   const invoiceCountry = String(
     invoice?.invoiceCountry || invoice?.taxBreakdown?.country || "",
@@ -215,12 +218,12 @@ export default function InvoiceDetailPage() {
       .catch(() => setShopUpiId(""));
   }, []);
 
-  const upiQrUrl = useMemo(() => {
+  const upiPayUri = useMemo(() => {
     if (!isDigitalWalletMethod(paymentMethod) || !shopUpiId || !invoice) {
       return null;
     }
     const amount = parseFloat(paymentAmount) || invoice.balanceDue || 0;
-    const uri = buildUpiPayUri({
+    return buildUpiPayUri({
       upiId: shopUpiId,
       amount,
       currency: invoice.currency === "NPR" ? "INR" : invoice.currency || "INR",
@@ -228,7 +231,6 @@ export default function InvoiceDetailPage() {
       note: `Invoice ${invoice.invoiceNumber}`,
       transactionRef: invoice.invoiceNumber,
     });
-    return uri ? buildQrImageUrl(uri) : null;
   }, [
     paymentMethod,
     shopUpiId,
@@ -237,6 +239,82 @@ export default function InvoiceDetailPage() {
     billSettings?.shopNameOnBill,
     user?.shop?.shopName,
   ]);
+
+  useEffect(() => {
+    if (!invoice?.verificationToken) {
+      setVerifyQrDataUrl(null);
+      return;
+    }
+    let cancelled = false;
+    toQrDataUrl(verifyBillUrl(invoice.verificationToken), 200).then((url) => {
+      if (!cancelled) setVerifyQrDataUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [invoice?.verificationToken]);
+
+  useEffect(() => {
+    if (!upiPayUri) {
+      setUpiQrDataUrl(null);
+      return;
+    }
+    let cancelled = false;
+    toQrDataUrl(upiPayUri, 220).then((url) => {
+      if (!cancelled) setUpiQrDataUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [upiPayUri]);
+
+  const shareBillInput = useMemo(() => {
+    if (!invoice) return null;
+    return {
+      id: invoice.id,
+      shopName: billSettings?.shopNameOnBill || user?.shop?.shopName,
+      shopPhone: billSettings?.shopPhone,
+      invoiceNumber: invoice.invoiceNumber,
+      customerName: invoice.customerName,
+      customerPhone: invoice.customerPhone,
+      customerEmail: invoice.customerEmail,
+      currency: invoice.currency || currencySymbol,
+      subtotal: invoice.subtotal,
+      taxAmount: invoice.taxAmount,
+      taxLabel: invoice.taxLabel,
+      discountAmount: invoice.discountAmount,
+      totalAmount: invoice.totalAmount,
+      paidAmount: invoice.paidAmount,
+      balanceDue: invoice.balanceDue,
+      lineItems: invoice.lineItems,
+      issuedAt: invoice.issuedAt || invoice.createdAt,
+      verificationToken: invoice.verificationToken,
+    };
+  }, [invoice, billSettings, user?.shop?.shopName, currencySymbol]);
+
+  const receiptPayload = useMemo(() => {
+    if (!invoice) return null;
+    return {
+      shopName: billSettings?.shopNameOnBill || user?.shop?.shopName,
+      invoiceNumber: invoice.invoiceNumber,
+      issuedAt: invoice.issuedAt || invoice.createdAt,
+      customerName: invoice.customerName,
+      customerPhone: invoice.customerPhone,
+      currency: invoice.currency || "NPR",
+      lines: (invoice.lineItems || []).map((li) => ({
+        label: li.label,
+        qty: li.quantity ?? 1,
+        amount: li.amount ?? 0,
+      })),
+      subtotal: invoice.subtotal,
+      discount: invoice.discountAmount,
+      taxAmount: invoice.taxAmount,
+      taxLabel: invoice.taxLabel,
+      total: invoice.totalAmount,
+      paid: invoice.paidAmount,
+      balance: invoice.balanceDue,
+    };
+  }, [invoice, billSettings?.shopNameOnBill, user?.shop?.shopName]);
 
   const handleRecordPayment = async () => {
     const amount = parseFloat(paymentAmount);
@@ -288,8 +366,17 @@ export default function InvoiceDetailPage() {
     }
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!invoice) return;
+    if (!invoice.verificationToken) {
+      toast({
+        variant: "destructive",
+        title: t("Verification QR unavailable"),
+        description: t(
+          "This invoice has no verification token. Contact support if this persists.",
+        ),
+      });
+    }
     const lines = invoice.lineItems || [];
     const wastageAmount = lines
       .filter((li) => /wastage|jarti/i.test(li.label || ""))
@@ -302,6 +389,13 @@ export default function InvoiceDetailPage() {
       )
       .reduce((s, li) => s + (Number(li.amount) || 0), 0);
     const tb = invoice.taxBreakdown || {};
+    let verificationQrDataUrl = verifyQrDataUrl;
+    if (invoice.verificationToken && !verificationQrDataUrl) {
+      verificationQrDataUrl = await toQrDataUrl(
+        verifyBillUrl(invoice.verificationToken),
+        200,
+      );
+    }
     const ok = printBill({
       fallbackShopName: user?.shop?.shopName,
       settings: billSettings,
@@ -347,6 +441,7 @@ export default function InvoiceDetailPage() {
       notes: invoice.notes,
       watermark: shouldShowWatermark,
       verificationToken: invoice.verificationToken,
+      verificationQrDataUrl,
     });
     if (!ok) {
       toast({
@@ -418,41 +513,51 @@ export default function InvoiceDetailPage() {
         <div className="space-y-6 max-w-4xl mx-auto">
           {/* Success banner after creation */}
           {showCreatedBanner && invoice.status !== "PAID" && (
-            <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 rounded-lg print:hidden">
-              <div className="flex items-center gap-3">
-                <PartyPopper className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-semibold text-green-800 dark:text-green-200">
-                    <T>Invoice Created Successfully!</T>
-                  </p>
-                  <p className="text-sm text-green-600">
-                    <T>What would you like to do next?</T>
-                  </p>
+            <div className="p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 rounded-lg print:hidden space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <PartyPopper className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-semibold text-green-800 dark:text-green-200">
+                      <T>Invoice Created Successfully!</T>
+                    </p>
+                    <p className="text-sm text-green-600">
+                      <T>What would you like to do next?</T>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <Button variant="outline" size="sm" onClick={handlePrint}>
+                    <Printer className="h-4 w-4 mr-2" /> <T>Print</T>
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => {
+                      setPaymentMethod("CASH");
+                      setPaymentAmount(String(invoice.balanceDue));
+                      setPaymentDialogOpen(true);
+                    }}
+                  >
+                    <Banknote className="h-4 w-4 mr-2" /> <T>Pay Cash</T>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCreatedBanner(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handlePrint}>
-                  <Printer className="h-4 w-4 mr-2" /> <T>Print</T>
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700"
-                    onClick={() => {
-                    setPaymentMethod("CASH");
-                    setPaymentAmount(String(invoice.balanceDue));
-                    setPaymentDialogOpen(true);
-                  }}
-                >
-                  <Banknote className="h-4 w-4 mr-2" /> <T>Pay Cash</T>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowCreatedBanner(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+              {shareBillInput && (
+                <div className="pt-3 border-t border-green-200/60 dark:border-green-800/40">
+                  <InvoiceShareActions
+                    invoice={shareBillInput}
+                    receiptPayload={receiptPayload}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -529,6 +634,15 @@ export default function InvoiceDetailPage() {
               )}
             </div>
           </div>
+
+          {shareBillInput && (
+            <div className="print:hidden">
+              <InvoiceShareActions
+                invoice={shareBillInput}
+                receiptPayload={receiptPayload}
+              />
+            </div>
+          )}
 
           {/* Sandbox warning banner */}
           {!user?.shop?.isVerified && (
@@ -925,6 +1039,30 @@ export default function InvoiceDetailPage() {
                   </div>
                 </>
               )}
+
+              {/* Bill verification QR */}
+              {invoice.verificationToken && (
+                <>
+                  <Separator />
+                  <div className="flex flex-col items-center gap-2 py-4 text-center">
+                    {verifyQrDataUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={verifyQrDataUrl}
+                        alt="Verify bill QR"
+                        className="h-36 w-36 rounded bg-white p-2 border"
+                      />
+                    ) : (
+                      <div className="h-36 w-36 flex items-center justify-center rounded border bg-muted/40">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground max-w-xs">
+                      <T>Scan to verify this bill is genuine on Orivraa</T>
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -979,23 +1117,27 @@ export default function InvoiceDetailPage() {
               </div>
               {isDigitalWalletMethod(paymentMethod) && (
                 <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-center space-y-2">
-                  {upiQrUrl ? (
+                  {upiQrDataUrl ? (
                     <>
                       <p className="text-xs text-muted-foreground">
                         <T>Ask customer to scan UPI / PhonePe QR</T>
                       </p>
-                      <Image
-                        src={upiQrUrl}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={upiQrDataUrl}
                         alt="UPI QR"
                         className="mx-auto h-40 w-40 rounded bg-white p-2"
                         width={160}
                         height={160}
-                        unoptimized
                       />
                       <p className="text-[11px] text-muted-foreground font-mono">
                         {shopUpiId}
                       </p>
                     </>
+                  ) : shopUpiId ? (
+                    <div className="flex justify-center py-6">
+                      <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
+                    </div>
                   ) : (
                     <p className="text-xs text-amber-700 dark:text-amber-300">
                       <T>

@@ -36,6 +36,14 @@ const mockStockCommit = {
   commit: jest.fn(),
   restoreForVoid: jest.fn(),
 };
+const mockMailService = {
+  sendHtml: jest.fn(),
+  send: jest.fn(),
+};
+const mockSmsService = {
+  send: jest.fn(),
+  isConfigured: jest.fn().mockReturnValue(true),
+};
 const saleBuilder = new SaleBuilderService();
 
 describe("InvoicesService Sri Lanka invoice compliance", () => {
@@ -61,6 +69,8 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
       mockAccounting as any,
       mockStockCommit as any,
       saleBuilder,
+      mockMailService as any,
+      mockSmsService as any,
     );
     mockPlanLimits.checkInvoiceLimit.mockResolvedValue(undefined);
     mockAccounting.prepareMonetaryContext.mockResolvedValue({

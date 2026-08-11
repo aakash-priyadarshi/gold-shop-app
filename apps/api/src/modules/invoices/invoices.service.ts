@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import {
@@ -24,9 +25,15 @@ import {
   TaxableComponent,
 } from "../core/pricing/services/backend-tax-engine.service";
 import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
+import {
+  ShareInvoiceEmailDto,
+  ShareInvoiceSmsDto,
+} from "./dto/share-invoice.dto";
 import { AccountingService } from "../accounting/accounting.service";
 import { StockCommitService } from "./stock-commit.service";
 import { SaleBuilderService } from "./sale-builder.service";
+import { MailService, EMAIL_SENDERS } from "../mail/mail.service";
+import { SmsService } from "../notifications/sms.service";
 
 export interface CreateInvoiceOptions {
   /** When true, caller commits stock itself (POS checkout path). */
@@ -51,6 +58,8 @@ const COUNTRY_TO_CURRENCY: Record<string, CurrencyCode> = {
 
 @Injectable()
 export class InvoicesService {
+  private readonly logger = new Logger(InvoicesService.name);
+
   constructor(
     private prisma: PrismaService,
     private planLimitsService: PlanLimitsService,
@@ -58,6 +67,8 @@ export class InvoicesService {
     private accounting: AccountingService,
     private stockCommit: StockCommitService,
     private saleBuilder: SaleBuilderService,
+    private mailService: MailService,
+    private smsService: SmsService,
   ) {}
 
   /**
@@ -1219,5 +1230,153 @@ export class InvoicesService {
         ...data,
       },
     });
+  }
+
+  private buildShareText(invoice: {
+    invoiceNumber: string;
+    customerName?: string | null;
+    currency: string;
+    subtotal: unknown;
+    taxAmount: unknown;
+    taxLabel?: string | null;
+    discountAmount?: unknown;
+    totalAmount: unknown;
+    paidAmount?: unknown;
+    balanceDue?: unknown;
+    verificationToken?: string | null;
+    shop?: { shopName?: string | null; contactPhone?: string | null } | null;
+    lineItems?: unknown;
+  }): string {
+    const currency = invoice.currency || "NPR";
+    const fmt = (n: unknown) =>
+      `${currency} ${Number(n ?? 0).toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+      })}`;
+    const lines: string[] = ["Bill"];
+    if (invoice.shop?.shopName) lines.push(invoice.shop.shopName);
+    lines.push(`#${invoice.invoiceNumber}`);
+    if (invoice.customerName) lines.push(`Customer: ${invoice.customerName}`);
+    lines.push("");
+    const items = Array.isArray(invoice.lineItems)
+      ? (invoice.lineItems as Array<Record<string, any>>)
+      : [];
+    for (const it of items.slice(0, 20)) {
+      lines.push(
+        `• ${it.label || "Item"} x${it.quantity ?? 1} — ${fmt(it.amount)}`,
+      );
+    }
+    lines.push("");
+    lines.push(`Subtotal: ${fmt(invoice.subtotal)}`);
+    if (Number(invoice.discountAmount ?? 0) > 0) {
+      lines.push(`Discount: -${fmt(invoice.discountAmount)}`);
+    }
+    if (Number(invoice.taxAmount ?? 0) > 0) {
+      lines.push(`${invoice.taxLabel || "Tax"}: ${fmt(invoice.taxAmount)}`);
+    }
+    lines.push(`Total: ${fmt(invoice.totalAmount)}`);
+    if (Number(invoice.balanceDue ?? 0) > 0) {
+      lines.push(`Paid: ${fmt(invoice.paidAmount)}`);
+      lines.push(`Balance: ${fmt(invoice.balanceDue)}`);
+    }
+    if (invoice.verificationToken) {
+      lines.push("");
+      lines.push(
+        `Verify bill: https://www.orivraa.com/verify-bill/${invoice.verificationToken}`,
+      );
+    }
+    if (invoice.shop?.contactPhone) {
+      lines.push("");
+      lines.push(`Phone: ${invoice.shop.contactPhone}`);
+    }
+    return lines.join("\n");
+  }
+
+  async shareViaEmail(
+    id: string,
+    shopId: string,
+    dto: ShareInvoiceEmailDto,
+  ) {
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id, shopId },
+      include: {
+        shop: { select: { shopName: true, contactPhone: true } },
+      },
+    });
+    if (!invoice) throw new NotFoundException("Invoice not found");
+
+    const to = (dto.to || invoice.customerEmail || "").trim();
+    if (!to) {
+      throw new BadRequestException(
+        "No email address. Provide a recipient or set customer email on the invoice.",
+      );
+    }
+
+    const bodyText =
+      dto.message?.trim() || this.buildShareText(invoice);
+    const shopName = invoice.shop?.shopName || "Your jeweller";
+    const html = `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
+        <h2 style="margin:0 0 8px">${shopName}</h2>
+        <p style="color:#666;margin:0 0 16px">Invoice ${invoice.invoiceNumber}</p>
+        <pre style="white-space:pre-wrap;font-family:inherit;background:#fafafa;padding:16px;border-radius:8px;border:1px solid #eee">${bodyText
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")}</pre>
+        ${
+          invoice.verificationToken
+            ? `<p style="margin-top:16px"><a href="https://www.orivraa.com/verify-bill/${invoice.verificationToken}">Verify this bill on Orivraa</a></p>`
+            : ""
+        }
+        <p style="color:#999;font-size:12px;margin-top:24px">Sent via Orivraa</p>
+      </div>`;
+
+    const result = await this.mailService.sendHtml({
+      to,
+      subject: `Invoice ${invoice.invoiceNumber} from ${shopName}`,
+      html,
+      from: EMAIL_SENDERS.ORDERS,
+    });
+
+    if (!result.success) {
+      this.logger.error(`Invoice email failed: ${result.error}`);
+      throw new BadRequestException(
+        result.error || "Failed to send invoice email",
+      );
+    }
+
+    return { success: true, to, messageId: result.messageId };
+  }
+
+  async shareViaSms(id: string, shopId: string, dto: ShareInvoiceSmsDto) {
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id, shopId },
+      include: {
+        shop: { select: { shopName: true, contactPhone: true } },
+      },
+    });
+    if (!invoice) throw new NotFoundException("Invoice not found");
+
+    const to = (dto.to || invoice.customerPhone || "").trim();
+    if (!to) {
+      throw new BadRequestException(
+        "No phone number. Provide a recipient or set customer phone on the invoice.",
+      );
+    }
+
+    const body =
+      dto.message?.trim() ||
+      this.buildShareText(invoice).slice(0, 450);
+
+    const result = await this.smsService.send(to, body);
+    if (result.skipped) {
+      throw new BadRequestException(
+        "SMS is not configured on the server. Contact support.",
+      );
+    }
+    if (!result.success) {
+      throw new BadRequestException(result.error || "Failed to send SMS");
+    }
+
+    return { success: true, to, sid: result.sid };
   }
 }
