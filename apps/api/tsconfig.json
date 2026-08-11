@@ -20,8 +20,7 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": ["src/*"],
-      "@shared/*": ["../../packages/shared/*"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["src/**/*", "prisma/**/*"],

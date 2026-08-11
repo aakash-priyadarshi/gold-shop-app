@@ -38,10 +38,15 @@ WORKDIR /app/apps/api
 # Generate Prisma client (pinned to match @prisma/client@5.22.0 in package.json)
 RUN npx prisma@5.22.0 generate
 
+# Build shared workspace package (API imports @gold-shop/shared, not source paths)
+WORKDIR /app
+RUN pnpm --filter @gold-shop/shared build
+WORKDIR /app/apps/api
+
 # Build using the locally installed nest CLI (via pnpm exec to guarantee local binary)
 RUN pnpm exec nest build
 
-# Verify dist/src/main.js was produced (tsc outputs to dist/src/ because tsconfig includes both src/ and prisma/)
+# Verify dist/src/main.js was produced (must stay under apps/api/dist/src — not monorepo-root dist/)
 RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found! Listing dist/:" && ls -laR dist/ && exit 1)
 
 EXPOSE 3001
