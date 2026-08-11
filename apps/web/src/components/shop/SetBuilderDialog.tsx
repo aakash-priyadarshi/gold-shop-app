@@ -111,8 +111,57 @@ type Props = {
   shopId: string;
   currencySymbol: string;
   formatCurrency: (n: number) => string;
+  /** Called after create or update succeeds */
   onCreated: () => void;
+  /** When set, dialog loads this set for editing */
+  editingSetId?: string | null;
 };
+
+function emptyNewRow(role = "NECKLACE"): CompRow {
+  return {
+    key: crypto.randomUUID(),
+    mode: "new",
+    role,
+    nameEn: "",
+    sku: `CMP-${Date.now().toString(36).toUpperCase()}`,
+    jewelleryType: role === "NATHUNI" ? "NOSE_PIN" : role,
+    totalWeightGrams: "",
+    metalValueNpr: "",
+    makingChargeNpr: "",
+    gemstoneValueNpr: "0",
+    gemstones: [],
+  };
+}
+
+function mapComponentItemToRow(link: any): CompRow {
+  const item = link.componentItem || link;
+  const comp = item.composition || {};
+  const gems = Array.isArray(comp.gemstones)
+    ? comp.gemstones.map((g: any) => ({
+        type: g.type || "",
+        cut: g.cut || "",
+        caratWeight: Number(g.caratWeight) || 0,
+        color: g.color,
+        clarity: g.clarity,
+        valueNpr: Number(g.valueNpr) || 0,
+      }))
+    : [];
+  return {
+    key: crypto.randomUUID(),
+    mode: "existing",
+    componentItemId: item.id,
+    role: link.role || item.jewelleryType || "OTHER",
+    nameEn: item.nameEn || "",
+    sku: item.sku || "",
+    jewelleryType: item.jewelleryType || "OTHER",
+    totalWeightGrams: String(item.totalWeightGrams ?? ""),
+    metalValueNpr: String(item.metalValueNpr ?? ""),
+    makingChargeNpr: String(item.makingChargeNpr ?? ""),
+    gemstoneValueNpr: String(item.gemstoneValueNpr ?? "0"),
+    gemstones: gems,
+    totalPriceNpr: item.totalPriceNpr,
+  };
+}
 
 export function SetBuilderDialog({
   open,
@@ -121,8 +170,10 @@ export function SetBuilderDialog({
   currencySymbol,
   formatCurrency,
   onCreated,
+  editingSetId = null,
 }: Props) {
   const t = useT();
+  const isEditing = !!editingSetId;
   const [nameEn, setNameEn] = useState("");
   const [sku, setSku] = useState("");
   const [discountType, setDiscountType] = useState<"PERCENT" | "FIXED">(
@@ -134,31 +185,14 @@ export function SetBuilderDialog({
   const [availablePieces, setAvailablePieces] = useState<any[]>([]);
   const [components, setComponents] = useState<CompRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingSet, setLoadingSet] = useState(false);
 
   useEffect(() => {
     if (!open || !shopId) return;
-    setNameEn("");
-    setSku(`SET-${Date.now().toString(36).toUpperCase()}`);
-    setDiscountType("PERCENT");
-    setDiscountValue("5");
-    setLocationId("");
-    setComponents([
-      {
-        key: crypto.randomUUID(),
-        mode: "new",
-        role: "NECKLACE",
-        nameEn: "",
-        sku: `CMP-${Date.now().toString(36).toUpperCase()}`,
-        jewelleryType: "NECKLACE",
-        totalWeightGrams: "",
-        metalValueNpr: "",
-        makingChargeNpr: "",
-        gemstoneValueNpr: "0",
-        gemstones: [],
-      },
-    ]);
+    let cancelled = false;
 
     (async () => {
+      setLoadingSet(true);
       try {
         const [locRes, invRes] = await Promise.all([
           inventoryApi.getStorageLocations(shopId),
@@ -168,30 +202,77 @@ export function SetBuilderDialog({
             limit: 100,
           }),
         ]);
+        if (cancelled) return;
+
         const locData = locRes.data?.data ?? locRes.data;
         setLocations(locData?.flat || []);
         const items =
           invRes.data?.items || invRes.data?.data?.items || invRes.data || [];
-        setAvailablePieces(
-          (Array.isArray(items) ? items : []).filter(
-            (i: any) => i.jewelleryType !== "SET",
-          ),
+        let pieces = (Array.isArray(items) ? items : []).filter(
+          (i: any) => i.jewelleryType !== "SET",
         );
+
+        if (editingSetId) {
+          const setRes = await inventoryApi.getSet(shopId, editingSetId);
+          if (cancelled) return;
+          const set = setRes.data?.data ?? setRes.data;
+          setNameEn(set.nameEn || "");
+          setSku(set.sku || "");
+          setDiscountType(
+            (set.setDiscountType as "PERCENT" | "FIXED") || "PERCENT",
+          );
+          setDiscountValue(String(set.setDiscountValue ?? 0));
+          setLocationId(set.locationId || "");
+
+          const links = set.setComponents || [];
+          const rows = links.map(mapComponentItemToRow);
+          setComponents(rows.length ? rows : [emptyNewRow()]);
+
+          // Current set pieces are HIDDEN / excluded — merge so the picker still works
+          const linkedPieces = links
+            .map((l: any) => l.componentItem)
+            .filter(Boolean);
+          const byId = new Map(pieces.map((p: any) => [p.id, p]));
+          for (const p of linkedPieces) byId.set(p.id, p);
+          pieces = Array.from(byId.values());
+        } else {
+          setNameEn("");
+          setSku(`SET-${Date.now().toString(36).toUpperCase()}`);
+          setDiscountType("PERCENT");
+          setDiscountValue("5");
+          setLocationId("");
+          setComponents([emptyNewRow("NECKLACE")]);
+        }
+
+        setAvailablePieces(pieces);
       } catch (err) {
         console.error(err);
+        toast({
+          title: t("Failed to load set"),
+          description: t("Could not open the set editor"),
+          variant: "destructive",
+        });
+      } finally {
+        if (!cancelled) setLoadingSet(false);
       }
     })();
-  }, [open, shopId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, shopId, editingSetId, t]);
 
   const componentSum = useMemo(() => {
     return components.reduce((sum, c) => {
-      if (c.mode === "existing" && c.totalPriceNpr != null) {
-        return sum + c.totalPriceNpr;
-      }
       const metal = parseFloat(c.metalValueNpr) || 0;
       const making = parseFloat(c.makingChargeNpr) || 0;
       const gem = parseFloat(c.gemstoneValueNpr) || 0;
-      return sum + metal + making + gem;
+      const fromFields = metal + making + gem;
+      if (fromFields > 0) return sum + fromFields;
+      if (c.mode === "existing" && c.totalPriceNpr != null) {
+        return sum + c.totalPriceNpr;
+      }
+      return sum;
     }, 0);
   }, [components]);
 
@@ -253,22 +334,7 @@ export function SetBuilderDialog({
   };
 
   const addRow = () => {
-    setComponents((rows) => [
-      ...rows,
-      {
-        key: crypto.randomUUID(),
-        mode: "new",
-        role: "EARRING",
-        nameEn: "",
-        sku: `CMP-${Date.now().toString(36).toUpperCase()}`,
-        jewelleryType: "EARRING",
-        totalWeightGrams: "",
-        metalValueNpr: "",
-        makingChargeNpr: "",
-        gemstoneValueNpr: "0",
-        gemstones: [],
-      },
-    ]);
+    setComponents((rows) => [...rows, emptyNewRow("EARRING")]);
   };
 
   const handleSubmit = async () => {
@@ -285,6 +351,23 @@ export function SetBuilderDialog({
         variant: "destructive",
       });
       return;
+    }
+
+    for (const c of components) {
+      if (c.mode === "existing" && !c.componentItemId) {
+        toast({
+          title: t("Pick an inventory piece for each Existing row"),
+          variant: "destructive",
+        });
+        return;
+      }
+      if (c.mode === "new" && !c.nameEn.trim()) {
+        toast({
+          title: t("Each new piece needs a name"),
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     const payloadComponents = components.map((c, i) => {
@@ -313,32 +396,52 @@ export function SetBuilderDialog({
       };
     });
 
-    for (const c of payloadComponents) {
-      if (!(c as any).componentItemId && !(c as any).nameEn) {
-        toast({
-          title: t("Each new piece needs a name"),
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
     setSubmitting(true);
     try {
-      await inventoryApi.createSet(shopId, {
-        nameEn: nameEn.trim(),
-        sku: sku.trim(),
-        setDiscountType: discountType,
-        setDiscountValue: parseFloat(discountValue) || 0,
-        locationId: locationId || undefined,
-        components: payloadComponents,
-      });
-      toast({ title: t("Set created") });
+      for (const c of components) {
+        if (c.mode !== "existing" || !c.componentItemId) continue;
+        const metal = parseFloat(c.metalValueNpr) || 0;
+        const making = parseFloat(c.makingChargeNpr) || 0;
+        const gem = parseFloat(c.gemstoneValueNpr) || 0;
+        await inventoryApi.update(c.componentItemId, {
+          nameEn: c.nameEn || undefined,
+          jewelleryType: c.jewelleryType || undefined,
+          totalWeightGrams: parseFloat(c.totalWeightGrams) || 0.01,
+          metalValueNpr: metal,
+          makingChargeNpr: making,
+          gemstoneValueNpr: gem,
+          composition: {
+            baseAlloy: { metal: "GOLD", purity: "22K" },
+            gemstones: c.gemstones.filter((g) => g.type),
+          },
+        });
+      }
+
+      if (isEditing && editingSetId) {
+        await inventoryApi.updateSet(shopId, editingSetId, {
+          nameEn: nameEn.trim(),
+          setDiscountType: discountType,
+          setDiscountValue: parseFloat(discountValue) || 0,
+          locationId: locationId || null,
+          components: payloadComponents,
+        });
+        toast({ title: t("Set updated") });
+      } else {
+        await inventoryApi.createSet(shopId, {
+          nameEn: nameEn.trim(),
+          sku: sku.trim(),
+          setDiscountType: discountType,
+          setDiscountValue: parseFloat(discountValue) || 0,
+          locationId: locationId || undefined,
+          components: payloadComponents,
+        });
+        toast({ title: t("Set created") });
+      }
       onOpenChange(false);
       onCreated();
     } catch (err: any) {
       toast({
-        title: t("Failed to create set"),
+        title: isEditing ? t("Failed to update set") : t("Failed to create set"),
         description:
           err?.response?.data?.message || err?.message || "Unknown error",
         variant: "destructive",
@@ -353,17 +456,35 @@ export function SetBuilderDialog({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            <T>Add jewelry set</T>
+            {isEditing ? <T>Edit jewelry set</T> : <T>Add jewelry set</T>}
           </DialogTitle>
           <DialogDescription>
-            <T>
-              Create a bridal or matching set with its own SKU. Components stay
-              linked and are not sold separately until you break the set.
-            </T>
+            {isEditing ? (
+              <T>
+                Update set name, discount, and linked pieces. Component prices
+                you change here are saved on each piece before the set total is
+                recalculated.
+              </T>
+            ) : (
+              <T>
+                Create a bridal or matching set with its own SKU. Components stay
+                linked and are not sold separately until you break the set.
+              </T>
+            )}
           </DialogDescription>
         </DialogHeader>
 
+        {loadingSet ? (
+          <div className="flex items-center justify-center py-16 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+            <T>Loading set…</T>
+          </div>
+        ) : (
         <div className="space-y-4">
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <T>Set details</T>
+            </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <Label>
@@ -379,8 +500,18 @@ export function SetBuilderDialog({
               <Label>
                 <T>Set SKU</T>
               </Label>
-              <Input value={sku} onChange={(e) => setSku(e.target.value)} />
+              <Input
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                disabled={isEditing}
+              />
+              {isEditing && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  <T>SKU cannot be changed after the set is created</T>
+                </p>
+              )}
             </div>
+          </div>
           </div>
 
           {locations.length > 0 && (
@@ -491,14 +622,26 @@ export function SetBuilderDialog({
                 </div>
 
                 {c.mode === "existing" ? (
+                  <div className="space-y-2">
                   <Select
                     value={c.componentItemId || ""}
                     onValueChange={(id) => {
                       const piece = availablePieces.find((p) => p.id === id);
+                      if (!piece) {
+                        updateRow(c.key, {
+                          componentItemId: id,
+                          totalPriceNpr: undefined,
+                        });
+                        return;
+                      }
+                      const mapped = mapComponentItemToRow({
+                        role: c.role,
+                        componentItem: piece,
+                      });
                       updateRow(c.key, {
-                        componentItemId: id,
-                        totalPriceNpr: piece?.totalPriceNpr,
-                        nameEn: piece?.nameEn,
+                        ...mapped,
+                        key: c.key,
+                        role: c.role,
                       });
                     }}
                   >
@@ -514,6 +657,91 @@ export function SetBuilderDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                  {c.componentItemId && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      <div className="col-span-2">
+                        <Label className="text-xs">
+                          <T>Name</T>
+                        </Label>
+                        <Input
+                          value={c.nameEn}
+                          onChange={(e) =>
+                            updateRow(c.key, { nameEn: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">
+                          <T>Weight (g)</T>
+                        </Label>
+                        <Input
+                          type="number"
+                          value={c.totalWeightGrams}
+                          onChange={(e) =>
+                            updateRow(c.key, {
+                              totalWeightGrams: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">
+                          <T>Metal value</T>
+                        </Label>
+                        <Input
+                          type="number"
+                          value={c.metalValueNpr}
+                          onChange={(e) =>
+                            updateRow(c.key, {
+                              metalValueNpr: e.target.value,
+                              totalPriceNpr:
+                                (parseFloat(e.target.value) || 0) +
+                                (parseFloat(c.makingChargeNpr) || 0) +
+                                (parseFloat(c.gemstoneValueNpr) || 0),
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">
+                          <T>Making</T>
+                        </Label>
+                        <Input
+                          type="number"
+                          value={c.makingChargeNpr}
+                          onChange={(e) =>
+                            updateRow(c.key, {
+                              makingChargeNpr: e.target.value,
+                              totalPriceNpr:
+                                (parseFloat(c.metalValueNpr) || 0) +
+                                (parseFloat(e.target.value) || 0) +
+                                (parseFloat(c.gemstoneValueNpr) || 0),
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">
+                          <T>Gemstone value</T>
+                        </Label>
+                        <Input
+                          type="number"
+                          value={c.gemstoneValueNpr}
+                          onChange={(e) =>
+                            updateRow(c.key, {
+                              gemstoneValueNpr: e.target.value,
+                              totalPriceNpr:
+                                (parseFloat(c.metalValueNpr) || 0) +
+                                (parseFloat(c.makingChargeNpr) || 0) +
+                                (parseFloat(e.target.value) || 0),
+                            })
+                          }
+                          readOnly={c.gemstones.length > 0}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  </div>
                 ) : (
                   <>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -790,14 +1018,15 @@ export function SetBuilderDialog({
             </div>
           </div>
         </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             <T>Cancel</T>
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
+          <Button onClick={handleSubmit} disabled={submitting || loadingSet}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            <T>Create set</T>
+            {isEditing ? <T>Save set</T> : <T>Create set</T>}
           </Button>
         </DialogFooter>
       </DialogContent>

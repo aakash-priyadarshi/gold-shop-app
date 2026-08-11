@@ -160,6 +160,14 @@ export class InventoryService {
       updateData.descriptionNe = dto.descriptionNe;
     if (dto.descriptionHi !== undefined)
       updateData.descriptionHi = dto.descriptionHi;
+    if (dto.jewelleryType !== undefined)
+      updateData.jewelleryType = dto.jewelleryType as JewelleryType;
+    if (dto.buildMethod !== undefined) updateData.buildMethod = dto.buildMethod;
+    if (dto.composition !== undefined) updateData.composition = dto.composition;
+    if (dto.totalWeightGrams !== undefined)
+      updateData.totalWeightGrams = dto.totalWeightGrams;
+    if (dto.dimensions !== undefined) updateData.dimensions = dto.dimensions;
+    if (dto.gemstones !== undefined) updateData.gemstones = dto.gemstones;
     if (dto.stockQuantity !== undefined)
       updateData.stockQuantity = dto.stockQuantity;
     if (dto.status !== undefined)

@@ -239,6 +239,8 @@ export class InventorySetsService {
     shopId: string,
     input: SetComponentInputDto,
     setLocationId?: string,
+    /** When updating a set, allow re-linking pieces that belong to this set */
+    allowSetId?: string,
   ) {
     if (input.componentItemId) {
       const item = await tx.inventoryItem.findFirst({
@@ -255,7 +257,7 @@ export class InventorySetsService {
       const already = await tx.inventorySetComponent.findUnique({
         where: { componentItemId: item.id },
       });
-      if (already) {
+      if (already && already.setItemId !== allowSetId) {
         throw new ConflictException(
           `${item.nameEn} is already part of another set`,
         );
@@ -365,6 +367,7 @@ export class InventorySetsService {
             shopId,
             dto.components[i],
             dto.locationId ?? set.locationId ?? undefined,
+            setId,
           );
           resolved.push({
             componentItemId: item.id,

@@ -277,6 +277,7 @@ export default function ShopProductsPage() {
   // Form state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSetDialogOpen, setIsSetDialogOpen] = useState(false);
+  const [editingSetId, setEditingSetId] = useState<string | null>(null);
   const [storageLocations, setStorageLocations] = useState<any[]>([]);
   // Live pricing toggle for catalog list
   const [livePricing, setLivePricing] = useState(false);
@@ -406,7 +407,19 @@ export default function ShopProductsPage() {
     setIsDialogOpen(true);
   };
 
+  const openAddSetDialog = () => {
+    setEditingSetId(null);
+    setIsSetDialogOpen(true);
+  };
+
   const openEditDialog = (product: InventoryItem) => {
+    // Sets must use the set builder — not the single-product form
+    if (product.jewelleryType === "SET") {
+      setEditingSetId(product.id);
+      setIsSetDialogOpen(true);
+      return;
+    }
+
     setEditingProduct(product);
     const comp = product.composition || {};
     setFormData({
@@ -798,7 +811,7 @@ export default function ShopProductsPage() {
               <Button
                 variant="outline"
                 data-tour="inventory-add-set"
-                onClick={() => setIsSetDialogOpen(true)}
+                onClick={openAddSetDialog}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 <T>Add Set</T>
@@ -1265,7 +1278,11 @@ export default function ShopProductsPage() {
                               size="sm"
                               variant="ghost"
                               onClick={() => openEditDialog(product)}
-                              title="Edit product"
+                              title={
+                                product.jewelleryType === "SET"
+                                  ? t("Edit set")
+                                  : t("Edit product")
+                              }
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -1291,20 +1308,24 @@ export default function ShopProductsPage() {
 
         {/* Add/Edit Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingProduct ? t("Edit Product") : t("Add New Product")}
               </DialogTitle>
               <DialogDescription>
                 {editingProduct
-                  ? t("Update your product details")
-                  : t("Add a new jewellery item to your inventory")}
+                  ? t("Update metal, stones, pricing, and photos for this piece")
+                  : t("Add a single jewellery piece to your catalog. Use Add Set for bridal or matching sets.")}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
+            <div className="space-y-5 py-2">
               {/* Basic Info */}
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <T>Basic details</T>
+                </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="name">
@@ -1455,24 +1476,28 @@ export default function ShopProductsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="description">
+                    <T>Description</T>
+                  </Label>
+                  <Textarea
+                    id="description"
+                    value={formData.descriptionEn}
+                    onChange={(e) =>
+                      setFormData({ ...formData, descriptionEn: e.target.value })
+                    }
+                    placeholder="Describe your product..."
+                    rows={2}
+                  />
+                </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">
-                  <T>Description</T>
-                </Label>
-                <Textarea
-                  id="description"
-                  value={formData.descriptionEn}
-                  onChange={(e) =>
-                    setFormData({ ...formData, descriptionEn: e.target.value })
-                  }
-                  placeholder="Describe your product..."
-                  rows={3}
-                />
               </div>
 
               {/* Material Info */}
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <T>Metal &amp; construction</T>
+                </p>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="buildMethod">
@@ -1612,13 +1637,14 @@ export default function ShopProductsPage() {
                   />
                 </div>
               </div>
+              </div>
 
               {/* Gemstones Section */}
-              <div className="space-y-3">
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
                 <div className="flex justify-between items-center">
-                  <Label>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     <T>Gemstones</T>
-                  </Label>
+                  </p>
                   <Button
                     type="button"
                     variant="outline"
@@ -1629,12 +1655,17 @@ export default function ShopProductsPage() {
                     <T>Add Gemstone</T>
                   </Button>
                 </div>
+                {formData.gemstones.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    <T>Optional. Add stones and use the sparkle button for a price suggestion.</T>
+                  </p>
+                )}
                 {formData.gemstones.length > 0 && (
                   <div className="space-y-3">
                     {formData.gemstones.map((gem, idx) => (
                       <div
                         key={idx}
-                        className="border rounded-lg p-3 space-y-3"
+                        className="border rounded-lg p-3 space-y-3 bg-background"
                       >
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium">
@@ -1833,6 +1864,10 @@ export default function ShopProductsPage() {
               </div>
 
               {/* Pricing */}
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <T>Pricing</T>
+                </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="metalValue">
@@ -1964,7 +1999,7 @@ export default function ShopProductsPage() {
               </div>
 
               {/* Total */}
-              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+              <div className="bg-background border p-4 rounded-lg">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">
                     <T>Total Price</T>
@@ -1974,12 +2009,13 @@ export default function ShopProductsPage() {
                   </span>
                 </div>
               </div>
+              </div>
 
               {/* Images */}
-              <div className="space-y-3">
-                <Label>
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <T>Product Images (max 3)</T>
-                </Label>
+                </p>
 
                 {/* File Upload */}
                 <div
@@ -2136,8 +2172,12 @@ export default function ShopProductsPage() {
         {user?.shop?.id && (
           <SetBuilderDialog
             open={isSetDialogOpen}
-            onOpenChange={setIsSetDialogOpen}
+            onOpenChange={(open) => {
+              setIsSetDialogOpen(open);
+              if (!open) setEditingSetId(null);
+            }}
             shopId={user.shop.id}
+            editingSetId={editingSetId}
             currencySymbol={currency.symbol}
             formatCurrency={(n) =>
               `${currency.symbol} ${n.toLocaleString(undefined, {
