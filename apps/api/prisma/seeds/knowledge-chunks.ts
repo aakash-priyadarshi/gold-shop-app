@@ -181,7 +181,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "billing_wastage",
     content:
-      "Billing wastage (also called jarti) is the customer-facing manufacturing-loss charge on invoices — separate from karigar workshop wastage limits in Supply Chain. On Create Invoice, use Calculate wastage after entering metal weight and cost. Hover How is this calculated? to see the formula. Weight % mode: wastage grams = net weight × %, amount = wastage grams × (metal cost ÷ net weight). Metal value % mode: wastage = metal cost × %. Country defaults: Sri Lanka/India/Nepal often on; US/UK/EU/UAE off by default. Change permanent mode and default % under Shop Settings → Preferences → Billing Wastage. Wastage is taxed like metal and shown as its own line on the bill.",
+      "Billing wastage (also called jarti) is the customer-facing manufacturing-loss charge on Create Invoice — separate from karigar workshop wastage limits in Supply Chain. After entering metal weight and metal cost on line items, click Calculate wastage. Hover the small link How is this calculated? to see the formula tooltip. Weight % mode: (1) wastage grams = net weight × (wastage % ÷ 100); (2) rate per gram = metal cost ÷ net weight; (3) wastage amount = wastage grams × rate; bill = metal + wastage + making + stones + tax. Metal value % mode: wastage amount = metal cost × (wastage % ÷ 100). If weight is missing, weight mode falls back to metal value %. Country defaults: Sri Lanka ~6%, India (jarti) ~5%, Nepal ~4% (weight %); UAE/UK/EU/US off by default. Change permanent calculation mode and default % under Shop Settings → Preferences → Billing Wastage (link Change wastage settings on the invoice page). Per-invoice % can be overridden before calculating. Wastage is taxed like precious metal and appears as its own line on the bill/totals.",
   },
 ];
 
@@ -238,10 +238,20 @@ async function main() {
   }
 
   let count = 0;
+  /** Topics whose content changed — re-embed even if already seeded. */
+  const FORCE_REFRESH = new Set(["billing_wastage"]);
+
   for (const chunk of CHUNKS) {
-    if (done.has(chunk.topic)) {
+    if (done.has(chunk.topic) && !FORCE_REFRESH.has(chunk.topic)) {
       console.log(`  Skipping [${chunk.topic}] (already done)`);
       continue;
+    }
+    if (FORCE_REFRESH.has(chunk.topic) && done.has(chunk.topic)) {
+      await prisma.$executeRawUnsafe(
+        `DELETE FROM "KnowledgeChunk" WHERE topic = $1`,
+        chunk.topic,
+      );
+      console.log(`  Refreshing [${chunk.topic}]…`);
     }
     process.stdout.write(`  Embedding [${chunk.topic}]… `);
     const vector = await embedWithRetry(chunk.content);

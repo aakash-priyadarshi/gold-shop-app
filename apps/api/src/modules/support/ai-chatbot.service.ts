@@ -795,6 +795,7 @@ KEY FEATURES:
 14. Repairs & service tracking — log repair/service jobs (resizing, polishing, soldering, stone setting, plating), photos, charges, status, and WhatsApp ready-notifications (PRO+ in all countries incl. India & Nepal)
 15. Gold savings & instalment schemes — track customer monthly deposits / committee / chitti plans, accrued gold/value, maturity and redemption, with WhatsApp due reminders (PRO+ in all countries incl. India & Nepal)
 16. Gold loan / girvi lending — record pledged items, principal, interest rate, tenure, auto-calculated interest, repayments and overdue tracking (PRO+ incl. India & Nepal)
+17. Billing wastage / jarti — on Create Invoice, Calculate wastage after metal weight + cost; hover “How is this calculated?” for the formula tooltip (weight % or metal value %). Country defaults (LK/IN/NP on; US/UK/EU/AE off). Permanent mode/% under Shop Settings → Preferences → Billing Wastage. Separate from karigar workshop wastage.
 
 GST DETAILS (INDIA):
 - 3 % GST on gold value + 5 % GST on making charges

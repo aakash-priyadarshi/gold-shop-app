@@ -350,7 +350,17 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Preferences Tab",
         description:
-          "Under Preferences, configure making charge %, Cash on Delivery toggle, and min/max order values. Under Payment Methods, add your bank account for payouts.",
+          "Under Preferences, configure making charge %, Billing Wastage (jarti) mode and default %, Cash on Delivery, and min/max order values. Under Payment Methods, add your bank account for payouts.",
+      },
+    },
+    {
+      element: "[data-tour='shop-wastage-settings']",
+      popover: {
+        title: "Billing Wastage Settings",
+        description:
+          "Set how customer wastage is calculated on invoices: Auto (follow invoice country), Weight %, Metal value %, or Disabled. Leave % blank to use the country default. Invoice create has a Calculate wastage button and a How is this calculated? formula tooltip that links here.",
+        side: "top",
+        align: "start",
       },
     },
   ],
@@ -461,11 +471,21 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='invoice-create-wastage']",
+      popover: {
+        title: "Billing Wastage (Jarti)",
+        description:
+          "After metal weight and cost are set, click Calculate wastage to add manufacturing loss as a separate charge. Hover How is this calculated? to see the formula (weight % or metal value %). Use Change wastage settings to open Shop Settings → Preferences and change the permanent mode or default %. Country defaults differ (e.g. Sri Lanka/India/Nepal often on; US/UK off). This is customer billing wastage — not karigar workshop limits.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
       element: "[data-tour='invoice-create-totals']",
       popover: {
         title: "Invoice Totals & Tax Breakdown",
         description:
-          "See the live subtotal, making charge, tax breakdown (metal tax vs making tax vs gemstone tax), discount, and grand total. The tax is split exactly as required for GSTR-1 filing — you don't need to calculate anything manually. Click 'Create Invoice' to generate a print-ready GST/VAT bill.",
+          "See the live subtotal (including wastage when calculated), making charge, tax breakdown (metal, wastage, making, gemstone), discount, and grand total. Tax is split for filing reports — you don't need to calculate manually. Click Create Invoice to generate a print-ready GST/VAT bill.",
         side: "top",
         align: "end",
       },
