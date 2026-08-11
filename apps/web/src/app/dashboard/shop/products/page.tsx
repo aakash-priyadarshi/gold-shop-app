@@ -32,6 +32,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { T } from "@/components/ui/T";
 import {
     Table,
@@ -60,8 +61,10 @@ import {
     RefreshCw,
     Scale,
     Search,
+    Sparkles,
     Trash2,
     Unlink,
+    Zap,
 } from "lucide-react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -275,12 +278,22 @@ export default function ShopProductsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSetDialogOpen, setIsSetDialogOpen] = useState(false);
   const [storageLocations, setStorageLocations] = useState<any[]>([]);
+  // Live pricing toggle for catalog list
+  const [livePricing, setLivePricing] = useState(false);
+  const [livePrices, setLivePrices] = useState<Record<string, any>>({});
+  const [livePricingLoading, setLivePricingLoading] = useState(false);
+
+  // Gemstone suggestion state
+  const [gemSuggesting, setGemSuggesting] = useState<number | null>(null);
+
+  // Reprice
   const [repriceOpen, setRepriceOpen] = useState(false);
   const [repriceLoading, setRepriceLoading] = useState(false);
   const [repriceApplying, setRepriceApplying] = useState(false);
   const [repricePreview, setRepricePreview] = useState<any>(null);
   const [repriceSelected, setRepriceSelected] = useState<Set<string>>(new Set());
   const [makingChargeMode, setMakingChargeMode] = useState<"KEEP" | "RECALC_PERCENT">("KEEP");
+  const [repriceMode, setRepriceMode] = useState<"FROM_SHOP_RATES" | "FROM_MARKET_RATES">("FROM_SHOP_RATES");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<InventoryItem | null>(
     null,
@@ -507,6 +520,91 @@ export default function ShopProductsPage() {
     });
   };
 
+  // Fetch gemstone price suggestion from backend resolver
+  const suggestGemstonePrice = async (index: number) => {
+    if (!user?.shop?.id) return;
+    const gem = formData.gemstones[index];
+    if (!gem.type) {
+      toast({ title: t("Select gemstone type first"), variant: "destructive" });
+      return;
+    }
+
+    setGemSuggesting(index);
+    try {
+      const { pricingApi } = await import("@/lib/api");
+      const res = await pricingApi.resolveGemstone({
+        shopId: user.shop.id,
+        stoneType: gem.type,
+        caratWeight: gem.caratWeight || undefined,
+        quality: gem.clarity || "STANDARD",
+        count: 1,
+      });
+      const data = res.data;
+      if (data?.effectivePerStone != null) {
+        updateGemstone(index, "valueNpr", data.effectivePerStone);
+        toast({
+          title: t("Price suggested"),
+          description: `${data.source === "SHOP" ? t("Your shop rate") : t("Orivraa reference")}: ${currency.symbol}${data.effectivePerStone.toLocaleString()}`,
+        });
+      }
+    } catch {
+      toast({
+        title: t("Suggestion unavailable"),
+        description: t("Enter price manually"),
+        variant: "destructive",
+      });
+    } finally {
+      setGemSuggesting(null);
+    }
+  };
+
+  // Fetch live prices for visible catalog items
+  const fetchLivePrices = async (itemIds: string[]) => {
+    if (!user?.shop?.id || itemIds.length === 0) return;
+    setLivePricingLoading(true);
+    try {
+      const { pricingApi } = await import("@/lib/api");
+      const res = await pricingApi.resolveBulk(user.shop.id, itemIds);
+      if (res.data?.items) {
+        setLivePrices(res.data.items);
+      }
+    } catch {
+      // Silently fail — stored prices remain visible
+    } finally {
+      setLivePricingLoading(false);
+    }
+  };
+
+  // Load live pricing preference from localStorage
+  useEffect(() => {
+    if (!user?.shop?.id) return;
+    const saved = localStorage.getItem(`orivraa:livePricing:${user.shop.id}`);
+    if (saved === "true") setLivePricing(true);
+  }, [user?.shop?.id]);
+
+  // Persist live pricing preference
+  useEffect(() => {
+    if (!user?.shop?.id) return;
+    localStorage.setItem(
+      `orivraa:livePricing:${user.shop.id}`,
+      String(livePricing),
+    );
+  }, [livePricing, user?.shop?.id]);
+
+  // Fetch live prices when toggle turns on or products change
+  useEffect(() => {
+    if (!livePricing || !user?.shop?.id) {
+      setLivePrices({});
+      return;
+    }
+    const ids = filteredProducts
+      .filter((p) => p.status === "AVAILABLE" && p.jewelleryType !== "SET")
+      .slice(0, 50)
+      .map((p) => p.id);
+    if (ids.length > 0) fetchLivePrices(ids);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [livePricing, products, user?.shop?.id]);
+
   const handleSubmit = async () => {
     if (!user?.shop?.id) return;
 
@@ -650,7 +748,20 @@ export default function ShopProductsPage() {
                 <T>Pre-built items you can add to catalogues, sell via POS, and invoice. Vault & Tags shows the physical location view.</T>
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
+              {/* Live pricing toggle */}
+              <div className="flex items-center gap-2 mr-2">
+                <Switch
+                  id="live-pricing-toggle"
+                  checked={livePricing}
+                  onCheckedChange={setLivePricing}
+                />
+                <Label htmlFor="live-pricing-toggle" className="text-sm cursor-pointer flex items-center gap-1">
+                  <Zap className="h-3.5 w-3.5 text-amber-500" />
+                  <T>Live pricing</T>
+                  {livePricingLoading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
+                </Label>
+              </div>
               <Button
                 variant="outline"
                 data-tour="inventory-reprice"
@@ -661,6 +772,7 @@ export default function ShopProductsPage() {
                   setRepricePreview(null);
                   try {
                     const res = await inventoryApi.repricePreview(user.shop.id, {
+                      mode: repriceMode,
                       makingChargeMode,
                     });
                     const data = res.data?.data ?? res.data;
@@ -712,6 +824,39 @@ export default function ShopProductsPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="flex flex-wrap items-center gap-3">
+                <Label className="text-sm"><T>Rate source</T></Label>
+                <Select
+                  value={repriceMode}
+                  onValueChange={async (v: "FROM_SHOP_RATES" | "FROM_MARKET_RATES") => {
+                    setRepriceMode(v);
+                    if (!user?.shop?.id) return;
+                    setRepriceLoading(true);
+                    try {
+                      const res = await inventoryApi.repricePreview(user.shop.id, {
+                        mode: v,
+                        makingChargeMode,
+                      });
+                      const data = res.data?.data ?? res.data;
+                      setRepricePreview(data);
+                      setRepriceSelected(
+                        new Set((data?.items || []).map((i: any) => i.id)),
+                      );
+                    } finally {
+                      setRepriceLoading(false);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FROM_SHOP_RATES"><T>Your shop rates</T></SelectItem>
+                    <SelectItem value="FROM_MARKET_RATES">
+                      <T>Orivraa reference (live market)</T>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
                 <Label className="text-sm"><T>Making charges</T></Label>
                 <Select
                   value={makingChargeMode}
@@ -721,6 +866,7 @@ export default function ShopProductsPage() {
                     setRepriceLoading(true);
                     try {
                       const res = await inventoryApi.repricePreview(user.shop.id, {
+                        mode: repriceMode,
                         makingChargeMode: v,
                       });
                       const data = res.data?.data ?? res.data;
@@ -1027,12 +1173,35 @@ export default function ShopProductsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">
-                              {currency.symbol}{" "}
-                              {product.totalPriceNpr?.toLocaleString() || 0}
-                            </span>
-                          </div>
+                          {livePricing && livePrices[product.id] ? (
+                            <div>
+                              <span className="font-medium">
+                                {currency.symbol}{" "}
+                                {Math.round(livePrices[product.id].effectiveTotal).toLocaleString()}
+                              </span>
+                              {livePrices[product.id].storedTotal != null &&
+                                livePrices[product.id].storedTotal !== livePrices[product.id].effectiveTotal && (
+                                <span className="block text-xs text-muted-foreground line-through">
+                                  {currency.symbol}{" "}
+                                  {Math.round(livePrices[product.id].storedTotal).toLocaleString()}
+                                </span>
+                              )}
+                              {livePrices[product.id].components?.some(
+                                (c: any) => c.source === "SHOP",
+                              ) && (
+                                <Badge variant="secondary" className="text-[9px] ml-1">
+                                  <T>Shop rate</T>
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">
+                                {currency.symbol}{" "}
+                                {product.totalPriceNpr?.toLocaleString() || 0}
+                              </span>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -1528,19 +1697,36 @@ export default function ShopProductsPage() {
                               )
                             }
                           />
-                          <Input
-                            type="number"
-                            placeholder={`Value (${currency.code})`}
-                            className="h-9"
-                            value={gem.valueNpr || ""}
-                            onChange={(e) =>
-                              updateGemstone(
-                                idx,
-                                "valueNpr",
-                                parseFloat(e.target.value) || 0,
-                              )
-                            }
-                          />
+                          <div className="flex gap-1">
+                            <Input
+                              type="number"
+                              placeholder={`Value (${currency.code})`}
+                              className="h-9 flex-1"
+                              value={gem.valueNpr || ""}
+                              onChange={(e) =>
+                                updateGemstone(
+                                  idx,
+                                  "valueNpr",
+                                  parseFloat(e.target.value) || 0,
+                                )
+                              }
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-9 px-2 shrink-0"
+                              title={t("Get price suggestion")}
+                              disabled={gemSuggesting === idx || !gem.type}
+                              onClick={() => suggestGemstonePrice(idx)}
+                            >
+                              {gemSuggesting === idx ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                              )}
+                            </Button>
+                          </div>
                         </div>
 
                         {/* 4Cs grading + lab certificate */}
@@ -1652,18 +1838,59 @@ export default function ShopProductsPage() {
                   <Label htmlFor="metalValue">
                     Metal Value ({currency.code})
                   </Label>
-                  <Input
-                    id="metalValue"
-                    type="number"
-                    value={formData.metalValueNpr}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        metalValueNpr: e.target.value,
-                      })
-                    }
-                    placeholder="e.g., 50000"
-                  />
+                  <div className="flex gap-1">
+                    <Input
+                      id="metalValue"
+                      type="number"
+                      value={formData.metalValueNpr}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          metalValueNpr: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., 50000"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 px-2 shrink-0"
+                      title={t("Suggest from live rate")}
+                      disabled={!formData.metalType || !formData.totalWeightGrams}
+                      onClick={async () => {
+                        if (!user?.shop?.id) return;
+                        try {
+                          const { pricingApi } = await import("@/lib/api");
+                          const res = await pricingApi.resolve({
+                            shopId: user.shop.id,
+                            composition: {
+                              metalType: formData.metalType,
+                              metalWeightG: parseFloat(formData.totalWeightGrams) || 0,
+                              purity: parseFloat(formData.purity) || undefined,
+                            },
+                          });
+                          const metalComp = res.data?.components?.find(
+                            (c: any) => c.component === "METAL",
+                          );
+                          if (metalComp) {
+                            setFormData((prev) => ({
+                              ...prev,
+                              metalValueNpr: String(metalComp.effectiveAmount),
+                            }));
+                            toast({
+                              title: t("Metal value suggested"),
+                              description: `${metalComp.source === "SHOP" ? t("Your shop rate") : t("Live market rate")}: ${currency.symbol}${metalComp.effectiveAmount.toLocaleString()}`,
+                            });
+                          }
+                        } catch {
+                          toast({ title: t("Suggestion unavailable"), variant: "destructive" });
+                        }
+                      }}
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="makingCharge">

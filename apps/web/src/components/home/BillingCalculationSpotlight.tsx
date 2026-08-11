@@ -21,6 +21,11 @@ const PILLARS = [
     desc: "Metal lines refresh from today's rate card — gram, tola, ounce, or laal — so counter staff never bill on yesterday's price.",
   },
   {
+    icon: Gem,
+    title: "Gemstone pricing engine",
+    desc: "Diamonds, ruby, sapphire, and more — priced by type, size, quality tier, and origin (natural vs lab-grown). Set your own shop rates or use Orivraa's reference catalog.",
+  },
+  {
     icon: Calculator,
     title: "Making + wastage (jarti)",
     desc: "Labour and customer wastage stay separate lines. Change weight or rate and the whole bill recalculates instantly.",
@@ -29,6 +34,11 @@ const PILLARS = [
     icon: Receipt,
     title: "Country-aware tax",
     desc: "GST, Skill Promotion Fee, gemstone VAT, UAE/UK/EU VAT, US sales tax, and Sri Lanka VAT — each shown on the invoice, not buried in one total.",
+  },
+  {
+    icon: Layers,
+    title: "Your shop rate card",
+    desc: "Override any price — metals, gemstones, plating, finishes, making charges — from Pricing Setup. Orivraa shows the reference; you set the final rate.",
   },
 ];
 
@@ -59,9 +69,11 @@ export function BillingCalculationSpotlight() {
               <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-base leading-relaxed max-w-lg">
                 <T>
                   Orivraa builds each invoice from weight, live gold and silver
-                  rates, making charges, wastage (jarti), stone value, and your
-                  country&apos;s tax rules — India, Nepal, UAE, UK, Europe, USA,
-                  and Sri Lanka. No side spreadsheet. No guessing at the counter.
+                  rates, gemstone pricing by type and quality, making charges,
+                  wastage (jarti), stone value, and your country&apos;s tax
+                  rules — India, Nepal, UAE, UK, Europe, USA, and Sri Lanka.
+                  Your shop rates override the reference at every step. No side
+                  spreadsheet. No guessing at the counter.
                 </T>
               </p>
             </ScrollReveal>

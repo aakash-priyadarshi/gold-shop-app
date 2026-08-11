@@ -38,7 +38,11 @@ import {
 } from "@/lib/currency";
 import { loadTradeInPayload } from "@/lib/oldGoldTradeIn";
 import { getApiUrl, inventoryApi, invoicesApi, ordersApi, pricingApi, shopQuotesApi, shopsApi } from "@/lib/api";
-import { getCounterPaymentMethods } from "@/lib/counterPayments";
+import {
+  formatBankAccountDetails,
+  getCounterPaymentMethods,
+  type ShopBankAccountDetails,
+} from "@/lib/counterPayments";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
     canIssueSriLankaTaxInvoice,
@@ -1162,6 +1166,7 @@ export default function CreateInvoicePage() {
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogItems, setCatalogItems] = useState<any[]>([]);
   const [catalogUseLiveRate, setCatalogUseLiveRate] = useState(false);
+  const [catalogLivePrices, setCatalogLivePrices] = useState<Record<string, any>>({});
 
   // ── Billing wastage (customer-facing jarti) ──
   // Single effective % control — source/delta shown as caption, not a second input.
@@ -1418,13 +1423,30 @@ export default function CreateInvoicePage() {
         limit: 30,
       });
       const data = res.data?.data ?? res.data;
-      setCatalogItems(data?.items || data || []);
+      const items = data?.items || data || [];
+      setCatalogItems(items);
+
+      // Fetch live prices for catalog picker when toggle is on
+      if (catalogUseLiveRate && items.length > 0) {
+        try {
+          const { pricingApi } = await import("@/lib/api");
+          const ids = items.map((i: any) => i.id).slice(0, 30);
+          const liveRes = await pricingApi.resolveBulk(shopId, ids);
+          if (liveRes.data?.items) {
+            setCatalogLivePrices(liveRes.data.items);
+          }
+        } catch {
+          // Live prices unavailable — stored prices remain visible
+        }
+      } else {
+        setCatalogLivePrices({});
+      }
     } catch {
       setCatalogItems([]);
     } finally {
       setCatalogLoading(false);
     }
-  }, [user?.shop?.id]);
+  }, [user?.shop?.id, catalogUseLiveRate]);
 
   useEffect(() => {
     if (!catalogOpen) return;
@@ -1500,6 +1522,61 @@ export default function CreateInvoicePage() {
             description: liveRateNote.slice(0, 180),
           });
         }
+      }
+
+      // Also resolve gemstones from live rates when toggle is on
+      if (item.composition?.gemstones?.length > 0) {
+        // Resolve each gemstone via the pricing API
+        (async () => {
+          try {
+            const { pricingApi } = await import("@/lib/api");
+            let gemTotal = 0;
+            let gemSource = "";
+            for (const gem of item.composition.gemstones) {
+              const res = await pricingApi.resolveGemstone({
+                shopId: user?.shop?.id || "",
+                stoneType: gem.type || "OTHER",
+                caratWeight: gem.caratWeight || undefined,
+                sizeMm: gem.sizeMm || undefined,
+                quality: gem.quality || "STANDARD",
+                origin: gem.origin || "NATURAL",
+                count: gem.count || 1,
+              });
+              if (res.data?.effectiveTotal != null) {
+                gemTotal += res.data.effectiveTotal;
+                if (res.data.source === "SHOP") gemSource = "SHOP";
+              }
+            }
+            if (gemTotal > 0) {
+              // Update the gemstone line if it exists
+              setLineItems((prev) =>
+                prev.map((li) =>
+                  li.inventoryItemId === item.id
+                    ? {
+                        ...li,
+                        gemstones: [
+                          {
+                            type: "GEMSTONE",
+                            cut: "",
+                            clarity: "",
+                            caratWeight: "",
+                            color: "",
+                            cost: String(Math.round(gemTotal)),
+                          },
+                        ],
+                      }
+                    : li,
+                ),
+              );
+              toast({
+                title: t("Gemstones priced from live rates"),
+                description: gemSource === "SHOP" ? t("Using your shop rates") : t("Using Orivraa reference"),
+              });
+            }
+          } catch {
+            // Keep stored gemstone value as fallback
+          }
+        })();
       }
     }
 
@@ -2066,11 +2143,29 @@ export default function CreateInvoicePage() {
   );
   const [dueDate, setDueDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [shopBankDetails, setShopBankDetails] =
+    useState<ShopBankAccountDetails | null>(null);
   // Same country selector as tax — payment rails follow invoice country / preference.
   const availablePaymentMethods = useMemo(
     () => getCounterPaymentMethods(invoiceCountry),
     [invoiceCountry],
   );
+  const bankDetailLines = useMemo(
+    () => formatBankAccountDetails(shopBankDetails),
+    [shopBankDetails],
+  );
+
+  useEffect(() => {
+    shopsApi
+      .getSettings()
+      .then((res) => {
+        const shop = res.data?.shop || res.data;
+        setShopBankDetails(
+          (shop?.bankAccountDetails || null) as ShopBankAccountDetails | null,
+        );
+      })
+      .catch(() => setShopBankDetails(null));
+  }, []);
 
   useEffect(() => {
     if (!availablePaymentMethods.some((m) => m.value === paymentMethod)) {
@@ -3893,7 +3988,7 @@ export default function CreateInvoicePage() {
                   </div>
                   <div className="flex items-center justify-between gap-2 py-1">
                     <Label htmlFor="catalog-live-rate" className="text-sm cursor-pointer">
-                      <T>Recalculate metal from today&apos;s rate</T>
+                      <T>Recalculate from live rates (metal + gemstones)</T>
                     </Label>
                     <Switch
                       id="catalog-live-rate"
@@ -3930,10 +4025,25 @@ export default function CreateInvoicePage() {
                                 : ""}
                             </p>
                           </div>
-                          <span className="text-sm font-medium shrink-0">
-                            {currencySymbol}
-                            {(item.totalPriceNpr ?? 0).toLocaleString()}
-                          </span>
+                          <div className="text-right shrink-0">
+                            {catalogUseLiveRate && catalogLivePrices[item.id] ? (
+                              <>
+                                <span className="text-sm font-medium block">
+                                  {currencySymbol}
+                                  {Math.round(catalogLivePrices[item.id].effectiveTotal).toLocaleString()}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground block">
+                                  {t("live")} · {t("stored")}: {currencySymbol}
+                                  {(item.totalPriceNpr ?? 0).toLocaleString()}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-sm font-medium">
+                                {currencySymbol}
+                                {(item.totalPriceNpr ?? 0).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
                         </button>
                       ))
                     )}
@@ -4413,6 +4523,33 @@ export default function CreateInvoicePage() {
                     </button>
                   ))}
                 </div>
+                {paymentMethod === "BANK_TRANSFER" && (
+                  <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
+                    <p className="font-semibold text-sm">
+                      <T>Bank transfer details</T>
+                    </p>
+                    <p className="text-muted-foreground mb-1">
+                      <T>
+                        These details will appear on the printed receipt so the
+                        customer can transfer payment.
+                      </T>
+                    </p>
+                    {bankDetailLines.length > 0 ? (
+                      bankDetailLines.map((line) => (
+                        <p key={line} className="text-muted-foreground">
+                          {line}
+                        </p>
+                      ))
+                    ) : (
+                      <p className="text-amber-700">
+                        <T>
+                          Add bank account details in Shop Settings before
+                          printing.
+                        </T>
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <Label><T>Notes</T></Label>

@@ -964,6 +964,7 @@ export default function QuotesPage() {
                 }
                 selectedCurrency={currency}
                 exchangeRate={nprToDisplayCurrency * 144}
+                shopId={(user?.shop as any)?.id}
               />
             </div>
             <div className="shrink-0 border-t border-gray-100 dark:border-gray-800 p-4">

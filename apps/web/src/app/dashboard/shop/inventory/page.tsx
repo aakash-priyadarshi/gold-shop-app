@@ -905,7 +905,10 @@ export default function ShopInventoryPage() {
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-xs">
                   <li>
-                    <strong><T>Market Rate:</T></strong>{" "}<T>Fetched live from FENEGOSIDA (Nepal) or international sources.</T>
+                    <strong><T>Orivraa Reference:</T></strong>{" "}<T>Live metal spot rates (FENEGOSIDA / international) and platform gemstone catalog prices. Used when no custom shop rate is set.</T>
+                  </li>
+                  <li>
+                    <strong><T>Your Shop Rate:</T></strong>{" "}<T>Custom rates you set below override the reference. Your rate is used on invoices, POS, quotes, and catalog live pricing.</T>
                   </li>
                   <li>
                     <strong><T>Making Charges:</T></strong>{" "}<T>Set your own per gram rate below, or leave blank for system default (10% of metal value).</T>
@@ -997,7 +1000,7 @@ export default function ShopInventoryPage() {
                                   {liveRate && (
                                     <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                                       <TrendingUp className="h-3 w-3" />
-                                      Live: {currencySymbol}{" "}
+                                      <T>Reference</T>: {currencySymbol}{" "}
                                       {liveRate.toLocaleString()}/g
                                     </div>
                                   )}
@@ -1011,7 +1014,7 @@ export default function ShopInventoryPage() {
                                   <div className="bg-green-50 dark:bg-green-950/30 rounded p-2 text-xs">
                                     <div className="flex justify-between">
                                       <span className="text-green-700 dark:text-green-400">
-                                        Live Rate:
+                                        <T>Orivraa Reference:</T>
                                       </span>
                                       <span className="font-medium">
                                         {currencySymbol}{" "}
@@ -1019,10 +1022,18 @@ export default function ShopInventoryPage() {
                                       </span>
                                     </div>
                                     <div className="flex justify-between text-muted-foreground">
-                                      <span>Default Making (10%):</span>
+                                      <span><T>Default Making (10%):</T></span>
                                       <span>
                                         {currencySymbol}{" "}
                                         {defaultMaking.toLocaleString()}/g
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between text-amber-700 dark:text-amber-400 mt-1 pt-1 border-t border-green-200 dark:border-green-800">
+                                      <span><T>Your Making Rate:</T></span>
+                                      <span className="font-medium">
+                                        {materialData?.makingChargePerGram
+                                          ? `${currencySymbol} ${materialData.makingChargePerGram.toLocaleString()}/g`
+                                          : t("Using reference")}
                                       </span>
                                     </div>
                                   </div>

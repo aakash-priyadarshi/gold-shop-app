@@ -893,6 +893,24 @@ export const shopQuotesApi = {
 export const pricingApi = {
   getTaxRules: (region: string) =>
     api.get("/pricing/tax-rules", { params: { region } }),
+  resolve: (data: {
+    shopId: string;
+    inventoryItemId?: string;
+    composition?: any;
+    makingOverride?: number;
+    wastagePercent?: number;
+  }) => api.post("/pricing/resolve", data),
+  resolveBulk: (shopId: string, itemIds: string[]) =>
+    api.post("/pricing/resolve/bulk", { shopId, itemIds }),
+  resolveGemstone: (data: {
+    shopId: string;
+    stoneType: string;
+    caratWeight?: number;
+    sizeMm?: number;
+    quality?: string;
+    origin?: string;
+    count?: number;
+  }) => api.post("/pricing/resolve/gemstone", data),
 };
 
 export const adminTaxSyncApi = {
@@ -1540,6 +1558,7 @@ export const posApi = {
       taxRate?: number;
       discountAmount?: number;
       paymentMethod?: string;
+      paymentSplits?: Array<{ method: string; amount: number }>;
       makingChargeRate?: number;
       makingChargesNpr?: number;
       invoiceCountry?: string;

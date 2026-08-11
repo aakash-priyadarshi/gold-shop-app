@@ -6,6 +6,11 @@ import {
 } from "@nestjs/common";
 import { InventoryStatus, JewelleryType, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
+import { MarketRatesService } from "../core/market-rates/market-rates.service";
+import {
+  MarketRegion,
+  SupportedCurrency,
+} from "../core/market-rates/types";
 import {
   PlanLimitExceededException,
   PlanLimitsService,
@@ -21,6 +26,7 @@ export class InventoryService {
   constructor(
     private prisma: PrismaService,
     private planLimitsService: PlanLimitsService,
+    private marketRatesService: MarketRatesService,
   ) {}
 
   // Create inventory item
@@ -565,6 +571,27 @@ export class InventoryService {
     const rateByMetal: Record<string, number> = {};
     for (const o of overrides) {
       rateByMetal[o.itemCode] = o.overrideValue;
+    }
+
+    // FROM_MARKET_RATES: override rateByMetal with live market rates
+    if (opts.mode === "FROM_MARKET_RATES") {
+      try {
+        const region = (shop.country || "NP") as MarketRegion;
+        const currency = (shop.currency || "NPR") as SupportedCurrency;
+        const marketData = await this.marketRatesService.getMarketRates(
+          currency,
+          region,
+        );
+        if (marketData?.metals) {
+          for (const [code, rate] of Object.entries(marketData.metals)) {
+            if (typeof rate === "number" && rate > 0) {
+              rateByMetal[code] = rate;
+            }
+          }
+        }
+      } catch {
+        // Fall through to shop rates if market rates unavailable
+      }
     }
 
     const makingMode = opts.makingChargeMode || "KEEP";

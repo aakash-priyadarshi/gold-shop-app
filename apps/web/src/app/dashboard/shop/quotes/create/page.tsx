@@ -1869,6 +1869,7 @@ export default function CreateShopQuotePage() {
                           currencySymbol={currencySymbol}
                           selectedCurrency={currencyCode}
                           exchangeRate={marketRates?.fx?.rate || 144}
+                          shopId={user?.shop?.id}
                         />
                       )}
                     </div>

@@ -70,6 +70,7 @@ interface GemstoneEditorV2Props {
   currencySymbol?: string;
   selectedCurrency?: string;
   exchangeRate?: number; // USD to selected currency rate
+  shopId?: string; // When provided, enables "Get shop price" via backend resolver
 }
 
 // ═══════════════════════════════════════════
@@ -114,6 +115,7 @@ export function GemstoneEditorV2({
   currencySymbol = "₹",
   selectedCurrency = "NPR",
   exchangeRate = 144, // Default USD to NPR rate
+  shopId,
 }: GemstoneEditorV2Props) {
   // Calculate NPR to selected currency conversion rate
   // Gemstone preset prices are stored in NPR
@@ -242,6 +244,7 @@ export function GemstoneEditorV2({
             onRemove={() => removeGemstone(index)}
             currencySymbol={currencySymbol}
             exchangeRate={nprToSelectedRate}
+            shopId={shopId}
           />
         ))}
 
@@ -285,6 +288,7 @@ interface GemstoneCardV2Props {
   onRemove: () => void;
   currencySymbol: string;
   exchangeRate: number;
+  shopId?: string;
 }
 
 function GemstoneCardV2({
@@ -295,7 +299,10 @@ function GemstoneCardV2({
   onRemove,
   currencySymbol,
   exchangeRate,
+  shopId,
 }: GemstoneCardV2Props) {
+  const [shopPriceLoading, setShopPriceLoading] = useState(false);
+  const [shopPriceResult, setShopPriceResult] = useState<any>(null);
   const colorOptions = gemstone.stoneType
     ? getColorOptionsForStone(gemstone.stoneType)
     : DEFAULT_GEM_COLORS;
@@ -702,6 +709,63 @@ function GemstoneCardV2({
         currencySymbol={currencySymbol}
         exchangeRate={exchangeRate}
       />
+
+      {/* Shop price suggestion from backend resolver */}
+      {shopId && gemstone.stoneType && (
+        <div className="pt-2 flex items-center justify-between">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-xs text-purple-600 dark:text-purple-400 h-7 px-2"
+            disabled={shopPriceLoading}
+            onClick={async () => {
+              setShopPriceLoading(true);
+              try {
+                const { pricingApi } = await import("@/lib/api");
+                const caratWeight =
+                  gemstone.sizeUnit === "CARAT"
+                    ? parseFloat(gemstone.sizeValue) || undefined
+                    : undefined;
+                const sizeMm =
+                  gemstone.sizeUnit === "MM"
+                    ? parseFloat(gemstone.sizeValue) || undefined
+                    : undefined;
+                const res = await pricingApi.resolveGemstone({
+                  shopId,
+                  stoneType: gemstone.stoneType,
+                  caratWeight,
+                  sizeMm,
+                  quality: gemstone.clarity || "STANDARD",
+                  origin: gemstone.origin || "NATURAL",
+                  count: gemstone.count,
+                });
+                setShopPriceResult(res.data);
+                if (res.data?.effectivePerStone != null) {
+                  onUpdate("estimatedPrice", res.data.effectivePerStone);
+                }
+              } catch {
+                // Silently fail — heuristic price remains
+              } finally {
+                setShopPriceLoading(false);
+              }
+            }}
+          >
+            {shopPriceLoading ? (
+              <Sparkles className="h-3 w-3 animate-spin mr-1" />
+            ) : (
+              <Sparkles className="h-3 w-3 mr-1" />
+            )}
+            Get shop price
+          </Button>
+          {shopPriceResult && (
+            <span className="text-xs text-muted-foreground">
+              {shopPriceResult.source === "SHOP" ? "Your shop rate" : "Orivraa reference"}: {currencySymbol}
+              {shopPriceResult.effectivePerStone?.toLocaleString()}/stone
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
