@@ -262,14 +262,18 @@ export function buildBillHtml(payload: BillPrintPayload): string {
     .join("");
 
   const supplierName =
+    payload.settings?.shopNameOnBill?.trim() ||
     payload.supplierName ||
-    payload.settings?.shopNameOnBill ||
     payload.fallbackShopName ||
     "";
   const supplierAddress =
-    payload.supplierAddress || payload.settings?.shopAddress || "";
+    payload.settings?.shopAddress?.trim() ||
+    payload.supplierAddress ||
+    "";
   const supplierPhone =
-    payload.supplierPhone || payload.settings?.shopPhone || "";
+    payload.settings?.shopPhone?.trim() ||
+    payload.supplierPhone ||
+    "";
   const watermarkCss = payload.watermark
     ? `.wm{position:fixed;inset:0;pointer-events:none;z-index:9999;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250'><text fill='rgba(220,38,38,0.12)' font-family='sans-serif' font-weight='bold' font-size='14' x='20' y='180' transform='rotate(-45 100 100)'>DEMO BILL - NOT FOR COMMERCIAL SALE</text></svg>");background-repeat:repeat;}`
     : "";

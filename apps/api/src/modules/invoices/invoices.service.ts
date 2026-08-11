@@ -227,10 +227,12 @@ export class InvoicesService {
         city: true,
         state: true,
         contactPhone: true,
+        contactEmail: true,
         vatNumber: true,
         vatRegistrationStatus: true,
         panNumber: true,
-        invoiceSettings: { select: { gstin: true } },
+        bisLicenseNumber: true,
+        invoiceSettings: true,
       },
     });
     if (!shop) throw new NotFoundException("Shop not found");
@@ -287,8 +289,8 @@ export class InvoicesService {
     const isLk = region === MarketRegion.LK;
     const isTaxExempt = !!dto.isTaxExempt;
     const supplierTaxId = isLk
-      ? shop.vatNumber || null
-      : shop.invoiceSettings?.gstin || shop.vatNumber || null;
+      ? shop.vatNumber || shop.invoiceSettings?.gstin || null
+      : shop.invoiceSettings?.gstin || shop.vatNumber || shop.panNumber || null;
     const sellerVatRegistered =
       !isLk ||
       (shop.vatRegistrationStatus === "VERIFIED" &&
@@ -481,9 +483,14 @@ export class InvoicesService {
       );
     }
 
-    const supplierAddress = [shop.address, shop.city, shop.state]
-      .filter(Boolean)
-      .join(", ");
+    const supplierAddress =
+      shop.invoiceSettings?.shopAddress?.trim() ||
+      [shop.address, shop.city, shop.state].filter(Boolean).join(", ");
+
+    const supplierName =
+      shop.invoiceSettings?.shopNameOnBill?.trim() || shop.shopName;
+    const supplierPhone =
+      shop.invoiceSettings?.shopPhone?.trim() || shop.contactPhone;
 
     // Aggregate tax lines for Nepal audit / UI (skill fee, VAT, metal/making GST)
     const taxLines = shouldChargeTax ? tax.lines || [] : [];
@@ -569,9 +576,9 @@ export class InvoicesService {
       customerEmail: dto.customerEmail || null,
       customerAddress: dto.customerAddress || null,
       invoiceTitle,
-      supplierName: shop.shopName,
+      supplierName,
       supplierAddress,
-      supplierPhone: shop.contactPhone,
+      supplierPhone,
       supplierTaxId,
       sellerVatStatus: isLk
         ? shop.vatRegistrationStatus
@@ -973,6 +980,9 @@ export class InvoicesService {
     if (!invoice) {
       throw new NotFoundException("Bill not found or verification link invalid");
     }
+    const billSettings = await this.prisma.invoiceSettings.findUnique({
+      where: { shopId: invoice.shopId },
+    });
     const lineItems = Array.isArray(invoice.lineItems)
       ? (invoice.lineItems as Array<Record<string, any>>)
       : [];
@@ -987,9 +997,11 @@ export class InvoicesService {
       paidAmount: invoice.paidAmount,
       balanceDue: invoice.balanceDue,
       currency: invoice.currency,
-      supplierName: invoice.supplierName,
-      supplierPhone: invoice.supplierPhone,
-      supplierTaxId: invoice.supplierTaxId,
+      supplierName:
+        billSettings?.shopNameOnBill?.trim() || invoice.supplierName,
+      supplierPhone:
+        billSettings?.shopPhone?.trim() || invoice.supplierPhone,
+      supplierTaxId: billSettings?.gstin?.trim() || invoice.supplierTaxId,
       customerName: invoice.customerName,
       lineItems: lineItems.slice(0, 50).map((li) => ({
         label: li.label,
@@ -997,6 +1009,28 @@ export class InvoicesService {
         amount: li.amount,
         details: li.details,
       })),
+      billSettings: billSettings
+        ? {
+            shopNameOnBill: billSettings.shopNameOnBill,
+            shopLogoUrl: billSettings.shopLogoUrl,
+            tagline: billSettings.tagline,
+            shopAddress: billSettings.shopAddress,
+            shopPhone: billSettings.shopPhone,
+            shopEmail: billSettings.shopEmail,
+            gstin: billSettings.gstin,
+            licenseNumber: billSettings.licenseNumber,
+            footerNote: billSettings.footerNote,
+            termsText: billSettings.termsText,
+            showLogo: billSettings.showLogo,
+            showAddress: billSettings.showAddress,
+            showPhone: billSettings.showPhone,
+            showEmail: billSettings.showEmail,
+            showGstin: billSettings.showGstin,
+            showLicense: billSettings.showLicense,
+            showFooter: billSettings.showFooter,
+            showTerms: billSettings.showTerms,
+          }
+        : null,
       shop: invoice.shop
         ? { ...invoice.shop, logo: (invoice.shop as any).profileImage ?? null }
         : null,

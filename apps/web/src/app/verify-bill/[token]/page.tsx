@@ -2,7 +2,14 @@
 
 import { T } from "@/components/ui/T";
 import { invoicesApi } from "@/lib/api";
+import type { BillSettings } from "@/lib/billPrint";
+import {
+  resolveBillShopAddress,
+  resolveBillShopName,
+  resolveBillShopPhone,
+} from "@/lib/invoiceBranding";
 import { CheckCircle2, FileWarning, Loader2, ShieldCheck } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -20,11 +27,13 @@ interface VerifyBillResult {
   currency?: string;
   supplierName?: string | null;
   supplierPhone?: string | null;
+  supplierTaxId?: string | null;
   customerName?: string | null;
   lineItems?: Array<{
     label?: string;
     amount?: number;
   }>;
+  billSettings?: BillSettings | null;
   shop?: {
     shopName?: string | null;
     city?: string | null;
@@ -73,6 +82,29 @@ export default function VerifyBillPage() {
       cancelled = true;
     };
   }, [token]);
+
+  const branding = bill?.billSettings;
+  const shopName = bill
+    ? resolveBillShopName(
+        branding,
+        bill.supplierName,
+        bill.shop?.shopName,
+      )
+    : "";
+  const shopAddress = bill
+    ? resolveBillShopAddress(branding, null)
+    : "";
+  const shopPhone = bill
+    ? resolveBillShopPhone(branding, bill.supplierPhone)
+    : "";
+  const showLogo =
+    branding?.showLogo !== false && Boolean(branding?.shopLogoUrl);
+  const showAddress = branding?.showAddress !== false && Boolean(shopAddress);
+  const showPhone = branding?.showPhone !== false && Boolean(shopPhone);
+  const showGstin =
+    branding?.showGstin !== false &&
+    Boolean(branding?.gstin || bill?.supplierTaxId);
+  const taxId = branding?.gstin?.trim() || bill?.supplierTaxId || "";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white dark:from-zinc-950 dark:to-zinc-900 px-4 py-10">
@@ -124,10 +156,36 @@ export default function VerifyBillPage() {
                 </div>
               </div>
 
-              <div>
-                <h1 className="text-xl font-bold">
-                  {bill.shop?.shopName || bill.supplierName || "Invoice"}
-                </h1>
+              <div className="text-center space-y-1">
+                {showLogo && branding?.shopLogoUrl && (
+                  <div className="flex justify-center mb-2">
+                    <Image
+                      src={branding.shopLogoUrl}
+                      alt="Shop logo"
+                      width={64}
+                      height={64}
+                      className="h-14 w-auto object-contain"
+                      unoptimized
+                    />
+                  </div>
+                )}
+                <h1 className="text-xl font-bold">{shopName || "Invoice"}</h1>
+                {branding?.tagline && (
+                  <p className="text-xs text-muted-foreground italic">
+                    {branding.tagline}
+                  </p>
+                )}
+                {showAddress && (
+                  <p className="text-sm text-muted-foreground">{shopAddress}</p>
+                )}
+                {showPhone && (
+                  <p className="text-sm text-muted-foreground">{shopPhone}</p>
+                )}
+                {showGstin && taxId && (
+                  <p className="text-xs text-muted-foreground">
+                    <T>Tax ID</T>: {taxId}
+                  </p>
+                )}
                 {(bill.shop?.city || bill.shop?.country) && (
                   <p className="text-sm text-muted-foreground">
                     {[bill.shop?.city, bill.shop?.country]
@@ -204,6 +262,17 @@ export default function VerifyBillPage() {
                   </p>
                 )}
               </div>
+
+              {branding?.showFooter !== false && branding?.footerNote && (
+                <p className="text-xs text-center text-muted-foreground border-t pt-3">
+                  {branding.footerNote}
+                </p>
+              )}
+              {branding?.showTerms !== false && branding?.termsText && (
+                <p className="text-[10px] text-center text-muted-foreground">
+                  {branding.termsText}
+                </p>
+              )}
             </>
           )}
         </div>

@@ -37,6 +37,7 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi, invoicesApi, posApi, shopsApi } from "@/lib/api";
 import { ManagerPinDialog } from "@/components/shop/ManagerPinDialog";
 import { printBill, type BillSettings } from "@/lib/billPrint";
+import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
 import {
   getCounterPaymentMethods,
   buildQrImageUrl,
@@ -207,7 +208,9 @@ function PosPageInner() {
   useEffect(() => {
     invoicesApi
       .getSettings()
-      .then((res) => setBillSettings(res.data))
+      .then((res) =>
+        setBillSettings(unwrapInvoiceSettingsResponse(res.data)),
+      )
       .catch(() => setBillSettings(null));
     shopsApi
       .getSettings()

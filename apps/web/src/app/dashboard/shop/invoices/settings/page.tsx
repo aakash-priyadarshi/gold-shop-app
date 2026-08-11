@@ -18,6 +18,8 @@ import { toast } from "@/hooks/use-toast";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useAuth } from "@/hooks/useAuth";
 import { invoicesApi } from "@/lib/api";
+import type { BillSettings } from "@/lib/billPrint";
+import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
 import {
     ArrowDown,
     ArrowLeft,
@@ -103,6 +105,39 @@ const defaultSettings: InvoiceSettingsData = {
   showTerms: true,
 };
 
+function mapRowToSettings(row: BillSettings): InvoiceSettingsData {
+  return {
+    shopNameOnBill: row.shopNameOnBill || "",
+    shopLogoUrl: row.shopLogoUrl || "",
+    tagline: row.tagline || "",
+    shopAddress: row.shopAddress || "",
+    shopPhone: row.shopPhone || "",
+    shopEmail: row.shopEmail || "",
+    gstin: row.gstin || "",
+    licenseNumber: row.licenseNumber || "",
+    footerNote: row.footerNote || "",
+    termsText: row.termsText || "",
+    shopNamePosition: (row.shopNamePosition as Position) || "TOP",
+    logoPosition: (row.logoPosition as Position) || "TOP",
+    taglinePosition: (row.taglinePosition as Position) || "TOP",
+    addressPosition: (row.addressPosition as Position) || "TOP",
+    phonePosition: (row.phonePosition as Position) || "TOP",
+    emailPosition: (row.emailPosition as Position) || "TOP",
+    gstinPosition: (row.gstinPosition as Position) || "TOP",
+    licensePosition: (row.licensePosition as Position) || "TOP",
+    footerPosition: (row.footerPosition as Position) || "BOTTOM",
+    termsPosition: (row.termsPosition as Position) || "BOTTOM",
+    showLogo: row.showLogo ?? true,
+    showAddress: row.showAddress ?? true,
+    showPhone: row.showPhone ?? true,
+    showEmail: row.showEmail ?? false,
+    showGstin: row.showGstin ?? true,
+    showLicense: row.showLicense ?? false,
+    showFooter: row.showFooter ?? true,
+    showTerms: row.showTerms ?? true,
+  };
+}
+
 function PositionToggle({
   value,
   onChange,
@@ -140,6 +175,25 @@ export default function InvoiceSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const settingsRef = useRef(settings);
+
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  const applySettingsRow = (row: BillSettings | null) => {
+    if (!row) return;
+    const next = mapRowToSettings(row);
+    settingsRef.current = next;
+    setSettings(next);
+  };
+
+  const persistSettings = async (patch: Partial<InvoiceSettingsData> = {}) => {
+    const payload = { ...settingsRef.current, ...patch };
+    const res = await invoicesApi.updateSettings(payload);
+    applySettingsRow(unwrapInvoiceSettingsResponse(res.data));
+    return payload;
+  };
 
   const {
     uploading: isUploadingLogo,
@@ -147,10 +201,17 @@ export default function InvoiceSettingsPage() {
     upload: uploadLogo,
   } = useImageUpload({
     type: "profile",
-    onSuccess: (result) => {
-      if (result.url) {
-        updateField("shopLogoUrl", result.url);
-        toast({ title: "Logo uploaded successfully" });
+    onSuccess: async (result) => {
+      if (!result.url) return;
+      try {
+        await persistSettings({ shopLogoUrl: result.url });
+        toast({ title: "Logo saved" });
+      } catch {
+        toast({
+          variant: "destructive",
+          title: "Logo uploaded but not saved",
+          description: "Click Save Settings to keep your logo.",
+        });
       }
     },
     onError: (err) =>
@@ -162,55 +223,28 @@ export default function InvoiceSettingsPage() {
   });
 
   useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
-    try {
-      const res = await invoicesApi.getSettings();
-      if (res.data) {
-        setSettings({
-          shopNameOnBill: res.data.shopNameOnBill || "",
-          shopLogoUrl: res.data.shopLogoUrl || "",
-          tagline: res.data.tagline || "",
-          shopAddress: res.data.shopAddress || "",
-          shopPhone: res.data.shopPhone || "",
-          shopEmail: res.data.shopEmail || "",
-          gstin: res.data.gstin || "",
-          licenseNumber: res.data.licenseNumber || "",
-          footerNote: res.data.footerNote || "",
-          termsText: res.data.termsText || "",
-          shopNamePosition: res.data.shopNamePosition || "TOP",
-          logoPosition: res.data.logoPosition || "TOP",
-          taglinePosition: res.data.taglinePosition || "TOP",
-          addressPosition: res.data.addressPosition || "TOP",
-          phonePosition: res.data.phonePosition || "TOP",
-          emailPosition: res.data.emailPosition || "TOP",
-          gstinPosition: res.data.gstinPosition || "TOP",
-          licensePosition: res.data.licensePosition || "TOP",
-          footerPosition: res.data.footerPosition || "BOTTOM",
-          termsPosition: res.data.termsPosition || "BOTTOM",
-          showLogo: res.data.showLogo ?? true,
-          showAddress: res.data.showAddress ?? true,
-          showPhone: res.data.showPhone ?? true,
-          showEmail: res.data.showEmail ?? false,
-          showGstin: res.data.showGstin ?? true,
-          showLicense: res.data.showLicense ?? false,
-          showFooter: res.data.showFooter ?? true,
-          showTerms: res.data.showTerms ?? true,
-        });
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await invoicesApi.getSettings();
+        if (!cancelled) {
+          applySettingsRow(unwrapInvoiceSettingsResponse(res.data));
+        }
+      } catch {
+        // Will use defaults
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
-    } catch {
-      // Will use defaults
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await invoicesApi.updateSettings(settings);
+      await persistSettings();
       toast({
         title: "Settings saved",
         description: "Invoice settings updated successfully",

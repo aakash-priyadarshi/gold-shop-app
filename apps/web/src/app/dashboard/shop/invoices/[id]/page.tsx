@@ -38,6 +38,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { invoicesApi, shopsApi } from "@/lib/api";
 import { printBill, type BillSettings } from "@/lib/billPrint";
 import {
+  resolveBillShopAddress,
+  resolveBillShopName,
+  resolveBillShopPhone,
+  unwrapInvoiceSettingsResponse,
+} from "@/lib/invoiceBranding";
+import {
   getCounterPaymentMethods,
   buildUpiPayUri,
   isDigitalWalletMethod,
@@ -206,7 +212,9 @@ export default function InvoiceDetailPage() {
   useEffect(() => {
     invoicesApi
       .getSettings()
-      .then((res) => setBillSettings(res.data))
+      .then((res) =>
+        setBillSettings(unwrapInvoiceSettingsResponse(res.data)),
+      )
       .catch(() => setBillSettings(null));
     shopsApi
       .getSettings()
@@ -719,9 +727,11 @@ export default function InvoiceDetailPage() {
                     />
                   )}
                   <CardTitle className="text-xl">
-                    {invoice.supplierName || billSettings?.shopNameOnBill || user?.shop?.shopName || (
-                      <T>INVOICE</T>
-                    )}
+                    {resolveBillShopName(
+                      billSettings,
+                      invoice.supplierName,
+                      user?.shop?.shopName,
+                    ) || <T>INVOICE</T>}
                   </CardTitle>
                   {billSettings?.tagline && (
                     <p className="text-xs text-muted-foreground italic mt-0.5">
@@ -731,9 +741,16 @@ export default function InvoiceDetailPage() {
                   <CardDescription className="font-mono text-base mt-1">
                     {invoice.invoiceNumber}
                   </CardDescription>
-                  {(invoice.supplierAddress || (billSettings?.showAddress !== false && billSettings?.shopAddress)) && (
+                  {(billSettings?.showAddress !== false &&
+                    resolveBillShopAddress(
+                      billSettings,
+                      invoice.supplierAddress,
+                    )) && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      {invoice.supplierAddress || billSettings?.shopAddress}
+                      {resolveBillShopAddress(
+                        billSettings,
+                        invoice.supplierAddress,
+                      )}
                     </p>
                   )}
                   {(billSettings?.showGstin !== false && (isLkTaxInvoice ? sellerLkTin : billSettings?.gstin)) && (
