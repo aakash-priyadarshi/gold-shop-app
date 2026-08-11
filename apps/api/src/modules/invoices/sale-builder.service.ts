@@ -28,6 +28,7 @@ export interface BuiltSaleLine {
   metalCost?: number;
   makingCost?: number;
   gemstoneCost?: number;
+  wastageCost?: number;
 }
 
 type InventoryLike = Pick<
@@ -276,6 +277,7 @@ export class SaleBuilderService {
     metalCost?: number;
     makingCost?: number;
     gemstoneCost?: number;
+    wastageCost?: number;
     metalType?: string;
     metalWeightG?: number;
     source?: SaleLineSource;
@@ -305,6 +307,7 @@ export class SaleBuilderService {
           metalCost: input.metalCost,
           makingCost: input.makingCost,
           gemstoneCost: input.gemstoneCost,
+          wastageCost: input.wastageCost,
           taxTreatment: input.taxTreatment,
         },
       ];
@@ -313,7 +316,9 @@ export class SaleBuilderService {
     const metalCost = Math.max(0, Number(input.metalCost) || 0);
     const makingCost = Math.max(0, Number(input.makingCost) || 0);
     const gemstoneCost = Math.max(0, Number(input.gemstoneCost) || 0);
-    const hasBreakdown = metalCost > 0 || makingCost > 0 || gemstoneCost > 0;
+    const wastageCost = Math.max(0, Number(input.wastageCost) || 0);
+    const hasBreakdown =
+      metalCost > 0 || makingCost > 0 || gemstoneCost > 0 || wastageCost > 0;
 
     if (hasBreakdown) {
       const lines: Array<BuiltSaleLine & { taxTreatment?: "TAXABLE" | "EXEMPT" }> =
@@ -339,6 +344,22 @@ export class SaleBuilderService {
           metalType: input.metalType,
           metalWeightG: input.metalWeightG,
           metalCost,
+          taxTreatment: input.taxTreatment,
+        });
+      }
+      // Wastage is taxed like precious metal in South Asian jewellery billing.
+      if (wastageCost > 0) {
+        lines.push({
+          label: `${input.label} — Wastage`,
+          category: "METAL",
+          quantity: qty,
+          unitPrice: wastageCost,
+          amount: wastageCost * qty,
+          details: input.details,
+          inventoryItemId: attachStock(),
+          variantId: input.variantId,
+          source,
+          wastageCost,
           taxTreatment: input.taxTreatment,
         });
       }
@@ -412,6 +433,7 @@ export class SaleBuilderService {
       metalCost?: number;
       makingCost?: number;
       gemstoneCost?: number;
+      wastageCost?: number;
       metalType?: string;
       metalWeightG?: number;
       taxTreatment?: "TAXABLE" | "EXEMPT";

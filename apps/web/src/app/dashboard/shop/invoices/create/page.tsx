@@ -47,13 +47,15 @@ import {
     validateTaxId,
 } from "@/lib/tax/validators";
 import { useT } from "@/providers/translation-provider";
-import { toGrams, fromGrams, getSupportedWeightUnits, getDefaultWeightUnit } from "@gold-shop/shared";
+import { toGrams, fromGrams, getSupportedWeightUnits, getDefaultWeightUnit, calculateLineWastage, getWastageFormulaText, getWastageModeLabel, resolveWastageRule, type ResolvedWastageRule } from "@gold-shop/shared";
 import {
     ArrowLeft,
     Check,
     ChevronDown,
+    ExternalLink,
     FileDown,
     Globe,
+    HelpCircle,
     Loader2,
     Package,
     Phone,
@@ -66,6 +68,7 @@ import {
     X,
     Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -76,6 +79,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type TaxCategoryKey =
   | "PRECIOUS_METAL"
@@ -551,6 +560,9 @@ interface RichLineItem {
   inventoryItemId?: string;
   variantId?: string;
   source?: "MANUAL" | "CATALOG" | "QUOTE" | "POS";
+  /** Customer billing wastage (jarti) — separate from metal cost */
+  wastagePercent?: string;
+  wastageCost?: string;
 }
 
 const emptyLineItem = (): RichLineItem => ({
@@ -564,14 +576,17 @@ const emptyLineItem = (): RichLineItem => ({
   gemstones: [],
   makingCost: "",
   source: "MANUAL",
+  wastagePercent: "",
+  wastageCost: "",
 });
 
 // Compute total for a line item
 function lineItemTotal(item: RichLineItem): number {
   const mc = parseFloat(item.metalCost) || 0;
+  const wc = parseFloat(item.wastageCost || "") || 0;
   const gc = item.gemstones.reduce((s, g) => s + (parseFloat(g.cost) || 0), 0);
   const mk = parseFloat(item.makingCost) || 0;
-  return (mc + gc + mk) * item.quantity;
+  return (mc + wc + gc + mk) * item.quantity;
 }
 
 /** True when a row is unused starter / leftover blank (safe to strip on catalog/quote add). */
@@ -1144,6 +1159,153 @@ export default function CreateInvoicePage() {
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogItems, setCatalogItems] = useState<any[]>([]);
   const [catalogUseLiveRate, setCatalogUseLiveRate] = useState(false);
+
+  // ── Billing wastage (customer-facing jarti) ──
+  const [shopWastageMode, setShopWastageMode] = useState("AUTO");
+  const [shopWastagePercent, setShopWastagePercent] = useState<number | null>(
+    null,
+  );
+  const [invoiceWastagePercent, setInvoiceWastagePercent] = useState("");
+  const [wastageApplied, setWastageApplied] = useState(false);
+  const [wastageCalcNotes, setWastageCalcNotes] = useState<string[]>([]);
+  const wastagePercentTouched = useRef(false);
+  const prevInvoiceCountryForWastage = useRef(invoiceCountry);
+
+  useEffect(() => {
+    let cancelled = false;
+    shopsApi
+      .getSettings()
+      .then((res) => {
+        if (cancelled) return;
+        const shop = res.data?.shop || res.data;
+        if (!shop) return;
+        setShopWastageMode(shop.billingWastageMode || "AUTO");
+        setShopWastagePercent(
+          shop.billingWastagePercent == null
+            ? null
+            : Number(shop.billingWastagePercent),
+        );
+      })
+      .catch(() => {
+        /* keep AUTO defaults */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const wastageRule: ResolvedWastageRule = useMemo(
+    () =>
+      resolveWastageRule(invoiceCountry, {
+        billingWastageMode: shopWastageMode,
+        billingWastagePercent: shopWastagePercent,
+      }),
+    [invoiceCountry, shopWastageMode, shopWastagePercent],
+  );
+
+  const effectiveWastagePercent = useMemo(() => {
+    const override = parseFloat(invoiceWastagePercent);
+    if (invoiceWastagePercent !== "" && Number.isFinite(override)) {
+      return Math.max(0, override);
+    }
+    return wastageRule.percent;
+  }, [invoiceWastagePercent, wastageRule.percent]);
+
+  useEffect(() => {
+    if (!wastagePercentTouched.current) {
+      setInvoiceWastagePercent(
+        wastageRule.mode === "DISABLED" ? "" : String(wastageRule.percent),
+      );
+    }
+  }, [wastageRule.mode, wastageRule.percent]);
+
+  useEffect(() => {
+    if (prevInvoiceCountryForWastage.current === invoiceCountry) return;
+    prevInvoiceCountryForWastage.current = invoiceCountry;
+    wastagePercentTouched.current = false;
+    setWastageApplied(false);
+    setWastageCalcNotes([]);
+    setLineItems((prev) =>
+      prev.map((li) => ({ ...li, wastageCost: "", wastagePercent: "" })),
+    );
+  }, [invoiceCountry]);
+
+  const applyWastageToLines = useCallback(() => {
+    if (wastageRule.mode === "DISABLED") {
+      toast({
+        title: t("Wastage is disabled"),
+        description: t(
+          "Enable it in shop wastage settings, or change invoice country.",
+        ),
+      });
+      return;
+    }
+    const pct = effectiveWastagePercent;
+    if (pct <= 0) {
+      toast({
+        variant: "destructive",
+        title: t("Enter a wastage % greater than 0"),
+      });
+      return;
+    }
+
+    const notes: string[] = [];
+    let appliedCount = 0;
+    setLineItems((prev) =>
+      prev.map((li, idx) => {
+        const metalCost = parseFloat(li.metalCost) || 0;
+        if (metalCost <= 0 || !li.label?.trim()) {
+          return { ...li, wastageCost: "", wastagePercent: "" };
+        }
+        const result = calculateLineWastage(
+          {
+            metalCost,
+            metalWeightG: parseFloat(li.metalWeightG) || 0,
+            wastagePercent: pct,
+          },
+          {
+            mode: wastageRule.mode,
+            percent: pct,
+            label: wastageRule.label,
+          },
+        );
+        if (result.wastageCost > 0) appliedCount += 1;
+        notes.push(
+          `Item ${idx + 1}: ${result.explanation.join(" · ")}`,
+        );
+        return {
+          ...li,
+          wastagePercent: String(pct),
+          wastageCost: result.wastageCost > 0 ? result.wastageCost.toFixed(2) : "",
+        };
+      }),
+    );
+    setWastageApplied(appliedCount > 0);
+    setWastageCalcNotes(notes.slice(0, 8));
+    toast({
+      title:
+        appliedCount > 0
+          ? t(`Wastage calculated on ${appliedCount} item(s)`)
+          : t("No metal lines to apply wastage"),
+      description:
+        appliedCount > 0
+          ? t(`${wastageRule.label} at ${pct}% using ${getWastageModeLabel(wastageRule.mode)}`)
+          : t("Add metal cost on line items first."),
+    });
+  }, [
+    wastageRule.mode,
+    wastageRule.label,
+    effectiveWastagePercent,
+    t,
+  ]);
+
+  const clearWastageFromLines = useCallback(() => {
+    setLineItems((prev) =>
+      prev.map((li) => ({ ...li, wastageCost: "", wastagePercent: "" })),
+    );
+    setWastageApplied(false);
+    setWastageCalcNotes([]);
+  }, []);
 
   const searchCatalog = useCallback(async (q: string) => {
     const shopId = user?.shop?.id;
@@ -1822,19 +1984,28 @@ export default function CreateInvoicePage() {
 
   const taxBreakdown = useMemo(() => {
     if (isTaxExempt || lkVatChargeBlocked) {
-      return { metalTax: 0, gemstoneTax: 0, makingTax: 0, totalTax: 0 };
+      return {
+        metalTax: 0,
+        gemstoneTax: 0,
+        makingTax: 0,
+        wastageTax: 0,
+        totalTax: 0,
+      };
     }
     const rates = countryTax.rates;
     let metalTax = 0;
     let gemstoneTax = 0;
     let makingTax = 0;
+    let wastageTax = 0;
 
     for (const item of lineItems) {
       const mc = parseFloat(item.metalCost) || 0;
+      const wc = parseFloat(item.wastageCost || "") || 0;
       const gc = gemstoneTotal(item);
       const mk = parseFloat(item.makingCost) || 0;
 
       metalTax += mc * item.quantity * rates.PRECIOUS_METAL;
+      wastageTax += wc * item.quantity * rates.PRECIOUS_METAL;
       gemstoneTax += gc * item.quantity * rates.GEMSTONE;
       makingTax += mk * item.quantity * rates.MAKING_CHARGE;
     }
@@ -1844,10 +2015,11 @@ export default function CreateInvoicePage() {
     // Items without breakdown → default rate
     for (const item of lineItems) {
       const mc = parseFloat(item.metalCost) || 0;
+      const wc = parseFloat(item.wastageCost || "") || 0;
       const gc = gemstoneTotal(item);
       const mk = parseFloat(item.makingCost) || 0;
       const tot = lineItemTotal(item);
-      if (mc === 0 && gc === 0 && mk === 0 && tot > 0) {
+      if (mc === 0 && wc === 0 && gc === 0 && mk === 0 && tot > 0) {
         metalTax += tot * countryTax.defaultRate;
       }
     }
@@ -1856,7 +2028,8 @@ export default function CreateInvoicePage() {
       metalTax,
       gemstoneTax,
       makingTax,
-      totalTax: metalTax + gemstoneTax + makingTax,
+      wastageTax,
+      totalTax: metalTax + gemstoneTax + makingTax + wastageTax,
     };
   }, [
     lineItems,
@@ -1865,6 +2038,16 @@ export default function CreateInvoicePage() {
     isTaxExempt,
     lkVatChargeBlocked,
   ]);
+
+  const wastageTotal = useMemo(
+    () =>
+      lineItems.reduce(
+        (s, li) =>
+          s + (parseFloat(li.wastageCost || "") || 0) * li.quantity,
+        0,
+      ),
+    [lineItems],
+  );
 
   const createBlockers = useMemo(() => {
     const missing: string[] = [];
@@ -2021,8 +2204,12 @@ export default function CreateInvoicePage() {
           const metalCost = parseFloat(li.metalCost) || 0;
           const makingCost = parseFloat(li.makingCost) || 0;
           const gemstoneCost = gemstoneTotal(li);
+          const wastageCost = parseFloat(li.wastageCost || "") || 0;
           const hasBreakdown =
-            metalCost > 0 || makingCost > 0 || gemstoneCost > 0;
+            metalCost > 0 ||
+            makingCost > 0 ||
+            gemstoneCost > 0 ||
+            wastageCost > 0;
 
           // Send breakdown so InvoicesService.normalizeInvoiceLines expands
           // into METAL / MAKING / GEMSTONE for tax reports + accounting.
@@ -2040,6 +2227,10 @@ export default function CreateInvoicePage() {
                   metalCost: metalCost || undefined,
                   makingCost: makingCost || undefined,
                   gemstoneCost: gemstoneCost || undefined,
+                  wastageCost: wastageCost || undefined,
+                  wastagePercent: li.wastagePercent
+                    ? parseFloat(li.wastagePercent) || undefined
+                    : undefined,
                   metalType: li.metalType || undefined,
                   metalWeightG: li.metalWeightG
                     ? parseFloat(li.metalWeightG) || undefined
@@ -2098,6 +2289,7 @@ export default function CreateInvoicePage() {
           metalTax: isTaxExempt || lkVatChargeBlocked ? 0 : taxBreakdown.metalTax,
           gemstoneTax: isTaxExempt || lkVatChargeBlocked ? 0 : taxBreakdown.gemstoneTax,
           makingTax: isTaxExempt || lkVatChargeBlocked ? 0 : taxBreakdown.makingTax,
+          wastageTax: isTaxExempt || lkVatChargeBlocked ? 0 : taxBreakdown.wastageTax,
           totalTax: isTaxExempt || lkVatChargeBlocked ? 0 : taxBreakdown.totalTax,
           country: invoiceCountry,
           isMockInsured,
@@ -2354,6 +2546,135 @@ export default function CreateInvoicePage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* ── Billing wastage ──────────────────────────────── */}
+              <div
+                className="mt-4 pt-4 border-t space-y-3"
+                data-tour="invoice-create-wastage"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm font-semibold">
+                        {wastageRule.label}
+                      </Label>
+                      <TooltipProvider delayDuration={150}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300 underline underline-offset-2 hover:text-amber-900"
+                            >
+                              <HelpCircle className="h-3.5 w-3.5" />
+                              <T>How is this calculated?</T>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="bottom"
+                            className="max-w-xs whitespace-pre-line text-xs leading-relaxed"
+                          >
+                            {getWastageFormulaText(
+                              wastageRule.mode === "DISABLED"
+                                ? "WEIGHT_PERCENT"
+                                : wastageRule.mode,
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {wastageRule.mode === "DISABLED" ? (
+                        <T>
+                          Wastage is off for this country. Change settings if your
+                          shop still charges it.
+                        </T>
+                      ) : (
+                        <>
+                          {getWastageModeLabel(wastageRule.mode)}
+                          {" · "}
+                          {t(`Default ${effectiveWastagePercent}%`)}
+                          {" · "}
+                          {wastageRule.source === "shop" ? (
+                            <T>Shop setting</T>
+                          ) : (
+                            <T>Country default</T>
+                          )}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <Link
+                    href="/dashboard/shop/settings?tab=preferences#wastage"
+                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                  >
+                    <T>Change wastage settings</T>
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
+
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">
+                      <T>Wastage % for this invoice</T>
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={50}
+                      step={0.5}
+                      className="w-28 h-9"
+                      disabled={wastageRule.mode === "DISABLED"}
+                      value={invoiceWastagePercent}
+                      onChange={(e) => {
+                        wastagePercentTouched.current = true;
+                        setInvoiceWastagePercent(e.target.value);
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-9"
+                    disabled={wastageRule.mode === "DISABLED"}
+                    onClick={applyWastageToLines}
+                  >
+                    <Zap className="h-3.5 w-3.5 mr-1.5" />
+                    <T>Calculate wastage</T>
+                  </Button>
+                  {wastageApplied && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-9 text-muted-foreground"
+                      onClick={clearWastageFromLines}
+                    >
+                      <T>Clear wastage</T>
+                    </Button>
+                  )}
+                  {wastageTotal > 0 && (
+                    <span className="text-sm font-medium ml-auto">
+                      {currencySymbol}{" "}
+                      {wastageTotal.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  )}
+                </div>
+
+                {wastageCalcNotes.length > 0 && (
+                  <div className="rounded-md border border-amber-200/70 bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2 space-y-1">
+                    {wastageCalcNotes.map((note, i) => (
+                      <p
+                        key={i}
+                        className="text-[11px] text-muted-foreground leading-snug"
+                      >
+                        {note}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* ── Tax filing controls ───────────────────────────── */}
@@ -2922,7 +3243,7 @@ export default function CreateInvoicePage() {
                           <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-2">
                             Metal Details
                           </p>
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <div>
                               <Label className="text-xs"><T>Metal Type</T></Label>
                               <select
@@ -3070,6 +3391,32 @@ export default function CreateInvoicePage() {
                                 className="h-9 text-xs"
                               />
                             </div>
+                            {(wastageApplied ||
+                              parseFloat(item.wastageCost || "") > 0) && (
+                              <div>
+                                <Label className="text-xs">
+                                  {wastageRule.label} ({currencySymbol})
+                                </Label>
+                                <Input
+                                  type="number"
+                                  value={item.wastageCost || ""}
+                                  onChange={(e) =>
+                                    updateLineItem(
+                                      idx,
+                                      "wastageCost",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="0"
+                                  className="h-9 text-xs mt-0.5"
+                                />
+                                {item.wastagePercent && (
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {item.wastagePercent}%
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </div>
                           {item.metalParts && item.metalParts.length > 1 && (
                             <div className="mt-2 rounded-md border border-amber-200/60 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 p-2 space-y-1">
@@ -3542,6 +3889,27 @@ export default function CreateInvoicePage() {
                     )}
                   </div>
 
+                  {wastageTotal > 0 && (
+                    <div className="flex justify-between text-sm text-amber-700 dark:text-amber-300">
+                      <span>
+                        {wastageRule.label}
+                        {effectiveWastagePercent > 0
+                          ? ` (${effectiveWastagePercent}%)`
+                          : ""}
+                        <span className="text-[11px] text-muted-foreground ml-1">
+                          <T>in subtotal</T>
+                        </span>
+                      </span>
+                      <span className="font-medium">
+                        {currencySymbol}{" "}
+                        {wastageTotal.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Tax — single line by default, breakdown on demand */}
                   <div className="space-y-1">
                     <div className="flex justify-between items-center text-sm">
@@ -3583,6 +3951,27 @@ export default function CreateInvoicePage() {
                             })}
                           </span>
                         </div>
+                        {taxBreakdown.wastageTax > 0 && (
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>
+                              {countryTax.taxName} on {wastageRule.label} (
+                              {(countryTax.rates.PRECIOUS_METAL * 100).toFixed(
+                                1,
+                              )}
+                              %)
+                            </span>
+                            <span>
+                              {currencySymbol}{" "}
+                              {taxBreakdown.wastageTax.toLocaleString(
+                                undefined,
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                },
+                              )}
+                            </span>
+                          </div>
+                        )}
                         {taxBreakdown.gemstoneTax > 0 && (
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>

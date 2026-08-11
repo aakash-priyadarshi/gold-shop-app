@@ -130,6 +130,26 @@ export class CreateShopDto {
   @Max(25)
   makingChargePercent?: number;
 
+  @ApiPropertyOptional({
+    example: 'AUTO',
+    description:
+      'Customer billing wastage mode: AUTO | DISABLED | WEIGHT_PERCENT | METAL_VALUE_PERCENT',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['AUTO', 'DISABLED', 'WEIGHT_PERCENT', 'METAL_VALUE_PERCENT'])
+  billingWastageMode?: string;
+
+  @ApiPropertyOptional({
+    example: 6,
+    description: 'Override country default wastage %. Null uses market default.',
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(50)
+  billingWastagePercent?: number | null;
+
   @ApiPropertyOptional({ example: 1000, description: 'Minimum order value in NPR' })
   @IsOptional()
   @IsNumber()

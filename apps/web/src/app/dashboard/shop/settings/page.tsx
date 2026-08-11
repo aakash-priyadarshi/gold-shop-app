@@ -56,6 +56,15 @@ import {
     XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import {
+  getMarketWastageConfig,
+  getWastageFormulaText,
+  getWastageModeLabel,
+  resolveWastageRule,
+  type ShopWastageMode,
+  type WastageCalcMode,
+} from "@gold-shop/shared";
 
 interface ShopData {
   id: string;
@@ -79,6 +88,8 @@ interface ShopData {
   codEnabled: boolean;
   codMaxValueNpr?: number;
   makingChargePercent: number;
+  billingWastageMode?: string;
+  billingWastagePercent?: number | null;
   minOrderValueNpr: number;
   maxOrderValueNpr?: number;
   bankAccountDetails?: {
@@ -193,11 +204,14 @@ const TIER_META: Record<
 export default function ShopSettingsPage() {
   const { user, refreshUser } = useAuth();
   const t = useT();
+  const searchParams = useSearchParams();
   const { placeholders: countryPlaceholders, symbol: currencySymbol } =
     useShopCurrency();
   const [shopData, setShopData] = useState<ShopData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const initialTab = searchParams.get("tab") || "profile";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [tierDashboard, setTierDashboard] = useState<TierDashboard | null>(
     null,
   );
@@ -267,6 +281,24 @@ export default function ShopSettingsPage() {
       loadTierDashboard();
     }
   }, [user?.shop?.id]);
+
+  // Deep-link: ?tab=preferences#wastage
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (isLoading || !shopData) return;
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#wastage") return;
+    const el = document.getElementById("wastage");
+    if (el) {
+      requestAnimationFrame(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [isLoading, shopData, activeTab]);
 
   const loadTierDashboard = async (targetTier?: string) => {
     setTierLoading(true);
@@ -339,6 +371,11 @@ export default function ShopSettingsPage() {
         codEnabled: shopData.codEnabled,
         codMaxValueNpr: shopData.codMaxValueNpr,
         makingChargePercent: shopData.makingChargePercent,
+        billingWastageMode: shopData.billingWastageMode || "AUTO",
+        billingWastagePercent:
+          shopData.billingWastagePercent == null
+            ? null
+            : Number(shopData.billingWastagePercent),
         minOrderValueNpr: shopData.minOrderValueNpr,
         maxOrderValueNpr: shopData.maxOrderValueNpr,
         bankAccountDetails: shopData.bankAccountDetails,
@@ -487,7 +524,11 @@ export default function ShopSettingsPage() {
             </div>
           )}
 
-          <Tabs defaultValue="profile" className="space-y-4">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="space-y-4"
+          >
             <TabsList className="flex-wrap h-auto" data-tour="settings-tabs">
               <TabsTrigger value="profile">
                 <T>Profile</T>
@@ -996,6 +1037,136 @@ export default function ShopSettingsPage() {
                           placeholder={countryPlaceholders.minOrderExample}
                         />
                       </div>
+                    </div>
+
+                    {/* Billing wastage (customer-facing jarti) */}
+                    <div
+                      id="wastage"
+                      data-tour="shop-wastage-settings"
+                      className="scroll-mt-24 space-y-4 rounded-lg border border-amber-200/80 bg-amber-50/40 p-4 dark:border-amber-900/50 dark:bg-amber-950/20"
+                    >
+                      <div className="space-y-1">
+                        <Label className="text-base font-semibold">
+                          <T>Billing Wastage (Jarti)</T>
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          <T>
+                            Extra metal charge shown on invoices for manufacturing
+                            loss. Separate from karigar workshop wastage limits.
+                          </T>
+                        </p>
+                      </div>
+
+                      {(() => {
+                        const mode = (shopData.billingWastageMode ||
+                          "AUTO") as ShopWastageMode;
+                        const countryCfg = getMarketWastageConfig(
+                          shopData.country || "NP",
+                        );
+                        const preview = resolveWastageRule(
+                          shopData.country || "NP",
+                          {
+                            billingWastageMode: mode,
+                            billingWastagePercent:
+                              shopData.billingWastagePercent,
+                          },
+                        );
+                        const formulaMode: WastageCalcMode =
+                          preview.mode === "DISABLED"
+                            ? countryCfg.mode === "DISABLED"
+                              ? "WEIGHT_PERCENT"
+                              : countryCfg.mode
+                            : preview.mode;
+                        return (
+                          <>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                              <div className="space-y-2">
+                                <Label htmlFor="billingWastageMode">
+                                  <T>Calculation mode</T>
+                                </Label>
+                                <Select
+                                  value={mode}
+                                  onValueChange={(v) =>
+                                    updateShopData({
+                                      billingWastageMode: v,
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger id="billingWastageMode">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="AUTO">
+                                      {getWastageModeLabel("AUTO")}
+                                    </SelectItem>
+                                    <SelectItem value="WEIGHT_PERCENT">
+                                      {getWastageModeLabel("WEIGHT_PERCENT")}
+                                    </SelectItem>
+                                    <SelectItem value="METAL_VALUE_PERCENT">
+                                      {getWastageModeLabel(
+                                        "METAL_VALUE_PERCENT",
+                                      )}
+                                    </SelectItem>
+                                    <SelectItem value="DISABLED">
+                                      {getWastageModeLabel("DISABLED")}
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="billingWastagePercent">
+                                  <T>Default wastage %</T>
+                                </Label>
+                                <Input
+                                  id="billingWastagePercent"
+                                  type="number"
+                                  min={0}
+                                  max={50}
+                                  step={0.5}
+                                  disabled={mode === "DISABLED"}
+                                  placeholder={String(
+                                    countryCfg.defaultPercent || 0,
+                                  )}
+                                  value={
+                                    shopData.billingWastagePercent ?? ""
+                                  }
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    updateShopData({
+                                      billingWastagePercent:
+                                        raw === ""
+                                          ? null
+                                          : parseFloat(raw) || 0,
+                                    });
+                                  }}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  {t(
+                                    `Leave blank to use ${shopData.country || "country"} default (${countryCfg.defaultPercent}%). Typical ${countryCfg.typicalRange.min}–${countryCfg.typicalRange.max}%.`,
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="rounded-md border bg-background/80 px-3 py-2 text-xs space-y-1">
+                              <p className="font-medium">
+                                <T>Preview for your shop country</T>
+                                {`: ${preview.label} · ${getWastageModeLabel(preview.mode)} · ${preview.percent}%`}
+                              </p>
+                              <p className="text-muted-foreground whitespace-pre-line">
+                                {getWastageFormulaText(
+                                  preview.mode === "DISABLED"
+                                    ? "DISABLED"
+                                    : formulaMode,
+                                )}
+                              </p>
+                              <p className="text-muted-foreground">
+                                {countryCfg.description}
+                              </p>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </CardContent>

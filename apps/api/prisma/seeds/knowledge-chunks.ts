@@ -178,6 +178,11 @@ const CHUNKS: { topic: string; content: string }[] = [
     content:
       "On Create Invoice use Add from catalog to pull available products into the bill with metal, making and gemstone breakdown. Catalog pieces are stock-linked and marked sold when the invoice is created. The Invoice Country selector at the top controls which tax regime applies (India GST, Nepal skill fee, UAE VAT, etc.) and which Tax Reports tab the invoice appears under. It defaults to your shop country and can differ for export bills. POS counter sales also use your shop currency and country for tax reporting.",
   },
+  {
+    topic: "billing_wastage",
+    content:
+      "Billing wastage (also called jarti) is the customer-facing manufacturing-loss charge on invoices — separate from karigar workshop wastage limits in Supply Chain. On Create Invoice, use Calculate wastage after entering metal weight and cost. Hover How is this calculated? to see the formula. Weight % mode: wastage grams = net weight × %, amount = wastage grams × (metal cost ÷ net weight). Metal value % mode: wastage = metal cost × %. Country defaults: Sri Lanka/India/Nepal often on; US/UK/EU/UAE off by default. Change permanent mode and default % under Shop Settings → Preferences → Billing Wastage. Wastage is taxed like metal and shown as its own line on the bill.",
+  },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

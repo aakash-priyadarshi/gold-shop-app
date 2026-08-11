@@ -79,6 +79,16 @@ export class InvoiceLineItemDto {
   @IsNumber()
   @Min(0)
   metalWeightG?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  wastageCost?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  wastagePercent?: number;
 }
 
 export class CreateInvoiceDto {

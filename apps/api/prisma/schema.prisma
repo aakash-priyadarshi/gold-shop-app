@@ -376,6 +376,10 @@ model Shop {
   codMaxValueNpr            Float?
   bankAccountDetails        Json?
   makingChargePercent       Float                 @default(10)
+  /// AUTO | DISABLED | WEIGHT_PERCENT | METAL_VALUE_PERCENT — customer billing wastage
+  billingWastageMode        String                @default("AUTO")
+  /// When set, overrides country default wastage %. Null = use market default.
+  billingWastagePercent     Float?
   nickelCompliantFlag       Boolean               @default(false)
   isActive                  Boolean               @default(true)
   createdAt                 DateTime              @default(now())

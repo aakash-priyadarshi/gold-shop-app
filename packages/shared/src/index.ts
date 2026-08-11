@@ -10,4 +10,5 @@ export * from "./validation/method-validation";
 // Utilities
 export * from "./location-data";
 export * from "./utils/market-config";
+export * from "./utils/wastage";
 export * from "./utils/weight-conversion";
