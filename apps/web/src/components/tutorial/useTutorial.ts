@@ -358,7 +358,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Billing Wastage Settings",
         description:
-          "Set how customer wastage is calculated on invoices: Auto (follow invoice country), Weight %, Metal value %, or Disabled. Leave % blank to use the country default. Invoice create has a Calculate wastage button and a How is this calculated? formula tooltip that links here.",
+          "Set how customer wastage is calculated on invoices: Auto (follow invoice country), Weight %, Metal value %, or Disabled. Leave % blank to use the country default. On Create Invoice, wastage recalculates live as you change the % (same as making). Hover How is this calculated? for the formula tooltip that links here.",
         side: "top",
         align: "start",
       },
@@ -475,7 +475,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Invoice Totals, Making & Wastage",
         description:
-          "Subtotal is based on metal and gemstones. Set Making Charge here (% or amount) — this is the only making control. Below it, one Wastage % field: catalog/walk-in imports show e.g. '5% from catalog' and if you change to 6% the caption shows '+1% adjusted' with the amount — no separate adjust box. Manual invoices just enter % and Calculate. Tax breakdown and grand total appear underneath.",
+          "Subtotal is based on metal and gemstones. Set Making Charge here (% or amount) — this is the only making control. Below it, one Wastage % field that recalculates live: catalog/walk-in imports show e.g. '5% from catalog' and if you change to 6% the caption shows '+1% adjusted' with the amount. Manual invoices just enter %. Tax breakdown and grand total appear underneath.",
         side: "top",
         align: "end",
       },

@@ -48,7 +48,7 @@ import {
     validateTaxId,
 } from "@/lib/tax/validators";
 import { useT } from "@/providers/translation-provider";
-import { toGrams, fromGrams, getSupportedWeightUnits, getDefaultWeightUnit, calculateLineWastage, getWastageFormulaText, getWastageModeLabel, resolveWastageRule, type ResolvedWastageRule } from "@gold-shop/shared";
+import { toGrams, fromGrams, getSupportedWeightUnits, getDefaultWeightUnit, calculateLineWastage, getWastageFormulaText, resolveWastageRule, type ResolvedWastageRule } from "@gold-shop/shared";
 import {
     ArrowLeft,
     Check,
@@ -1235,10 +1235,52 @@ export default function CreateInvoicePage() {
     );
   }, [invoiceCountry]);
 
-  const applyWastageToLines = useCallback(
-    (overridePercent?: string, opts?: { silent?: boolean }) => {
+  /** Live wastage for one line — same formula as totals % control. */
+  const recalcLineWastage = useCallback(
+    (li: RichLineItem, pct: number): RichLineItem => {
       const mode =
         wastageRule.mode === "DISABLED" ? "WEIGHT_PERCENT" : wastageRule.mode;
+      const metalCost = parseFloat(li.metalCost) || 0;
+      if (metalCost <= 0 || !li.label?.trim()) {
+        return { ...li, wastageCost: "", wastagePercent: "" };
+      }
+      const hasBase =
+        li.baseWastagePercent !== undefined && li.baseWastagePercent !== "";
+      const nextBase = hasBase ? li.baseWastagePercent! : String(pct);
+      if (pct <= 0) {
+        return {
+          ...li,
+          baseWastagePercent: nextBase,
+          wastagePercent: "0",
+          wastageCost: "",
+        };
+      }
+      const result = calculateLineWastage(
+        {
+          metalCost,
+          metalWeightG: parseFloat(li.metalWeightG) || 0,
+          wastagePercent: pct,
+        },
+        {
+          mode,
+          percent: pct,
+          label: wastageRule.label,
+        },
+      );
+      return {
+        ...li,
+        baseWastagePercent: nextBase,
+        wastagePercent: String(pct),
+        wastageCost:
+          result.wastageCost > 0 ? result.wastageCost.toFixed(2) : "",
+      };
+    },
+    [wastageRule.mode, wastageRule.label],
+  );
+
+  /** Apply invoice wastage % to all lines (live — no Calculate button). */
+  const applyWastageToLines = useCallback(
+    (overridePercent?: string) => {
       const raw =
         overridePercent !== undefined
           ? overridePercent
@@ -1253,76 +1295,25 @@ export default function CreateInvoicePage() {
       let appliedCount = 0;
       setLineItems((prev) =>
         prev.map((li, idx) => {
-          const metalCost = parseFloat(li.metalCost) || 0;
-          if (metalCost <= 0 || !li.label?.trim()) {
-            return { ...li, wastageCost: "", wastagePercent: "" };
+          const next = recalcLineWastage(li, pct);
+          const cost = parseFloat(next.wastageCost || "") || 0;
+          if (cost > 0) {
+            appliedCount += 1;
+            notes.push(
+              `Item ${idx + 1}: ${next.wastagePercent}% · ${currencySymbol} ${cost.toFixed(2)}`,
+            );
           }
-          // Manual lines with no base: treat current % as the source baseline once set
-          const hasBase =
-            li.baseWastagePercent !== undefined &&
-            li.baseWastagePercent !== "";
-          const nextBase = hasBase
-            ? li.baseWastagePercent!
-            : li.source === "MANUAL"
-              ? String(pct)
-              : String(pct);
-
-          if (pct <= 0) {
-            return {
-              ...li,
-              baseWastagePercent: nextBase,
-              wastagePercent: "0",
-              wastageCost: "",
-            };
-          }
-          const result = calculateLineWastage(
-            {
-              metalCost,
-              metalWeightG: parseFloat(li.metalWeightG) || 0,
-              wastagePercent: pct,
-            },
-            {
-              mode,
-              percent: pct,
-              label: wastageRule.label,
-            },
-          );
-          if (result.wastageCost > 0) appliedCount += 1;
-          notes.push(`Item ${idx + 1}: ${result.explanation.join(" · ")}`);
-          return {
-            ...li,
-            baseWastagePercent: nextBase,
-            wastagePercent: String(pct),
-            wastageCost:
-              result.wastageCost > 0 ? result.wastageCost.toFixed(2) : "",
-          };
+          return next;
         }),
       );
       setWastageApplied(appliedCount > 0 || pct === 0);
       setWastageCalcNotes(notes.slice(0, 8));
-      if (!opts?.silent) {
-        toast({
-          title:
-            appliedCount > 0
-              ? t(`Wastage calculated on ${appliedCount} item(s)`)
-              : pct === 0
-                ? t("Wastage set to 0%")
-                : t("No metal lines to apply wastage"),
-          description:
-            appliedCount > 0
-              ? t(`${wastageRule.label} using ${getWastageModeLabel(mode)}`)
-              : pct === 0
-                ? undefined
-                : t("Add metal cost on line items first."),
-        });
-      }
     },
     [
-      wastageRule.mode,
-      wastageRule.label,
       effectiveWastagePercent,
       invoiceWastagePercent,
-      t,
+      recalcLineWastage,
+      currencySymbol,
     ],
   );
 
@@ -1592,9 +1583,29 @@ export default function CreateInvoicePage() {
     field: keyof RichLineItem,
     value: any,
   ) => {
-    const updated = [...lineItems];
-    (updated[index] as any)[field] = value;
-    setLineItems(updated);
+    setLineItems((prev) => {
+      const updated = [...prev];
+      const row = { ...updated[index], [field]: value } as RichLineItem;
+      // Keep wastage in sync with metal edits (live, like making)
+      if (field === "metalCost" || field === "metalWeightG") {
+        const pct =
+          invoiceWastagePercent !== "" &&
+          Number.isFinite(parseFloat(invoiceWastagePercent))
+            ? Math.max(0, parseFloat(invoiceWastagePercent))
+            : parseFloat(row.wastagePercent || row.baseWastagePercent || "") ||
+              0;
+        if (
+          invoiceWastagePercent !== "" ||
+          row.wastagePercent ||
+          row.baseWastagePercent
+        ) {
+          updated[index] = recalcLineWastage(row, pct);
+          return updated;
+        }
+      }
+      updated[index] = row;
+      return updated;
+    });
   };
 
   // Autofill metal cost: prefer shop Pricing Setup rates, else live market.
@@ -2176,7 +2187,7 @@ export default function CreateInvoicePage() {
         kind: "MANUAL" as const,
         text:
           invoiceWastagePercent === ""
-            ? t("Manual — enter % and calculate")
+            ? t("Manual — enter %")
             : t(`Manual · ${effective}%`),
       };
     }
@@ -3855,22 +3866,12 @@ export default function CreateInvoicePage() {
                           wastagePercentTouched.current = true;
                           const v = e.target.value;
                           setInvoiceWastagePercent(v);
-                          applyWastageToLines(v, { silent: true });
+                          applyWastageToLines(v);
                         }}
                         placeholder="%"
                         title={t("Wastage %")}
                       />
                       <span className="text-xs text-muted-foreground">%</span>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="h-8 text-xs"
-                        onClick={() => applyWastageToLines()}
-                      >
-                        <Zap className="h-3 w-3 mr-1" />
-                        <T>Calculate</T>
-                      </Button>
                       <span className="text-sm ml-auto font-medium text-amber-700 dark:text-amber-300">
                         {currencySymbol}{" "}
                         {wastageTotal.toLocaleString(undefined, {
