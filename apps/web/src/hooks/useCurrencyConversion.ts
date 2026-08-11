@@ -5,13 +5,10 @@ import {
   CURRENCY_SYMBOLS,
   DEFAULT_USD_FX_RATES,
   convertCurrencyAmount,
-  fetchFreeFxRates,
+  fetchFreeFxRatesDetailed,
   type SupportedCurrencyCode,
 } from '@/lib/currency';
 import { useMarket, type CurrencyCode } from './useMarket';
-
-// Cache for FX rates
-let fxRatesCache: { rates: Record<SupportedCurrencyCode, number>; expiresAt: Date } | null = null;
 
 export function useCurrencyConversion() {
   const { selectedCurrency } = useMarket();
@@ -22,30 +19,19 @@ export function useCurrencyConversion() {
   // Fetch FX rates from API
   useEffect(() => {
     const fetchFxRates = async () => {
-      // Check cache first (5 minute TTL)
-      if (fxRatesCache && fxRatesCache.expiresAt > new Date()) {
-        setFxRates(fxRatesCache.rates);
-        setIsLoading(false);
-        return;
-      }
-
       setIsLoading(true);
       setError(null);
 
       try {
-        const rates = await fetchFreeFxRates();
-
-        // Cache the rates for 5 minutes
-        fxRatesCache = {
-          rates,
-          expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-        };
-
+        const { rates, isFallback } = await fetchFreeFxRatesDetailed();
         setFxRates(rates);
+        if (isFallback) {
+          setError('Live rates unavailable — showing approximate reference rates');
+        }
       } catch (err) {
         console.error('Failed to fetch FX rates:', err);
-        setError('Failed to load exchange rates');
-        // Keep using default rates
+        setFxRates({ ...DEFAULT_USD_FX_RATES });
+        setError('Live rates unavailable — showing approximate reference rates');
       } finally {
         setIsLoading(false);
       }

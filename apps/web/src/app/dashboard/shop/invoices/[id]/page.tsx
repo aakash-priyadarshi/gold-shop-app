@@ -290,6 +290,18 @@ export default function InvoiceDetailPage() {
 
   const handlePrint = () => {
     if (!invoice) return;
+    const lines = invoice.lineItems || [];
+    const wastageAmount = lines
+      .filter((li) => /wastage|jarti/i.test(li.label || ""))
+      .reduce((s, li) => s + (Number(li.amount) || 0), 0);
+    const makingAmount = lines
+      .filter(
+        (li) =>
+          String(li.category || "").toUpperCase() === "MAKING" ||
+          /making/i.test(li.label || ""),
+      )
+      .reduce((s, li) => s + (Number(li.amount) || 0), 0);
+    const tb = invoice.taxBreakdown || {};
     const ok = printBill({
       fallbackShopName: user?.shop?.shopName,
       settings: billSettings,
@@ -309,15 +321,23 @@ export default function InvoiceDetailPage() {
       supplyDate: invoice.supplyDate,
       placeOfSupply:
         invoice.placeOfSupply || invoice.taxBreakdown?.placeOfSupply,
-      lineItems: invoice.lineItems?.map((li) => ({
+      lineItems: lines.map((li) => ({
         label: li.label,
         quantity: li.quantity,
         amount: li.amount,
         details: li.details,
       })),
       subtotal: invoice.subtotal,
+      makingAmount: makingAmount > 0 ? makingAmount : undefined,
+      wastageAmount: wastageAmount > 0 ? wastageAmount : undefined,
       taxAmount: invoice.taxAmount,
       taxLabel: invoice.taxLabel,
+      taxBreakdown: {
+        metalTax: Number(tb.metalTax) || undefined,
+        wastageTax: Number(tb.wastageTax) || undefined,
+        makingTax: Number(tb.makingTax) || undefined,
+        gemstoneTax: Number(tb.gemstoneTax) || undefined,
+      },
       discountAmount: invoice.discountAmount,
       totalAmount: invoice.totalAmount,
       paidAmount: invoice.paidAmount,
@@ -723,6 +743,38 @@ export default function InvoiceDetailPage() {
                       )}
                     </span>
                   </div>
+                  {(() => {
+                    const wastageAmt = (invoice.lineItems || [])
+                      .filter((li) => /wastage|jarti/i.test(li.label || ""))
+                      .reduce((s, li) => s + (Number(li.amount) || 0), 0);
+                    const makingAmt = (invoice.lineItems || [])
+                      .filter(
+                        (li) =>
+                          String(li.category || "").toUpperCase() === "MAKING" ||
+                          /making/i.test(li.label || ""),
+                      )
+                      .reduce((s, li) => s + (Number(li.amount) || 0), 0);
+                    return (
+                      <>
+                        {makingAmt > 0 && (
+                          <div className="flex justify-between text-sm text-blue-600 dark:text-blue-400">
+                            <span>
+                              <T>Incl. making</T>
+                            </span>
+                            <span>{formatCurrency(makingAmt)}</span>
+                          </div>
+                        )}
+                        {wastageAmt > 0 && (
+                          <div className="flex justify-between text-sm text-amber-700 dark:text-amber-300">
+                            <span>
+                              <T>Incl. wastage</T>
+                            </span>
+                            <span>{formatCurrency(wastageAmt)}</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                   {invoice.taxAmount > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>
@@ -732,6 +784,53 @@ export default function InvoiceDetailPage() {
                             `Tax (${(invoice.taxRate * 100).toFixed(1)}%)`}
                       </span>
                       <span>{formatCurrency(invoice.taxAmount)}</span>
+                    </div>
+                  )}
+                  {(invoice.taxBreakdown?.metalTax > 0 ||
+                    invoice.taxBreakdown?.wastageTax > 0 ||
+                    invoice.taxBreakdown?.makingTax > 0 ||
+                    invoice.taxBreakdown?.gemstoneTax > 0) && (
+                    <div className="pl-2 border-l-2 border-amber-100 dark:border-amber-900/40 space-y-0.5 text-[11px] text-muted-foreground">
+                      {invoice.taxBreakdown?.metalTax > 0 && (
+                        <div className="flex justify-between">
+                          <span>
+                            <T>Metal tax</T>
+                          </span>
+                          <span>
+                            {formatCurrency(invoice.taxBreakdown.metalTax)}
+                          </span>
+                        </div>
+                      )}
+                      {invoice.taxBreakdown?.wastageTax > 0 && (
+                        <div className="flex justify-between">
+                          <span>
+                            <T>Wastage tax</T>
+                          </span>
+                          <span>
+                            {formatCurrency(invoice.taxBreakdown.wastageTax)}
+                          </span>
+                        </div>
+                      )}
+                      {invoice.taxBreakdown?.makingTax > 0 && (
+                        <div className="flex justify-between">
+                          <span>
+                            <T>Making tax</T>
+                          </span>
+                          <span>
+                            {formatCurrency(invoice.taxBreakdown.makingTax)}
+                          </span>
+                        </div>
+                      )}
+                      {invoice.taxBreakdown?.gemstoneTax > 0 && (
+                        <div className="flex justify-between">
+                          <span>
+                            <T>Gemstone tax</T>
+                          </span>
+                          <span>
+                            {formatCurrency(invoice.taxBreakdown.gemstoneTax)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                   {invoice.discountAmount > 0 && (

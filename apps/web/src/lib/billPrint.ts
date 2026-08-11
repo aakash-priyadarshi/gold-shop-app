@@ -59,8 +59,18 @@ export interface BillPrintPayload {
   placeOfSupply?: string | null;
   lineItems?: BillLineItem[];
   subtotal?: number;
+  /** Explicit making total for the bill footer (when not already split in lines) */
+  makingAmount?: number;
+  /** Explicit wastage / jarti total */
+  wastageAmount?: number;
   taxAmount?: number;
   taxLabel?: string;
+  taxBreakdown?: {
+    metalTax?: number;
+    wastageTax?: number;
+    makingTax?: number;
+    gemstoneTax?: number;
+  };
   discountAmount?: number;
   totalAmount: number;
   paidAmount?: number;
@@ -294,8 +304,24 @@ ${
       <div class="row"><span class="label">Date</span><span class="value">${safe(formatDate(payload.issuedAt))}</span></div>
       ${payload.paymentMethod ? `<div class="row"><span class="label">Payment mode</span><span class="value">${safe(payload.paymentMethod.replace(/_/g, " "))}</span></div>` : ""}<hr class="divider"/>${standardLines}
       ${payload.subtotal != null ? `<div class="row"><span class="label">Subtotal</span><span class="value">${safe(fmt(payload.subtotal, currency))}</span></div>` : ""}
+      ${payload.makingAmount ? `<div class="row"><span class="label">Incl. making</span><span class="value">${safe(fmt(payload.makingAmount, currency))}</span></div>` : ""}
+      ${payload.wastageAmount ? `<div class="row"><span class="label">Incl. wastage</span><span class="value">${safe(fmt(payload.wastageAmount, currency))}</span></div>` : ""}
       ${payload.discountAmount ? `<div class="row"><span class="label">Discount</span><span class="value">-${safe(fmt(payload.discountAmount, currency))}</span></div>` : ""}
       ${payload.taxAmount ? `<div class="row"><span class="label">${safe(payload.taxLabel || "Tax")}</span><span class="value">${safe(fmt(payload.taxAmount, currency))}</span></div>` : ""}
+      ${
+        payload.taxBreakdown &&
+        (payload.taxBreakdown.metalTax ||
+          payload.taxBreakdown.wastageTax ||
+          payload.taxBreakdown.makingTax ||
+          payload.taxBreakdown.gemstoneTax)
+          ? `<div class="tiny" style="margin:2px 0 6px 8px;line-height:1.5">
+              ${payload.taxBreakdown.metalTax ? `Metal tax: ${safe(fmt(payload.taxBreakdown.metalTax, currency))}<br/>` : ""}
+              ${payload.taxBreakdown.wastageTax ? `Wastage tax: ${safe(fmt(payload.taxBreakdown.wastageTax, currency))}<br/>` : ""}
+              ${payload.taxBreakdown.makingTax ? `Making tax: ${safe(fmt(payload.taxBreakdown.makingTax, currency))}<br/>` : ""}
+              ${payload.taxBreakdown.gemstoneTax ? `Gemstone tax: ${safe(fmt(payload.taxBreakdown.gemstoneTax, currency))}` : ""}
+            </div>`
+          : ""
+      }
       <div class="total-row"><span>Total</span><span>${safe(fmt(payload.totalAmount, currency))}</span></div>`
 }
 ${paid > 0 ? `<div class="row" style="padding-top:8px"><span class="label">Paid</span><span class="amt-paid">${safe(fmt(paid, currency))}</span></div>` : ""}

@@ -81,6 +81,15 @@ export class CreateInventoryItemDto {
   @Min(0)
   makingChargeNpr: number;
 
+  @ApiPropertyOptional({
+    description: 'Default customer billing wastage % (jarti) for this piece',
+    example: 5,
+  })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  wastagePercent?: number;
+
   @ApiPropertyOptional({ description: 'Gemstone value in NPR' })
   @IsNumber()
   @IsOptional()
@@ -248,6 +257,14 @@ export class UpdateInventoryItemDto {
   @IsNumber()
   @IsOptional()
   makingChargeNpr?: number;
+
+  @ApiPropertyOptional({
+    description: 'Default customer billing wastage % (jarti) for this piece',
+  })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  wastagePercent?: number;
 
   @ApiPropertyOptional()
   @IsNumber()

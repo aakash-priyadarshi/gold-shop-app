@@ -95,6 +95,7 @@ export class InventoryService {
         gemstones: (dto.gemstones as object) || null,
         metalValueNpr: metalValue,
         makingChargeNpr: makingCharge,
+        wastagePercent: dto.wastagePercent ?? 0,
         gemstoneValueNpr: gemstoneValue,
         taxNpr: tax,
         totalPriceNpr: totalPrice,
@@ -165,6 +166,8 @@ export class InventoryService {
       updateData.metalValueNpr = dto.metalValueNpr;
     if (dto.makingChargeNpr !== undefined)
       updateData.makingChargeNpr = dto.makingChargeNpr;
+    if (dto.wastagePercent !== undefined)
+      updateData.wastagePercent = dto.wastagePercent;
     if (dto.gemstoneValueNpr !== undefined)
       updateData.gemstoneValueNpr = dto.gemstoneValueNpr;
     if (dto.taxNpr !== undefined) updateData.taxNpr = dto.taxNpr;

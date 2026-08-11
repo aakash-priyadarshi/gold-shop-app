@@ -574,6 +574,8 @@ model InventoryItem {
   gemstones         Json?
   metalValueNpr     Float
   makingChargeNpr   Float
+  /// Customer billing wastage % (jarti) default for this piece — applied on invoice
+  wastagePercent    Float               @default(0)
   gemstoneValueNpr  Float               @default(0)
   taxNpr            Float               @default(0)
   totalPriceNpr     Float

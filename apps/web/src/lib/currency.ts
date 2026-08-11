@@ -45,7 +45,11 @@ export const DEFAULT_USD_FX_RATES: Record<SupportedCurrencyCode, number> = {
   AUD: 1.51,
 };
 
-let fxCache: { rates: Record<SupportedCurrencyCode, number>; expiresAt: number } | null = null;
+let fxCache: {
+  rates: Record<SupportedCurrencyCode, number>;
+  expiresAt: number;
+  isFallback: boolean;
+} | null = null;
 
 export function getCurrencyForCountry(
   country?: string | null,
@@ -64,35 +68,68 @@ export function getCurrencyForShop(
   return resolveShopCurrency(shop, base as CurrencyCode) as SupportedCurrencyCode;
 }
 
+export type FxRatesResult = {
+  rates: Record<SupportedCurrencyCode, number>;
+  /** True when live API failed and defaults were used */
+  isFallback: boolean;
+};
+
 export async function fetchFreeFxRates(): Promise<Record<SupportedCurrencyCode, number>> {
+  const result = await fetchFreeFxRatesDetailed();
+  return result.rates;
+}
+
+export async function fetchFreeFxRatesDetailed(): Promise<FxRatesResult> {
   if (fxCache && fxCache.expiresAt > Date.now()) {
-    return fxCache.rates;
+    return { rates: fxCache.rates, isFallback: fxCache.isFallback };
   }
 
-  const response = await fetch("https://api.frankfurter.dev/v1/latest?base=USD");
-  if (!response.ok) throw new Error("Failed to load exchange rates");
+  const endpoints = [
+    "https://api.frankfurter.app/latest?from=USD",
+    "https://api.frankfurter.dev/v1/latest?base=USD",
+  ];
 
-  const data = await response.json();
-  const rates: Record<SupportedCurrencyCode, number> = {
-    ...DEFAULT_USD_FX_RATES,
-    ...(data.rates ?? {}),
-    USD: 1,
-  };
+  let lastError: unknown;
+  for (const url of endpoints) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        lastError = new Error(`FX ${response.status}`);
+        continue;
+      }
+      const data = await response.json();
+      const rates: Record<SupportedCurrencyCode, number> = {
+        ...DEFAULT_USD_FX_RATES,
+        ...(data.rates ?? {}),
+        USD: 1,
+      };
 
-  if (rates.INR && !data.rates?.NPR) {
-    rates.NPR = rates.INR * 1.6;
+      if (rates.INR && !data.rates?.NPR) {
+        rates.NPR = rates.INR * 1.6;
+      }
+      if (!data.rates?.LKR) {
+        rates.LKR = rates.INR ? rates.INR * 3.6 : DEFAULT_USD_FX_RATES.LKR;
+      }
+
+      fxCache = {
+        rates,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        isFallback: false,
+      };
+      return { rates, isFallback: false };
+    } catch (err) {
+      lastError = err;
+    }
   }
-  if (!data.rates?.LKR) {
-    // Frankfurter often omits LKR — derive from INR (~3.6 LKR per INR)
-    rates.LKR = rates.INR ? rates.INR * 3.6 : DEFAULT_USD_FX_RATES.LKR;
-  }
 
+  console.warn("FX fetch failed, using fallback rates", lastError);
+  const rates = { ...DEFAULT_USD_FX_RATES };
   fxCache = {
     rates,
-    expiresAt: Date.now() + 5 * 60 * 1000,
+    expiresAt: Date.now() + 60 * 1000,
+    isFallback: true,
   };
-
-  return rates;
+  return { rates, isFallback: true };
 }
 
 export function convertCurrencyAmount(

@@ -78,6 +78,7 @@ interface InventoryItem {
   totalWeightGrams: number;
   metalValueNpr: number;
   makingChargeNpr: number;
+  wastagePercent?: number;
   gemstoneValueNpr: number;
   totalPriceNpr: number;
   images: string[];
@@ -219,6 +220,7 @@ interface ProductFormData {
   totalWeightGrams: string;
   metalValueNpr: string;
   makingChargeNpr: string;
+  wastagePercent: string;
   gemstoneValueNpr: string;
   stockQuantity: string;
   images: string[];
@@ -239,6 +241,7 @@ const emptyForm: ProductFormData = {
   totalWeightGrams: "",
   metalValueNpr: "",
   makingChargeNpr: "",
+  wastagePercent: "",
   gemstoneValueNpr: "0",
   stockQuantity: "1",
   images: [],
@@ -404,6 +407,7 @@ export default function ShopProductsPage() {
       totalWeightGrams: product.totalWeightGrams.toString(),
       metalValueNpr: product.metalValueNpr.toString(),
       makingChargeNpr: product.makingChargeNpr.toString(),
+      wastagePercent: String(product.wastagePercent ?? 0),
       gemstoneValueNpr: product.gemstoneValueNpr.toString(),
       stockQuantity: product.stockQuantity.toString(),
       images: product.images || [],
@@ -545,6 +549,7 @@ export default function ShopProductsPage() {
         totalWeightGrams: weightInGrams,
         metalValueNpr: parseFloat(formData.metalValueNpr) || 0,
         makingChargeNpr: parseFloat(formData.makingChargeNpr) || 0,
+        wastagePercent: parseFloat(formData.wastagePercent) || 0,
         gemstoneValueNpr: parseFloat(formData.gemstoneValueNpr) || 0,
         stockQuantity: parseInt(formData.stockQuantity) || 1,
         images: formData.images,
@@ -1642,7 +1647,7 @@ export default function ShopProductsPage() {
               </div>
 
               {/* Pricing */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="metalValue">
                     Metal Value ({currency.code})
@@ -1676,6 +1681,32 @@ export default function ShopProductsPage() {
                     }
                     placeholder="e.g., 5000"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="wastagePercent">
+                    <T>Wastage %</T>
+                  </Label>
+                  <Input
+                    id="wastagePercent"
+                    type="number"
+                    min={0}
+                    max={50}
+                    step={0.5}
+                    value={formData.wastagePercent}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        wastagePercent: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., 5"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    <T>
+                      Applied when this piece is added to an invoice (jarti). You
+                      can still adjust +/- on the bill.
+                    </T>
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gemstoneValue">
