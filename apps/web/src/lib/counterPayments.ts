@@ -58,10 +58,90 @@ export function isDigitalWalletMethod(method?: string | null): boolean {
 
 export function paymentMethodLabel(method?: string | null): string {
   if (!method) return "";
-  const found = COUNTER_PAYMENT_METHODS.find(
-    (m) => m.value === method.toUpperCase(),
-  );
+  const m = method.toUpperCase();
+  if (m === "SPLIT") return "Split";
+  const found = COUNTER_PAYMENT_METHODS.find((x) => x.value === m);
   return found?.label || method.replace(/_/g, " ");
+}
+
+/** NPCI typical per-transaction UPI QR / intent limit (INR). */
+export const UPI_MAX_AMOUNT_INR = 100_000;
+
+/**
+ * Whether a UPI/PhonePe amount is within the ₹1 lakh limit.
+ * Non-digital-wallet methods always return true.
+ */
+export function isUpiAmountAllowed(
+  amount: number,
+  method?: string | null,
+): boolean {
+  if (!isDigitalWalletMethod(method)) return true;
+  if (!Number.isFinite(amount) || amount <= 0) return true;
+  return amount <= UPI_MAX_AMOUNT_INR;
+}
+
+export interface ShopBankAccountDetails {
+  bankName?: string | null;
+  branchName?: string | null;
+  accountName?: string | null;
+  accountNumber?: string | null;
+  swiftCode?: string | null;
+  ifsc?: string | null;
+  upiId?: string | null;
+  phonePeMerchantRef?: string | null;
+  posTerminalId?: string | null;
+  posTerminalProvider?: string | null;
+}
+
+/** Human-readable bank transfer lines for dialogs / receipts. */
+export function formatBankAccountDetails(
+  details?: ShopBankAccountDetails | null,
+): string[] {
+  if (!details || typeof details !== "object") return [];
+  const lines: string[] = [];
+  if (details.accountName?.trim()) {
+    lines.push(`Account name: ${details.accountName.trim()}`);
+  }
+  if (details.accountNumber?.trim()) {
+    lines.push(`Account number: ${details.accountNumber.trim()}`);
+  }
+  if (details.bankName?.trim()) {
+    lines.push(`Bank: ${details.bankName.trim()}`);
+  }
+  if (details.branchName?.trim()) {
+    lines.push(`Branch: ${details.branchName.trim()}`);
+  }
+  const ifscOrSwift =
+    details.ifsc?.trim() || details.swiftCode?.trim() || "";
+  if (ifscOrSwift) {
+    lines.push(
+      `${details.ifsc?.trim() ? "IFSC" : "IFSC / SWIFT"}: ${ifscOrSwift}`,
+    );
+  }
+  return lines;
+}
+
+export function hasBankTransferDetails(
+  details?: ShopBankAccountDetails | null,
+): boolean {
+  return formatBankAccountDetails(details).length > 0;
+}
+
+/** e.g. "Cash 50,000 + Card 50,000" for split receipts. */
+export function formatPaymentSummary(
+  legs: Array<{ method: string; amount: number }>,
+  currency?: string,
+): string {
+  const parts = legs
+    .filter((l) => l.amount > 0)
+    .map((l) => {
+      const label = paymentMethodLabel(l.method);
+      const amt = Number(l.amount || 0).toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+      });
+      return currency ? `${label} ${currency} ${amt}` : `${label} ${amt}`;
+    });
+  return parts.join(" + ");
 }
 
 /** Build a standard UPI intent URI for QR display / deep link. */
@@ -75,6 +155,7 @@ export function buildUpiPayUri(opts: {
 }): string | null {
   const pa = (opts.upiId || "").trim();
   if (!pa || !opts.amount || opts.amount <= 0) return null;
+  if (!isUpiAmountAllowed(opts.amount, "UPI")) return null;
   const params = new URLSearchParams({
     pa,
     am: opts.amount.toFixed(2),
@@ -91,13 +172,7 @@ export function buildQrImageUrl(data: string, size = 220): string {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}`;
 }
 
-export interface ShopPaymentAccounts {
-  upiId?: string | null;
-  phonePeMerchantRef?: string | null;
-  /** Reserved for future terminal / soundbox pairing */
-  posTerminalId?: string | null;
-  posTerminalProvider?: string | null;
-}
+export type ShopPaymentAccounts = ShopBankAccountDetails;
 
 /**
  * Future hardware POS / soundbox adapter.
