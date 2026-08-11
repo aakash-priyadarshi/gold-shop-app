@@ -471,21 +471,11 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
-      element: "[data-tour='invoice-create-wastage']",
-      popover: {
-        title: "Billing Wastage (Jarti)",
-        description:
-          "After metal weight and cost are set, click Calculate wastage to add manufacturing loss as a separate charge. Hover How is this calculated? to see the formula (weight % or metal value %). Use Change wastage settings to open Shop Settings → Preferences and change the permanent mode or default %. Country defaults differ (e.g. Sri Lanka/India/Nepal often on; US/UK off). This is customer billing wastage — not karigar workshop limits.",
-        side: "top",
-        align: "start",
-      },
-    },
-    {
       element: "[data-tour='invoice-create-totals']",
       popover: {
-        title: "Invoice Totals & Tax Breakdown",
+        title: "Invoice Totals, Making & Wastage",
         description:
-          "See the live subtotal (including wastage when calculated), making charge, tax breakdown (metal, wastage, making, gemstone), discount, and grand total. Tax is split for filing reports — you don't need to calculate manually. Click Create Invoice to generate a print-ready GST/VAT bill.",
+          "Subtotal is based on metal and gemstones. Set Making Charge here (% or amount) — this is the only making control. Below it, set Wastage % and optional +/- adjust, then Calculate. Catalog pieces keep their own wastage base; adjust adds on top (e.g. 5% +1 = 6%). Hover How is this calculated? for the formula. Tax breakdown and grand total appear underneath.",
         side: "top",
         align: "end",
       },

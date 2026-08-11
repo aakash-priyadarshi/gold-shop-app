@@ -1173,6 +1173,7 @@ export default function CreateInvoicePage() {
     null,
   );
   const [invoiceWastagePercent, setInvoiceWastagePercent] = useState("");
+  const [invoiceWastageAdjust, setInvoiceWastageAdjust] = useState("0");
   const [wastageApplied, setWastageApplied] = useState(false);
   const [wastageCalcNotes, setWastageCalcNotes] = useState<string[]>([]);
   const wastagePercentTouched = useRef(false);
@@ -1265,7 +1266,9 @@ export default function CreateInvoicePage() {
         }
         const base =
           parseFloat(li.baseWastagePercent || "") || defaultPct || 0;
-        const adjust = parseFloat(li.wastageAdjustPercent || "") || 0;
+        const lineAdjust = parseFloat(li.wastageAdjustPercent || "") || 0;
+        const invoiceAdjust = parseFloat(invoiceWastageAdjust || "") || 0;
+        const adjust = lineAdjust || invoiceAdjust;
         const pct = Math.max(0, base + adjust);
         if (pct <= 0) {
           return { ...li, wastageCost: "", wastagePercent: "" };
@@ -1288,7 +1291,7 @@ export default function CreateInvoicePage() {
           ...li,
           baseWastagePercent:
             li.baseWastagePercent || (base > 0 ? String(base) : ""),
-          wastageAdjustPercent: li.wastageAdjustPercent || "0",
+          wastageAdjustPercent: String(adjust),
           wastagePercent: String(pct),
           wastageCost:
             result.wastageCost > 0 ? result.wastageCost.toFixed(2) : "",
@@ -1313,56 +1316,21 @@ export default function CreateInvoicePage() {
     wastageRule.mode,
     wastageRule.label,
     effectiveWastagePercent,
+    invoiceWastageAdjust,
     lineItems,
     t,
   ]);
 
-  const recalculateLineWastage = useCallback(
-    (
-      li: RichLineItem,
-      overrides?: Partial<
-        Pick<RichLineItem, "wastageAdjustPercent" | "baseWastagePercent" | "metalCost" | "metalWeightG">
-      >,
-    ): RichLineItem => {
-      const merged = { ...li, ...overrides };
-      const metalCost = parseFloat(merged.metalCost) || 0;
-      const base =
-        parseFloat(merged.baseWastagePercent || "") ||
-        effectiveWastagePercent ||
-        0;
-      const adjust = parseFloat(merged.wastageAdjustPercent || "") || 0;
-      const pct = Math.max(0, base + adjust);
-      if (metalCost <= 0 || pct <= 0) {
-        return {
-          ...merged,
-          wastagePercent: pct > 0 ? String(pct) : "",
-          wastageCost: "",
-        };
-      }
-      const mode =
-        wastageRule.mode === "DISABLED" ? "WEIGHT_PERCENT" : wastageRule.mode;
-      const result = calculateLineWastage(
-        {
-          metalCost,
-          metalWeightG: parseFloat(merged.metalWeightG) || 0,
-          wastagePercent: pct,
-        },
-        { mode, percent: pct, label: wastageRule.label },
-      );
-      return {
-        ...merged,
-        wastagePercent: String(pct),
-        wastageCost:
-          result.wastageCost > 0 ? result.wastageCost.toFixed(2) : "",
-      };
-    },
-    [effectiveWastagePercent, wastageRule.mode, wastageRule.label],
-  );
-
   const clearWastageFromLines = useCallback(() => {
     setLineItems((prev) =>
-      prev.map((li) => ({ ...li, wastageCost: "", wastagePercent: "" })),
+      prev.map((li) => ({
+        ...li,
+        wastageCost: "",
+        wastagePercent: "",
+        wastageAdjustPercent: "0",
+      })),
     );
+    setInvoiceWastageAdjust("0");
     setWastageApplied(false);
     setWastageCalcNotes([]);
   }, []);
@@ -2647,133 +2615,6 @@ export default function CreateInvoicePage() {
                 </div>
               </div>
 
-              {/* ── Billing wastage ──────────────────────────────── */}
-              <div
-                className="mt-4 pt-4 border-t space-y-3"
-                data-tour="invoice-create-wastage"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm font-semibold">
-                        {wastageRule.label}
-                      </Label>
-                      <TooltipProvider delayDuration={150}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300 underline underline-offset-2 hover:text-amber-900"
-                            >
-                              <HelpCircle className="h-3.5 w-3.5" />
-                              <T>How is this calculated?</T>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="bottom"
-                            className="max-w-xs whitespace-pre-line text-xs leading-relaxed"
-                          >
-                            {getWastageFormulaText(
-                              wastageRule.mode === "DISABLED"
-                                ? "WEIGHT_PERCENT"
-                                : wastageRule.mode,
-                            )}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {wastageRule.mode === "DISABLED" ? (
-                        <T>
-                          Wastage is off for this country. Change settings if your
-                          shop still charges it.
-                        </T>
-                      ) : (
-                        <>
-                          {getWastageModeLabel(wastageRule.mode)}
-                          {" · "}
-                          {t(`Default ${effectiveWastagePercent}%`)}
-                          {" · "}
-                          {wastageRule.source === "shop" ? (
-                            <T>Shop setting</T>
-                          ) : (
-                            <T>Country default</T>
-                          )}
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  <Link
-                    href="/dashboard/shop/settings?tab=preferences#wastage"
-                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                  >
-                    <T>Change wastage settings</T>
-                    <ExternalLink className="h-3 w-3" />
-                  </Link>
-                </div>
-
-                <div className="flex flex-wrap items-end gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">
-                      <T>Wastage % for this invoice</T>
-                    </Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={50}
-                      step={0.5}
-                      className="w-28 h-9"
-                      value={invoiceWastagePercent}
-                      onChange={(e) => {
-                        wastagePercentTouched.current = true;
-                        setInvoiceWastagePercent(e.target.value);
-                      }}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-9"
-                    onClick={applyWastageToLines}
-                  >
-                    <Zap className="h-3.5 w-3.5 mr-1.5" />
-                    <T>Calculate wastage</T>
-                  </Button>
-                  {wastageApplied && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-9 text-muted-foreground"
-                      onClick={clearWastageFromLines}
-                    >
-                      <T>Clear wastage</T>
-                    </Button>
-                  )}
-                  {wastageTotal > 0 && (
-                    <span className="text-sm font-medium ml-auto">
-                      {currencySymbol}{" "}
-                      {wastageTotal.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  )}
-                </div>
-
-                {wastageCalcNotes.length > 0 && (
-                  <div className="rounded-md border border-amber-200/70 bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2 space-y-1">
-                    {wastageCalcNotes.map((note, i) => (
-                      <p
-                        key={i}
-                        className="text-[11px] text-muted-foreground leading-snug"
-                      >
-                        {note}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* ── Tax filing controls ───────────────────────────── */}
               <div className="mt-4 pt-4 border-t space-y-4">
                 {/* B2B/B2C selector + country-aware tax ID */}
@@ -3340,7 +3181,7 @@ export default function CreateInvoicePage() {
                           <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-2">
                             Metal Details
                           </p>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="grid grid-cols-3 gap-3">
                             <div>
                               <Label className="text-xs"><T>Metal Type</T></Label>
                               <select
@@ -3488,75 +3329,6 @@ export default function CreateInvoicePage() {
                                 className="h-9 text-xs"
                               />
                             </div>
-                            {(wastageApplied ||
-                              parseFloat(item.wastageCost || "") > 0 ||
-                              parseFloat(item.baseWastagePercent || "") > 0) && (
-                              <div className="col-span-2 md:col-span-4 grid grid-cols-2 md:grid-cols-4 gap-3 mt-1 p-2 rounded-md border border-amber-200/70 bg-amber-50/40 dark:bg-amber-950/20">
-                                <div>
-                                  <Label className="text-xs">
-                                    <T>Catalog wastage %</T>
-                                  </Label>
-                                  <Input
-                                    type="number"
-                                    value={item.baseWastagePercent || "0"}
-                                    readOnly
-                                    className="h-9 text-xs mt-0.5 bg-muted/40"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs">
-                                    <T>Adjust (+/- %)</T>
-                                  </Label>
-                                  <Input
-                                    type="number"
-                                    step={0.5}
-                                    value={item.wastageAdjustPercent || "0"}
-                                    onChange={(e) => {
-                                      const updated = [...lineItems];
-                                      updated[idx] = recalculateLineWastage(
-                                        item,
-                                        {
-                                          wastageAdjustPercent: e.target.value,
-                                        },
-                                      );
-                                      setLineItems(updated);
-                                      setWastageApplied(true);
-                                    }}
-                                    className="h-9 text-xs mt-0.5"
-                                    placeholder="0"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs">
-                                    <T>Effective %</T>
-                                  </Label>
-                                  <Input
-                                    type="number"
-                                    value={item.wastagePercent || ""}
-                                    readOnly
-                                    className="h-9 text-xs mt-0.5 bg-muted/40"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs">
-                                    {wastageRule.label} ({currencySymbol})
-                                  </Label>
-                                  <Input
-                                    type="number"
-                                    value={item.wastageCost || ""}
-                                    onChange={(e) =>
-                                      updateLineItem(
-                                        idx,
-                                        "wastageCost",
-                                        e.target.value,
-                                      )
-                                    }
-                                    placeholder="0"
-                                    className="h-9 text-xs mt-0.5"
-                                  />
-                                </div>
-                              </div>
-                            )}
                           </div>
                           {item.metalParts && item.metalParts.length > 1 && (
                             <div className="mt-2 rounded-md border border-amber-200/60 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 p-2 space-y-1">
@@ -3575,62 +3347,6 @@ export default function CreateInvoicePage() {
                               ))}
                             </div>
                           )}
-                        </div>
-
-                        {/* Making cost (per line — catalog/quote managed via totals) */}
-                        <div>
-                          <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">
-                            <T>Making Charge</T>
-                          </p>
-                          <div className="grid grid-cols-3 gap-3">
-                            <div>
-                              <Label className="text-xs">
-                                {t("Making Cost")} ({currencySymbol})
-                              </Label>
-                              <Input
-                                type="number"
-                                value={item.makingCost}
-                                onChange={(e) =>
-                                  updateLineItem(
-                                    idx,
-                                    "makingCost",
-                                    e.target.value,
-                                  )
-                                }
-                                placeholder="0"
-                                className="h-9 text-xs"
-                                readOnly={
-                                  item.source === "CATALOG" ||
-                                  item.source === "QUOTE"
-                                }
-                                disabled={
-                                  item.source === "CATALOG" ||
-                                  item.source === "QUOTE"
-                                }
-                              />
-                              {(item.source === "CATALOG" ||
-                                item.source === "QUOTE") && (
-                                <p className="text-[10px] text-muted-foreground mt-1">
-                                  <T>
-                                    Adjust with Making Charge in totals below —
-                                    % and amount merge with this piece.
-                                  </T>
-                                </p>
-                              )}
-                              {(parseFloat(item.baseMakingCost || "") || 0) >
-                                0 &&
-                                (parseFloat(item.makingCost) || 0) !==
-                                  (parseFloat(item.baseMakingCost || "") ||
-                                    0) && (
-                                  <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">
-                                    <T>Was</T> {currencySymbol}{" "}
-                                    {(
-                                      parseFloat(item.baseMakingCost || "") || 0
-                                    ).toLocaleString()}
-                                  </p>
-                                )}
-                            </div>
-                          </div>
                         </div>
 
                         {/* Gemstones (multiple) */}
@@ -3967,7 +3683,7 @@ export default function CreateInvoicePage() {
 
               {/* Totals */}
               <div className="flex justify-end" data-tour="invoice-create-totals">
-                <div className="w-[420px] space-y-3">
+                <div className="w-full max-w-[480px] space-y-3">
                   <div className="flex justify-between text-sm">
                     <span><T>Subtotal</T></span>
                     <span className="font-medium">
@@ -4029,26 +3745,138 @@ export default function CreateInvoicePage() {
                     )}
                   </div>
 
-                  {wastageTotal > 0 && (
-                    <div className="flex justify-between text-sm text-amber-700 dark:text-amber-300">
-                      <span>
+                  {/* Wastage — same totals area as making */}
+                  <div
+                    className="space-y-1.5"
+                    data-tour="invoice-create-wastage"
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-amber-700 dark:text-amber-300 w-28 flex-shrink-0">
                         {wastageRule.label}
-                        {effectiveWastagePercent > 0
-                          ? ` (${effectiveWastagePercent}%)`
-                          : ""}
-                        <span className="text-[11px] text-muted-foreground ml-1">
-                          <T>in subtotal</T>
+                      </span>
+                      <Input
+                        className="w-20 text-xs"
+                        type="number"
+                        min={0}
+                        max={50}
+                        step={0.5}
+                        value={invoiceWastagePercent}
+                        onChange={(e) => {
+                          wastagePercentTouched.current = true;
+                          setInvoiceWastagePercent(e.target.value);
+                        }}
+                        placeholder="%"
+                        title={t("Base wastage %")}
+                      />
+                      <span className="text-xs text-muted-foreground">+</span>
+                      <Input
+                        className="w-16 text-xs"
+                        type="number"
+                        step={0.5}
+                        value={invoiceWastageAdjust}
+                        onChange={(e) => setInvoiceWastageAdjust(e.target.value)}
+                        placeholder="+/-"
+                        title={t("Adjust % (e.g. +1)")}
+                      />
+                      <span className="text-xs text-muted-foreground">%</span>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={applyWastageToLines}
+                      >
+                        <Zap className="h-3 w-3 mr-1" />
+                        <T>Calculate</T>
+                      </Button>
+                      {wastageTotal > 0 && (
+                        <span className="text-sm ml-auto font-medium text-amber-700 dark:text-amber-300">
+                          {currencySymbol}{" "}
+                          {wastageTotal.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
                         </span>
-                      </span>
-                      <span className="font-medium">
-                        {currencySymbol}{" "}
-                        {wastageTotal.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
+                      )}
                     </div>
-                  )}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-0.5">
+                      <TooltipProvider delayDuration={150}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-300 underline underline-offset-2"
+                            >
+                              <HelpCircle className="h-3 w-3" />
+                              <T>How is this calculated?</T>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            className="max-w-xs whitespace-pre-line text-xs leading-relaxed"
+                          >
+                            {getWastageFormulaText(
+                              wastageRule.mode === "DISABLED"
+                                ? "WEIGHT_PERCENT"
+                                : wastageRule.mode,
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <Link
+                        href="/dashboard/shop/settings?tab=preferences#wastage"
+                        className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:underline"
+                      >
+                        <T>Change wastage settings</T>
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                      {wastageApplied && (
+                        <button
+                          type="button"
+                          className="text-[11px] text-muted-foreground hover:underline"
+                          onClick={clearWastageFromLines}
+                        >
+                          <T>Clear wastage</T>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground pl-0.5">
+                      {wastageRule.mode === "DISABLED" ? (
+                        <T>
+                          Off for this country by default — Calculate still works
+                          if catalog pieces have wastage %.
+                        </T>
+                      ) : (
+                        <>
+                          {getWastageModeLabel(wastageRule.mode)}
+                          {" · "}
+                          {t(
+                            `Base ${effectiveWastagePercent}%` +
+                              (parseFloat(invoiceWastageAdjust || "")
+                                ? ` ${Number(invoiceWastageAdjust) >= 0 ? "+" : ""}${invoiceWastageAdjust}% adjust`
+                                : ""),
+                          )}
+                          {" · "}
+                          <T>
+                            Catalog pieces keep their own base %; adjust adds on
+                            top.
+                          </T>
+                        </>
+                      )}
+                    </p>
+                    {wastageCalcNotes.length > 0 && (
+                      <div className="pl-1 ml-0.5 border-l-2 border-amber-200 dark:border-amber-900/50 space-y-0.5">
+                        {wastageCalcNotes.map((note, i) => (
+                          <p
+                            key={i}
+                            className="text-[11px] text-muted-foreground leading-snug"
+                          >
+                            {note}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Tax — single line by default, breakdown on demand */}
                   <div className="space-y-1">
