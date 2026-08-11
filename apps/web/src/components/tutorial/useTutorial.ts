@@ -475,7 +475,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Invoice Totals, Making & Wastage",
         description:
-          "Subtotal is based on metal and gemstones. Set Making Charge here (% or amount) — this is the only making control. Below it, set Wastage % and optional +/- adjust, then Calculate. Catalog pieces keep their own wastage base; adjust adds on top (e.g. 5% +1 = 6%). Hover How is this calculated? for the formula. Tax breakdown and grand total appear underneath.",
+          "Subtotal is based on metal and gemstones. Set Making Charge here (% or amount) — this is the only making control. Below it, one Wastage % field: catalog/walk-in imports show e.g. '5% from catalog' and if you change to 6% the caption shows '+1% adjusted' with the amount — no separate adjust box. Manual invoices just enter % and Calculate. Tax breakdown and grand total appear underneath.",
         side: "top",
         align: "end",
       },

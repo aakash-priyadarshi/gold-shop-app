@@ -182,7 +182,28 @@ export default function ShopQuotesPage() {
 
   const handleStatusUpdate = async (quoteId: string, newStatus: string) => {
     try {
-      await shopQuotesApi.updateStatus(quoteId, { status: newStatus });
+      const payload: {
+        status: string;
+        wastagePercent?: number;
+      } = { status: newStatus };
+      if (newStatus === "READY") {
+        const raw = window.prompt(
+          "Billing wastage % for this built piece (0 allowed):",
+          "0",
+        );
+        if (raw === null) return;
+        const pct = parseFloat(raw);
+        if (!Number.isFinite(pct) || pct < 0) {
+          toast({
+            variant: "destructive",
+            title: "Invalid wastage %",
+            description: "Enter 0 or a positive number.",
+          });
+          return;
+        }
+        payload.wastagePercent = pct;
+      }
+      await shopQuotesApi.updateStatus(quoteId, payload);
       toast({
         title: "Status Updated",
         description: `Quote status changed to ${

@@ -861,8 +861,10 @@ export const shopQuotesApi = {
   update: (id: string, data: any) => api.put(`/shop-quotes/${id}`, data),
 
   // Status management
-  updateStatus: (id: string, data: { status: string; cancelReason?: string }) =>
-    api.put(`/shop-quotes/${id}/status`, data),
+  updateStatus: (
+    id: string,
+    data: { status: string; cancelReason?: string; wastagePercent?: number },
+  ) => api.put(`/shop-quotes/${id}/status`, data),
 
   // Payment recording
   recordPayment: (id: string, data: { amountNpr: number; notes?: string }) =>

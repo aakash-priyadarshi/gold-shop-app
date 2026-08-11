@@ -11,6 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { T } from "@/components/ui/T";
@@ -54,6 +62,8 @@ interface ShopQuote {
   totalPriceNpr?: number | null;
   advancePaidNpr?: number;
   balanceDueNpr?: number | null;
+  /** Billing wastage % set at Mark Ready (built). null until then. */
+  wastagePercent?: number | null;
   status: string;
   specialInstructions?: string | null;
   shopNotes?: string | null;
@@ -95,41 +105,103 @@ export default function QuoteDetailPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [advanceAmount, setAdvanceAmount] = useState("");
+  const [readyDialogOpen, setReadyDialogOpen] = useState(false);
+  const [readyWastagePercent, setReadyWastagePercent] = useState("0");
+  const [editWastagePercent, setEditWastagePercent] = useState("");
 
   const load = useCallback(async () => {
     if (!quoteId) return;
     setLoading(true);
     try {
       const res = await shopQuotesApi.getById(quoteId);
-      setQuote(res.data ?? null);
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Could not load quote";
-      toast({ variant: "destructive", title: "Failed", description: message });
+      const data = res.data?.data ?? res.data;
+      setQuote(data);
+      if (data?.wastagePercent != null) {
+        setEditWastagePercent(String(data.wastagePercent));
+      } else {
+        setEditWastagePercent("0");
+      }
+    } catch {
       setQuote(null);
+      toast({ variant: "destructive", title: "Failed to load quote" });
     } finally {
       setLoading(false);
     }
   }, [quoteId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
-  const handleStatusAdvance = async () => {
+  const advanceStatus = async (
+    next: string,
+    extras?: { wastagePercent?: number },
+  ) => {
     if (!quote) return;
-    const next = NEXT_STATUS[quote.status];
-    if (!next) return;
     setSubmitting(true);
     try {
-      await shopQuotesApi.updateStatus(quote.id, { status: next });
+      await shopQuotesApi.updateStatus(quote.id, {
+        status: next,
+        ...extras,
+      });
       toast({ title: "Status updated" });
+      setReadyDialogOpen(false);
       await load();
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
           ?.message ?? "Could not update status";
+      toast({ variant: "destructive", title: "Failed", description: message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleStatusAdvance = async () => {
+    if (!quote) return;
+    const next = NEXT_STATUS[quote.status];
+    if (!next) return;
+    if (next === "READY") {
+      setReadyWastagePercent(
+        quote.wastagePercent != null ? String(quote.wastagePercent) : "0",
+      );
+      setReadyDialogOpen(true);
+      return;
+    }
+    await advanceStatus(next);
+  };
+
+  const handleConfirmReady = async () => {
+    const pct = parseFloat(readyWastagePercent);
+    if (!Number.isFinite(pct) || pct < 0) {
+      toast({
+        variant: "destructive",
+        title: "Enter a valid wastage % (0 or more)",
+      });
+      return;
+    }
+    await advanceStatus("READY", { wastagePercent: pct });
+  };
+
+  const handleSaveWastage = async () => {
+    if (!quote) return;
+    const pct = parseFloat(editWastagePercent);
+    if (!Number.isFinite(pct) || pct < 0) {
+      toast({
+        variant: "destructive",
+        title: "Enter a valid wastage % (0 or more)",
+      });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await shopQuotesApi.update(quote.id, { wastagePercent: pct });
+      toast({ title: "Wastage updated" });
+      await load();
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Could not update wastage";
       toast({ variant: "destructive", title: "Failed", description: message });
     } finally {
       setSubmitting(false);
@@ -196,7 +268,7 @@ export default function QuoteDetailPage() {
   return (
     <ShopGuard>
       <DashboardLayout>
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="space-y-6 max-w-3xl mx-auto p-4 md:p-6">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/dashboard/shop/quotes">
@@ -297,6 +369,14 @@ export default function QuoteDetailPage() {
                       <span>{formatCurrency(quote.gemstoneCostNpr!)}</span>
                     </div>
                   )}
+                  {quote.wastagePercent != null && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        <T>Wastage (from ready)</T>
+                      </span>
+                      <span>{quote.wastagePercent}%</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t pt-2 font-semibold">
                     <span>
                       <T>Total</T>
@@ -326,14 +406,56 @@ export default function QuoteDetailPage() {
                 </CardContent>
               </Card>
 
+              {(quote.status === "READY" || quote.status === "IN_PROGRESS") &&
+                !quote.invoiceNumber && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        <T>Billing wastage</T>
+                      </CardTitle>
+                      <CardDescription>
+                        <T>
+                          Set when the piece is built / marked ready. Carried to
+                          the final invoice (0 is allowed).
+                        </T>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col sm:flex-row gap-2 items-end">
+                      <div className="flex-1 space-y-2 w-full">
+                        <Label htmlFor="edit-wastage">
+                          <T>Wastage %</T>
+                        </Label>
+                        <Input
+                          id="edit-wastage"
+                          type="number"
+                          min={0}
+                          max={50}
+                          step={0.5}
+                          value={editWastagePercent}
+                          onChange={(e) =>
+                            setEditWastagePercent(e.target.value)
+                          }
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={handleSaveWastage}
+                        disabled={submitting}
+                      >
+                        <T>Save wastage</T>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
               {quote.specialInstructions && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">
-                      <T>Notes</T>
+                      <T>Instructions</T>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm text-muted-foreground">
+                  <CardContent className="text-sm whitespace-pre-wrap">
                     {quote.specialInstructions}
                   </CardContent>
                 </Card>
@@ -413,6 +535,52 @@ export default function QuoteDetailPage() {
             </>
           )}
         </div>
+
+        <Dialog open={readyDialogOpen} onOpenChange={setReadyDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                <T>Mark ready — billing wastage</T>
+              </DialogTitle>
+              <DialogDescription>
+                <T>
+                  Enter the wastage % for this built piece. It will be applied
+                  on the final invoice. Use 0 if there is no wastage.
+                </T>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 py-2">
+              <Label htmlFor="ready-wastage">
+                <T>Wastage %</T>
+              </Label>
+              <Input
+                id="ready-wastage"
+                type="number"
+                min={0}
+                max={50}
+                step={0.5}
+                value={readyWastagePercent}
+                onChange={(e) => setReadyWastagePercent(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setReadyDialogOpen(false)}
+                disabled={submitting}
+              >
+                <T>Cancel</T>
+              </Button>
+              <Button onClick={handleConfirmReady} disabled={submitting}>
+                {submitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                <T>Mark Ready</T>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DashboardLayout>
     </ShopGuard>
   );

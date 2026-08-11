@@ -564,10 +564,8 @@ interface RichLineItem {
   /** Customer billing wastage (jarti) — separate from metal cost */
   wastagePercent?: string;
   wastageCost?: string;
-  /** Catalog/shop base % before invoice adjustment */
+  /** Original % from catalog / walk-in ready (can be "0") — for caption + delta */
   baseWastagePercent?: string;
-  /** Invoice delta on top of base (e.g. +1 → 5+1=6) */
-  wastageAdjustPercent?: string;
 }
 
 const emptyLineItem = (): RichLineItem => ({
@@ -584,7 +582,6 @@ const emptyLineItem = (): RichLineItem => ({
   wastagePercent: "",
   wastageCost: "",
   baseWastagePercent: "",
-  wastageAdjustPercent: "0",
 });
 
 // Compute total for a line item
@@ -1168,12 +1165,12 @@ export default function CreateInvoicePage() {
   const [catalogUseLiveRate, setCatalogUseLiveRate] = useState(false);
 
   // ── Billing wastage (customer-facing jarti) ──
+  // Single effective % control — source/delta shown as caption, not a second input.
   const [shopWastageMode, setShopWastageMode] = useState("AUTO");
   const [shopWastagePercent, setShopWastagePercent] = useState<number | null>(
     null,
   );
   const [invoiceWastagePercent, setInvoiceWastagePercent] = useState("");
-  const [invoiceWastageAdjust, setInvoiceWastageAdjust] = useState("0");
   const [wastageApplied, setWastageApplied] = useState(false);
   const [wastageCalcNotes, setWastageCalcNotes] = useState<string[]>([]);
   const wastagePercentTouched = useRef(false);
@@ -1238,88 +1235,96 @@ export default function CreateInvoicePage() {
     );
   }, [invoiceCountry]);
 
-  const applyWastageToLines = useCallback(() => {
-    const mode =
-      wastageRule.mode === "DISABLED" ? "WEIGHT_PERCENT" : wastageRule.mode;
-    const defaultPct = effectiveWastagePercent;
-    if (defaultPct <= 0) {
-      // Still allow lines that already have a catalog base %
-      const hasCatalogBase = lineItems.some(
-        (li) => (parseFloat(li.baseWastagePercent || "") || 0) > 0,
-      );
-      if (!hasCatalogBase) {
-        toast({
-          variant: "destructive",
-          title: t("Enter a wastage % greater than 0"),
-        });
-        return;
-      }
-    }
+  const applyWastageToLines = useCallback(
+    (overridePercent?: string, opts?: { silent?: boolean }) => {
+      const mode =
+        wastageRule.mode === "DISABLED" ? "WEIGHT_PERCENT" : wastageRule.mode;
+      const raw =
+        overridePercent !== undefined
+          ? overridePercent
+          : invoiceWastagePercent;
+      const parsed = parseFloat(raw);
+      const pct =
+        raw !== "" && Number.isFinite(parsed)
+          ? Math.max(0, parsed)
+          : Math.max(0, effectiveWastagePercent);
 
-    const notes: string[] = [];
-    let appliedCount = 0;
-    setLineItems((prev) =>
-      prev.map((li, idx) => {
-        const metalCost = parseFloat(li.metalCost) || 0;
-        if (metalCost <= 0 || !li.label?.trim()) {
-          return { ...li, wastageCost: "", wastagePercent: "" };
-        }
-        const base =
-          parseFloat(li.baseWastagePercent || "") || defaultPct || 0;
-        const lineAdjust = parseFloat(li.wastageAdjustPercent || "") || 0;
-        const invoiceAdjust = parseFloat(invoiceWastageAdjust || "") || 0;
-        const adjust = lineAdjust || invoiceAdjust;
-        const pct = Math.max(0, base + adjust);
-        if (pct <= 0) {
-          return { ...li, wastageCost: "", wastagePercent: "" };
-        }
-        const result = calculateLineWastage(
-          {
-            metalCost,
-            metalWeightG: parseFloat(li.metalWeightG) || 0,
-            wastagePercent: pct,
-          },
-          {
-            mode,
-            percent: pct,
-            label: wastageRule.label,
-          },
-        );
-        if (result.wastageCost > 0) appliedCount += 1;
-        notes.push(`Item ${idx + 1}: ${result.explanation.join(" · ")}`);
-        return {
-          ...li,
-          baseWastagePercent:
-            li.baseWastagePercent || (base > 0 ? String(base) : ""),
-          wastageAdjustPercent: String(adjust),
-          wastagePercent: String(pct),
-          wastageCost:
-            result.wastageCost > 0 ? result.wastageCost.toFixed(2) : "",
-        };
-      }),
-    );
-    setWastageApplied(appliedCount > 0);
-    setWastageCalcNotes(notes.slice(0, 8));
-    toast({
-      title:
-        appliedCount > 0
-          ? t(`Wastage calculated on ${appliedCount} item(s)`)
-          : t("No metal lines to apply wastage"),
-      description:
-        appliedCount > 0
-          ? t(
-              `${wastageRule.label} using ${getWastageModeLabel(mode)}`,
-            )
-          : t("Add metal cost on line items first."),
-    });
-  }, [
-    wastageRule.mode,
-    wastageRule.label,
-    effectiveWastagePercent,
-    invoiceWastageAdjust,
-    lineItems,
-    t,
-  ]);
+      const notes: string[] = [];
+      let appliedCount = 0;
+      setLineItems((prev) =>
+        prev.map((li, idx) => {
+          const metalCost = parseFloat(li.metalCost) || 0;
+          if (metalCost <= 0 || !li.label?.trim()) {
+            return { ...li, wastageCost: "", wastagePercent: "" };
+          }
+          // Manual lines with no base: treat current % as the source baseline once set
+          const hasBase =
+            li.baseWastagePercent !== undefined &&
+            li.baseWastagePercent !== "";
+          const nextBase = hasBase
+            ? li.baseWastagePercent!
+            : li.source === "MANUAL"
+              ? String(pct)
+              : String(pct);
+
+          if (pct <= 0) {
+            return {
+              ...li,
+              baseWastagePercent: nextBase,
+              wastagePercent: "0",
+              wastageCost: "",
+            };
+          }
+          const result = calculateLineWastage(
+            {
+              metalCost,
+              metalWeightG: parseFloat(li.metalWeightG) || 0,
+              wastagePercent: pct,
+            },
+            {
+              mode,
+              percent: pct,
+              label: wastageRule.label,
+            },
+          );
+          if (result.wastageCost > 0) appliedCount += 1;
+          notes.push(`Item ${idx + 1}: ${result.explanation.join(" · ")}`);
+          return {
+            ...li,
+            baseWastagePercent: nextBase,
+            wastagePercent: String(pct),
+            wastageCost:
+              result.wastageCost > 0 ? result.wastageCost.toFixed(2) : "",
+          };
+        }),
+      );
+      setWastageApplied(appliedCount > 0 || pct === 0);
+      setWastageCalcNotes(notes.slice(0, 8));
+      if (!opts?.silent) {
+        toast({
+          title:
+            appliedCount > 0
+              ? t(`Wastage calculated on ${appliedCount} item(s)`)
+              : pct === 0
+                ? t("Wastage set to 0%")
+                : t("No metal lines to apply wastage"),
+          description:
+            appliedCount > 0
+              ? t(`${wastageRule.label} using ${getWastageModeLabel(mode)}`)
+              : pct === 0
+                ? undefined
+                : t("Add metal cost on line items first."),
+        });
+      }
+    },
+    [
+      wastageRule.mode,
+      wastageRule.label,
+      effectiveWastagePercent,
+      invoiceWastagePercent,
+      t,
+    ],
+  );
 
   const clearWastageFromLines = useCallback(() => {
     setLineItems((prev) =>
@@ -1327,10 +1332,8 @@ export default function CreateInvoicePage() {
         ...li,
         wastageCost: "",
         wastagePercent: "",
-        wastageAdjustPercent: "0",
       })),
     );
-    setInvoiceWastageAdjust("0");
     setWastageApplied(false);
     setWastageCalcNotes([]);
   }, []);
@@ -1478,30 +1481,35 @@ export default function CreateInvoicePage() {
     ].filter(Boolean);
 
     const makingNum = parseFloat(makingCost) || 0;
-    const catalogWastagePct = Number(item.wastagePercent) || 0;
+    // Always take catalog wastage (including 0) — do not fall back to shop default
+    const catalogWastagePct = Number(item.wastagePercent);
+    const basePct = Number.isFinite(catalogWastagePct)
+      ? Math.max(0, catalogWastagePct)
+      : 0;
     let wastageCost = "";
-    let wastagePercent = "";
-    if (catalogWastagePct > 0 && (parseFloat(metalCost) || 0) > 0) {
+    const metalCostNum = parseFloat(metalCost) || 0;
+    if (basePct > 0 && metalCostNum > 0) {
       const result = calculateLineWastage(
         {
-          metalCost: parseFloat(metalCost) || 0,
+          metalCost: metalCostNum,
           metalWeightG: totalWeightG,
-          wastagePercent: catalogWastagePct,
+          wastagePercent: basePct,
         },
         {
           mode:
             wastageRule.mode === "DISABLED"
               ? "WEIGHT_PERCENT"
               : wastageRule.mode,
-          percent: catalogWastagePct,
+          percent: basePct,
           label: wastageRule.label,
         },
       );
       if (result.wastageCost > 0) {
         wastageCost = result.wastageCost.toFixed(2);
-        wastagePercent = String(catalogWastagePct);
         setWastageApplied(true);
       }
+    } else {
+      setWastageApplied(true);
     }
 
     const next: RichLineItem = {
@@ -1518,10 +1526,8 @@ export default function CreateInvoicePage() {
       metalParts: metalParts.length > 0 ? metalParts : undefined,
       inventoryItemId: item.id,
       source: "CATALOG",
-      baseWastagePercent:
-        catalogWastagePct > 0 ? String(catalogWastagePct) : "",
-      wastageAdjustPercent: "0",
-      wastagePercent,
+      baseWastagePercent: String(basePct),
+      wastagePercent: String(basePct),
       wastageCost,
     };
 
@@ -1530,6 +1536,10 @@ export default function CreateInvoicePage() {
     const newItems = [...kept, next];
     setLineItems(newItems);
     setExpandedItems(new Set([newItems.length - 1]));
+
+    // Seed totals wastage control from catalog (source %, not shop default)
+    wastagePercentTouched.current = true;
+    setInvoiceWastagePercent(String(basePct));
 
     // Seed totals making control from catalog making (merge, don't stack)
     if (makingNum > 0) {
@@ -1542,7 +1552,10 @@ export default function CreateInvoicePage() {
 
     setCatalogOpen(false);
     if (!catalogUseLiveRate || !liveRateNote) {
-      toast({ title: t("Added from catalog"), description: next.label });
+      toast({
+        title: t("Added from catalog"),
+        description: `${next.label} · ${basePct}% ${wastageRule.label}`,
+      });
     }
   };
 
@@ -1767,6 +1780,39 @@ export default function CreateInvoicePage() {
     }
     item.source = "QUOTE";
 
+    // Walk-in wastage from Mark Ready (built) — include 0
+    const quoteWastageRaw = quote.wastagePercent;
+    const quoteWastagePct =
+      quoteWastageRaw != null && Number.isFinite(Number(quoteWastageRaw))
+        ? Math.max(0, Number(quoteWastageRaw))
+        : 0;
+    item.baseWastagePercent = String(quoteWastagePct);
+    item.wastagePercent = String(quoteWastagePct);
+    const metalNum = parseFloat(item.metalCost) || 0;
+    if (quoteWastagePct > 0 && metalNum > 0) {
+      const result = calculateLineWastage(
+        {
+          metalCost: metalNum,
+          metalWeightG: parseFloat(item.metalWeightG) || 0,
+          wastagePercent: quoteWastagePct,
+        },
+        {
+          mode:
+            wastageRule.mode === "DISABLED"
+              ? "WEIGHT_PERCENT"
+              : wastageRule.mode,
+          percent: quoteWastagePct,
+          label: wastageRule.label,
+        },
+      );
+      if (result.wastageCost > 0) {
+        item.wastageCost = result.wastageCost.toFixed(2);
+      }
+    }
+    wastagePercentTouched.current = true;
+    setInvoiceWastagePercent(String(quoteWastagePct));
+    setWastageApplied(true);
+
     setLineItems([item]);
     setExpandedItems(new Set([0]));
     if (makingNum > 0) {
@@ -1781,7 +1827,7 @@ export default function CreateInvoicePage() {
     setShowQuoteImport(false);
     toast({
       title: "Quote imported",
-      description: `Imported ${quote.quoteNumber || metalLabel} from walk-in quote`,
+      description: `Imported ${quote.quoteNumber || metalLabel} · ${quoteWastagePct}% wastage from walk-in ready`,
     });
   };
 
@@ -2115,6 +2161,50 @@ export default function CreateInvoicePage() {
       ),
     [lineItems],
   );
+
+  /** Caption: "5% from catalog · +1% adjusted" — not a second input */
+  const wastageCaption = useMemo(() => {
+    const sourced = lineItems.filter(
+      (li) =>
+        (li.source === "CATALOG" || li.source === "QUOTE") &&
+        li.baseWastagePercent !== undefined &&
+        li.baseWastagePercent !== "",
+    );
+    const effective = effectiveWastagePercent;
+    if (sourced.length === 0) {
+      return {
+        kind: "MANUAL" as const,
+        text:
+          invoiceWastagePercent === ""
+            ? t("Manual — enter % and calculate")
+            : t(`Manual · ${effective}%`),
+      };
+    }
+    const bases = sourced.map((li) => parseFloat(li.baseWastagePercent!) || 0);
+    const sameBase = bases.every((b) => b === bases[0]);
+    const base = sameBase ? bases[0] : null;
+    const sources = new Set(sourced.map((li) => li.source));
+    let fromLabel = t("mixed sources");
+    if (sources.size === 1) {
+      const source = Array.from(sources)[0];
+      fromLabel =
+        source === "QUOTE"
+          ? t("walk-in ready")
+          : t("catalog");
+    }
+    const delta = base != null ? effective - base : null;
+    const parts: string[] = [];
+    if (base != null) {
+      parts.push(`${base}% ${t("from")} ${fromLabel}`);
+    } else {
+      parts.push(t(`From ${fromLabel}`));
+    }
+    if (delta != null && Math.abs(delta) > 0.0001) {
+      const sign = delta > 0 ? "+" : "";
+      parts.push(`${sign}${Number(delta.toFixed(2))}% ${t("adjusted")}`);
+    }
+    return { kind: "SOURCED" as const, text: parts.join(" · "), base, delta };
+  }, [lineItems, effectiveWastagePercent, invoiceWastagePercent, t]);
 
   const createBlockers = useMemo(() => {
     const missing: string[] = [];
@@ -3745,7 +3835,7 @@ export default function CreateInvoicePage() {
                     )}
                   </div>
 
-                  {/* Wastage — same totals area as making */}
+                  {/* Wastage — single % (source + adjusted shown as caption) */}
                   <div
                     className="space-y-1.5"
                     data-tour="invoice-create-wastage"
@@ -3763,20 +3853,12 @@ export default function CreateInvoicePage() {
                         value={invoiceWastagePercent}
                         onChange={(e) => {
                           wastagePercentTouched.current = true;
-                          setInvoiceWastagePercent(e.target.value);
+                          const v = e.target.value;
+                          setInvoiceWastagePercent(v);
+                          applyWastageToLines(v, { silent: true });
                         }}
                         placeholder="%"
-                        title={t("Base wastage %")}
-                      />
-                      <span className="text-xs text-muted-foreground">+</span>
-                      <Input
-                        className="w-16 text-xs"
-                        type="number"
-                        step={0.5}
-                        value={invoiceWastageAdjust}
-                        onChange={(e) => setInvoiceWastageAdjust(e.target.value)}
-                        placeholder="+/-"
-                        title={t("Adjust % (e.g. +1)")}
+                        title={t("Wastage %")}
                       />
                       <span className="text-xs text-muted-foreground">%</span>
                       <Button
@@ -3784,21 +3866,22 @@ export default function CreateInvoicePage() {
                         variant="secondary"
                         size="sm"
                         className="h-8 text-xs"
-                        onClick={applyWastageToLines}
+                        onClick={() => applyWastageToLines()}
                       >
                         <Zap className="h-3 w-3 mr-1" />
                         <T>Calculate</T>
                       </Button>
-                      {wastageTotal > 0 && (
-                        <span className="text-sm ml-auto font-medium text-amber-700 dark:text-amber-300">
-                          {currencySymbol}{" "}
-                          {wastageTotal.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      )}
+                      <span className="text-sm ml-auto font-medium text-amber-700 dark:text-amber-300">
+                        {currencySymbol}{" "}
+                        {wastageTotal.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
                     </div>
+                    <p className="text-[11px] text-muted-foreground pl-0.5">
+                      {wastageCaption.text}
+                    </p>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-0.5">
                       <TooltipProvider delayDuration={150}>
                         <Tooltip>
@@ -3840,30 +3923,15 @@ export default function CreateInvoicePage() {
                         </button>
                       )}
                     </div>
-                    <p className="text-[11px] text-muted-foreground pl-0.5">
-                      {wastageRule.mode === "DISABLED" ? (
-                        <T>
-                          Off for this country by default — Calculate still works
-                          if catalog pieces have wastage %.
-                        </T>
-                      ) : (
-                        <>
-                          {getWastageModeLabel(wastageRule.mode)}
-                          {" · "}
-                          {t(
-                            `Base ${effectiveWastagePercent}%` +
-                              (parseFloat(invoiceWastageAdjust || "")
-                                ? ` ${Number(invoiceWastageAdjust) >= 0 ? "+" : ""}${invoiceWastageAdjust}% adjust`
-                                : ""),
-                          )}
-                          {" · "}
+                    {wastageRule.mode === "DISABLED" &&
+                      wastageCaption.kind === "MANUAL" && (
+                        <p className="text-[11px] text-muted-foreground pl-0.5">
                           <T>
-                            Catalog pieces keep their own base %; adjust adds on
-                            top.
+                            Off for this country by default — enter a % to bill
+                            wastage on this invoice.
                           </T>
-                        </>
+                        </p>
                       )}
-                    </p>
                     {wastageCalcNotes.length > 0 && (
                       <div className="pl-1 ml-0.5 border-l-2 border-amber-200 dark:border-amber-900/50 space-y-0.5">
                         {wastageCalcNotes.map((note, i) => (

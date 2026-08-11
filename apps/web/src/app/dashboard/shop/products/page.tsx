@@ -241,7 +241,7 @@ const emptyForm: ProductFormData = {
   totalWeightGrams: "",
   metalValueNpr: "",
   makingChargeNpr: "",
-  wastagePercent: "",
+  wastagePercent: "0",
   gemstoneValueNpr: "0",
   stockQuantity: "1",
   images: [],
@@ -1684,7 +1684,8 @@ export default function ShopProductsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="wastagePercent">
-                    <T>Wastage %</T>
+                    <T>Wastage %</T>{" "}
+                    <span className="text-amber-600">*</span>
                   </Label>
                   <Input
                     id="wastagePercent"
@@ -1692,6 +1693,7 @@ export default function ShopProductsPage() {
                     min={0}
                     max={50}
                     step={0.5}
+                    required
                     value={formData.wastagePercent}
                     onChange={(e) =>
                       setFormData({
@@ -1699,12 +1701,13 @@ export default function ShopProductsPage() {
                         wastagePercent: e.target.value,
                       })
                     }
-                    placeholder="e.g., 5"
+                    placeholder="0"
                   />
                   <p className="text-[10px] text-muted-foreground">
                     <T>
-                      Applied when this piece is added to an invoice (jarti). You
-                      can still adjust +/- on the bill.
+                      Required on catalog pieces (use 0 if none). Fetched onto
+                      the invoice when you add this product — seller can change
+                      the % on the bill; the original catalog % stays visible.
                     </T>
                   </p>
                 </div>

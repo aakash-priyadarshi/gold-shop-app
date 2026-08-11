@@ -903,6 +903,8 @@ model ShopQuote {
   totalPriceNpr     Float?
   goldPriceSnapshot Float? // Gold rate at time of quote
   estimatedDays     Int?
+  /// Billing wastage % set when marking READY (built). Nullable until then.
+  wastagePercent    Float?
 
   // Status: QUOTED → CONFIRMED → IN_PROGRESS → READY → COMPLETED / CANCELLED
   status       ShopQuoteStatus @default(QUOTED)
