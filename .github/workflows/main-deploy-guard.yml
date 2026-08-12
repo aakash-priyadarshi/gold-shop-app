@@ -50,6 +50,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared package
+        working-directory: packages/shared
+        run: pnpm build
+
       - name: Generate Prisma Client
         working-directory: apps/api
         run: npx prisma generate
