@@ -91,6 +91,44 @@ function isApprovedDomain(hostname: string): boolean {
   );
 }
 
+/**
+ * Railway forwards public requests to the Next server at its internal
+ * `0.0.0.0` listener. `request.nextUrl` can therefore contain that internal
+ * address even though the visitor requested m.orivraa.com. Prefer a trusted
+ * forwarded/Host value and only accept an approved Orivraa or local hostname.
+ */
+function normalizeHostname(value: string | null): string {
+  const candidate = value?.split(",")[0]?.trim();
+  if (!candidate) return "";
+
+  try {
+    return new URL(`http://${candidate}`).hostname.toLowerCase();
+  } catch {
+    return candidate.toLowerCase().split(":")[0];
+  }
+}
+
+function getPublicHostname(request: NextRequest): string {
+  const candidates = [
+    request.headers.get("x-forwarded-host"),
+    request.headers.get("host"),
+    request.nextUrl.hostname,
+  ];
+
+  for (const candidate of candidates) {
+    const hostname = normalizeHostname(candidate);
+    if (hostname && isApprovedDomain(hostname)) return hostname;
+  }
+
+  return normalizeHostname(request.nextUrl.hostname);
+}
+
+function getPublicRequestUrl(request: NextRequest, hostname: string): URL {
+  const url = new URL(request.url);
+  if (isApprovedDomain(hostname)) url.hostname = hostname;
+  return url;
+}
+
 function escapeHtml(unsafe: string): string {
   return unsafe
     .replace(/&/g, "&amp;")
@@ -337,7 +375,7 @@ function withGeoCookies(request: NextRequest, response: NextResponse) {
 
   // Prevent Vercel preview / non-production deployments from being indexed
   // and polluting Google with duplicate canonical URLs.
-  const host = request.nextUrl.hostname.toLowerCase().split(":")[0];
+  const host = getPublicHostname(request);
   const isCanonicalHost =
     host === "orivraa.com" ||
     host.endsWith(".orivraa.com") ||
@@ -349,7 +387,7 @@ function withGeoCookies(request: NextRequest, response: NextResponse) {
 
   if (!rawCountry) return response;
 
-  const isProdDomain = request.nextUrl.hostname.endsWith("orivraa.com");
+  const isProdDomain = host.endsWith("orivraa.com");
   const cookieOptions = {
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
@@ -370,16 +408,8 @@ function withGeoCookies(request: NextRequest, response: NextResponse) {
 }
 
 export async function middleware(request: NextRequest) {
-  // request.nextUrl.hostname is the most reliable source in Next.js edge middleware.
-  // It reflects the actual custom domain Vercel matched (e.g. m.orivraa.com),
-  // whereas x-forwarded-host can be an internal Vercel hostname.
-  const hostname = (
-    request.nextUrl.hostname ||
-    request.headers.get("host") ||
-    ""
-  )
-    .toLowerCase()
-    .split(":")[0];
+  const hostname = getPublicHostname(request);
+  const publicRequestUrl = getPublicRequestUrl(request, hostname);
   const pathname = request.nextUrl.pathname;
   const userAgent = request.headers.get("user-agent") || "";
   const isCrawlerBot = /bot|crawl|spider|slurp|ia_archiver|prerender/i.test(
@@ -420,7 +450,7 @@ export async function middleware(request: NextRequest) {
       const cookieValue = request.cookies.get("orivraa_customer_flow")?.value;
       const flowOn = await resolveCustomerFlow(cookieValue);
       if (!flowOn) {
-        const homeUrl = new URL("/", request.url);
+        const homeUrl = new URL("/", publicRequestUrl);
         const redirect = NextResponse.redirect(homeUrl, 307);
         redirect.cookies.set("orivraa_customer_flow", "0", {
           path: "/",
@@ -444,7 +474,7 @@ export async function middleware(request: NextRequest) {
   // If a non-eligible user (customer, admin, support) lands on the mobile subdomain,
   // redirect them back to the desktop domain immediately.
   if (isMobileSubdomain && !isRoleEligibleForMobile) {
-    const desktopUrl = new URL(request.url);
+    const desktopUrl = new URL(publicRequestUrl);
     const host = hostname;
     if (host.startsWith("m.")) {
       desktopUrl.hostname = host.substring(2);
@@ -464,7 +494,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-url", request.url);
+  requestHeaders.set("x-url", publicRequestUrl.toString());
   requestHeaders.set("x-pathname", pathname);
 
   if (!isMobileSubdomain) {
@@ -486,7 +516,7 @@ export async function middleware(request: NextRequest) {
       isRoleEligibleForMobile &&
       (isDashboardPath || isMobilePath || hasMobileEquivalent)
     ) {
-      const mobileUrl = new URL(request.url);
+      const mobileUrl = new URL(publicRequestUrl);
       const host = hostname;
       if (host === "orivraa.com") {
         mobileUrl.hostname = "m.orivraa.com";
@@ -528,7 +558,7 @@ export async function middleware(request: NextRequest) {
   // If we are on the mobile subdomain but the pathname does not represent a mobile app page or a dashboard page,
   // we redirect them back to the main domain so they can browse the landing page normally.
   if (pathname !== "/" && !isMobilePath && !isDashboardPath && !hasMobileEquivalent) {
-    const desktopUrl = new URL(request.url);
+    const desktopUrl = new URL(publicRequestUrl);
     const host = hostname;
     if (host.startsWith("m.")) {
       desktopUrl.hostname = host.substring(2);
@@ -563,7 +593,7 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/") {
     return withGeoCookies(
       request,
-      NextResponse.rewrite(new URL("/m/pos", request.url), {
+      NextResponse.rewrite(new URL("/m/pos", publicRequestUrl), {
         request: {
           headers: requestHeaders,
         },
@@ -578,7 +608,7 @@ export async function middleware(request: NextRequest) {
     const invoiceSuffix = pathname.slice("/dashboard/shop/invoices".length);
     return withGeoCookies(
       request,
-      NextResponse.redirect(new URL(`/m/invoices${invoiceSuffix}`, request.url)),
+      NextResponse.redirect(new URL(`/m/invoices${invoiceSuffix}`, publicRequestUrl)),
     );
   }
 
@@ -586,7 +616,7 @@ export async function middleware(request: NextRequest) {
   if (isDashboardPath) {
     return withGeoCookies(
       request,
-      NextResponse.redirect(new URL("/m/pos", request.url)),
+      NextResponse.redirect(new URL("/m/pos", publicRequestUrl)),
     );
   }
 
@@ -594,7 +624,7 @@ export async function middleware(request: NextRequest) {
   if (hasMobileEquivalent) {
     return withGeoCookies(
       request,
-      NextResponse.rewrite(new URL(`/m${pathname}`, request.url), {
+      NextResponse.rewrite(new URL(`/m${pathname}`, publicRequestUrl), {
         request: {
           headers: requestHeaders,
         },
