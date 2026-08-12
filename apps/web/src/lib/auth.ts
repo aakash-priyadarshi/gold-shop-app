@@ -1,8 +1,27 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { PHASE_PRODUCTION_BUILD } from 'next/constants';
 import { getApiUrl } from './api';
 
 const API_URL = getApiUrl();
+
+function getNextAuthSecret(): string {
+  const configuredSecret = process.env.NEXTAUTH_SECRET;
+  if (configuredSecret) return configuredSecret;
+
+  // Next.js imports route modules while collecting page data. The real secret
+  // remains a runtime-only Railway variable, so use a non-production value
+  // only for that isolated compile step.
+  if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
+    return 'build-time-placeholder-not-valid-at-runtime';
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('NEXTAUTH_SECRET must be set in production');
+  }
+
+  return 'dev-only-not-for-production-use';
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -77,7 +96,5 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 24 * 60 * 60, // 24 hours
   },
-  secret: process.env.NEXTAUTH_SECRET || (process.env.NODE_ENV === 'production'
-    ? (() => { throw new Error('NEXTAUTH_SECRET must be set in production'); })()
-    : 'dev-only-not-for-production-use'),
+  secret: getNextAuthSecret(),
 };
