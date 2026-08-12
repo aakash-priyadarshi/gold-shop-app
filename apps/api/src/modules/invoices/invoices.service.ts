@@ -74,26 +74,17 @@ export class InvoicesService {
   ) {}
 
   /**
-   * Generate a unique invoice number: INV-YYYYMMDD-XXXX
+   * Legacy helper kept for reference; ordinary invoices now allocate via
+   * InvoiceSequence inside the create transaction (see buildOrdinaryInvoiceNumber).
    */
-  private async generateInvoiceNumber(): Promise<string> {
-    const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
-    const prefix = `INV-${dateStr}`;
-
-    // Find the latest invoice for today
-    const latest = await this.prisma.invoice.findFirst({
-      where: { invoiceNumber: { startsWith: prefix } },
-      orderBy: { invoiceNumber: "desc" },
-    });
-
-    let seq = 1;
-    if (latest) {
-      const parts = latest.invoiceNumber.split("-");
-      seq = parseInt(parts[2] || "0", 10) + 1;
-    }
-
-    return `${prefix}-${String(seq).padStart(4, "0")}`;
+  private buildOrdinaryInvoiceNumber(
+    shopId: string,
+    issuedAt: Date,
+    sequence: number,
+  ): string {
+    const dateStr = issuedAt.toISOString().slice(0, 10).replace(/-/g, "");
+    const shopCode = shopId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase() || "SHOP";
+    return `INV-${dateStr}-${shopCode}-${String(sequence).padStart(4, "0")}`;
   }
 
   private mapTaxCategory(category: string): TaxableComponent["category"] {
@@ -217,29 +208,6 @@ export class InvoicesService {
     dto: CreateInvoiceDto,
     options: CreateInvoiceOptions = {},
   ) {
-    await this.planLimitsService.checkInvoiceLimit(shopId);
-    const shop = await this.prisma.shop.findUnique({
-      where: { id: shopId },
-      select: {
-        id: true,
-        shopName: true,
-        country: true,
-        currency: true,
-        address: true,
-        city: true,
-        state: true,
-        contactPhone: true,
-        contactEmail: true,
-        vatNumber: true,
-        vatRegistrationStatus: true,
-        panNumber: true,
-        bisLicenseNumber: true,
-        invoiceSettings: true,
-      },
-    });
-    if (!shop) throw new NotFoundException("Shop not found");
-
-    // Reject duplicate catalog lines on the same invoice
     const stockLines = StockCommitService.linesFromInvoiceItems(dto.lineItems);
     const seenIds = new Set<string>();
     for (const line of stockLines) {
@@ -251,17 +219,47 @@ export class InvoicesService {
       seenIds.add(line.inventoryItemId);
     }
 
+    // Run plan check + shop load in parallel (was sequential ~2 round-trips)
+    const [, shop] = await Promise.all([
+      this.planLimitsService.checkInvoiceLimit(shopId),
+      this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: {
+          id: true,
+          shopName: true,
+          country: true,
+          currency: true,
+          address: true,
+          city: true,
+          state: true,
+          contactPhone: true,
+          contactEmail: true,
+          vatNumber: true,
+          vatRegistrationStatus: true,
+          panNumber: true,
+          bisLicenseNumber: true,
+          invoiceSettings: true,
+        },
+      }),
+    ]);
+    if (!shop) throw new NotFoundException("Shop not found");
+
     if (stockLines.length > 0 && !options.skipStockCommit) {
+      const items = await this.prisma.inventoryItem.findMany({
+        where: {
+          shopId,
+          id: { in: stockLines.map((l) => l.inventoryItemId) },
+        },
+        select: {
+          id: true,
+          nameEn: true,
+          stockQuantity: true,
+          status: true,
+        },
+      });
+      const byId = new Map(items.map((item) => [item.id, item]));
       for (const line of stockLines) {
-        const item = await this.prisma.inventoryItem.findFirst({
-          where: { id: line.inventoryItemId, shopId },
-          select: {
-            id: true,
-            nameEn: true,
-            stockQuantity: true,
-            status: true,
-          },
-        });
+        const item = byId.get(line.inventoryItemId);
         if (!item) {
           throw new NotFoundException(
             `Inventory item ${line.inventoryItemId} not found in your shop`,
@@ -622,31 +620,32 @@ export class InvoicesService {
       makingChargesAmt: dto.makingChargesAmt ?? null,
     };
 
-    const ordinaryInvoiceNumber = isLkTaxInvoice
-      ? null
-      : await this.generateInvoiceNumber();
-
     const invoice = await this.prisma.$transaction(async (tx) => {
-      let invoiceNumber = ordinaryInvoiceNumber!;
-      let serialSequence: number | undefined;
+      let invoiceNumber: string;
+      const sequence = await tx.invoiceSequence.upsert({
+        where: { shopId_marketRegion: { shopId, marketRegion: region } },
+        update: { lastNumber: { increment: 1 } },
+        create: { shopId, marketRegion: region, lastNumber: 1 },
+      });
+      const serialSequence = sequence.lastNumber;
       if (isLkTaxInvoice) {
-        const sequence = await tx.invoiceSequence.upsert({
-          where: { shopId_marketRegion: { shopId, marketRegion: region } },
-          update: { lastNumber: { increment: 1 } },
-          create: { shopId, marketRegion: region, lastNumber: 1 },
-        });
         invoiceNumber = this.buildLkInvoiceNumber(
           issuedAt,
           shopId,
           sequence.lastNumber,
         );
-        serialSequence = sequence.lastNumber;
+      } else {
+        invoiceNumber = this.buildOrdinaryInvoiceNumber(
+          shopId,
+          issuedAt,
+          sequence.lastNumber,
+        );
       }
 
       const invoice = await tx.invoice.create({
         data: {
           invoiceNumber,
-          ...(serialSequence ? { serialSequence } : {}),
+          serialSequence,
           ...baseData,
         },
       });

@@ -33,16 +33,33 @@ export default function MobileInvoiceDetailPage() {
   );
 
   const load = useCallback(async () => {
-    setLoading(true);
+    let seeded: any = null;
+    try {
+      const raw = sessionStorage.getItem(`m-invoice-seed:${id}`);
+      if (raw) {
+        seeded = JSON.parse(raw);
+        sessionStorage.removeItem(`m-invoice-seed:${id}`);
+        if (seeded?.id) {
+          setInvoice(seeded);
+          setLoading(false);
+        }
+      }
+    } catch {
+      /* ignore corrupt seed */
+    }
+
+    if (!seeded) setLoading(true);
     try {
       const [invoiceResponse, settingsResponse] = await Promise.all([
         invoicesApi.getById(id),
         invoicesApi.getSettings(),
       ]);
-      setInvoice(invoiceResponse.data ?? null);
+      setInvoice(invoiceResponse.data ?? seeded ?? null);
       setSettings(unwrapInvoiceSettingsResponse(settingsResponse.data));
     } catch (error: any) {
-      toast({ title: "Could not load invoice", description: error?.response?.data?.message, variant: "destructive" });
+      if (!seeded) {
+        toast({ title: "Could not load invoice", description: error?.response?.data?.message, variant: "destructive" });
+      }
     } finally {
       setLoading(false);
     }

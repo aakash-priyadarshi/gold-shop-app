@@ -91,7 +91,6 @@ function MobileInvoiceCreateInner() {
     setMakingMode,
     makingValue,
     setMakingValue,
-    marketRatesLoading,
     updateLine,
     applyMakingOnLine,
     addFromCatalog,
@@ -350,6 +349,15 @@ function MobileInvoiceCreateInner() {
         router.replace("/m/invoices");
         return;
       }
+      // Seed detail page so navigation does not wait on a second full fetch
+      try {
+        sessionStorage.setItem(
+          `m-invoice-seed:${invoice.id}`,
+          JSON.stringify(invoice),
+        );
+      } catch {
+        /* private mode / quota — detail will fetch normally */
+      }
       toast({
         title: "Invoice created",
         description: invoice.invoiceNumber ? `#${invoice.invoiceNumber}` : undefined,
@@ -383,7 +391,7 @@ function MobileInvoiceCreateInner() {
   };
 
   return (
-    <div className="space-y-4 px-4 py-4 pb-32" data-tour="mobile-invoice-create">
+    <div className="space-y-4 px-4 py-4 pb-44" data-tour="mobile-invoice-create">
       <div className="flex items-center gap-3">
         <Link href="/m/invoices" className="rounded-xl bg-gray-100 p-2">
           <ArrowLeft className="h-5 w-5" />
@@ -869,52 +877,40 @@ function MobileInvoiceCreateInner() {
           </div>
 
           <div
-            className="rounded-2xl border border-amber-100 bg-amber-50 p-4 space-y-1.5 text-sm"
+            className="rounded-2xl border border-amber-100 bg-amber-50 p-3 space-y-1 text-sm"
             data-tour="invoice-tax-breakdown"
           >
-            <div className="flex justify-between">
+            <div className="flex justify-between text-xs text-gray-600">
               <span><T>Subtotal</T></span>
-              <strong>
+              <span>
                 {currency} {subtotal.toLocaleString()}
-              </strong>
-            </div>
-            <div className="flex justify-between">
-              <span><T>Wastage</T></span>
-              <strong>
-                {currency} {wastageTotal.toLocaleString()}
-              </strong>
-            </div>
-            <div className="flex justify-between text-xs text-gray-600">
-              <span><T>Metal tax</T></span>
-              <span>
-                {currency} {taxBreakdown.metalTax.toLocaleString()}
               </span>
             </div>
-            <div className="flex justify-between text-xs text-gray-600">
-              <span><T>Making tax</T></span>
-              <span>
-                {currency} {taxBreakdown.makingTax.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between text-xs text-gray-600">
-              <span><T>Gemstone tax</T></span>
-              <span>
-                {currency} {taxBreakdown.gemstoneTax.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between text-xs text-gray-600">
-              <span><T>Wastage tax</T></span>
-              <span>
-                {currency} {taxBreakdown.wastageTax.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between border-t border-amber-200 pt-2">
-              <span><T>Tax total</T> ({countryTax.taxName})</span>
-              <strong>
-                {currency} {taxBreakdown.totalTax.toLocaleString()}
-              </strong>
-            </div>
-            <div className="flex justify-between text-base font-black text-amber-900">
+            {wastageTotal > 0 && (
+              <div className="flex justify-between text-xs text-gray-600">
+                <span><T>Wastage</T></span>
+                <span>
+                  {currency} {wastageTotal.toLocaleString()}
+                </span>
+              </div>
+            )}
+            {taxBreakdown.totalTax > 0 && (
+              <div className="flex justify-between text-xs text-gray-600">
+                <span><T>Tax</T> ({countryTax.taxName})</span>
+                <span>
+                  {currency} {taxBreakdown.totalTax.toLocaleString()}
+                </span>
+              </div>
+            )}
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-xs text-gray-600">
+                <span><T>Discount</T></span>
+                <span>
+                  −{currency} {discountAmount.toLocaleString()}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-amber-200 pt-1.5 text-sm font-black text-amber-900">
               <span><T>Grand total</T></span>
               <span>
                 {currency} {grandTotal.toLocaleString()}
@@ -1069,60 +1065,65 @@ function MobileInvoiceCreateInner() {
         </div>
       )}
 
-      {/* Sticky totals on Lines step */}
-      {step === 1 && (
-        <div
-          className="fixed bottom-[7.5rem] left-0 right-0 border-t border-amber-100 bg-amber-50/95 px-4 py-2 backdrop-blur-sm"
-          data-tour="invoice-live-totals"
-        >
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">
-              <T>Subtotal</T> + <T>Tax</T>
+      {/* Bottom dock: compact totals + CTA (clears mobile tab bar at bottom-16) */}
+      <div className="fixed bottom-16 left-0 right-0 z-30 border-t border-gray-100 bg-white/95 backdrop-blur-sm">
+        {(step === 1 || step === 2) && (
+          <div
+            className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50 px-4 py-1.5 text-xs"
+            data-tour="invoice-live-totals"
+          >
+            <span className="truncate text-gray-600">
+              <T>Total</T>
+              {wastageTotal > 0 ? (
+                <>
+                  {" "}
+                  · <T>Wastage</T> {currency} {wastageTotal.toLocaleString()}
+                </>
+              ) : null}
+              {taxBreakdown.totalTax > 0 ? (
+                <>
+                  {" "}
+                  · <T>Tax</T> {currency} {taxBreakdown.totalTax.toLocaleString()}
+                </>
+              ) : null}
             </span>
-            <strong className="text-amber-900">
-              {currency}{" "}
-              {(subtotal + wastageTotal + taxBreakdown.totalTax).toLocaleString()}
+            <strong className="shrink-0 text-sm text-amber-900">
+              {currency} {grandTotal.toLocaleString()}
             </strong>
           </div>
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>
-              <T>Wastage</T>: {currency} {wastageTotal.toLocaleString()}
-              {marketRatesLoading ? " · …" : null}
-            </span>
-            <span className="font-bold text-amber-800">
-              <T>Total</T>: {currency} {grandTotal.toLocaleString()}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Bottom CTA */}
-      <div className="fixed bottom-16 left-0 right-0 border-t border-gray-100 bg-white p-4">
-        {step < 2 ? (
-          <button
-            type="button"
-            onClick={goNext}
-            className="w-full rounded-2xl bg-amber-600 py-4 text-base font-bold text-white"
-          >
-            <T>Continue</T>
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => void submit()}
-            className="w-full rounded-2xl bg-amber-600 py-4 text-base font-bold text-white disabled:opacity-50"
-            data-tour="invoice-create-submit"
-          >
-            {saving ? (
-              <T>Creating…</T>
-            ) : (
-              <>
-                <T>Create invoice</T> · {currency} {grandTotal.toLocaleString()}
-              </>
-            )}
-          </button>
         )}
+        <div className="p-3">
+          {step < 2 ? (
+            <button
+              type="button"
+              onClick={goNext}
+              className="w-full rounded-xl bg-amber-600 py-3 text-sm font-bold text-white"
+            >
+              <T>Continue</T>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void submit()}
+              className="w-full rounded-xl bg-amber-600 py-3 text-sm font-bold text-white disabled:opacity-50"
+              data-tour="invoice-create-submit"
+            >
+              {saving ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <T>Creating…</T>
+                </span>
+              ) : (
+                <>
+                  <T>Create invoice</T>
+                  {" · "}
+                  {currency} {grandTotal.toLocaleString()}
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

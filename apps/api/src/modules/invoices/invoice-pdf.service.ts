@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import PDFDocument from "pdfkit";
+import * as QRCode from "qrcode";
 import { PrismaService } from "../../prisma/prisma.service";
+import type { InvoicePdfContext } from "./pdf/invoice-pdf.types";
+import {
+  DEFAULT_INVOICE_PDF_TEMPLATE_ID,
+  resolveInvoicePdfTemplate,
+} from "./pdf/templates";
 
 // pdfkit CJS interop
 const PdfCtor =
@@ -9,9 +15,14 @@ const PdfCtor =
 
 @Injectable()
 export class InvoicePdfService {
+  private readonly logger = new Logger(InvoicePdfService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
-  async generatePdfBuffer(id: string, shopId: string): Promise<{
+  async generatePdfBuffer(
+    id: string,
+    shopId: string,
+  ): Promise<{
     buffer: Buffer;
     filename: string;
   }> {
@@ -28,6 +39,8 @@ export class InvoicePdfService {
             country: true,
             vatNumber: true,
             panNumber: true,
+            profileImage: true,
+            invoiceSettings: true,
           },
         },
         payments: {
@@ -39,7 +52,8 @@ export class InvoicePdfService {
     });
     if (!invoice) throw new NotFoundException("Invoice not found");
 
-    const buffer = await this.renderInvoice(invoice);
+    const ctx = await this.buildContext(invoice);
+    const buffer = await this.renderWithTemplate(ctx);
     const safeNumber = String(invoice.invoiceNumber || id).replace(
       /[^\w.-]+/g,
       "_",
@@ -50,7 +64,190 @@ export class InvoicePdfService {
     };
   }
 
-  private renderInvoice(invoice: any): Promise<Buffer> {
+  private async buildContext(invoice: any): Promise<InvoicePdfContext> {
+    const settings = invoice.shop?.invoiceSettings || null;
+    // Future: InvoiceSettings.billTemplateId — read when column ships
+    const templateId =
+      (settings as { billTemplateId?: string } | null)?.billTemplateId ||
+      DEFAULT_INVOICE_PDF_TEMPLATE_ID;
+
+    const shopName =
+      settings?.shopNameOnBill?.trim() ||
+      invoice.supplierName ||
+      invoice.shop?.shopName ||
+      "Jeweller";
+
+    const logoUrl =
+      (settings?.showLogo !== false &&
+        (settings?.shopLogoUrl || invoice.shop?.profileImage)) ||
+      null;
+
+    const logoBuffer = logoUrl ? await this.fetchImageBuffer(logoUrl) : null;
+
+    const frontendBase = (
+      process.env.FRONTEND_URL || "https://www.orivraa.com"
+    ).replace(/\/$/, "");
+    const verifyUrl = invoice.verificationToken
+      ? `${frontendBase}/verify-bill/${invoice.verificationToken}`
+      : null;
+
+    let qrBuffer: Buffer | null = null;
+    if (verifyUrl) {
+      try {
+        qrBuffer = await QRCode.toBuffer(verifyUrl, {
+          type: "png",
+          width: 160,
+          margin: 1,
+          errorCorrectionLevel: "M",
+        });
+      } catch (err) {
+        this.logger.warn(
+          `QR generation failed for invoice ${invoice.id}: ${String(err)}`,
+        );
+      }
+    }
+
+    const taxId =
+      settings?.gstin ||
+      invoice.shop?.vatNumber ||
+      invoice.shop?.panNumber ||
+      null;
+
+    const address =
+      settings?.shopAddress ||
+      [invoice.shop?.address, invoice.shop?.city, invoice.shop?.country]
+        .filter(Boolean)
+        .join(", ") ||
+      null;
+
+    const lines: any[] = Array.isArray(invoice.lineItems)
+      ? invoice.lineItems
+      : [];
+
+    return {
+      templateId,
+      invoiceNumber: String(invoice.invoiceNumber || invoice.id),
+      title:
+        invoice.invoiceTitle ||
+        (invoice.invoiceCountry === "LK" ? "INVOICE" : "INVOICE"),
+      currency: invoice.currency || "NPR",
+      invoiceCountry: invoice.invoiceCountry,
+      issuedAt: invoice.issuedAt,
+      customerName: invoice.customerName,
+      customerPhone: invoice.customerPhone,
+      customerEmail: invoice.customerEmail,
+      customerAddress: invoice.customerAddress,
+      customerTaxId: invoice.customerTaxId,
+      lineItems: lines.map((line) => ({
+        label: String(line.label || "Item"),
+        quantity: line.quantity != null ? Number(line.quantity) : 1,
+        amount: Number(line.amount || 0),
+        details: line.details ? String(line.details) : undefined,
+      })),
+      subtotal: Number(invoice.subtotal || 0),
+      discountAmount: Number(invoice.discountAmount || 0),
+      taxAmount: Number(invoice.taxAmount || 0),
+      taxLabel: invoice.taxLabel,
+      taxBreakdown: (invoice.taxBreakdown as Record<string, number>) || null,
+      totalAmount: Number(invoice.totalAmount || 0),
+      paidAmount: Number(invoice.paidAmount || 0),
+      balanceDue: Number(invoice.balanceDue || 0),
+      notes: invoice.notes,
+      branding: {
+        shopName,
+        tagline: settings?.tagline ?? null,
+        address,
+        phone: settings?.shopPhone || invoice.shop?.contactPhone || null,
+        email: settings?.shopEmail || invoice.shop?.contactEmail || null,
+        taxId,
+        licenseNumber: settings?.licenseNumber ?? null,
+        footerNote: settings?.footerNote ?? null,
+        termsText: settings?.termsText ?? null,
+        showLogo: settings?.showLogo !== false,
+        showAddress: settings?.showAddress !== false,
+        showPhone: settings?.showPhone !== false,
+        showEmail: settings?.showEmail === true,
+        showGstin: settings?.showGstin !== false,
+        showLicense: settings?.showLicense === true,
+        showFooter: settings?.showFooter !== false,
+        showTerms: settings?.showTerms !== false,
+        logoPosition:
+          (settings?.logoPosition || "TOP").toUpperCase() === "BOTTOM"
+            ? "BOTTOM"
+            : "TOP",
+        logoUrl,
+        logoBuffer,
+      },
+      verificationToken: invoice.verificationToken,
+      verifyUrl,
+      qrBuffer,
+    };
+  }
+
+  private async fetchImageBuffer(url: string): Promise<Buffer | null> {
+    try {
+      if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) {
+        return null;
+      }
+
+      const candidates = [url];
+      // pdfkit only embeds PNG/JPEG — try common siblings for .webp logos
+      if (/\.webp(\?|$)/i.test(url)) {
+        candidates.push(
+          url.replace(/\.webp(\?|$)/i, ".png$1"),
+          url.replace(/\.webp(\?|$)/i, ".jpg$1"),
+          url.replace(/\.webp(\?|$)/i, ".jpeg$1"),
+        );
+      }
+
+      for (const candidate of candidates) {
+        const buf = await this.downloadImage(candidate);
+        if (!buf) continue;
+        if (this.isPdfKitImage(buf)) return buf;
+        this.logger.warn(
+          `Logo format unsupported by pdfkit (need PNG/JPEG): ${candidate}`,
+        );
+      }
+      return null;
+    } catch (err) {
+      this.logger.warn(`Logo fetch error: ${String(err)}`);
+      return null;
+    }
+  }
+
+  private async downloadImage(url: string): Promise<Buffer | null> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { Accept: "image/png,image/jpeg,image/*,*/*" },
+      });
+      if (!res.ok) {
+        this.logger.warn(`Logo fetch failed (${res.status}): ${url}`);
+        return null;
+      }
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.length < 32 || buf.length > 5_000_000) return null;
+      return buf;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /** PNG (89 50 4E 47) or JPEG (FF D8 FF) — the formats pdfkit can embed. */
+  private isPdfKitImage(buf: Buffer): boolean {
+    if (buf.length < 4) return false;
+    const isPng =
+      buf[0] === 0x89 &&
+      buf[1] === 0x50 &&
+      buf[2] === 0x4e &&
+      buf[3] === 0x47;
+    const isJpeg = buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+    return isPng || isJpeg;
+  }
+
+  private renderWithTemplate(ctx: InvoicePdfContext): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PdfCtor({ size: "A4", margin: 48 });
       const chunks: Buffer[] = [];
@@ -58,128 +255,8 @@ export class InvoicePdfService {
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", reject);
 
-      const currency = invoice.currency || "NPR";
-      const shopName =
-        invoice.supplierName || invoice.shop?.shopName || "Jeweller";
-      const title =
-        invoice.invoiceTitle ||
-        (invoice.invoiceCountry === "LK" ? "INVOICE" : "INVOICE");
-
-      doc
-        .fontSize(18)
-        .fillColor("#92400e")
-        .text(shopName, { continued: false });
-      doc
-        .fontSize(11)
-        .fillColor("#666666")
-        .text(title, { continued: false });
-      doc.moveDown(0.5);
-
-      doc
-        .fontSize(12)
-        .fillColor("#111111")
-        .text(`Invoice #${invoice.invoiceNumber}`, { continued: false });
-      if (invoice.issuedAt) {
-        doc
-          .fontSize(10)
-          .fillColor("#555555")
-          .text(`Date: ${new Date(invoice.issuedAt).toLocaleDateString()}`);
-      }
-      doc.moveDown(0.8);
-
-      // Parties
-      doc.fontSize(10).fillColor("#111111").text("Bill to", { underline: true });
-      doc.text(invoice.customerName || "Walk-in customer");
-      if (invoice.customerPhone) doc.text(invoice.customerPhone);
-      if (invoice.customerEmail) doc.text(invoice.customerEmail);
-      if (invoice.customerAddress) doc.text(invoice.customerAddress);
-      if (invoice.customerTaxId) doc.text(`Tax ID: ${invoice.customerTaxId}`);
-      doc.moveDown(0.8);
-
-      // Lines
-      doc.fontSize(10).fillColor("#111111").text("Items", { underline: true });
-      doc.moveDown(0.3);
-      const lines: any[] = Array.isArray(invoice.lineItems)
-        ? invoice.lineItems
-        : [];
-      for (const line of lines) {
-        const qty =
-          line.quantity && Number(line.quantity) !== 1
-            ? ` × ${line.quantity}`
-            : "";
-        const label = `${line.label || "Item"}${qty}`;
-        const amount = `${currency} ${Number(line.amount || 0).toLocaleString()}`;
-        doc.fontSize(10).fillColor("#111111").text(label, {
-          continued: true,
-          width: 360,
-        });
-        doc.text(amount, { align: "right" });
-        if (line.details) {
-          doc.fontSize(8).fillColor("#666666").text(String(line.details));
-        }
-        doc.moveDown(0.25);
-      }
-
-      doc.moveDown(0.5);
-      const row = (label: string, value: number, bold = false) => {
-        doc
-          .fontSize(bold ? 12 : 10)
-          .fillColor("#111111")
-          .font(bold ? "Helvetica-Bold" : "Helvetica")
-          .text(label, { continued: true, width: 360 });
-        doc.text(`${currency} ${Number(value || 0).toLocaleString()}`, {
-          align: "right",
-        });
-        doc.font("Helvetica");
-      };
-
-      row("Subtotal", Number(invoice.subtotal || 0));
-      if (Number(invoice.discountAmount || 0) > 0) {
-        row("Discount", -Number(invoice.discountAmount));
-      }
-      if (Number(invoice.taxAmount || 0) > 0) {
-        row(invoice.taxLabel || "Tax", Number(invoice.taxAmount));
-      }
-      const breakdown = invoice.taxBreakdown as Record<string, number> | null;
-      if (breakdown && typeof breakdown === "object") {
-        doc.fontSize(8).fillColor("#666666");
-        if (breakdown.metalTax)
-          doc.text(`  Metal tax: ${currency} ${Number(breakdown.metalTax).toLocaleString()}`);
-        if (breakdown.makingTax)
-          doc.text(`  Making tax: ${currency} ${Number(breakdown.makingTax).toLocaleString()}`);
-        if (breakdown.gemstoneTax)
-          doc.text(`  Gemstone tax: ${currency} ${Number(breakdown.gemstoneTax).toLocaleString()}`);
-        if (breakdown.wastageTax)
-          doc.text(`  Wastage tax: ${currency} ${Number(breakdown.wastageTax).toLocaleString()}`);
-        doc.fillColor("#111111");
-      }
-      row("Total", Number(invoice.totalAmount || 0), true);
-      row("Paid", Number(invoice.paidAmount || 0));
-      row("Balance due", Number(invoice.balanceDue || 0), true);
-
-      if (invoice.notes) {
-        doc.moveDown(0.8);
-        doc.fontSize(9).fillColor("#555555").text(`Notes: ${invoice.notes}`);
-      }
-
-      if (invoice.verificationToken) {
-        doc.moveDown(1);
-        doc
-          .fontSize(9)
-          .fillColor("#92400e")
-          .text(
-            `Verify: https://www.orivraa.com/verify-bill/${invoice.verificationToken}`,
-          );
-      }
-
-      doc.moveDown(1.5);
-      doc
-        .fontSize(8)
-        .fillColor("#999999")
-        .text("Generated on demand by Orivraa — not stored.", {
-          align: "center",
-        });
-
+      const template = resolveInvoicePdfTemplate(ctx.templateId);
+      template.render(doc, ctx);
       doc.end();
     });
   }

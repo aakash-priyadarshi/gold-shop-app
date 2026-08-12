@@ -137,8 +137,30 @@ export class AccountingService {
     client: DbClient,
     shopId: string,
   ): Promise<Map<LedgerAccountKey, string>> {
-    const accounts = await Promise.all(
-      DEFAULT_LEDGER_ACCOUNTS.map((account) =>
+    const existing = await client.ledgerAccount.findMany({
+      where: {
+        shopId,
+        systemKey: { in: DEFAULT_LEDGER_ACCOUNTS.map((a) => a.systemKey) },
+      },
+      select: { id: true, systemKey: true },
+    });
+    const byKey = new Map<LedgerAccountKey, string>();
+    for (const account of existing) {
+      if (account.systemKey) {
+        byKey.set(account.systemKey, account.id);
+      }
+    }
+
+    const missing = DEFAULT_LEDGER_ACCOUNTS.filter(
+      (account) => !byKey.has(account.systemKey),
+    );
+    if (missing.length === 0) {
+      return byKey;
+    }
+
+    // Only upsert accounts that are not present — avoids 11 writes on every invoice.
+    const created = await Promise.all(
+      missing.map((account) =>
         client.ledgerAccount.upsert({
           where: {
             shopId_systemKey: { shopId, systemKey: account.systemKey },
@@ -159,7 +181,12 @@ export class AccountingService {
         }),
       ),
     );
-    return new Map(accounts.map((account) => [account.systemKey!, account.id]));
+    for (const account of created) {
+      if (account.systemKey) {
+        byKey.set(account.systemKey, account.id);
+      }
+    }
+    return byKey;
   }
 
   async postEntry(

@@ -157,7 +157,8 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
     } as any);
 
     expect(result.invoiceTitle).toBe("INVOICE / RECEIPT");
-    expect(invoiceSequenceUpsert).not.toHaveBeenCalled();
+    expect(invoiceSequenceUpsert).toHaveBeenCalled();
+    expect(result.invoiceNumber).toMatch(/^INV-\d{8}-SHOP12-\d{4}$/);
   });
 
   it("accepts the current UI requestTaxInvoice alias deliberately", async () => {

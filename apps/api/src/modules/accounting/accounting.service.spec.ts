@@ -11,12 +11,16 @@ import { DEFAULT_LEDGER_ACCOUNTS } from "./accounting.types";
 
 describe("AccountingService", () => {
   const ledgerAccountUpsert = jest.fn();
+  const ledgerAccountFindMany = jest.fn();
   const journalFindUnique = jest.fn();
   const journalCreate = jest.fn();
   const journalUpdate = jest.fn();
   const journalFindFirst = jest.fn();
   const tx = {
-    ledgerAccount: { upsert: ledgerAccountUpsert },
+    ledgerAccount: {
+      upsert: ledgerAccountUpsert,
+      findMany: ledgerAccountFindMany,
+    },
     journalEntry: {
       findUnique: journalFindUnique,
       findFirst: journalFindFirst,
@@ -41,6 +45,7 @@ describe("AccountingService", () => {
     jest.clearAllMocks();
     service = new AccountingService(prisma, fxRates as any);
     journalFindUnique.mockResolvedValue(null);
+    ledgerAccountFindMany.mockResolvedValue([]);
     ledgerAccountUpsert.mockImplementation(({ create }: any) =>
       Promise.resolve(create),
     );
@@ -75,6 +80,7 @@ describe("AccountingService", () => {
       ],
     });
 
+    expect(ledgerAccountFindMany).toHaveBeenCalled();
     expect(ledgerAccountUpsert).toHaveBeenCalledTimes(
       DEFAULT_LEDGER_ACCOUNTS.length,
     );
@@ -95,6 +101,39 @@ describe("AccountingService", () => {
         data: { status: JournalEntryStatus.POSTED },
       }),
     );
+  });
+
+  it("skips ledger upserts when default accounts already exist", async () => {
+    ledgerAccountFindMany.mockResolvedValue(
+      DEFAULT_LEDGER_ACCOUNTS.map((account) => ({
+        id: `acc-${account.systemKey}`,
+        systemKey: account.systemKey,
+      })),
+    );
+
+    await service.postEntry(tx, {
+      ...context,
+      shopId: "shop-1",
+      referenceType: JournalReferenceType.ORDER_PAYMENT,
+      referenceId: "payment-existing-accounts",
+      idempotencyKey: "order-payment:existing-accounts",
+      description: "Settlement",
+      transactionDate: new Date(),
+      lines: [
+        {
+          accountKey: LedgerAccountKey.GATEWAY_CLEARING,
+          debitNpr: 100,
+          transactionDebit: 250,
+        },
+        {
+          accountKey: LedgerAccountKey.CUSTOMER_ADVANCES,
+          creditNpr: 100,
+          transactionCredit: 250,
+        },
+      ],
+    });
+
+    expect(ledgerAccountUpsert).not.toHaveBeenCalled();
   });
 
   it("rejects unbalanced debits and credits before a journal is inserted", async () => {
