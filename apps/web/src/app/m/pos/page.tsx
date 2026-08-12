@@ -50,12 +50,28 @@ interface InventoryItem {
   jewelleryType?: string;
   descriptionEn?: string;
   descriptionNe?: string;
+  variants?: ProductVariant[];
+}
+
+interface ProductVariant {
+  id: string;
+  sizeLabel: string;
+  sku?: string;
+  stock?: number;
+  priceOverride?: number;
+  isActive?: boolean;
 }
 
 interface CartItem {
   item: InventoryItem;
   qty: number;
   unitPrice: number;
+  variantId?: string;
+  variantLabel?: string;
+}
+
+function cartItemKey(itemId: string, variantId?: string) {
+  return `${itemId}:${variantId ?? "base"}`;
 }
 
 function formatMoney(amount: number, currency: SupportedCurrencyCode) {
@@ -92,13 +108,19 @@ function CartDrawer({
   cart: CartItem[];
   currency: SupportedCurrencyCode;
   shopCountry: string;
-  onQtyChange: (id: string, qty: number) => void;
-  onRemove: (id: string) => void;
+  onQtyChange: (id: string, qty: number, variantId?: string) => void;
+  onRemove: (id: string, variantId?: string) => void;
   onCheckout: (
     method: string,
     customerName: string,
     customerPhone?: string,
-    extras?: { taxRate?: number; makingPct?: number; customerId?: string },
+    extras?: {
+      taxRate?: number;
+      taxAmount?: number;
+      makingPct?: number;
+      customerId?: string;
+      customerKind?: "walkIn" | "registered";
+    },
   ) => Promise<void> | void;
   onClose: () => void;
 }) {
@@ -119,9 +141,11 @@ function CartDrawer({
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [customerKind, setCustomerKind] = useState<"walkIn" | "registered" | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [makingPct, setMakingPct] = useState(0); // making charge %
   const [taxRate, setTaxRate] = useState(0);
+  const [makingTaxRate, setMakingTaxRate] = useState(0);
   const [taxLabel, setTaxLabel] = useState("Tax");
 
   // Load country-specific tax rate
@@ -133,11 +157,18 @@ function CartDrawer({
         setTaxLabel("Tax unavailable");
         return;
       }
-      const r = lookupTaxRate(data.rules, "ALL");
-      setTaxRate(r.rate);
-      setTaxLabel(`${r.name} (${Math.round(r.rate * 100)}%)`);
+      const metalRule = lookupTaxRate(data.rules, "PRECIOUS_METAL");
+      const makingRule = lookupTaxRate(data.rules, "MAKING_CHARGE");
+      setTaxRate(metalRule.rate);
+      setMakingTaxRate(makingRule.rate);
+      setTaxLabel(
+        makingRule.rate !== metalRule.rate
+          ? `${metalRule.name} (${Math.round(metalRule.rate * 100)}%) + making tax (${Math.round(makingRule.rate * 100)}%)`
+          : `${metalRule.name} (${Math.round(metalRule.rate * 100)}%)`,
+      );
     }).catch(() => {
-      setTaxRate(0);
+        setTaxRate(0);
+        setMakingTaxRate(0);
       setTaxLabel("Tax unavailable");
     });
   }, [shopCountry]);
@@ -150,6 +181,7 @@ function CartDrawer({
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 7) {
       setCustomerId(null);
+      setCustomerKind(null);
       return;
     }
     const handle = setTimeout(async () => {
@@ -163,12 +195,15 @@ function CartDrawer({
         const customer = result?.customer;
         if (result?.found && customer) {
           setCustomerId(customer.id ?? null);
+          setCustomerKind(customer.isRegistered ? "registered" : "walkIn");
           if (customer.name && !name) setName(customer.name);
         } else {
           setCustomerId(null);
+          setCustomerKind(null);
         }
       } catch {
         setCustomerId(null);
+        setCustomerKind(null);
         // no existing customer — ignore
       } finally {
         setLookingUp(false);
@@ -190,7 +225,7 @@ function CartDrawer({
   const subtotal = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
   const making = Math.round(subtotal * (makingPct / 100));
   const total = subtotal + making;
-  const tax = Math.round(total * taxRate);
+  const tax = Math.round(subtotal * taxRate + making * makingTaxRate);
 
   return (
     <div className="fixed inset-0 z-30 flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
@@ -208,7 +243,7 @@ function CartDrawer({
       {/* Items */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {cart.map((c) => (
-          <div key={c.item.id} className="flex items-center gap-3">
+          <div key={cartItemKey(c.item.id, c.variantId)} className="flex items-center gap-3">
             {c.item.images[0] ? (
               <Image
                 src={c.item.images[0]}
@@ -226,11 +261,13 @@ function CartDrawer({
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                 {c.item.nameEn}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{formatMoney(c.unitPrice, currency)} <T>each</T></p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {c.variantLabel ? `${c.variantLabel} · ` : ""}{formatMoney(c.unitPrice, currency)} <T>each</T>
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => onQtyChange(c.item.id, c.qty - 1)}
+                onClick={() => onQtyChange(c.item.id, c.qty - 1, c.variantId)}
                 className="h-10 w-10 rounded-full border border-gray-200 flex items-center justify-center active:bg-gray-100"
               >
                 <Minus className="h-4 w-4" />
@@ -239,13 +276,13 @@ function CartDrawer({
                 {c.qty}
               </span>
               <button
-                onClick={() => onQtyChange(c.item.id, c.qty + 1)}
+                onClick={() => onQtyChange(c.item.id, c.qty + 1, c.variantId)}
                 className="h-10 w-10 rounded-full border border-gray-200 flex items-center justify-center active:bg-gray-100"
               >
                 <Plus className="h-4 w-4" />
               </button>
               <button
-                onClick={() => onRemove(c.item.id)}
+                onClick={() => onRemove(c.item.id, c.variantId)}
                 className="h-10 w-10 rounded-full text-red-500 bg-red-50 flex items-center justify-center active:bg-red-100 ml-2"
               >
                 <Trash2 className="h-4 w-4" />
@@ -370,7 +407,13 @@ function CartDrawer({
               method,
               name.trim() || "Walk-in Customer",
               phone || undefined,
-              { taxRate: Math.round(taxRate * 100), makingPct, customerId: customerId || undefined },
+              {
+                taxRate: Math.round(taxRate * 100),
+                taxAmount: tax,
+                makingPct,
+                customerId: customerId || undefined,
+                customerKind: customerKind || undefined,
+              },
             );
             setLoading(false);
           }}
@@ -389,28 +432,34 @@ function CartDrawer({
 }
 
 function BillSuccess({
-  quoteId,
-  trackingToken,
+  reference,
+  invoiceId,
+  invoiceNumber,
+  verificationToken,
+  pendingSync,
   total,
   currency,
   customerPhone,
   onNew,
 }: {
-  quoteId: string;
-  trackingToken?: string;
+  reference: string;
+  invoiceId?: string;
+  invoiceNumber?: string;
+  verificationToken?: string;
+  pendingSync: boolean;
   total: number;
   currency: SupportedCurrencyCode;
   customerPhone?: string;
   onNew: () => void;
 }) {
   // Public /track/:token only works with shop-quote tracking tokens — not POS clientIds.
-  const trackUrl = trackingToken
-    ? `${typeof window !== "undefined" ? window.location.origin : "https://orivraa.com"}/track/${trackingToken}`
+  const verifyUrl = verificationToken
+    ? `${typeof window !== "undefined" ? window.location.origin : "https://orivraa.com"}/verify-bill/${verificationToken}`
     : null;
   const whatsappMsg = encodeURIComponent(
     `Thank you for your purchase at our store!\n\nBill Amount: ${formatMoney(total, currency)}` +
-      (trackUrl ? `\nView/Download Bill: ${trackUrl}` : "") +
-      (quoteId ? `\nRef: ${quoteId}` : ""),
+      (verifyUrl ? `\nVerify Bill: ${verifyUrl}` : "") +
+      `\nRef: ${invoiceNumber || reference}`,
   );
   const whatsappUrl = customerPhone
     ? `https://wa.me/${customerPhone.replace(/\D/g, "")}?text=${whatsappMsg}`
@@ -422,27 +471,35 @@ function BillSuccess({
         <Check className="h-10 w-10 text-green-600" />
       </div>
       <div>
-        <h2 className="text-xl font-bold text-gray-900"><T>Bill Created!</T></h2>
+        <h2 className="text-xl font-bold text-gray-900">
+          {pendingSync ? <T>Sale saved for sync</T> : <T>Bill Created!</T>}
+        </h2>
         <p className="text-sm text-gray-500 mt-1">
-          {formatMoney(total, currency)} — <T>Payment recorded</T>
+          {pendingSync ? (
+            <T>The sale is pending server confirmation. Do not share this as a final bill.</T>
+          ) : (
+            <>{formatMoney(total, currency)} — <T>Payment recorded</T></>
+          )}
         </p>
       </div>
 
-      <a
-        href={whatsappUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-full max-w-xs py-4 bg-[#25D366] text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2 shadow-lg"
-      >
-        <MessageCircle className="h-5 w-5" />
-        <T>Send Bill via WhatsApp</T>
-      </a>
+      {!pendingSync && (
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full max-w-xs py-4 bg-[#25D366] text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2 shadow-lg"
+        >
+          <MessageCircle className="h-5 w-5" />
+          <T>Send Bill via WhatsApp</T>
+        </a>
+      )}
 
-      {trackUrl ? (
+      {verifyUrl ? (
         <button
           type="button"
           onClick={() => {
-            void navigator.clipboard?.writeText(trackUrl);
+            void navigator.clipboard?.writeText(verifyUrl);
           }}
           className="w-full max-w-xs py-4 border border-gray-200 text-gray-700 text-base font-medium rounded-2xl flex items-center justify-center gap-2"
         >
@@ -451,8 +508,17 @@ function BillSuccess({
         </button>
       ) : (
         <p className="text-xs text-gray-400">
-          <T>Receipt ref</T>: {quoteId}
+          <T>Receipt ref</T>: {reference}
         </p>
+      )}
+
+      {!pendingSync && invoiceId && (
+        <Link
+          href={`/m/invoices/${invoiceId}`}
+          className="w-full max-w-xs py-3 border border-amber-300 text-amber-700 text-sm font-semibold rounded-2xl"
+        >
+          <T>View invoice</T> {invoiceNumber ? `#${invoiceNumber}` : ""}
+        </Link>
       )}
 
       <button
@@ -468,24 +534,35 @@ function BillSuccess({
 function ProductDetailSheet({
   item,
   currency,
-  inCartQty,
   loading,
   onAdd,
   onQtyChange,
   onRemove,
+  getCartQty,
   onClose,
 }: {
   item: InventoryItem;
   currency: SupportedCurrencyCode;
-  inCartQty: number;
   loading: boolean;
-  onAdd: () => void;
-  onQtyChange: (qty: number) => void;
-  onRemove: () => void;
+  onAdd: (variant?: ProductVariant) => void;
+  onQtyChange: (qty: number, variant?: ProductVariant) => void;
+  onRemove: (variant?: ProductVariant) => void;
+  getCartQty: (variantId?: string) => number;
   onClose: () => void;
 }) {
   const image = item.images?.[0];
   const weight = item.totalWeightGrams ?? item.weightGrams;
+  const variants = (item.variants ?? []).filter((variant) => variant.isActive !== false);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(
+    variants[0]?.id,
+  );
+  const firstVariantId = variants[0]?.id;
+  useEffect(() => {
+    setSelectedVariantId(firstVariantId);
+  }, [item.id, firstVariantId]);
+  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId);
+  const inCartQty = getCartQty(selectedVariant?.id);
+  const price = selectedVariant?.priceOverride ?? item.totalPriceNpr ?? 0;
 
   return (
     <div className="fixed inset-0 z-30 bg-white dark:bg-gray-950 flex flex-col text-gray-900 dark:text-gray-100">
@@ -534,7 +611,7 @@ function ProductDetailSheet({
               <p className="text-xs text-gray-400">SKU {item.sku || item.id}</p>
             </div>
             <p className="text-base font-bold text-amber-700 whitespace-nowrap">
-              {formatMoney(item.totalPriceNpr ?? 0, currency)}
+              {formatMoney(price, currency)}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -558,6 +635,29 @@ function ProductDetailSheet({
             </span>
           </div>
         </div>
+
+        {variants.length > 0 && (
+          <div className="rounded-2xl border border-gray-100 p-4 space-y-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase"><T>Select size</T></p>
+            <div className="flex flex-wrap gap-2">
+              {variants.map((variant) => (
+                <button
+                  key={variant.id}
+                  type="button"
+                  disabled={(variant.stock ?? 1) <= 0}
+                  onClick={() => setSelectedVariantId(variant.id)}
+                  className={`rounded-xl border px-3 py-2 text-sm font-semibold disabled:opacity-40 ${
+                    selectedVariantId === variant.id
+                      ? "border-amber-500 bg-amber-50 text-amber-700"
+                      : "border-gray-200 text-gray-600"
+                  }`}
+                >
+                  {variant.sizeLabel} {(variant.stock ?? 0) > 0 ? `(${variant.stock})` : <T>Out</T>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {(item.descriptionEn || item.descriptionNe) && (
           <div className="rounded-2xl bg-gray-50 p-4">
@@ -583,7 +683,7 @@ function ProductDetailSheet({
         {inCartQty > 0 ? (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onQtyChange(inCartQty - 1)}
+              onClick={() => onQtyChange(inCartQty - 1, selectedVariant)}
               className="h-12 w-12 rounded-2xl border border-gray-200 flex items-center justify-center"
               aria-label="Decrease quantity"
             >
@@ -593,14 +693,14 @@ function ProductDetailSheet({
               {inCartQty} <T>in bill</T>
             </div>
             <button
-              onClick={() => onQtyChange(inCartQty + 1)}
+              onClick={() => onQtyChange(inCartQty + 1, selectedVariant)}
               className="h-12 w-12 rounded-2xl border border-gray-200 flex items-center justify-center"
               aria-label="Increase quantity"
             >
               <Plus className="h-4 w-4" />
             </button>
             <button
-              onClick={onRemove}
+              onClick={() => onRemove(selectedVariant)}
               className="h-12 w-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center"
               aria-label="Remove from bill"
             >
@@ -609,7 +709,8 @@ function ProductDetailSheet({
           </div>
         ) : (
           <button
-            onClick={onAdd}
+            onClick={() => onAdd(selectedVariant)}
+            disabled={variants.length > 0 && !selectedVariant}
             className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
           >
             <ShoppingCart className="h-5 w-5" />
@@ -912,8 +1013,11 @@ export default function MobilePOSPage() {
   const [loading, setLoading] = useState(true);
   const [showCart, setShowCart] = useState(false);
   const [billResult, setBillResult] = useState<{
-    quoteId: string;
-    trackingToken?: string;
+    reference: string;
+    invoiceId?: string;
+    invoiceNumber?: string;
+    verificationToken?: string;
+    pendingSync: boolean;
     total: number;
     customerPhone?: string;
   } | null>(null);
@@ -967,16 +1071,29 @@ export default function MobilePOSPage() {
     return () => clearTimeout(t);
   }, [search, loadInventory]);
 
-  const addToCart = useCallback((item: InventoryItem) => {
+  const addToCart = useCallback((item: InventoryItem, variant?: ProductVariant) => {
     haptic("light");
     setCart((prev) => {
-      const existing = prev.find((c) => c.item.id === item.id);
+      const existing = prev.find(
+        (c) => c.item.id === item.id && c.variantId === variant?.id,
+      );
       if (existing) {
         return prev.map((c) =>
-          c.item.id === item.id ? { ...c, qty: c.qty + 1 } : c,
+          c.item.id === item.id && c.variantId === variant?.id
+            ? { ...c, qty: c.qty + 1 }
+            : c,
         );
       }
-      return [...prev, { item, qty: 1, unitPrice: item.totalPriceNpr ?? 0 }];
+      return [
+        ...prev,
+        {
+          item,
+          qty: 1,
+          unitPrice: variant?.priceOverride ?? item.totalPriceNpr ?? 0,
+          variantId: variant?.id,
+          variantLabel: variant?.sizeLabel,
+        },
+      ];
     });
   }, [haptic]);
 
@@ -1040,18 +1157,20 @@ export default function MobilePOSPage() {
   // attached HID scanner sends a burst of keystrokes ending in Enter.
   useBarcodeScanner(handleScannedCode, { ignoreEditable: true });
 
-  const updateQty = (itemId: string, qty: number) => {
+  const updateQty = (itemId: string, qty: number, variantId?: string) => {
     if (qty <= 0) {
-      setCart((prev) => prev.filter((c) => c.item.id !== itemId));
+      setCart((prev) => prev.filter((c) => !(c.item.id === itemId && c.variantId === variantId)));
     } else {
       setCart((prev) =>
-        prev.map((c) => (c.item.id === itemId ? { ...c, qty } : c)),
+        prev.map((c) =>
+          c.item.id === itemId && c.variantId === variantId ? { ...c, qty } : c,
+        ),
       );
     }
   };
 
-  const removeFromCart = (itemId: string) => {
-    setCart((prev) => prev.filter((c) => c.item.id !== itemId));
+  const removeFromCart = (itemId: string, variantId?: string) => {
+    setCart((prev) => prev.filter((c) => !(c.item.id === itemId && c.variantId === variantId)));
   };
 
   const cartTotal = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
@@ -1061,7 +1180,13 @@ export default function MobilePOSPage() {
     method: string,
     customerName: string,
     customerPhone?: string,
-    extras?: { taxRate?: number; makingPct?: number; customerId?: string },
+    extras?: {
+      taxRate?: number;
+      taxAmount?: number;
+      makingPct?: number;
+      customerId?: string;
+      customerKind?: "walkIn" | "registered";
+    },
   ) => {
     if (!cart.length) return;
     try {
@@ -1075,62 +1200,84 @@ export default function MobilePOSPage() {
       const makingCharges = makingPct
         ? Math.round(cartTotal * (makingPct / 100))
         : 0;
-      const taxAmount = Math.round((cartTotal + makingCharges) * (taxRate / 100));
+      const taxAmount = extras?.taxAmount ?? Math.round((cartTotal + makingCharges) * (taxRate / 100));
       const total = cartTotal + makingCharges + taxAmount;
 
       const shopCountry = user?.shop?.country || undefined;
-      const { clientId, queuedOffline } = await createOfflineSale({
+      const { clientId, queuedOffline, invoice } = await createOfflineSale({
         items: cart.map((c) => ({
           inventoryItemId: c.item.id,
+          variantId: c.variantId,
           qty: c.qty,
           unitPrice: c.unitPrice,
         })),
         customerName,
         customerPhone: customerPhone || undefined,
-        customerId: extras?.customerId,
+        walkInCustomerId:
+          extras?.customerKind === "walkIn" ? extras.customerId : undefined,
+        registeredCustomerId:
+          extras?.customerKind === "registered" ? extras.customerId : undefined,
         taxRate,
         paymentMethod: method,
         makingChargeRate: makingPct || undefined,
         invoiceCountry: shopCountry,
       });
 
-      const billId = clientId;
+      if (!queuedOffline && !invoice?.id) {
+        throw new Error("The server did not return an invoice for this sale");
+      }
+      const billTotal = queuedOffline ? total : Number(invoice?.totalAmount ?? total);
+      const billCurrency = (invoice?.currency as SupportedCurrencyCode | undefined) ?? shopCurrency;
 
       setShowCart(false);
-      setBillResult({ quoteId: billId, total, customerPhone });
+      setBillResult({
+        reference: queuedOffline ? clientId : String(invoice?.invoiceNumber),
+        invoiceId: queuedOffline ? undefined : String(invoice?.id),
+        invoiceNumber: queuedOffline ? undefined : String(invoice?.invoiceNumber),
+        verificationToken: queuedOffline ? undefined : String(invoice?.verificationToken),
+        pendingSync: queuedOffline,
+        total: billTotal,
+        customerPhone,
+      });
       setCart([]);
       haptic("success");
       toast({
         title: queuedOffline ? "Bill saved offline" : "Bill created",
         description: queuedOffline
           ? `${formatMoney(total, shopCurrency)} — will sync when online`
-          : `${formatMoney(total, shopCurrency)}`,
+          : `${formatMoney(billTotal, billCurrency)}`,
       });
 
       // Auto-print receipt if a printer is configured
       const hw = loadHardwareConfig();
-      if (hw.printer.enabled && hw.printer.autoPrint) {
+      if (!queuedOffline && hw.printer.enabled && hw.printer.autoPrint && invoice) {
         try {
           await printReceipt(
             {
               shopName: user?.shop?.shopName,
               shopPhone: user?.shop?.contactPhone,
-              invoiceNumber: String(billId ?? "-"),
-              issuedAt: new Date(),
+              invoiceNumber: String(invoice.invoiceNumber),
+              issuedAt: invoice.issuedAt ? new Date(invoice.issuedAt) : new Date(),
               customerName,
               customerPhone,
-              currency: user?.shop?.currency ?? "NPR",
-              lines: cart.map((c) => ({
-                label: c.item.nameEn,
-                qty: c.qty,
-                amount: c.unitPrice * c.qty,
-              })),
-              subtotal: cartTotal,
-              taxAmount: Math.round(cartTotal * (taxRate / 100)),
-              taxLabel: `Tax ${taxRate}%`,
-              total,
-              paid: total,
-              balance: 0,
+              currency: invoice.currency ?? user?.shop?.currency ?? "NPR",
+              lines: Array.isArray(invoice.lineItems)
+                ? invoice.lineItems.map((line: any) => ({
+                    label: line.label,
+                    qty: line.quantity,
+                    amount: line.amount,
+                  }))
+                : cart.map((c) => ({
+                    label: c.item.nameEn,
+                    qty: c.qty,
+                    amount: c.unitPrice * c.qty,
+                  })),
+              subtotal: Number(invoice.subtotal ?? cartTotal),
+              taxAmount: Number(invoice.taxAmount ?? 0),
+              taxLabel: invoice.taxLabel ?? "Tax",
+              total: billTotal,
+              paid: Number(invoice.paidAmount ?? billTotal),
+              balance: Number(invoice.balanceDue ?? 0),
             },
             { kickDrawer: hw.printer.kickCashDrawer && method === "CASH" },
           );
@@ -1155,8 +1302,11 @@ export default function MobilePOSPage() {
   if (billResult) {
     return (
       <BillSuccess
-        quoteId={billResult.quoteId}
-        trackingToken={billResult.trackingToken}
+        reference={billResult.reference}
+        invoiceId={billResult.invoiceId}
+        invoiceNumber={billResult.invoiceNumber}
+        verificationToken={billResult.verificationToken}
+        pendingSync={billResult.pendingSync}
         total={billResult.total}
         currency={shopCurrency}
         customerPhone={billResult.customerPhone}
@@ -1262,7 +1412,9 @@ export default function MobilePOSPage() {
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {items.map((item) => {
-                const inCart = cart.find((c) => c.item.id === item.id);
+                const itemCart = cart.filter((c) => c.item.id === item.id);
+                const inCartQty = itemCart.reduce((sum, entry) => sum + entry.qty, 0);
+                const hasVariants = (item.variants?.length ?? 0) > 0;
                 return (
                   <div
                     key={item.id}
@@ -1273,7 +1425,7 @@ export default function MobilePOSPage() {
                       if (e.key === "Enter" || e.key === " ") openProductDetails(item);
                     }}
                     className={`relative flex flex-col rounded-2xl border overflow-hidden text-left active:scale-95 transition-transform cursor-pointer ${
-                      inCart
+                      inCartQty > 0
                         ? "border-amber-400 bg-amber-50"
                         : "border-gray-200 bg-white"
                     }`}
@@ -1293,9 +1445,9 @@ export default function MobilePOSPage() {
                           <ScanLine className="h-8 w-8 text-gray-300" />
                         </div>
                       )}
-                      {inCart && (
+                      {inCartQty > 0 && (
                         <span className="absolute top-2 right-2 h-6 w-6 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center shadow">
-                          {inCart.qty}
+                          {inCartQty}
                         </span>
                       )}
                       <span className="absolute bottom-2 left-2 rounded-full bg-black/55 text-white text-[10px] font-medium px-2 py-1">
@@ -1323,7 +1475,8 @@ export default function MobilePOSPage() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            addToCart(item);
+                            if (hasVariants) openProductDetails(item);
+                            else addToCart(item);
                           }}
                           className="h-10 w-10 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-md active:bg-amber-600 transition-colors"
                           aria-label={`Add ${item.nameEn} to bill`}
@@ -1331,20 +1484,20 @@ export default function MobilePOSPage() {
                           <Plus className="h-5 w-5" />
                         </button>
                       </div>
-                      {inCart && (
+                      {inCartQty > 0 && !hasVariants && (
                         <div className="mt-3 flex items-center justify-between rounded-xl bg-amber-50 border border-amber-200 p-1.5">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              updateQty(item.id, inCart.qty - 1);
+                              updateQty(item.id, inCartQty - 1);
                             }}
                             className="h-8 w-8 rounded-lg flex items-center justify-center bg-white text-gray-700 shadow-sm active:bg-gray-100"
                             aria-label={`Decrease ${item.nameEn}`}
                           >
                             <Minus className="h-4 w-4" />
                           </button>
-                          <span className="text-sm font-black text-amber-800">{inCart.qty}</span>
+                          <span className="text-sm font-black text-amber-800">{inCartQty}</span>
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1400,11 +1553,16 @@ export default function MobilePOSPage() {
         <ProductDetailSheet
           item={selectedItem}
           currency={shopCurrency}
-          inCartQty={cart.find((c) => c.item.id === selectedItem.id)?.qty ?? 0}
           loading={detailLoading}
-          onAdd={() => addToCart(selectedItem)}
-          onQtyChange={(qty) => updateQty(selectedItem.id, qty)}
-          onRemove={() => removeFromCart(selectedItem.id)}
+          getCartQty={(variantId) =>
+            cart.find(
+              (entry) =>
+                entry.item.id === selectedItem.id && entry.variantId === variantId,
+            )?.qty ?? 0
+          }
+          onAdd={(variant) => addToCart(selectedItem, variant)}
+          onQtyChange={(qty, variant) => updateQty(selectedItem.id, qty, variant?.id)}
+          onRemove={(variant) => removeFromCart(selectedItem.id, variant?.id)}
           onClose={() => setSelectedItem(null)}
         />
       )}

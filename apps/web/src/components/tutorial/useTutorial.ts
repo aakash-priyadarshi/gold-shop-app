@@ -436,7 +436,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Country & Tax",
         description:
-          "Select the country for this invoice. Tax rates auto-apply per category, and this also controls which Tax Reports tab the bill appears under (India GSTR, Nepal, UAE VAT, etc.). Defaults to your shop country; change it for export bills. Changing country recalculates tax on existing lines.",
+          "Select the country for this invoice. Tax rates auto-apply per category, and this also controls which Tax Reports tab the bill appears under (India GSTR, Nepal, UAE VAT, etc.). In Nepal, the active 0.5% Skill Promotion Fee replaces the old 2% luxury tax. Defaults to your shop country; change it for export bills. Changing country recalculates tax on existing lines.",
         side: "bottom",
         align: "start",
       },

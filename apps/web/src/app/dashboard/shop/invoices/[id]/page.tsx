@@ -46,8 +46,15 @@ import {
 import {
   getCounterPaymentMethods,
   buildUpiPayUri,
+  formatBankAccountDetails,
+  formatPaymentSummary,
+  hasBankTransferDetails,
   isDigitalWalletMethod,
+  isUpiAmountAllowed,
   paymentMethodLabel,
+  UPI_MAX_AMOUNT_INR,
+  type CounterPaymentMethod,
+  type ShopBankAccountDetails,
 } from "@/lib/counterPayments";
 import { toQrDataUrl, verifyBillUrl } from "@/lib/qrCode";
 import { useT } from "@/providers/translation-provider";
@@ -61,7 +68,10 @@ import {
   FileText,
   Loader2,
   PartyPopper,
+  Plus,
   Printer,
+  Split,
+  Trash2,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -119,6 +129,16 @@ interface InvoiceDetail {
   supplierTaxId?: string;
   taxBreakdown?: any;
   verificationToken?: string;
+  payments?: Array<{
+    id: string;
+    amount: number;
+    currency: string;
+    method: string;
+    reference?: string | null;
+    notes?: string | null;
+    receivedAt?: string;
+    createdAt?: string;
+  }>;
 }
 
 const statusColors: Record<string, string> = {
@@ -157,8 +177,14 @@ export default function InvoiceDetailPage() {
   const [showCreatedBanner, setShowCreatedBanner] = useState(justCreated);
   const [billSettings, setBillSettings] = useState<BillSettings | null>(null);
   const [shopUpiId, setShopUpiId] = useState<string>("");
+  const [shopBankDetails, setShopBankDetails] =
+    useState<ShopBankAccountDetails | null>(null);
   const [verifyQrDataUrl, setVerifyQrDataUrl] = useState<string | null>(null);
   const [upiQrDataUrl, setUpiQrDataUrl] = useState<string | null>(null);
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitLegs, setSplitLegs] = useState<
+    Array<{ id: string; method: CounterPaymentMethod; amount: string }>
+  >([]);
 
   const invoiceCountry = String(
     invoice?.invoiceCountry || invoice?.taxBreakdown?.country || "",
@@ -220,10 +246,16 @@ export default function InvoiceDetailPage() {
       .getSettings()
       .then((res) => {
         const shop = res.data?.shop || res.data;
-        const upi = shop?.bankAccountDetails?.upiId || "";
+        const bank = (shop?.bankAccountDetails ||
+          null) as ShopBankAccountDetails | null;
+        setShopBankDetails(bank);
+        const upi = bank?.upiId || "";
         setShopUpiId(typeof upi === "string" ? upi : "");
       })
-      .catch(() => setShopUpiId(""));
+      .catch(() => {
+        setShopUpiId("");
+        setShopBankDetails(null);
+      });
   }, []);
 
   const upiPayUri = useMemo(() => {
@@ -231,6 +263,7 @@ export default function InvoiceDetailPage() {
       return null;
     }
     const amount = parseFloat(paymentAmount) || invoice.balanceDue || 0;
+    if (!isUpiAmountAllowed(amount, paymentMethod)) return null;
     return buildUpiPayUri({
       upiId: shopUpiId,
       amount,
@@ -247,6 +280,86 @@ export default function InvoiceDetailPage() {
     billSettings?.shopNameOnBill,
     user?.shop?.shopName,
   ]);
+
+  const singlePaymentAmount = useMemo(() => {
+    if (!invoice) return 0;
+    return parseFloat(paymentAmount) || invoice.balanceDue || 0;
+  }, [invoice, paymentAmount]);
+
+  const upiOverLimit =
+    !splitMode &&
+    isDigitalWalletMethod(paymentMethod) &&
+    singlePaymentAmount > UPI_MAX_AMOUNT_INR;
+
+  const bankDetailLines = useMemo(
+    () => formatBankAccountDetails(shopBankDetails),
+    [shopBankDetails],
+  );
+
+  const paymentSummaryForPrint = useMemo(() => {
+    if (!invoice?.payments?.length) {
+      return invoice?.paymentMethod
+        ? paymentMethodLabel(invoice.paymentMethod)
+        : "";
+    }
+    return formatPaymentSummary(
+      invoice.payments.map((p) => ({
+        method: p.method,
+        amount: Number(p.amount) || 0,
+      })),
+      invoice.currency,
+    );
+  }, [invoice]);
+
+  const showBankOnPrint = useMemo(() => {
+    if (!invoice) return false;
+    if (invoice.paymentMethod === "BANK_TRANSFER") return true;
+    return (invoice.payments || []).some(
+      (p) => (p.method || "").toUpperCase() === "BANK_TRANSFER",
+    );
+  }, [invoice]);
+
+  const initSplitLegs = useCallback(
+    (balance: number) => {
+      const defaultMethod = (availablePaymentMethods[0]?.value ||
+        "CASH") as CounterPaymentMethod;
+      const half = Math.round((balance / 2) * 100) / 100;
+      const rest = Math.round((balance - half) * 100) / 100;
+      setSplitLegs([
+        {
+          id: crypto.randomUUID(),
+          method: defaultMethod,
+          amount: String(half),
+        },
+        {
+          id: crypto.randomUUID(),
+          method:
+            (availablePaymentMethods.find((m) => m.value === "CARD")?.value as
+              | CounterPaymentMethod
+              | undefined) || defaultMethod,
+          amount: String(rest),
+        },
+      ]);
+    },
+    [availablePaymentMethods],
+  );
+
+  const openPaymentDialog = useCallback(
+    (method: string, amount: number) => {
+      const useMethod =
+        isDigitalWalletMethod(method) && amount > UPI_MAX_AMOUNT_INR
+          ? availablePaymentMethods.find((m) => m.value === "BANK_TRANSFER")
+              ?.value ||
+            availablePaymentMethods.find((m) => m.value === "CARD")?.value ||
+            "CASH"
+          : method;
+      setSplitMode(false);
+      setPaymentMethod(useMethod);
+      setPaymentAmount(String(amount));
+      setPaymentDialogOpen(true);
+    },
+    [availablePaymentMethods],
+  );
 
   useEffect(() => {
     if (!invoice?.verificationToken) {
@@ -325,9 +438,96 @@ export default function InvoiceDetailPage() {
   }, [invoice, billSettings?.shopNameOnBill, user?.shop?.shopName]);
 
   const handleRecordPayment = async () => {
+    if (!invoice) return;
+
+    if (splitMode) {
+      const legs = splitLegs
+        .map((leg) => ({
+          method: leg.method,
+          amount: parseFloat(leg.amount),
+        }))
+        .filter((leg) => Number.isFinite(leg.amount) && leg.amount > 0);
+
+      if (legs.length < 2) {
+        toast({
+          variant: "destructive",
+          title: t("Need at least two payment parts"),
+        });
+        return;
+      }
+
+      const sum = legs.reduce((s, l) => s + l.amount, 0);
+      if (sum > invoice.balanceDue + 0.009) {
+        toast({
+          variant: "destructive",
+          title: t("Split total exceeds balance due"),
+        });
+        return;
+      }
+
+      for (const leg of legs) {
+        if (!isUpiAmountAllowed(leg.amount, leg.method)) {
+          toast({
+            variant: "destructive",
+            title: t("UPI amount too high"),
+            description: t(
+              `UPI / PhonePe cannot exceed ₹${UPI_MAX_AMOUNT_INR.toLocaleString()}. Use bank transfer, card, or split further.`,
+            ),
+          });
+          return;
+        }
+      }
+
+      setIsSubmitting(true);
+      let recorded = 0;
+      try {
+        for (const leg of legs) {
+          await invoicesApi.updatePaymentStatus(invoiceId, {
+            amount: leg.amount,
+            paymentMethod: leg.method,
+            idempotencyKey: crypto.randomUUID(),
+          });
+          recorded += 1;
+        }
+        toast({
+          title: t("Split payment recorded"),
+          description: formatPaymentSummary(legs, invoice.currency),
+        });
+        setPaymentDialogOpen(false);
+        setPaymentAmount("");
+        setSplitMode(false);
+        loadInvoice();
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: t("Partial payment recorded"),
+          description:
+            recorded > 0
+              ? t(
+                  `${recorded} of ${legs.length} parts saved. Reload and record the rest.`,
+                )
+              : error.response?.data?.message || t("Error"),
+        });
+        loadInvoice();
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     const amount = parseFloat(paymentAmount);
     if (!amount || amount <= 0) {
       toast({ variant: "destructive", title: t("Invalid amount") });
+      return;
+    }
+    if (!isUpiAmountAllowed(amount, paymentMethod)) {
+      toast({
+        variant: "destructive",
+        title: t("UPI amount too high"),
+        description: t(
+          `UPI / PhonePe cannot exceed ₹${UPI_MAX_AMOUNT_INR.toLocaleString()}. Choose bank transfer, card, or split payment.`,
+        ),
+      });
       return;
     }
 
@@ -446,6 +646,11 @@ export default function InvoiceDetailPage() {
       balanceDue: invoice.balanceDue,
       currency: invoice.currency || currencySymbol,
       paymentMethod: invoice.paymentMethod,
+      paymentSummary: paymentSummaryForPrint || undefined,
+      bankAccountDetails:
+        showBankOnPrint && hasBankTransferDetails(shopBankDetails)
+          ? shopBankDetails
+          : undefined,
       notes: invoice.notes,
       watermark: shouldShowWatermark,
       verificationToken: invoice.verificationToken,
@@ -541,11 +746,9 @@ export default function InvoiceDetailPage() {
                   <Button
                     size="sm"
                     className="bg-green-600 hover:bg-green-700"
-                    onClick={() => {
-                      setPaymentMethod("CASH");
-                      setPaymentAmount(String(invoice.balanceDue));
-                      setPaymentDialogOpen(true);
-                    }}
+                    onClick={() =>
+                      openPaymentDialog("CASH", invoice.balanceDue)
+                    }
                   >
                     <Banknote className="h-4 w-4 mr-2" /> <T>Pay Cash</T>
                   </Button>
@@ -609,22 +812,23 @@ export default function InvoiceDetailPage() {
                         size="sm"
                         variant="outline"
                         className="border-green-300 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-950/30"
-                        onClick={() => {
-                          setPaymentMethod("CASH");
-                          setPaymentAmount(String(invoice.balanceDue));
-                          setPaymentDialogOpen(true);
-                        }}
+                        onClick={() =>
+                          openPaymentDialog("CASH", invoice.balanceDue)
+                        }
                       >
                         <Banknote className="h-4 w-4 mr-2" /> <T>Pay Cash</T>
                       </Button>
                       <Button
                         size="sm"
                         className="bg-green-600 hover:bg-green-700"
-                        onClick={() => {
-                          setPaymentMethod("UPI");
-                          setPaymentAmount(String(invoice.balanceDue));
-                          setPaymentDialogOpen(true);
-                        }}
+                        onClick={() =>
+                          openPaymentDialog(
+                            availablePaymentMethods.some((m) => m.value === "UPI")
+                              ? "UPI"
+                              : availablePaymentMethods[0]?.value || "CASH",
+                            invoice.balanceDue,
+                          )
+                        }
                       >
                         <CreditCard className="h-4 w-4 mr-2" />{" "}
                         <T>Record Payment</T>
@@ -760,9 +964,22 @@ export default function InvoiceDetailPage() {
                   )}
                   {invoice.paymentMethod && (
                     <p className="text-xs mt-1">
-                      <T>{isLkTaxInvoice ? "Mode of payment" : "Paid via"}</T>: {paymentMethodLabel(invoice.paymentMethod)}
+                      <T>{isLkTaxInvoice ? "Mode of payment" : "Paid via"}</T>:{" "}
+                      {paymentSummaryForPrint ||
+                        paymentMethodLabel(invoice.paymentMethod)}
                     </p>
                   )}
+                  {invoice.paymentMethod === "BANK_TRANSFER" &&
+                    bankDetailLines.length > 0 && (
+                      <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
+                        <p className="font-medium text-foreground">
+                          <T>Bank transfer details</T>
+                        </p>
+                        {bankDetailLines.map((line) => (
+                          <p key={line}>{line}</p>
+                        ))}
+                      </div>
+                    )}
                 </div>
                 <div className="text-right text-sm text-muted-foreground">
                   {invoice.issuedAt && (
@@ -1006,6 +1223,29 @@ export default function InvoiceDetailPage() {
                       {formatCurrency(invoice.balanceDue)}
                     </span>
                   </div>
+                  {invoice.payments && invoice.payments.length > 0 && (
+                    <div className="pt-2 space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        <T>Payment history</T>
+                      </p>
+                      {invoice.payments.map((p) => (
+                        <div
+                          key={p.id}
+                          className="flex justify-between text-xs gap-3"
+                        >
+                          <span className="text-muted-foreground">
+                            {paymentMethodLabel(p.method)}
+                            {p.receivedAt
+                              ? ` · ${formatDate(p.receivedAt)}`
+                              : ""}
+                          </span>
+                          <span className="font-medium shrink-0">
+                            {formatCurrency(Number(p.amount) || 0)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1085,16 +1325,24 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Record Payment Dialog */}
-        <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-          <DialogContent>
+        <Dialog
+          open={paymentDialogOpen}
+          onOpenChange={(open) => {
+            setPaymentDialogOpen(open);
+            if (!open) setSplitMode(false);
+          }}
+        >
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                {paymentMethod === "CASH" ? (
+                {splitMode ? (
+                  <Split className="h-5 w-5 text-green-600" />
+                ) : paymentMethod === "CASH" ? (
                   <Banknote className="h-5 w-5 text-green-600" />
                 ) : (
                   <CreditCard className="h-5 w-5 text-green-600" />
                 )}
-                {t("Record Payment")}
+                {t(splitMode ? "Split Payment" : "Record Payment")}
               </DialogTitle>
               <DialogDescription>
                 {t(`Record a payment for invoice ${invoice.invoiceNumber}`)}
@@ -1111,94 +1359,284 @@ export default function InvoiceDetailPage() {
                   </span>
                 </div>
               </div>
-              <div>
-                <Label className="text-xs mb-1.5 block">
-                  <T>Payment Method</T>
+
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs">
+                  <T>Split across methods</T>
                 </Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {availablePaymentMethods.map((pm) => (
-                    <button
-                      key={pm.value}
-                      type="button"
-                      onClick={() => setPaymentMethod(pm.value)}
-                      className={`px-2 py-2 rounded-lg text-xs font-medium border transition-all ${
-                        paymentMethod === pm.value
-                          ? "bg-green-600 text-white border-green-600 shadow-sm"
-                          : "bg-muted/50 border-muted-foreground/20 hover:border-green-500/50"
-                      }`}
-                    >
-                      {pm.label}
-                    </button>
-                  ))}
-                </div>
+                <Button
+                  type="button"
+                  variant={splitMode ? "default" : "outline"}
+                  size="sm"
+                  className={
+                    splitMode
+                      ? "bg-green-600 hover:bg-green-700 h-8 text-xs"
+                      : "h-8 text-xs"
+                  }
+                  onClick={() => {
+                    if (!splitMode) {
+                      initSplitLegs(invoice.balanceDue);
+                      setSplitMode(true);
+                    } else {
+                      setSplitMode(false);
+                    }
+                  }}
+                >
+                  <Split className="h-3.5 w-3.5 mr-1.5" />
+                  {splitMode ? <T>Single method</T> : <T>Split payment</T>}
+                </Button>
               </div>
-              {isDigitalWalletMethod(paymentMethod) && (
-                <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-center space-y-2">
-                  {upiQrDataUrl ? (
-                    <>
-                      <p className="text-xs text-muted-foreground">
-                        <T>Ask customer to scan UPI / PhonePe QR</T>
-                      </p>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={upiQrDataUrl}
-                        alt="UPI QR"
-                        className="mx-auto h-40 w-40 rounded bg-white p-2"
-                        width={160}
-                        height={160}
-                      />
-                      <p className="text-[11px] text-muted-foreground font-mono">
-                        {shopUpiId}
-                      </p>
-                    </>
-                  ) : shopUpiId ? (
-                    <div className="flex justify-center py-6">
-                      <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
+
+              {!splitMode ? (
+                <>
+                  <div>
+                    <Label className="text-xs mb-1.5 block">
+                      <T>Payment Method</T>
+                    </Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {availablePaymentMethods.map((pm) => (
+                        <button
+                          key={pm.value}
+                          type="button"
+                          onClick={() => setPaymentMethod(pm.value)}
+                          className={`px-2 py-2 rounded-lg text-xs font-medium border transition-all ${
+                            paymentMethod === pm.value
+                              ? "bg-green-600 text-white border-green-600 shadow-sm"
+                              : "bg-muted/50 border-muted-foreground/20 hover:border-green-500/50"
+                          }`}
+                        >
+                          {pm.label}
+                        </button>
+                      ))}
                     </div>
-                  ) : (
-                    <p className="text-xs text-amber-700 dark:text-amber-300">
-                      <T>
-                        Add your UPI ID in Shop Settings → Bank Details to show a
-                        payment QR here.
-                      </T>
-                    </p>
+                  </div>
+
+                  {upiOverLimit && (
+                    <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-100 space-y-1">
+                      <p className="font-semibold">
+                        <T>UPI limit exceeded</T>
+                      </p>
+                      <p>
+                        <T>
+                          UPI / PhonePe cannot collect more than ₹1,00,000 in one
+                          QR. Use bank transfer, card, cash, or split the payment.
+                        </T>
+                      </p>
+                    </div>
                   )}
+
+                  {isDigitalWalletMethod(paymentMethod) && !upiOverLimit && (
+                    <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-center space-y-2">
+                      {upiQrDataUrl ? (
+                        <>
+                          <p className="text-xs text-muted-foreground">
+                            <T>Ask customer to scan UPI / PhonePe QR</T>
+                          </p>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={upiQrDataUrl}
+                            alt="UPI QR"
+                            className="mx-auto h-40 w-40 rounded bg-white p-2"
+                            width={160}
+                            height={160}
+                          />
+                          <p className="text-[11px] text-muted-foreground font-mono">
+                            {shopUpiId}
+                          </p>
+                        </>
+                      ) : shopUpiId ? (
+                        <div className="flex justify-center py-6">
+                          <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-amber-700 dark:text-amber-300">
+                          <T>
+                            Add your UPI ID in Shop Settings → Bank Details to
+                            show a payment QR here.
+                          </T>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {paymentMethod === "BANK_TRANSFER" && (
+                    <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
+                      <p className="font-semibold text-sm">
+                        <T>Bank transfer details</T>
+                      </p>
+                      {bankDetailLines.length > 0 ? (
+                        bankDetailLines.map((line) => (
+                          <p key={line} className="text-muted-foreground">
+                            {line}
+                          </p>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground">
+                          <T>
+                            Add bank account details in Shop Settings so they
+                            appear here and on the printed receipt.
+                          </T>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <div>
+                    <Label>{t(`Payment Amount (${invoice.currency})`)}</Label>
+                    <Input
+                      type="number"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() =>
+                        setPaymentAmount(String(invoice.balanceDue))
+                      }
+                    >
+                      <T>Full Amount</T>
+                    </Button>
+                    {invoice.balanceDue > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() =>
+                          setPaymentAmount(
+                            String(Math.round(invoice.balanceDue / 2)),
+                          )
+                        }
+                      >
+                        <T>Half</T>
+                      </Button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-3">
+                  {splitLegs.map((leg, index) => (
+                    <div
+                      key={leg.id}
+                      className="rounded-lg border p-3 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium">
+                          <T>Part</T> {index + 1}
+                        </p>
+                        {splitLegs.length > 2 && (
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-red-600"
+                            onClick={() =>
+                              setSplitLegs((prev) =>
+                                prev.filter((l) => l.id !== leg.id),
+                              )
+                            }
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {availablePaymentMethods.map((pm) => (
+                          <button
+                            key={pm.value}
+                            type="button"
+                            onClick={() =>
+                              setSplitLegs((prev) =>
+                                prev.map((l) =>
+                                  l.id === leg.id
+                                    ? {
+                                        ...l,
+                                        method:
+                                          pm.value as CounterPaymentMethod,
+                                      }
+                                    : l,
+                                ),
+                              )
+                            }
+                            className={`px-1.5 py-1.5 rounded text-[10px] font-medium border ${
+                              leg.method === pm.value
+                                ? "bg-green-600 text-white border-green-600"
+                                : "bg-muted/50 border-muted-foreground/20"
+                            }`}
+                          >
+                            {pm.label}
+                          </button>
+                        ))}
+                      </div>
+                      <Input
+                        type="number"
+                        value={leg.amount}
+                        onChange={(e) =>
+                          setSplitLegs((prev) =>
+                            prev.map((l) =>
+                              l.id === leg.id
+                                ? { ...l, amount: e.target.value }
+                                : l,
+                            ),
+                          )
+                        }
+                        placeholder="0"
+                      />
+                      {isDigitalWalletMethod(leg.method) &&
+                        parseFloat(leg.amount) > UPI_MAX_AMOUNT_INR && (
+                          <p className="text-[10px] text-amber-700">
+                            <T>
+                              This UPI part exceeds ₹1,00,000 — lower the amount
+                              or change method.
+                            </T>
+                          </p>
+                        )}
+                    </div>
+                  ))}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() =>
+                        setSplitLegs((prev) => [
+                          ...prev,
+                          {
+                            id: crypto.randomUUID(),
+                            method: (availablePaymentMethods[0]?.value ||
+                              "CASH") as CounterPaymentMethod,
+                            amount: "0",
+                          },
+                        ])
+                      }
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      <T>Add part</T>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => initSplitLegs(invoice.balanceDue)}
+                    >
+                      <T>50 / 50</T>
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    <T>Parts total</T>:{" "}
+                    {formatCurrency(
+                      splitLegs.reduce(
+                        (s, l) => s + (parseFloat(l.amount) || 0),
+                        0,
+                      ),
+                    )}
+                  </p>
                 </div>
               )}
-              <div>
-                <Label>{t(`Payment Amount (${invoice.currency})`)}</Label>
-                <Input
-                  type="number"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
-              {/* Quick fill buttons */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => setPaymentAmount(String(invoice.balanceDue))}
-                >
-                  <T>Full Amount</T>
-                </Button>
-                {invoice.balanceDue > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() =>
-                      setPaymentAmount(
-                        String(Math.round(invoice.balanceDue / 2)),
-                      )
-                    }
-                  >
-                    <T>Half</T>
-                  </Button>
-                )}
-              </div>
             </div>
             <DialogFooter>
               <Button
@@ -1209,7 +1647,7 @@ export default function InvoiceDetailPage() {
               </Button>
               <Button
                 onClick={handleRecordPayment}
-                disabled={isSubmitting}
+                disabled={isSubmitting || (!splitMode && upiOverLimit)}
                 className="bg-green-600 hover:bg-green-700"
               >
                 {isSubmitting ? (

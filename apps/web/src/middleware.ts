@@ -570,6 +570,17 @@ export async function middleware(request: NextRequest) {
     );
   }
 
+  // Preserve invoice deep links on the mobile host now that /m/invoices has
+  // list, create, and detail routes. Other desktop dashboard pages still fall
+  // back to POS until they gain a mobile equivalent.
+  if (pathname.startsWith("/dashboard/shop/invoices")) {
+    const invoiceSuffix = pathname.slice("/dashboard/shop/invoices".length);
+    return withGeoCookies(
+      request,
+      NextResponse.redirect(new URL(`/m/invoices${invoiceSuffix}`, request.url)),
+    );
+  }
+
   // Dashboard paths have no mobile equivalent — send shopkeepers to the POS
   if (isDashboardPath) {
     return withGeoCookies(

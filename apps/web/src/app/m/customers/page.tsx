@@ -48,6 +48,9 @@ interface CustomerProfile {
   };
   recentOrders: {
     id: string;
+    orderNumber?: string;
+    invoiceNumber?: string;
+    isInvoice?: boolean;
     status: string;
     totalNpr: number;
     createdAt: string;
@@ -220,12 +223,12 @@ function ProfileDrawer({
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
                   <T>Recent Orders</T>
                 </p>
-                {profile.recentOrders.slice(0, 5).map((o) => (
-                  <div
-                    key={o.id}
-                    className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-3"
-                  >
+                {profile.recentOrders.slice(0, 5).map((o) => {
+                  const content = <>
                     <div>
+                      <p className="text-xs font-medium text-gray-800">
+                        {o.invoiceNumber || o.orderNumber || "Order"}
+                      </p>
                       <p className="text-xs text-gray-500">
                         {new Date(o.createdAt).toLocaleDateString("en-IN", {
                           day: "numeric",
@@ -240,8 +243,24 @@ function ProfileDrawer({
                     <p className="text-sm font-bold text-amber-700">
                       {format(o.totalNpr ?? 0)}
                     </p>
-                  </div>
-                ))}
+                  </>;
+                  return o.isInvoice ? (
+                    <Link
+                    key={o.id}
+                    href={`/m/invoices/${o.id}`}
+                    className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-3"
+                  >
+                      {content}
+                    </Link>
+                  ) : (
+                    <div
+                      key={o.id}
+                      className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-3"
+                    >
+                      {content}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -278,8 +297,9 @@ function ProfileDrawer({
                   <T>Invoices</T>
                 </p>
                 {walkInInvoices.slice(0, 5).map((inv) => (
-                  <div
+                  <Link
                     key={inv.id}
+                    href={`/m/invoices/${inv.id}`}
                     className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-3"
                   >
                     <div>
@@ -293,7 +313,7 @@ function ProfileDrawer({
                     <p className="text-sm font-bold text-amber-700">
                       {format(inv.totalAmount ?? 0)}
                     </p>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

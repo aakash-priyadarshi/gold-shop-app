@@ -1,5 +1,12 @@
-import type { PosSalePayload } from "@/lib/api";
+import { api, type PosSalePayload } from "@/lib/api";
 import { enqueue } from "./sync";
+
+function createClientId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 /**
  * Offline-capable POS sale.
@@ -16,20 +23,45 @@ import { enqueue } from "./sync";
  */
 export async function createSale(
   payload: Omit<PosSalePayload, "clientId" | "occurredOffline" | "soldAt">,
-): Promise<{ clientId: string; queuedOffline: boolean }> {
+): Promise<{
+  clientId: string;
+  queuedOffline: boolean;
+  invoice?: Record<string, any>;
+}> {
   const online =
     typeof navigator === "undefined" ? true : navigator.onLine;
+  const clientId = createClientId();
+  const body = {
+    ...payload,
+    clientId,
+    occurredOffline: !online,
+    soldAt: new Date().toISOString(),
+  };
 
-  const clientId = await enqueue({
+  // An online counter sale must wait for the authoritative invoice. Only a
+  // genuine connectivity failure falls back to the offline outbox; validation
+  // and stock errors are surfaced to the shopkeeper instead of showing a false
+  // successful bill.
+  if (online) {
+    try {
+      const response = await api.post("/pos/sale", body);
+      return {
+        clientId,
+        queuedOffline: false,
+        invoice: response.data?.invoice ?? response.data,
+      };
+    } catch (error: any) {
+      if (error?.response) throw error;
+    }
+  }
+
+  await enqueue({
     entity: "sale",
     method: "post",
     endpoint: "/pos/sale",
-    body: {
-      ...payload,
-      occurredOffline: !online,
-      soldAt: new Date().toISOString(),
-    },
+    body: { ...body, occurredOffline: true },
+    clientId,
   });
 
-  return { clientId, queuedOffline: !online };
+  return { clientId, queuedOffline: true };
 }

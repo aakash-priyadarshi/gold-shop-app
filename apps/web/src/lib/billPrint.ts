@@ -77,6 +77,17 @@ export interface BillPrintPayload {
   balanceDue?: number;
   currency?: string;
   paymentMethod?: string | null;
+  /** Overrides paymentMethod label when set (e.g. split summary). */
+  paymentSummary?: string | null;
+  /** Shop bank transfer details — shown when customer pays by bank transfer. */
+  bankAccountDetails?: {
+    bankName?: string | null;
+    branchName?: string | null;
+    accountName?: string | null;
+    accountNumber?: string | null;
+    swiftCode?: string | null;
+    ifsc?: string | null;
+  } | null;
   notes?: string | null;
   watermark?: boolean;
   /** Public QR verification token — renders a scannable code on the bill. */
@@ -278,6 +289,47 @@ export function buildBillHtml(payload: BillPrintPayload): string {
     ? `.wm{position:fixed;inset:0;pointer-events:none;z-index:9999;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250'><text fill='rgba(220,38,38,0.12)' font-family='sans-serif' font-weight='bold' font-size='14' x='20' y='180' transform='rotate(-45 100 100)'>DEMO BILL - NOT FOR COMMERCIAL SALE</text></svg>");background-repeat:repeat;}`
     : "";
 
+  const paymentModeLabel =
+    (payload.paymentSummary || "").trim() ||
+    (payload.paymentMethod
+      ? payload.paymentMethod.replace(/_/g, " ")
+      : "");
+
+  const bank = payload.bankAccountDetails;
+  const bankLines: string[] = [];
+  if (bank) {
+    if (bank.accountName?.trim()) {
+      bankLines.push(
+        `<div class="row"><span class="label">Account name</span><span class="value">${safe(bank.accountName.trim())}</span></div>`,
+      );
+    }
+    if (bank.accountNumber?.trim()) {
+      bankLines.push(
+        `<div class="row"><span class="label">Account number</span><span class="value">${safe(bank.accountNumber.trim())}</span></div>`,
+      );
+    }
+    if (bank.bankName?.trim()) {
+      bankLines.push(
+        `<div class="row"><span class="label">Bank</span><span class="value">${safe(bank.bankName.trim())}</span></div>`,
+      );
+    }
+    if (bank.branchName?.trim()) {
+      bankLines.push(
+        `<div class="row"><span class="label">Branch</span><span class="value">${safe(bank.branchName.trim())}</span></div>`,
+      );
+    }
+    const ifscOrSwift = bank.ifsc?.trim() || bank.swiftCode?.trim() || "";
+    if (ifscOrSwift) {
+      bankLines.push(
+        `<div class="row"><span class="label">${bank.ifsc?.trim() ? "IFSC" : "IFSC / SWIFT"}</span><span class="value">${safe(ifscOrSwift)}</span></div>`,
+      );
+    }
+  }
+  const bankBlock =
+    bankLines.length > 0
+      ? `<hr class="divider"/><p class="muted" style="font-weight:600;margin-bottom:4px">Bank transfer details</p>${bankLines.join("")}`
+      : "";
+
   return `<!doctype html><html><head><meta charset="utf-8">
 <title>${safe(heading)} ${safe(payload.invoiceNumber)}</title>
 <style>
@@ -299,7 +351,7 @@ ${
         <section class="party"><h3>Supplier</h3><p><strong>Name:</strong> ${safe(supplierName)}</p><p><strong>TIN:</strong> ${safe(sellerTin)}</p><p><strong>Address:</strong> ${safe(supplierAddress)}</p>${supplierPhone ? `<p><strong>Telephone:</strong> ${safe(supplierPhone)}</p>` : ""}</section>
         <section class="party"><h3>Purchaser</h3><p><strong>Name:</strong> ${safe(payload.customerName)}</p><p><strong>TIN:</strong> ${safe(purchaserTin)}</p><p><strong>Address:</strong> ${safe(payload.customerAddress || "")}</p>${payload.customerPhone ? `<p><strong>Telephone:</strong> ${safe(payload.customerPhone)}</p>` : ""}</section>
       </div>
-      <div class="meta-grid"><div><strong>Invoice number:</strong> ${safe(payload.invoiceNumber)}</div><div><strong>Invoice date:</strong> ${safe(formatDate(payload.issuedAt, true))}</div><div><strong>Date of supply:</strong> ${safe(formatDate(payload.supplyDate, true))}</div>${payload.placeOfSupply ? `<div><strong>Place of supply:</strong> ${safe(payload.placeOfSupply)}</div>` : ""}${payload.paymentMethod ? `<div><strong>Mode of payment:</strong> ${safe(payload.paymentMethod.replace(/_/g, " "))}</div>` : ""}</div>
+      <div class="meta-grid"><div><strong>Invoice number:</strong> ${safe(payload.invoiceNumber)}</div><div><strong>Invoice date:</strong> ${safe(formatDate(payload.issuedAt, true))}</div><div><strong>Date of supply:</strong> ${safe(formatDate(payload.supplyDate, true))}</div>${payload.placeOfSupply ? `<div><strong>Place of supply:</strong> ${safe(payload.placeOfSupply)}</div>` : ""}${paymentModeLabel ? `<div><strong>Mode of payment:</strong> ${safe(paymentModeLabel)}</div>` : ""}</div>
       <table><thead><tr><th>Description</th><th class="number">Quantity / volume</th><th class="number">Value excluding VAT</th></tr></thead><tbody>${taxInvoiceLines}</tbody></table>
       <div class="lk-totals"><div class="row"><span class="label">Value excluding VAT</span><span class="value">${safe(fmt(exVatTotal, "LKR"))}</span></div><div class="row"><span class="label">VAT</span><span class="value">${safe(fmt(payload.taxAmount || 0, "LKR"))}</span></div><div class="total-row"><span>Total including VAT</span><span>${safe(fmt(payload.totalAmount, "LKR"))}</span></div></div>`
     : `<hr class="divider"/><div class="row"><span class="label">Invoice</span><span class="value">${safe(payload.invoiceNumber)}</span></div>
@@ -308,7 +360,7 @@ ${
       ${payload.customerEmail ? `<div class="row"><span class="label">Email</span><span class="value">${safe(payload.customerEmail)}</span></div>` : ""}
       ${payload.customerAddress ? `<div class="row"><span class="label">Address</span><span class="value">${safe(payload.customerAddress)}</span></div>` : ""}
       <div class="row"><span class="label">Date</span><span class="value">${safe(formatDate(payload.issuedAt))}</span></div>
-      ${payload.paymentMethod ? `<div class="row"><span class="label">Payment mode</span><span class="value">${safe(payload.paymentMethod.replace(/_/g, " "))}</span></div>` : ""}<hr class="divider"/>${standardLines}
+      ${paymentModeLabel ? `<div class="row"><span class="label">Payment mode</span><span class="value">${safe(paymentModeLabel)}</span></div>` : ""}<hr class="divider"/>${standardLines}
       ${payload.subtotal != null ? `<div class="row"><span class="label">Subtotal</span><span class="value">${safe(fmt(payload.subtotal, currency))}</span></div>` : ""}
       ${payload.makingAmount ? `<div class="row"><span class="label">Incl. making</span><span class="value">${safe(fmt(payload.makingAmount, currency))}</span></div>` : ""}
       ${payload.wastageAmount ? `<div class="row"><span class="label">Incl. wastage</span><span class="value">${safe(fmt(payload.wastageAmount, currency))}</span></div>` : ""}
@@ -330,6 +382,7 @@ ${
       }
       <div class="total-row"><span>Total</span><span>${safe(fmt(payload.totalAmount, currency))}</span></div>`
 }
+${bankBlock}
 ${paid > 0 ? `<div class="row" style="padding-top:8px"><span class="label">Paid</span><span class="amt-paid">${safe(fmt(paid, currency))}</span></div>` : ""}
 ${balance > 0.009 ? `<div class="row"><span class="label">Balance due</span><span class="amt-due">${safe(fmt(balance, currency))}</span></div>` : ""}
 ${payload.notes ? `<p class="muted" style="margin-top:12px">${safe(payload.notes)}</p>` : ""}

@@ -929,6 +929,7 @@ model ShopQuote {
   advancePaidNpr Float     @default(0)
   balanceDueNpr  Float?
   paidInFullAt   DateTime?
+  payments       ShopQuotePayment[]
 
   // Metadata
   shopNotes String? // Internal notes for shopkeeper
@@ -942,6 +943,25 @@ model ShopQuote {
   @@index([walkInCustomerId])
   @@index([status])
   @@index([quoteNumber])
+}
+
+// Immutable quote-payment history. Quote balances are maintained as a
+// denormalized summary for fast list rendering, while this ledger is the
+// auditable source used when carrying advances into the final invoice.
+model ShopQuotePayment {
+  id             String   @id @default(uuid())
+  shopQuoteId    String
+  amount         Float
+  method         String   @default("UNSPECIFIED")
+  reference      String?
+  notes          String?
+  idempotencyKey String   @unique
+  receivedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  shopQuote ShopQuote @relation(fields: [shopQuoteId], references: [id], onDelete: Cascade)
+
+  @@index([shopQuoteId, receivedAt])
 }
 
 enum ShopQuoteStatus {
@@ -2496,6 +2516,10 @@ model Invoice {
   orderId       String?
   shopQuoteId   String?
   walkInCustomerId String? // walk-in CRM link (via quote/POS/manual)
+  // Registered customer link for counter/POS invoices. This is deliberately a
+  // scalar: marketplace User ownership is optional and historic invoices must
+  // remain valid if a customer account is removed.
+  registeredCustomerId String?
 
   // Public bill verification token for QR on printed invoices
   verificationToken String @default(uuid()) @unique
@@ -2579,6 +2603,7 @@ model Invoice {
   @@index([shopId, issuedAt])
   @@index([invoiceCountry])
   @@index([walkInCustomerId])
+  @@index([registeredCustomerId])
 }
 
 enum InvoicePaymentStatus {

@@ -26,6 +26,7 @@ import { UpgradeNudge } from "@/components/UpgradeNudge";
 const MOBILE_TO_BACKEND_FEATURE: Record<string, string | null> = {
   // Core POS workflows — always available to authenticated shopkeepers
   mobilePOS: null,
+  mobileInvoices: null,
   mobileOrders: null,
   mobileRateCard: null,
   mobileBroadcast: null,

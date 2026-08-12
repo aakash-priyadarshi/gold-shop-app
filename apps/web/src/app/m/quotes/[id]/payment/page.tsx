@@ -5,6 +5,7 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { shopQuotesApi } from "@/lib/api";
+import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import {
   ArrowLeft,
   Banknote,
@@ -12,45 +13,94 @@ import {
   CreditCard,
   FileDown,
   Loader2,
-  MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { useParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 function fmt(amount: number, currency = "NPR") {
   return `${currency} ${Math.round(amount).toLocaleString("en-IN")}`;
 }
 
-type PaymentMethod = "CASH" | "POS";
 type PaymentMode = "full" | "partial";
 
 function PaymentPageInner() {
   const params = useParams<{ id: string }>();
-  const searchParams = useSearchParams();
   const { user } = useAuth();
 
   const quoteId = params.id;
-  const displayTotal = Number(searchParams.get("displayTotal") ?? 0);
-  const currency = searchParams.get("currency") ?? "NPR";
-  const nprRate = Number(searchParams.get("nprRate") ?? 1);
-  const customerName = searchParams.get("name") ?? "";
-  const quoteNumber = searchParams.get("num") ?? String(quoteId ?? "");
-  const customerPhone = searchParams.get("phone") ?? "";
-
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [quote, setQuote] = useState<any>(null);
+  const [quoteLoading, setQuoteLoading] = useState(true);
+  const [invoice, setInvoice] = useState<any>(null);
+  const checkoutIdempotencyKey = useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
+  const currency = quote?.shop?.currency ?? user?.shop?.currency ?? "NPR";
+  const displayTotal = Number(quote?.totalPriceNpr ?? 0);
+  const currentBalance = Number(quote?.balanceDueNpr ?? displayTotal);
+  const customerName = quote?.walkInCustomer?.name ?? quote?.customerName ?? "";
+  const quoteNumber = quote?.quoteNumber ?? String(quoteId ?? "");
+  const customerPhone = quote?.walkInCustomer?.phone ?? "";
+  const paymentMethods = useMemo(
+    () => getCounterPaymentMethods(user?.shop?.country ?? "NP"),
+    [user?.shop?.country],
+  );
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("full");
   const [customAmount, setCustomAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
   const [outstandingAmount, setOutstandingAmount] = useState(0);
+  const paymentMethodLabel =
+    paymentMethods.find((method) => method.value === paymentMethod)?.label ??
+    paymentMethod.replace(/_/g, " ");
 
-  const payAmount = paymentMode === "full" ? displayTotal : Number(customAmount) || 0;
-  const outstanding = Math.max(0, displayTotal - payAmount);
+  const payAmount = paymentMode === "full" ? currentBalance : Number(customAmount) || 0;
+  const outstanding = Math.max(0, currentBalance - payAmount);
   // *Npr fields store the shop's local currency (e.g. INR for Indian shops).
   // payAmount is already in that same local currency — no conversion needed.
   const payAmountNpr = Math.round(payAmount);
+
+  useEffect(() => {
+    if (!quoteId) return;
+    setQuoteLoading(true);
+    shopQuotesApi
+      .getById(quoteId)
+      .then((response) => setQuote(response.data ?? null))
+      .catch((error: any) => {
+        toast({
+          title: "Could not load quote",
+          description: error?.response?.data?.message ?? "Please return and try again",
+          variant: "destructive",
+        });
+      })
+      .finally(() => setQuoteLoading(false));
+  }, [quoteId]);
+
+  useEffect(() => {
+    if (!paymentMethods.some((method) => method.value === paymentMethod)) {
+      setPaymentMethod(paymentMethods[0]?.value ?? "CASH");
+    }
+  }, [paymentMethod, paymentMethods]);
+
+  if (quoteLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
+  if (!quote) {
+    return (
+      <div className="px-5 py-12 text-center text-sm text-gray-500">
+        <T>Quote could not be loaded. Please return to Orders and try again.</T>
+      </div>
+    );
+  }
 
   const handlePay = async () => {
     if (!quoteId) return;
@@ -58,24 +108,29 @@ function PaymentPageInner() {
       toast({ title: "Enter the amount being paid", variant: "destructive" });
       return;
     }
-    if (payAmount > displayTotal + 0.01) {
+    if (payAmount > currentBalance + 0.01) {
       toast({ title: "Amount cannot exceed the total", variant: "destructive" });
       return;
     }
 
     setSubmitting(true);
     try {
-      const methodLabel = paymentMethod === "CASH" ? "Cash at shop" : "POS / Card";
+      const methodLabel =
+        paymentMethods.find((method) => method.value === paymentMethod)?.label ??
+        paymentMethod.replace(/_/g, " ");
       const notes = `Payment via ${methodLabel}. Paid: ${fmt(payAmount, currency)}${outstanding > 0 ? `. Outstanding: ${fmt(outstanding, currency)}` : ""}`;
 
       // 1. Record payment on the quote
-      await shopQuotesApi.recordPayment(quoteId, {
+      const response = await shopQuotesApi.checkout(quoteId, {
         amountNpr: Math.round(payAmountNpr),
         notes,
+        invoiceNotes: notes,
+        paymentMethod,
+        idempotencyKey: checkoutIdempotencyKey.current,
       });
 
       // 2. Convert quote → invoice (generates the bill)
-      await shopQuotesApi.convertToInvoice(quoteId, { notes });
+      setInvoice(response.data?.invoice ?? null);
 
       setPaidAmount(payAmount);
       setOutstandingAmount(outstanding);
@@ -83,7 +138,7 @@ function PaymentPageInner() {
 
       toast({
         title: outstanding > 0 ? "Partial payment recorded" : "Payment complete!",
-        description: quoteNumber,
+        description: response.data?.invoice?.invoiceNumber ?? quoteNumber,
       });
     } catch (err: any) {
       toast({
@@ -206,28 +261,21 @@ ${outstandingAmount > 0 ? `<div class="row"><span class="label">Outstanding bala
               <T>Method</T>
             </span>
             <span className="text-gray-600 dark:text-gray-300">
-              {paymentMethod === "CASH" ? "Cash at shop" : "POS / Card"}
+              {paymentMethodLabel}
             </span>
           </div>
         </div>
 
         <div className="w-full max-w-xs space-y-3">
-          {customerPhone && (
-            <button
-              onClick={shareWhatsApp}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-4 text-sm font-semibold text-white shadow-lg"
+          {invoice?.id && (
+            <Link
+              href={`/m/invoices/${invoice.id}`}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-300 py-3 text-sm font-semibold text-amber-700 dark:text-amber-400"
             >
-              <MessageCircle className="h-5 w-5" />
-              <T>Share Receipt on WhatsApp</T>
-            </button>
+              <FileDown className="h-4 w-4" />
+              <T>Open final invoice</T>
+            </Link>
           )}
-          <button
-            onClick={printBill}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-300 py-3 text-sm font-semibold text-amber-700 dark:text-amber-400"
-          >
-            <FileDown className="h-4 w-4" />
-            <T>Print / Save Bill</T>
-          </button>
           <Link
             href="/m/orders"
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gray-900 dark:bg-gray-100 py-3 text-sm font-semibold text-white dark:text-gray-900"
@@ -275,42 +323,27 @@ ${outstandingAmount > 0 ? `<div class="row"><span class="label">Outstanding bala
           <T>Payment Method</T>
         </p>
         <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setPaymentMethod("CASH")}
-            className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-4 transition ${
-              paymentMethod === "CASH"
-                ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20"
-                : "border-gray-200 dark:border-gray-700"
-            }`}
-          >
-            <Banknote
-              className={`h-6 w-6 ${paymentMethod === "CASH" ? "text-amber-600" : "text-gray-400"}`}
-            />
-            <span
-              className={`text-sm font-semibold ${paymentMethod === "CASH" ? "text-amber-700 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"}`}
-            >
-              <T>Cash at Shop</T>
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setPaymentMethod("POS")}
-            className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-4 transition ${
-              paymentMethod === "POS"
-                ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20"
-                : "border-gray-200 dark:border-gray-700"
-            }`}
-          >
-            <CreditCard
-              className={`h-6 w-6 ${paymentMethod === "POS" ? "text-amber-600" : "text-gray-400"}`}
-            />
-            <span
-              className={`text-sm font-semibold ${paymentMethod === "POS" ? "text-amber-700 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"}`}
-            >
-              <T>POS / Card</T>
-            </span>
-          </button>
+          {paymentMethods.map((method) => {
+            const Icon = method.value === "CASH" ? Banknote : CreditCard;
+            const selected = paymentMethod === method.value;
+            return (
+              <button
+                key={method.value}
+                type="button"
+                onClick={() => setPaymentMethod(method.value)}
+                className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-4 transition ${
+                  selected
+                    ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20"
+                    : "border-gray-200 dark:border-gray-700"
+                }`}
+              >
+                <Icon className={`h-6 w-6 ${selected ? "text-amber-600" : "text-gray-400"}`} />
+                <span className={`text-sm font-semibold ${selected ? "text-amber-700 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"}`}>
+                  <T>{method.label}</T>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -353,10 +386,10 @@ ${outstandingAmount > 0 ? `<div class="row"><span class="label">Outstanding bala
               type="number"
               inputMode="decimal"
               min="1"
-              max={displayTotal}
+              max={currentBalance}
               value={customAmount}
               onChange={(e) => setCustomAmount(e.target.value)}
-              placeholder={`Max ${Math.round(displayTotal).toLocaleString("en-IN")}`}
+              placeholder={`Max ${Math.round(currentBalance).toLocaleString("en-IN")}`}
               className="w-full rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white dark:bg-gray-900 dark:text-gray-100"
             />
             {Number(customAmount) > 0 && outstanding > 0 && (
@@ -392,7 +425,7 @@ ${outstandingAmount > 0 ? `<div class="row"><span class="label">Outstanding bala
               <T>Method</T>
             </span>
             <span className="font-semibold dark:text-gray-100">
-              {paymentMethod === "CASH" ? "Cash at Shop" : "POS / Card"}
+              {paymentMethodLabel}
             </span>
           </div>
         </section>

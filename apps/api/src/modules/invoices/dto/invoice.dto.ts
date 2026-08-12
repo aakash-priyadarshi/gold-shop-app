@@ -104,6 +104,11 @@ export class CreateInvoiceDto {
   @IsString()
   walkInCustomerId?: string;
 
+  /** Marketplace customer selected at the counter or in the CRM. */
+  @IsOptional()
+  @IsUUID()
+  registeredCustomerId?: string;
+
   @IsString()
   customerName: string;
 

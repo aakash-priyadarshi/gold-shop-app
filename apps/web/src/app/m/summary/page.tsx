@@ -16,7 +16,7 @@ import { MobileSkeletonCard, MobileSkeletonRow } from "@/components/mobile/Mobil
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
-import { ordersApi } from "@/lib/api";
+import { invoicesApi } from "@/lib/api";
 import {
   ArrowDown,
   ArrowUp,
@@ -30,13 +30,18 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-interface Order {
+interface InvoicePayment {
+  amount: number;
+  method?: string | null;
+}
+
+interface Invoice {
   id: string;
-  totalNpr?: number;
-  totalAmount?: number;
+  totalAmount: number;
+  currency?: string;
   createdAt: string;
-  paymentMethod?: string;
   status: string;
+  payments?: InvoicePayment[];
 }
 
 interface Summary {
@@ -47,36 +52,64 @@ interface Summary {
   card: number;
   upi: number;
   other: number;
+  collected: number;
+  outstanding: number;
   currency: string;
   hourly: number[]; // 0-23
   yesterdayTotal: number;
+  additionalCurrencies: Array<{
+    currency: string;
+    total: number;
+    collected: number;
+    count: number;
+  }>;
 }
 
-function buildSummary(orders: Order[], yOrders: Order[]): Summary {
-  const paid = orders.filter((o) => o.status !== "CANCELLED");
-
-  const total = paid.reduce((s, o) => s + (o.totalNpr ?? o.totalAmount ?? 0), 0);
-  const count = paid.length;
-
-  const byMethod = (method: string) =>
-    paid
-      .filter((o) => (o.paymentMethod ?? "CASH").toUpperCase().includes(method))
-      .reduce((s, o) => s + (o.totalNpr ?? o.totalAmount ?? 0), 0);
-
-  const cash = byMethod("CASH");
-  const card = byMethod("CARD");
-  const upi = byMethod("UPI") + byMethod("DIGITAL") + byMethod("ONLINE");
-  const other = total - cash - card - upi;
+function buildSummary(
+  invoices: Invoice[],
+  yesterdayInvoices: Invoice[],
+  currency: string,
+): Summary {
+  const allValidInvoices = invoices.filter(
+    (invoice) => !["VOID", "CANCELLED"].includes(invoice.status),
+  );
+  // Do not sum unlike currencies. The shop's normal currency is shown in the
+  // headline; export invoices are shown separately below.
+  const validInvoices = allValidInvoices.filter(
+    (invoice) => (invoice.currency || currency) === currency,
+  );
+  const total = validInvoices.reduce(
+    (sum, invoice) => sum + invoice.totalAmount,
+    0,
+  );
+  const count = validInvoices.length;
+  const payments = validInvoices.flatMap((invoice) => invoice.payments ?? []);
+  const byMethod = (matcher: RegExp) =>
+    payments
+      .filter((payment) => matcher.test((payment.method ?? "").toUpperCase()))
+      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const cash = byMethod(/CASH/);
+  const card = byMethod(/CARD|STRIPE|BANK_CARD/);
+  const upi = byMethod(/UPI|DIGITAL|ONLINE|WALLET|BANK_TRANSFER|QR/);
+  const collected = payments.reduce(
+    (sum, payment) => sum + Number(payment.amount || 0),
+    0,
+  );
+  const other = Math.max(0, collected - cash - card - upi);
 
   const hourly = Array.from({ length: 24 }, (_, h) =>
-    paid
-      .filter((o) => new Date(o.createdAt).getHours() === h)
-      .reduce((s, o) => s + (o.totalNpr ?? o.totalAmount ?? 0), 0),
+    validInvoices
+      .filter((invoice) => new Date(invoice.createdAt).getHours() === h)
+      .reduce((sum, invoice) => sum + invoice.totalAmount, 0),
   );
 
-  const yesterdayTotal = yOrders
-    .filter((o) => o.status !== "CANCELLED")
-    .reduce((s, o) => s + (o.totalNpr ?? o.totalAmount ?? 0), 0);
+  const yesterdayTotal = yesterdayInvoices
+    .filter(
+      (invoice) =>
+        !["VOID", "CANCELLED"].includes(invoice.status) &&
+        (invoice.currency || currency) === currency,
+    )
+    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
 
   return {
     total,
@@ -85,10 +118,34 @@ function buildSummary(orders: Order[], yOrders: Order[]): Summary {
     cash,
     card,
     upi,
-    other: Math.max(0, other),
-    currency: "NPR",
+    other,
+    collected,
+    outstanding: Math.max(0, total - collected),
+    currency,
     hourly,
     yesterdayTotal,
+    additionalCurrencies: Array.from(
+      new Set(
+        allValidInvoices
+          .map((invoice) => invoice.currency || currency)
+          .filter((invoiceCurrency) => invoiceCurrency !== currency),
+      ),
+    ).map((invoiceCurrency) => {
+      const currencyInvoices = allValidInvoices.filter(
+        (invoice) => (invoice.currency || currency) === invoiceCurrency,
+      );
+      return {
+        currency: invoiceCurrency,
+        count: currencyInvoices.length,
+        total: currencyInvoices.reduce(
+          (sum, invoice) => sum + Number(invoice.totalAmount || 0),
+          0,
+        ),
+        collected: currencyInvoices
+          .flatMap((invoice) => invoice.payments ?? [])
+          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+      };
+    }),
   };
 }
 
@@ -189,23 +246,58 @@ export default function DailySummaryPage() {
     if (!shopId) return;
     setLoading(true);
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+      const dayRange = (offsetDays: number) => {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() + offsetDays);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 1);
+        end.setMilliseconds(-1);
+        return { start: start.toISOString(), end: end.toISOString() };
+      };
+      const fetchAllInvoices = async ({ start, end }: ReturnType<typeof dayRange>) => {
+        const first = await invoicesApi.getAll({
+          dateFrom: start,
+          dateTo: end,
+          page: 1,
+          limit: 100,
+        });
+        const firstPage = first.data?.invoices ?? [];
+        const totalPages = Math.max(1, first.data?.totalPages ?? 1);
+        if (totalPages === 1) return firstPage as Invoice[];
+        const remaining = await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, index) =>
+            invoicesApi.getAll({
+              dateFrom: start,
+              dateTo: end,
+              page: index + 2,
+              limit: 100,
+            }),
+          ),
+        );
+        return [
+          ...firstPage,
+          ...remaining.flatMap((response) => response.data?.invoices ?? []),
+        ] as Invoice[];
+      };
 
-      const [todayRes, yRes] = await Promise.all([
-        ordersApi.getShopOrders(shopId, { dateFrom: today, dateTo: today, limit: 200 }),
-        ordersApi.getShopOrders(shopId, { dateFrom: yesterday, dateTo: yesterday, limit: 200 }),
+      const [todayInvoices, yesterdayInvoices] = await Promise.all([
+        fetchAllInvoices(dayRange(0)),
+        fetchAllInvoices(dayRange(-1)),
       ]);
-
-      const todayOrders: Order[] = todayRes.data?.orders ?? todayRes.data?.items ?? todayRes.data ?? [];
-      const yOrders: Order[] = yRes.data?.orders ?? yRes.data?.items ?? yRes.data ?? [];
-      setSummary(buildSummary(todayOrders, yOrders));
+      setSummary(
+        buildSummary(
+          todayInvoices,
+          yesterdayInvoices,
+          user?.shop?.currency || "NPR",
+        ),
+      );
     } catch {
       setSummary(null);
     } finally {
       setLoading(false);
     }
-  }, [shopId]);
+  }, [shopId, user?.shop?.currency]);
 
   useEffect(() => {
     load();
@@ -292,7 +384,7 @@ export default function DailySummaryPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium opacity-80 uppercase tracking-wide">
-                    <T>Today's Revenue</T>
+                    <T>Today's Invoiced Sales</T>
                   </p>
                   <p className="text-3xl font-bold mt-1">
                     {summary.currency} {summary.total.toLocaleString()}
@@ -330,15 +422,28 @@ export default function DailySummaryPage() {
                 value={`${summary.currency} ${summary.avg.toLocaleString()}`}
                 color="blue"
               />
+              <StatCard
+                icon={Wallet}
+                label="Collected"
+                value={`${summary.currency} ${summary.collected.toLocaleString()}`}
+                color="green"
+              />
+              <StatCard
+                icon={CreditCard}
+                label="Outstanding"
+                value={`${summary.currency} ${summary.outstanding.toLocaleString()}`}
+                color="purple"
+              />
             </div>
 
             {/* Payment breakdown */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-3">
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100"><T>By Payment Method</T></p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100"><T>Collected by Payment Method</T></p>
               {[
                 { label: "Cash", value: summary.cash, icon: Wallet, color: "text-green-600", bg: "bg-green-50" },
                 { label: "Card", value: summary.card, icon: CreditCard, color: "text-blue-600", bg: "bg-blue-50" },
                 { label: "UPI / Digital", value: summary.upi, icon: Share2, color: "text-purple-600", bg: "bg-purple-50" },
+                { label: "Other", value: summary.other, icon: Wallet, color: "text-gray-600", bg: "bg-gray-100" },
               ].filter((m) => m.value > 0).map((m) => (
                 <div key={m.label} className="flex items-center gap-3">
                   <div className={`h-8 w-8 rounded-lg ${m.bg} dark:bg-gray-800/80 flex items-center justify-center flex-shrink-0`}>
@@ -364,6 +469,22 @@ export default function DailySummaryPage() {
 
             {/* Hourly chart */}
             <HourlyBar hourly={summary.hourly} currency={summary.currency} />
+
+            {summary.additionalCurrencies.length > 0 && (
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-2">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100"><T>Other invoice currencies</T></p>
+                <p className="text-xs text-gray-500"><T>Export invoices are shown separately and are not mixed into the shop-currency total.</T></p>
+                {summary.additionalCurrencies.map((item) => (
+                  <div key={item.currency} className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{item.currency} · {item.count} <T>bills</T></span>
+                    <span className="text-right text-xs">
+                      <span className="block font-bold text-gray-900 dark:text-gray-100">{item.currency} {item.total.toLocaleString()}</span>
+                      <span className="text-gray-500"><T>Collected</T> {item.currency} {item.collected.toLocaleString()}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Yesterday comparison */}
             {summary.yesterdayTotal > 0 && (

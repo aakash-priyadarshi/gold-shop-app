@@ -11,6 +11,28 @@ export class CustomerCrmService {
   async searchCustomers(shopId: string, query?: string, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
 
+    // POS invoices can be created for a registered customer without a
+    // marketplace Order. Keep those customers visible in CRM as well.
+    const invoiceCustomerStats = await this.prisma.invoice.groupBy({
+      by: ["registeredCustomerId"],
+      where: {
+        shopId,
+        registeredCustomerId: { not: null },
+        status: { notIn: ["VOID", "CANCELLED"] },
+      },
+      _count: { _all: true },
+      _sum: { totalAmount: true },
+      _max: { createdAt: true },
+    });
+    const invoiceStatsByCustomer = new Map(
+      invoiceCustomerStats
+        .filter((stat): stat is typeof stat & { registeredCustomerId: string } =>
+          Boolean(stat.registeredCustomerId),
+        )
+        .map((stat) => [stat.registeredCustomerId, stat]),
+    );
+    const invoiceCustomerIds = [...invoiceStatsByCustomer.keys()];
+
     // Search registered customers who have ordered from this shop
     const customerWhere: any = {
       role: "CUSTOMER",
@@ -45,6 +67,7 @@ export class CustomerCrmService {
                     some: { targetedShops: { some: { shopId } } },
                   },
                 },
+                { id: { in: invoiceCustomerIds } },
               ],
             },
           ],
@@ -86,6 +109,7 @@ export class CustomerCrmService {
                     some: { targetedShops: { some: { shopId } } },
                   },
                 },
+                { id: { in: invoiceCustomerIds } },
               ],
             },
           ],
@@ -128,10 +152,17 @@ export class CustomerCrmService {
         phone: c.phone,
         country: c.preferredCountry,
         currency: c.preferredCurrency,
-        orderCount: c._count.customerOrders,
+        orderCount:
+          c._count.customerOrders +
+          (invoiceStatsByCustomer.get(c.id)?._count._all || 0),
         rfqCount: c._count.rfqRequests,
-        totalSpent: c.purchaseStats[0]?.totalSpent || 0,
-        lastActive: c.lastLoginAt || c.createdAt,
+        totalSpent:
+          (invoiceStatsByCustomer.get(c.id)?._sum.totalAmount || 0) +
+          (c.purchaseStats[0]?.totalSpent || 0),
+        lastActive:
+          invoiceStatsByCustomer.get(c.id)?._max.createdAt ||
+          c.lastLoginAt ||
+          c.createdAt,
         createdAt: c.createdAt,
       })),
       ...walkInCustomers.map((w) => ({
@@ -259,7 +290,7 @@ export class CustomerCrmService {
   ) {
     const skip = (page - 1) * limit;
 
-    const [orders, total] = await Promise.all([
+    const [orders, total, invoices, invoiceTotal] = await Promise.all([
       this.prisma.order.findMany({
         where: { customerId, shopId },
         orderBy: { createdAt: "desc" },
@@ -275,7 +306,55 @@ export class CustomerCrmService {
         },
       }),
       this.prisma.order.count({ where: { customerId, shopId } }),
+      this.prisma.invoice.findMany({
+        where: {
+          shopId,
+          registeredCustomerId: customerId,
+          status: { notIn: ["VOID", "CANCELLED"] },
+        },
+        orderBy: { createdAt: "desc" },
+        take: skip + limit,
+        select: {
+          id: true,
+          invoiceNumber: true,
+          status: true,
+          paymentStatus: true,
+          totalAmount: true,
+          currency: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.invoice.count({
+        where: {
+          shopId,
+          registeredCustomerId: customerId,
+          status: { notIn: ["VOID", "CANCELLED"] },
+        },
+      }),
     ]);
+
+    const invoiceOrders = invoices.map((invoice) => ({
+      id: invoice.id,
+      orderNumber: invoice.invoiceNumber,
+      status: invoice.paymentStatus || invoice.status,
+      totalNpr: invoice.totalAmount,
+      displayCurrency: invoice.currency,
+      createdAt: invoice.createdAt,
+      invoiceNumber: invoice.invoiceNumber,
+      isInvoice: true,
+    }));
+    const combinedOrders = [...orders, ...invoiceOrders]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(skip, skip + limit);
+
+    if (total > 0 || invoiceTotal > 0) {
+      return {
+        orders: combinedOrders,
+        total: total + invoiceTotal,
+        page,
+        limit,
+      };
+    }
 
     // If no regular orders found, check if customerId is a walk-in customer ID
     // and return their shop quotes instead
@@ -329,7 +408,7 @@ export class CustomerCrmService {
       }
     }
 
-    return { orders, total, page, limit };
+    return { orders: combinedOrders, total: total + invoiceTotal, page, limit };
   }
 
   /**
@@ -344,7 +423,18 @@ export class CustomerCrmService {
       _avg: { totalNpr: true },
     });
 
-    if (orderStats._count === 0) {
+    const invoiceStats = await this.prisma.invoice.aggregate({
+      where: {
+        shopId,
+        registeredCustomerId: customerId,
+        status: { notIn: ["VOID", "CANCELLED"] },
+      },
+      _sum: { totalAmount: true },
+      _count: true,
+      _avg: { totalAmount: true },
+    });
+
+    if (orderStats._count === 0 && invoiceStats._count === 0) {
       // It might be a walk in customer, check quotes
       const walkIn = await this.prisma.walkInCustomer.findFirst({
         where: { id: customerId, createdByShopId: shopId },
@@ -383,11 +473,29 @@ export class CustomerCrmService {
       }
     }
 
-    // Get first & last order dates
-    const [firstOrder, lastOrder] = await Promise.all([
+    // Get first & last order/invoice dates.
+    const [firstOrder, firstInvoice, lastInvoice, lastOrder] = await Promise.all([
       this.prisma.order.findFirst({
         where: { customerId, shopId },
         orderBy: { createdAt: "asc" },
+        select: { createdAt: true },
+      }),
+      this.prisma.invoice.findFirst({
+        where: {
+          shopId,
+          registeredCustomerId: customerId,
+          status: { notIn: ["VOID", "CANCELLED"] },
+        },
+        orderBy: { createdAt: "asc" },
+        select: { createdAt: true },
+      }),
+      this.prisma.invoice.findFirst({
+        where: {
+          shopId,
+          registeredCustomerId: customerId,
+          status: { notIn: ["VOID", "CANCELLED"] },
+        },
+        orderBy: { createdAt: "desc" },
         select: { createdAt: true },
       }),
       this.prisma.order.findFirst({
@@ -412,11 +520,24 @@ export class CustomerCrmService {
     });
 
     return {
-      totalOrders: orderStats._count,
-      totalSpent: orderStats._sum?.totalNpr || 0,
-      averageOrderValue: orderStats._avg?.totalNpr || 0,
-      firstOrderDate: firstOrder?.createdAt,
-      lastOrderDate: lastOrder?.createdAt,
+      totalOrders: orderStats._count + invoiceStats._count,
+      totalSpent:
+        (orderStats._sum?.totalNpr || 0) +
+        (invoiceStats._sum?.totalAmount || 0),
+      averageOrderValue:
+        orderStats._count + invoiceStats._count > 0
+          ? ((orderStats._sum?.totalNpr || 0) +
+              (invoiceStats._sum?.totalAmount || 0)) /
+            (orderStats._count + invoiceStats._count)
+          : 0,
+      firstOrderDate:
+        [firstOrder?.createdAt, firstInvoice?.createdAt]
+          .filter((date): date is Date => Boolean(date))
+          .sort((a, b) => a.getTime() - b.getTime())[0],
+      lastOrderDate:
+        [lastOrder?.createdAt, lastInvoice?.createdAt]
+          .filter((date): date is Date => Boolean(date))
+          .sort((a, b) => b.getTime() - a.getTime())[0],
       activeRfqs,
       purchaseStats,
     };

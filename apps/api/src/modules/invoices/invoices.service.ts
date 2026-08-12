@@ -571,6 +571,7 @@ export class InvoicesService {
       orderId: dto.orderId || null,
       shopQuoteId: dto.shopQuoteId || null,
       walkInCustomerId: dto.walkInCustomerId || null,
+      registeredCustomerId: dto.registeredCustomerId || null,
       customerName: dto.customerName,
       customerPhone: dto.customerPhone || null,
       customerEmail: dto.customerEmail || null,
@@ -779,14 +780,31 @@ export class InvoicesService {
     params?: {
       status?: string;
       search?: string;
+      dateFrom?: string;
+      dateTo?: string;
       page?: number;
       limit?: number;
     },
   ) {
-    const { status, search, page = 1, limit = 20 } = params || {};
+    const { status, search, dateFrom, dateTo, page = 1, limit = 20 } =
+      params || {};
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(100, Math.max(1, limit));
 
     const where: any = { shopId };
     if (status) where.status = status;
+    if (dateFrom || dateTo) {
+      const createdAt: { gte?: Date; lte?: Date } = {};
+      if (dateFrom) {
+        const parsed = new Date(dateFrom);
+        if (!Number.isNaN(parsed.getTime())) createdAt.gte = parsed;
+      }
+      if (dateTo) {
+        const parsed = new Date(dateTo);
+        if (!Number.isNaN(parsed.getTime())) createdAt.lte = parsed;
+      }
+      if (Object.keys(createdAt).length > 0) where.createdAt = createdAt;
+    }
     if (search) {
       where.OR = [
         { invoiceNumber: { contains: search, mode: "insensitive" } },
@@ -799,8 +817,14 @@ export class InvoicesService {
       this.prisma.invoice.findMany({
         where,
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: (safePage - 1) * safeLimit,
+        take: safeLimit,
+        include: {
+          payments: {
+            where: { status: "RECEIVED" },
+            select: { amount: true, method: true, receivedAt: true },
+          },
+        },
       }),
       this.prisma.invoice.count({ where }),
     ]);
@@ -808,14 +832,32 @@ export class InvoicesService {
     return {
       invoices,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
     };
   }
 
   async findById(id: string, shopId: string) {
-    const invoice = await this.prisma.invoice.findUnique({ where: { id } });
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { id },
+      include: {
+        payments: {
+          where: { status: "RECEIVED" },
+          orderBy: { receivedAt: "asc" },
+          select: {
+            id: true,
+            amount: true,
+            currency: true,
+            method: true,
+            reference: true,
+            notes: true,
+            receivedAt: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
     if (!invoice) throw new NotFoundException("Invoice not found");
     if (invoice.shopId !== shopId)
       throw new ForbiddenException("Not your invoice");
@@ -940,6 +982,25 @@ export class InvoicesService {
         },
       });
 
+      const receivedPayments = await tx.invoicePayment.findMany({
+        where: { invoiceId: id, status: "RECEIVED" },
+        select: { method: true },
+      });
+      const distinctMethods = [
+        ...new Set(
+          receivedPayments
+            .map((p) => (p.method || "").toUpperCase())
+            .filter((m) => m && m !== "UNSPECIFIED"),
+        ),
+      ];
+      const paymentMethodLabel =
+        distinctMethods.length > 1
+          ? "SPLIT"
+          : distinctMethods[0] ||
+            (dto.paymentMethod
+              ? dto.paymentMethod.toUpperCase()
+              : invoice.paymentMethod);
+
       const updated = await tx.invoice.findUniqueOrThrow({ where: { id } });
       const isPaid = roundMoney(updated.balanceDue) <= 0;
       const finalInvoice = await tx.invoice.update({
@@ -948,6 +1009,9 @@ export class InvoicesService {
           status: isPaid ? "PAID" : "PARTIALLY_PAID",
           paymentStatus: isPaid ? "PAID" : "PARTIALLY_PAID",
           paidAt: isPaid ? new Date() : null,
+          ...(paymentMethodLabel
+            ? { paymentMethod: paymentMethodLabel }
+            : {}),
         },
       });
 

@@ -5,6 +5,7 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { shopQuotesApi } from "@/lib/api";
+import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import {
   formatCurrencyAmount,
   getCurrencyForCountry,
@@ -13,7 +14,7 @@ import {
 import { ArrowLeft, Banknote, Check, ChevronRight, CreditCard, Loader2, Receipt, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface WalkInCustomer {
   id: string;
@@ -85,19 +86,28 @@ export default function MobileOrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [payRemainingOpen, setPayRemainingOpen] = useState(false);
-  const [payRemainingMethod, setPayRemainingMethod] = useState<"CASH" | "POS">("CASH");
+  const [payRemainingMethod, setPayRemainingMethod] = useState("CASH");
   const [payingRemaining, setPayingRemaining] = useState(false);
   const [remainingPaid, setRemainingPaid] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [payAmount, setPayAmount] = useState<string>("");
   const [readyWastageOpen, setReadyWastageOpen] = useState(false);
   const [readyWastagePercent, setReadyWastagePercent] = useState("0");
+  const paymentIdempotencyKey = useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
 
   // Derive the shop's local currency from its country setting (single source of truth).
   // *Npr DB fields store amounts in this local currency — no FX conversion needed.
   const shopCurrency = getCurrencyForCountry(user?.shop?.country) as SupportedCurrencyCode;
   const money = (amount?: number | null) =>
     formatCurrencyAmount(Math.round(Number(amount ?? 0)), shopCurrency);
+  const paymentMethods = useMemo(
+    () => getCounterPaymentMethods(user?.shop?.country ?? "NP"),
+    [user?.shop?.country],
+  );
 
   const load = useCallback(async () => {
     if (!params?.id) return;
@@ -125,17 +135,23 @@ export default function MobileOrderDetailPage() {
     }
     setPayingRemaining(true);
     try {
-      const methodLabel = payRemainingMethod === "CASH" ? "Cash at shop" : "POS / Card";
-      await shopQuotesApi.recordPayment(quote.id, {
+      const methodLabel =
+        paymentMethods.find((method) => method.value === payRemainingMethod)
+          ?.label ?? payRemainingMethod.replace(/_/g, " ");
+      // Checkout is intentionally atomic at the workflow level: it records an
+      // immutable quote payment and idempotently synchronises it to the final
+      // invoice, including when this quote was already converted earlier.
+      await shopQuotesApi.checkout(quote.id, {
         amountNpr: amt,
         notes: `${amt < Math.round(quote.balanceDueNpr) ? "Partial" : "Full"} balance collected via ${methodLabel}.`,
+        invoiceNotes: `Payment collected via ${methodLabel}.`,
+        paymentMethod: payRemainingMethod,
+        idempotencyKey: paymentIdempotencyKey.current,
       });
-      // Convert to invoice if not already done (first payment path skipped the payment page)
-      if (!quote.invoiceNumber) {
-        await shopQuotesApi.convertToInvoice(quote.id, {
-          notes: `Payment collected via ${methodLabel}.`,
-        });
-      }
+      paymentIdempotencyKey.current =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       setRemainingPaid(amt >= Math.round(quote.balanceDueNpr));
       setPayRemainingOpen(false);
       toast({ title: "Payment recorded!", description: `${money(amt)} collected.` });
@@ -415,10 +431,10 @@ export default function MobileOrderDetailPage() {
                       </div>
                       <p className="text-xs font-semibold uppercase text-gray-400"><T>Payment Method</T></p>
                       <div className="grid grid-cols-2 gap-2">
-                        {(["CASH", "POS"] as const).map((m) => (
-                          <button key={m} type="button" onClick={() => setPayRemainingMethod(m)}
-                            className={`flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-semibold transition ${payRemainingMethod === m ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400" : "border-gray-200 dark:border-gray-700 text-gray-500"}`}>
-                            {m === "CASH" ? <><Banknote className="h-4 w-4" /><T>Cash</T></> : <><CreditCard className="h-4 w-4" /><T>POS / Card</T></>}
+                        {paymentMethods.map((method) => (
+                          <button key={method.value} type="button" onClick={() => setPayRemainingMethod(method.value)}
+                            className={`flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-semibold transition ${payRemainingMethod === method.value ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400" : "border-gray-200 dark:border-gray-700 text-gray-500"}`}>
+                            {method.value === "CASH" ? <Banknote className="h-4 w-4" /> : <CreditCard className="h-4 w-4" />}<T>{method.label}</T>
                           </button>
                         ))}
                       </div>

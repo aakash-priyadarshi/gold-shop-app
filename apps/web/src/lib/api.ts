@@ -867,8 +867,29 @@ export const shopQuotesApi = {
   ) => api.put(`/shop-quotes/${id}/status`, data),
 
   // Payment recording
-  recordPayment: (id: string, data: { amountNpr: number; notes?: string }) =>
+  recordPayment: (
+    id: string,
+    data: {
+      amountNpr: number;
+      notes?: string;
+      paymentMethod?: string;
+      reference?: string;
+      idempotencyKey?: string;
+    },
+  ) =>
     api.post(`/shop-quotes/${id}/payment`, data),
+
+  checkout: (
+    id: string,
+    data: {
+      amountNpr: number;
+      notes?: string;
+      invoiceNotes?: string;
+      paymentMethod?: string;
+      reference?: string;
+      idempotencyKey?: string;
+    },
+  ) => api.post(`/shop-quotes/${id}/checkout`, data),
 
   // Invoice conversion
   convertToInvoice: (id: string, data?: { notes?: string }) =>
@@ -1581,7 +1602,10 @@ export interface PosSalePayload {
   customerName: string;
   customerPhone?: string;
   customerEmail?: string;
+  /** Legacy polymorphic customer reference. Prefer one of the explicit links. */
   customerId?: string;
+  walkInCustomerId?: string;
+  registeredCustomerId?: string;
   taxRate?: number;
   discountAmount?: number;
   paymentMethod?: string;

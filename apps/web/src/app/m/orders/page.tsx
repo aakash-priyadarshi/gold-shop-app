@@ -4,7 +4,7 @@ import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
 
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
-import { shopQuotesApi } from "@/lib/api";
+import { invoicesApi, shopQuotesApi } from "@/lib/api";
 import {
   formatCurrencyAmount,
   getCurrencyForShop,
@@ -46,6 +46,18 @@ interface StatusMeta {
   bg: string;
   color: string;
   Icon: React.ElementType;
+}
+
+interface InvoiceSummary {
+  id: string;
+  invoiceNumber: string;
+  customerName: string;
+  totalAmount: number;
+  balanceDue: number;
+  paymentStatus: string;
+  createdAt: string;
+  issuedAt?: string | null;
+  currency?: string;
 }
 
 // Payment-aware status display
@@ -132,10 +144,23 @@ function QuoteCard({ q, currency }: { q: ShopQuote; currency: SupportedCurrencyC
   );
 }
 
+function InvoiceCard({ invoice, fallbackCurrency }: { invoice: InvoiceSummary; fallbackCurrency: SupportedCurrencyCode }) {
+  const router = useRouter();
+  const currency = (invoice.currency || fallbackCurrency) as SupportedCurrencyCode;
+  const balance = Number(invoice.balanceDue || 0);
+  const date = new Date(invoice.issuedAt || invoice.createdAt);
+  return (
+    <div role="button" tabIndex={0} onClick={() => router.push(`/m/invoices/${invoice.id}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`/m/invoices/${invoice.id}`); }} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-4 py-3.5 active:bg-amber-50">
+      <div className="flex items-center gap-3"><div className="h-10 w-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center"><Receipt className="h-5 w-5" /></div><div className="flex-1 min-w-0"><div className="flex items-center justify-between"><p className="truncate text-sm font-semibold">{invoice.customerName || "Walk-in"}</p><p className="ml-2 text-sm font-bold text-amber-700">{formatCurrencyAmount(Number(invoice.totalAmount || 0), currency)}</p></div><div className="mt-1 flex items-center justify-between"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${balance > 0 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>{balance > 0 ? "Due" : "Paid"}</span><span className="text-xs text-gray-400">{date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></div><p className="mt-1 text-[11px] text-gray-400">#{invoice.invoiceNumber}</p></div></div>
+    </div>
+  );
+}
+
 export default function OrdersPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [quotes, setQuotes] = useState<ShopQuote[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilterIdx, setActiveFilterIdx] = useState(0);
   const [scope, setScope] = useState<"today" | "all">("today");
@@ -147,11 +172,16 @@ export default function OrdersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await shopQuotesApi.getAll();
+      const [res, invoicesRes] = await Promise.all([
+        shopQuotesApi.getAll(),
+        invoicesApi.getAll({ limit: 100 }),
+      ]);
       const data: any = res.data ?? [];
       setQuotes(Array.isArray(data) ? data : []);
+      setInvoices(invoicesRes.data?.invoices ?? []);
     } catch {
       setQuotes([]);
+      setInvoices([]);
     } finally {
       setLoading(false);
     }
@@ -160,7 +190,7 @@ export default function OrdersPage() {
   useEffect(() => { load(); }, [load]);
 
   // Scope filter: today vs all
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Intl.DateTimeFormat("en-CA").format(new Date());
   const scopeFiltered = scope === "today"
     ? quotes.filter((q) => q.createdAt?.startsWith(today))
     : quotes;
@@ -178,6 +208,10 @@ export default function OrdersPage() {
     : scopeFiltered;
 
   const displayed = searchFiltered.filter(TAB_FILTERS[activeFilterIdx].filterFn);
+  const invoiceFiltered = invoices
+    .filter((invoice) => scope === "all" || new Intl.DateTimeFormat("en-CA").format(new Date(invoice.issuedAt || invoice.createdAt)) === today)
+    .filter((invoice) => !searchQuery.trim() || invoice.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) || invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter((invoice) => activeFilterIdx === 0 || (activeFilterIdx === 1 && Number(invoice.balanceDue || 0) <= 0) || (activeFilterIdx === 2 && Number(invoice.balanceDue || 0) > 0));
 
   return (
     <MobileFeatureGate feature="mobileOrders" featureName="Walk-in Quotes">
@@ -251,7 +285,7 @@ export default function OrdersPage() {
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-amber-400" />
             </div>
-          ) : displayed.length === 0 ? (
+          ) : displayed.length === 0 && invoiceFiltered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
               <Receipt className="h-10 w-10" />
               <p className="text-sm font-medium">
@@ -269,7 +303,10 @@ export default function OrdersPage() {
               </button>
             </div>
           ) : (
-            displayed.map((q) => <QuoteCard key={q.id} q={q} currency={currency} />)
+            <>
+              {invoiceFiltered.map((invoice) => <InvoiceCard key={`invoice-${invoice.id}`} invoice={invoice} fallbackCurrency={currency} />)}
+              {displayed.map((q) => <QuoteCard key={q.id} q={q} currency={currency} />)}
+            </>
           )}
         </div>
       </div>

@@ -48,6 +48,8 @@ export class InvoicesController {
     @CurrentUser("shopId") shopId: string,
     @Query("status") status?: string,
     @Query("search") search?: string,
+    @Query("dateFrom") dateFrom?: string,
+    @Query("dateTo") dateTo?: string,
     @Query("page") page?: string,
     @Query("limit") limit?: string,
   ) {
@@ -57,6 +59,8 @@ export class InvoicesController {
     return this.invoicesService.findAll(shopId, {
       status,
       search,
+      dateFrom,
+      dateTo,
       page: page ? parseInt(page) : undefined,
       limit: limit ? parseInt(limit) : undefined,
     });

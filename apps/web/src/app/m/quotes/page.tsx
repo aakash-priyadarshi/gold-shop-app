@@ -6,7 +6,7 @@ import { GemstoneEditorV2, type GemstoneEntry as GemstoneEntryV2 } from "@/compo
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
+import { fetchTaxRules, lookupTaxRate, type TaxRule } from "@/hooks/useTaxRules";
 import { materialsApi, shopQuotesApi, shopsApi } from "@/lib/api";
 import {
   convertCurrencyAmount,
@@ -99,6 +99,7 @@ interface CustomerLookupResult {
     address?: string | null;
     city?: string | null;
     country?: string | null;
+    isRegistered?: boolean;
   };
 }
 
@@ -163,6 +164,7 @@ export default function QuotesPage() {
   // Tax rate + label loaded from the server based on shop country (e.g. 3% GST for IN, 13% VAT for NP)
   const [taxRate, setTaxRate] = useState(0);
   const [taxLabel, setTaxLabel] = useState("Tax");
+  const [taxRules, setTaxRules] = useState<TaxRule[]>([]);
   const [shopMakingPerGramNpr, setShopMakingPerGramNpr] = useState<Record<string, number>>({});
   const [shopMakingChargePercent, setShopMakingChargePercent] = useState(10);
   const [baseMetalPricesNpr, setBaseMetalPricesNpr] = useState<Record<string, number>>({});
@@ -178,6 +180,7 @@ export default function QuotesPage() {
   const [customerCity, setCustomerCity] = useState<string>((user?.shop as any)?.city ?? "");
   const [customerCountry, setCustomerCountry] = useState<string>((user?.shop as any)?.country ?? "");
   const [matchedCustomerId, setMatchedCustomerId] = useState<string | null>(null);
+  const [matchedCustomerIsRegistered, setMatchedCustomerIsRegistered] = useState(false);
   const [lookingUpCustomer, setLookingUpCustomer] = useState(false);
 
   const [jewelleryType, setJewelleryType] = useState("RING");
@@ -252,7 +255,12 @@ export default function QuotesPage() {
   }, [gemstonesV2, nprToDisplayCurrency]);
 
   const estimateTotal = metalCostNpr + makingChargeNpr + gemstoneCostNpr + finishCostNpr;
-  const estimatedTax = Math.round(estimateTotal * taxRate);
+  const estimatedTax = Math.round(
+    ((metalCostNpr || 0) * lookupTaxRate(taxRules, "PRECIOUS_METAL").rate +
+      (makingChargeNpr || 0) * lookupTaxRate(taxRules, "MAKING_CHARGE").rate +
+      (gemstoneCostNpr || 0) * lookupTaxRate(taxRules, "GEMSTONE").rate +
+      (finishCostNpr || 0) * lookupTaxRate(taxRules, "FINISH").rate) * 100,
+  ) / 100;
   const estimatedTotalWithTax = estimateTotal + estimatedTax;
 
   const loadRates = useCallback(async () => {
@@ -339,9 +347,11 @@ export default function QuotesPage() {
         const { rate, name } = lookupTaxRate(result.rules);
         setTaxRate(rate);
         setTaxLabel(`${name} (${(rate * 100).toFixed(1)}%)`);
+        setTaxRules(result.rules);
       } else {
         setTaxRate(0);
         setTaxLabel("Tax unavailable");
+        setTaxRules([]);
       }
     });
   }, [user?.shop]);
@@ -411,6 +421,7 @@ export default function QuotesPage() {
     const digits = customerPhone.replace(/\D/g, "");
     if (digits.length < 7) {
       setMatchedCustomerId(null);
+      setMatchedCustomerIsRegistered(false);
       return;
     }
 
@@ -425,6 +436,7 @@ export default function QuotesPage() {
         const customer = result?.customer;
         if (result?.found && customer) {
           setMatchedCustomerId(customer.id ?? null);
+          setMatchedCustomerIsRegistered(customer.isRegistered === true);
           setCustomerName((prev) => prev || customer.name || "");
           setCustomerEmail((prev) => prev || customer.email || "");
           setCustomerAddress((prev) => prev || customer.address || "");
@@ -432,9 +444,11 @@ export default function QuotesPage() {
           setCustomerCountry((prev) => prev || customer.country || "");
         } else {
           setMatchedCustomerId(null);
+          setMatchedCustomerIsRegistered(false);
         }
       } catch {
         setMatchedCustomerId(null);
+        setMatchedCustomerIsRegistered(false);
       } finally {
         setLookingUpCustomer(false);
       }
@@ -504,11 +518,6 @@ export default function QuotesPage() {
       //   - Indian shop  → INR values stored in metalCostNpr, etc.
       //   - Nepali shop  → NPR values (the historical default)
       // No NPR conversion needed — the display-currency amount IS the stored amount.
-      // Send explicit tax so the backend uses the same rate the customer was shown.
-      // taxRate is loaded from the server (e.g. 3% for Indian shops, 13% for Nepal).
-      const localSubtotal = (metalCostNpr || 0) + (makingChargeNpr || 0) + (gemstoneCostNpr || 0) + (finishCostNpr || 0);
-      const taxForBackend = metalCostNpr !== undefined ? Math.round(localSubtotal * taxRate) : undefined;
-
       const res = await shopQuotesApi.create({
         customer: {
           name: customerName.trim(),
@@ -532,22 +541,17 @@ export default function QuotesPage() {
         makingChargeNpr: makingChargeNpr || undefined,
         gemstoneCostNpr: gemstoneCostNpr || undefined,
         finishCostNpr: finishCostNpr || undefined,
-        taxNpr: taxForBackend,
+        registeredCustomerId:
+          matchedCustomerIsRegistered && matchedCustomerId
+            ? matchedCustomerId
+            : undefined,
         estimatedDays: estimatedDays || undefined,
         shopNotes: notes || undefined,
       });
 
       const quote = res.data ?? {};
       toast({ title: "Quote created", description: quote.quoteNumber ?? "Ready to share" });
-      const payParams = new URLSearchParams({
-        displayTotal: String(Math.round(estimatedTotalWithTax)),
-        currency,
-        nprRate: String(nprToDisplayCurrency),
-        name: customerName.trim(),
-        num: quote.quoteNumber ?? quote.id ?? "",
-        phone: customerPhone.replace(/\D/g, ""),
-      });
-      router.push(`/m/quotes/${quote.id}/payment?${payParams.toString()}`);
+      router.push(`/m/quotes/${quote.id}/payment`);
     } catch (err: any) {
       toast({
         title: "Failed to create quote",

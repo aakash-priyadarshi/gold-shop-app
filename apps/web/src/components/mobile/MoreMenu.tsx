@@ -44,6 +44,7 @@ const sections = [
     title: "Daily Operations",
     items: [
       { href: "/m/summary", icon: BarChart2, label: "Daily Summary" },
+      { href: "/m/invoices", icon: Receipt, label: "Invoices" },
       { href: "/m/exchange", icon: Scale, label: "Old Gold Exchange" },
       { href: "/m/pending", icon: Wallet, label: "Pending Payments" },
       { href: "/m/repairs", icon: Wrench, label: "Repairs" },

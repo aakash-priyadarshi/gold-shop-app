@@ -42,7 +42,14 @@ import {
   getCounterPaymentMethods,
   buildQrImageUrl,
   buildUpiPayUri,
+  formatBankAccountDetails,
+  formatPaymentSummary,
+  hasBankTransferDetails,
   isDigitalWalletMethod,
+  isUpiAmountAllowed,
+  UPI_MAX_AMOUNT_INR,
+  type CounterPaymentMethod,
+  type ShopBankAccountDetails,
 } from "@/lib/counterPayments";
 import { loadTradeInPayload } from "@/lib/oldGoldTradeIn";
 import { usePreferencesStore } from "@/store/preferences";
@@ -57,11 +64,12 @@ import {
     ScanLine,
     Search,
     ShoppingCart,
+    Split,
     Trash2,
     X,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 interface PosSessionItem {
   id: string;
@@ -173,12 +181,20 @@ function PosPageInner() {
     invoiceNumber: string;
     total: number;
     paymentMethod?: string;
+    paymentSummary?: string;
     customerName?: string;
     customerPhone?: string;
     verificationToken?: string;
+    usedBankTransfer?: boolean;
   } | null>(null);
   const [billSettings, setBillSettings] = useState<BillSettings | null>(null);
   const [shopUpiId, setShopUpiId] = useState("");
+  const [shopBankDetails, setShopBankDetails] =
+    useState<ShopBankAccountDetails | null>(null);
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitLegs, setSplitLegs] = useState<
+    Array<{ id: string; method: CounterPaymentMethod; amount: string }>
+  >([]);
 
   const shopCountry = user?.shop?.country || "NP";
   const PAYMENT_METHODS = getCounterPaymentMethods(shopCountry);
@@ -216,11 +232,22 @@ function PosPageInner() {
       .getSettings()
       .then((res) => {
         const shop = res.data?.shop || res.data;
-        const upi = shop?.bankAccountDetails?.upiId || "";
+        const bank = (shop?.bankAccountDetails ||
+          null) as ShopBankAccountDetails | null;
+        setShopBankDetails(bank);
+        const upi = bank?.upiId || "";
         setShopUpiId(typeof upi === "string" ? upi : "");
       })
-      .catch(() => setShopUpiId(""));
+      .catch(() => {
+        setShopUpiId("");
+        setShopBankDetails(null);
+      });
   }, []);
+
+  const bankDetailLines = useMemo(
+    () => formatBankAccountDetails(shopBankDetails),
+    [shopBankDetails],
+  );
 
   useEffect(() => {
     const fromQuery = searchParams.get("tradeInCredit");
@@ -357,6 +384,61 @@ function PosPageInner() {
 
   const runCheckout = async () => {
     if (!session) return;
+
+    let paymentSplits:
+      | Array<{ method: string; amount: number }>
+      | undefined;
+    let paymentSummary: string | undefined;
+    let usedBankTransfer = paymentMethod === "BANK_TRANSFER";
+
+    if (splitMode) {
+      const legs = splitLegs
+        .map((leg) => ({
+          method: leg.method,
+          amount: parseFloat(leg.amount),
+        }))
+        .filter((leg) => Number.isFinite(leg.amount) && leg.amount > 0);
+      if (legs.length < 2) {
+        toast({
+          variant: "destructive",
+          title: t("Need at least two payment parts"),
+        });
+        return;
+      }
+      const sum = legs.reduce((s, l) => s + l.amount, 0);
+      if (Math.abs(sum - basketTotal) > 0.05) {
+        toast({
+          variant: "destructive",
+          title: t("Split total must equal basket total"),
+        });
+        return;
+      }
+      for (const leg of legs) {
+        if (!isUpiAmountAllowed(leg.amount, leg.method)) {
+          toast({
+            variant: "destructive",
+            title: t("UPI amount too high"),
+            description: t(
+              `UPI / PhonePe cannot exceed ₹${UPI_MAX_AMOUNT_INR.toLocaleString()} per part.`,
+            ),
+          });
+          return;
+        }
+      }
+      paymentSplits = legs;
+      paymentSummary = formatPaymentSummary(legs, currencySymbol);
+      usedBankTransfer = legs.some((l) => l.method === "BANK_TRANSFER");
+    } else if (!isUpiAmountAllowed(basketTotal, paymentMethod)) {
+      toast({
+        variant: "destructive",
+        title: t("UPI amount too high"),
+        description: t(
+          `UPI / PhonePe cannot exceed ₹${UPI_MAX_AMOUNT_INR.toLocaleString()}. Use bank transfer, card, or split payment.`,
+        ),
+      });
+      return;
+    }
+
     setCheckoutLoading(true);
     try {
       const res = await posApi.checkout(session.id, {
@@ -366,7 +448,10 @@ function PosPageInner() {
         notes: notes || undefined,
         taxRate,
         discountAmount,
-        paymentMethod,
+        paymentMethod: splitMode
+          ? "SPLIT"
+          : paymentMethod,
+        paymentSplits,
         makingChargeRate: makingChargeRate || undefined,
         invoiceCountry: shopCountry || undefined,
       });
@@ -374,13 +459,16 @@ function PosPageInner() {
       setSession(null);
       setCheckoutOpen(false);
       setCustomerPicks([]);
+      setSplitMode(false);
       setCheckoutSuccess({
         invoiceNumber: inv?.invoiceNumber || "N/A",
         total: inv?.totalAmount || basketTotal,
-        paymentMethod,
+        paymentMethod: splitMode ? "SPLIT" : paymentMethod,
+        paymentSummary,
         customerName,
         customerPhone,
         verificationToken: inv?.verificationToken,
+        usedBankTransfer,
       });
       toast({
         title: t("Checkout complete!"),
@@ -444,6 +532,35 @@ function PosPageInner() {
   const basketMaking = makingChargeRate > 0 ? Math.round(basketSubtotal * (makingChargeRate / 100)) : 0;
   const basketTax = (basketSubtotal + basketMaking) * (taxRate || 0);
   const basketTotal = basketSubtotal + basketMaking + basketTax - (discountAmount || 0);
+
+  const upiOverLimit =
+    !splitMode &&
+    isDigitalWalletMethod(paymentMethod) &&
+    basketTotal > UPI_MAX_AMOUNT_INR;
+
+  const initSplitLegs = useCallback(
+    (total: number) => {
+      const defaultMethod = (PAYMENT_METHODS[0]?.value ||
+        "CASH") as CounterPaymentMethod;
+      const half = Math.round((total / 2) * 100) / 100;
+      const rest = Math.round((total - half) * 100) / 100;
+      setSplitLegs([
+        {
+          id: crypto.randomUUID(),
+          method: defaultMethod,
+          amount: String(half),
+        },
+        {
+          id: crypto.randomUUID(),
+          method:
+            (PAYMENT_METHODS.find((m) => m.value === "CARD")
+              ?.value as CounterPaymentMethod) || defaultMethod,
+          amount: String(rest),
+        },
+      ]);
+    },
+    [PAYMENT_METHODS],
+  );
 
   // ─── Time remaining ───
 
@@ -997,48 +1114,189 @@ function PosPageInner() {
 
               {/* Payment Method */}
               <div>
-                <Label className="text-sm font-medium"><T>Payment Method</T></Label>
-                <div className="grid grid-cols-3 gap-2 mt-1.5">
-                  {PAYMENT_METHODS.map((pm) => (
-                    <button
-                      key={pm.value}
-                      onClick={() => setPaymentMethod(pm.value)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${paymentMethod === pm.value ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-muted/50 border-muted-foreground/20 hover:border-primary/50"}`}
-                    >
-                      {pm.label}
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-sm font-medium"><T>Payment Method</T></Label>
+                  <Button
+                    type="button"
+                    variant={splitMode ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      if (!splitMode) {
+                        initSplitLegs(Math.max(0, basketTotal));
+                        setSplitMode(true);
+                      } else {
+                        setSplitMode(false);
+                      }
+                    }}
+                  >
+                    <Split className="h-3 w-3 mr-1" />
+                    {splitMode ? <T>Single</T> : <T>Split</T>}
+                  </Button>
                 </div>
-                {isDigitalWalletMethod(paymentMethod) && (
-                  <div className="mt-3 rounded-lg border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-center space-y-2">
-                    {shopUpiId && basketTotal > 0 ? (
-                      <>
-                        <p className="text-xs text-muted-foreground">
-                          <T>Customer can scan to pay via UPI / PhonePe</T>
+                {!splitMode ? (
+                  <>
+                    <div className="grid grid-cols-3 gap-2 mt-1.5">
+                      {PAYMENT_METHODS.map((pm) => (
+                        <button
+                          key={pm.value}
+                          type="button"
+                          onClick={() => setPaymentMethod(pm.value)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${paymentMethod === pm.value ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-muted/50 border-muted-foreground/20 hover:border-primary/50"}`}
+                        >
+                          {pm.label}
+                        </button>
+                      ))}
+                    </div>
+                    {upiOverLimit && (
+                      <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-100">
+                        <p className="font-semibold"><T>UPI limit exceeded</T></p>
+                        <p>
+                          <T>
+                            UPI / PhonePe cannot collect more than ₹1,00,000 in one
+                            QR. Use bank transfer, card, cash, or split the payment.
+                          </T>
                         </p>
-                        <Image
-                          src={buildQrImageUrl(
-                            buildUpiPayUri({
-                              upiId: shopUpiId,
-                              amount: Math.round(basketTotal),
-                              currency: "INR",
-                              payeeName: billSettings?.shopNameOnBill || user?.shop?.shopName,
-                              note: "POS sale",
-                            }) || shopUpiId,
-                          )}
-                          alt="UPI QR"
-                          className="mx-auto h-36 w-36 rounded bg-white p-2"
-                          width={144}
-                          height={144}
-                          unoptimized
-                        />
-                        <p className="text-[11px] font-mono text-muted-foreground">{shopUpiId}</p>
-                      </>
-                    ) : (
-                      <p className="text-xs text-amber-700 dark:text-amber-300">
-                        <T>Add UPI ID in Shop Settings to show a payment QR.</T>
-                      </p>
+                      </div>
                     )}
+                    {isDigitalWalletMethod(paymentMethod) && !upiOverLimit && (
+                      <div className="mt-3 rounded-lg border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-center space-y-2">
+                        {shopUpiId && basketTotal > 0 ? (
+                          <>
+                            <p className="text-xs text-muted-foreground">
+                              <T>Customer can scan to pay via UPI / PhonePe</T>
+                            </p>
+                            <Image
+                              src={buildQrImageUrl(
+                                buildUpiPayUri({
+                                  upiId: shopUpiId,
+                                  amount: Math.round(basketTotal),
+                                  currency: "INR",
+                                  payeeName: billSettings?.shopNameOnBill || user?.shop?.shopName,
+                                  note: "POS sale",
+                                }) || shopUpiId,
+                              )}
+                              alt="UPI QR"
+                              className="mx-auto h-36 w-36 rounded bg-white p-2"
+                              width={144}
+                              height={144}
+                              unoptimized
+                            />
+                            <p className="text-[11px] font-mono text-muted-foreground">{shopUpiId}</p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-amber-700 dark:text-amber-300">
+                            <T>Add UPI ID in Shop Settings to show a payment QR.</T>
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {paymentMethod === "BANK_TRANSFER" && (
+                      <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs space-y-1 text-left">
+                        <p className="font-semibold text-sm">
+                          <T>Bank transfer details</T>
+                        </p>
+                        {bankDetailLines.length > 0 ? (
+                          bankDetailLines.map((line) => (
+                            <p key={line} className="text-muted-foreground">{line}</p>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground">
+                            <T>
+                              Add bank account details in Shop Settings so they
+                              appear on the receipt.
+                            </T>
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {splitLegs.map((leg, index) => (
+                      <div key={leg.id} className="rounded-lg border p-2 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <p className="text-xs font-medium"><T>Part</T> {index + 1}</p>
+                          {splitLegs.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSplitLegs((prev) => prev.filter((l) => l.id !== leg.id))
+                              }
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          {PAYMENT_METHODS.map((pm) => (
+                            <button
+                              key={pm.value}
+                              type="button"
+                              onClick={() =>
+                                setSplitLegs((prev) =>
+                                  prev.map((l) =>
+                                    l.id === leg.id
+                                      ? { ...l, method: pm.value as CounterPaymentMethod }
+                                      : l,
+                                  ),
+                                )
+                              }
+                              className={`px-1 py-1 rounded text-[10px] border ${
+                                leg.method === pm.value
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-muted/50"
+                              }`}
+                            >
+                              {pm.label}
+                            </button>
+                          ))}
+                        </div>
+                        <Input
+                          type="number"
+                          value={leg.amount}
+                          onChange={(e) =>
+                            setSplitLegs((prev) =>
+                              prev.map((l) =>
+                                l.id === leg.id ? { ...l, amount: e.target.value } : l,
+                              ),
+                            )
+                          }
+                          className="h-8"
+                        />
+                      </div>
+                    ))}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() =>
+                          setSplitLegs((prev) => [
+                            ...prev,
+                            {
+                              id: crypto.randomUUID(),
+                              method: (PAYMENT_METHODS[0]?.value ||
+                                "CASH") as CounterPaymentMethod,
+                              amount: "0",
+                            },
+                          ])
+                        }
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        <T>Add part</T>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => initSplitLegs(Math.max(0, basketTotal))}
+                      >
+                        <T>50 / 50</T>
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1150,7 +1408,9 @@ function PosPageInner() {
               </Button>
               <Button
                 onClick={handleCheckout}
-                disabled={checkoutLoading || !customerName.trim()}
+                disabled={
+                  checkoutLoading || !customerName.trim() || upiOverLimit
+                }
                 className="min-w-[140px]"
               >
                 {checkoutLoading ? (
@@ -1193,6 +1453,12 @@ function PosPageInner() {
                       balanceDue: 0,
                       currency: currencySymbol,
                       paymentMethod: checkoutSuccess.paymentMethod,
+                      paymentSummary: checkoutSuccess.paymentSummary,
+                      bankAccountDetails:
+                        checkoutSuccess.usedBankTransfer &&
+                        hasBankTransferDetails(shopBankDetails)
+                          ? shopBankDetails
+                          : undefined,
                       verificationToken: checkoutSuccess.verificationToken,
                     });
                     if (!ok) {
@@ -1209,7 +1475,7 @@ function PosPageInner() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: ${currencySymbol} ${checkoutSuccess?.total?.toLocaleString()}\nPaid via: ${checkoutSuccess?.paymentMethod || "CASH"}\nThank you for your purchase!`;
+                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: ${currencySymbol} ${checkoutSuccess?.total?.toLocaleString()}\nPaid via: ${checkoutSuccess?.paymentSummary || checkoutSuccess?.paymentMethod || "CASH"}\nThank you for your purchase!`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
                   }}
                 >
