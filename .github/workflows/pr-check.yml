@@ -218,6 +218,7 @@ jobs:
         run: pnpm build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          NEXTAUTH_SECRET: ci-build-only-not-used-at-runtime
 
   # ══════════════════════════════════════════════════════════
   # Stage 5: Prisma Migration Safety Check

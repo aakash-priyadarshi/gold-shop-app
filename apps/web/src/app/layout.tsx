@@ -3,18 +3,28 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
-import { SupportBot } from "@/components/support/SupportBot";
 import { Toaster } from "@/components/ui/toaster";
 import { BRAND } from "@/config/brand";
 import { SITE_URL, MOBILE_SITE_URL } from "@/config/site";
 import { mapCountryToMarket } from "@/lib/geo";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import dynamic from "next/dynamic";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 
 const googleSiteVerification = process.env.GOOGLE_SITE_VERIFICATION;
+
+// SupportBot reads browser storage and creates a browser-tab session ID during
+// render, so it must mount only on the client to keep SSR markup deterministic.
+const SupportBot = dynamic(
+  () =>
+    import("@/components/support/SupportBot").then(
+      (module) => module.SupportBot,
+    ),
+  { ssr: false },
+);
 
 const inter = Inter({
   subsets: ["latin"],
