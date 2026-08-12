@@ -191,6 +191,7 @@ export default function RootLayout({
                     { "@type": "Country", name: "United Arab Emirates" },
                     { "@type": "Country", name: "United States" },
                     { "@type": "Country", name: "United Kingdom" },
+                    { "@type": "Country", name: "Sri Lanka" },
                   ],
                   knowsLanguage: ["en", "fr", "de", "hi", "es", "ar", "ne"],
                   availableLanguage: [

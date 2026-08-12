@@ -8,6 +8,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Gem,
+  Printer,
   Receipt,
   Scale,
   ShieldCheck,
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   title:
     "Jewellery Shop Software for Sri Lanka | LKR Billing, VAT & Mobile POS | Orivraa",
   description:
-    "Jewellery billing software for Sri Lankan gold shops. LKR pricing, gram and tola weights, 18% VAT invoices with TIN fields, mobile POS, and catalog-linked stock. Pro from LKR 4,500/month. Free plan available.",
+    "Jewellery billing software for Sri Lankan gold shops. LKR pricing, gram and tola weights, 18% VAT invoices with TIN fields, mobile POS, QR/RFID tag printing, and catalog-linked stock. Pro from LKR 4,500/month. Free plan available.",
   alternates: {
     canonical: "https://www.orivraa.com/lk/jewellery-shop-software",
   },
@@ -78,6 +79,14 @@ const jsonLd = {
             text: "Orivraa offers a free plan (up to 15 products). Pro is LKR 4,500/month with unlimited inventory, mobile POS, tax reports, and catalog reprice — priced for local gold shops in Colombo, Kandy, Galle, and nationwide.",
           },
         },
+        {
+          "@type": "Question",
+          name: "Can Sri Lankan jewellery shops print QR and RFID tags?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. Each inventory piece can carry a QR identity, scanner-readable SKU barcode, and optional RFID/EPC code. Print a single tag, multiple A4 labels, or thermal-roll labels from desktop or mobile. Multi-tag printing is available on Pro and higher plans.",
+          },
+        },
       ],
     },
   ],
@@ -98,6 +107,11 @@ const FEATURES = [
     icon: Smartphone,
     title: "Mobile POS for Walk-Ins",
     desc: "Turn any Android phone into a counter POS — scan items, issue receipts, and sync stock without a dedicated terminal.",
+  },
+  {
+    icon: Printer,
+    title: "QR, RFID & Tag Printing",
+    desc: "Give each piece QR, barcode and optional RFID/EPC identity. Print A4 multi-tag sheets or thermal labels from desktop and mobile; multi-tag printing is included with Pro.",
   },
 ];
 
@@ -144,6 +158,10 @@ const FAQS = [
   {
     q: "Does Orivraa support Sinhala or Tamil?",
     a: "The interface supports dynamic translation including Sinhala, with English fallback. Tamil translation is also available through the same system.",
+  },
+  {
+    q: "Can I print multiple jewellery tags on one A4 page?",
+    a: "Yes. Select pieces from Vault & Tags, choose an A4 21-tag or 10-tag layout, and print the selected labels together. Thermal roll layouts and single-tag printing are also available. Multi-tag sheets are a Pro plan feature.",
   },
 ];
 

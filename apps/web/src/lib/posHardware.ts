@@ -34,9 +34,10 @@ export interface ScannerConfig {
   autoAdd: boolean;
 }
 
-export type PrinterTransport = "webusb" | "bluetooth" | "network" | "none";
+export type PrinterTransport = "browser" | "webusb" | "bluetooth" | "network" | "none";
 export type PaperWidth = 58 | 80;
-export type LabelPrinterTransport = "web-serial" | "download";
+export type LabelPrinterTransport = "web-serial" | "webusb" | "bluetooth" | "network" | "download";
+export type LabelPrinterLanguage = "ZPL" | "TSPL" | "EPL" | "ESC_POS";
 
 export interface PrinterConfig {
   enabled: boolean;
@@ -57,6 +58,7 @@ export interface PrinterConfig {
 export interface LabelPrinterConfig {
   enabled: boolean;
   transport: LabelPrinterTransport;
+  language: LabelPrinterLanguage;
   /** Label width in millimetres (default ~50mm jewellery tag). */
   widthMm: number;
   /** Label height in millimetres (default ~25mm jewellery tag). */
@@ -66,6 +68,8 @@ export interface LabelPrinterConfig {
   /** Baud rate for Web Serial (Zebra defaults to 9600). */
   baudRate?: number;
   deviceLabel?: string;
+  host?: string;
+  port?: number;
 }
 
 export interface HardwareConfig {
@@ -86,7 +90,7 @@ export const defaultHardwareConfig: HardwareConfig = {
   },
   printer: {
     enabled: false,
-    transport: "none",
+    transport: "browser",
     paperWidth: 80,
     autoPrint: false,
     kickCashDrawer: false,
@@ -94,10 +98,12 @@ export const defaultHardwareConfig: HardwareConfig = {
   labelPrinter: {
     enabled: false,
     transport: "download",
+    language: "ZPL",
     widthMm: 50,
     heightMm: 25,
     dpi: 203,
     baudRate: 9600,
+    port: 9100,
   },
 };
 
@@ -577,6 +583,44 @@ export async function printReceiptBytes(bytes: Uint8Array<ArrayBuffer>): Promise
   await device.transferOut(endpoint.endpointNumber, bytes);
 }
 
+declare global {
+  interface Window {
+    __TAURI__?: {
+      core?: {
+        invoke: <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
+      };
+    };
+  }
+}
+
+/** Send printer-language bytes unchanged to the currently paired BLE printer. */
+export async function printBluetoothRawBytes(bytes: Uint8Array): Promise<void> {
+  const characteristic = await ensureBleConnection();
+  await writeBleChunks(characteristic, bytes);
+}
+
+function printHtml(value: unknown): string {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/** Universal route for OS-installed wired, Bluetooth, Wi-Fi and laser printers. */
+export function printBrowserReceipt(payload: ReceiptPayload): void {
+  if (typeof window === "undefined") return;
+  const win = window.open("", "_blank", "width=420,height=760");
+  if (!win) throw new Error("Popup blocked — allow popups to print receipts");
+  const rows = payload.lines.map((line) => `<tr><td>${printHtml(line.label)}${line.qty > 1 ? ` × ${line.qty}` : ""}</td><td>${printHtml(`${payload.currency || ""} ${Number(line.amount).toFixed(2)}`)}</td></tr>`).join("");
+  win.document.write(`<!doctype html><html><head><title>Receipt</title><style>@page{margin:7mm}body{font:12px Arial;margin:0;color:#111}h1{font-size:17px;margin:0 0 3px}p{margin:2px 0;color:#444}table{width:100%;border-collapse:collapse;margin:12px 0}td{padding:4px 0;border-bottom:1px solid #ddd}td:last-child{text-align:right}.total{font-size:16px;font-weight:700;text-align:right}</style></head><body><h1>${printHtml(payload.shopName)}</h1><p>${printHtml(payload.invoiceNumber)}</p><table>${rows}</table><div class="total">${printHtml(`${payload.currency || ""} ${Number(payload.total).toFixed(2)}`)}</div><script>window.onload=()=>setTimeout(()=>window.print(),100)</script></body></html>`);
+  win.document.close();
+}
+
+/** Raw Wi-Fi/LAN printer transport is available only inside the desktop app. */
+export async function printDesktopRawTcp(host: string | undefined, port: number | undefined, bytes: Uint8Array): Promise<void> {
+  if (!host) throw new Error("Enter the printer's local network address");
+  const invoke = typeof window === "undefined" ? null : window.__TAURI__?.core?.invoke;
+  if (!invoke) throw new Error("Raw Wi-Fi printing requires Orivraa Desktop. Use System print for an OS-installed network printer.");
+  await invoke("send_raw_tcp_print", { host, port: Number(port) || 9100, data: Array.from(bytes) });
+}
+
 /** Convenience: build + print a receipt using the saved config. */
 export async function printReceipt(
   payload: ReceiptPayload,
@@ -597,12 +641,15 @@ export async function printReceipt(
     // The browser cannot open a raw TCP socket; this hands off to the API
     // which forwards the bytes to a local print agent. Backend route TBD –
     // for now we surface a clear error so the UI can guide the shopkeeper.
-    throw new Error(
-      "Network printing requires the Orivraa Desktop app or a local print agent.",
-    );
+    await printDesktopRawTcp(cfg.printer.host, cfg.printer.port, bytes);
+    return;
   }
   if (cfg.printer.transport === "bluetooth") {
     await printBluetoothReceiptBytes(bytes);
+    return;
+  }
+  if (cfg.printer.transport === "browser") {
+    printBrowserReceipt(payload);
     return;
   }
 }
@@ -619,6 +666,7 @@ export async function kickCashDrawer(): Promise<void> {
  * the shopkeeper can send to the printer via Zebra Setup Utilities / USB.
  */
 export interface ZplLabelPayload {
+  id?: string;
   sku: string;
   name: string;
   purity?: string;
@@ -626,6 +674,7 @@ export interface ZplLabelPayload {
   price?: number;
   currency?: string;
   hallmark?: string;
+  rfidCode?: string;
   shopName?: string;
 }
 
@@ -675,6 +724,8 @@ export function buildZplJewelleryLabel(
       : "";
   const meta = [purity, weight].filter(Boolean).join("  ");
   const hallmark = payload.hallmark ? zplEscape(payload.hallmark) : "";
+  const rfid = payload.rfidCode ? zplEscape(payload.rfidCode) : "";
+  const qrPayload = zplEscape(payload.id ? `orivraa:inventory:${payload.id}` : payload.sku);
 
   // Layout tuned for ~50×25mm at 203dpi (≈400×200 dots).
   // Code128 barcode on SKU; human-readable fields for counter staff.
@@ -694,9 +745,11 @@ export function buildZplJewelleryLabel(
     // Price
     price ? `^FO20,82^A0N,22,22^FD${zplEscape(price)}^FS` : "",
     // Code128 barcode (SKU) — height ~40 dots
+    `^FO${Math.max(pw - 104, 260)},18^BQN,2,4^FDLA,${qrPayload}^FS`,
     `^FO20,108^BY1.5,2,40^BCN,40,Y,N,N^FD${sku}^FS`,
     // Hallmark / HUID if present
     hallmark ? `^FO20,168^A0N,14,14^FD${hallmark}^FS` : "",
+    rfid ? `^FO20,184^A0N,12,12^FDRFID ${rfid}^FS` : "",
     "^XZ",
   ].filter(Boolean);
 
@@ -780,6 +833,97 @@ async function writeZplToSerial(zpl: string, baudRate = 9600): Promise<void> {
   } finally {
     writer.releaseLock();
   }
+}
+
+function rawLabelText(value: unknown, max = 64): string {
+  return String(value ?? "").replace(/[\r\n"']/g, " ").slice(0, max);
+}
+
+function tagPayload(payload: ZplLabelPayload): string {
+  return payload.id ? `orivraa:inventory:${payload.id}` : payload.sku;
+}
+
+function buildTsplLabel(payload: ZplLabelPayload, cfg: LabelPrinterConfig): string {
+  return [
+    `SIZE ${cfg.widthMm} mm,${cfg.heightMm} mm`, "GAP 2 mm,0", "CLS",
+    `TEXT 16,12,\"0\",0,1,1,\"${rawLabelText(payload.shopName || "Orivraa", 24)}\"`,
+    `TEXT 16,34,\"0\",0,1,1,\"${rawLabelText(payload.name, 28)}\"`,
+    `QRCODE 300,12,L,4,A,0,M2,S7,\"${rawLabelText(tagPayload(payload), 120)}\"`,
+    `BARCODE 16,62,\"128\",42,1,0,2,2,\"${rawLabelText(payload.sku, 32)}\"`,
+    "PRINT 1,1",
+  ].join("\n");
+}
+
+function buildEplLabel(payload: ZplLabelPayload, cfg: LabelPrinterConfig): string {
+  const width = mmToDots(cfg.widthMm, cfg.dpi);
+  const height = mmToDots(cfg.heightMm, cfg.dpi);
+  return [
+    "N", `q${width}`, `Q${height},24`,
+    `A16,12,0,2,1,1,N,\"${rawLabelText(payload.shopName || "Orivraa", 24)}\"`,
+    `A16,36,0,2,1,1,N,\"${rawLabelText(payload.name, 28)}\"`,
+    `b${Math.max(width - 112, 220)},12,Q,2,4,M,0,\"${rawLabelText(tagPayload(payload), 100)}\"`,
+    `B16,64,0,1,2,3,44,B,\"${rawLabelText(payload.sku, 32)}\"`, "P1",
+  ].join("\n");
+}
+
+function buildRawLabel(payload: ZplLabelPayload, cfg: LabelPrinterConfig): Uint8Array {
+  if (cfg.language === "ESC_POS") {
+    return buildEscPosReceipt({
+      shopName: payload.shopName || "Orivraa", invoiceNumber: payload.sku,
+      issuedAt: new Date(), currency: payload.currency || "",
+      lines: [{ label: payload.name, qty: 1, amount: payload.price ?? 0 }, { label: `QR: ${tagPayload(payload)}`, qty: 1, amount: 0 }],
+      subtotal: payload.price ?? 0, total: payload.price ?? 0,
+    }, 58);
+  }
+  const command = cfg.language === "TSPL" ? buildTsplLabel(payload, cfg)
+    : cfg.language === "EPL" ? buildEplLabel(payload, cfg)
+      : buildZplJewelleryLabel(payload, cfg);
+  return new TextEncoder().encode(command);
+}
+
+function downloadRawLabel(bytes: Uint8Array, sku: string, language: LabelPrinterLanguage): void {
+  if (typeof window === "undefined") return;
+  const ext = { ZPL: "zpl", TSPL: "tspl", EPL: "epl", ESC_POS: "bin" }[language];
+  const buffer = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
+  const url = URL.createObjectURL(new Blob([buffer], { type: "application/octet-stream" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `label-${(sku || "tag").replace(/[^\w.-]+/g, "_").slice(0, 40)}.${ext}`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Send a configured ZPL/TSPL/EPL/ESC-POS tag through the selected transport. */
+export async function printJewelleryLabel(payload: ZplLabelPayload): Promise<{ method: LabelPrinterTransport }> {
+  const cfg = loadHardwareConfig().labelPrinter;
+  const bytes = buildRawLabel(payload, cfg);
+  if (cfg.transport === "web-serial") {
+    try {
+      await writeZplToSerial(new TextDecoder().decode(bytes), cfg.baudRate ?? 9600);
+      return { method: "web-serial" };
+    } catch (error) {
+      console.warn("Serial label print failed; downloading label command", error);
+      downloadRawLabel(bytes, payload.sku, cfg.language);
+      return { method: "download" };
+    }
+  }
+  if (cfg.transport === "webusb") {
+    await printReceiptBytes(bytes as Uint8Array<ArrayBuffer>);
+    return { method: "webusb" };
+  }
+  if (cfg.transport === "bluetooth") {
+    await printBluetoothRawBytes(bytes);
+    return { method: "bluetooth" };
+  }
+  if (cfg.transport === "network") {
+    await printDesktopRawTcp(cfg.host, cfg.port, bytes);
+    return { method: "network" };
+  }
+  downloadRawLabel(bytes, payload.sku, cfg.language);
+  return { method: "download" };
 }
 
 /**

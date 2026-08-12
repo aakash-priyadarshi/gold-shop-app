@@ -1,10 +1,11 @@
 "use client";
 
 import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
+import { TagPrintDialog } from "@/components/shop/TagPrintDialog";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { inventoryApi, materialsApi } from "@/lib/api";
-import { printStockJewelleryTags } from "@/lib/jewelleryTagPrint";
+import { type JewelleryTagItem } from "@/lib/jewelleryTagPrint";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -46,6 +47,9 @@ export default function MobileStockPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("ALL");
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+  const [tagPrintOpen, setTagPrintOpen] = useState(false);
+  const [tagPrintItems, setTagPrintItems] = useState<JewelleryTagItem[]>([]);
 
   // Transfer Drawer State
   const [transferOpen, setTransferOpen] = useState(false);
@@ -59,6 +63,7 @@ export default function MobileStockPage() {
   const [addForm, setAddForm] = useState({
     tag: "",
     huid: "",
+    rfid: "",
     name: "",
     purity: "22K (916)",
     grossWeight: "",
@@ -221,12 +226,14 @@ export default function MobileStockPage() {
         totalPriceNpr: 0,
         labels: [addForm.location],
         hallmarkNumber: addForm.huid.toUpperCase(),
+        rfidCode: addForm.rfid.trim().toUpperCase() || undefined,
         status: "AVAILABLE"
       });
 
       setAddForm({
         tag: "",
         huid: "",
+        rfid: "",
         name: "",
         purity: "22K (916)",
         grossWeight: "",
@@ -255,6 +262,42 @@ export default function MobileStockPage() {
 
     return matchesSearch && matchesLocation;
   });
+
+  const toTagItem = (item: any): JewelleryTagItem => {
+    const raw = item.rawItem ?? item;
+    return {
+      id: raw.id ?? item.id,
+      sku: raw.sku ?? item.tag,
+      name: raw.nameEn ?? item.name,
+      purity: raw.composition?.baseAlloy?.purity ?? raw.composition?.purity ?? item.purity,
+      weightGrams: raw.totalWeightGrams ?? item.netWeight,
+      price: raw.totalPriceNpr ?? calculateItemValuation(item),
+      currency: goldRates.currency,
+      hallmark: raw.hallmarkNumber ?? item.huid,
+      rfidCode: raw.rfidCode,
+      shopName: raw.shop?.shopName ?? user?.shop?.shopName,
+    };
+  };
+
+  const openTagPrint = (items: any[]) => {
+    setTagPrintItems(items.map(toTagItem));
+    setTagPrintOpen(true);
+  };
+
+  const authorizeMultiTagPrint = async (itemIds: string[], copies: number) => {
+    if (!user?.shop?.id) throw new Error(t("No active shop found"));
+    const response = await inventoryApi.prepareMultiTagPrint(user.shop.id, itemIds, copies);
+    const items = response.data?.items ?? response.data?.data?.items ?? [];
+    return (Array.isArray(items) ? items : []).filter(Boolean).map(toTagItem);
+  };
+
+  const toggleTagSelection = (id: string) => {
+    setSelectedTagIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
@@ -337,6 +380,21 @@ export default function MobileStockPage() {
           </select>
         </div>
 
+        {selectedTagIds.size > 0 && (
+          <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/50 dark:bg-amber-950/20">
+            <span className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+              {selectedTagIds.size} <T>tag(s) selected</T>
+            </span>
+            <button
+              onClick={() => openTagPrint(stock.filter((item) => selectedTagIds.has(item.id)))}
+              className="flex items-center gap-1 rounded-lg bg-amber-500 px-2.5 py-1.5 text-xs font-semibold text-white"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <T>Print tags</T>
+            </button>
+          </div>
+        )}
+
         {/* Database Stock list */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 space-y-2">
@@ -355,15 +413,24 @@ export default function MobileStockPage() {
                 className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-3.5 shadow-sm space-y-3"
               >
                 <div className="flex justify-between items-start">
-                  <div className="space-y-0.5">
-                    <p className="font-bold text-sm text-gray-900 dark:text-gray-100">{item.name}</p>
-                    <div className="flex items-center gap-1.5 pt-0.5">
-                      <span className="text-[9px] font-mono font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
-                        {item.tag}
-                      </span>
-                      <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
-                        {item.huid}
-                      </span>
+                  <div className="flex items-start gap-2">
+                    <button
+                      onClick={() => toggleTagSelection(item.id)}
+                      className={`mt-0.5 h-4 w-4 rounded border text-[10px] leading-none ${selectedTagIds.has(item.id) ? "border-amber-500 bg-amber-500 text-white" : "border-gray-300 dark:border-gray-700"}`}
+                      aria-label={selectedTagIds.has(item.id) ? "Deselect tag" : "Select tag"}
+                    >
+                      {selectedTagIds.has(item.id) ? "✓" : ""}
+                    </button>
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-sm text-gray-900 dark:text-gray-100">{item.name}</p>
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <span className="text-[9px] font-mono font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
+                          {item.tag}
+                        </span>
+                        <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                          {item.huid}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <Badge variant={item.status === "ON_DISPLAY" ? "outline" : "secondary"} className={item.status === "ON_DISPLAY" ? "border-sky-500/25 bg-sky-500/5 text-sky-600 dark:text-sky-400" : ""}>
@@ -381,24 +448,7 @@ export default function MobileStockPage() {
                       {formatCurrency(calculateItemValuation(item))}
                     </span>
                     <button
-                      onClick={async () => {
-                        try {
-                          await printStockJewelleryTags([
-                            {
-                              sku: item.tag,
-                              name: item.name,
-                              purity: item.purity,
-                              weightGrams: item.netWeight,
-                              price: calculateItemValuation(item),
-                              currency: goldRates.currency,
-                              hallmark: item.huid,
-                              shopName: user?.shop?.shopName,
-                            },
-                          ]);
-                        } catch {
-                          // popup blocked / serial denied
-                        }
-                      }}
+                      onClick={() => openTagPrint([item])}
                       className="h-8 w-8 bg-gray-50 dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-950/20 text-gray-600 dark:text-gray-400 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
                       aria-label="Print tag"
                     >
@@ -437,6 +487,16 @@ export default function MobileStockPage() {
               <div className="space-y-1">
                 <Label className="text-xs text-gray-500"><T>Unique Barcode Tag</T></Label>
                 <Input value={transferForm.tag} disabled className="bg-gray-50 dark:bg-gray-950 font-mono text-xs text-gray-900 dark:text-gray-100" />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-gray-655 dark:text-gray-400"><T>RFID / EPC Code</T></Label>
+                <Input
+                  placeholder="EPC-300833B2DDD9014000000001"
+                  value={addForm.rfid}
+                  onChange={(e) => setAddForm((p) => ({ ...p, rfid: e.target.value }))}
+                  className="bg-white dark:bg-gray-955 text-xs text-gray-900 dark:text-gray-100"
+                />
               </div>
 
               <div className="space-y-1">
@@ -569,6 +629,12 @@ export default function MobileStockPage() {
           </div>
         </div>
       )}
+      <TagPrintDialog
+        open={tagPrintOpen}
+        onOpenChange={setTagPrintOpen}
+        items={tagPrintItems}
+        authorizeMultiTagPrint={authorizeMultiTagPrint}
+      />
     </div>
   );
 }

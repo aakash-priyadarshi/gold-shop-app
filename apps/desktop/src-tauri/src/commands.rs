@@ -5,9 +5,13 @@
 
 use crate::db::Database;
 use crate::sync::SyncEngine;
+use std::net::IpAddr;
 use std::sync::Arc;
 use tauri::{Emitter, State};
+use tokio::io::AsyncWriteExt;
+use tokio::net::{lookup_host, TcpStream};
 use tokio::sync::Mutex as AsyncMutex;
+use tokio::time::{timeout, Duration};
 
 /// Managed state for sync engine
 pub struct SyncState(pub Arc<AsyncMutex<Option<Arc<SyncEngine>>>>);
@@ -44,6 +48,71 @@ pub async fn check_connectivity(
 #[tauri::command]
 pub fn is_desktop() -> bool {
     true
+}
+
+fn is_local_printer_address(address: IpAddr) -> bool {
+    match address {
+        IpAddr::V4(ip) => {
+            let octets = ip.octets();
+            octets[0] == 10
+                || octets[0] == 127
+                || (octets[0] == 172 && (16..=31).contains(&octets[1]))
+                || (octets[0] == 192 && octets[1] == 168)
+                || (octets[0] == 169 && octets[1] == 254)
+        }
+        IpAddr::V6(ip) => ip.is_loopback() || ip.is_unique_local() || ip.is_unicast_link_local(),
+    }
+}
+
+/// Send a raw printer command to a LAN/Wi-Fi printer. The command only permits
+/// loopback/private/link-local destinations, so a remote web page cannot use
+/// the desktop bridge as a general-purpose network proxy.
+#[tauri::command]
+pub async fn send_raw_tcp_print(host: String, port: u16, data: Vec<u8>) -> Result<(), String> {
+    let host = host.trim();
+    if host.is_empty() || host.len() > 253 {
+        return Err("Invalid printer host".into());
+    }
+    if port == 0 {
+        return Err("Invalid printer port".into());
+    }
+    if data.is_empty() || data.len() > 2 * 1024 * 1024 {
+        return Err("Print payload must be between 1 byte and 2 MB".into());
+    }
+
+    let addresses: Vec<_> = timeout(Duration::from_secs(3), lookup_host((host, port)))
+        .await
+        .map_err(|_| "Printer hostname lookup timed out")?
+        .map_err(|error| format!("Could not resolve printer host: {error}"))?
+        .filter(|address| is_local_printer_address(address.ip()))
+        .collect();
+
+    if addresses.is_empty() {
+        return Err("For safety, raw printing is limited to local network printer addresses".into());
+    }
+
+    let mut last_error = None;
+    for address in addresses {
+        match timeout(Duration::from_secs(5), TcpStream::connect(address)).await {
+            Ok(Ok(mut stream)) => {
+                timeout(Duration::from_secs(10), stream.write_all(&data))
+                    .await
+                    .map_err(|_| "Printer write timed out")?
+                    .map_err(|error| format!("Could not send print data: {error}"))?;
+                let _ = stream.shutdown().await;
+                return Ok(());
+            }
+            Ok(Err(error)) => last_error = Some(error.to_string()),
+            Err(_) => last_error = Some("connection timed out".into()),
+        }
+    }
+
+    Err(format!(
+        "Could not connect to the local printer{}",
+        last_error
+            .map(|error| format!(": {error}"))
+            .unwrap_or_default()
+    ))
 }
 
 // ─── Auth ────────────────────────────────────────────────

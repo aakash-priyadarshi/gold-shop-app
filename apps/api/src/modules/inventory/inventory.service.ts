@@ -21,6 +21,12 @@ import {
   UpdateInventoryItemDto,
 } from "./dto/inventory.dto";
 
+/** Canonical payload encoded in an Orivraa inventory QR label. */
+export function parseInventoryTagCode(code: string): string | null {
+  const match = /^orivraa:inventory:([a-z0-9-]{8,})$/i.exec(code.trim());
+  return match?.[1] ?? null;
+}
+
 @Injectable()
 export class InventoryService {
   constructor(
@@ -109,6 +115,7 @@ export class InventoryService {
         videos: dto.videos || [],
         certificateUrl: dto.certificateUrl,
         hallmarkNumber: dto.hallmarkNumber,
+        rfidCode: dto.rfidCode?.trim() || null,
         assayOffice: dto.assayOffice || null,
         purityCertUrl: dto.purityCertUrl,
         labels: dto.labels || [],
@@ -187,6 +194,8 @@ export class InventoryService {
     if (dto.taxNpr !== undefined) updateData.taxNpr = dto.taxNpr;
     if (dto.hallmarkNumber !== undefined)
       updateData.hallmarkNumber = dto.hallmarkNumber;
+    if (dto.rfidCode !== undefined)
+      updateData.rfidCode = dto.rfidCode?.trim() || null;
     if (dto.assayOffice !== undefined)
       updateData.assayOffice = dto.assayOffice;
     if (dto.certificateUrl !== undefined)
@@ -259,6 +268,27 @@ export class InventoryService {
     const trimmed = code?.trim();
     if (!trimmed) return null;
 
+    const qrItemId = parseInventoryTagCode(trimmed);
+    if (qrItemId) {
+      const byQr = await this.prisma.inventoryItem.findFirst({
+        where: {
+          id: qrItemId,
+          shopId,
+          status: { not: InventoryStatus.DISCONTINUED },
+        },
+      });
+      if (byQr) return { item: byQr, variant: null };
+    }
+
+    const byRfid = await this.prisma.inventoryItem.findFirst({
+      where: {
+        shopId,
+        rfidCode: trimmed,
+        status: { not: InventoryStatus.DISCONTINUED },
+      },
+    });
+    if (byRfid) return { item: byRfid, variant: null };
+
     // 1. Direct SKU on inventory item
     const bySku = await this.prisma.inventoryItem.findFirst({
       where: {
@@ -294,6 +324,37 @@ export class InventoryService {
     if (byHallmark) return { item: byHallmark, variant: null };
 
     return null;
+  }
+
+  /** Return current, shop-owned data after the multi-tag feature check. */
+  async getTagPrintItems(shopId: string, itemIds: string[]) {
+    const uniqueIds = [...new Set(itemIds)];
+    const items = await this.prisma.inventoryItem.findMany({
+      where: {
+        id: { in: uniqueIds },
+        shopId,
+        status: { not: InventoryStatus.DISCONTINUED },
+      },
+      select: {
+        id: true,
+        sku: true,
+        nameEn: true,
+        composition: true,
+        totalWeightGrams: true,
+        totalPriceNpr: true,
+        hallmarkNumber: true,
+        rfidCode: true,
+        shop: { select: { shopName: true } },
+      },
+    });
+
+    if (items.length !== uniqueIds.length) {
+      throw new NotFoundException(
+        "One or more selected inventory pieces are unavailable for printing",
+      );
+    }
+    const byId = new Map(items.map((item) => [item.id, item]));
+    return { items: uniqueIds.map((id) => byId.get(id)) };
   }
 
   // Get single item

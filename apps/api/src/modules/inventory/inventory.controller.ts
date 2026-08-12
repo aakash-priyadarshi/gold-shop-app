@@ -23,6 +23,7 @@ import {
   CreateInventoryItemDto,
   UpdateInventoryItemDto,
   InventoryFilterDto,
+  MultiTagPrintDto,
 } from "./dto/inventory.dto";
 import {
   CreateSetDto,
@@ -32,6 +33,8 @@ import {
   UpdateStorageLocationDto,
 } from "./dto/sets-locations.dto";
 import { SkipSecurity } from "../security/security.guard";
+import { FeatureGateGuard } from "../core/subscriptions/feature-gate.guard";
+import { RequireFeature } from "../core/subscriptions/require-feature.decorator";
 
 @ApiTags("inventory")
 @Controller("inventory")
@@ -275,6 +278,23 @@ export class InventoryController {
       throw new ForbiddenException("You can only scan your own shop inventory");
     }
     return this.inventoryService.findByCode(shopId, code);
+  }
+
+  @Post("shop/:shopId/tag-print/multi")
+  @UseGuards(JwtAuthGuard, RolesGuard, FeatureGateGuard)
+  @Roles("SHOPKEEPER")
+  @RequireFeature("multiTagPrint")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Authorize and prepare a multi-tag print job" })
+  async prepareMultiTagPrint(
+    @Param("shopId") shopId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body() dto: MultiTagPrintDto,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only print tags for your own shop");
+    }
+    return this.inventoryService.getTagPrintItems(shopId, dto.itemIds);
   }
 
   // ── Stock audit (RFID / barcode keyboard-wedge) ───────────────

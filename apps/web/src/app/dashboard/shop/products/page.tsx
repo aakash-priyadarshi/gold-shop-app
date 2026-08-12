@@ -88,6 +88,7 @@ interface InventoryItem {
   status: string;
   stockQuantity: number;
   hallmarkNumber?: string;
+  rfidCode?: string | null;
   locationId?: string | null;
   setComponents?: any[];
   createdAt: string;
@@ -229,6 +230,7 @@ interface ProductFormData {
   images: string[];
   gemstones: GemstoneData[];
   hallmarkNumber: string;
+  rfidCode: string;
   assayOffice: string;
   locationId: string;
 }
@@ -250,6 +252,7 @@ const emptyForm: ProductFormData = {
   images: [],
   gemstones: [],
   hallmarkNumber: "",
+  rfidCode: "",
   assayOffice: "",
   locationId: "",
 };
@@ -453,6 +456,7 @@ export default function ShopProductsPage() {
           }))
         : [],
       hallmarkNumber: product.hallmarkNumber || "",
+      rfidCode: product.rfidCode || "",
       assayOffice: (product as any).assayOffice || "",
       locationId: product.locationId || "",
     });
@@ -665,6 +669,7 @@ export default function ShopProductsPage() {
         stockQuantity: parseInt(formData.stockQuantity) || 1,
         images: formData.images,
         hallmarkNumber: formData.hallmarkNumber.trim() || undefined,
+        rfidCode: formData.rfidCode.trim() || undefined,
         assayOffice: formData.assayOffice || null,
         locationId: formData.locationId || null,
       };
@@ -1390,6 +1395,26 @@ export default function ShopProductsPage() {
                         {`${formData.hallmarkNumber.length}/6 characters`}
                       </span>
                     )}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rfidCode"><T>RFID / EPC code</T></Label>
+                  <Input
+                    id="rfidCode"
+                    value={formData.rfidCode}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        rfidCode: e.target.value.toUpperCase().slice(0, 128),
+                      })
+                    }
+                    placeholder="e.g. EPC-300833B2DDD9014000000001"
+                    maxLength={128}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    <T>Optional. A physical RFID/EPC identifier for audits; QR tags remain linked to this inventory record.</T>
                   </p>
                 </div>
                 <div className="space-y-2">

@@ -586,6 +586,10 @@ model InventoryItem {
   videos            String[]
   certificateUrl    String?
   hallmarkNumber    String?
+  /// Physical RFID / EPC value assigned to this individual piece.
+  /// QR labels use the immutable inventory id, so an RFID label can be
+  /// replaced without invalidating existing QR tags.
+  rfidCode          String?             @unique
   hallmarkDate      DateTime?
   /// UK assay office (London / Birmingham / Sheffield / Edinburgh)
   assayOffice       AssayOffice?

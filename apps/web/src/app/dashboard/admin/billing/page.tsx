@@ -453,6 +453,12 @@ const ALL_FEATURE_KEYS: {
     category: "Sharing & Hardware",
     enforced: true,
   },
+  {
+    key: "multiTagPrint",
+    label: "Multi-tag A4 and label-roll printing",
+    category: "Sharing & Hardware",
+    enforced: true,
+  },
 ];
 
 const FEATURE_CATEGORIES = Array.from(

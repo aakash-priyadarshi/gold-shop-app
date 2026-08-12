@@ -3,6 +3,7 @@
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { FeatureGate } from "@/components/FeatureGate";
+import { TagPrintDialog } from "@/components/shop/TagPrintDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +28,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { toast } from "@/hooks/use-toast";
 import { inventoryApi, materialsApi } from "@/lib/api";
-import { printStockJewelleryTags } from "@/lib/jewelleryTagPrint";
+import { type JewelleryTagItem } from "@/lib/jewelleryTagPrint";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -89,6 +90,8 @@ function StockLedgerContent() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [tagPrintOpen, setTagPrintOpen] = useState(false);
+  const [tagPrintItems, setTagPrintItems] = useState<JewelleryTagItem[]>([]);
   const [expandedSets, setExpandedSets] = useState<Set<string>>(new Set());
 
   const [addLocOpen, setAddLocOpen] = useState(false);
@@ -256,6 +259,31 @@ function StockLedgerContent() {
     (sum, item) => sum + calculateItemValuation(item),
     0,
   );
+
+  const toTagItem = (item: any): JewelleryTagItem => ({
+    id: item.id,
+    sku: item.sku,
+    name: item.nameEn,
+    hallmark: item.hallmarkNumber,
+    rfidCode: item.rfidCode,
+    purity: item.composition?.baseAlloy?.purity || item.composition?.purity || "",
+    weightGrams: item.totalWeightGrams,
+    price: item.totalPriceNpr,
+    currency: goldRates.currency,
+    shopName: item.shop?.shopName || user?.shop?.shopName,
+  });
+
+  const openTagPrint = (items: any[]) => {
+    setTagPrintItems(items.map(toTagItem));
+    setTagPrintOpen(true);
+  };
+
+  const authorizeMultiTagPrint = async (itemIds: string[], copies: number) => {
+    if (!shopId) throw new Error(t("No active shop found"));
+    const response = await inventoryApi.prepareMultiTagPrint(shopId, itemIds, copies);
+    const items = response.data?.items ?? response.data?.data?.items ?? [];
+    return (Array.isArray(items) ? items : []).filter(Boolean).map(toTagItem);
+  };
 
   const handleCreateLocation = async () => {
     if (!shopId || !addLocForm.name.trim()) return;
@@ -439,10 +467,16 @@ function StockLedgerContent() {
             </Link>
           </Button>
           {selectedIds.size > 0 && (
-            <Button onClick={() => setTransferOpen(true)}>
-              <ArrowRightLeft className="h-4 w-4 mr-1" />
-              <T>Transfer</T> ({selectedIds.size})
-            </Button>
+            <>
+              <Button variant="outline" onClick={() => openTagPrint(stock.filter((item) => selectedIds.has(item.id)))}>
+                <Printer className="h-4 w-4 mr-1" />
+                <T>Print tags</T> ({selectedIds.size})
+              </Button>
+              <Button onClick={() => setTransferOpen(true)}>
+                <ArrowRightLeft className="h-4 w-4 mr-1" />
+                <T>Transfer</T> ({selectedIds.size})
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -610,6 +644,11 @@ function StockLedgerContent() {
                                   HUID {item.hallmarkNumber}
                                 </div>
                               )}
+                              {item.rfidCode && (
+                                <div className="text-[10px] text-muted-foreground">
+                                  RFID {item.rfidCode}
+                                </div>
+                              )}
                             </td>
                             <td className="py-2 text-xs">
                               {item.jewelleryType}
@@ -629,21 +668,7 @@ function StockLedgerContent() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() =>
-                                  printStockJewelleryTags([
-                                    {
-                                      sku: item.sku,
-                                      name: item.nameEn,
-                                      hallmark: item.hallmarkNumber,
-                                      purity:
-                                        item.composition?.baseAlloy?.purity ||
-                                        "",
-                                      weightGrams: item.totalWeightGrams,
-                                      price: item.totalPriceNpr,
-                                      currency: goldRates.currency,
-                                    },
-                                  ])
-                                }
+                                onClick={() => openTagPrint([item])}
                               >
                                 <Printer className="h-3.5 w-3.5" />
                               </Button>
@@ -820,6 +845,12 @@ function StockLedgerContent() {
           </Card>
         </div>
       )}
+      <TagPrintDialog
+        open={tagPrintOpen}
+        onOpenChange={setTagPrintOpen}
+        items={tagPrintItems}
+        authorizeMultiTagPrint={authorizeMultiTagPrint}
+      />
     </div>
     </FeatureGate>
   );

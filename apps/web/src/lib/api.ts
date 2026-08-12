@@ -348,6 +348,8 @@ export const inventoryApi = {
   getStats: (shopId: string) => api.get(`/inventory/shop/${shopId}/stats`),
   lookupByCode: (shopId: string, code: string) =>
     api.get(`/inventory/shop/${shopId}/lookup`, { params: { code } }),
+  prepareMultiTagPrint: (shopId: string, itemIds: string[], copies: number) =>
+    api.post(`/inventory/shop/${shopId}/tag-print/multi`, { itemIds, copies }),
   updateVisibility: (itemId: string, visibility: string) =>
     api.patch(`/catalogues/inventory/${itemId}/visibility`, { visibility }),
   // Storage locations

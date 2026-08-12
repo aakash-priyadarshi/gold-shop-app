@@ -34,6 +34,11 @@ const CHUNKS: { topic: string; content: string }[] = [
       "RFID / barcode stock audit: From Vault & Tags open Stock Audit. Start a session and scan pieces with a keyboard-wedge RFID gun or barcode scanner (SKU, HUID, or barcode). Completing the audit compares scanned items to available stock and produces a shrinkage report of missing pieces. Manager PIN can be required to finalize the audit (Shop Settings → Security).",
   },
   {
+    topic: "qr-rfid-multi-tag-printing",
+    content:
+      "QR, RFID and multi-tag printing: In Product Catalog, optionally save a physical RFID/EPC code for an individual piece. Orivraa QR tags encode the immutable inventory record; the printed Code 39/SKU barcode and RFID text stay separate. In Vault & Tags select one or more pieces and choose Print tags. Choose A4 21-tag or 10-tag layouts, 50×25 or 60×40 mm thermal labels, copies, and whether QR, barcode, or RFID text should appear. One tag can be printed on any plan; multi-tag sheets and multiple copies are a Pro feature. Browser/System print works with OS-installed wired, Bluetooth, Wi-Fi, laser and normal printers. For raw thermal tags configure Mobile Settings → Hardware for ZPL, TSPL, EPL, or ESC/POS via Web Serial, WebUSB, BLE, or the desktop app's local-network TCP printer bridge.",
+  },
+  {
     topic: "manager-pin",
     content:
       "Manager PIN clearance gates: In Shop Settings → Security, set a 4–8 digit manager PIN. Discounts at or above the configured threshold on POS require the PIN. Completing a stock audit also prompts for the PIN when enabled. This is staff clearance control — not fingerprint biometrics.",

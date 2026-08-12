@@ -76,7 +76,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Pieces in this location",
         description:
-          "Search by tag or HUID, multi-select to transfer, print tags, and expand Sets to see component pieces. Use RFID / Barcode stock audit to run a full count with a wedge scanner.",
+          "Search by tag, HUID, QR, or RFID/EPC. Multi-select pieces to transfer or open Print tags: choose A4 multi-up, thermal size, copies, QR, barcode, and RFID text. Multi-tag printing is a Pro feature. Use RFID / Barcode stock audit to run a full count with a wedge scanner.",
         side: "top",
         align: "center",
       },

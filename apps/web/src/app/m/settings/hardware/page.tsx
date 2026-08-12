@@ -4,7 +4,6 @@ import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useToast } from "@/hooks/use-toast";
 import {
-    buildEscPosReceipt,
     defaultHardwareConfig,
     hasBarcodeDetector,
     hasCameraScanning,
@@ -16,9 +15,8 @@ import {
     pairBluetoothPrinter,
     pairLabelSerialPrinter,
     pairUsbPrinter,
-    printBluetoothReceiptBytes,
-    printReceiptBytes,
-    printZplJewelleryLabel,
+    printJewelleryLabel,
+    printReceipt,
     saveHardwareConfig,
     type HardwareConfig,
     type LabelPrinterTransport,
@@ -57,6 +55,13 @@ const TRANSPORTS: {
     label: "Disabled",
     Icon: Printer,
     hint: "No receipt printing",
+    available: () => true,
+  },
+  {
+    id: "browser",
+    label: "System print",
+    Icon: Printer,
+    hint: "Any installed wired, Bluetooth, Wi-Fi, laser, A4 or thermal printer",
     available: () => true,
   },
   {
@@ -188,28 +193,20 @@ export default function HardwareSettingsPage() {
   const handleTestPrint = async () => {
     setTesting(true);
     try {
-      const bytes = buildEscPosReceipt(
-        {
-          shopName: "Orivraa Test Receipt",
-          shopPhone: "Hardware self-test",
-          invoiceNumber: "TEST-001",
-          issuedAt: new Date(),
-          currency: "INR",
-          lines: [
-            { label: "Test Item 1", qty: 1, amount: 100 },
-            { label: "Test Item 2", qty: 2, amount: 250 },
-          ],
-          subtotal: 350,
-          total: 350,
-        },
-        cfg.printer.paperWidth,
-        { kickDrawer: cfg.printer.kickCashDrawer },
-      );
-      if (cfg.printer.transport === "bluetooth") {
-        await printBluetoothReceiptBytes(bytes);
-      } else {
-        await printReceiptBytes(bytes);
-      }
+      saveHardwareConfig(cfg);
+      await printReceipt({
+        shopName: "Orivraa Test Receipt",
+        shopPhone: "Hardware self-test",
+        invoiceNumber: "TEST-001",
+        issuedAt: new Date(),
+        currency: "LKR",
+        lines: [
+          { label: "Test Item 1", qty: 1, amount: 100 },
+          { label: "Test Item 2", qty: 2, amount: 250 },
+        ],
+        subtotal: 350,
+        total: 350,
+      });
       toast({ title: "Test receipt sent" });
     } catch (e: any) {
       toast({
@@ -238,12 +235,15 @@ export default function HardwareSettingsPage() {
   const handlePairLabel = async () => {
     setPairingLabel(true);
     try {
-      const result = await pairLabelSerialPrinter(
-        cfg.labelPrinter.baudRate ?? 9600,
-      );
+      const result = cfg.labelPrinter.transport === "webusb"
+        ? await pairUsbPrinter()
+        : cfg.labelPrinter.transport === "bluetooth"
+          ? await pairBluetoothPrinter()
+          : await pairLabelSerialPrinter(cfg.labelPrinter.baudRate ?? 9600);
+      if (!result) return;
       updateLabelPrinter({
         enabled: true,
-        transport: "web-serial",
+        transport: cfg.labelPrinter.transport,
         deviceLabel: result.label,
       });
       toast({ title: "Label printer paired", description: result.label });
@@ -263,7 +263,8 @@ export default function HardwareSettingsPage() {
     try {
       // Persist current form values first so the test uses them
       saveHardwareConfig(cfg);
-      const result = await printZplJewelleryLabel({
+      const result = await printJewelleryLabel({
+        id: "a1c00000-0000-4000-8000-000000000001",
         sku: "TEST-SKU-001",
         name: "18K Gold Ring",
         purity: "18K",
@@ -275,12 +276,10 @@ export default function HardwareSettingsPage() {
       });
       toast({
         title:
-          result.method === "web-serial"
-            ? "Test label sent to printer"
-            : "Test .zpl file downloaded",
+          result.method === "download" ? "Test label file downloaded" : "Test label sent to printer",
         description:
           result.method === "download"
-            ? "Open the file with Zebra Setup Utilities or send to the printer"
+            ? "Send the downloaded command file with your printer utility"
             : undefined,
       });
     } catch (e: any) {
@@ -625,10 +624,31 @@ export default function HardwareSettingsPage() {
                   available: hasWebSerial(),
                 },
                 {
+                  id: "webusb" as LabelPrinterTransport,
+                  label: "WebUSB",
+                  Icon: Usb,
+                  hint: "Direct USB thermal/label printer",
+                  available: hasWebUSB(),
+                },
+                {
+                  id: "bluetooth" as LabelPrinterTransport,
+                  label: "Bluetooth",
+                  Icon: Bluetooth,
+                  hint: "BLE label printer in Chrome / Edge",
+                  available: hasWebBluetooth(),
+                },
+                {
+                  id: "network" as LabelPrinterTransport,
+                  label: "Wi-Fi / LAN",
+                  Icon: Wifi,
+                  hint: "Raw TCP 9100 through Orivraa Desktop",
+                  available: true,
+                },
+                {
                   id: "download" as LabelPrinterTransport,
-                  label: "Download .zpl",
+                  label: "Download command file",
                   Icon: Download,
-                  hint: "Save a .zpl file to send manually",
+                  hint: "Use any vendor utility or installed driver",
                   available: true,
                 },
               ] as const
@@ -663,6 +683,43 @@ export default function HardwareSettingsPage() {
                 </button>
               );
             })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <label className="text-[11px] text-gray-600">
+              <T>Printer language</T>
+              <select
+                value={cfg.labelPrinter.language}
+                onChange={(e) =>
+                  updateLabelPrinter({
+                    language: e.target.value as HardwareConfig["labelPrinter"]["language"],
+                  })
+                }
+                className="mt-1 w-full px-2 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg"
+              >
+                <option value="ZPL">ZPL (Zebra)</option>
+                <option value="TSPL">TSPL (TSC / XPrinter)</option>
+                <option value="EPL">EPL (legacy Eltron)</option>
+                <option value="ESC_POS">ESC/POS (receipt thermal)</option>
+              </select>
+            </label>
+            {cfg.labelPrinter.transport === "network" && (
+              <div className="grid grid-cols-3 gap-1 col-span-2">
+                <input
+                  placeholder="192.168.1.100"
+                  value={cfg.labelPrinter.host ?? ""}
+                  onChange={(e) => updateLabelPrinter({ host: e.target.value })}
+                  className="col-span-2 px-2 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg"
+                />
+                <input
+                  type="number"
+                  placeholder="9100"
+                  value={cfg.labelPrinter.port ?? 9100}
+                  onChange={(e) => updateLabelPrinter({ port: Number(e.target.value) || 9100 })}
+                  className="px-2 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-2 mb-3">
@@ -727,17 +784,20 @@ export default function HardwareSettingsPage() {
               onClick={handlePairLabel}
               disabled={
                 pairingLabel ||
-                cfg.labelPrinter.transport !== "web-serial" ||
-                !hasWebSerial()
+                !["web-serial", "webusb", "bluetooth"].includes(
+                  cfg.labelPrinter.transport,
+                )
               }
               className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-100 text-amber-800 text-xs font-semibold disabled:opacity-40"
             >
               {pairingLabel ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : cfg.labelPrinter.transport === "bluetooth" ? (
+                <Bluetooth className="h-3.5 w-3.5" />
               ) : (
                 <Usb className="h-3.5 w-3.5" />
               )}
-              <T>Pair serial</T>
+              <T>Pair device</T>
             </button>
             <button
               onClick={handleTestLabel}

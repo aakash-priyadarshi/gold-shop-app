@@ -4,6 +4,10 @@ import {
   IsOptional,
   IsArray,
   IsBoolean,
+  ArrayMaxSize,
+  ArrayMinSize,
+  Max,
+  MaxLength,
   Min,
   IsObject,
 } from 'class-validator';
@@ -127,6 +131,12 @@ export class CreateInventoryItemDto {
   @IsString()
   @IsOptional()
   hallmarkNumber?: string;
+
+  @ApiPropertyOptional({ description: 'Physical RFID / EPC code', maxLength: 128 })
+  @IsString()
+  @IsOptional()
+  @MaxLength(128)
+  rfidCode?: string;
 
   @ApiPropertyOptional({
     description: 'UK assay office',
@@ -286,6 +296,12 @@ export class UpdateInventoryItemDto {
   @IsOptional()
   hallmarkNumber?: string;
 
+  @ApiPropertyOptional({ description: 'Physical RFID / EPC code', maxLength: 128 })
+  @IsString()
+  @IsOptional()
+  @MaxLength(128)
+  rfidCode?: string | null;
+
   @ApiPropertyOptional({
     description: 'UK assay office',
     enum: ['LONDON', 'BIRMINGHAM', 'SHEFFIELD', 'EDINBURGH'],
@@ -401,4 +417,21 @@ export class InventoryFilterDto {
   @Transform(({ value }) => value === true || value === 'true' || value === '1')
   @IsBoolean()
   excludeSetComponents?: boolean;
+}
+
+/** Multi-label jobs are feature-gated by the controller before printing. */
+export class MultiTagPrintDto {
+  @ApiProperty({ type: [String], maxItems: 200 })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  @IsString({ each: true })
+  itemIds: string[];
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 50, default: 1 })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(50)
+  copies?: number;
 }

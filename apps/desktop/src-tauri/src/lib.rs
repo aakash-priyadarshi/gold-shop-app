@@ -261,6 +261,7 @@ pub fn run() {
             // System
             commands::is_desktop,
             commands::check_connectivity,
+            commands::send_raw_tcp_print,
             // Auth
             commands::save_auth_token,
             commands::get_auth_token,

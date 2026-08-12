@@ -18,6 +18,7 @@ import {
     Globe,
     MapPin,
     MessageSquare,
+    Printer,
     Receipt,
     RefreshCw,
     ShieldCheck,
@@ -100,6 +101,11 @@ const shopFeatures = [
     icon: MapPin,
     title: "Vault Locations & Jewellery Sets",
     desc: "Bundle necklace, bangles, and earrings into jewellery sets with a set discount. Sell as one line at POS; components stay in vault stock until the set is broken.",
+  },
+  {
+    icon: Printer,
+    title: "QR, RFID & Multi-Tag Printing",
+    desc: "Give every piece a QR identity alongside SKU barcode and RFID/EPC. Print one tag, a full A4 sheet, or thermal-roll labels from mobile or desktop; Pro plans can print multiple tags together.",
   },
   {
     icon: Smartphone,
@@ -251,6 +257,7 @@ export function SellerFeaturesSection() {
               "Old Gold Exchange & Buy-Back": "https://images.orivraa.com/images/public/hasan-mrad-9Foi-h8zmIU-unsplash.jpg",
               "Savings & Committee Schemes": "https://images.orivraa.com/images/public/luxury-gold-globe.png",
               "Vault Locations & Jewellery Sets": "https://images.orivraa.com/images/public/carlos-esteves-1MWbwTaeJIA-unsplash.jpg",
+              "QR, RFID & Multi-Tag Printing": "https://images.orivraa.com/images/public/luxury-gold-globe.png",
               "Mobile POS — Sell Anywhere": "https://images.orivraa.com/images/public/sayan-bhaskar-U0nWBqGsTMk-unsplash.jpg",
               "Tax Reports & Filing Summaries": "https://images.orivraa.com/images/public/vaibhav-nagare-G3Hrl6WzQYQ-unsplash.jpg",
               "Catalog Reprice with Live Rates": "https://images.orivraa.com/images/public/luxury-gold-globe.png",
