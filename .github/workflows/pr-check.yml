@@ -151,6 +151,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared package
+        working-directory: packages/shared
+        run: pnpm build
+
       - name: Generate Prisma Client
         working-directory: apps/api
         run: npx prisma generate
@@ -218,6 +222,22 @@ jobs:
     name: 🗃️ Prisma Migration Safety
     runs-on: ubuntu-latest
     needs: install
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: prisma
+          POSTGRES_PASSWORD: prisma
+          POSTGRES_DB: prisma_shadow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prisma -d prisma_shadow"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SHADOW_DATABASE_URL: postgresql://prisma:prisma@localhost:5432/prisma_shadow?schema=public
     steps:
       - uses: actions/checkout@v4
         with:
@@ -267,7 +287,8 @@ jobs:
         working-directory: apps/api
         run: |
           # Get list of new migration files in this PR
-          NEW_MIGRATIONS=$(git diff --name-only origin/main...HEAD -- prisma/migrations/ | grep "\.sql$" || true)
+          BASE_REF="origin/${{ github.base_ref }}"
+          NEW_MIGRATIONS=$(git diff --name-only "$BASE_REF"...HEAD -- prisma/migrations/ | grep "\.sql$" || true)
           if [[ -n "$NEW_MIGRATIONS" ]]; then
             echo "has_migrations=true" >> $GITHUB_OUTPUT
             echo "::notice::New migrations detected:"
@@ -283,7 +304,8 @@ jobs:
         run: |
           # Check for destructive operations in new migrations
           DESTRUCTIVE_PATTERNS="DROP TABLE|DROP COLUMN|ALTER TABLE.*DROP|TRUNCATE|DELETE FROM"
-          NEW_MIGRATIONS=$(git diff --name-only origin/main...HEAD -- prisma/migrations/ | grep "\.sql$" || true)
+          BASE_REF="origin/${{ github.base_ref }}"
+          NEW_MIGRATIONS=$(git diff --name-only "$BASE_REF"...HEAD -- prisma/migrations/ | grep "\.sql$" || true)
 
           FOUND_DESTRUCTIVE=false
           for migration in $NEW_MIGRATIONS; do
@@ -310,6 +332,7 @@ jobs:
           npx prisma migrate diff \
             --from-schema-datamodel prisma/schema.prisma \
             --to-migrations prisma/migrations \
+            --shadow-database-url "$SHADOW_DATABASE_URL" \
             --exit-code || {
               echo "::error::Schema drift detected! Your schema.prisma doesn't match migrations."
               echo "::error::Run 'npx prisma migrate dev' to create a new migration."

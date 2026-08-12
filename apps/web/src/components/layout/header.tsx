@@ -495,13 +495,21 @@ export function Header() {
       <nav className="container mx-auto flex h-14 lg:h-16 items-center justify-between px-4">
         {/* Mobile Menu Button */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetTrigger asChild className="lg:hidden">
+          <SheetTrigger
+            asChild
+            className="lg:hidden"
+            aria-controls="mobile-navigation-sheet"
+          >
             <Button variant="ghost" size="icon" className="touch-target -ml-2">
               <Bars3Icon className="h-5 w-5" />
               <span className="sr-only">Open menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] p-0">
+          <SheetContent
+            id="mobile-navigation-sheet"
+            side="left"
+            className="w-[300px] p-0"
+          >
             <SheetHeader className="p-4 border-b border-gray-100 dark:border-gray-800">
               <SheetTitle className="flex items-center gap-2">
                 <BrandLogo variant="icon" size="sm" linkToHome={false} />

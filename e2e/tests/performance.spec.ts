@@ -37,7 +37,7 @@ test.describe("Performance", () => {
     page.on("pageerror", (err) => {
       errors.push(err.message);
     });
-    await page.goto("/");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("domcontentloaded");
     // Give hydration a moment without requiring networkidle (CF/CDN can hang)
     await page.waitForTimeout(1500);
