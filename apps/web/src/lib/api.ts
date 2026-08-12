@@ -1136,6 +1136,9 @@ export const invoicesApi = {
     api.post(`/invoices/${id}/share/email`, data),
   shareSms: (id: string, data: { to?: string; message?: string }) =>
     api.post(`/invoices/${id}/share/sms`, data),
+  /** On-demand PDF (authenticated; uses axios interceptors for token + refresh). */
+  getPdf: (id: string) =>
+    api.get<Blob>(`/invoices/${id}/pdf`, { responseType: "blob" }),
 };
 
 // Shop double-entry ledger / accounting API

@@ -2,8 +2,9 @@
 
 > **Goal:** Replace the simplified mobile invoice form with a full jeweller-grade workflow (matching desktop calculations and data completeness). Share on WhatsApp, email, and all OS share targets must deliver **the existing bill text plus a generated PDF** — free for every shop, on mobile and desktop. PDFs are generated on demand only; nothing is stored.
 
-**Status:** Implementation in progress (Phases 1–4)  
-**Last updated:** 2026-08-12  
+**Status:** Phases 1–3 shipped to `master` (shared engine, mobile wizard shell, PDF share). **Phase 2 calculation wiring is incomplete** — mobile UI exists but reactive pricing, catalog/quote import, and audit-grade line breakdown are not reliably populated. **Phase 5–7 (below) are the active work.**
+
+**Last updated:** 2026-08-12 (v3 — calculation + audit pipeline)
 **Product owner decisions:** Locked (see §2)
 
 ---
@@ -417,3 +418,224 @@ e2e/tests/mobile-invoice-create.spec.ts        # Phase 4
 - Plan-gated PDF share
 - Separate mobile vs desktop PDF templates
 - Text-only WhatsApp as primary path (text remains, but always paired with PDF attempt)
+
+---
+
+## 14. End-to-end sales & compliance pipeline (mobile = desktop)
+
+Every sale — whether entered on phone or PC — must follow the **same data contract** so tax reports, IRD/GST audits, and double-entry accounting stay correct.
+
+### 14.1 Pipeline diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  SOURCES (pick one or more per invoice line)                                │
+├─────────────────┬─────────────────┬─────────────────┬───────────────────────┤
+│  Manual line    │  Catalog piece  │  Walk-in quote  │  Online order (RFQ)   │
+│  (counter sale) │  inventoryItemId│  shopQuoteId    │  orderId              │
+└────────┬────────┴────────┬────────┴────────┬────────┴───────────┬───────────┘
+         │                 │                 │                    │
+         └─────────────────┴────────┬────────┴────────────────────┘
+                                    ▼
+              ┌─────────────────────────────────────────┐
+              │  INVOICE CREATE (shared mapToCreateDto) │
+              │  • Rich line: metal / making / wastage  │
+              │    / gemstone breakdown per line        │
+              │  • shopQuoteId, orderId, inventoryId  │
+              │  • invoiceCountry, customerType, taxId  │
+              │  • taxBreakdown preview (client)        │
+              └────────────────────┬────────────────────┘
+                                   ▼
+              ┌─────────────────────────────────────────┐
+              │  API: POST /api/invoices                │
+              │  • saleBuilder.normalizeInvoiceLines()  │
+              │    → METAL / MAKING / GEMSTONE / FINISH │
+              │  • backendTaxEngine (authoritative tax) │
+              │  • Persist Invoice + lineItems JSON     │
+              │  • accounting.postInvoiceIssuance()     │
+              │  • Stock commit (catalog lines)         │
+              │  • Link quote/order → invoiced          │
+              └────────────┬───────────────┬────────────┘
+                           │               │
+              ┌────────────▼───┐   ┌───────▼────────────────────────┐
+              │  ACCOUNTING    │   │  TAX REPORTS                    │
+              │  Journal entry │   │  /tax-reports/* + /m/tax        │
+              │  AR / Revenue  │   │  Reads stored lineItems by      │
+              │  Tax payable   │   │  category + taxBreakdown JSON   │
+              │  Payment recv  │   │  NP IRD audit, IN GSTR, LK VAT  │
+              │  /dashboard/   │   │  Exports CSV/PDF for accountant │
+              │  shop/accounting│  │                                 │
+              └────────────────┘   └─────────────────────────────────┘
+```
+
+### 14.2 Why mobile calculation bugs break audit
+
+Tax reports (`tax-reports.service.ts`) aggregate **stored** `invoice.lineItems` by category:
+
+| Category   | Used for (examples)                    |
+| ---------- | -------------------------------------- |
+| `METAL`    | NP skill promotion fee, IN metal GST   |
+| `MAKING`   | NP skill fee base, IN 5% GST on making |
+| `GEMSTONE` | NP 13% VAT, category-split tax         |
+| `FINISH`   | NP 13% VAT                             |
+| `PRODUCT`  | Legacy flat lines — **bad for audit**  |
+
+If mobile sends a flat amount without `metalCost` / `makingCost` / `gemstoneCost` / `wastageCost`, the API's `expandCollapsedLine` may guess METAL-only — **tax reports and IRD audit exports will be wrong** even if the grand total looks right on the bill.
+
+Accounting (`postInvoiceIssuance`) posts **invoice-level** AR / revenue / tax payable — it needs correct `totalAmount` and `taxAmount`. Wrong client preview → wrong payment recording → ledger drift.
+
+### 14.3 Audit-grade invoice payload contract
+
+Every `POST /api/invoices` from mobile **or** desktop must include:
+
+| Field                                        | Required when           | Purpose                                    |
+| -------------------------------------------- | ----------------------- | ------------------------------------------ |
+| `lineItems[].metalCost`                      | Jewellery line          | Tax category METAL, metal tax              |
+| `lineItems[].makingCost`                     | Making charged          | MAKING line expansion, making tax          |
+| `lineItems[].gemstoneCost`                   | Gems on piece           | GEMSTONE line, 13% VAT (NP)                |
+| `lineItems[].wastageCost` + `wastagePercent` | Jarti applied           | Wastage tax, audit trail                   |
+| `lineItems[].metalType` + `metalWeightG`     | Metal jewellery         | Weight audit, rate verification            |
+| `lineItems[].inventoryItemId`                | From catalog            | Stock commit + traceability                |
+| `shopQuoteId`                                | From walk-in quote      | Quote → invoice linkage                    |
+| `orderId`                                    | From RFQ/order          | Order → invoice linkage                    |
+| `invoiceCountry`                             | Always                  | Regime selection                           |
+| `customerType` + `customerTaxId`             | B2B / LK tax invoice    | Filing compliance                          |
+| `taxBreakdown`                               | Always (client preview) | Stored; reports prefer this over recompute |
+
+**Rule:** Client preview totals must match server response within ±₹1 (rounding). Server tax engine is authoritative; client must not submit if validation fails.
+
+### 14.4 Mobile vs desktop surface map (same backend)
+
+| Step              | Desktop                           | Mobile                                                | Same API?                      |
+| ----------------- | --------------------------------- | ----------------------------------------------------- | ------------------------------ |
+| Create invoice    | `/dashboard/shop/invoices/create` | `/m/invoices/create`                                  | `POST /invoices`               |
+| Tax reports       | `/dashboard/shop/tax-reports`     | `/m/tax`                                              | `taxReportsApi.*`              |
+| Accounting ledger | `/dashboard/shop/accounting`      | _(no page yet — link or lightweight `/m/accounting`)_ | `accountingApi.*`              |
+| Daily summary     | Dashboard widgets                 | `/m/summary`                                          | Invoice aggregates             |
+| Quote → invoice   | Import + checkout                 | `/m/quotes` + `?shopQuoteId=`                         | `shopQuotesApi`                |
+| Catalog → invoice | Catalog dialog                    | Catalog picker on create                              | `inventoryApi` + `resolveBulk` |
+
+---
+
+## 15. Phase 5 — Mobile calculation engine (fix Step 2) — **ACTIVE**
+
+**Duration:** ~5–6 dev days  
+**Outcome:** Mobile Step 2 behaves like desktop — live rates, wastage, making, catalog/quote import all populate and recalculate.
+
+### 15.1 Root causes (confirmed in code review)
+
+| Symptom                       | Root cause                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------------- |
+| Nothing calculated on Step 2  | Lines start empty; no auto metal cost from type + weight + live rate                  |
+| Catalog prices missing        | Only `resolveBulk`; no `calcMetalCostFromParts(shopPrices, marketRates)` fallback     |
+| Apply making does nothing     | `applyMakingToLine` needs metal cost > 0; no user feedback                            |
+| Wastage % doesn't update cost | No `useEffect` to sync all lines when invoice `wastagePct` changes (desktop has this) |
+| Gemstones manual only         | Catalog import sets `gemstones: []`; desktop resolves `composition.gemstones`         |
+
+### 15.2 Deliverables
+
+| #   | Task                                                                                      | Files                                           |
+| --- | ----------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| 1   | `useInvoicePricing` hook — market rates, shop prices, shop wastage rules, reactive recalc | `apps/web/src/lib/invoice/useInvoicePricing.ts` |
+| 2   | Wire hook into mobile create page                                                         | `apps/web/src/app/m/invoices/create/page.tsx`   |
+| 3   | Harden `importCatalogItem` — gems from composition, rate fallback, warnings               | `importHelpers.ts`                              |
+| 4   | Harden `importShopQuote` — audit API response fields                                      | `importHelpers.ts` + API fixture test           |
+| 5   | Sticky totals bar on Step 2 (subtotal / wastage / tax / grand)                            | mobile create UI                                |
+| 6   | `orderId` prefill path (RFQ → order → invoice)                                            | mobile create + desktop parity                  |
+| 7   | Unit tests for wastage sync, making apply, catalog/quote import                           | `invoice-engine.test.ts`                        |
+
+### 15.3 Acceptance criteria
+
+- [ ] Catalog ring: metal + making + wastage + gems populated from inventory + live rates
+- [ ] Walk-in quote: all priced fields + customer prefill + `shopQuoteId` on DTO
+- [ ] Manual line: type + weight → live metal → 5% wastage → 15% making → tax preview updates
+- [ ] Invoice created from mobile has `lineItems` with METAL/MAKING/GEMSTONE breakdown in DB (not flat PRODUCT-only)
+
+---
+
+## 16. Phase 6 — Audit & compliance verification pipeline
+
+**Duration:** ~3–4 dev days  
+**Outcome:** Prove mobile-created invoices produce **identical** tax report and accounting entries as desktop for the same inputs.
+
+### 16.1 API integration tests (new)
+
+| Test                                | Assert                                                                     |
+| ----------------------------------- | -------------------------------------------------------------------------- |
+| Mobile-shaped DTO → `create()`      | `lineItems` normalized to METAL/MAKING/GEMSTONE                            |
+| Same DTO desktop vs mobile snapshot | Identical stored `taxBreakdown`, `subtotal`, `taxAmount`                   |
+| Nepal VAT report                    | Mobile invoice appears in `getNepalVat` with correct skill fee + VAT split |
+| Nepal yearly audit                  | Mobile invoice in `getNepalAuditReport` monthly buckets                    |
+| India GSTR                          | Mobile invoice in B2B/B2C buckets with IGST/CGST/SGST                      |
+| Accounting issuance                 | `journalEntry` created with AR / revenue / tax payable matching total      |
+
+Location: `apps/api/src/modules/invoices/invoices.service.spec.ts`, `tax-reports.service.spec.ts`, `accounting.service.spec.ts`.
+
+### 16.2 E2E compliance smoke
+
+```
+1. Mobile: create invoice from catalog (live rate on)
+2. Mobile: open /m/tax → same period → verify invoice count + tax total
+3. Desktop: /dashboard/shop/tax-reports → same numbers
+4. Desktop: /dashboard/shop/accounting → trial balance includes sale
+5. Void invoice → verify tax report excludes + accounting reversal
+```
+
+Playwright: extend `e2e/tests/mobile-invoice-create.spec.ts` + add `mobile-tax-report-parity.spec.ts`.
+
+### 16.3 Quote / order linkage audit
+
+| Path                                      | Must set on invoice               | Must update on source                    |
+| ----------------------------------------- | --------------------------------- | ---------------------------------------- |
+| Walk-in quote import                      | `shopQuoteId`, `walkInCustomerId` | Quote status → invoiced, `invoiceNumber` |
+| Quote checkout (`/m/quotes/[id]/payment`) | Same + payment                    | No duplicate invoice                     |
+| Online order (`orderId`)                  | `orderId`                         | Order fulfillment state                  |
+
+Audit `shop-quotes.service.ts` convert/checkout and `invoices.service.ts` create for idempotency.
+
+### 16.4 Mobile accounting access (lightweight)
+
+Desktop has full ledger UI; mobile shopkeepers need **read-only audit trail**:
+
+| Option          | Route                                                 | Content                                                |
+| --------------- | ----------------------------------------------------- | ------------------------------------------------------ |
+| A (minimal)     | Link from `/m/more` → desktop accounting (responsive) | Zero new UI                                            |
+| B (recommended) | `/m/accounting`                                       | Trial balance summary + link to full desktop           |
+| C               | Extend `/m/summary`                                   | Add tax collected + AR outstanding from accounting API |
+
+**Recommendation:** Option B — thin mobile page calling `accountingApi.trialBalance` + `profitLoss` for current month, with "Open full ledger on desktop" CTA.
+
+---
+
+## 17. Phase 7 — Desktop refactor + drift prevention
+
+**Duration:** ~1 week (can run parallel after Phase 5 hook is stable)  
+**Outcome:** Desktop create page uses `useInvoicePricing`; one code path for both clients.
+
+- Refactor `apps/web/src/app/dashboard/shop/invoices/create/page.tsx` to consume shared hook (~4600 → ~2000 lines target).
+- CI: `mapToCreateDto` snapshot test must pass for both mobile and desktop fixture inputs.
+- Add `pnpm test:invoice-engine` script for shared + API compliance specs.
+
+---
+
+## 18. Revised implementation order
+
+| Order | Phase                                                      | Depends on           | Est.     |
+| ----- | ---------------------------------------------------------- | -------------------- | -------- |
+| 1     | Phase 5 — Mobile calculation fix                           | Phases 1–2 (shipped) | 5–6 days |
+| 2     | Phase 6 — Audit/compliance verification                    | Phase 5              | 3–4 days |
+| 3     | PDF auth fix deploy (axios)                                | —                    | 1 day    |
+| 4     | Phase 7 — Desktop refactor to shared hook                  | Phase 5              | 1 week   |
+| 5     | Phase 4 remainder — E2E, tutorials, mobile accounting page | Phase 6              | 3 days   |
+
+**Critical path:** Phase 5 → Phase 6 → production deploy. Do not mark mobile billing "done" until Phase 6 tax report parity tests pass.
+
+---
+
+## 19. Compliance success metrics (add to §12)
+
+- **100%** of mobile jewellery invoices in a 30-day sample have `metalCost` + `makingCost` populated (DB audit query).
+- Mobile vs desktop tax report totals for same shop/period: **±0** (not ± rounding).
+- Nepal IRD audit export (`getNepalAuditReport`) includes all mobile-created NP invoices.
+- Accounting trial balance revenue matches sum of issued invoice `totalAmount - taxAmount` for the period.
+- Zero duplicate invoices from quote checkout + manual import of same `shopQuoteId` (idempotency).

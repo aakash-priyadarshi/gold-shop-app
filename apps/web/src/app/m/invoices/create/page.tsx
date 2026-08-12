@@ -3,29 +3,19 @@
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { inventoryApi, invoicesApi, pricingApi, shopQuotesApi } from "@/lib/api";
+import { inventoryApi, invoicesApi, ordersApi, shopQuotesApi } from "@/lib/api";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
-  applyMakingToLine,
-  computeDiscountAmount,
-  computeGrandTotal,
-  computeSubtotal,
-  computeTaxBreakdown,
-  computeWastageTotal,
   emptyGemstone,
   emptyLineItem,
-  FALLBACK_CATEGORY_TAX_RATES,
   gemstoneTotal,
-  importCatalogItem,
-  importShopQuote,
   lineItemTotal,
   mapToCreateDto,
-  METAL_TYPES,
-  recalcLineWastage,
-  type CountryTaxConfig,
   type RichLineItem,
+  useInvoicePricing,
   validateInvoiceDraft,
+  type MakingMode,
 } from "@/lib/invoice";
 import {
   mobileInvoiceDetailPath,
@@ -46,10 +36,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
+import { METAL_TYPES } from "@/lib/invoice/lineItemTypes";
+
 const MARKETS = ["NP", "IN", "LK", "AE", "GB", "DE", "FR", "US"];
 const STEPS = ["Customer", "Lines", "Review"] as const;
-
-type MakingMode = "PERCENT" | "PER_GRAM" | "FIXED";
 
 function MobileInvoiceCreateInner() {
   const router = useRouter();
@@ -78,21 +68,50 @@ function MobileInvoiceCreateInner() {
   );
   const orderId = searchParams.get("orderId") || undefined;
 
-  // Lines
-  const [lineItems, setLineItems] = useState<RichLineItem[]>([emptyLineItem()]);
   const [expandedIdx, setExpandedIdx] = useState(0);
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(
     getDefaultWeightUnit(shopCountry) as WeightUnit,
   );
-  const [makingMode, setMakingMode] = useState<MakingMode>("PERCENT");
-  const [makingValue, setMakingValue] = useState("15");
-  const [wastagePct, setWastagePct] = useState("0");
   const [discountType, setDiscountType] = useState<"PERCENT" | "FIXED">("FIXED");
   const [discountValue, setDiscountValue] = useState("");
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
 
-  // Pickers
+  const {
+    lineItems,
+    setLineItems,
+    wastagePct,
+    setWastagePct,
+    wastageRule,
+    invoiceWastagePct,
+    countryTax,
+    useLiveRate,
+    setUseLiveRate,
+    makingMode,
+    setMakingMode,
+    makingValue,
+    setMakingValue,
+    marketRatesLoading,
+    updateLine,
+    applyMakingOnLine,
+    addFromCatalog,
+    mergeQuoteImport,
+    subtotal,
+    wastageTotal,
+    taxBreakdown,
+    discountAmount,
+    grandTotal,
+  } = useInvoicePricing({
+    invoiceCountry: country,
+    shopCountry,
+    shopCurrency: getCurrencyForCountry(shopCountry),
+    shopId: user?.shop?.id,
+    discountType,
+    discountValue,
+  });
+
+  const currency = useMemo(() => getCurrencyForCountry(country), [country]);
+
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState("");
@@ -100,55 +119,6 @@ function MobileInvoiceCreateInner() {
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [quotes, setQuotes] = useState<any[]>([]);
   const [quotesLoading, setQuotesLoading] = useState(false);
-  const [useLiveRate, setUseLiveRate] = useState(true);
-
-  const [countryTax, setCountryTax] = useState<CountryTaxConfig>(
-    FALLBACK_CATEGORY_TAX_RATES[shopCountry] || FALLBACK_CATEGORY_TAX_RATES.NP,
-  );
-
-  const currency = useMemo(() => getCurrencyForCountry(country), [country]);
-  const wastageRule = useMemo(
-    () => ({ mode: "WEIGHT_PERCENT" as const, label: "Wastage", percent: Number(wastagePct) || 0 }),
-    [wastagePct],
-  );
-
-  // Load tax rules
-  useEffect(() => {
-    let cancelled = false;
-    pricingApi
-      .getTaxRules(country === "GB" ? "UK" : country)
-      .then((res) => {
-        if (cancelled) return;
-        const data = res.data?.data || res.data;
-        if (data?.rates) {
-          setCountryTax({
-            taxType: data.taxType || "TAX",
-            taxName: data.taxName || "Tax",
-            rates: {
-              PRECIOUS_METAL: Number(data.rates.PRECIOUS_METAL ?? data.rates.metal ?? 0),
-              MAKING_CHARGE: Number(data.rates.MAKING_CHARGE ?? data.rates.making ?? 0),
-              GEMSTONE: Number(data.rates.GEMSTONE ?? data.rates.gemstone ?? 0),
-              FINISH: Number(data.rates.FINISH ?? data.rates.finish ?? 0),
-            },
-            defaultRate: Number(data.defaultRate ?? data.rates.PRECIOUS_METAL ?? 0),
-          });
-        } else {
-          setCountryTax(
-            FALLBACK_CATEGORY_TAX_RATES[country] || FALLBACK_CATEGORY_TAX_RATES.NP,
-          );
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCountryTax(
-            FALLBACK_CATEGORY_TAX_RATES[country] || FALLBACK_CATEGORY_TAX_RATES.NP,
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [country]);
 
   // Prefill from shopQuoteId query
   useEffect(() => {
@@ -159,16 +129,12 @@ function MobileInvoiceCreateInner() {
       .then((res) => {
         const quote = res.data?.data || res.data;
         if (!quote) return;
-        const imported = importShopQuote(quote);
+        const imported = mergeQuoteImport(quote);
         setShopQuoteId(imported.shopQuoteId);
         if (imported.customer.name) setCustomerName(imported.customer.name);
         if (imported.customer.phone) setCustomerPhone(imported.customer.phone);
         if (imported.customer.email) setCustomerEmail(imported.customer.email);
         if (imported.customer.id) setWalkInCustomerId(imported.customer.id);
-        if (imported.wastagePercent != null) {
-          setWastagePct(String(imported.wastagePercent));
-        }
-        setLineItems([imported.line]);
         setExpandedIdx(0);
         setStep(1);
         toast({ title: "Quote imported", description: imported.line.label });
@@ -179,7 +145,24 @@ function MobileInvoiceCreateInner() {
           variant: "destructive",
         }),
       );
-  }, [searchParams]);
+  }, [searchParams, mergeQuoteImport]);
+
+  // Prefill customer from orderId (invoice lines still manual/catalog)
+  useEffect(() => {
+    if (!orderId) return;
+    ordersApi
+      .getById(orderId)
+      .then((res) => {
+        const o = res.data?.data || res.data;
+        const customer = o?.customer;
+        if (!customer) return;
+        const name = `${customer.firstName || ""} ${customer.lastName || ""}`.trim();
+        if (name) setCustomerName(name);
+        if (customer.phone) setCustomerPhone(customer.phone);
+        if (customer.email) setCustomerEmail(customer.email);
+      })
+      .catch(() => undefined);
+  }, [orderId]);
 
   const searchCatalog = useCallback(
     async (q: string) => {
@@ -227,33 +210,6 @@ function MobileInvoiceCreateInner() {
     }
   };
 
-  const updateLine = (index: number, patch: Partial<RichLineItem>) => {
-    setLineItems((current) =>
-      current.map((line, i) => {
-        if (i !== index) return line;
-        let next = { ...line, ...patch };
-        // Recalc wastage when metal changes
-        if (
-          patch.metalCost !== undefined ||
-          patch.metalWeightG !== undefined ||
-          patch.wastagePercent !== undefined
-        ) {
-          next = recalcLineWastage(next, Number(wastagePct) || 0, wastageRule);
-        }
-        return next;
-      }),
-    );
-  };
-
-  const applyMakingOnLine = (index: number) => {
-    const value = Number(makingValue) || 0;
-    setLineItems((current) =>
-      current.map((line, i) =>
-        i === index ? applyMakingToLine(line, makingMode, value) : line,
-      ),
-    );
-  };
-
   const addManualLine = () => {
     setLineItems((c) => [...c, emptyLineItem()]);
     setExpandedIdx(lineItems.length);
@@ -264,83 +220,39 @@ function MobileInvoiceCreateInner() {
     setExpandedIdx(0);
   };
 
-  const addFromCatalog = async (item: any) => {
-    let liveMetalCost: number | undefined;
-    let liveDetail: string | undefined;
-    if (useLiveRate) {
-      try {
-        const bulk = await pricingApi.resolveBulk(user!.shop!.id, [item.id]);
-        const price = bulk.data?.prices?.[item.id] || bulk.data?.[item.id];
-        if (price?.metalCost != null) {
-          liveMetalCost = Number(price.metalCost);
-          liveDetail = "Live rate";
-        } else if (price?.effectiveTotal != null) {
-          liveMetalCost = Number(price.effectiveTotal);
-          liveDetail = "Live rate (total)";
-        }
-      } catch {
-        /* keep catalog cost */
-      }
-    }
-    const result = importCatalogItem({
-      item,
-      existingLines: lineItems,
-      liveMetalCost,
-      liveDetail,
-      shopWastagePercent: Number(wastagePct) || 0,
-    });
-    if ("error" in result) {
+  const handleAddFromCatalog = async (item: any) => {
+    const result = await addFromCatalog(item);
+    if (!result.ok) {
       toast({ title: result.error, variant: "destructive" });
       return;
     }
-    setLineItems(result.nextLines);
-    setExpandedIdx(result.nextLines.length - 1);
-    if (result.wastagePercent != null) setWastagePct(String(result.wastagePercent));
+    const { line, warning, missingRates, liveRateNote } = result.result;
+    setExpandedIdx(result.result.nextLines.length - 1);
     setCatalogOpen(false);
+    if (missingRates && missingRates.length > 0) {
+      toast({
+        title: "Some metal rates missing",
+        description: `Could not price: ${missingRates.join(", ")}`,
+        variant: "destructive",
+      });
+    }
     toast({
-      title: "Added from catalog",
-      description: result.warning || result.line.label,
+      title: liveRateNote ? "Metal from live rate" : "Added from catalog",
+      description: warning || liveRateNote || line.label,
     });
   };
 
-  const addFromQuote = (quote: any) => {
-    const imported = importShopQuote(quote);
+  const handleAddFromQuote = (quote: any) => {
+    const imported = mergeQuoteImport(quote);
     setShopQuoteId(imported.shopQuoteId);
     if (imported.customer.name) setCustomerName(imported.customer.name);
     if (imported.customer.phone) setCustomerPhone(imported.customer.phone);
     if (imported.customer.email) setCustomerEmail(imported.customer.email);
     if (imported.customer.id) setWalkInCustomerId(imported.customer.id);
-    if (imported.wastagePercent != null) {
-      setWastagePct(String(imported.wastagePercent));
-    }
-    setLineItems([imported.line]);
     setExpandedIdx(0);
     setQuoteOpen(false);
     toast({ title: "Quote imported", description: imported.line.label });
   };
-
-  const invoiceWastagePct = Number(wastagePct) || 0;
-  const subtotal = computeSubtotal(lineItems);
-  const wastageTotal = computeWastageTotal(lineItems, invoiceWastagePct, wastageRule);
-  const taxBreakdown = computeTaxBreakdown({
-    lineItems,
-    countryTax,
-    makingChargeAmount: 0,
-    invoiceWastagePct,
-    wastageRule,
-  });
-  const discountAmount = computeDiscountAmount(
-    subtotal + wastageTotal,
-    discountType,
-    Number(discountValue) || 0,
-  );
-  const grandTotal = computeGrandTotal({
-    subtotal,
-    makingChargeAmount: 0,
-    wastageTotal,
-    taxTotal: taxBreakdown.totalTax,
-    discountAmount,
-  });
 
   const goNext = () => {
     if (step === 0) {
@@ -811,7 +723,15 @@ function MobileInvoiceCreateInner() {
                         />
                         <button
                           type="button"
-                          onClick={() => applyMakingOnLine(index)}
+                          onClick={() => {
+                            const result = applyMakingOnLine(index);
+                            if (!result.ok) {
+                              toast({
+                                title: result.message || "Could not apply making",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
                           className="rounded-xl bg-amber-600 px-3 py-2 text-xs font-bold text-white"
                         >
                           <T>Apply</T>
@@ -1090,7 +1010,7 @@ function MobileInvoiceCreateInner() {
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => void addFromCatalog(item)}
+                  onClick={() => void handleAddFromCatalog(item)}
                   className="flex w-full items-center justify-between rounded-xl border border-gray-100 px-3 py-3 text-left active:bg-amber-50"
                 >
                   <div>
@@ -1130,7 +1050,7 @@ function MobileInvoiceCreateInner() {
                 <button
                   key={q.id}
                   type="button"
-                  onClick={() => addFromQuote(q)}
+                  onClick={() => handleAddFromQuote(q)}
                   className="flex w-full items-center justify-between rounded-xl border border-gray-100 px-3 py-3 text-left active:bg-blue-50"
                 >
                   <div>
@@ -1145,6 +1065,33 @@ function MobileInvoiceCreateInner() {
                 </button>
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Sticky totals on Lines step */}
+      {step === 1 && (
+        <div
+          className="fixed bottom-[7.5rem] left-0 right-0 border-t border-amber-100 bg-amber-50/95 px-4 py-2 backdrop-blur-sm"
+          data-tour="invoice-live-totals"
+        >
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">
+              <T>Subtotal</T> + <T>Tax</T>
+            </span>
+            <strong className="text-amber-900">
+              {currency}{" "}
+              {(subtotal + wastageTotal + taxBreakdown.totalTax).toLocaleString()}
+            </strong>
+          </div>
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span>
+              <T>Wastage</T>: {currency} {wastageTotal.toLocaleString()}
+              {marketRatesLoading ? " · …" : null}
+            </span>
+            <span className="font-bold text-amber-800">
+              <T>Total</T>: {currency} {grandTotal.toLocaleString()}
+            </span>
           </div>
         </div>
       )}

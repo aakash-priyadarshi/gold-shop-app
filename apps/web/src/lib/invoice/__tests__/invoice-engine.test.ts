@@ -6,6 +6,7 @@ import {
   computeTaxBreakdown,
   emptyLineItem,
   FALLBACK_CATEGORY_TAX_RATES,
+  importCatalogItem,
   importShopQuote,
   lineItemTotal,
   mapLineItemsToApi,
@@ -142,6 +143,59 @@ describe("invoice shared engine", () => {
     expect(result.line.source).toBe("QUOTE");
     expect(result.line.metalCost).toBe("95000");
     expect(parseFloat(result.line.wastageCost || "0")).toBeGreaterThan(0);
+  });
+
+  it("imports catalog item with stored metal/gem values and composition gems", () => {
+    const result = importCatalogItem({
+      item: {
+        id: "inv-1",
+        nameEn: "22K Ring",
+        jewelleryType: "RING",
+        metalValueNpr: 120000,
+        makingChargeNpr: 15000,
+        gemstoneValueNpr: 8000,
+        composition: {
+          preciousMetal: "GOLD",
+          purity: "22K",
+          gemstones: [
+            {
+              type: "Ruby",
+              caratWeight: 0.5,
+              cost: 8000,
+            },
+          ],
+        },
+        totalWeightGrams: 11.66,
+      },
+      existingLines: [],
+      shopWastagePercent: 5,
+    });
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.line.metalCost).toBe("120000");
+    expect(result.line.makingCost).toBe("15000");
+    expect(result.line.gemstones).toHaveLength(1);
+    expect(result.line.gemstones[0].type).toBe("Ruby");
+    expect(parseFloat(result.line.wastageCost || "0")).toBeGreaterThan(0);
+  });
+
+  it("imports shop quote pricing aliases from estimatedTotal", () => {
+    const result = importShopQuote({
+      id: "q2",
+      title: "Custom bangle",
+      estimatedTotal: {
+        metalCost: 200000,
+        makingCharge: 25000,
+        gemstoneCost: 10000,
+        wastagePercent: 3,
+      },
+      customer: { firstName: "Ram", lastName: "Shah", phone: "9811111111" },
+    });
+    expect(result.line.label).toBe("Custom bangle");
+    expect(result.line.metalCost).toBe("200000");
+    expect(result.line.makingCost).toBe("25000");
+    expect(result.line.gemstones[0].cost).toBe("10000");
+    expect(result.customer.name).toBe("Ram Shah");
   });
 
   it("computes grand total", () => {

@@ -166,6 +166,45 @@ export interface CatalogImportResult {
   makingPercent?: number;
   wastagePercent?: number;
   warning?: string;
+  liveRateNote?: string;
+  missingRates?: string[];
+}
+
+function gemstonesFromCatalogItem(item: any): RichLineItem["gemstones"] {
+  const gemCost = Number(item.gemstoneValueNpr) || 0;
+  const compositionGems = Array.isArray(item?.composition?.gemstones)
+    ? item.composition.gemstones
+    : [];
+
+  if (compositionGems.length > 0) {
+    return compositionGems.map((gem: any) => ({
+      ...emptyGemstone(),
+      type: String(gem.type || gem.stoneType || "GEMSTONE"),
+      cut: String(gem.cut || ""),
+      clarity: String(gem.clarity || ""),
+      caratWeight:
+        gem.caratWeight != null ? String(gem.caratWeight) : "",
+      color: String(gem.color || ""),
+      cost:
+        gem.cost != null
+          ? String(gem.cost)
+          : gem.valueNpr != null
+            ? String(gem.valueNpr)
+            : "",
+    }));
+  }
+
+  if (gemCost > 0) {
+    return [
+      {
+        ...emptyGemstone(),
+        type: "GEMSTONE",
+        cost: String(gemCost),
+      },
+    ];
+  }
+
+  return [];
 }
 
 export function importCatalogItem(opts: {
@@ -174,6 +213,9 @@ export function importCatalogItem(opts: {
   liveMetalCost?: number;
   liveDetail?: string;
   shopWastagePercent?: number;
+  shopPrices?: { baseMetalPrices?: Record<string, number> } | null;
+  marketRates?: { metals?: Record<string, number> } | null;
+  useLiveRate?: boolean;
 }): CatalogImportResult | { error: string } {
   const { item, existingLines } = opts;
   if (
@@ -186,13 +228,44 @@ export function importCatalogItem(opts: {
   const metalType =
     metalParts[0]?.metalType ||
     extractMetalTypeFromComposition(item.composition);
-  const totalWeightG = metalParts.reduce((s, p) => s + p.weightG, 0);
-  const metalCost =
+  const totalWeightG =
+    metalParts.reduce((s, p) => s + p.weightG, 0) ||
+    Number(item.totalWeightGrams) ||
+    0;
+
+  let liveRateNote: string | undefined;
+  let missingRates: string[] | undefined;
+  let metalCostNum =
     opts.liveMetalCost != null && opts.liveMetalCost > 0
-      ? String(opts.liveMetalCost)
-      : String(Number(item.metalCost) || Number(item.costPrice) || "");
+      ? opts.liveMetalCost
+      : Number(item.metalValueNpr) ||
+        Number(item.metalCost) ||
+        Number(item.costPrice) ||
+        0;
+
+  if (
+    opts.useLiveRate !== false &&
+    metalParts.length > 0 &&
+    metalParts.some((p) => p.metalType)
+  ) {
+    const { cost, missing, detailLines } = calcMetalCostFromParts(
+      metalParts,
+      opts.shopPrices ?? null,
+      opts.marketRates ?? null,
+    );
+    if (cost > 0) {
+      metalCostNum = cost;
+      liveRateNote = opts.liveDetail || detailLines.join(" · ");
+    }
+    if (missing.length > 0) {
+      missingRates = missing;
+    }
+  }
+
+  const metalCost = metalCostNum > 0 ? String(metalCostNum) : "";
 
   const makingRaw =
+    Number(item.makingChargeNpr) ||
     Number(item.makingCharge) ||
     Number(item.makingCost) ||
     Number(item.labourCharge) ||
@@ -223,7 +296,7 @@ export function importCatalogItem(opts: {
 
   const detailBits = [
     item.sku ? `SKU ${item.sku}` : null,
-    opts.liveDetail || null,
+    liveRateNote || opts.liveDetail || null,
   ].filter(Boolean);
 
   const next: RichLineItem = {
@@ -234,7 +307,7 @@ export function importCatalogItem(opts: {
     metalType: String(metalType || ""),
     metalWeightG: totalWeightG > 0 ? String(totalWeightG) : "",
     metalCost,
-    gemstones: [],
+    gemstones: gemstonesFromCatalogItem(item),
     makingCost,
     baseMakingCost: makingRaw > 0 ? String(makingRaw) : undefined,
     metalParts: metalParts.length > 0 ? metalParts : undefined,
@@ -249,11 +322,14 @@ export function importCatalogItem(opts: {
   return {
     line: next,
     nextLines: [...kept, next],
-    makingPercent: makingRaw > 0 && mc > 0 ? roundMoney2((makingRaw / mc) * 100) : undefined,
+    makingPercent:
+      makingRaw > 0 && mc > 0 ? roundMoney2((makingRaw / mc) * 100) : undefined,
     wastagePercent: basePct,
     warning: !metalType
       ? "This catalog piece has no metal type stored. Edit the product composition."
       : undefined,
+    liveRateNote,
+    missingRates,
   };
 }
 
@@ -271,27 +347,43 @@ export interface ShopQuoteImportResult {
 }
 
 export function importShopQuote(quote: any): ShopQuoteImportResult {
-  const customer = quote.walkInCustomer || {};
+  const customer = quote.walkInCustomer || quote.customer || {};
+  const estimated = quote.estimatedTotal || quote.pricing || {};
   const item = emptyLineItem();
   item.label =
-    quote.jewelleryType || quote.metalType || "Jewellery Item";
-  item.category = quote.jewelleryType || "OTHER";
+    quote.jewelleryType ||
+    quote.title ||
+    quote.metalType ||
+    "Jewellery Item";
+  item.category = quote.jewelleryType || quote.category || "OTHER";
   item.metalType =
     quote.metalType ||
     quote.alloyConfig?.baseMetal ||
     quote.composition?.baseAlloy?.metal ||
+    quote.composition?.preciousMetal ||
     "";
-  item.metalWeightG = String(quote.targetTotalWeightG || "");
-  item.metalCost = String(
-    quote.metalCostNpr ??
-      quote.metalCostOverride ??
-      quote.estimatedTotal?.metalCost ??
+  item.metalWeightG = String(
+    quote.targetTotalWeightG ??
+      quote.metalWeightG ??
+      quote.totalWeightGrams ??
       "",
   );
+
+  const metalRaw =
+    quote.metalCostNpr ??
+    quote.metalCostOverride ??
+    quote.metalCost ??
+    estimated.metalCost ??
+    estimated.metal ??
+    "";
+  item.metalCost = String(metalRaw);
+
   const makingRaw =
     quote.makingChargeNpr ??
     quote.makingChargeOverride ??
-    quote.estimatedTotal?.makingCharge ??
+    quote.makingCharge ??
+    estimated.makingCharge ??
+    estimated.making ??
     "";
   item.makingCost = String(makingRaw);
   const makingNum = parseFloat(String(makingRaw)) || 0;
@@ -300,16 +392,30 @@ export function importShopQuote(quote: any): ShopQuoteImportResult {
   const gcVal =
     quote.gemstoneCostNpr ??
     quote.gemstoneCostOverride ??
-    quote.estimatedTotal?.gemstoneCost ??
+    quote.gemstoneCost ??
+    estimated.gemstoneCost ??
+    estimated.gemstone ??
     0;
   if (gcVal) {
-    item.gemstones = [{ ...emptyGemstone(), cost: String(gcVal) }];
+    item.gemstones = [{ ...emptyGemstone(), type: "GEMSTONE", cost: String(gcVal) }];
+  } else if (Array.isArray(quote.composition?.gemstones)) {
+    item.gemstones = quote.composition.gemstones.map((gem: any) => ({
+      ...emptyGemstone(),
+      type: String(gem.type || "GEMSTONE"),
+      cut: String(gem.cut || ""),
+      clarity: String(gem.clarity || ""),
+      caratWeight: gem.caratWeight != null ? String(gem.caratWeight) : "",
+      color: String(gem.color || ""),
+      cost: gem.cost != null ? String(gem.cost) : "",
+    }));
   }
 
   const finishVal =
     quote.finishCostNpr ??
     quote.finishCostOverride ??
-    quote.estimatedTotal?.finishCost ??
+    quote.finishCost ??
+    estimated.finishCost ??
+    estimated.finish ??
     0;
   if (finishVal) {
     const current = parseFloat(item.metalCost) || 0;
@@ -317,8 +423,13 @@ export function importShopQuote(quote: any): ShopQuoteImportResult {
   }
 
   item.source = "QUOTE";
+  if (quote.inventoryItemId) item.inventoryItemId = quote.inventoryItemId;
 
-  const wastagePct = Number(quote.wastagePercent) || 0;
+  const wastagePct =
+    Number(quote.wastagePercent) ||
+    Number(quote.wastagePct) ||
+    Number(estimated.wastagePercent) ||
+    0;
   const mc = parseFloat(item.metalCost) || 0;
   if (mc > 0 && wastagePct > 0) {
     item.wastagePercent = String(wastagePct);
@@ -340,7 +451,11 @@ export function importShopQuote(quote: any): ShopQuoteImportResult {
   return {
     line: item,
     customer: {
-      name: customer.name,
+      name:
+        customer.name ||
+        (customer.firstName || customer.lastName
+          ? `${customer.firstName || ""} ${customer.lastName || ""}`.trim()
+          : undefined),
       phone: customer.phone,
       phoneCountryCode: customer.phoneCountryCode,
       email: customer.email,

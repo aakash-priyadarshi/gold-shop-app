@@ -1,12 +1,20 @@
-import { getApiUrl } from "@/lib/api";
+import axios from "axios";
+import { invoicesApi } from "@/lib/api";
 
-function authHeader(): HeadersInit {
-  if (typeof window === "undefined") return {};
-  const token =
-    localStorage.getItem("token") ||
-    sessionStorage.getItem("token") ||
-    "";
-  return token ? { Authorization: `Bearer ${token}` } : {};
+async function blobErrorMessage(blob: Blob, status: number): Promise<string> {
+  try {
+    const text = await blob.text();
+    if (!text) return `PDF failed (${status})`;
+    try {
+      const json = JSON.parse(text) as { message?: string };
+      if (json.message) return json.message;
+    } catch {
+      /* not JSON */
+    }
+    return text.slice(0, 200);
+  } catch {
+    return `PDF failed (${status})`;
+  }
 }
 
 /** Fetch on-demand invoice PDF (not stored server-side). */
@@ -14,21 +22,25 @@ export async function fetchInvoicePdfBlob(invoiceId: string): Promise<{
   blob: Blob;
   filename: string;
 }> {
-  const res = await fetch(`${getApiUrl()}/invoices/${invoiceId}/pdf`, {
-    headers: {
-      ...authHeader(),
-      Accept: "application/pdf",
-    },
-  });
-  if (!res.ok) {
-    const message = await res.text().catch(() => "PDF generation failed");
-    throw new Error(message || `PDF failed (${res.status})`);
+  try {
+    const res = await invoicesApi.getPdf(invoiceId);
+    const disposition = String(res.headers["content-disposition"] || "");
+    const match = disposition.match(/filename="?([^"]+)"?/i);
+    const filename = match?.[1] || `Invoice-${invoiceId}.pdf`;
+    return { blob: res.data, filename };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data instanceof Blob) {
+      const message = await blobErrorMessage(
+        err.response.data,
+        err.response.status ?? 0,
+      );
+      throw new Error(message);
+    }
+    if (axios.isAxiosError(err) && err.response?.data?.message) {
+      throw new Error(String(err.response.data.message));
+    }
+    throw err instanceof Error ? err : new Error("PDF generation failed");
   }
-  const disposition = res.headers.get("Content-Disposition") || "";
-  const match = disposition.match(/filename="?([^"]+)"?/i);
-  const filename = match?.[1] || `Invoice-${invoiceId}.pdf`;
-  const blob = await res.blob();
-  return { blob, filename };
 }
 
 export function buildInvoicePdfFile(blob: Blob, filename: string): File {
