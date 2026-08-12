@@ -2,13 +2,17 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   Patch,
   Post,
   Query,
+  Res,
+  StreamableFile,
   UseGuards,
 } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
+import type { Response } from "express";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -21,16 +25,20 @@ import {
   ShareInvoiceSmsDto,
 } from "./dto/share-invoice.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
+import { InvoicePdfService } from "./invoice-pdf.service";
 import { InvoicesService } from "./invoices.service";
 
 // NOTE: Invoicing is a core USP feature and is intentionally NOT gated behind a
 // paid plan. New shops can always create bills/invoices (unverified shops just
-// get a watermark until KYC). Only AI + enterprise modules keep @RequireFeature.
+// get a watermark until KYC). PDF share is free for all shops.
 @Controller("invoices")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.SHOPKEEPER, UserRole.ADMIN)
 export class InvoicesController {
-  constructor(private readonly invoicesService: InvoicesService) {}
+  constructor(
+    private readonly invoicesService: InvoicesService,
+    private readonly invoicePdfService: InvoicePdfService,
+  ) {}
 
   @Post()
   async create(
@@ -93,17 +101,6 @@ export class InvoicesController {
     return this.invoicesService.getStats(shopId);
   }
 
-  @Get(":id")
-  async findById(
-    @CurrentUser("shopId") shopId: string,
-    @Param("id") id: string,
-  ) {
-    if (!shopId) {
-      throw new Error("No shop associated with this user");
-    }
-    return this.invoicesService.findById(id, shopId);
-  }
-
   @Get("order/:orderId")
   async findByOrder(
     @CurrentUser("shopId") shopId: string,
@@ -113,6 +110,39 @@ export class InvoicesController {
       throw new Error("No shop associated with this user");
     }
     return this.invoicesService.findByOrder(orderId, shopId);
+  }
+
+  /** On-demand PDF — not stored. Free for all shops. */
+  @Get(":id/pdf")
+  @Header("Content-Type", "application/pdf")
+  async downloadPdf(
+    @CurrentUser("shopId") shopId: string,
+    @Param("id") id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (!shopId) {
+      throw new Error("No shop associated with this user");
+    }
+    const { buffer, filename } = await this.invoicePdfService.generatePdfBuffer(
+      id,
+      shopId,
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${filename}"`,
+    );
+    return new StreamableFile(buffer);
+  }
+
+  @Get(":id")
+  async findById(
+    @CurrentUser("shopId") shopId: string,
+    @Param("id") id: string,
+  ) {
+    if (!shopId) {
+      throw new Error("No shop associated with this user");
+    }
+    return this.invoicesService.findById(id, shopId);
   }
 
   @Patch(":id/payment")
@@ -138,9 +168,8 @@ export class InvoicesController {
     return this.invoicesService.voidInvoice(id, shopId);
   }
 
+  /** Email with PDF attachment — free for all shops (PDF share decision). */
   @Post(":id/share/email")
-  @UseGuards(FeatureGateGuard)
-  @RequireFeature("invoiceShareEmail")
   async shareEmail(
     @CurrentUser("shopId") shopId: string,
     @Param("id") id: string,

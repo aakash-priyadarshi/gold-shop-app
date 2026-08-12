@@ -239,7 +239,7 @@ export class MailService {
       const to = Array.isArray(options.to) ? options.to : [options.to];
 
       if (this.provider === 'resend' && this.resend) {
-        return this.sendWithResend(from, to, options.subject, options.html, options.replyTo);
+        return this.sendWithResend(from, to, options.subject, options.html, options.replyTo, options.attachments);
       }
 
       if (this.provider === 'smtp' && this.transporter) {
@@ -276,7 +276,7 @@ export class MailService {
 
       // Use Resend if available
       if (this.provider === 'resend' && this.resend) {
-        return this.sendWithResend(from, to, options.subject, html, options.replyTo);
+        return this.sendWithResend(from, to, options.subject, html, options.replyTo, options.attachments);
       }
 
       // Fallback to SMTP
@@ -297,14 +297,28 @@ export class MailService {
     subject: string,
     html: string,
     replyTo?: string,
+    attachments?: EmailOptions['attachments'],
   ): Promise<SendResult> {
     try {
+      const resendAttachments = attachments?.map((a) => ({
+        filename: a.filename,
+        content: Buffer.isBuffer(a.content)
+          ? a.content
+          : typeof a.content === "string"
+            ? Buffer.from(a.content)
+            : undefined,
+        contentType: a.contentType,
+      })).filter((a) => a.content);
+
       const { data, error } = await this.resend!.emails.send({
         from,
         to,
         subject,
         html,
         replyTo,
+        ...(resendAttachments?.length
+          ? { attachments: resendAttachments }
+          : {}),
       });
 
       if (error) {

@@ -26,17 +26,24 @@ This is a LIVE PRODUCTION application hosted at:
 ## Tech Stack Reference
 
 ### Hosting
-- Frontend: Vercel (Next.js 14)
-- Backend: Railway (NestJS)
-- Database: Neon (PostgreSQL) - NOT Upstash
-- Cache: Upstash (Redis)
-- Images: Cloudflare R2 + Workers
-- Email: Resend
+- **Frontend:** Railway (`@gold-shop/web` service, Next.js 14 Docker/Railpack) — **not Vercel**
+- **Backend:** Railway (`@gold-shop/api` service, NestJS Dockerfile)
+- **Database:** PostgreSQL on Railway (Neon legacy; production DB is Railway Postgres)
+- **Cache:** Redis on Railway
+- **Images / media:** Cloudflare R2 + Workers (`images.orivraa.com`)
+- **Desktop installers:** Cloudflare R2 + Workers (`releases.orivraa.com`)
+- **Email:** Resend
 
-### Key Domains
-- orivraa.com, www.orivraa.com - Frontend
-- api.orivraa.com - Backend API
-- images.orivraa.com - Cloudflare image worker
+### Key Domains (Cloudflare DNS → Railway)
+- `orivraa.com`, `www.orivraa.com`, `m.orivraa.com` — Frontend (`@gold-shop/web`)
+- `api.orivraa.com` — Backend API (`@gold-shop/api`)
+- `images.orivraa.com` — Cloudflare image worker (not Railway)
+- `releases.orivraa.com` — Cloudflare releases worker (not Railway)
+
+### Railway deploy watch paths
+- **API** (`railway.json` root): `apps/api/**` — Dockerfile `apps/api/Dockerfile`
+- **Web** (`apps/web/railway.json`): `apps/web/**`, `packages/shared/**`, lockfiles — Dockerfile `apps/web/Dockerfile`
+- Web-only commits skip API deploy (and vice versa) — this is expected.
 
 ## Code Patterns
 

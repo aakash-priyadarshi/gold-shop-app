@@ -1,5 +1,5 @@
 # Deploy Guard Pipeline
-# Runs on pushes to main - ensures safe deployments to Railway + Vercel
+# Runs on pushes to main - ensures safe deployments to Railway (API + Web)
 
 name: Deploy Guard
 
@@ -150,8 +150,9 @@ jobs:
           echo "::error::Check migration logs and consider manual intervention."
 
   # ══════════════════════════════════════════════════════════
-  # Railway Deploy (API)
-  # Railway auto-deploys from main, this monitors it
+  # Railway Deploy (API + Web)
+  # Both @gold-shop/api and @gold-shop/web auto-deploy from main via watchPatterns.
+  # API-only commits skip web deploy; web-only commits skip API deploy — both are expected.
   # ══════════════════════════════════════════════════════════
   monitor-railway-deploy:
     name: 🚂 Monitor Railway Deploy

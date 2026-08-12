@@ -329,6 +329,24 @@ export default function MobileOrderDetailPage() {
                 )}
               </section>
 
+              {!quote.invoiceNumber && (
+                <Link
+                  href={`/m/invoices/create?shopQuoteId=${quote.id}`}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-600 py-3.5 text-sm font-bold text-white"
+                  data-tour="quote-create-invoice"
+                >
+                  <T>Create invoice from quote</T>
+                </Link>
+              )}
+              {quote.invoiceNumber && (quote as any).invoiceId && (
+                <Link
+                  href={`/m/invoices/${(quote as any).invoiceId}`}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-300 py-3.5 text-sm font-bold text-amber-800"
+                >
+                  <T>Open invoice</T>
+                </Link>
+              )}
+
               {/* Status Controls */}
               {quote && !["COMPLETED", "CANCELLED"].includes(quote.status) && (
                 <section className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-3">

@@ -18,9 +18,14 @@ import { useFeatures } from "@/hooks/useFeatures";
 import { invoicesApi } from "@/lib/api";
 import {
   buildBillShareText,
-  shareBillOnWhatsApp,
   type BillShareInput,
 } from "@/lib/billShare";
+import {
+  buildInvoicePdfFile,
+  canShareFiles,
+  downloadBlob,
+  fetchInvoicePdfBlob,
+} from "@/lib/invoicePdf";
 import {
   loadHardwareConfig,
   printReceipt,
@@ -29,6 +34,8 @@ import {
 import { useT } from "@/providers/translation-provider";
 import {
   Bluetooth,
+  Download,
+  FileText,
   Loader2,
   Lock,
   Mail,
@@ -66,11 +73,10 @@ export function InvoiceShareActions({
   const [smsTo, setSmsTo] = useState(invoice.customerPhone || "");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const [btPrinting, setBtPrinting] = useState(false);
 
-  const canWhatsApp =
-    featuresLoading || hasFeature("invoiceShareWhatsApp") || hasFeature("mobileWhatsAppShare");
-  const canEmail = hasFeature("invoiceShareEmail");
+  // PDF + OS share is free for all shops. SMS remains plan-gated.
   const canSms = hasFeature("invoiceShareSms");
   const canBluetooth = hasFeature("bluetoothThermalPrinter");
 
@@ -81,42 +87,70 @@ export function InvoiceShareActions({
       : invoice.publicUrl,
   };
 
-  const handleWhatsApp = () => {
-    if (!canWhatsApp) {
-      toast({
-        variant: "destructive",
-        title: t("Upgrade required"),
-        description: t(
-          `WhatsApp bill share is not enabled on ${planName || "your plan"}.`,
-        ),
-      });
-      return;
-    }
-    shareBillOnWhatsApp(shareInput, invoice.customerPhone);
+  const loadPdf = async () => {
+    const { blob, filename } = await fetchInvoicePdfBlob(invoice.id);
+    const file = buildInvoicePdfFile(blob, filename);
+    return { blob, filename, file, text: buildBillShareText(shareInput) };
   };
 
-  const handleNativeShare = async () => {
-    const text = buildBillShareText(shareInput);
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({
-          title: `Invoice ${invoice.invoiceNumber || ""}`,
-          text,
-        });
-        return;
-      } catch {
-        // user cancelled or share failed — fall through to copy
-      }
-    }
+  /** Primary path: text + PDF via OS share sheet (WhatsApp, Gmail, etc.). */
+  const shareWithPdf = async (preferWhatsAppHint = false) => {
+    setPdfBusy(true);
     try {
-      await navigator.clipboard.writeText(text);
-      toast({ title: t("Copied"), description: t("Bill text copied to clipboard") });
-    } catch {
+      const { blob, filename, file, text } = await loadPdf();
+      const title = `Invoice ${invoice.invoiceNumber || ""}`;
+
+      if (canShareFiles()) {
+        try {
+          await navigator.share({
+            title,
+            text,
+            files: [file],
+          });
+          return;
+        } catch (err: any) {
+          if (err?.name === "AbortError") return;
+          // fall through to download + clipboard
+        }
+      }
+
+      downloadBlob(blob, filename);
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        /* ignore */
+      }
+      toast({
+        title: t("PDF ready"),
+        description: preferWhatsAppHint
+          ? t("PDF downloaded. Open WhatsApp and attach the file — bill text is on your clipboard.")
+          : t("PDF downloaded. Bill text copied — attach the PDF in any app."),
+      });
+    } catch (err: any) {
       toast({
         variant: "destructive",
-        title: t("Could not share"),
-        description: t("Copy to clipboard failed"),
+        title: t("Could not generate PDF"),
+        description: err?.message || t("Try again in a moment"),
       });
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setPdfBusy(true);
+    try {
+      const { blob, filename } = await fetchInvoicePdfBlob(invoice.id);
+      downloadBlob(blob, filename);
+      toast({ title: t("PDF downloaded") });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: t("Could not generate PDF"),
+        description: err?.message || t("Try again in a moment"),
+      });
+    } finally {
+      setPdfBusy(false);
     }
   };
 
@@ -127,7 +161,10 @@ export function InvoiceShareActions({
         to: emailTo || undefined,
         message: message || undefined,
       });
-      toast({ title: t("Email sent") });
+      toast({
+        title: t("Email sent"),
+        description: t("PDF invoice attached"),
+      });
       setEmailOpen(false);
     } catch (err: any) {
       toast({
@@ -135,7 +172,7 @@ export function InvoiceShareActions({
         title: t("Email failed"),
         description:
           err?.response?.data?.message ||
-          t("Could not send email. Check plan features and recipient."),
+          t("Could not send email. Check recipient address."),
       });
     } finally {
       setSending(false);
@@ -176,10 +213,7 @@ export function InvoiceShareActions({
       return;
     }
     const cfg = loadHardwareConfig();
-    if (
-      !cfg.printer.enabled ||
-      cfg.printer.transport !== "bluetooth"
-    ) {
+    if (!cfg.printer.enabled || cfg.printer.transport !== "bluetooth") {
       toast({
         title: t("Pair a Bluetooth printer"),
         description: t(
@@ -217,38 +251,48 @@ export function InvoiceShareActions({
   return (
     <>
       <div className={`flex flex-wrap gap-2 ${className}`}>
-        <Button variant="outline" size={btn} onClick={handleWhatsApp}>
+        <Button
+          variant="default"
+          size={btn}
+          onClick={() => void shareWithPdf(false)}
+          disabled={pdfBusy}
+          data-tour="invoice-share-pdf"
+        >
+          {pdfBusy ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Share2 className="h-4 w-4 mr-2" />
+          )}
+          <T>Share PDF</T>
+        </Button>
+        <Button
+          variant="outline"
+          size={btn}
+          onClick={() => void shareWithPdf(true)}
+          disabled={pdfBusy}
+        >
           <MessageCircle className="h-4 w-4 mr-2" />
           <T>WhatsApp</T>
         </Button>
-        <Button variant="outline" size={btn} onClick={handleNativeShare}>
-          <Share2 className="h-4 w-4 mr-2" />
-          <T>Share</T>
+        <Button
+          variant="outline"
+          size={btn}
+          onClick={() => void handleDownloadPdf()}
+          disabled={pdfBusy}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          <T>Download PDF</T>
         </Button>
         <Button
           variant="outline"
           size={btn}
           onClick={() => {
-            if (!canEmail) {
-              toast({
-                variant: "destructive",
-                title: t("Upgrade required"),
-                description: t(
-                  `Email delivery is not enabled on ${planName || "your plan"}.`,
-                ),
-              });
-              return;
-            }
             setEmailTo(invoice.customerEmail || "");
             setMessage("");
             setEmailOpen(true);
           }}
         >
-          {!canEmail && !featuresLoading ? (
-            <Lock className="h-4 w-4 mr-2" />
-          ) : (
-            <Mail className="h-4 w-4 mr-2" />
-          )}
+          <Mail className="h-4 w-4 mr-2" />
           <T>Email</T>
         </Button>
         <Button
@@ -306,7 +350,7 @@ export function InvoiceShareActions({
               <T>Email invoice</T>
             </DialogTitle>
             <DialogDescription>
-              <T>Send this bill to the customer by email.</T>
+              <T>Sends the bill summary and a PDF attachment.</T>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -332,6 +376,10 @@ export function InvoiceShareActions({
                 placeholder={t("Leave blank to send the default bill summary")}
               />
             </div>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <FileText className="h-3.5 w-3.5" />
+              <T>PDF will be generated on send and attached automatically.</T>
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEmailOpen(false)}>

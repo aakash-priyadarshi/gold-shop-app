@@ -12,6 +12,52 @@
 - **Cloudflare Workers** — `cloudflare-worker/` (images/videos) and `cloudflare-worker/releases-worker/` (desktop installer downloads via R2)
 - **Database:** PostgreSQL with Prisma ORM. Seeds at `apps/api/prisma/seeds/`
 
+## Hosting & Deployment (Railway Pro — Aug 2026)
+
+> **Frontend moved off Vercel.** All Orivraa production web traffic is now on Railway.
+> Cloudflare remains the DNS/CDN edge; Railway runs the Next.js and NestJS containers.
+
+### Railway project: `eloquent-respect`
+
+| Service                 | Repo path  | Builder                            | Custom domains                                    |
+| ----------------------- | ---------- | ---------------------------------- | ------------------------------------------------- |
+| `@gold-shop/web`        | `apps/web` | Dockerfile (`apps/web/Dockerfile`) | `orivraa.com`, `www.orivraa.com`, `m.orivraa.com` |
+| `@gold-shop/api`        | `apps/api` | Dockerfile (`apps/api/Dockerfile`) | `api.orivraa.com`                                 |
+| Postgres, Redis, Qdrant | —          | Railway plugins                    | internal only                                     |
+
+### Cloudflare DNS (zone `orivraa.com`)
+
+| Hostname               | Target                      | Notes                                       |
+| ---------------------- | --------------------------- | ------------------------------------------- |
+| `orivraa.com`          | `vmgkc829.up.railway.app`   | Apex → `@gold-shop/web`                     |
+| `www.orivraa.com`      | `xm7x8io7.up.railway.app`   | Desktop site                                |
+| `m.orivraa.com`        | `ohidcv44.up.railway.app`   | Mobile shopkeeper app                       |
+| `api.orivraa.com`      | `adj2paqz.up.railway.app`   | NestJS API                                  |
+| `images.orivraa.com`   | Cloudflare Worker (`100::`) | R2 image CDN — **not Railway**              |
+| `releases.orivraa.com` | Cloudflare Worker           | Desktop installer CDN — **not Railway**     |
+| `team.orivraa.com`     | Vercel DNS                  | Separate team product — **still on Vercel** |
+
+All production hostnames above are **proxied through Cloudflare** (orange cloud).
+
+### Deploy triggers
+
+Each service has `watchPatterns` in its `railway.json`:
+
+- **API** (root `railway.json`): watches `apps/api/**` — web-only pushes are correctly **skipped**.
+- **Web** (`apps/web/railway.json`): watches `apps/web/**`, `packages/shared/**`, root lockfiles.
+
+Both services auto-deploy from `master` on GitHub push. CI workflow `.github/workflows/main-deploy-guard.yml` still runs migrations + API health check; add a web health check when convenient (`https://www.orivraa.com/`).
+
+### Required `@gold-shop/web` build-time env vars
+
+Set in Railway service variables (compiled into Next.js client bundle):
+
+`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_MOBILE_SITE_URL`,
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_CDN_UPLOAD_URL`,
+`NEXT_PUBLIC_IMAGE_WORKER_URL`, `NEXT_PUBLIC_MEDIA_CDN_BASE_URL`, `NEXT_PUBLIC_SENTRY_DSN`
+
+See `apps/web/Dockerfile` for the full ARG list.
+
 ## Private Submodule (gold-shop-core)
 
 Proprietary business logic lives in a private Git submodule at `apps/api/src/modules/core/`.
@@ -292,10 +338,15 @@ cd e2e && npx playwright install chromium && npx ts-node auth-setup.ts
 
 ## Invoice Feature
 
-- **Create page:** `apps/web/src/app/dashboard/shop/invoices/create/page.tsx`
+- **Desktop create:** `apps/web/src/app/dashboard/shop/invoices/create/page.tsx` — full jeweller workflow
+- **Mobile create:** `apps/web/src/app/m/invoices/create/page.tsx` — full jewellery wizard (metal/making/wastage/tax; catalog + quote import). Shared calc: `apps/web/src/lib/invoice/`
+- **Mobile detail:** `apps/web/src/app/m/invoices/[id]/page.tsx` — share/print/pay (uses `InvoiceShareActions`)
 - **Backend module:** `apps/api/src/modules/invoices/`
-- Supports: line items with metal/gemstone/making breakdown, tax per category, discounts, currency converter, live market rates with autofill, weight unit selector (tola/gram/etc.), weighing scale integration, quote import.
+- Desktop supports: metal/gemstone/making/wastage breakdown, tax per category, discounts, currency converter, live market rates, weight units, scale, catalog/quote import.
+- Mobile: same structural data as desktop via shared `mapToCreateDto` / `validateInvoiceDraft` (no flat-amount mode).
+- **PDF share (free for all):** `GET /api/invoices/:id/pdf` on-demand (pdfkit, not stored). `InvoiceShareActions` shares **text + PDF** via OS share sheet / email attachment.
 - Invoice country can differ from shop country (for export invoices).
+- Plan: `plans/mobile-invoice-parity-pdf.md`
 
 ## Jewelry Sets
 
@@ -525,18 +576,20 @@ Use the **Microsoft Learn MCP Server** for live WinApp CLI, MSIX, Partner Center
 
 ## MCP Server Authentication (Already Configured — Do NOT Re-Authenticate)
 
-Both Railway and Vercel MCP servers have **permanent authentication** configured in
+Railway and Cloudflare MCP servers have **permanent authentication** configured in
 `%APPDATA%\devin\mcp_config.json`. Never ask the user to log in again or re-authenticate.
 
 - **Railway** — Uses the **local CLI MCP** (`railway mcp` stdio command). Authenticated via
   `railway login` (persistent token stored by the Railway CLI). No OAuth, no expiry.
   Do NOT switch to the remote OAuth endpoint at `mcp.railway.com` — it uses short-lived
   tokens with no refresh and will require repeated re-authentication.
+  Production project: `eloquent-respect` — services `@gold-shop/web`, `@gold-shop/api`.
 
-- **Vercel** — Uses a **permanent API token** via `Authorization: Bearer` header in the MCP
-  config. The token (`vcp_...`) does not expire and has access to all accounts/projects.
-  Do NOT switch to OAuth — the OAuth auto-refresh was broken (tokens expired without
-  refreshing, creating 15+ duplicate tokens).
+- **Cloudflare** — `user-cloudflare-api` MCP for DNS, Workers, R2. Account `c3219a748734c4ae628206c10c8b2c05`.
+  Use for DNS changes when adding Railway custom domains.
+
+- **Vercel** — Still used for `team.orivraa.com` only. MCP token may remain configured but
+  **Orivraa main frontend is no longer on Vercel.**
 
 If either MCP stops working, check the config file first. Do NOT delete OAuth session
 files or change the auth method without explicit user instruction.

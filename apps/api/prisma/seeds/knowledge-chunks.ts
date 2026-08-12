@@ -191,7 +191,12 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "invoice_share_and_bluetooth",
     content:
-      "After creating an invoice, the invoice detail page shows Print, Record Payment, WhatsApp, Share, Email, SMS, and Bluetooth print. Email and SMS are plan features you enable in Admin → Billing (SMS typically Pro+ / Enterprise). Bluetooth thermal printing works with SEZNIK Josh and similar 58mm BLE printers: open Mobile Settings → Hardware, choose Bluetooth, Pair, then Test or print from the invoice. Each printed bill includes a verification QR; customers can scan it to open /verify-bill and confirm the bill is genuine on Orivraa.",
+      "After creating an invoice, the invoice detail page shows Print, Record Payment, Share PDF, WhatsApp, Download PDF, Email, SMS, and Bluetooth print. Share PDF and WhatsApp open the phone's share sheet with the bill text PLUS a generated PDF attachment (free for all shops — PDF is created on demand and not stored). Email also attaches the PDF. SMS remains a plan feature (Pro+ / Enterprise). Bluetooth thermal printing works with SEZNIK Josh and similar 58mm BLE printers: open Mobile Settings → Hardware, choose Bluetooth, Pair, then Test or print from the invoice. Each printed bill includes a verification QR; customers can scan it to open /verify-bill and confirm the bill is genuine on Orivraa.",
+  },
+  {
+    topic: "mobile_invoice_full_billing",
+    content:
+      "Mobile Create Invoice (/m/invoices/create) is a full jewellery workflow — not a flat amount form. Steps: Customer details → add lines from Catalog, Shop Quote, or Manual → enter metal type, weight (tola/gram/laal), metal cost, making charge (% / per-gram / flat), wastage (jarti), optional gemstones → Review with tax breakdown → Create. Catalog items commit stock. Importing a walk-in shop quote prefills customer and line costs and links shopQuoteId. Flat-only amounts without metal/making breakdown are rejected so tax reports and accounting stay accurate. After create you land on the invoice detail page to share PDF via WhatsApp and other apps.",
   },
 ];
 
@@ -249,7 +254,11 @@ async function main() {
 
   let count = 0;
   /** Topics whose content changed — re-embed even if already seeded. */
-  const FORCE_REFRESH = new Set(["billing_wastage"]);
+  const FORCE_REFRESH = new Set([
+    "billing_wastage",
+    "invoice_share_and_bluetooth",
+    "mobile_invoice_full_billing",
+  ]);
 
   for (const chunk of CHUNKS) {
     if (done.has(chunk.topic) && !FORCE_REFRESH.has(chunk.topic)) {

@@ -34,6 +34,7 @@ import { StockCommitService } from "./stock-commit.service";
 import { SaleBuilderService } from "./sale-builder.service";
 import { MailService, EMAIL_SENDERS } from "../mail/mail.service";
 import { SmsService } from "../notifications/sms.service";
+import { InvoicePdfService } from "./invoice-pdf.service";
 
 export interface CreateInvoiceOptions {
   /** When true, caller commits stock itself (POS checkout path). */
@@ -69,6 +70,7 @@ export class InvoicesService {
     private saleBuilder: SaleBuilderService,
     private mailService: MailService,
     private smsService: SmsService,
+    private invoicePdfService: InvoicePdfService,
   ) {}
 
   /**
@@ -1425,14 +1427,26 @@ export class InvoicesService {
             ? `<p style="margin-top:16px"><a href="https://www.orivraa.com/verify-bill/${invoice.verificationToken}">Verify this bill on Orivraa</a></p>`
             : ""
         }
-        <p style="color:#999;font-size:12px;margin-top:24px">Sent via Orivraa</p>
+        <p style="color:#999;font-size:12px;margin-top:24px">PDF invoice attached · Sent via Orivraa</p>
       </div>`;
+
+    const { buffer, filename } = await this.invoicePdfService.generatePdfBuffer(
+      id,
+      shopId,
+    );
 
     const result = await this.mailService.sendHtml({
       to,
       subject: `Invoice ${invoice.invoiceNumber} from ${shopName}`,
       html,
       from: EMAIL_SENDERS.ORDERS,
+      attachments: [
+        {
+          filename,
+          content: buffer,
+          contentType: "application/pdf",
+        },
+      ],
     });
 
     if (!result.success) {

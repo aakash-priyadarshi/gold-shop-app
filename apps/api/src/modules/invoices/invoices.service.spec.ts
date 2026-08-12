@@ -71,6 +71,7 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
       saleBuilder,
       mockMailService as any,
       mockSmsService as any,
+      { generatePdfBuffer: jest.fn().mockResolvedValue({ buffer: Buffer.from("%PDF"), filename: "Invoice-test.pdf" }) } as any,
     );
     mockPlanLimits.checkInvoiceLimit.mockResolvedValue(undefined);
     mockAccounting.prepareMonetaryContext.mockResolvedValue({

@@ -1388,6 +1388,48 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
+  "/m/invoices/create": [
+    {
+      element: "[data-tour='mobile-invoice-create']",
+      popover: {
+        title: "Full jewellery invoice",
+        description:
+          "Create bills with metal weight, making charge, wastage, and tax — same accuracy as desktop. No flat-amount shortcuts.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='invoice-add-from-catalog']",
+      popover: {
+        title: "Add from catalog",
+        description:
+          "Pull stocked pieces with live rates. Catalog items commit stock when the invoice is created.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='invoice-add-from-quote']",
+      popover: {
+        title: "Import a shop quote",
+        description:
+          "Convert a walk-in quote into an invoice with metal, making, and wastage already filled.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='invoice-tax-breakdown']",
+      popover: {
+        title: "Tax preview",
+        description:
+          "Review metal, making, gemstone, and wastage tax before creating. The server recalculates authoritatively on submit.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
   "/m/repairs": [
     {
       element: "[data-tour='m-repairs-list']",

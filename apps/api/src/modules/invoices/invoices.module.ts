@@ -8,6 +8,7 @@ import {
   InvoicesController,
   InvoicesPublicController,
 } from "./invoices.controller";
+import { InvoicePdfService } from "./invoice-pdf.service";
 import { InvoicesService } from "./invoices.service";
 import { SaleBuilderService } from "./sale-builder.service";
 import { StockCommitService } from "./stock-commit.service";
@@ -21,7 +22,17 @@ import { StockCommitService } from "./stock-commit.service";
     NotificationsModule,
   ],
   controllers: [InvoicesController, InvoicesPublicController],
-  providers: [InvoicesService, SaleBuilderService, StockCommitService],
-  exports: [InvoicesService, SaleBuilderService, StockCommitService],
+  providers: [
+    InvoicesService,
+    InvoicePdfService,
+    SaleBuilderService,
+    StockCommitService,
+  ],
+  exports: [
+    InvoicesService,
+    InvoicePdfService,
+    SaleBuilderService,
+    StockCommitService,
+  ],
 })
 export class InvoicesModule {}
