@@ -37,6 +37,11 @@ import {
   type SupportedCurrencyCode,
 } from "@/lib/currency";
 import { loadTradeInPayload } from "@/lib/oldGoldTradeIn";
+import {
+  isMobileShopContext,
+  mobileInvoiceDetailPath,
+  resolveCreatedInvoice,
+} from "@/lib/mobileInvoice";
 import { getApiUrl, inventoryApi, invoicesApi, ordersApi, pricingApi, shopQuotesApi, shopsApi } from "@/lib/api";
 import {
   formatBankAccountDetails,
@@ -2744,12 +2749,23 @@ export default function CreateInvoicePage() {
         paymentMethod,
       });
 
+      const created = resolveCreatedInvoice(response.data);
       toast({
         title: "Invoice Created",
-        description: `Invoice ${response.data.invoiceNumber} has been created`,
+        description: created?.invoiceNumber
+          ? `Invoice ${created.invoiceNumber} has been created`
+          : "Your invoice has been created",
       });
-      // Redirect to invoice detail page (has Print & Pay)
-      router.push(`/dashboard/shop/invoices/${response.data.id}?created=true`);
+      // Mobile shopkeepers should land on the mobile detail page (share / print / pay).
+      if (isMobileShopContext() && created?.id) {
+        router.push(mobileInvoiceDetailPath(created.id, { created: true }));
+        return;
+      }
+      if (created?.id) {
+        router.push(`/dashboard/shop/invoices/${created.id}?created=true`);
+        return;
+      }
+      router.push("/dashboard/shop/invoices");
     } catch (error: any) {
       toast({
         variant: "destructive",

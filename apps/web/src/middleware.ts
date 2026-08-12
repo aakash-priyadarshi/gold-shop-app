@@ -25,6 +25,7 @@ const MOBILE_TOP_SEGMENTS = new Set([
   "pending",    // Pending Payments Register
   "occasions",  // Birthday & Anniversary Reminders
   "purity",     // Gold Purity Calculator
+  "invoices",   // Mobile invoice list / create / detail (/m/invoices/*)
 ]);
 
 function mapToSupportedMarket(countryCode: string): string {

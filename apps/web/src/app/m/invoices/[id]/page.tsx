@@ -9,13 +9,14 @@ import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
 import { printBill } from "@/lib/billPrint";
 import { toQrDataUrl, verifyBillUrl } from "@/lib/qrCode";
-import { ArrowLeft, Loader2, Printer, WalletCards } from "lucide-react";
+import { ArrowLeft, Loader2, PartyPopper, Printer, WalletCards, X } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export default function MobileInvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [invoice, setInvoice] = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
@@ -23,6 +24,9 @@ export default function MobileInvoiceDetailPage() {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("CASH");
   const [saving, setSaving] = useState(false);
+  const [showCreatedBanner, setShowCreatedBanner] = useState(
+    searchParams.get("created") === "true",
+  );
   const methods = useMemo(
     () => getCounterPaymentMethods(user?.shop?.country ?? "NP"),
     [user?.shop?.country],
@@ -122,6 +126,29 @@ export default function MobileInvoiceDetailPage() {
   const currency = invoice.currency ?? "NPR";
   return (
     <div className="space-y-4 px-4 py-4 pb-28">
+      {showCreatedBanner && (
+        <section className="rounded-2xl border border-green-200 bg-green-50 p-4 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <PartyPopper className="mt-0.5 h-5 w-5 text-green-600" />
+              <div>
+                <p className="font-bold text-green-900"><T>Invoice created!</T></p>
+                <p className="text-sm text-green-700">
+                  <T>Share via WhatsApp, email, or print below.</T>
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCreatedBanner(false)}
+              className="rounded-lg p-1 text-green-700"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </section>
+      )}
       <div className="flex items-center justify-between">
         <Link href="/m/invoices" className="rounded-xl bg-gray-100 p-2"><ArrowLeft className="h-5 w-5" /></Link>
         <button onClick={() => void print()} className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 px-3 py-2 text-sm font-bold text-amber-700"><Printer className="h-4 w-4" /><T>Print</T></button>

@@ -5,6 +5,10 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { invoicesApi } from "@/lib/api";
 import { getCurrencyForCountry } from "@/lib/currency";
+import {
+  mobileInvoiceDetailPath,
+  resolveCreatedInvoice,
+} from "@/lib/mobileInvoice";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,9 +60,22 @@ export default function MobileInvoiceCreatePage() {
           amount: Number(line.amount),
         })),
       });
-      const invoice = response.data;
-      toast({ title: "Invoice created", description: invoice?.invoiceNumber });
-      router.replace(`/m/invoices/${invoice.id}`);
+      const invoice = resolveCreatedInvoice(response.data);
+      if (!invoice?.id) {
+        toast({
+          title: "Invoice created",
+          description: "Open Invoices from the menu to find your new bill.",
+        });
+        router.replace("/m/invoices");
+        return;
+      }
+      toast({
+        title: "Invoice created",
+        description: invoice.invoiceNumber
+          ? `#${invoice.invoiceNumber}`
+          : undefined,
+      });
+      router.replace(mobileInvoiceDetailPath(invoice.id, { created: true }));
     } catch (error: any) {
       toast({ title: "Could not create invoice", description: error?.response?.data?.message ?? "Please review the bill", variant: "destructive" });
     } finally {
