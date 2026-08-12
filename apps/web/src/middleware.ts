@@ -125,7 +125,12 @@ function getPublicHostname(request: NextRequest): string {
 
 function getPublicRequestUrl(request: NextRequest, hostname: string): URL {
   const url = new URL(request.url);
-  if (isApprovedDomain(hostname)) url.hostname = hostname;
+  if (isApprovedDomain(hostname)) {
+    url.hostname = hostname;
+    // Railway includes its internal listener port in request.url. It must never
+    // be carried into a public redirect or rewrite URL.
+    url.port = "";
+  }
   return url;
 }
 
