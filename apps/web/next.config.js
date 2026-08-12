@@ -13,6 +13,10 @@ const nextConfig = {
   // Static export for Tauri desktop builds
   ...(isTauriBuild && { output: 'export', distDir: 'out' }),
 
+  // Production web deployments run as a self-contained Node server. This is
+  // required by Railway while preserving the static Tauri export above.
+  ...(!isTauriBuild && { output: 'standalone' }),
+
   // Compress output for smaller bundles
   compress: true,
 
