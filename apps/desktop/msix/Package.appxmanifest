@@ -8,7 +8,7 @@
   <Identity
     Name="OrivraaLTD.Orivraa"
     Publisher="CN=B2A437AC-7FFC-46EE-8124-FF5F92077F5E"
-    Version="0.2.5.0"
+    Version="0.2.6.0"
     ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Orivraa</DisplayName>

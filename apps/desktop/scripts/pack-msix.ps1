@@ -8,7 +8,7 @@
 #   Package EXE as MSIX:   https://learn.microsoft.com/en-us/windows/apps/dev-tools/winapp-cli/guides/packaging-cli
 #   Microsoft Learn MCP:   https://learn.microsoft.com/api/mcp (microsoft_docs_search / microsoft_docs_fetch)
 param(
-    [string]$Version = "0.2.5",
+    [string]$Version = "0.2.6",
     [switch]$SkipBuild
 )
 
