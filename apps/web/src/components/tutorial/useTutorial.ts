@@ -236,7 +236,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Artisan Fabrication Pipeline",
         description:
-          "Track active custom jobs through their fabrication lifecycle on the workbench! Click the interactive stages checklist (Cast → File → Set → Polish → HUID) to record milestones in real-time as your Karigars complete each step.",
+          "Track active jobs with gold in/out at each stage. Casting trees show issued metal vs finished pieces, sprue/button, recoverable scrap, allowed loss, and unexplained loss. This is workshop metal — not customer billing wastage.",
         side: "top",
         align: "center",
       },
@@ -246,8 +246,38 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Create Fabrication Job",
         description:
-          "Launch a new custom job order for any product. Select from your registered Karigars, specify the product description, and enter the gross weight of precious metal to initialize the tracking card.",
+          "Launch a new custom job. Then record a casting tree (for example 1 kg issued) and department weights. Use Load sample 1 kg job for a walkthrough of the Gold Loss report.",
         side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='supply-sample-job']",
+      popover: {
+        title: "Sample 1 kg casting job",
+        description:
+          "Loads a demo: 1000g issued, 920g finished, 50g sprue, 20g recoverable. Actual loss is 10g, which matches 1% allowed — unexplained stays at 0. Open the Gold Loss report after it loads.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='supply-casting-tree']",
+      popover: {
+        title: "Casting tree reconciliation",
+        description:
+          "Enter issued gold, finished pieces, sprue/button, and recoverable scrap. Actual loss and unexplained loss (above the allowed %) calculate automatically.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='supply-gold-loss']",
+      popover: {
+        title: "Gold Loss report",
+        description:
+          "Job-wise, tree-wise, and karigar-wise gold accountability. Print this for a factory walkthrough. Catalogue and invoice wastage are separate and never mix into this ledger.",
+        side: "top",
         align: "center",
       },
     },

@@ -11,6 +11,7 @@ export * from "./validation/method-validation";
 export * from "./location-data";
 export * from "./utils/market-config";
 export * from "./utils/wastage";
+export * from "./utils/gold-loss";
 export * from "./utils/weight-conversion";
 
 // Pricing

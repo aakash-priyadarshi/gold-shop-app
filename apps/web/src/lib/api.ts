@@ -511,15 +511,74 @@ export const chitApi = {
   ) => api.post(`/chit-groups/${id}/cycles/${cycleId}/winner`, data),
 };
 
-// Karigar / supply-chain API (full-state snapshot)
+// Karigar / supply-chain API
 export const karigarApi = {
   getSnapshot: () => api.get("/karigar/snapshot"),
   saveSnapshot: (data: {
     vaultReserves: Record<string, number>;
     workshops: any[];
-    jobs: any[];
+    jobs?: any[];
     customMaterials?: Array<{ key: string; label: string; vaultKey: string }>;
   }) => api.put("/karigar/snapshot", data),
+  createJob: (data: {
+    product: string;
+    artisan: string;
+    workshopId?: string;
+    grossWeight?: number;
+    metalKey?: string;
+    allowedWastagePercent?: number;
+  }) => api.post("/karigar/jobs", data),
+  updateJob: (jobId: string, data: Record<string, unknown>) =>
+    api.patch(`/karigar/jobs/${jobId}`, data),
+  deleteJob: (jobId: string) => api.delete(`/karigar/jobs/${jobId}`),
+  deleteWorkshop: (workshopId: string) =>
+    api.delete(`/karigar/workshops/${workshopId}`),
+  addMovement: (
+    data: {
+      type: string;
+      weightGrams: number;
+      workshopId?: string;
+      stage?: string;
+      metalKey?: string;
+      note?: string;
+    },
+    jobId?: string,
+  ) =>
+    jobId
+      ? api.post(`/karigar/jobs/${jobId}/movements`, data)
+      : api.post("/karigar/movements", data),
+  updateStage: (
+    jobId: string,
+    stage: string,
+    data: {
+      goldInGrams?: number;
+      goldOutGrams?: number;
+      scrapGrams?: number;
+      dustGrams?: number;
+      allowedWastagePercent?: number;
+      workshopId?: string;
+      status?: string;
+    },
+  ) => api.patch(`/karigar/jobs/${jobId}/stages/${stage}`, data),
+  createTree: (
+    jobId: string,
+    data: { label?: string; issuedGrams: number; allowedWastagePercent?: number; purity?: string },
+  ) => api.post(`/karigar/jobs/${jobId}/trees`, data),
+  updateTree: (
+    jobId: string,
+    treeId: string,
+    data: {
+      issuedGrams?: number;
+      finishedGrams?: number;
+      sprueButtonGrams?: number;
+      recoverableGrams?: number;
+      allowedWastagePercent?: number;
+      lines?: Array<{ label: string; weightGrams: number }>;
+    },
+  ) => api.patch(`/karigar/jobs/${jobId}/trees/${treeId}`, data),
+  goldLoss: (params?: { from?: string; to?: string }) =>
+    api.get("/karigar/gold-loss", { params }),
+  loadSampleJob: () => api.post("/karigar/sample-job"),
 };
 
 // RFQ API

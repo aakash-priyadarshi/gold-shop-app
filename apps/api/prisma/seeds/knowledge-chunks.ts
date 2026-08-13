@@ -213,6 +213,11 @@ const CHUNKS: { topic: string; content: string }[] = [
     content:
       "On mobile POS, tap a product to open its detail sheet with metal, wastage (jarti), gemstones, making charges, and the stored calculation. Tap Show full details to customer to open a full-screen page at /m/products/:id that you can hand to the buyer. This is a seller inventory view, not the public marketplace product page. Stock Ledger item names also open the same page. Wastage is a default % applied when you bill; estimated bill = catalog price (metal + making + gems + tax) plus wastage.",
   },
+  {
+    topic: "karigar_gold_loss_ledger",
+    content:
+      "Karigar Gold Loss on Supply Chain tracks physical workshop metal, not customer billing wastage (jarti) on invoices. Issue gold from the vault to a karigar or job. Each job has stages (casting, filing, polishing, stone setting, final polish, QC) with gold in, gold out, scrap, and dust. Casting trees reconcile issued grams against finished pieces, sprue/button, and recoverable scrap. Actual loss = issued − finished − sprue − recoverable. Unexplained loss is anything above the allowed %. Catalogue and RFQ bills never feed this ledger. Use Load sample 1 kg job for a demo: 1000g issued, 920g finished, 50g sprue, 20g recoverable, 10g actual loss at 1% allowed. Print the Gold Loss report for job-wise, tree-wise, and karigar-wise accountability.",
+  },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

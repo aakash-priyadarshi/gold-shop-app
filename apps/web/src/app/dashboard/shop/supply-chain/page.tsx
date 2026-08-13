@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
+import { GoldLossReport } from "@/components/shop/karigar/GoldLossReport";
+import { KarigarJobGoldCard } from "@/components/shop/karigar/KarigarJobGoldCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { materialsApi, karigarApi } from "@/lib/api";
@@ -67,9 +69,14 @@ interface Job {
   id: string;
   product: string;
   artisan: string;
+  workshopId?: string | null;
   grossWeight: number;
   status: string;
-  steps: {
+  allowedWastagePercent?: number;
+  goldLoss?: any;
+  stages?: any[];
+  trees?: any[];
+  steps?: {
     casting: boolean;
     filing: boolean;
     setting: boolean;
@@ -124,6 +131,7 @@ function KarigarSupplyChainContent() {
   const [vaultReserves, setVaultReserves] = useState<VaultReserves>({ goldGrains24k: 0, goldBars24k: 0, silverBullion999: 0 });
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [goldLoss, setGoldLoss] = useState<any>(null);
   const [customMaterials, setCustomMaterials] = useState<{ key: string; label: string; vaultKey: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -252,6 +260,7 @@ function KarigarSupplyChainContent() {
         if (dbConfig.workshops) setWorkshops(dbConfig.workshops);
         if (dbConfig.jobs) setJobs(dbConfig.jobs);
         if (dbConfig.customMaterials) setCustomMaterials(dbConfig.customMaterials);
+        if (dbConfig.goldLoss) setGoldLoss(dbConfig.goldLoss);
       }
     } catch (err) {
       console.error("Failed to load supply-chain configuration from database:", err);
@@ -274,7 +283,7 @@ function KarigarSupplyChainContent() {
   const persistState = async (
     updatedReserves: VaultReserves,
     updatedWorkshops: Workshop[],
-    updatedJobs: Job[],
+    _updatedJobs?: Job[],
     updatedCustomMaterials?: typeof customMaterials,
   ) => {
     setSaving(true);
@@ -282,7 +291,6 @@ function KarigarSupplyChainContent() {
       await karigarApi.saveSnapshot({
         vaultReserves: updatedReserves,
         workshops: updatedWorkshops,
-        jobs: updatedJobs,
         customMaterials: updatedCustomMaterials ?? customMaterials,
       });
     } catch (err) {
@@ -376,11 +384,14 @@ function KarigarSupplyChainContent() {
 
   // ── Delete Karigar ──
   const handleDeleteKarigar = async (id: string) => {
-    const updatedWorkshops = workshops.filter((w) => w.id !== id);
-    setWorkshops(updatedWorkshops);
-    setDeleteKarigarId(null);
-    showToast(t("Karigar removed from ledger."));
-    await persistState(vaultReserves, updatedWorkshops, jobs);
+    try {
+      await karigarApi.deleteWorkshop(id);
+      setDeleteKarigarId(null);
+      showToast(t("Karigar removed from ledger."));
+      await loadDatabaseConfig();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || t("Could not remove karigar"), "error");
+    }
   };
 
   // ── Allotment handler ──
@@ -392,30 +403,20 @@ function KarigarSupplyChainContent() {
     }
 
     const vaultKey = getVaultKeyForMetal(allotForm.metalType);
-    let updatedReserves = { ...vaultReserves };
-
-    if ((updatedReserves[vaultKey] || 0) < wt) {
-      showToast(t("Insufficient reserves in vault for this material!"), "error");
-      return;
+    try {
+      await karigarApi.addMovement({
+        type: "ISSUE",
+        weightGrams: wt,
+        workshopId: allotForm.workshopId,
+        metalKey: vaultKey,
+      });
+      setAllotForm((prev) => ({ ...prev, weight: "" }));
+      setAllotModalOpen(false);
+      showToast(t(`Issued ${wt}g to workshop successfully!`));
+      await loadDatabaseConfig();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || t("Insufficient reserves in vault for this material!"), "error");
     }
-    updatedReserves[vaultKey] = Number(((updatedReserves[vaultKey] || 0) - wt).toFixed(2));
-
-    const updatedWorkshops = workshops.map((w) =>
-      w.id === allotForm.workshopId
-        ? {
-            ...w,
-            metalIssued: Number((w.metalIssued + wt).toFixed(2)),
-            outstandingBalance: Number((w.outstandingBalance + wt).toFixed(2)),
-          }
-        : w
-    );
-
-    setVaultReserves(updatedReserves);
-    setWorkshops(updatedWorkshops);
-    setAllotForm((prev) => ({ ...prev, weight: "" }));
-    setAllotModalOpen(false);
-    showToast(t(`Issued ${wt}g to workshop successfully!`));
-    await persistState(updatedReserves, updatedWorkshops, jobs);
   };
 
   // ── Procure handler ──
@@ -470,66 +471,50 @@ function KarigarSupplyChainContent() {
       showToast(t("Please fill in the product name and artisan!"), "error");
       return;
     }
-    const newJob: Job = {
-      id: "job-" + Date.now(),
-      product: jobForm.product,
-      artisan: jobForm.artisan,
-      grossWeight: parseFloat(jobForm.grossWeight) || 0,
-      status: "Casting",
-      steps: { casting: false, filing: false, setting: false, polishing: false, hallmark: false },
-      updatedAt: "Just now",
-    };
-    const updatedJobs = [...jobs, newJob];
-    setJobs(updatedJobs);
-    setAddJobModalOpen(false);
-    setJobForm({ product: "", artisan: "", grossWeight: "" });
-    showToast(t(`Job "${newJob.product}" created!`));
-    await persistState(vaultReserves, workshops, updatedJobs);
+    const workshopId = workshops.find((w) => w.artisan === jobForm.artisan)?.id;
+    try {
+      await karigarApi.createJob({
+        product: jobForm.product,
+        artisan: jobForm.artisan,
+        workshopId,
+        grossWeight: parseFloat(jobForm.grossWeight) || 0,
+      });
+      setAddJobModalOpen(false);
+      setJobForm({ product: "", artisan: "", grossWeight: "" });
+      showToast(t(`Job "${jobForm.product}" created!`));
+      await loadDatabaseConfig();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || t("Could not create job"), "error");
+    }
   };
 
   // ── Edit Job ──
   const handleEditJob = async () => {
     if (!editJobForm) return;
-    const updatedJobs = jobs.map((j) => (j.id === editJobForm.id ? { ...editJobForm } : j));
-    setJobs(updatedJobs);
-    setEditJobModalOpen(false);
-    setEditJobForm(null);
-    showToast(t("Job details updated!"));
-    await persistState(vaultReserves, workshops, updatedJobs);
+    try {
+      await karigarApi.updateJob(editJobForm.id, {
+        product: editJobForm.product,
+        artisan: editJobForm.artisan,
+        grossWeight: editJobForm.grossWeight,
+      });
+      setEditJobModalOpen(false);
+      setEditJobForm(null);
+      showToast(t("Job details updated!"));
+      await loadDatabaseConfig();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || t("Could not update job"), "error");
+    }
   };
 
-  // ── Delete Job ──
   const handleDeleteJob = async (id: string) => {
-    const updatedJobs = jobs.filter((j) => j.id !== id);
-    setJobs(updatedJobs);
-    setDeleteJobId(null);
-    showToast(t("Job removed from pipeline."));
-    await persistState(vaultReserves, workshops, updatedJobs);
-  };
-
-  // ── Step click toggler ──
-  const toggleJobStep = async (jobId: string, stepKey: string) => {
-    const updatedJobs = jobs.map((j) => {
-      if (j.id !== jobId) return j;
-      // @ts-ignore
-      const nextSteps = { ...j.steps, [stepKey]: !j.steps[stepKey] };
-
-      let status = "Casting";
-      if (nextSteps.hallmark) status = "Completed";
-      else if (nextSteps.polishing) status = "Polishing";
-      else if (nextSteps.setting) status = "Stone Setting";
-      else if (nextSteps.filing) status = "Filing & Assembly";
-
-      return {
-        ...j,
-        steps: nextSteps,
-        status,
-        updatedAt: "Just now",
-      };
-    });
-
-    setJobs(updatedJobs);
-    await persistState(vaultReserves, workshops, updatedJobs);
+    try {
+      await karigarApi.deleteJob(id);
+      setDeleteJobId(null);
+      showToast(t("Job removed from pipeline."));
+      await loadDatabaseConfig();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || t("Could not delete job"), "error");
+    }
   };
 
   const filteredWorkshops = workshops.filter(
@@ -649,6 +634,22 @@ function KarigarSupplyChainContent() {
           >
             <Plus className="h-4 w-4 mr-1" />
             <T>Add Job</T>
+          </Button>
+          <Button
+            data-tour="supply-sample-job"
+            variant="outline"
+            className="border-emerald-500/30 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 bg-white dark:bg-gray-900"
+            onClick={async () => {
+              try {
+                await karigarApi.loadSampleJob();
+                showToast(t("Sample 1 kg casting job loaded."));
+                await loadDatabaseConfig();
+              } catch (err: any) {
+                showToast(err?.response?.data?.message || t("Could not load sample job"), "error");
+              }
+            }}
+          >
+            <T>Load sample 1 kg job</T>
           </Button>
           <Button
             className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
@@ -1013,14 +1014,14 @@ function KarigarSupplyChainContent() {
                 </CardContent>
               </Card>
 
-              {/* Jobs and Steps checklists */}
+              {/* Jobs with gold-loss stages + casting trees */}
               <Card data-tour="supply-pipeline" className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                 <CardHeader>
                   <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">
                     <T>Artisan Fabrication Pipeline</T>
                   </CardTitle>
                   <CardDescription>
-                    <T>Active custom jobs on the workbench. Click checklist stages to record fabrication milestones.</T>
+                    <T>Track gold in and out at each stage. Casting trees reconcile issued metal against finished pieces, sprue, and recoverable scrap.</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1034,7 +1035,7 @@ function KarigarSupplyChainContent() {
                           <T>No active fabrication jobs</T>
                         </p>
                         <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                          <T>Create a new job to start tracking fabrication progress through casting, filing, setting, polishing, and hallmarking stages.</T>
+                          <T>Create a job or load the sample 1 kg casting tree to record issued gold, scrap, and unexplained loss.</T>
                         </p>
                       </div>
                       <Button
@@ -1049,106 +1050,37 @@ function KarigarSupplyChainContent() {
                     </div>
                   ) : (
                     jobs.map((j) => (
-                      <div
+                      <KarigarJobGoldCard
                         key={j.id}
-                        className="p-3 border dark:border-gray-800 rounded-xl bg-gray-50/50 dark:bg-gray-800/20 space-y-3"
-                      >
-                        <div className="flex justify-between items-start flex-wrap gap-2">
-                          <div>
-                            <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{j.product}</p>
-                            <p className="text-xs text-muted-foreground">{j.artisan}</p>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/25 text-[10px]">
-                              {j.status}
-                            </Badge>
-                            <button
-                              onClick={() => {
-                                setEditJobForm({ ...j });
-                                setEditJobModalOpen(true);
-                              }}
-                              className="p-1 rounded hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-600 dark:text-amber-400 transition-colors"
-                              title={t("Edit Job")}
-                            >
-                              <Edit3 className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteJobId(j.id)}
-                              className="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-500 dark:text-rose-400 transition-colors"
-                              title={t("Delete Job")}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Horizontal steps checkboxes */}
-                        <div className="grid grid-cols-5 gap-1 text-[10px] text-center pt-2">
-                          <button
-                            type="button"
-                            onClick={() => toggleJobStep(j.id, "casting")}
-                            className={`py-1.5 rounded-lg border font-medium ${
-                              j.steps.casting
-                                ? "bg-amber-500 border-amber-500 text-white"
-                                : "border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                            }`}
-                          >
-                            Cast
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleJobStep(j.id, "filing")}
-                            className={`py-1.5 rounded-lg border font-medium ${
-                              j.steps.filing
-                                ? "bg-amber-500 border-amber-500 text-white"
-                                : "border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                            }`}
-                          >
-                            File
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleJobStep(j.id, "setting")}
-                            className={`py-1.5 rounded-lg border font-medium ${
-                              j.steps.setting
-                                ? "bg-amber-500 border-amber-500 text-white"
-                                : "border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                            }`}
-                          >
-                            Set
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleJobStep(j.id, "polishing")}
-                            className={`py-1.5 rounded-lg border font-medium ${
-                              j.steps.polishing
-                                ? "bg-amber-500 border-amber-500 text-white"
-                                : "border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                            }`}
-                          >
-                            Polish
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleJobStep(j.id, "hallmark")}
-                            className={`py-1.5 rounded-lg border font-medium ${
-                              j.steps.hallmark
-                                ? "bg-emerald-500 border-emerald-500 text-white animate-pulse"
-                                : "border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                            }`}
-                          >
-                            HUID
-                          </button>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] text-muted-foreground pt-1">
-                          <span>
-                            <T>Gross Weight</T>: {j.grossWeight} g
-                          </span>
-                          <span>{j.updatedAt}</span>
-                        </div>
-                      </div>
+                        job={j}
+                        onChanged={() => void loadDatabaseConfig()}
+                        onEdit={() => {
+                          setEditJobForm({ ...j });
+                          setEditJobModalOpen(true);
+                        }}
+                        onDelete={() => setDeleteJobId(j.id)}
+                      />
                     ))
                   )}
+                </CardContent>
+              </Card>
+              <Card className="md:col-span-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-base font-semibold">
+                      <T>Gold Loss / Wastage Report</T>
+                    </CardTitle>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.print()}
+                    >
+                      <T>Print</T>
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <GoldLossReport report={goldLoss} />
                 </CardContent>
               </Card>
             </div>

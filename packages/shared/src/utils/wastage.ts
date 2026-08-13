@@ -3,6 +3,7 @@
  *
  * Distinct from karigar/workshop wastage limits — this is the customer-facing
  * manufacturing loss charge shown on invoices, quotes, and POS.
+ * Physical factory loss (issued vs finished vs sprue) lives in gold-loss.ts.
  */
 
 import { mapCountryToMarket, type MarketRegion } from "./market-config";

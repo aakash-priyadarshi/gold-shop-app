@@ -459,6 +459,9 @@ model Shop {
   karigarWorkshops     KarigarWorkshop[]
   karigarJobs          KarigarJob[]
   karigarVaultReserves KarigarVaultReserve[]
+  karigarMetalMovements KarigarMetalMovement[]
+  karigarJobStages      KarigarJobStage[]
+  karigarCastingTrees   KarigarCastingTree[]
 
   // AI Credit Auto-Recharge
   autoRechargeEnabled   Boolean @default(false)
@@ -3947,6 +3950,25 @@ model GoldLoan {
 }
 
 // ─── Karigar / Workshop supply chain ──────────────────────
+enum KarigarStage {
+  CASTING
+  FILING
+  POLISHING
+  SETTING
+  FINAL_POLISH
+  QC
+}
+
+enum KarigarMovementType {
+  ISSUE
+  TRANSFER
+  RETURN_FINISHED
+  RETURN_SPRUE
+  SCRAP
+  DUST
+  ADJUST
+}
+
 model KarigarWorkshop {
   id                 String   @id // client-generated id (e.g. ws-...)
   shopId             String
@@ -3966,23 +3988,115 @@ model KarigarWorkshop {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   shop               Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  jobs               KarigarJob[]
+  movements          KarigarMetalMovement[]
+  stages             KarigarJobStage[]
 
   @@index([shopId])
 }
 
 model KarigarJob {
-  id          String   @id // client-generated id (e.g. job-...)
-  shopId      String
-  product     String
-  artisan     String
-  grossWeight Float    @default(0)
-  status      String   @default("PENDING")
-  steps       Json? // { casting, filing, setting, polishing, hallmark }
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  id                     String   @id // client-generated id (e.g. job-...)
+  shopId                 String
+  workshopId             String?
+  product                String
+  artisan                String
+  grossWeight            Float    @default(0)
+  metalKey               String   @default("goldGrains24k")
+  allowedWastagePercent  Float    @default(1)
+  status                 String   @default("PENDING")
+  steps                  Json? // legacy checkboxes; stages table is source of truth
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  shop                   Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workshop               KarigarWorkshop? @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  stages                 KarigarJobStage[]
+  movements              KarigarMetalMovement[]
+  trees                  KarigarCastingTree[]
 
   @@index([shopId])
+  @@index([workshopId])
+}
+
+model KarigarJobStage {
+  id                    String       @id @default(uuid())
+  shopId                String
+  jobId                 String
+  workshopId            String?
+  stage                 KarigarStage
+  goldInGrams           Float        @default(0)
+  goldOutGrams          Float        @default(0)
+  scrapGrams            Float        @default(0)
+  dustGrams             Float        @default(0)
+  allowedWastagePercent Float        @default(1)
+  status                String       @default("PENDING")
+  completedAt           DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  shop                  Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  job                   KarigarJob   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  workshop              KarigarWorkshop? @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+
+  @@unique([jobId, stage])
+  @@index([shopId, jobId])
+}
+
+model KarigarCastingTree {
+  id                String   @id @default(uuid())
+  shopId            String
+  jobId             String
+  label             String   @default("Tree")
+  metalKey          String   @default("goldGrains24k")
+  purity            String   @default("24K")
+  issuedGrams       Float    @default(0)
+  finishedGrams     Float    @default(0)
+  sprueButtonGrams  Float    @default(0)
+  recoverableGrams  Float    @default(0)
+  allowedWastagePercent Float @default(1)
+  status            String   @default("OPEN")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  shop              Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  job               KarigarJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  lines             KarigarCastingTreeLine[]
+  movements         KarigarMetalMovement[]
+
+  @@index([shopId, jobId])
+}
+
+model KarigarCastingTreeLine {
+  id        String             @id @default(uuid())
+  treeId    String
+  label     String
+  weightGrams Float            @default(0)
+  sortOrder Int                @default(0)
+  tree      KarigarCastingTree @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  @@index([treeId])
+}
+
+model KarigarMetalMovement {
+  id          String               @id @default(uuid())
+  shopId      String
+  workshopId  String?
+  jobId       String?
+  treeId      String?
+  stage       KarigarStage?
+  type        KarigarMovementType
+  metalKey    String               @default("goldGrains24k")
+  weightGrams Float
+  purity      String?
+  note        String?
+  createdBy   String?
+  createdAt   DateTime             @default(now())
+  shop        Shop                 @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workshop    KarigarWorkshop?     @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  job         KarigarJob?          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  tree        KarigarCastingTree?  @relation(fields: [treeId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, createdAt])
+  @@index([jobId])
+  @@index([workshopId])
 }
 
 model KarigarVaultReserve {
