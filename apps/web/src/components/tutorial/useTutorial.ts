@@ -7,6 +7,92 @@ import { useEffect, useMemo } from "react";
 import { useTourContext } from "./useTourContext";
 
 /** Tour steps keyed by pathname prefix */
+const HARDWARE_TOUR_STEPS: DriveStep[] = [
+  {
+    element: "[data-tour='hardware-receipt-printer']",
+    popover: {
+      title: "Receipt printer",
+      description:
+        "Pick how invoices Print. Thermal receipt is a 58/80mm roll (SEZNIK MiniX / Josh, Epson TM). A4 / office is any printer already installed on this computer (Wi-Fi, USB, Windows Devices and Printers). Invoice Print then chooses automatically — use the chevron if you need the other type.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='hardware-detected']",
+    popover: {
+      title: "Printers on this device",
+      description:
+        "In the Orivraa Desktop app this list comes from Windows or macOS. Tap a thermal name to use it for short receipts. In the browser you only see paired thermals — open Desktop to list every office printer too.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='hardware-scanner']",
+    popover: {
+      title: "Barcode scanner",
+      description:
+        "USB or Bluetooth scanners that type like a keyboard work with no extra driver. Phone camera scanning is available when the browser supports it.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='hardware-label-printer']",
+    popover: {
+      title: "Jewellery label printer",
+      description:
+        "Optional Zebra / ZPL tags from Vault & Tags → Print tags. Leave this off to use the browser printable tag sheet.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='hardware-save']",
+    popover: {
+      title: "Save hardware settings",
+      description:
+        "Save after pairing. Then open any invoice and tap Print — the subtitle shows Thermal receipt or A4 / office.",
+      side: "top",
+      align: "center",
+    },
+  },
+];
+
+const INVOICE_DETAIL_TOUR_STEPS: DriveStep[] = [
+  {
+    element: "[data-tour='invoice-print']",
+    popover: {
+      title: "Print",
+      description:
+        "One Print button. If a thermal receipt printer is paired or listed by the Desktop app, it sends a short 58/80mm receipt. Otherwise it opens the A4 / office print dialog. The chevron lets you pick either type, or open printer setup.",
+      side: "bottom",
+      align: "end",
+    },
+  },
+  {
+    element: "[data-tour='invoice-download-pdf']",
+    popover: {
+      title: "Download PDF",
+      description:
+        "Saves an on-demand PDF of this bill (free on every plan). On a phone you also get Share PDF and WhatsApp, which attach the same PDF. On a PC use Download, Email, and SMS instead of the phone share sheet.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='invoice-receipt-printer']",
+    popover: {
+      title: "Set up a printer",
+      description:
+        "Opens POS Hardware. Pair a wireless thermal, pick USB, or (in Desktop) tap an installed thermal from Windows/macOS. Shop Settings → Preferences also has this link.",
+      side: "top",
+      align: "start",
+    },
+  },
+];
+
 const TOUR_STEPS: Record<string, DriveStep[]> = {
   "/dashboard/shop/pos": [
     {
@@ -363,7 +449,18 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
         align: "start",
       },
     },
+    {
+      element: "[data-tour='settings-hardware']",
+      popover: {
+        title: "Receipt / thermal printer",
+        description:
+          "Under Preferences, open Hardware settings to pair a 58/80mm thermal receipt printer or use A4 / office printers already on this PC. The Orivraa Desktop app lists Windows and macOS printers so invoice Print can tell thermal from office automatically.",
+        side: "top",
+        align: "start",
+      },
+    },
   ],
+  "/dashboard/shop/settings/hardware": HARDWARE_TOUR_STEPS,
   "/dashboard/shop/messages": [
     {
       element: "[data-tour='messages-list']",
@@ -529,7 +626,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Invoice List",
         description:
-          "View all invoices with status (Issued / Paid / Partial / Overdue / Voided). Click any invoice to see full details, mark as paid, or send a payment reminder.",
+          "View all invoices with status (Issued / Paid / Partial / Overdue / Voided). Click any invoice to Print (thermal receipt or A4), Download PDF, Email, or share on a phone.",
         side: "top",
         align: "center",
       },
@@ -538,10 +635,11 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "💡 Invoice Settings",
         description:
-          "Want to change what your printed bill looks like? Go to Invoice Settings (top-right gear icon) to add your shop logo, GSTIN, footer note, and control which fields appear on the bill.",
+          "Want to change what your printed bill looks like? Go to Invoice Settings (top-right gear icon) to add your shop logo, GSTIN, footer note, and control which fields appear on the bill. Pair a receipt printer from Shop Settings → Hardware, or from the Receipt printer link on the invoice.",
       },
     },
   ],
+  "/dashboard/shop/invoices/": INVOICE_DETAIL_TOUR_STEPS,
   // ─── Tax Reports: generic fallback (shown when no country tab active yet) ───
   "/dashboard/shop/tax-reports": [
     {
@@ -1424,12 +1522,26 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Tax preview",
         description:
-          "Review metal, making, gemstone, and wastage tax before creating. The server recalculates authoritatively on submit.",
+          "Review metal, making, gemstone, and wastage tax before creating. The server recalculates authoritatively on submit. After Create you land on the invoice — tap Print (thermal or A4) or Share PDF / WhatsApp.",
         side: "top",
         align: "center",
       },
     },
   ],
+  "/m/settings": [
+    {
+      element: "[data-tour='m-settings-hardware']",
+      popover: {
+        title: "POS Hardware",
+        description:
+          "Tap here to pair a thermal receipt printer, barcode scanner, or jewellery label printer. Invoice Print then sends to that printer automatically.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
+  "/m/settings/hardware": HARDWARE_TOUR_STEPS,
+  "/m/invoices/": INVOICE_DETAIL_TOUR_STEPS,
   "/m/repairs": [
     {
       element: "[data-tour='m-repairs-list']",
@@ -1570,6 +1682,38 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
         title: "Deep Insights Panel",
         description:
           "Click the 👁 eye icon on any user to open the sliding panel. It features 5 tabs: Profile, Activity (with active sessions), Shops, Audit Log, and Direct Messaging (with AI compose).",
+      },
+    },
+  ],
+  "/dashboard/admin/crash-reports": [
+    {
+      element: "[data-tour='crash-reports-header']",
+      popover: {
+        title: "Crash Reports",
+        description:
+          "Errors other users actually saw: red toasts, page crashes, and server/network failures are captured automatically. Check this page daily so you can fix issues you never hit yourself.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='crash-reports-filters']",
+      popover: {
+        title: "Today and source",
+        description:
+          "Defaults to today's new reports. Auto vs User shows silent capture versus someone tapping Send Report. Copy uses the same title + description + page block as the user's toast copy button.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='crash-reports-list']",
+      popover: {
+        title: "Review and resolve",
+        description:
+          "Open a row for stack and notes. Mark Reviewed or Resolved as you go. Session-expired and form-validation toasts are not logged.",
+        side: "top",
+        align: "center",
       },
     },
   ],

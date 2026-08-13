@@ -492,7 +492,7 @@ export default function MobileStoreSettingsPage() {
         </section>
 
         {/* Hardware link */}
-        <section>
+        <section data-tour="m-settings-hardware">
           <Link
             href="/m/settings/hardware"
             className="flex items-center justify-between rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3"

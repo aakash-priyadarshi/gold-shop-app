@@ -368,7 +368,10 @@ export default function HardwareSettingsPanel({
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
         {/* Scanner section */}
-        <section className="bg-white rounded-2xl border border-gray-100 p-4">
+        <section
+          className="bg-white rounded-2xl border border-gray-100 p-4"
+          data-tour="hardware-scanner"
+        >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <ScanLine className="h-5 w-5 text-amber-600" />
@@ -436,7 +439,10 @@ export default function HardwareSettingsPanel({
         </section>
 
         {/* Printer section */}
-        <section className="bg-white rounded-2xl border border-gray-100 p-4">
+        <section
+          className="bg-white rounded-2xl border border-gray-100 p-4"
+          data-tour="hardware-receipt-printer"
+        >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Printer className="h-5 w-5 text-amber-600" />
@@ -529,7 +535,10 @@ export default function HardwareSettingsPanel({
             </p>
           )}
           {detected.length > 0 ? (
-            <div className="mb-3 rounded-xl bg-gray-50 border border-gray-100 p-3 space-y-1.5">
+            <div
+              className="mb-3 rounded-xl bg-gray-50 border border-gray-100 p-3 space-y-1.5"
+              data-tour="hardware-detected"
+            >
               <p className="text-[11px] font-semibold text-gray-700">
                 <T>Detected on this device</T>
               </p>
@@ -602,7 +611,10 @@ export default function HardwareSettingsPanel({
               ))}
             </div>
           ) : (
-            <p className="text-[11px] text-gray-500 mb-3">
+            <p
+              className="text-[11px] text-gray-500 mb-3"
+              data-tour="hardware-detected"
+            >
               {isTauriDesktop() ? (
                 <T>
                   No printers found on this computer yet. Install a printer in
@@ -714,7 +726,10 @@ export default function HardwareSettingsPanel({
         </section>
 
         {/* Label printer (ZPL / Zebra) */}
-        <section className="bg-white rounded-2xl border border-gray-100 p-4">
+        <section
+          className="bg-white rounded-2xl border border-gray-100 p-4"
+          data-tour="hardware-label-printer"
+        >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Tag className="h-5 w-5 text-amber-600" />
@@ -956,6 +971,7 @@ export default function HardwareSettingsPanel({
         <button
           onClick={handleSave}
           disabled={saving === "saving"}
+          data-tour="hardware-save"
           className="w-full py-3 bg-amber-500 text-white text-sm font-semibold rounded-2xl flex items-center justify-center gap-2 active:bg-amber-600 disabled:opacity-60"
         >
           {saving === "saving" ? (

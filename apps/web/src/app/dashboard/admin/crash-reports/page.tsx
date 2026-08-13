@@ -258,7 +258,7 @@ export default function CrashReportsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gold-100 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gold-100 flex items-center gap-2" data-tour="crash-reports-header">
               <Bug className="h-6 w-6 text-red-500" />
               Crash Reports
             </h1>
@@ -349,7 +349,7 @@ export default function CrashReportsPage() {
         )}
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3" data-tour="crash-reports-filters">
           <Filter className="h-4 w-4 text-gray-400" />
           <div className="relative">
             <select
@@ -431,7 +431,7 @@ export default function CrashReportsPage() {
         </div>
 
         {/* Reports list */}
-        <div className="space-y-3">
+        <div className="space-y-3" data-tour="crash-reports-list">
           {loading && reports.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <RefreshCw className="h-8 w-8 mx-auto animate-spin mb-3" />

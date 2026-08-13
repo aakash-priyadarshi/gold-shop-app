@@ -829,7 +829,7 @@ export default function ShopSettingsPage() {
 
             {/* Preferences Tab */}
             <TabsContent value="preferences" className="space-y-4">
-              <Card>
+              <Card data-tour="settings-hardware">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Printer className="h-5 w-5 text-amber-600" />

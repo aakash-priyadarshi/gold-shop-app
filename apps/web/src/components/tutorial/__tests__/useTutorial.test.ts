@@ -49,6 +49,24 @@ describe("Tutorial TOUR_STEPS — Structure", () => {
   test("has tour steps for admin users", () => {
     expect(sourceFile).toContain('"/dashboard/admin/users"');
   });
+
+  test("has tour steps for hardware settings", () => {
+    expect(sourceFile).toContain('"/dashboard/shop/settings/hardware"');
+    expect(sourceFile).toContain('"/m/settings/hardware"');
+    expect(sourceFile).toContain("hardware-receipt-printer");
+  });
+
+  test("has tour steps for invoice detail Print", () => {
+    expect(sourceFile).toContain('"/dashboard/shop/invoices/"');
+    expect(sourceFile).toContain('"/m/invoices/"');
+    expect(sourceFile).toContain("invoice-print");
+    expect(sourceFile).toContain("invoice-download-pdf");
+  });
+
+  test("has tour steps for admin crash reports", () => {
+    expect(sourceFile).toContain('"/dashboard/admin/crash-reports"');
+    expect(sourceFile).toContain("crash-reports-filters");
+  });
 });
 
 describe("Tutorial — Invoice Create Page Content", () => {

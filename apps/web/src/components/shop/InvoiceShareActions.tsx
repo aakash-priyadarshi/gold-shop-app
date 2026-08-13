@@ -297,7 +297,7 @@ export function InvoiceShareActions({
           <T>SMS</T>
         </Button>
         <Button variant="ghost" size={btn} asChild>
-          <Link href={hardwareHref}>
+          <Link href={hardwareHref} data-tour="invoice-receipt-printer">
             <Wrench className="h-4 w-4 mr-2" />
             <T>Receipt printer</T>
           </Link>

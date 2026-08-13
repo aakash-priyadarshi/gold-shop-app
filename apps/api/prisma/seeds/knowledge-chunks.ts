@@ -194,6 +194,11 @@ const CHUNKS: { topic: string; content: string }[] = [
       "After creating an invoice, one Print button sends the bill to the printer that is connected. Thermal receipt (58/80mm roll, e.g. SEZNIK MiniX / Josh, Epson TM) prints a short ESC/POS receipt. A4 / office printers already installed on the computer (Wi-Fi, USB, or Windows Devices and Printers) open the full bill dialog. The chevron beside Print lets you pick either type. In the Orivraa Desktop app, Print reads the real Windows/macOS printer list and labels each device as thermal receipt or A4/office. Pair a thermal printer in Settings → Receipt printer (Hardware), or tap an installed thermal in that list. Share PDF and WhatsApp appear on phones and open the share sheet with bill text plus an on-demand PDF (free for all shops). On PC use Download PDF, Email, and SMS. SMS is Pro+ / Enterprise. Each printed bill includes a verification QR at /verify-bill.",
   },
   {
+    topic: "pos_hardware_receipt_printers",
+    content:
+      "POS Hardware and invoice Print: Open Shop Settings → Preferences → Open hardware settings, or go to /dashboard/shop/settings/hardware (phone: /m/settings/hardware or More → Store Settings → POS Hardware). Pair a thermal receipt printer (58/80mm roll such as SEZNIK MiniX / Josh or Epson TM) via Wireless thermal, USB, or Installed thermal in the Orivraa Desktop app. A4 / office means printers already installed on the computer (Wi-Fi, USB, Windows Devices and Printers). After an invoice is created, one Print button sends to the connected printer automatically; the chevron lets you pick thermal vs A4. Desktop reads the real Windows/macOS printer list and labels each device. Share PDF and WhatsApp appear on phones with an on-demand PDF (free). On PC use Download PDF, Email, and SMS (SMS is Pro+ / Enterprise). Optional jewellery label printer (Zebra/ZPL) is on the same Hardware page for Vault & Tags print tags.",
+  },
+  {
     topic: "crash_reports_admin",
     content:
       "Orivraa automatically records errors shown to users (red error toasts, page crashes, and server 5xx / network failures) so admins can fix issues they do not see themselves. Open Admin → Crash Reports. Default view is today's new reports. Each row has a Copy button with the same title + description + page format as the user's toast copy button. Auto vs User badges show whether the report was silent capture or a shopkeeper clicking Send Report. Session expiry and form-validation toasts are not logged. Check this page daily, mark reviewed or resolved, and add admin notes.",
@@ -201,7 +206,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "mobile_invoice_full_billing",
     content:
-      "Mobile Create Invoice (/m/invoices/create) is a full jewellery workflow — not a flat amount form. Steps: Customer details → add lines from Catalog, Shop Quote, or Manual → enter metal type, weight (tola/gram/laal), metal cost, making charge (% / per-gram / flat), wastage (jarti), optional gemstones → Review with tax breakdown → Create. Catalog items commit stock. Importing a walk-in shop quote prefills customer and line costs and links shopQuoteId. Flat-only amounts without metal/making breakdown are rejected so tax reports and accounting stay accurate. After create you land on the invoice detail page to share PDF via WhatsApp and other apps.",
+      "Mobile Create Invoice (/m/invoices/create) is a full jewellery workflow — not a flat amount form. Steps: Customer details → add lines from Catalog, Shop Quote, or Manual → enter metal type, weight (tola/gram/laal), metal cost, making charge (% / per-gram / flat), wastage (jarti), optional gemstones → Review with tax breakdown → Create. Catalog items commit stock. Importing a walk-in shop quote prefills customer and line costs and links shopQuoteId. Flat-only amounts without metal/making breakdown are rejected so tax reports and accounting stay accurate. After create you land on the invoice detail page: Print (thermal receipt or A4) and Share PDF / WhatsApp.",
   },
 ];
 
