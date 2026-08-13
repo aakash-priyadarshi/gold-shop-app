@@ -196,7 +196,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "invoice_bill_templates",
     content:
-      "Invoice Settings (/dashboard/shop/invoices/settings) lets you brand bills and pick a printable template. Layout & Visibility sits on the left with a live preview on the right so Top/Bottom and show/hide changes appear immediately. Below both is a horizontal strip of bill templates: Classic (warm gold), Royal (navy header with gold accents), Compact (tighter spacing), Ornate (double gold border for festive bills), and Minimal (black and white). Click a template to preview it, then Save Settings. The chosen template applies to browser print and the on-demand PDF share. Existing shops stay on Classic until they pick another look.",
+      "Invoice Settings (/dashboard/shop/invoices/settings) lets you brand bills and pick a printable template. Layout & Visibility sits on the left with a live preview on the right. Below both is a strip of bill templates, each with a distinct border and an auspicious icon on the top and bottom edge: Classic (double gold frame + diya), Royal (navy header + gold crown), Compact (dashed gold gem), Ornate (wine lotus on cream paper — not gold-on-gold), and Minimal (gold corner ticks + kalash). Click a template to preview it, then Save Settings. The chosen template applies to browser print and the on-demand PDF share. Existing shops stay on Classic until they pick another look.",
   },
   {
     topic: "pos_hardware_receipt_printers",
@@ -280,6 +280,7 @@ async function main() {
   let count = 0;
   /** Topics whose content changed — re-embed even if already seeded. */
   const FORCE_REFRESH = new Set([
+    "invoice_bill_templates",
     "billing_wastage",
     "invoice_share_and_bluetooth",
     "mobile_invoice_full_billing",

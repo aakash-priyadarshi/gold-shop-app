@@ -1,4 +1,9 @@
-import type { BillTemplateId } from "@gold-shop/shared";
+import type {
+  BillFrameStyle,
+  BillOrnamentIcon,
+  BillTemplateId,
+} from "@gold-shop/shared";
+import { BILL_ORNAMENT_GOLD, BILL_ORNAMENT_WINE } from "@gold-shop/shared";
 import type PDFKit from "pdfkit";
 import type {
   InvoicePdfContext,
@@ -15,6 +20,9 @@ type PdfLook = {
   compact: boolean;
   ornate: boolean;
   uppercaseName: boolean;
+  ornamentColor: string;
+  icon: BillOrnamentIcon;
+  frame: BillFrameStyle;
 };
 
 const LOOKS: Record<BillTemplateId, PdfLook> = {
@@ -28,9 +36,12 @@ const LOOKS: Record<BillTemplateId, PdfLook> = {
     compact: false,
     ornate: false,
     uppercaseName: false,
+    ornamentColor: BILL_ORNAMENT_GOLD,
+    icon: "diya",
+    frame: "double",
   },
   royal: {
-    accent: "#c9a227",
+    accent: BILL_ORNAMENT_GOLD,
     muted: "#475569",
     text: "#0f172a",
     light: "#94a3b8",
@@ -39,6 +50,9 @@ const LOOKS: Record<BillTemplateId, PdfLook> = {
     compact: false,
     ornate: false,
     uppercaseName: false,
+    ornamentColor: BILL_ORNAMENT_GOLD,
+    icon: "crown",
+    frame: "solid",
   },
   compact: {
     accent: "#92400e",
@@ -50,6 +64,9 @@ const LOOKS: Record<BillTemplateId, PdfLook> = {
     compact: true,
     ornate: false,
     uppercaseName: false,
+    ornamentColor: BILL_ORNAMENT_GOLD,
+    icon: "diamond",
+    frame: "dashed",
   },
   ornate: {
     accent: "#92400e",
@@ -61,6 +78,9 @@ const LOOKS: Record<BillTemplateId, PdfLook> = {
     compact: false,
     ornate: true,
     uppercaseName: false,
+    ornamentColor: BILL_ORNAMENT_WINE,
+    icon: "lotus",
+    frame: "double",
   },
   minimal: {
     accent: "#111111",
@@ -72,6 +92,9 @@ const LOOKS: Record<BillTemplateId, PdfLook> = {
     compact: false,
     ornate: false,
     uppercaseName: true,
+    ornamentColor: BILL_ORNAMENT_GOLD,
+    icon: "kalash",
+    frame: "corners",
   },
 };
 
@@ -79,18 +102,227 @@ function money(currency: string, value: number): string {
   return `${currency} ${Number(value || 0).toLocaleString()}`;
 }
 
+function drawDiya(
+  doc: PDFKit.PDFDocument,
+  cx: number,
+  cy: number,
+  color: string,
+): void {
+  doc.save();
+  doc.fillColor(color);
+  doc
+    .moveTo(cx, cy - 9)
+    .lineTo(cx - 3.2, cy - 1)
+    .lineTo(cx + 3.2, cy - 1)
+    .closePath()
+    .fill();
+  doc.ellipse(cx, cy + 4, 9, 2.6).fill();
+  doc
+    .moveTo(cx - 9, cy + 4)
+    .lineTo(cx, cy + 11)
+    .lineTo(cx + 9, cy + 4)
+    .closePath()
+    .fill();
+  doc.restore();
+}
+
+function drawCrown(
+  doc: PDFKit.PDFDocument,
+  cx: number,
+  cy: number,
+  color: string,
+): void {
+  doc.save();
+  doc.fillColor(color);
+  doc
+    .moveTo(cx - 11, cy + 7)
+    .lineTo(cx - 11, cy - 3)
+    .lineTo(cx - 5, cy + 3)
+    .lineTo(cx, cy - 8)
+    .lineTo(cx + 5, cy + 3)
+    .lineTo(cx + 11, cy - 3)
+    .lineTo(cx + 11, cy + 7)
+    .closePath()
+    .fill();
+  doc.rect(cx - 11, cy + 6, 22, 2.4).fill();
+  doc.restore();
+}
+
+function drawDiamond(
+  doc: PDFKit.PDFDocument,
+  cx: number,
+  cy: number,
+  color: string,
+): void {
+  doc.save();
+  doc.fillColor(color);
+  doc
+    .moveTo(cx, cy - 8)
+    .lineTo(cx + 7, cy)
+    .lineTo(cx, cy + 9)
+    .lineTo(cx - 7, cy)
+    .closePath()
+    .fill();
+  doc.restore();
+}
+
+function drawLotus(
+  doc: PDFKit.PDFDocument,
+  cx: number,
+  cy: number,
+  color: string,
+): void {
+  doc.save();
+  doc.fillColor(color);
+  doc.ellipse(cx - 5, cy + 2, 3.1, 6.6).fill();
+  doc.ellipse(cx + 5, cy + 2, 3.1, 6.6).fill();
+  doc.ellipse(cx, cy + 1, 3.4, 8).fill();
+  doc.restore();
+}
+
+function drawKalash(
+  doc: PDFKit.PDFDocument,
+  cx: number,
+  cy: number,
+  color: string,
+): void {
+  doc.save();
+  doc.fillColor(color);
+  doc
+    .moveTo(cx, cy - 10)
+    .lineTo(cx - 3.5, cy - 4)
+    .lineTo(cx + 3.5, cy - 4)
+    .closePath()
+    .fill();
+  doc.rect(cx - 3, cy - 4, 6, 2).fill();
+  doc.ellipse(cx, cy + 4, 6.2, 6.4).fill();
+  doc.restore();
+}
+
+function drawOrnamentIcon(
+  doc: PDFKit.PDFDocument,
+  icon: BillOrnamentIcon,
+  cx: number,
+  cy: number,
+  color: string,
+): void {
+  switch (icon) {
+    case "crown":
+      drawCrown(doc, cx, cy, color);
+      break;
+    case "diamond":
+      drawDiamond(doc, cx, cy, color);
+      break;
+    case "lotus":
+      drawLotus(doc, cx, cy, color);
+      break;
+    case "kalash":
+      drawKalash(doc, cx, cy, color);
+      break;
+    default:
+      drawDiya(doc, cx, cy, color);
+  }
+}
+
+function strokeInterruptedRect(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  color: string,
+  lineWidth: number,
+  gap: number,
+  dashed: boolean,
+): void {
+  const cx = x + w / 2;
+  doc.save();
+  doc.strokeColor(color).lineWidth(lineWidth);
+  if (dashed) doc.dash(5, { space: 3.5 });
+  const line = (x1: number, y1: number, x2: number, y2: number) => {
+    doc.moveTo(x1, y1).lineTo(x2, y2).stroke();
+  };
+  line(x, y, cx - gap, y);
+  line(cx + gap, y, x + w, y);
+  line(x + w, y, x + w, y + h);
+  line(x + w, y + h, cx + gap, y + h);
+  line(cx - gap, y + h, x, y + h);
+  line(x, y + h, x, y);
+  doc.restore();
+}
+
+function drawCornerTicks(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  color: string,
+  arm = 16,
+): void {
+  doc.save();
+  doc.strokeColor(color).lineWidth(1.4);
+  const ticks: Array<[number, number, number, number, number, number]> = [
+    [x + arm, y, x, y, x, y + arm],
+    [x + w - arm, y, x + w, y, x + w, y + arm],
+    [x, y + h - arm, x, y + h, x + arm, y + h],
+    [x + w, y + h - arm, x + w, y + h, x + w - arm, y + h],
+  ];
+  for (const [x1, y1, x2, y2, x3, y3] of ticks) {
+    doc.moveTo(x1, y1).lineTo(x2, y2).lineTo(x3, y3).stroke();
+  }
+  doc.restore();
+}
+
 function drawPageOrnament(doc: PDFKit.PDFDocument, look: PdfLook): void {
-  if (!look.ornate) return;
-  const inset = 22;
+  const inset = look.compact ? 16 : 22;
+  const x = inset;
+  const y = inset;
   const w = doc.page.width - inset * 2;
   const h = doc.page.height - inset * 2;
-  doc.save();
-  doc.lineWidth(1.4).strokeColor(look.accent).rect(inset, inset, w, h).stroke();
-  doc
-    .lineWidth(0.5)
-    .rect(inset + 5, inset + 5, w - 10, h - 10)
-    .stroke();
-  doc.restore();
+  const cx = x + w / 2;
+  const gap = 16;
+  const color = look.ornamentColor;
+
+  if (look.frame === "corners") {
+    drawCornerTicks(doc, x, y, w, h, color);
+    doc.save();
+    doc.strokeColor(color).lineWidth(1.1);
+    doc.moveTo(x + 22, y).lineTo(cx - gap, y);
+    doc.moveTo(cx + gap, y).lineTo(x + w - 22, y);
+    doc.moveTo(x + 22, y + h).lineTo(cx - gap, y + h);
+    doc.moveTo(cx + gap, y + h).lineTo(x + w - 22, y + h);
+    doc.stroke();
+    doc.restore();
+  } else if (look.frame === "double") {
+    strokeInterruptedRect(doc, x, y, w, h, color, 1.5, gap, false);
+    strokeInterruptedRect(
+      doc,
+      x + 5,
+      y + 5,
+      w - 10,
+      h - 10,
+      color,
+      0.6,
+      gap - 2,
+      false,
+    );
+  } else {
+    strokeInterruptedRect(
+      doc,
+      x,
+      y,
+      w,
+      h,
+      color,
+      look.frame === "dashed" ? 1.1 : 1.6,
+      gap,
+      look.frame === "dashed",
+    );
+  }
+
+  drawOrnamentIcon(doc, look.icon, cx, y, color);
+  drawOrnamentIcon(doc, look.icon, cx, y + h, color);
 }
 
 function drawBranding(

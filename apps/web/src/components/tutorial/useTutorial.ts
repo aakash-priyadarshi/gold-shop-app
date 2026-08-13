@@ -634,7 +634,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Bill templates",
         description:
-          "The strip at the bottom is a row of bill looks — Classic, Royal, Compact, Ornate, and Minimal. Click one to preview it instantly. Save Settings to use that layout on printed bills and shared PDFs.",
+          "The strip at the bottom is a row of bill looks — Classic (gold diya frame), Royal (navy with gold crown), Compact (dashed gold gem), Ornate (wine lotus on cream), and Minimal (gold kalash corners). Click one to preview it instantly. Save Settings to use that layout on printed bills and shared PDFs.",
         side: "top",
         align: "start",
       },

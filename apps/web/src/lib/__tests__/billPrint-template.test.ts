@@ -10,7 +10,8 @@ describe("buildBillHtml templates", () => {
     });
     expect(html).toContain('class="bill-tpl-royal"');
     expect(html).toContain("body.bill-tpl-royal");
-    expect(html).toContain("brand-top");
+    expect(html).toContain("bill-frame");
+    expect(html).toContain("bill-ornament-top");
   });
 
   it("falls back to classic when the id is missing", () => {

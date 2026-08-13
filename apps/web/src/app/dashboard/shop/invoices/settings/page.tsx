@@ -23,7 +23,10 @@ import type { BillSettings } from "@/lib/billPrint";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
 import {
   BILL_TEMPLATES,
+  billOrnamentSvg,
+  billTemplateFrameStyle,
   getBillTemplate,
+  type BillTemplateMeta,
   type BillTemplateTheme,
 } from "@gold-shop/shared";
 import {
@@ -177,27 +180,57 @@ function PositionToggle({
   );
 }
 
-function TemplateThumb({ theme }: { theme: BillTemplateTheme }) {
-  const ornate = theme.style === "ornate";
+function BillOrnamentMark({
+  theme,
+  position,
+  size = 24,
+}: {
+  theme: BillTemplateTheme;
+  position: "top" | "bottom";
+  size?: number;
+}) {
+  return (
+    <span
+      className={`absolute left-1/2 z-10 -translate-x-1/2 px-1.5 leading-none ${
+        position === "top" ? "-top-3" : "-bottom-3"
+      }`}
+      style={{ backgroundColor: theme.paper }}
+      dangerouslySetInnerHTML={{
+        __html: billOrnamentSvg(theme.ornamentIcon, theme.ornamentColor, size),
+      }}
+    />
+  );
+}
+
+function TemplateThumb({ template }: { template: BillTemplateMeta }) {
+  const theme = template.theme;
   const royal = theme.style === "royal";
   return (
     <div
-      className="h-28 w-full rounded-md overflow-hidden pointer-events-none"
-      style={{
-        background: theme.paper,
-        boxShadow: ornate
-          ? `inset 0 0 0 2px ${theme.border}, inset 0 0 0 5px ${theme.paper}, inset 0 0 0 6px ${theme.border}`
-          : `inset 0 0 0 1px ${theme.border}`,
-      }}
+      className="relative h-28 w-full overflow-visible pointer-events-none rounded-sm"
+      style={{ ...billTemplateFrameStyle(theme), padding: "10px 8px 12px" }}
     >
+      {theme.frame === "corners" && (
+        <>
+          <span
+            className="absolute left-5 right-5 top-0 h-[1.5px]"
+            style={{ background: theme.ornamentColor }}
+          />
+          <span
+            className="absolute left-5 right-5 bottom-0 h-[1.5px]"
+            style={{ background: theme.ornamentColor }}
+          />
+        </>
+      )}
+      <BillOrnamentMark theme={theme} position="top" size={16} />
       <div
         style={{
-          background: royal ? theme.headerBg : theme.headerInk,
-          height: royal ? 22 : 4,
-          opacity: royal ? 1 : 0.85,
+          background: royal ? theme.headerBg : "transparent",
+          height: royal ? 18 : 0,
+          margin: royal ? "4px -6px 0" : 0,
         }}
       />
-      <div className="px-2.5 pt-2 space-y-1.5">
+      <div className="px-1.5 pt-2 space-y-1.5">
         <div
           className="h-1.5 rounded-full"
           style={{ width: "62%", background: theme.accent }}
@@ -210,7 +243,7 @@ function TemplateThumb({ theme }: { theme: BillTemplateTheme }) {
           <div className="flex justify-between gap-2">
             <div
               className="h-1 flex-1 rounded-full"
-              style={{ background: theme.border }}
+              style={{ background: theme.border, opacity: 0.45 }}
             />
             <div
               className="h-1 w-6 rounded-full"
@@ -220,7 +253,7 @@ function TemplateThumb({ theme }: { theme: BillTemplateTheme }) {
           <div className="flex justify-between gap-2">
             <div
               className="h-1 flex-1 rounded-full"
-              style={{ background: theme.border }}
+              style={{ background: theme.border, opacity: 0.45 }}
             />
             <div
               className="h-1 w-8 rounded-full"
@@ -238,11 +271,12 @@ function TemplateThumb({ theme }: { theme: BillTemplateTheme }) {
             />
             <div
               className="h-1.5 w-8 rounded-full"
-              style={{ background: theme.accent }}
+              style={{ background: theme.ornamentColor }}
             />
           </div>
         </div>
       </div>
+      <BillOrnamentMark theme={theme} position="bottom" size={16} />
     </div>
   );
 }
@@ -513,7 +547,6 @@ export default function InvoiceSettingsPage() {
   const previewTheme = previewTemplate.theme;
   const previewCompact = previewTheme.density === "compact";
   const previewRoyal = previewTemplate.id === "royal";
-  const previewOrnate = previewTemplate.id === "ornate";
 
   if (isLoading) {
     return (
@@ -860,18 +893,27 @@ export default function InvoiceSettingsPage() {
                   <T>Changes appear here as you edit. Save Settings to print with this look.</T>
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="overflow-visible pt-4">
                 <div
-                  className="rounded-lg shadow-sm text-sm overflow-hidden"
+                  className="rounded-sm text-sm"
                   style={{
-                    background: previewTheme.paper,
+                    ...billTemplateFrameStyle(previewTheme),
                     color: previewTheme.ink,
-                    padding: previewCompact ? 12 : 24,
-                    border: previewOrnate
-                      ? `3px double ${previewTheme.border}`
-                      : `1px solid ${previewTheme.border}`,
                   }}
                 >
+                  {previewTheme.frame === "corners" && (
+                    <>
+                      <span
+                        className="absolute left-7 right-7 top-0 h-[1.5px]"
+                        style={{ background: previewTheme.ornamentColor }}
+                      />
+                      <span
+                        className="absolute left-7 right-7 bottom-0 h-[1.5px]"
+                        style={{ background: previewTheme.ornamentColor }}
+                      />
+                    </>
+                  )}
+                  <BillOrnamentMark theme={previewTheme} position="top" />
                   <p
                     className="text-center font-semibold tracking-widest mb-3"
                     style={{
@@ -967,6 +1009,7 @@ export default function InvoiceSettingsPage() {
                       ))}
                     </div>
                   )}
+                  <BillOrnamentMark theme={previewTheme} position="bottom" />
                 </div>
               </CardContent>
             </Card>
@@ -984,7 +1027,7 @@ export default function InvoiceSettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="rounded-xl border bg-muted/40 p-3">
-                <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory">
+                <div className="flex gap-3 overflow-x-auto py-3 snap-x snap-mandatory">
                   {BILL_TEMPLATES.map((tpl) => {
                     const selected = settings.billTemplateId === tpl.id;
                     return (
@@ -999,7 +1042,7 @@ export default function InvoiceSettingsPage() {
                         }`}
                       >
                         <div className="relative">
-                          <TemplateThumb theme={tpl.theme} />
+                          <TemplateThumb template={tpl} />
                           {selected && (
                             <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-amber-500 text-white flex items-center justify-center">
                               <Check className="h-3 w-3" />

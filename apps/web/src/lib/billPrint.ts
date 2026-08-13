@@ -1,4 +1,5 @@
 import {
+  billTemplateOrnamentHtml,
   billTemplatePrintCss,
   resolveBillTemplateId,
 } from "@gold-shop/shared";
@@ -334,6 +335,8 @@ export function buildBillHtml(payload: BillPrintPayload): string {
       ? `<hr class="divider"/><p class="muted" style="font-weight:600;margin-bottom:4px">Bank transfer details</p>${bankLines.join("")}`
       : "";
 
+  const ornaments = billTemplateOrnamentHtml(payload.settings?.billTemplateId);
+
   return `<!doctype html><html><head><meta charset="utf-8">
 <title>${safe(heading)} ${safe(payload.invoiceNumber)}</title>
 <style>
@@ -348,6 +351,8 @@ ${billTemplatePrintCss(payload.settings?.billTemplateId)}
 </style></head><body class="bill-tpl-${resolveBillTemplateId(payload.settings?.billTemplateId)}">
 ${payload.watermark ? '<div class="wm"></div>' : ""}
 <button onclick="window.print()" style="position:fixed;top:12px;right:12px;padding:7px 14px;background:#b45309;color:#fff;border:0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Print / Save PDF</button>
+<div class="bill-frame">
+${ornaments.top}
 <h1 class="doc-title">${heading}</h1>
 <div class="brand-top">${topBrand || `<h2>${safe(payload.fallbackShopName || "Receipt")}</h2>`}</div>
 ${
@@ -406,6 +411,8 @@ ${
     : ""
 }
 ${bottomBrand || '<p class="footer">Thank you for your business!</p>'}
+${ornaments.bottom}
+</div>
 <script>setTimeout(function(){window.print();},350);</script></body></html>`;
 }
 
