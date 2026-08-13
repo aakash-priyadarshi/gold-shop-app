@@ -42,7 +42,6 @@ type ProductRecord = {
   taxNpr?: number;
   setDiscountType?: string | null;
   setDiscountValue?: number | null;
-  labels?: string[];
   shop?: { id?: string; shopName?: string };
   variants?: Array<{
     id: string;
@@ -200,11 +199,6 @@ export default function MobileProductDetailPage() {
                 })}
               </p>
               <div className="flex flex-wrap gap-1.5 pt-1">
-                {(item.labels ?? []).includes("demo") && (
-                  <span className="px-2 py-1 rounded-full bg-emerald-50 text-xs font-semibold text-emerald-800">
-                    <T>Sample piece</T>
-                  </span>
-                )}
                 {item.jewelleryType && (
                   <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300">
                     {item.jewelleryType.replace(/_/g, " ")}

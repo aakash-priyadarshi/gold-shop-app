@@ -33,13 +33,11 @@ import {
     Maximize2,
     Share2,
     ShoppingCart,
-    Sparkles,
     Trash2,
     X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface InventoryItem {
@@ -1000,7 +998,6 @@ function AddProductSheet({
 export default function MobilePOSPage() {
   const { user } = useAuth();
   const t = useT();
-  const router = useRouter();
 
   const isVerified = user?.shop?.isVerified ?? false;
 
@@ -1049,7 +1046,6 @@ export default function MobilePOSPage() {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [addProductOpen, setAddProductOpen] = useState(false);
-  const [sampleLoading, setSampleLoading] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const shopId = user?.shop?.id;
@@ -1078,32 +1074,6 @@ export default function MobilePOSPage() {
     },
     [shopId],
   );
-
-  const loadSampleShowProduct = useCallback(async () => {
-    if (!shopId) return;
-    setSampleLoading(true);
-    try {
-      const res = await inventoryApi.loadSampleShowProduct(shopId);
-      const created = (res.data ?? res) as InventoryItem;
-      await loadInventory();
-      if (created?.id) {
-        router.push(`/m/products/${created.id}`);
-      }
-    } catch (err: unknown) {
-      const message =
-        err && typeof err === "object" && "response" in err
-          ? (err as { response?: { data?: { message?: string } } }).response
-              ?.data?.message
-          : undefined;
-      toast({
-        title: t("Could not load sample product"),
-        description: message ?? t("Please try again"),
-        variant: "destructive",
-      });
-    } finally {
-      setSampleLoading(false);
-    }
-  }, [shopId, loadInventory, router, t]);
 
   useEffect(() => {
     loadInventory();
@@ -1432,20 +1402,6 @@ export default function MobilePOSPage() {
               />
             </div>
           </div>
-          <button
-            type="button"
-            data-tour="m-pos-sample-product"
-            disabled={!shopId || sampleLoading}
-            onClick={() => void loadSampleShowProduct()}
-            className="mt-2 w-full py-2 rounded-xl border border-amber-200 bg-amber-50 text-[11px] font-semibold text-amber-800 flex items-center justify-center gap-1.5 disabled:opacity-50"
-          >
-            {sampleLoading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="h-3.5 w-3.5" />
-            )}
-            <T>Load sample necklace (full customer details)</T>
-          </button>
         </div>
 
         {/* Product grid */}

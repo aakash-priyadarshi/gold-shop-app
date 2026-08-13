@@ -375,8 +375,6 @@ export const inventoryApi = {
   getById: (id: string) => api.get(`/inventory/${id}`),
   create: (shopId: string, data: any) =>
     api.post(`/inventory/shop/${shopId}`, data),
-  loadSampleShowProduct: (shopId: string) =>
-    api.post(`/inventory/shop/${shopId}/sample-show-product`),
   update: (id: string, data: any) => api.patch(`/inventory/${id}`, data),
   delete: (id: string) => api.delete(`/inventory/${id}`),
   getShopInventory: (shopId: string, params?: any) =>

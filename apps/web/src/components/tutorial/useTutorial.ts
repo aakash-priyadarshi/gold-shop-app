@@ -1338,18 +1338,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Product Grid & Detail Sheets",
         description:
-          "Displays your catalog cards. Tapping any card opens a sheet with metal, wastage, gemstones, making charges, and the full calculation. Use Show full details to customer for a full-screen view you can hand to the buyer. Tapping the orange '+' button adds the item to the bill. Use Load sample necklace if a piece has no stored metal/gem details — that demo shows gallery, HUID, gemstone cards, sizes, and certificate.",
+          "Displays your catalog cards. Tapping any card opens a sheet with metal, wastage, gemstones, making charges, and the full calculation. Use Show full details to customer for a full-screen view you can hand to the buyer. Tapping the orange '+' button adds the item to the bill.",
         side: "top",
-        align: "center",
-      },
-    },
-    {
-      element: "[data-tour='m-pos-sample-product']",
-      popover: {
-        title: "Sample necklace for customer view",
-        description:
-          "Creates a demo 22K necklace with photos, diamond and ruby cards, HUID, assay office, chain lengths, and a certificate. Then opens the full Show to customer page so you can see what extra fields appear versus the compact POS sheet.",
-        side: "bottom",
         align: "center",
       },
     },
