@@ -2,17 +2,20 @@ import {
   Body,
   Controller,
   Get,
-  Header,
+  HttpException,
+  HttpStatus,
+  Logger,
   Param,
   Patch,
   Post,
   Query,
+  Req,
   Res,
-  StreamableFile,
   UseGuards,
 } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
-import type { Response } from "express";
+import type { Request, Response } from "express";
+import { SkipCache } from "../../common";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -28,6 +31,41 @@ import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { InvoicePdfService } from "./invoice-pdf.service";
 import { InvoicesService } from "./invoices.service";
 
+function corsOriginForPdf(origin: string | undefined): string | null {
+  if (!origin) return null;
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname.toLowerCase();
+    const isOrivraa =
+      host === "orivraa.com" || host.endsWith(".orivraa.com");
+    if (parsed.protocol === "https:" && isOrivraa) return origin;
+    if (
+      process.env.NODE_ENV !== "production" &&
+      (host === "localhost" || host === "127.0.0.1")
+    ) {
+      return origin;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function applyPdfCors(req: Request, res: Response) {
+  const origin = corsOriginForPdf(
+    typeof req.headers.origin === "string" ? req.headers.origin : undefined,
+  );
+  if (!origin) return;
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Expose-Headers",
+    "Content-Disposition, Content-Length, Content-Type",
+  );
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+}
+
 // NOTE: Invoicing is a core USP feature and is intentionally NOT gated behind a
 // paid plan. New shops can always create bills/invoices (unverified shops just
 // get a watermark until KYC). PDF share is free for all shops.
@@ -35,6 +73,8 @@ import { InvoicesService } from "./invoices.service";
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.SHOPKEEPER, UserRole.ADMIN)
 export class InvoicesController {
+  private readonly logger = new Logger(InvoicesController.name);
+
   constructor(
     private readonly invoicesService: InvoicesService,
     private readonly invoicePdfService: InvoicePdfService,
@@ -114,24 +154,50 @@ export class InvoicesController {
 
   /** On-demand PDF — not stored. Free for all shops. */
   @Get(":id/pdf")
-  @Header("Content-Type", "application/pdf")
+  @SkipCache()
   async downloadPdf(
     @CurrentUser("shopId") shopId: string,
     @Param("id") id: string,
-    @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
+    @Res() res: Response,
   ) {
     if (!shopId) {
-      throw new Error("No shop associated with this user");
+      applyPdfCors(req, res);
+      res.status(HttpStatus.BAD_REQUEST).json({
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: "No shop associated with this user",
+      });
+      return;
     }
-    const { buffer, filename } = await this.invoicePdfService.generatePdfBuffer(
-      id,
-      shopId,
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${filename}"`,
-    );
-    return new StreamableFile(buffer);
+    try {
+      const { buffer, filename } =
+        await this.invoicePdfService.generatePdfBuffer(id, shopId);
+      applyPdfCors(req, res);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+      res.setHeader("Content-Length", String(buffer.length));
+      res.setHeader("Cache-Control", "private, no-store");
+      res.status(200).end(buffer);
+    } catch (err) {
+      applyPdfCors(req, res);
+      if (err instanceof HttpException) {
+        const status = err.getStatus();
+        const body = err.getResponse();
+        res.status(status).json(
+          typeof body === "string"
+            ? { statusCode: status, message: body }
+            : body,
+        );
+        return;
+      }
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: "Could not generate PDF",
+      });
+      this.logger.error(
+        `PDF generation failed for invoice ${id}: ${String(err)}`,
+      );
+    }
   }
 
   @Get(":id")

@@ -5,6 +5,10 @@ packages:
 
 enablePrePostScripts: true
 
+# Invoice PDFs convert WebP shop logos via sharp (pdfkit is PNG/JPEG only)
+onlyBuiltDependencies:
+  - sharp
+
 ignoredBuiltDependencies:
   - "@nestjs/core"
   - "@prisma/client"

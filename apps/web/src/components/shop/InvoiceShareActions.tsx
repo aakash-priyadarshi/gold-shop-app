@@ -18,13 +18,15 @@ import { useFeatures } from "@/hooks/useFeatures";
 import { invoicesApi } from "@/lib/api";
 import {
   buildBillShareText,
+  shareBillOnWhatsApp,
   type BillShareInput,
 } from "@/lib/billShare";
 import {
   buildInvoicePdfFile,
-  canShareFiles,
   downloadBlob,
   fetchInvoicePdfBlob,
+  prefetchInvoicePdf,
+  sharePdfWithFallbacks,
 } from "@/lib/invoicePdf";
 import {
   loadHardwareConfig,
@@ -44,7 +46,7 @@ import {
   Share2,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export interface InvoiceShareActionsProps {
   invoice: BillShareInput & {
@@ -80,6 +82,11 @@ export function InvoiceShareActions({
   const canSms = hasFeature("invoiceShareSms");
   const canBluetooth = hasFeature("bluetoothThermalPrinter");
 
+  useEffect(() => {
+    if (!invoice.id) return;
+    prefetchInvoicePdf(invoice.id);
+  }, [invoice.id]);
+
   const shareInput: BillShareInput = {
     ...invoice,
     publicUrl: invoice.verificationToken
@@ -100,19 +107,8 @@ export function InvoiceShareActions({
       const { blob, filename, file, text } = await loadPdf();
       const title = `Invoice ${invoice.invoiceNumber || ""}`;
 
-      if (canShareFiles()) {
-        try {
-          await navigator.share({
-            title,
-            text,
-            files: [file],
-          });
-          return;
-        } catch (err: any) {
-          if (err?.name === "AbortError") return;
-          // fall through to download + clipboard
-        }
-      }
+      const result = await sharePdfWithFallbacks({ file, text, title });
+      if (result === "shared" || result === "cancelled") return;
 
       downloadBlob(blob, filename);
       try {
@@ -120,11 +116,23 @@ export function InvoiceShareActions({
       } catch {
         /* ignore */
       }
+
+      if (preferWhatsAppHint) {
+        shareBillOnWhatsApp(shareInput, invoice.customerPhone);
+        toast({
+          title: t("PDF saved"),
+          description: t(
+            "PDF downloaded. WhatsApp is opening with the bill text — attach the PDF in the chat.",
+          ),
+        });
+        return;
+      }
+
       toast({
         title: t("PDF ready"),
-        description: preferWhatsAppHint
-          ? t("PDF downloaded. Open WhatsApp and attach the file — bill text is on your clipboard.")
-          : t("PDF downloaded. Bill text copied — attach the PDF in any app."),
+        description: t(
+          "PDF downloaded. Bill text copied — attach the PDF in any app.",
+        ),
       });
     } catch (err: any) {
       toast({
@@ -132,6 +140,9 @@ export function InvoiceShareActions({
         title: t("Could not generate PDF"),
         description: err?.message || t("Try again in a moment"),
       });
+      if (preferWhatsAppHint) {
+        shareBillOnWhatsApp(shareInput, invoice.customerPhone);
+      }
     } finally {
       setPdfBusy(false);
     }

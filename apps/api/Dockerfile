@@ -31,6 +31,8 @@ RUN if [ ! -f apps/api/src/modules/core/subscriptions/subscription-plans.module.
 
 # Install all dependencies (dev included — needed for @nestjs/cli and prisma)
 RUN pnpm install --frozen-lockfile --ignore-scripts
+# sharp's native binary is required to convert WebP shop logos for pdfkit
+RUN pnpm --filter @gold-shop/api rebuild sharp
 
 # Switch into the api app context
 WORKDIR /app/apps/api

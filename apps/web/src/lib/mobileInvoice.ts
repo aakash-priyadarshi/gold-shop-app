@@ -1,22 +1,30 @@
 /** Unwrap create-invoice API payloads ({ id }) or nested { data: { id } }. */
-export function resolveCreatedInvoice(
+export function unwrapInvoiceRecord(
   payload: unknown,
-): { id: string; invoiceNumber?: string } | null {
+): Record<string, unknown> | null {
   if (!payload || typeof payload !== "object") return null;
   const record = payload as Record<string, unknown>;
   if (typeof record.id === "string" && record.id.length > 0) {
-    return {
-      id: record.id,
-      invoiceNumber:
-        typeof record.invoiceNumber === "string"
-          ? record.invoiceNumber
-          : undefined,
-    };
+    return record;
   }
   if (record.data && typeof record.data === "object") {
-    return resolveCreatedInvoice(record.data);
+    return unwrapInvoiceRecord(record.data);
   }
   return null;
+}
+
+export function resolveCreatedInvoice(
+  payload: unknown,
+): { id: string; invoiceNumber?: string } | null {
+  const record = unwrapInvoiceRecord(payload);
+  if (!record) return null;
+  return {
+    id: record.id as string,
+    invoiceNumber:
+      typeof record.invoiceNumber === "string"
+        ? record.invoiceNumber
+        : undefined,
+  };
 }
 
 export function isMobileShopContext(): boolean {

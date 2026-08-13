@@ -20,8 +20,9 @@ import {
 import {
   mobileInvoiceDetailPath,
   resolveCreatedInvoice,
+  unwrapInvoiceRecord,
 } from "@/lib/mobileInvoice";
-import { getDefaultWeightUnit, fromGrams, toGrams, type WeightUnit } from "@gold-shop/shared";
+import { getDefaultWeightUnit, fromGrams, toGrams, getSupportedWeightUnits, type WeightUnit } from "@gold-shop/shared";
 import {
   ArrowLeft,
   Check,
@@ -34,12 +35,22 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { METAL_TYPES } from "@/lib/invoice/lineItemTypes";
 
 const MARKETS = ["NP", "IN", "LK", "AE", "GB", "DE", "FR", "US"];
 const STEPS = ["Customer", "Lines", "Review"] as const;
+const COUNTRY_PHONE_CODES: Record<string, string> = {
+  NP: "+977",
+  IN: "+91",
+  AE: "+971",
+  LK: "+94",
+  US: "+1",
+  GB: "+44",
+  DE: "+49",
+  FR: "+33",
+};
 
 function MobileInvoiceCreateInner() {
   const router = useRouter();
@@ -63,6 +74,10 @@ function MobileInvoiceCreateInner() {
     new Date().toISOString().slice(0, 10),
   );
   const [walkInCustomerId, setWalkInCustomerId] = useState<string | undefined>();
+  const [customerHits, setCustomerHits] = useState<
+    { id: string; name?: string; phone?: string; email?: string; address?: string }[]
+  >([]);
+  const phoneDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [shopQuoteId, setShopQuoteId] = useState<string | undefined>(
     searchParams.get("shopQuoteId") || undefined,
   );
@@ -110,6 +125,10 @@ function MobileInvoiceCreateInner() {
   });
 
   const currency = useMemo(() => getCurrencyForCountry(country), [country]);
+
+  useEffect(() => {
+    setWeightUnit(getDefaultWeightUnit(country) as WeightUnit);
+  }, [country]);
 
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
@@ -207,6 +226,32 @@ function MobileInvoiceCreateInner() {
     } finally {
       setQuotesLoading(false);
     }
+  };
+
+  const searchWalkInCustomers = useCallback(async (phone: string) => {
+    if (phone.replace(/\D/g, "").length < 3) {
+      setCustomerHits([]);
+      return;
+    }
+    try {
+      const res = await shopQuotesApi.searchCustomers({
+        phoneCountryCode: COUNTRY_PHONE_CODES[shopCountry] || "+977",
+        phone,
+      });
+      const result = res.data as { customers?: typeof customerHits };
+      setCustomerHits(result.customers || []);
+    } catch {
+      setCustomerHits([]);
+    }
+  }, [shopCountry]);
+
+  const handlePhoneChange = (phone: string) => {
+    setCustomerPhone(phone);
+    setWalkInCustomerId(undefined);
+    if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current);
+    phoneDebounceRef.current = setTimeout(() => {
+      void searchWalkInCustomers(phone);
+    }, 400);
   };
 
   const addManualLine = () => {
@@ -350,10 +395,11 @@ function MobileInvoiceCreateInner() {
         return;
       }
       // Seed detail page so navigation does not wait on a second full fetch
+      const created = unwrapInvoiceRecord(response.data) || invoice;
       try {
         sessionStorage.setItem(
           `m-invoice-seed:${invoice.id}`,
-          JSON.stringify(invoice),
+          JSON.stringify(created),
         );
       } catch {
         /* private mode / quota — detail will fetch normally */
@@ -457,11 +503,35 @@ function MobileInvoiceCreateInner() {
             <T>Customer phone</T>
             <input
               value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
+              onChange={(e) => handlePhoneChange(e.target.value)}
               inputMode="tel"
               className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
             />
           </label>
+          {customerHits.length > 0 && (
+            <div className="rounded-xl border border-amber-100 bg-amber-50 overflow-hidden">
+              {customerHits.map((hit) => (
+                <button
+                  key={hit.id}
+                  type="button"
+                  onClick={() => {
+                    setWalkInCustomerId(hit.id);
+                    if (hit.name) setCustomerName(hit.name);
+                    if (hit.phone) setCustomerPhone(hit.phone);
+                    if (hit.email) setCustomerEmail(hit.email);
+                    if (hit.address) setCustomerAddress(hit.address);
+                    setCustomerHits([]);
+                  }}
+                  className="block w-full border-b border-amber-100 px-3 py-2 text-left text-sm last:border-0"
+                >
+                  <span className="font-bold">{hit.name || "Customer"}</span>
+                  {hit.phone ? (
+                    <span className="ml-2 text-xs text-gray-500">{hit.phone}</span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          )}
           <label className="block text-xs font-bold text-gray-500">
             <T>Customer email</T>
             <input
@@ -578,11 +648,11 @@ function MobileInvoiceCreateInner() {
 
           <div className="flex items-center gap-2 text-xs">
             <span className="font-bold text-gray-500"><T>Weight unit</T></span>
-            {(["TOLA", "GRAM", "LAAL"] as WeightUnit[]).map((u) => (
+            {getSupportedWeightUnits(country).map((u) => (
               <button
                 key={u}
                 type="button"
-                onClick={() => setWeightUnit(u)}
+                onClick={() => setWeightUnit(u as WeightUnit)}
                 className={`rounded-lg px-2 py-1 font-bold ${
                   weightUnit === u
                     ? "bg-amber-500 text-white"

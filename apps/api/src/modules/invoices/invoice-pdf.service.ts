@@ -4,6 +4,12 @@ import * as QRCode from "qrcode";
 import { PrismaService } from "../../prisma/prisma.service";
 import type { InvoicePdfContext } from "./pdf/invoice-pdf.types";
 import {
+  getCachedLogo,
+  isWebp,
+  setCachedLogo,
+  toPdfKitPng,
+} from "./pdf/logo-for-pdf";
+import {
   DEFAULT_INVOICE_PDF_TEMPLATE_ID,
   resolveInvoicePdfTemplate,
 } from "./pdf/templates";
@@ -82,8 +88,6 @@ export class InvoicePdfService {
         (settings?.shopLogoUrl || invoice.shop?.profileImage)) ||
       null;
 
-    const logoBuffer = logoUrl ? await this.fetchImageBuffer(logoUrl) : null;
-
     const frontendBase = (
       process.env.FRONTEND_URL || "https://www.orivraa.com"
     ).replace(/\/$/, "");
@@ -91,21 +95,10 @@ export class InvoicePdfService {
       ? `${frontendBase}/verify-bill/${invoice.verificationToken}`
       : null;
 
-    let qrBuffer: Buffer | null = null;
-    if (verifyUrl) {
-      try {
-        qrBuffer = await QRCode.toBuffer(verifyUrl, {
-          type: "png",
-          width: 160,
-          margin: 1,
-          errorCorrectionLevel: "M",
-        });
-      } catch (err) {
-        this.logger.warn(
-          `QR generation failed for invoice ${invoice.id}: ${String(err)}`,
-        );
-      }
-    }
+    const [logoBuffer, qrBuffer] = await Promise.all([
+      logoUrl ? this.fetchImageBuffer(logoUrl) : Promise.resolve(null),
+      this.buildQrBuffer(verifyUrl, invoice.id),
+    ]);
 
     const taxId =
       settings?.gstin ||
@@ -184,31 +177,49 @@ export class InvoicePdfService {
     };
   }
 
+  private async buildQrBuffer(
+    verifyUrl: string | null,
+    invoiceId: string,
+  ): Promise<Buffer | null> {
+    if (!verifyUrl) return null;
+    try {
+      return await QRCode.toBuffer(verifyUrl, {
+        type: "png",
+        width: 160,
+        margin: 1,
+        errorCorrectionLevel: "M",
+      });
+    } catch (err) {
+      this.logger.warn(
+        `QR generation failed for invoice ${invoiceId}: ${String(err)}`,
+      );
+      return null;
+    }
+  }
+
   private async fetchImageBuffer(url: string): Promise<Buffer | null> {
     try {
       if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) {
         return null;
       }
 
-      const candidates = [url];
-      // pdfkit only embeds PNG/JPEG — try common siblings for .webp logos
-      if (/\.webp(\?|$)/i.test(url)) {
-        candidates.push(
-          url.replace(/\.webp(\?|$)/i, ".png$1"),
-          url.replace(/\.webp(\?|$)/i, ".jpg$1"),
-          url.replace(/\.webp(\?|$)/i, ".jpeg$1"),
-        );
-      }
+      const cached = getCachedLogo(url);
+      if (cached) return cached;
 
-      for (const candidate of candidates) {
-        const buf = await this.downloadImage(candidate);
-        if (!buf) continue;
-        if (this.isPdfKitImage(buf)) return buf;
+      const raw = await this.downloadImage(url);
+      if (!raw) return null;
+
+      let converted: Buffer;
+      try {
+        converted = await toPdfKitPng(raw);
+      } catch (err) {
         this.logger.warn(
-          `Logo format unsupported by pdfkit (need PNG/JPEG): ${candidate}`,
+          `Could not convert shop logo for pdfkit${isWebp(raw) ? " (webp)" : ""}: ${url} — ${String(err)}`,
         );
+        return null;
       }
-      return null;
+      setCachedLogo(url, converted);
+      return converted;
     } catch (err) {
       this.logger.warn(`Logo fetch error: ${String(err)}`);
       return null;
@@ -217,11 +228,14 @@ export class InvoicePdfService {
 
   private async downloadImage(url: string): Promise<Buffer | null> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
+    const timer = setTimeout(() => controller.abort(), 15000);
     try {
       const res = await fetch(url, {
         signal: controller.signal,
-        headers: { Accept: "image/png,image/jpeg,image/*,*/*" },
+        headers: {
+          // Omit webp/avif so Cloudflare Polish is more likely to return PNG/JPEG
+          Accept: "image/png,image/jpeg,image/*;q=0.8",
+        },
       });
       if (!res.ok) {
         this.logger.warn(`Logo fetch failed (${res.status}): ${url}`);
@@ -233,18 +247,6 @@ export class InvoicePdfService {
     } finally {
       clearTimeout(timer);
     }
-  }
-
-  /** PNG (89 50 4E 47) or JPEG (FF D8 FF) — the formats pdfkit can embed. */
-  private isPdfKitImage(buf: Buffer): boolean {
-    if (buf.length < 4) return false;
-    const isPng =
-      buf[0] === 0x89 &&
-      buf[1] === 0x50 &&
-      buf[2] === 0x4e &&
-      buf[3] === 0x47;
-    const isJpeg = buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
-    return isPng || isJpeg;
   }
 
   private renderWithTemplate(ctx: InvoicePdfContext): Promise<Buffer> {

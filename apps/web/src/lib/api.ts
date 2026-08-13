@@ -191,6 +191,23 @@ api.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    // Blob downloads (PDF/CSV) must not send JSON Content-Type — that forces a
+    // CORS preflight and some mobile browsers then fail to read the body.
+    if (config.responseType === "blob") {
+      const headers = config.headers as {
+        delete?: (name: string) => void;
+        Accept?: string;
+      };
+      if (typeof headers.delete === "function") {
+        headers.delete("Content-Type");
+      } else {
+        delete (config.headers as Record<string, unknown>)["Content-Type"];
+      }
+      if (!headers.Accept) {
+        headers.Accept = "*/*";
+      }
+    }
+
     // Add currency header from preferences store
     try {
       const prefsJson = localStorage.getItem("gold-shop-preferences");
@@ -1138,7 +1155,11 @@ export const invoicesApi = {
     api.post(`/invoices/${id}/share/sms`, data),
   /** On-demand PDF (authenticated; uses axios interceptors for token + refresh). */
   getPdf: (id: string) =>
-    api.get<Blob>(`/invoices/${id}/pdf`, { responseType: "blob" }),
+    api.get<Blob>(`/invoices/${id}/pdf`, {
+      responseType: "blob",
+      timeout: 45000,
+      headers: { Accept: "application/pdf" },
+    }),
 };
 
 // Shop double-entry ledger / accounting API

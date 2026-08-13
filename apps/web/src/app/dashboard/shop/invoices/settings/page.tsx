@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useAuth } from "@/hooks/useAuth";
@@ -167,6 +168,15 @@ function PositionToggle({
   );
 }
 
+const BILL_LOGO_TYPES = new Set(["image/jpeg", "image/jpg", "image/png"]);
+const BILL_LOGO_EXT = /\.(jpe?g|png)$/i;
+
+function isAllowedBillLogo(file: File): boolean {
+  if (BILL_LOGO_TYPES.has(file.type)) return true;
+  if (!file.type && BILL_LOGO_EXT.test(file.name)) return true;
+  return false;
+}
+
 export default function InvoiceSettingsPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -201,6 +211,7 @@ export default function InvoiceSettingsPage() {
     upload: uploadLogo,
   } = useImageUpload({
     type: "profile",
+    outputMime: "image/png",
     onSuccess: async (result) => {
       if (!result.url) return;
       try {
@@ -269,6 +280,16 @@ export default function InvoiceSettingsPage() {
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!isAllowedBillLogo(file)) {
+      toast({
+        variant: "destructive",
+        title: "JPG or PNG only",
+        description:
+          "Other formats (WebP, GIF, SVG) are blocked so the logo prints on the PDF bill.",
+      });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       toast({
         variant: "destructive",
@@ -513,7 +534,7 @@ export default function InvoiceSettingsPage() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/png,image/jpeg,image/webp"
+                      accept="image/png,image/jpeg,.jpg,.jpeg,.png"
                       onChange={handleLogoFileSelect}
                       className="hidden"
                     />
@@ -537,7 +558,10 @@ export default function InvoiceSettingsPage() {
                       )}
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      PNG, JPG or WebP. Max 5MB. Recommended 200×200px.
+                      <T>
+                        JPG or PNG only — other formats are blocked so the logo
+                        prints on the PDF bill. Max 5MB. Recommended 200×200px.
+                      </T>
                     </p>
                   </div>
                 </div>

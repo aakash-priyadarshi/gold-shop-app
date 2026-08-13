@@ -1,6 +1,12 @@
 import axios from "axios";
 import { invoicesApi } from "@/lib/api";
 
+const PDF_CACHE_MS = 2 * 60 * 1000;
+const pdfCache = new Map<
+  string,
+  { blob: Blob; filename: string; at: number }
+>();
+
 async function blobErrorMessage(blob: Blob, status: number): Promise<string> {
   try {
     const text = await blob.text();
@@ -17,17 +23,34 @@ async function blobErrorMessage(blob: Blob, status: number): Promise<string> {
   }
 }
 
+async function asPdfBlob(blob: Blob): Promise<Blob> {
+  const head = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
+  const magic = String.fromCharCode(...Array.from(head));
+  if (magic.startsWith("%PDF")) {
+    if (blob.type === "application/pdf") return blob;
+    return new Blob([blob], { type: "application/pdf" });
+  }
+  throw new Error(await blobErrorMessage(blob, 0));
+}
+
 /** Fetch on-demand invoice PDF (not stored server-side). */
 export async function fetchInvoicePdfBlob(invoiceId: string): Promise<{
   blob: Blob;
   filename: string;
 }> {
+  const cached = pdfCache.get(invoiceId);
+  if (cached && Date.now() - cached.at < PDF_CACHE_MS) {
+    return { blob: cached.blob, filename: cached.filename };
+  }
+
   try {
     const res = await invoicesApi.getPdf(invoiceId);
     const disposition = String(res.headers["content-disposition"] || "");
     const match = disposition.match(/filename="?([^"]+)"?/i);
     const filename = match?.[1] || `Invoice-${invoiceId}.pdf`;
-    return { blob: res.data, filename };
+    const blob = await asPdfBlob(res.data);
+    pdfCache.set(invoiceId, { blob, filename, at: Date.now() });
+    return { blob, filename };
   } catch (err) {
     if (axios.isAxiosError(err) && err.response?.data instanceof Blob) {
       const message = await blobErrorMessage(
@@ -39,6 +62,16 @@ export async function fetchInvoicePdfBlob(invoiceId: string): Promise<{
     if (axios.isAxiosError(err) && err.response?.data?.message) {
       throw new Error(String(err.response.data.message));
     }
+    if (axios.isAxiosError(err) && err.code === "ECONNABORTED") {
+      throw new Error("PDF timed out — try Download PDF");
+    }
+    const fallback =
+      err instanceof Error ? err.message : "PDF generation failed";
+    if (/network error/i.test(fallback)) {
+      throw new Error(
+        "Could not download the PDF. Check your connection and try again.",
+      );
+    }
     throw err instanceof Error ? err : new Error("PDF generation failed");
   }
 }
@@ -47,21 +80,17 @@ export function buildInvoicePdfFile(blob: Blob, filename: string): File {
   return new File([blob], filename, { type: "application/pdf" });
 }
 
-export function canShareFiles(): boolean {
-  if (typeof navigator === "undefined" || !navigator.share) return false;
-  const nav = navigator as Navigator & {
-    canShare?: (data: ShareData) => boolean;
-  };
-  if (typeof nav.canShare !== "function") {
-    // Optimistic: many Android browsers support files without canShare
-    return true;
-  }
-  try {
-    const probe = new File(["x"], "probe.pdf", { type: "application/pdf" });
-    return nav.canShare({ files: [probe] });
-  } catch {
-    return false;
-  }
+export {
+  canShareFiles,
+  isNativeFileShareReliable,
+  isUserShareCancel,
+  sharePdfWithFallbacks,
+} from "./invoiceShare";
+
+/** Warm the PDF (and shop logo on the server) before the user taps Share. */
+export function prefetchInvoicePdf(invoiceId: string): void {
+  if (!invoiceId) return;
+  void fetchInvoicePdfBlob(invoiceId).catch(() => undefined);
 }
 
 export function downloadBlob(blob: Blob, filename: string) {

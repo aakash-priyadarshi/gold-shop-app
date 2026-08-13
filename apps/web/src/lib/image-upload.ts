@@ -29,6 +29,8 @@ export interface UploadOptions {
   maxWidth?: number;
   maxHeight?: number;
   quality?: number;
+  /** Keep PNG/JPEG for bill logos — pdfkit cannot embed WebP. */
+  outputMime?: "image/webp" | "image/jpeg" | "image/png";
   onProgress?: (progress: number) => void;
 }
 
@@ -50,7 +52,12 @@ const DEFAULT_OPTIONS: Record<
  */
 export async function compressImage(
   file: File,
-  options: { maxWidth: number; maxHeight: number; quality: number },
+  options: {
+    maxWidth: number;
+    maxHeight: number;
+    quality: number;
+    mimeType?: "image/webp" | "image/jpeg" | "image/png";
+  },
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -86,29 +93,28 @@ export async function compressImage(
         ctx.imageSmoothingQuality = "high";
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Convert to WebP if supported, otherwise JPEG
-        const mimeType = "image/webp";
+        const mimeType = options.mimeType || "image/webp";
+        const quality = mimeType === "image/png" ? undefined : options.quality / 100;
         canvas.toBlob(
           (blob) => {
             if (blob) {
               resolve(blob);
-            } else {
-              // Fallback to JPEG if WebP fails
-              canvas.toBlob(
-                (jpegBlob) => {
-                  if (jpegBlob) {
-                    resolve(jpegBlob);
-                  } else {
-                    reject(new Error("Failed to compress image"));
-                  }
-                },
-                "image/jpeg",
-                options.quality / 100,
-              );
+              return;
             }
+            canvas.toBlob(
+              (jpegBlob) => {
+                if (jpegBlob) {
+                  resolve(jpegBlob);
+                } else {
+                  reject(new Error("Failed to compress image"));
+                }
+              },
+              "image/jpeg",
+              options.quality / 100,
+            );
           },
           mimeType,
-          options.quality / 100,
+          quality,
         );
       };
 
@@ -119,6 +125,14 @@ export async function compressImage(
     reader.onerror = () => reject(new Error("Failed to read file"));
     reader.readAsDataURL(file);
   });
+}
+
+function filenameForCompressed(originalName: string, blob: Blob): string {
+  const base = originalName.replace(/\.[^.]+$/, "") || "upload";
+  if (blob.type === "image/png") return `${base}.png`;
+  if (blob.type === "image/jpeg") return `${base}.jpg`;
+  if (blob.type === "image/webp") return `${base}.webp`;
+  return originalName;
 }
 
 /**
@@ -161,13 +175,17 @@ export async function uploadImage(
       maxWidth,
       maxHeight,
       quality,
+      mimeType: options.outputMime,
     });
 
     onProgress?.(40);
 
-    // Create form data
     const formData = new FormData();
-    formData.append("file", compressedBlob, file.name);
+    formData.append(
+      "file",
+      compressedBlob,
+      filenameForCompressed(file.name, compressedBlob),
+    );
 
     // Upload to worker
     const response = await fetch(`${WORKER_URL}/upload`, {

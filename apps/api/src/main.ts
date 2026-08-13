@@ -66,8 +66,15 @@ async function bootstrap() {
   // ======================
   // Performance Middleware
   // ======================
-  // Gzip/Brotli compression — reduces response sizes by 60-80%
-  app.use(compression());
+  // Gzip/Brotli compression — skip PDF so mobile browsers can read the blob
+  app.use(
+    compression({
+      filter: (req, res) => {
+        if (/\/pdf(\?|$)/i.test(req.url || "")) return false;
+        return compression.filter(req, res);
+      },
+    }),
+  );
 
   // ======================
   // Security Middleware
@@ -85,6 +92,8 @@ async function bootstrap() {
         },
       },
       crossOriginEmbedderPolicy: false, // Allow embedding for Swagger UI
+      // API is consumed cross-origin from www / m.orivraa.com (PDF share included)
+      crossOriginResourcePolicy: { policy: "cross-origin" },
     }),
   );
 
@@ -116,8 +125,29 @@ async function bootstrap() {
   ].filter((origin): origin is string => Boolean(origin));
 
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean | string) => void,
+    ) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      try {
+        const host = new URL(origin).hostname.toLowerCase();
+        const isOrivraa =
+          host === "orivraa.com" || host.endsWith(".orivraa.com");
+        if (isOrivraa || allowedOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+      } catch {
+        /* invalid origin */
+      }
+      callback(null, false);
+    },
     credentials: true,
+    exposedHeaders: ["Content-Disposition", "Content-Length", "Content-Type"],
   });
 
   // Swagger API documentation — disabled in production to avoid information disclosure

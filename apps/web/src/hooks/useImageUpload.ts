@@ -6,6 +6,7 @@ import { uploadImage, deleteImage, type UploadType, type UploadResult } from '@/
 interface UseImageUploadOptions {
   type: UploadType;
   maxFiles?: number;
+  outputMime?: "image/webp" | "image/jpeg" | "image/png";
   onSuccess?: (result: UploadResult) => void;
   onError?: (error: string) => void;
 }
@@ -39,7 +40,7 @@ interface UseImageUploadReturn {
  * ```
  */
 export function useImageUpload(options: UseImageUploadOptions): UseImageUploadReturn {
-  const { type, maxFiles = 10, onSuccess, onError } = options;
+  const { type, maxFiles = 10, onSuccess, onError, outputMime } = options;
   
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -59,6 +60,7 @@ export function useImageUpload(options: UseImageUploadOptions): UseImageUploadRe
     try {
       const result = await uploadImage(file, {
         type,
+        outputMime,
         onProgress: setProgress,
       });
 
@@ -78,7 +80,7 @@ export function useImageUpload(options: UseImageUploadOptions): UseImageUploadRe
     } finally {
       setUploading(false);
     }
-  }, [type, onSuccess, onError]);
+  }, [type, outputMime, onSuccess, onError]);
 
   const uploadMultiple = useCallback(async (files: FileList | File[]): Promise<UploadResult[]> => {
     const fileArray = Array.from(files).slice(0, maxFiles);
@@ -94,6 +96,7 @@ export function useImageUpload(options: UseImageUploadOptions): UseImageUploadRe
       try {
         const result = await uploadImage(fileArray[i], {
           type,
+          outputMime,
           onProgress: (fileProgress) => {
             // Calculate overall progress
             const overallProgress = ((i * 100) + fileProgress) / totalFiles;
@@ -119,7 +122,7 @@ export function useImageUpload(options: UseImageUploadOptions): UseImageUploadRe
     setProgress(100);
 
     return results;
-  }, [type, maxFiles, onSuccess, onError]);
+  }, [type, outputMime, maxFiles, onSuccess, onError]);
 
   const remove = useCallback(async (key: string): Promise<boolean> => {
     try {
