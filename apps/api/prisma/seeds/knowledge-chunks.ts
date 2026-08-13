@@ -208,6 +208,11 @@ const CHUNKS: { topic: string; content: string }[] = [
     content:
       "Mobile Create Invoice (/m/invoices/create) is a full jewellery workflow — not a flat amount form. Steps: Customer details → add lines from Catalog, Shop Quote, or Manual → enter metal type, weight (tola/gram/laal), metal cost, making charge (% / per-gram / flat), wastage (jarti), optional gemstones → Review with tax breakdown → Create. Catalog items commit stock. Importing a walk-in shop quote prefills customer and line costs and links shopQuoteId. Flat-only amounts without metal/making breakdown are rejected so tax reports and accounting stay accurate. After create you land on the invoice detail page: Print (thermal receipt or A4) and Share PDF / WhatsApp.",
   },
+  {
+    topic: "mobile_product_show_to_customer",
+    content:
+      "On mobile POS, tap a product to open its detail sheet with metal, wastage (jarti), gemstones, making charges, and the stored calculation. Tap Show full details to customer to open a full-screen page at /m/products/:id that you can hand to the buyer. This is a seller inventory view, not the public marketplace product page. Stock Ledger item names also open the same page. Wastage is a default % applied when you bill; estimated bill = catalog price (metal + making + gems + tax) plus wastage.",
+  },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

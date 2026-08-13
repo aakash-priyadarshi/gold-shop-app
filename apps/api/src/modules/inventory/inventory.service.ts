@@ -379,6 +379,28 @@ export class InventoryService {
             },
           },
         },
+        variants: true,
+        setComponents: {
+          orderBy: { sortOrder: "asc" },
+          include: {
+            componentItem: {
+              select: {
+                id: true,
+                sku: true,
+                nameEn: true,
+                jewelleryType: true,
+                composition: true,
+                totalWeightGrams: true,
+                metalValueNpr: true,
+                makingChargeNpr: true,
+                gemstoneValueNpr: true,
+                taxNpr: true,
+                totalPriceNpr: true,
+                images: true,
+              },
+            },
+          },
+        },
       },
     });
 

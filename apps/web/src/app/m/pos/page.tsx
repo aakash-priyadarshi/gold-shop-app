@@ -12,9 +12,11 @@ import {
 import { loadHardwareConfig, printReceipt } from "@/lib/posHardware";
 import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import { useHaptics } from "@/hooks/useHaptics";
+import { SellerProductBreakdown } from "@/components/shop/SellerProductBreakdown";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useMarket } from "@/hooks/useMarket";
 import { inventoryApi, shopQuotesApi } from "@/lib/api";
 import { createSale as createOfflineSale } from "@/lib/offline/pos";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
@@ -28,6 +30,7 @@ import {
     Plus,
     ScanLine,
     Search,
+    Maximize2,
     Share2,
     ShoppingCart,
     Trash2,
@@ -50,6 +53,15 @@ interface InventoryItem {
   jewelleryType?: string;
   descriptionEn?: string;
   descriptionNe?: string;
+  composition?: unknown;
+  gemstones?: unknown;
+  metalValueNpr?: number;
+  makingChargeNpr?: number;
+  wastagePercent?: number;
+  gemstoneValueNpr?: number;
+  taxNpr?: number;
+  hallmarkNumber?: string;
+  assayOffice?: string;
   variants?: ProductVariant[];
 }
 
@@ -550,6 +562,7 @@ function ProductDetailSheet({
   getCartQty: (variantId?: string) => number;
   onClose: () => void;
 }) {
+  const { selectedWeightUnit } = useMarket();
   const image = item.images?.[0];
   const weight = item.totalWeightGrams ?? item.weightGrams;
   const variants = (item.variants ?? []).filter((variant) => variant.isActive !== false);
@@ -670,12 +683,20 @@ function ProductDetailSheet({
           </div>
         )}
 
+        <SellerProductBreakdown
+          item={item}
+          currency={currency}
+          weightUnit={selectedWeightUnit}
+          compact
+        />
+
         <Link
-          href={`/shop/${item.id}`}
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-700"
+          data-tour="m-pos-show-customer"
+          href={`/m/products/${item.id}`}
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-800"
         >
-          <Share2 className="h-4 w-4" />
-          <T>Open full product page</T>
+          <Maximize2 className="h-4 w-4" />
+          <T>Show full details to customer</T>
         </Link>
       </div>
 

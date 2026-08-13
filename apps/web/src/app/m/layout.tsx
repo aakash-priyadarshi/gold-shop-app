@@ -183,6 +183,7 @@ export default function MobileLayout({
 
   // Shopkeeper-only guard (customer mobile routes under /m/customer are exempt)
   const isCustomerMobileRoute = pathname.startsWith("/m/customer");
+  const isProductShowRoute = pathname.startsWith("/m/products/");
   useEffect(() => {
     if (!isLoading && user && !isCustomerMobileRoute && user.role !== "SHOPKEEPER") {
       router.push("/dashboard");
@@ -294,7 +295,7 @@ export default function MobileLayout({
   return (
     <OfflineProvider>
     <div className="flex flex-col h-dvh bg-gray-50 dark:bg-gray-950 overflow-hidden">
-      {!isCustomerMobileRoute && (
+      {!isCustomerMobileRoute && !isProductShowRoute && (
       <>
       {/* Top bar */}
       <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
@@ -431,11 +432,11 @@ export default function MobileLayout({
         key={pathname}
         className="flex-1 overflow-y-auto animate-in fade-in duration-200"
       >
-        <SmartUpgradeBanner compact />
+        {!isProductShowRoute && <SmartUpgradeBanner compact />}
         {children}
       </main>
 
-      {!isCustomerMobileRoute && (
+      {!isCustomerMobileRoute && !isProductShowRoute && (
       <>
       {/* Bottom navigation */}
       <nav

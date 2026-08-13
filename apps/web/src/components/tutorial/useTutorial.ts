@@ -1308,7 +1308,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Product Grid & Detail Sheets",
         description:
-          "Displays your catalog cards. Tapping any card opens a modal sheet showing weight in grams, metal purity, base value, and making charges. Tapping the orange '+' button instantly adds the item to your active bill, updating the badge count in real-time.",
+          "Displays your catalog cards. Tapping any card opens a sheet with metal, wastage, gemstones, making charges, and the full calculation. Use Show full details to customer for a full-screen view you can hand to the buyer. Tapping the orange '+' button adds the item to the bill.",
         side: "top",
         align: "center",
       },
@@ -1348,6 +1348,18 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
         title: "💡 Need Help on Mobile?",
         description:
           "You can tap the floating '?' Help Button in the bottom-right corner of the screen at any point to restart this guide or get in-context assistance on any mobile page you visit!",
+      },
+    },
+  ],
+  "/m/products/": [
+    {
+      element: "[data-tour='m-product-breakdown']",
+      popover: {
+        title: "Full piece calculation",
+        description:
+          "Hand this screen to the customer. It shows metal, weight, wastage (jarti), making charges, each gemstone, tax, and the estimated bill — the same figures stored when the piece was added. This is a shop floor view, not the public marketplace.",
+        side: "top",
+        align: "center",
       },
     },
   ],

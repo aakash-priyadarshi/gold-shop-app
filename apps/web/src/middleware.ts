@@ -26,6 +26,7 @@ const MOBILE_TOP_SEGMENTS = new Set([
   "occasions",  // Birthday & Anniversary Reminders
   "purity",     // Gold Purity Calculator
   "invoices",   // Mobile invoice list / create / detail (/m/invoices/*)
+  "products",   // Seller product detail for showing a piece to a walk-in customer
 ]);
 
 function mapToSupportedMarket(countryCode: string): string {
@@ -86,8 +87,7 @@ function isApprovedDomain(hostname: string): boolean {
     lowerHost === "orivraa.com" ||
     lowerHost.endsWith(".orivraa.com") ||
     lowerHost === "localhost" ||
-    lowerHost.endsWith(".localhost") ||
-    lowerHost.endsWith(".vercel.app")
+    lowerHost.endsWith(".localhost")
   );
 }
 
@@ -421,6 +421,9 @@ export async function middleware(request: NextRequest) {
     userAgent,
   );
   const isMobileSubdomain = hostname === "m" || hostname.startsWith("m.");
+  const userRole = request.cookies.get("orivraa_user_role")?.value;
+  const isSellerPreviewRole =
+    userRole === "SHOPKEEPER" || userRole === "SALES" || userRole === "ADMIN";
 
   // Crawlers on marketing/SEO pages do not need geo cookies or mobile redirects.
   if (
@@ -454,7 +457,8 @@ export async function middleware(request: NextRequest) {
     if (CONSUMER_TOP_SEGMENT_SET.has(firstSeg)) {
       const cookieValue = request.cookies.get("orivraa_customer_flow")?.value;
       const flowOn = await resolveCustomerFlow(cookieValue);
-      if (!flowOn) {
+      // Shopkeepers still need /shop/:id as a listing preview from POS.
+      if (!flowOn && !isSellerPreviewRole) {
         const homeUrl = new URL("/", publicRequestUrl);
         const redirect = NextResponse.redirect(homeUrl, 307);
         redirect.cookies.set("orivraa_customer_flow", "0", {
@@ -473,7 +477,6 @@ export async function middleware(request: NextRequest) {
   // Role cookie to gate mobile subdomain redirection.
   // Only SHOPKEEPER and SALES roles (or guests/logged-out users) should be on the mobile subdomain.
   // CUSTOMER, ADMIN, and SUPPORT roles should always stay on the responsive desktop domain.
-  const userRole = request.cookies.get("orivraa_user_role")?.value;
   const isRoleEligibleForMobile = !userRole || userRole === "SHOPKEEPER" || userRole === "SALES";
 
   // If a non-eligible user (customer, admin, support) lands on the mobile subdomain,
@@ -557,12 +560,14 @@ export async function middleware(request: NextRequest) {
 
   const isMobilePath = pathname === "/m" || pathname.startsWith("/m/");
   const isDashboardPath = pathname.startsWith("/dashboard");
+  const isAuthPath = pathname === "/auth" || pathname.startsWith("/auth/");
   const firstSegment = pathname.split("/")[1];
   const hasMobileEquivalent = MOBILE_TOP_SEGMENTS.has(firstSegment);
 
   // If we are on the mobile subdomain but the pathname does not represent a mobile app page or a dashboard page,
   // we redirect them back to the main domain so they can browse the landing page normally.
-  if (pathname !== "/" && !isMobilePath && !isDashboardPath && !hasMobileEquivalent) {
+  // Keep /auth/* on this host — Google OAuth returns here so tokens land in m.orivraa.com storage.
+  if (pathname !== "/" && !isMobilePath && !isDashboardPath && !isAuthPath && !hasMobileEquivalent) {
     const desktopUrl = new URL(publicRequestUrl);
     const host = hostname;
     if (host.startsWith("m.")) {
@@ -594,11 +599,16 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  // Root → mobile home (POS)
+  // Root → mobile home (POS).
+  // Rewrite on the incoming Next URL, not https://m.orivraa.com/... — an
+  // absolute rewrite to the public Cloudflare hostname makes Railway fetch
+  // that URL as origin, which Cloudflare treats as Error 1000 (proxy loop).
   if (pathname === "/") {
+    const posUrl = request.nextUrl.clone();
+    posUrl.pathname = "/m/pos";
     return withGeoCookies(
       request,
-      NextResponse.rewrite(new URL("/m/pos", publicRequestUrl), {
+      NextResponse.rewrite(posUrl, {
         request: {
           headers: requestHeaders,
         },
@@ -627,9 +637,11 @@ export async function middleware(request: NextRequest) {
 
   // Only rewrite paths whose first segment has a mobile equivalent.
   if (hasMobileEquivalent) {
+    const mobileUrl = request.nextUrl.clone();
+    mobileUrl.pathname = `/m${pathname}`;
     return withGeoCookies(
       request,
-      NextResponse.rewrite(new URL(`/m${pathname}`, publicRequestUrl), {
+      NextResponse.rewrite(mobileUrl, {
         request: {
           headers: requestHeaders,
         },

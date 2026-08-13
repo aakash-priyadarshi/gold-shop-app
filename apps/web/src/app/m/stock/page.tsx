@@ -422,7 +422,12 @@ export default function MobileStockPage() {
                       {selectedTagIds.has(item.id) ? "✓" : ""}
                     </button>
                     <div className="space-y-0.5">
-                      <p className="font-bold text-sm text-gray-900 dark:text-gray-100">{item.name}</p>
+                      <Link
+                        href={`/m/products/${item.id}`}
+                        className="font-bold text-sm text-gray-900 dark:text-gray-100"
+                      >
+                        {item.name}
+                      </Link>
                       <div className="flex items-center gap-1.5 pt-0.5">
                         <span className="text-[9px] font-mono font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
                           {item.tag}
