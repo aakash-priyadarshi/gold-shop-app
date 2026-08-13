@@ -251,6 +251,23 @@ api.interceptors.response.use(
       }
     }
 
+    if (typeof window !== "undefined") {
+      const status = error.response?.status as number | undefined;
+      const url = String(error.config?.url || "");
+      if (!url.includes("/crash-reports")) {
+        if (status && status >= 500) {
+          window.dispatchEvent(new CustomEvent("orivraa:api_error"));
+        }
+        if (!status || status >= 500) {
+          void import("@/lib/reportUserFacingError").then(
+            ({ reportApiFailure }) => {
+              reportApiFailure(error);
+            },
+          );
+        }
+      }
+    }
+
     return Promise.reject(error);
   },
 );
@@ -1897,6 +1914,11 @@ export const crashReportApi = {
     userId?: string;
     userAgent?: string;
     appVersion?: string;
+    userTriggered?: boolean;
+    userDescription?: string;
+    screenshotUrl?: string;
+    frustrationType?: string;
+    sessionToken?: string;
   }) => api.post("/crash-reports", data),
 
   /** Get paginated crash reports (admin) */
@@ -1905,12 +1927,18 @@ export const crashReportApi = {
     limit?: number;
     status?: string;
     platform?: string;
+    userTriggered?: boolean;
+    since?: string;
   }) => {
     const query = new URLSearchParams();
     if (params?.page) query.set("page", String(params.page));
     if (params?.limit) query.set("limit", String(params.limit));
     if (params?.status) query.set("status", params.status);
     if (params?.platform) query.set("platform", params.platform);
+    if (params?.userTriggered !== undefined) {
+      query.set("userTriggered", String(params.userTriggered));
+    }
+    if (params?.since) query.set("since", params.since);
     const qs = query.toString();
     return api.get(`/crash-reports${qs ? `?${qs}` : ""}`);
   },

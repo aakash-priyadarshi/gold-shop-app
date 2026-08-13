@@ -11,6 +11,15 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     Sentry.captureException(error);
+    void import("@/lib/reportUserFacingError").then(({ reportUserFacingError }) => {
+      reportUserFacingError({
+        title: "Page crash",
+        description: error.message || "Unknown error",
+        stack: error.stack,
+        frustrationType: "boundary",
+        userTriggered: false,
+      });
+    });
   }, [error]);
 
   return (

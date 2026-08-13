@@ -9,16 +9,29 @@ import {
   ToastViewport,
 } from "@/components/ui/toast"
 import { useToast } from "@/hooks/use-toast"
+import { formatUserFacingErrorCopy } from "@/lib/reportUserFacingError"
 import { Copy, Check } from "lucide-react"
 import { useState } from "react"
 
 export function Toaster() {
   const { toasts } = useToast()
+  const page =
+    typeof window !== "undefined"
+      ? window.location.pathname + window.location.search
+      : ""
 
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         const isDestructive = props.variant === "destructive"
+        const titleText = typeof title === "string" ? title : ""
+        const descriptionText =
+          typeof description === "string" ? description : ""
+        const copyText = formatUserFacingErrorCopy({
+          title: titleText,
+          description: descriptionText,
+          page,
+        })
         return (
           <Toast key={id} {...props}>
             <div className="grid gap-1">
@@ -28,14 +41,8 @@ export function Toaster() {
               )}
             </div>
             {action}
-            {isDestructive && description && (
-              <CopyErrorButton
-                text={
-                  typeof description === "string"
-                    ? description
-                    : `${title || ""} — ${description}`
-                }
-              />
+            {isDestructive && copyText && (
+              <CopyErrorButton text={copyText} />
             )}
             <ToastClose />
           </Toast>

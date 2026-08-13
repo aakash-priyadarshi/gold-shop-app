@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import api from '@/lib/api';
+import { submitUserFacingError } from '@/lib/reportUserFacingError';
 
 type FrustrationType = 'rage_click' | 'api_error' | 'manual' | 'boundary';
 
@@ -74,12 +75,10 @@ export function ErrorReporter({ trigger, autoShow = false, errorMessage = '', pa
         } catch { /* screenshot optional, continue */ }
       }
 
-      await api.post('/crash-reports', {
-        errorMessage: currentError || 'User-reported issue',
-        page: currentPage || window.location.pathname,
-        platform: 'web',
-        userRole: session?.user?.role || 'guest',
-        sessionToken: sessionStorage.getItem('orivraa_ws_token') || undefined,
+      await submitUserFacingError({
+        title: currentTrigger === 'manual' ? 'User report' : 'Having trouble',
+        description: currentError || 'User-reported issue',
+        page: currentPage || undefined,
         userTriggered: true,
         userDescription: description || undefined,
         screenshotUrl,

@@ -11,6 +11,8 @@ type ToasterToast = ToastProps & {
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  /** Default true for destructive toasts. Set false to skip admin capture. */
+  reportToAdmin?: boolean
 }
 
 const actionTypes = {
@@ -135,7 +137,13 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+function nodeToText(node: React.ReactNode): string {
+  if (node == null || typeof node === "boolean") return ""
+  if (typeof node === "string" || typeof node === "number") return String(node)
+  return ""
+}
+
+function toast({ reportToAdmin, ...props }: Toast) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -156,6 +164,19 @@ function toast({ ...props }: Toast) {
       },
     },
   })
+
+  if (props.variant === "destructive" && reportToAdmin !== false) {
+    const title = nodeToText(props.title)
+    const description = nodeToText(props.description)
+    void import("@/lib/reportUserFacingError").then(({ reportUserFacingError }) => {
+      reportUserFacingError({
+        title,
+        description: description || title,
+        frustrationType: "toast",
+        userTriggered: false,
+      })
+    })
+  }
 
   return {
     id: id,

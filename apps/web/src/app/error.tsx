@@ -6,7 +6,6 @@
  * so it has access to the theme, fonts, and navigation.
  */
 
-import { crashReportApi } from "@/lib/api";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -23,39 +22,37 @@ export default function Error({
 
   useEffect(() => {
     console.error("[Orivraa Error Boundary]", error);
+    void import("@/lib/reportUserFacingError").then(
+      ({ submitUserFacingError }) => {
+        submitUserFacingError({
+          title: "Page crash",
+          description: error.message || "Unknown error",
+          stack: error.stack,
+          frustrationType: "boundary",
+          userTriggered: false,
+          userAction: document.title ? `Viewing: ${document.title}` : undefined,
+        }).then((ok) => {
+          if (ok) setReportStatus("sent");
+        });
+      },
+    );
   }, [error]);
 
   const handleReport = async () => {
     setReportStatus("sending");
     try {
-      // Gather user info from localStorage if available
-      let userRole = "guest";
-      let userId: string | undefined;
-      try {
-        const token = localStorage.getItem("token");
-        if (token) {
-          const parts = token.split(".");
-          if (parts.length === 3) {
-            const payload = JSON.parse(
-              atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
-            );
-            userRole = payload.role || "guest";
-            userId = payload.sub;
-          }
-        }
-      } catch {}
-
-      await crashReportApi.submit({
-        errorMessage: error.message || "Unknown error",
-        errorStack: error.stack,
-        page: window.location.pathname + window.location.search,
+      const { submitUserFacingError } = await import(
+        "@/lib/reportUserFacingError"
+      );
+      const ok = await submitUserFacingError({
+        title: "Page crash",
+        description: error.message || "Unknown error",
+        stack: error.stack,
+        frustrationType: "boundary",
+        userTriggered: true,
         userAction: document.title ? `Viewing: ${document.title}` : undefined,
-        platform: (window as any).__TAURI__ ? "desktop" : "web",
-        userRole,
-        userId,
-        userAgent: navigator.userAgent,
       });
-      setReportStatus("sent");
+      setReportStatus(ok ? "sent" : "error");
     } catch {
       setReportStatus("error");
     }

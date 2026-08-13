@@ -16,6 +16,7 @@ import { UserRole } from "@prisma/client";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { Throttle } from "@nestjs/throttler";
 import { SkipSecurity } from "../security/security.guard";
 import {
   CrashReportsService,
@@ -32,6 +33,7 @@ export class CrashReportsController {
    */
   @Post()
   @SkipSecurity()
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
   @HttpCode(HttpStatus.CREATED)
   async submit(@Body() body: SubmitCrashReportDto, @Req() req: any) {
     const ip =
@@ -53,6 +55,7 @@ export class CrashReportsController {
     @Query("status") status?: string,
     @Query("platform") platform?: string,
     @Query("userTriggered") userTriggered?: string,
+    @Query("since") since?: string,
   ) {
     return this.crashReportsService.getAll({
       page: page ? parseInt(page, 10) : 1,
@@ -60,6 +63,7 @@ export class CrashReportsController {
       status,
       platform,
       userTriggered: userTriggered === "true" ? true : userTriggered === "false" ? false : undefined,
+      since,
     });
   }
 

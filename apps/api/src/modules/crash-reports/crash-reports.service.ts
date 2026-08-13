@@ -1,4 +1,10 @@
-import { Injectable, Logger } from "@nestjs/common";
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+} from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 
 export interface SubmitCrashReportDto {
@@ -16,7 +22,7 @@ export interface SubmitCrashReportDto {
   userTriggered?: boolean;
   userDescription?: string;
   screenshotUrl?: string;
-  frustrationType?: string; // 'rage_click' | 'api_error' | 'manual' | 'boundary'
+  frustrationType?: string; // 'rage_click' | 'api_error' | 'manual' | 'boundary' | 'toast'
 }
 
 export interface GetCrashReportsQuery {
@@ -25,37 +31,115 @@ export interface GetCrashReportsQuery {
   status?: string;
   platform?: string;
   userTriggered?: boolean;
+  since?: string;
 }
+
+const SUBMIT_RATE_LIMIT = 30;
+const SUBMIT_RATE_WINDOW_MS = 60_000;
+const DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class CrashReportsService {
   private readonly logger = new Logger(CrashReportsService.name);
+  private readonly ipHits = new Map<string, number[]>();
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private enforceIpRateLimit(ip?: string) {
+    if (!ip || ip === "unknown") return;
+    const now = Date.now();
+    const hits = (this.ipHits.get(ip) || []).filter(
+      (t) => now - t < SUBMIT_RATE_WINDOW_MS,
+    );
+    if (hits.length >= SUBMIT_RATE_LIMIT) {
+      throw new HttpException(
+        "Too many error reports from this address",
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    hits.push(now);
+    this.ipHits.set(ip, hits);
+  }
+
   /** Submit a new crash report (public — no auth required) */
   async submit(dto: SubmitCrashReportDto, ip?: string) {
+    if (!dto?.errorMessage || typeof dto.errorMessage !== "string") {
+      throw new BadRequestException("errorMessage is required");
+    }
+    if (!dto.page || typeof dto.page !== "string") {
+      throw new BadRequestException("page is required");
+    }
+
+    this.enforceIpRateLimit(ip);
+
+    const errorMessage = dto.errorMessage.slice(0, 10000);
+    const page = dto.page.slice(0, 2000);
+    const platform =
+      dto.platform === "desktop" || dto.platform === "web"
+        ? dto.platform
+        : "web";
+
+    const since = new Date(Date.now() - DEDUPE_WINDOW_MS);
+    const existing = await this.prisma.crashReport.findFirst({
+      where: { page, errorMessage, createdAt: { gte: since } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (existing && dto.userTriggered) {
+      const updated = await this.prisma.crashReport.update({
+        where: { id: existing.id },
+        data: {
+          userTriggered: true,
+          ...(dto.userDescription && {
+            userDescription: dto.userDescription.slice(0, 5000),
+          }),
+          ...(dto.screenshotUrl && {
+            screenshotUrl: dto.screenshotUrl.slice(0, 2000),
+          }),
+        },
+      });
+      return {
+        id: updated.id,
+        message: "Report updated",
+        duplicate: true,
+      };
+    }
+
+    if (existing) {
+      return {
+        id: existing.id,
+        message: "Duplicate suppressed",
+        duplicate: true,
+      };
+    }
+
     const report = await this.prisma.crashReport.create({
       data: {
-        errorMessage: dto.errorMessage.slice(0, 10000),
+        errorMessage,
         errorStack: dto.errorStack?.slice(0, 20000),
-        page: dto.page.slice(0, 2000),
+        page,
         userAction: dto.userAction?.slice(0, 2000),
-        platform: dto.platform,
+        platform,
         userRole: dto.userRole || "guest",
         userId: dto.userId || null,
         userAgent: dto.userAgent?.slice(0, 1000),
         appVersion: dto.appVersion || null,
         ip: ip || null,
-        // User-triggered report fields
-        ...(dto.userTriggered !== undefined && { userTriggered: dto.userTriggered }),
-        ...(dto.userDescription && { userDescription: dto.userDescription.slice(0, 5000) }),
-        ...(dto.screenshotUrl && { screenshotUrl: dto.screenshotUrl.slice(0, 2000) }),
+        sessionToken: dto.sessionToken || null,
+        ...(dto.userTriggered !== undefined && {
+          userTriggered: dto.userTriggered,
+        }),
+        ...(dto.userDescription && {
+          userDescription: dto.userDescription.slice(0, 5000),
+        }),
+        ...(dto.screenshotUrl && {
+          screenshotUrl: dto.screenshotUrl.slice(0, 2000),
+        }),
         ...(dto.frustrationType && { frustrationType: dto.frustrationType }),
       },
     });
     this.logger.log(
-      `Crash report submitted: ${report.id} [${dto.platform}] ${dto.page}${dto.userTriggered ? " [USER-TRIGGERED]" : ""}`,
+      `Crash report submitted: ${report.id} [${platform}] ${page}${dto.userTriggered ? " [USER-TRIGGERED]" : ""}`,
     );
     return { id: report.id, message: "Report submitted successfully" };
   }
@@ -70,6 +154,12 @@ export class CrashReportsService {
     if (query.status) where.status = query.status;
     if (query.platform) where.platform = query.platform;
     if (query.userTriggered !== undefined) where.userTriggered = query.userTriggered;
+    if (query.since) {
+      const sinceDate = new Date(query.since);
+      if (!Number.isNaN(sinceDate.getTime())) {
+        where.createdAt = { gte: sinceDate };
+      }
+    }
 
     const [reports, total] = await Promise.all([
       this.prisma.crashReport.findMany({
@@ -114,7 +204,10 @@ export class CrashReportsService {
 
   /** Get summary stats for dashboard */
   async getStats() {
-    const [total, newCount, reviewedCount, resolvedCount, byPlatform, userTriggeredCount, withScreenshot, byFrustration] =
+    const startOfUtcDay = new Date();
+    startOfUtcDay.setUTCHours(0, 0, 0, 0);
+
+    const [total, newCount, reviewedCount, resolvedCount, byPlatform, userTriggeredCount, withScreenshot, byFrustration, todayCount] =
       await Promise.all([
         this.prisma.crashReport.count(),
         this.prisma.crashReport.count({ where: { status: "new" } }),
@@ -124,6 +217,7 @@ export class CrashReportsService {
         this.prisma.crashReport.count({ where: { userTriggered: true } }),
         this.prisma.crashReport.count({ where: { screenshotUrl: { not: null } } }),
         this.prisma.crashReport.groupBy({ by: ["frustrationType" as any], _count: true }).catch(() => []),
+        this.prisma.crashReport.count({ where: { createdAt: { gte: startOfUtcDay } } }),
       ]);
 
     return {
@@ -131,6 +225,7 @@ export class CrashReportsService {
       new: newCount,
       reviewed: reviewedCount,
       resolved: resolvedCount,
+      today: todayCount,
       userTriggered: userTriggeredCount,
       withScreenshot,
       byPlatform: Object.fromEntries(

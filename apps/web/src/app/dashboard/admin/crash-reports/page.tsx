@@ -5,10 +5,12 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { crashReportApi } from "@/lib/api";
 import {
   Bug,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
+  Copy,
   Eye,
   Filter,
   Monitor,
@@ -36,6 +38,10 @@ interface CrashReport {
   adminNotes?: string;
   createdAt: string;
   updatedAt: string;
+  userTriggered?: boolean;
+  userDescription?: string;
+  screenshotUrl?: string;
+  frustrationType?: string;
 }
 
 interface Stats {
@@ -43,7 +49,65 @@ interface Stats {
   new: number;
   reviewed: number;
   resolved: number;
+  today?: number;
+  userTriggered?: number;
   byPlatform: Record<string, number>;
+}
+
+function startOfLocalDayIso() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+function formatAdminCopy(report: CrashReport) {
+  const source = report.userTriggered ? "User reported" : "Automatic";
+  return [
+    report.errorMessage,
+    "",
+    "---",
+    `When: ${new Date(report.createdAt).toISOString()}`,
+    `Platform: ${report.platform}${report.appVersion ? ` v${report.appVersion}` : ""}`,
+    `Role: ${report.userRole || "guest"}`,
+    report.userId ? `User: ${report.userId}` : null,
+    `Source: ${source}`,
+    `Type: ${report.frustrationType || "—"}`,
+    report.userAction ? `Action: ${report.userAction}` : null,
+    report.userDescription ? `User note: ${report.userDescription}` : null,
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
+}
+
+function CopyTextButton({
+  text,
+  className = "",
+}: {
+  text: string;
+  className?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      title="Copy error (same format as user toast)"
+      aria-label="Copy error"
+      className={`inline-flex items-center gap-1 rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200 ${className}`}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+    >
+      {copied ? (
+        <Check className="h-3.5 w-3.5 text-green-500" />
+      ) : (
+        <Copy className="h-3.5 w-3.5" />
+      )}
+    </button>
+  );
 }
 
 // ─── Status badge ───────────────────────────────────────
@@ -86,8 +150,10 @@ export default function CrashReportsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("new");
   const [platformFilter, setPlatformFilter] = useState<string>("");
+  const [sourceFilter, setSourceFilter] = useState<string>("");
+  const [todayOnly, setTodayOnly] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesText, setNotesText] = useState("");
@@ -101,6 +167,13 @@ export default function CrashReportsPage() {
           limit: 25,
           status: statusFilter || undefined,
           platform: platformFilter || undefined,
+          userTriggered:
+            sourceFilter === "user"
+              ? true
+              : sourceFilter === "auto"
+                ? false
+                : undefined,
+          since: todayOnly ? startOfLocalDayIso() : undefined,
         }),
         crashReportApi.getStats(),
       ]);
@@ -113,7 +186,7 @@ export default function CrashReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, platformFilter]);
+  }, [page, statusFilter, platformFilter, sourceFilter, todayOnly]);
 
   useEffect(() => {
     fetchReports();
@@ -190,7 +263,8 @@ export default function CrashReportsPage() {
               Crash Reports
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Client-side errors reported from web and desktop apps
+              Errors shown to shopkeepers and customers. Check this daily —
+              copy matches the user toast.
             </p>
           </div>
           <button
@@ -205,17 +279,27 @@ export default function CrashReportsPage() {
 
         {/* Stats cards */}
         {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
             {[
               {
-                label: "Total",
-                value: stats.total,
-                color: "text-gray-700 dark:text-gray-300",
+                label: "Today",
+                value: stats.today ?? 0,
+                color: "text-orange-600 dark:text-orange-400",
+                onClick: () => {
+                  setTodayOnly(true);
+                  setPage(1);
+                },
+                active: todayOnly,
               },
               {
                 label: "New",
                 value: stats.new,
                 color: "text-red-600 dark:text-red-400",
+                onClick: () => {
+                  setStatusFilter("new");
+                  setPage(1);
+                },
+                active: statusFilter === "new",
               },
               {
                 label: "Reviewed",
@@ -228,6 +312,16 @@ export default function CrashReportsPage() {
                 color: "text-green-600 dark:text-green-400",
               },
               {
+                label: "Total",
+                value: stats.total,
+                color: "text-gray-700 dark:text-gray-300",
+                onClick: () => {
+                  setTodayOnly(false);
+                  setStatusFilter("");
+                  setPage(1);
+                },
+              },
+              {
                 label: "Desktop",
                 value: stats.byPlatform?.desktop || 0,
                 color: "text-blue-600 dark:text-blue-400",
@@ -235,7 +329,15 @@ export default function CrashReportsPage() {
             ].map((s) => (
               <div
                 key={s.label}
-                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-4"
+                role={s.onClick ? "button" : undefined}
+                onClick={s.onClick}
+                className={`rounded-xl border bg-white dark:bg-gray-900/50 p-4 ${
+                  s.onClick ? "cursor-pointer hover:border-gold-400" : ""
+                } ${
+                  s.active
+                    ? "border-gold-400 dark:border-gold-500"
+                    : "border-gray-200 dark:border-gray-800"
+                }`}
               >
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {s.label}
@@ -280,11 +382,42 @@ export default function CrashReportsPage() {
             </select>
             <ChevronDown className="absolute right-2 top-2 h-4 w-4 text-gray-400 pointer-events-none" />
           </div>
-          {(statusFilter || platformFilter) && (
+          <div className="relative">
+            <select
+              value={sourceFilter}
+              onChange={(e) => {
+                setSourceFilter(e.target.value);
+                setPage(1);
+              }}
+              className="appearance-none rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 pr-8 text-sm text-gray-700 dark:text-gray-300"
+            >
+              <option value="">All sources</option>
+              <option value="auto">Automatic</option>
+              <option value="user">User reported</option>
+            </select>
+            <ChevronDown className="absolute right-2 top-2 h-4 w-4 text-gray-400 pointer-events-none" />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setTodayOnly((v) => !v);
+              setPage(1);
+            }}
+            className={`rounded-lg border px-3 py-1.5 text-sm ${
+              todayOnly
+                ? "border-gold-400 bg-gold-50 text-gold-800 dark:bg-gold-900/20 dark:text-gold-300"
+                : "border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+            }`}
+          >
+            Today
+          </button>
+          {(statusFilter || platformFilter || sourceFilter || todayOnly) && (
             <button
               onClick={() => {
                 setStatusFilter("");
                 setPlatformFilter("");
+                setSourceFilter("");
+                setTodayOnly(false);
                 setPage(1);
               }}
               className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1"
@@ -326,6 +459,20 @@ export default function CrashReportsPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <StatusBadge status={report.status} />
                       <PlatformBadge platform={report.platform} />
+                      <span
+                        className={`text-xs px-1.5 py-0.5 rounded ${
+                          report.userTriggered
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                        }`}
+                      >
+                        {report.userTriggered ? "User" : "Auto"}
+                      </span>
+                      {report.frustrationType && (
+                        <span className="text-xs text-gray-400">
+                          {report.frustrationType}
+                        </span>
+                      )}
                       {report.userRole && report.userRole !== "guest" && (
                         <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
                           {report.userRole}
@@ -345,6 +492,7 @@ export default function CrashReportsPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <CopyTextButton text={formatAdminCopy(report)} />
                     <Eye className="h-4 w-4 text-gray-400" />
                   </div>
                 </div>
@@ -354,13 +502,27 @@ export default function CrashReportsPage() {
                   <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4 space-y-4">
                     {/* Error message */}
                     <div>
-                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
-                        Error Message
-                      </p>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                          Error Message
+                        </p>
+                        <CopyTextButton text={formatAdminCopy(report)} />
+                      </div>
                       <pre className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 overflow-auto max-h-40 whitespace-pre-wrap break-words">
                         {report.errorMessage}
                       </pre>
                     </div>
+
+                    {report.userDescription && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
+                          User note
+                        </p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 rounded-lg p-3">
+                          {report.userDescription}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Stack trace */}
                     {report.errorStack && (
