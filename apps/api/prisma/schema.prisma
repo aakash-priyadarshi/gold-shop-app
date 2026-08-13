@@ -2708,6 +2708,9 @@ model InvoiceSettings {
   footerPosition   String @default("BOTTOM")
   termsPosition    String @default("BOTTOM")
 
+  // Printable layout (classic | royal | compact | ornate | minimal)
+  billTemplateId String @default("classic")
+
   // Visibility toggles
   showLogo    Boolean @default(true)
   showAddress Boolean @default(true)

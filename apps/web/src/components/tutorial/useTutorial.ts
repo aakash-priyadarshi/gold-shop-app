@@ -624,7 +624,17 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Layout & Visibility",
         description:
-          "Control which fields (address, GSTIN, licence number, footer, terms) appear on your printed invoice, and whether they print at the top or bottom. Toggle any field off to hide it from the bill. Changes apply to all new invoices immediately.",
+          "Control which fields (address, GSTIN, licence number, footer, terms) appear on your printed invoice, and whether they print at the top or bottom. Toggle any field off to hide it from the bill. The live preview on the right updates as you change these.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='invoice-settings-templates']",
+      popover: {
+        title: "Bill templates",
+        description:
+          "The strip at the bottom is a row of bill looks — Classic, Royal, Compact, Ornate, and Minimal. Click one to preview it instantly. Save Settings to use that layout on printed bills and shared PDFs.",
         side: "top",
         align: "start",
       },

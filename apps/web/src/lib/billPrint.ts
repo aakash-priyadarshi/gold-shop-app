@@ -1,4 +1,7 @@
-/** Shared popup print helper with country-aware invoice formatting. */
+import {
+  billTemplatePrintCss,
+  resolveBillTemplateId,
+} from "@gold-shop/shared";
 
 export interface BillSettings {
   shopNameOnBill?: string | null;
@@ -29,6 +32,7 @@ export interface BillSettings {
   showLicense?: boolean;
   showFooter?: boolean;
   showTerms?: boolean;
+  billTemplateId?: string;
 }
 
 export interface BillLineItem {
@@ -340,11 +344,12 @@ h1.doc-title{text-align:center;font-size:24px;letter-spacing:.08em;margin:8px 0 
 .amt-paid{color:#065f46;font-weight:700}.amt-due{color:#b45309;font-weight:700}.footer{margin-top:12px;font-size:10px;color:#9ca3af;text-align:center}.parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0}.party{border:1px solid #d1d5db;border-radius:8px;padding:12px}.party h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin:0 0 7px}.party p{font-size:12px;margin:3px 0}.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;margin:12px 0;font-size:12px}
 table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px}th,td{border:1px solid #d1d5db;padding:7px;text-align:left}th{background:#f3f4f6}.number{text-align:right;white-space:nowrap}.lk-totals{margin-left:auto;width:min(100%,340px)}
 @media print{button{display:none}}${watermarkCss}
-</style></head><body>
+${billTemplatePrintCss(payload.settings?.billTemplateId)}
+</style></head><body class="bill-tpl-${resolveBillTemplateId(payload.settings?.billTemplateId)}">
 ${payload.watermark ? '<div class="wm"></div>' : ""}
 <button onclick="window.print()" style="position:fixed;top:12px;right:12px;padding:7px 14px;background:#b45309;color:#fff;border:0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Print / Save PDF</button>
 <h1 class="doc-title">${heading}</h1>
-${topBrand || `<h2>${safe(payload.fallbackShopName || "Receipt")}</h2>`}
+<div class="brand-top">${topBrand || `<h2>${safe(payload.fallbackShopName || "Receipt")}</h2>`}</div>
 ${
   isLkTaxInvoice
     ? `<div class="parties">

@@ -72,10 +72,8 @@ export class InvoicePdfService {
 
   private async buildContext(invoice: any): Promise<InvoicePdfContext> {
     const settings = invoice.shop?.invoiceSettings || null;
-    // Future: InvoiceSettings.billTemplateId — read when column ships
     const templateId =
-      (settings as { billTemplateId?: string } | null)?.billTemplateId ||
-      DEFAULT_INVOICE_PDF_TEMPLATE_ID;
+      settings?.billTemplateId || DEFAULT_INVOICE_PDF_TEMPLATE_ID;
 
     const shopName =
       settings?.shopNameOnBill?.trim() ||

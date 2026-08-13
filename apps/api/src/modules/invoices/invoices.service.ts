@@ -19,6 +19,7 @@ import {
   isCurrencySupportedForMarket,
   resolveMarketRegion,
 } from "../../common/market/country-currency";
+import { resolveBillTemplateId } from "@gold-shop/shared";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import {
   BackendTaxEngineService,
@@ -1094,6 +1095,7 @@ export class InvoicesService {
             showLicense: billSettings.showLicense,
             showFooter: billSettings.showFooter,
             showTerms: billSettings.showTerms,
+            billTemplateId: billSettings.billTemplateId,
           }
         : null,
       shop: invoice.shop
@@ -1293,6 +1295,7 @@ export class InvoicesService {
       "showLicense",
       "showFooter",
       "showTerms",
+      "billTemplateId",
     ];
 
     const data: Record<string, any> = {};
@@ -1319,6 +1322,10 @@ export class InvoicesService {
       if (data[field] && !["TOP", "BOTTOM"].includes(data[field])) {
         throw new BadRequestException(`${field} must be TOP or BOTTOM`);
       }
+    }
+
+    if (data.billTemplateId !== undefined) {
+      data.billTemplateId = resolveBillTemplateId(data.billTemplateId);
     }
 
     return this.prisma.invoiceSettings.upsert({

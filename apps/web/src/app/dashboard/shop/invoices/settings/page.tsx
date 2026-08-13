@@ -22,10 +22,16 @@ import { invoicesApi } from "@/lib/api";
 import type { BillSettings } from "@/lib/billPrint";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
 import {
+  BILL_TEMPLATES,
+  getBillTemplate,
+  type BillTemplateTheme,
+} from "@gold-shop/shared";
+import {
     ArrowDown,
     ArrowLeft,
     ArrowUp,
     Building2,
+    Check,
     FileText,
     ImageIcon,
     LayoutTemplate,
@@ -73,6 +79,7 @@ interface InvoiceSettingsData {
   showLicense: boolean;
   showFooter: boolean;
   showTerms: boolean;
+  billTemplateId: string;
 }
 
 const defaultSettings: InvoiceSettingsData = {
@@ -104,6 +111,7 @@ const defaultSettings: InvoiceSettingsData = {
   showLicense: false,
   showFooter: true,
   showTerms: true,
+  billTemplateId: "classic",
 };
 
 function mapRowToSettings(row: BillSettings): InvoiceSettingsData {
@@ -136,6 +144,7 @@ function mapRowToSettings(row: BillSettings): InvoiceSettingsData {
     showLicense: row.showLicense ?? false,
     showFooter: row.showFooter ?? true,
     showTerms: row.showTerms ?? true,
+    billTemplateId: row.billTemplateId || "classic",
   };
 }
 
@@ -164,6 +173,76 @@ function PositionToggle({
         <ArrowDown className="h-3 w-3 inline mr-0.5" />
         Bottom
       </button>
+    </div>
+  );
+}
+
+function TemplateThumb({ theme }: { theme: BillTemplateTheme }) {
+  const ornate = theme.style === "ornate";
+  const royal = theme.style === "royal";
+  return (
+    <div
+      className="h-28 w-full rounded-md overflow-hidden pointer-events-none"
+      style={{
+        background: theme.paper,
+        boxShadow: ornate
+          ? `inset 0 0 0 2px ${theme.border}, inset 0 0 0 5px ${theme.paper}, inset 0 0 0 6px ${theme.border}`
+          : `inset 0 0 0 1px ${theme.border}`,
+      }}
+    >
+      <div
+        style={{
+          background: royal ? theme.headerBg : theme.headerInk,
+          height: royal ? 22 : 4,
+          opacity: royal ? 1 : 0.85,
+        }}
+      />
+      <div className="px-2.5 pt-2 space-y-1.5">
+        <div
+          className="h-1.5 rounded-full"
+          style={{ width: "62%", background: theme.accent }}
+        />
+        <div
+          className="h-1 rounded-full"
+          style={{ width: "40%", background: theme.muted, opacity: 0.45 }}
+        />
+        <div className="pt-1 space-y-1">
+          <div className="flex justify-between gap-2">
+            <div
+              className="h-1 flex-1 rounded-full"
+              style={{ background: theme.border }}
+            />
+            <div
+              className="h-1 w-6 rounded-full"
+              style={{ background: theme.accent, opacity: 0.5 }}
+            />
+          </div>
+          <div className="flex justify-between gap-2">
+            <div
+              className="h-1 flex-1 rounded-full"
+              style={{ background: theme.border }}
+            />
+            <div
+              className="h-1 w-8 rounded-full"
+              style={{ background: theme.accent, opacity: 0.5 }}
+            />
+          </div>
+          <div
+            className="h-px mt-1"
+            style={{ background: theme.totalBorder }}
+          />
+          <div className="flex justify-between gap-2">
+            <div
+              className="h-1.5 w-10 rounded-full"
+              style={{ background: theme.ink, opacity: 0.35 }}
+            />
+            <div
+              className="h-1.5 w-8 rounded-full"
+              style={{ background: theme.accent }}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -430,6 +509,12 @@ export default function InvoiceSettingsPage() {
     );
   }
 
+  const previewTemplate = getBillTemplate(settings.billTemplateId);
+  const previewTheme = previewTemplate.theme;
+  const previewCompact = previewTheme.density === "compact";
+  const previewRoyal = previewTemplate.id === "royal";
+  const previewOrnate = previewTemplate.id === "ornate";
+
   if (isLoading) {
     return (
       <ShopGuard>
@@ -445,7 +530,7 @@ export default function InvoiceSettingsPage() {
   return (
     <ShopGuard>
       <DashboardLayout>
-        <div className="space-y-6 max-w-3xl mx-auto">
+        <div className="space-y-6 max-w-6xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -673,131 +758,264 @@ export default function InvoiceSettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Layout Options — per-field position + visibility */}
-          <Card data-tour="invoice-settings-layout">
+          {/* Layout + live preview side by side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <Card data-tour="invoice-settings-layout">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LayoutTemplate className="h-5 w-5 text-amber-500" />
+                  <T>Layout & Visibility</T>
+                </CardTitle>
+                <CardDescription>
+                  <T>Choose where each field appears (top or bottom of the bill) and toggle visibility. The preview on the right updates as you change these.</T>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(
+                  [
+                    {
+                      label: "Shop Name",
+                      posKey: "shopNamePosition" as const,
+                      showKey: null,
+                    },
+                    {
+                      label: "Shop Logo",
+                      posKey: "logoPosition" as const,
+                      showKey: "showLogo" as const,
+                    },
+                    {
+                      label: "Tagline",
+                      posKey: "taglinePosition" as const,
+                      showKey: null,
+                    },
+                    {
+                      label: "Address",
+                      posKey: "addressPosition" as const,
+                      showKey: "showAddress" as const,
+                    },
+                    {
+                      label: "Phone",
+                      posKey: "phonePosition" as const,
+                      showKey: "showPhone" as const,
+                    },
+                    {
+                      label: "Email",
+                      posKey: "emailPosition" as const,
+                      showKey: "showEmail" as const,
+                    },
+                    {
+                      label: "GSTIN / VAT / PAN",
+                      posKey: "gstinPosition" as const,
+                      showKey: "showGstin" as const,
+                    },
+                    {
+                      label: "Hallmark License",
+                      posKey: "licensePosition" as const,
+                      showKey: "showLicense" as const,
+                    },
+                    {
+                      label: "Footer Note",
+                      posKey: "footerPosition" as const,
+                      showKey: "showFooter" as const,
+                    },
+                    {
+                      label: "Terms & Conditions",
+                      posKey: "termsPosition" as const,
+                      showKey: "showTerms" as const,
+                    },
+                  ] as const
+                ).map(({ label, posKey, showKey }) => (
+                  <div
+                    key={posKey}
+                    className="flex items-center justify-between py-2 border-b last:border-0"
+                  >
+                    <span className="text-sm font-medium">
+                      <T>{label}</T>
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <PositionToggle
+                        value={settings[posKey] as Position}
+                        onChange={(v) => updateField(posKey, v)}
+                      />
+                      {showKey && (
+                        <Switch
+                          checked={settings[showKey] as boolean}
+                          onCheckedChange={(checked) =>
+                            updateField(showKey, checked)
+                          }
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="border-dashed border-2 lg:sticky lg:top-4">
+              <CardHeader>
+                <CardTitle className="text-sm text-muted-foreground">
+                  <T>Live preview</T>
+                </CardTitle>
+                <CardDescription>
+                  <T>Changes appear here as you edit. Save Settings to print with this look.</T>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div
+                  className="rounded-lg shadow-sm text-sm overflow-hidden"
+                  style={{
+                    background: previewTheme.paper,
+                    color: previewTheme.ink,
+                    padding: previewCompact ? 12 : 24,
+                    border: previewOrnate
+                      ? `3px double ${previewTheme.border}`
+                      : `1px solid ${previewTheme.border}`,
+                  }}
+                >
+                  <p
+                    className="text-center font-semibold tracking-widest mb-3"
+                    style={{
+                      color: previewRoyal
+                        ? previewTheme.accent
+                        : previewTheme.ink,
+                      fontSize: previewCompact ? 10 : 11,
+                      letterSpacing:
+                        previewTemplate.id === "minimal" ? "0.18em" : "0.12em",
+                    }}
+                  >
+                    INVOICE
+                  </p>
+                  {topItems.length > 0 && (
+                    <div
+                      className={
+                        previewRoyal
+                          ? "space-y-1 -mx-1 px-3 py-3 rounded-sm [&_.text-muted-foreground]:text-slate-300"
+                          : "space-y-1 pb-3 border-b"
+                      }
+                      style={
+                        previewRoyal
+                          ? {
+                              background: previewTheme.headerBg,
+                              color: previewTheme.headerInk,
+                            }
+                          : { borderColor: previewTheme.border }
+                      }
+                    >
+                      {topItems.map((item) => (
+                        <div key={item.key}>{item.content}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div
+                    className="border-dashed"
+                    style={{
+                      padding: previewCompact ? "10px 0" : "20px 0",
+                      borderTop: `1px dashed ${previewTheme.border}`,
+                      borderBottom: `1px dashed ${previewTheme.border}`,
+                    }}
+                  >
+                    <div
+                      className="flex justify-between text-xs mb-1.5"
+                      style={{ color: previewTheme.muted }}
+                    >
+                      <span>
+                        <T>Gold chain 22K</T>
+                      </span>
+                      <span
+                        style={{ color: previewTheme.ink, fontWeight: 600 }}
+                      >
+                        45,000
+                      </span>
+                    </div>
+                    <div
+                      className="flex justify-between text-xs mb-1.5"
+                      style={{ color: previewTheme.muted }}
+                    >
+                      <span>
+                        <T>Making charge</T>
+                      </span>
+                      <span
+                        style={{ color: previewTheme.ink, fontWeight: 600 }}
+                      >
+                        4,500
+                      </span>
+                    </div>
+                    <div
+                      className="flex justify-between text-xs pt-2 font-semibold"
+                      style={{
+                        color: previewTheme.ink,
+                        borderTop: `2px solid ${previewTheme.totalBorder}`,
+                      }}
+                    >
+                      <span>
+                        <T>Total</T>
+                      </span>
+                      <span>49,500</span>
+                    </div>
+                  </div>
+
+                  {bottomItems.length > 0 && (
+                    <div
+                      className="space-y-1 pt-3"
+                      style={{
+                        borderTop: `1px solid ${previewTheme.border}`,
+                      }}
+                    >
+                      {bottomItems.map((item) => (
+                        <div key={item.key}>{item.content}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card data-tour="invoice-settings-templates">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <LayoutTemplate className="h-5 w-5 text-amber-500" />
-                Layout &amp; Visibility
+                <FileText className="h-5 w-5 text-amber-500" />
+                <T>Bill templates</T>
               </CardTitle>
               <CardDescription>
-                Choose where each field appears (top or bottom of the bill) and
-                toggle visibility
+                <T>Pick a layout for printed bills and shared PDFs. The live preview above updates immediately — click Save Settings to keep it.</T>
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Per-field controls */}
-              {(
-                [
-                  {
-                    label: "Shop Name",
-                    posKey: "shopNamePosition" as const,
-                    showKey: null,
-                  },
-                  {
-                    label: "Shop Logo",
-                    posKey: "logoPosition" as const,
-                    showKey: "showLogo" as const,
-                  },
-                  {
-                    label: "Tagline",
-                    posKey: "taglinePosition" as const,
-                    showKey: null,
-                  },
-                  {
-                    label: "Address",
-                    posKey: "addressPosition" as const,
-                    showKey: "showAddress" as const,
-                  },
-                  {
-                    label: "Phone",
-                    posKey: "phonePosition" as const,
-                    showKey: "showPhone" as const,
-                  },
-                  {
-                    label: "Email",
-                    posKey: "emailPosition" as const,
-                    showKey: "showEmail" as const,
-                  },
-                  {
-                    label: "GSTIN / VAT / PAN",
-                    posKey: "gstinPosition" as const,
-                    showKey: "showGstin" as const,
-                  },
-                  {
-                    label: "Hallmark License",
-                    posKey: "licensePosition" as const,
-                    showKey: "showLicense" as const,
-                  },
-                  {
-                    label: "Footer Note",
-                    posKey: "footerPosition" as const,
-                    showKey: "showFooter" as const,
-                  },
-                  {
-                    label: "Terms & Conditions",
-                    posKey: "termsPosition" as const,
-                    showKey: "showTerms" as const,
-                  },
-                ] as const
-              ).map(({ label, posKey, showKey }) => (
-                <div
-                  key={posKey}
-                  className="flex items-center justify-between py-2 border-b last:border-0"
-                >
-                  <span className="text-sm font-medium">{label}</span>
-                  <div className="flex items-center gap-3">
-                    <PositionToggle
-                      value={settings[posKey] as Position}
-                      onChange={(v) => updateField(posKey, v)}
-                    />
-                    {showKey && (
-                      <Switch
-                        checked={settings[showKey] as boolean}
-                        onCheckedChange={(checked) =>
-                          updateField(showKey, checked)
-                        }
-                      />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Live Preview */}
-          <Card className="border-dashed border-2">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">
-                Preview
-              </CardTitle>
-            </CardHeader>
             <CardContent>
-              <div className="bg-white dark:bg-[#161B22] rounded-lg p-6 border shadow-sm space-y-4 text-sm">
-                {/* Top section */}
-                {topItems.length > 0 && (
-                  <div className="space-y-1 pb-3 border-b">
-                    {topItems.map((item) => (
-                      <div key={item.key}>{item.content}</div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Invoice body placeholder */}
-                <div className="py-6 text-center text-muted-foreground border-y border-dashed">
-                  <p className="text-xs">
-                    — Invoice line items will appear here —
-                  </p>
+              <div className="rounded-xl border bg-muted/40 p-3">
+                <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory">
+                  {BILL_TEMPLATES.map((tpl) => {
+                    const selected = settings.billTemplateId === tpl.id;
+                    return (
+                      <button
+                        key={tpl.id}
+                        type="button"
+                        onClick={() => updateField("billTemplateId", tpl.id)}
+                        className={`snap-start flex-1 min-w-[9.5rem] text-left rounded-lg p-2 transition-all ${
+                          selected
+                            ? "ring-2 ring-amber-500 bg-background shadow-sm"
+                            : "bg-background/70 hover:bg-background border border-transparent hover:border-border"
+                        }`}
+                      >
+                        <div className="relative">
+                          <TemplateThumb theme={tpl.theme} />
+                          {selected && (
+                            <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-amber-500 text-white flex items-center justify-center">
+                              <Check className="h-3 w-3" />
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-2 text-sm font-medium leading-tight">
+                          <T>{tpl.label}</T>
+                        </p>
+                        <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
+                          <T>{tpl.description}</T>
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
-
-                {/* Bottom section */}
-                {bottomItems.length > 0 && (
-                  <div className="space-y-1 pt-3 border-t">
-                    {bottomItems.map((item) => (
-                      <div key={item.key}>{item.content}</div>
-                    ))}
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>

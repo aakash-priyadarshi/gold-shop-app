@@ -1,7 +1,7 @@
 import type PDFKit from "pdfkit";
 
-/** Future seller-selectable layouts plug in here. */
-export type InvoicePdfTemplateId = "classic" | string;
+/** Seller-selectable layouts. Unknown IDs fall back to classic. */
+export type InvoicePdfTemplateId = import("@gold-shop/shared").BillTemplateId | string;
 
 export interface InvoicePdfBranding {
   shopName: string;

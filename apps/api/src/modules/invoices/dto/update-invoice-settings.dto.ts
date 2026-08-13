@@ -1,4 +1,5 @@
 import { IsBoolean, IsIn, IsOptional, IsString } from "class-validator";
+import { BILL_TEMPLATE_IDS } from "@gold-shop/shared";
 
 const POSITION = ["TOP", "BOTTOM"] as const;
 
@@ -123,4 +124,8 @@ export class UpdateInvoiceSettingsDto {
   @IsOptional()
   @IsBoolean()
   showTerms?: boolean;
+
+  @IsOptional()
+  @IsIn([...BILL_TEMPLATE_IDS])
+  billTemplateId?: string;
 }
