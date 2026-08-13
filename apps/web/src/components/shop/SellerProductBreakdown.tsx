@@ -188,7 +188,19 @@ export function SellerProductBreakdown({
           />
         )}
 
-        {breakdown.gemstones.length > 0 && (
+        {breakdown.gemstones.length > 0 && compact && (
+          <Row
+            label={
+              <>
+                {breakdown.gemstones.length} <T>gemstones</T>
+              </>
+            }
+            hint={<T>Open full details for cut, carat, lab and certificate</T>}
+            value={money(breakdown.gemstoneValue, currency)}
+          />
+        )}
+
+        {breakdown.gemstones.length > 0 && !compact && (
           <div className="py-2 space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1.5">

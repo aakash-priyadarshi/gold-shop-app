@@ -211,7 +211,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "mobile_product_show_to_customer",
     content:
-      "On mobile POS, tap a product to open its detail sheet with metal, wastage (jarti), gemstones, making charges, and the stored calculation. Tap Show full details to customer to open a full-screen page at /m/products/:id that you can hand to the buyer. This is a seller inventory view, not the public marketplace product page. Stock Ledger item names also open the same page. Wastage is a default % applied when you bill; estimated bill = catalog price (metal + making + gems + tax) plus wastage.",
+      "On mobile POS, tap a product to open a compact sheet. If that piece has no stored metal, gems, photos, or HUID, Show full details to customer looks the same. Use Load sample necklace to create a demo 22K bridal necklace with gallery, diamond and ruby cards, 8% wastage, HUID, Birmingham assay, 16/18/20 inch sizes, description, and a certificate. That full page is what you hand the buyer. Hidden from the public marketplace. SKU starts with DEMO-SHOW-.",
   },
   {
     topic: "karigar_gold_loss_ledger",

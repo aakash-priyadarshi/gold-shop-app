@@ -220,6 +220,25 @@ export class InventoryController {
     return this.inventoryService.create(shopId, userId, dto);
   }
 
+  @Post("shop/:shopId/sample-show-product")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SHOPKEEPER")
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      "Create or refresh a demo necklace with gallery, gems, HUID, and sizes",
+  })
+  async createSampleShowProduct(
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only add items to your own shop");
+    }
+    return this.inventoryService.createSampleShowProduct(shopId, userId);
+  }
+
   @Get("shop/:shopId/items")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("SHOPKEEPER")
