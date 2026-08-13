@@ -142,15 +142,29 @@ const withPWAConfigured = withPWA({
   workboxOptions: {
     runtimeCaching: [
       {
-        // API GET reads — serve cached data instantly, revalidate in background.
+        // Invoice PDFs are generated on-demand (logo + QR can take >5s).
+        // Never cache them — NetworkFirst + status 0 poisoned the download.
         urlPattern: ({ url, request }) =>
-          request.method === 'GET' && /\/api\//.test(url.pathname),
+          request.method === 'GET' &&
+          /\/api\/invoices\/[^/]+\/pdf(\?|$)/.test(url.pathname),
+        handler: 'NetworkOnly',
+        options: {
+          cacheName: 'invoice-pdfs',
+        },
+      },
+      {
+        // API GET reads — serve cached data instantly, revalidate in background.
+        // Skip opaque (status 0) responses so timeouts never poison the cache.
+        urlPattern: ({ url, request }) =>
+          request.method === 'GET' &&
+          /\/api\//.test(url.pathname) &&
+          !/\/api\/invoices\/[^/]+\/pdf(\?|$)/.test(url.pathname),
         handler: 'NetworkFirst',
         options: {
           cacheName: 'api-reads',
-          networkTimeoutSeconds: 5,
+          networkTimeoutSeconds: 15,
           expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 },
-          cacheableResponse: { statuses: [0, 200] },
+          cacheableResponse: { statuses: [200] },
         },
       },
       {

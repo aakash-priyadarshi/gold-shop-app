@@ -2,6 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { InvoicePrintButton } from "@/components/shop/InvoicePrintButton";
 import { InvoiceShareActions } from "@/components/shop/InvoiceShareActions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,6 @@ import {
   Loader2,
   PartyPopper,
   Plus,
-  Printer,
   Split,
   Trash2,
   X,
@@ -575,7 +575,7 @@ export default function InvoiceDetailPage() {
   };
 
   const handlePrint = async () => {
-    if (!invoice) return;
+    if (!invoice) return false;
     if (!invoice.verificationToken) {
       toast({
         variant: "destructive",
@@ -604,7 +604,7 @@ export default function InvoiceDetailPage() {
         200,
       );
     }
-    const ok = printBill({
+    return printBill({
       fallbackShopName: user?.shop?.shopName,
       settings: billSettings,
       invoiceNumber: invoice.invoiceNumber,
@@ -656,13 +656,6 @@ export default function InvoiceDetailPage() {
       verificationToken: invoice.verificationToken,
       verificationQrDataUrl,
     });
-    if (!ok) {
-      toast({
-        variant: "destructive",
-        title: t("Pop-ups blocked"),
-        description: t("Allow pop-ups to print the bill"),
-      });
-    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -740,9 +733,10 @@ export default function InvoiceDetailPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
-                  <Button variant="outline" size="sm" onClick={handlePrint}>
-                    <Printer className="h-4 w-4 mr-2" /> <T>Print</T>
-                  </Button>
+                  <InvoicePrintButton
+                    onSystemPrint={handlePrint}
+                    receiptPayload={receiptPayload}
+                  />
                   <Button
                     size="sm"
                     className="bg-green-600 hover:bg-green-700"
@@ -765,7 +759,6 @@ export default function InvoiceDetailPage() {
                 <div className="pt-3 border-t border-green-200/60 dark:border-green-800/40">
                   <InvoiceShareActions
                     invoice={shareBillInput}
-                    receiptPayload={receiptPayload}
                   />
                 </div>
               )}
@@ -801,9 +794,10 @@ export default function InvoiceDetailPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-2" /> <T>Print</T>
-              </Button>
+              <InvoicePrintButton
+                onSystemPrint={handlePrint}
+                receiptPayload={receiptPayload}
+              />
               {invoice.status !== "VOID" && invoice.status !== "CANCELLED" && (
                 <>
                   {invoice.status !== "PAID" && (
@@ -851,7 +845,6 @@ export default function InvoiceDetailPage() {
             <div className="print:hidden">
               <InvoiceShareActions
                 invoice={shareBillInput}
-                receiptPayload={receiptPayload}
               />
             </div>
           )}

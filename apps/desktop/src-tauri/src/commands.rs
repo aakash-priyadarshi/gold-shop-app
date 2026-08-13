@@ -115,6 +115,27 @@ pub async fn send_raw_tcp_print(host: String, port: u16, data: Vec<u8>) -> Resul
     ))
 }
 
+/// Printers installed in Windows / macOS (Devices and Printers / CUPS).
+#[tauri::command]
+pub async fn list_os_printers() -> Result<Vec<crate::printers::OsPrinter>, String> {
+    tokio::task::spawn_blocking(crate::printers::list_os_printers)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// Send ESC/POS (or other raw) bytes to a named OS printer via the spooler.
+#[tauri::command]
+pub async fn send_raw_to_named_printer(
+    printer_name: String,
+    data: Vec<u8>,
+) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        crate::printers::send_raw_to_named_printer(&printer_name, &data)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 // ─── Auth ────────────────────────────────────────────────
 
 #[tauri::command]

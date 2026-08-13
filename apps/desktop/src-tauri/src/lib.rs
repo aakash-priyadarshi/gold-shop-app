@@ -4,6 +4,7 @@
 
 pub mod commands;
 pub mod db;
+pub mod printers;
 pub mod sync;
 
 use commands::{AuthTokenReceiver, PendingUpdateState, SyncState};
@@ -262,6 +263,8 @@ pub fn run() {
             commands::is_desktop,
             commands::check_connectivity,
             commands::send_raw_tcp_print,
+            commands::list_os_printers,
+            commands::send_raw_to_named_printer,
             // Auth
             commands::save_auth_token,
             commands::get_auth_token,

@@ -1158,7 +1158,11 @@ export const invoicesApi = {
     api.get<Blob>(`/invoices/${id}/pdf`, {
       responseType: "blob",
       timeout: 45000,
-      headers: { Accept: "application/pdf" },
+      headers: {
+        Accept: "application/pdf",
+        "Cache-Control": "no-store",
+        Pragma: "no-cache",
+      },
     }),
 };
 

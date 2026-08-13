@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import {
   isNativeFileShareReliable,
+  isPhoneLikeDevice,
   isUserShareCancel,
   sharePdfWithFallbacks,
 } from "../invoiceShare";
@@ -37,14 +38,25 @@ describe("sharePdfWithFallbacks", () => {
     expect(isUserShareCancel({ name: "NetworkError" })).toBe(false);
   });
 
-  it("treats iPadOS Macintosh user agents as native share", () => {
+  it("treats iPadOS Macintosh user agents as phone-like", () => {
     vi.stubGlobal("navigator", {
       userAgent:
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
       maxTouchPoints: 5,
       share: vi.fn(),
     });
+    expect(isPhoneLikeDevice()).toBe(true);
     expect(isNativeFileShareReliable()).toBe(true);
+  });
+
+  it("treats Windows as desktop (not phone-like)", () => {
+    vi.stubGlobal("navigator", {
+      userAgent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0",
+      maxTouchPoints: 0,
+      share: vi.fn(),
+    });
+    expect(isPhoneLikeDevice()).toBe(false);
   });
 
   it("skips native share on Windows so it does not throw Network Error", async () => {

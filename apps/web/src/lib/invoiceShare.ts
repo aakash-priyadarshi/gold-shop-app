@@ -1,14 +1,20 @@
+/** True on phones / tablets where OS share + thermal BLE make sense. */
+export function isPhoneLikeDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/Android|iPhone|iPad|iPod/i.test(ua)) return true;
+  // iPadOS 13+ Safari reports as Macintosh
+  const nav = navigator as Navigator & { maxTouchPoints?: number };
+  return /Macintosh/i.test(ua) && (nav.maxTouchPoints || 0) > 1;
+}
+
 /** True on phones where the OS share sheet can attach a PDF. */
 export function isNativeFileShareReliable(): boolean {
   if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
     return false;
   }
-  const ua = navigator.userAgent || "";
   // Windows/macOS expose navigator.share but file share throws NetworkError.
-  if (/Android|iPhone|iPad|iPod/i.test(ua)) return true;
-  // iPadOS 13+ Safari reports as Macintosh
-  const nav = navigator as Navigator & { maxTouchPoints?: number };
-  return /Macintosh/i.test(ua) && (nav.maxTouchPoints || 0) > 1;
+  return isPhoneLikeDevice();
 }
 
 export function isUserShareCancel(err: unknown): boolean {

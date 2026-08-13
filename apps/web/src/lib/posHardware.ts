@@ -34,7 +34,7 @@ export interface ScannerConfig {
   autoAdd: boolean;
 }
 
-export type PrinterTransport = "browser" | "webusb" | "bluetooth" | "network" | "none";
+export type PrinterTransport = "browser" | "webusb" | "bluetooth" | "network" | "os" | "none";
 export type PaperWidth = 58 | 80;
 export type LabelPrinterTransport = "web-serial" | "webusb" | "bluetooth" | "network" | "download";
 export type LabelPrinterLanguage = "ZPL" | "TSPL" | "EPL" | "ESC_POS";
@@ -79,6 +79,8 @@ export interface HardwareConfig {
 }
 
 const STORAGE_KEY = "orivraa.posHardware.v1";
+/** Fired after hardware settings are saved so invoice Print can refresh. */
+export const HARDWARE_CONFIG_CHANGED = "orivraa-hardware-changed";
 
 export const defaultHardwareConfig: HardwareConfig = {
   scanner: {
@@ -130,6 +132,7 @@ export function saveHardwareConfig(cfg: HardwareConfig) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
+    window.dispatchEvent(new Event(HARDWARE_CONFIG_CHANGED));
   } catch {
     // ignore quota errors
   }
@@ -546,7 +549,7 @@ async function ensureBleConnection(): Promise<BluetoothRemoteGATTCharacteristic>
     return bleWriteChar;
   }
   throw new Error(
-    "No paired Bluetooth printer. Pair one in Settings → Hardware.",
+    "No paired thermal printer. Pair one in Settings → Receipt printer.",
   );
 }
 
@@ -567,7 +570,7 @@ export async function printBluetoothReceiptBytes(
 /** Send raw ESC/POS bytes to the currently paired printer. */
 export async function printReceiptBytes(bytes: Uint8Array<ArrayBuffer>): Promise<void> {
   const device = await getPairedUsbPrinter();
-  if (!device) throw new Error("No paired USB printer. Pair one in Settings → Hardware.");
+  if (!device) throw new Error("No paired USB thermal printer. Pair one in Settings → Receipt printer.");
   if (!device.configuration) {
     await device.open();
     await device.selectConfiguration(1);
@@ -590,6 +593,51 @@ declare global {
         invoke: <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
       };
     };
+  }
+}
+
+export function isTauriDesktop(): boolean {
+  if (typeof window === "undefined") return false;
+  return !!(
+    window.__TAURI__?.core?.invoke ||
+    (window as unknown as { __TAURI_INTERNALS__?: { invoke?: unknown } })
+      .__TAURI_INTERNALS__?.invoke
+  );
+}
+
+export function invokeTauri<T>(
+  command: string,
+  args?: Record<string, unknown>,
+): Promise<T> | null {
+  if (typeof window === "undefined") return null;
+  const invoke =
+    window.__TAURI__?.core?.invoke ??
+    (
+      window as unknown as {
+        __TAURI_INTERNALS__?: {
+          invoke?: <R>(cmd: string, args?: Record<string, unknown>) => Promise<R>;
+        };
+      }
+    ).__TAURI_INTERNALS__?.invoke;
+  if (!invoke) return null;
+  return invoke<T>(command, args);
+}
+
+export interface OsPrinterInfo {
+  name: string;
+  driver?: string | null;
+  port?: string | null;
+  isDefault: boolean;
+}
+
+export async function listOsPrinters(): Promise<OsPrinterInfo[]> {
+  const invoke = invokeTauri<OsPrinterInfo[]>("list_os_printers");
+  if (!invoke) return [];
+  try {
+    const rows = await invoke;
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
   }
 }
 
@@ -616,36 +664,73 @@ export function printBrowserReceipt(payload: ReceiptPayload): void {
 /** Raw Wi-Fi/LAN printer transport is available only inside the desktop app. */
 export async function printDesktopRawTcp(host: string | undefined, port: number | undefined, bytes: Uint8Array): Promise<void> {
   if (!host) throw new Error("Enter the printer's local network address");
-  const invoke = typeof window === "undefined" ? null : window.__TAURI__?.core?.invoke;
-  if (!invoke) throw new Error("Raw Wi-Fi printing requires Orivraa Desktop. Use System print for an OS-installed network printer.");
-  await invoke("send_raw_tcp_print", { host, port: Number(port) || 9100, data: Array.from(bytes) });
+  const invoke = invokeTauri<void>("send_raw_tcp_print", {
+    host,
+    port: Number(port) || 9100,
+    data: Array.from(bytes),
+  });
+  if (!invoke) {
+    throw new Error("Raw Wi-Fi printing requires Orivraa Desktop. Use A4 / office print for an OS-installed network printer.");
+  }
+  await invoke;
+}
+
+/** Send ESC/POS to a printer already installed in Windows / macOS (Desktop app). */
+export async function printDesktopNamedPrinter(
+  printerName: string | undefined,
+  bytes: Uint8Array,
+): Promise<void> {
+  const name = String(printerName || "").trim();
+  if (!name) throw new Error("No installed thermal printer selected");
+  const invoke = invokeTauri<void>("send_raw_to_named_printer", {
+    printerName: name,
+    data: Array.from(bytes),
+  });
+  if (!invoke) {
+    throw new Error("Printing to an installed printer requires the Orivraa Desktop app.");
+  }
+  await invoke;
+}
+
+export interface PrintReceiptOptions {
+  kickDrawer?: boolean;
+  /** Windows/macOS printer name from Devices and Printers (Desktop app). */
+  osPrinterName?: string;
 }
 
 /** Convenience: build + print a receipt using the saved config. */
 export async function printReceipt(
   payload: ReceiptPayload,
-  opts: { kickDrawer?: boolean } = {},
+  opts: PrintReceiptOptions = {},
 ): Promise<void> {
   const cfg = loadHardwareConfig();
-  if (!cfg.printer.enabled || cfg.printer.transport === "none") {
-    throw new Error("Printer not configured");
-  }
   const bytes = buildEscPosReceipt(payload, cfg.printer.paperWidth, {
     kickDrawer: opts.kickDrawer ?? cfg.printer.kickCashDrawer,
   });
+  const osName =
+    opts.osPrinterName ||
+    (cfg.printer.transport === "os" ? cfg.printer.deviceLabel : undefined);
+  if (osName && isTauriDesktop()) {
+    await printDesktopNamedPrinter(osName, bytes);
+    return;
+  }
+  if (!cfg.printer.enabled || cfg.printer.transport === "none") {
+    throw new Error("Printer not configured");
+  }
   if (cfg.printer.transport === "webusb") {
     await printReceiptBytes(bytes);
     return;
   }
   if (cfg.printer.transport === "network") {
-    // The browser cannot open a raw TCP socket; this hands off to the API
-    // which forwards the bytes to a local print agent. Backend route TBD –
-    // for now we surface a clear error so the UI can guide the shopkeeper.
     await printDesktopRawTcp(cfg.printer.host, cfg.printer.port, bytes);
     return;
   }
   if (cfg.printer.transport === "bluetooth") {
     await printBluetoothReceiptBytes(bytes);
+    return;
+  }
+  if (cfg.printer.transport === "os") {
+    await printDesktopNamedPrinter(cfg.printer.deviceLabel, bytes);
     return;
   }
   if (cfg.printer.transport === "browser") {

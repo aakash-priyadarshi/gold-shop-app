@@ -1,5 +1,6 @@
 import axios from "axios";
 import { invoicesApi } from "@/lib/api";
+import { isPhoneLikeDevice } from "./invoiceShare";
 
 const PDF_CACHE_MS = 2 * 60 * 1000;
 const pdfCache = new Map<
@@ -83,13 +84,14 @@ export function buildInvoicePdfFile(blob: Blob, filename: string): File {
 export {
   canShareFiles,
   isNativeFileShareReliable,
+  isPhoneLikeDevice,
   isUserShareCancel,
   sharePdfWithFallbacks,
 } from "./invoiceShare";
 
-/** Warm the PDF (and shop logo on the server) before the user taps Share. */
+/** Warm the PDF on phones before Share — skip on desktop to avoid SW races. */
 export function prefetchInvoicePdf(invoiceId: string): void {
-  if (!invoiceId) return;
+  if (!invoiceId || !isPhoneLikeDevice()) return;
   void fetchInvoicePdfBlob(invoiceId).catch(() => undefined);
 }
 

@@ -45,6 +45,7 @@ import {
     Mail,
     MapPin,
     Phone,
+    Printer,
     Save,
     Settings,
     Shield,
@@ -828,6 +829,30 @@ export default function ShopSettingsPage() {
 
             {/* Preferences Tab */}
             <TabsContent value="preferences" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Printer className="h-5 w-5 text-amber-600" />
+                    <T>Receipt / thermal printer</T>
+                  </CardTitle>
+                  <CardDescription>
+                    <T>
+                      Pair a thermal receipt printer (58/80mm roll) or use A4 /
+                      office printers already installed on this computer. The
+                      Orivraa Desktop app lists Windows/macOS printers so Print
+                      can tell thermal from office automatically.
+                    </T>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="outline" asChild>
+                    <a href="/dashboard/shop/settings/hardware">
+                      <Printer className="h-4 w-4 mr-2" />
+                      <T>Open hardware settings</T>
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

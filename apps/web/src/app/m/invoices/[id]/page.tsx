@@ -1,6 +1,7 @@
 "use client";
 
 import { T } from "@/components/ui/T";
+import { InvoicePrintButton } from "@/components/shop/InvoicePrintButton";
 import { InvoiceShareActions } from "@/components/shop/InvoiceShareActions";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,7 +10,7 @@ import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
 import { printBill } from "@/lib/billPrint";
 import { toQrDataUrl, verifyBillUrl } from "@/lib/qrCode";
-import { ArrowLeft, Loader2, PartyPopper, Printer, WalletCards, X } from "lucide-react";
+import { ArrowLeft, Loader2, PartyPopper, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -93,12 +94,36 @@ export default function MobileInvoiceDetailPage() {
     }
   };
 
+  const receiptPayload = useMemo(() => {
+    if (!invoice) return null;
+    return {
+      shopName: settings?.shopNameOnBill || user?.shop?.shopName,
+      invoiceNumber: invoice.invoiceNumber,
+      issuedAt: invoice.issuedAt,
+      customerName: invoice.customerName,
+      customerPhone: invoice.customerPhone,
+      currency: invoice.currency || "NPR",
+      lines: (invoice.lineItems ?? []).map((line: any) => ({
+        label: line.label,
+        qty: line.quantity ?? 1,
+        amount: line.amount ?? 0,
+      })),
+      subtotal: invoice.subtotal,
+      discount: invoice.discountAmount,
+      taxAmount: invoice.taxAmount,
+      taxLabel: invoice.taxLabel,
+      total: invoice.totalAmount,
+      paid: invoice.paidAmount,
+      balance: invoice.balanceDue,
+    };
+  }, [invoice, settings?.shopNameOnBill, user?.shop?.shopName]);
+
   const print = async () => {
-    if (!invoice) return;
+    if (!invoice) return false;
     const qr = invoice.verificationToken
       ? await toQrDataUrl(verifyBillUrl(invoice.verificationToken), 180)
       : undefined;
-    printBill({
+    return printBill({
       fallbackShopName: user?.shop?.shopName,
       settings,
       invoiceNumber: invoice.invoiceNumber,
@@ -168,7 +193,10 @@ export default function MobileInvoiceDetailPage() {
       )}
       <div className="flex items-center justify-between">
         <Link href="/m/invoices" className="rounded-xl bg-gray-100 p-2"><ArrowLeft className="h-5 w-5" /></Link>
-        <button onClick={() => void print()} className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 px-3 py-2 text-sm font-bold text-amber-700"><Printer className="h-4 w-4" /><T>Print</T></button>
+        <InvoicePrintButton
+          onSystemPrint={print}
+          receiptPayload={receiptPayload}
+        />
       </div>
       <section className="rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 p-5 text-white shadow-lg">
         <p className="text-xs opacity-80">{invoice.invoiceTitle || "INVOICE"}</p>

@@ -191,7 +191,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "invoice_share_and_bluetooth",
     content:
-      "After creating an invoice, the invoice detail page shows Print, Record Payment, Share PDF, WhatsApp, Download PDF, Email, SMS, and Bluetooth print. Share PDF and WhatsApp open the phone's share sheet with the bill text PLUS a generated PDF attachment (free for all shops — PDF is created on demand and not stored). Email also attaches the PDF. SMS remains a plan feature (Pro+ / Enterprise). Bluetooth thermal printing works with SEZNIK Josh and similar 58mm BLE printers: open Mobile Settings → Hardware, choose Bluetooth, Pair, then Test or print from the invoice. Each printed bill includes a verification QR; customers can scan it to open /verify-bill and confirm the bill is genuine on Orivraa.",
+      "After creating an invoice, one Print button sends the bill to the printer that is connected. Thermal receipt (58/80mm roll, e.g. SEZNIK MiniX / Josh, Epson TM) prints a short ESC/POS receipt. A4 / office printers already installed on the computer (Wi-Fi, USB, or Windows Devices and Printers) open the full bill dialog. The chevron beside Print lets you pick either type. In the Orivraa Desktop app, Print reads the real Windows/macOS printer list and labels each device as thermal receipt or A4/office. Pair a thermal printer in Settings → Receipt printer (Hardware), or tap an installed thermal in that list. Share PDF and WhatsApp appear on phones and open the share sheet with bill text plus an on-demand PDF (free for all shops). On PC use Download PDF, Email, and SMS. SMS is Pro+ / Enterprise. Each printed bill includes a verification QR at /verify-bill.",
   },
   {
     topic: "mobile_invoice_full_billing",

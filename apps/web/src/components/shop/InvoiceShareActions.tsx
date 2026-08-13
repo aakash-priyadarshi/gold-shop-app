@@ -25,17 +25,12 @@ import {
   buildInvoicePdfFile,
   downloadBlob,
   fetchInvoicePdfBlob,
+  isPhoneLikeDevice,
   prefetchInvoicePdf,
   sharePdfWithFallbacks,
 } from "@/lib/invoicePdf";
-import {
-  loadHardwareConfig,
-  printReceipt,
-  type ReceiptPayload,
-} from "@/lib/posHardware";
 import { useT } from "@/providers/translation-provider";
 import {
-  Bluetooth,
   Download,
   FileText,
   Loader2,
@@ -44,6 +39,7 @@ import {
   MessageCircle,
   MessageSquare,
   Share2,
+  Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -55,20 +51,18 @@ export interface InvoiceShareActionsProps {
     customerPhone?: string | null;
     verificationToken?: string | null;
   };
-  /** ESC/POS payload for Bluetooth thermal print */
-  receiptPayload?: ReceiptPayload | null;
   size?: "sm" | "default";
   className?: string;
 }
 
 export function InvoiceShareActions({
   invoice,
-  receiptPayload,
   size = "sm",
   className = "",
 }: InvoiceShareActionsProps) {
   const t = useT();
   const { hasFeature, planName, loading: featuresLoading } = useFeatures();
+  const [isPhone, setIsPhone] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
   const [emailTo, setEmailTo] = useState(invoice.customerEmail || "");
@@ -76,16 +70,18 @@ export function InvoiceShareActions({
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
-  const [btPrinting, setBtPrinting] = useState(false);
 
   // PDF + OS share is free for all shops. SMS remains plan-gated.
   const canSms = hasFeature("invoiceShareSms");
-  const canBluetooth = hasFeature("bluetoothThermalPrinter");
 
   useEffect(() => {
-    if (!invoice.id) return;
+    setIsPhone(isPhoneLikeDevice());
+  }, []);
+
+  useEffect(() => {
+    if (!invoice.id || !isPhone) return;
     prefetchInvoicePdf(invoice.id);
-  }, [invoice.id]);
+  }, [invoice.id, isPhone]);
 
   const shareInput: BillShareInput = {
     ...invoice,
@@ -100,7 +96,7 @@ export function InvoiceShareActions({
     return { blob, filename, file, text: buildBillShareText(shareInput) };
   };
 
-  /** Primary path: text + PDF via OS share sheet (WhatsApp, Gmail, etc.). */
+  /** Phone: text + PDF via OS share sheet (WhatsApp, Gmail, etc.). */
   const shareWithPdf = async (preferWhatsAppHint = false) => {
     setPdfBusy(true);
     try {
@@ -212,86 +208,54 @@ export function InvoiceShareActions({
     }
   };
 
-  const handleBluetooth = async () => {
-    if (!canBluetooth) {
-      toast({
-        variant: "destructive",
-        title: t("Upgrade required"),
-        description: t(
-          `Bluetooth printing is not enabled on ${planName || "your plan"}.`,
-        ),
-      });
-      return;
-    }
-    const cfg = loadHardwareConfig();
-    if (!cfg.printer.enabled || cfg.printer.transport !== "bluetooth") {
-      toast({
-        title: t("Pair a Bluetooth printer"),
-        description: t(
-          "Open Hardware settings, select Bluetooth, and pair your SEZNIK printer.",
-        ),
-      });
-      return;
-    }
-    if (!receiptPayload) {
-      toast({
-        variant: "destructive",
-        title: t("Nothing to print"),
-      });
-      return;
-    }
-    setBtPrinting(true);
-    try {
-      await printReceipt(receiptPayload);
-      toast({ title: t("Sent to Bluetooth printer") });
-    } catch (e: any) {
-      toast({
-        variant: "destructive",
-        title: t("Bluetooth print failed"),
-        description:
-          e?.message ||
-          t("Pair the printer in Settings → Hardware and try again."),
-      });
-    } finally {
-      setBtPrinting(false);
-    }
-  };
-
   const btn = size === "sm" ? "sm" : "default";
+  const hardwareHref = isPhone
+    ? "/m/settings/hardware"
+    : "/dashboard/shop/settings/hardware";
 
   return (
     <>
       <div className={`flex flex-wrap gap-2 ${className}`}>
+        {/* Phone: OS share sheet + WhatsApp. PC: skip — use Print / Download. */}
+        {isPhone && (
+          <>
+            <Button
+              variant="default"
+              size={btn}
+              onClick={() => void shareWithPdf(false)}
+              disabled={pdfBusy}
+              data-tour="invoice-share-pdf"
+            >
+              {pdfBusy ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Share2 className="h-4 w-4 mr-2" />
+              )}
+              <T>Share PDF</T>
+            </Button>
+            <Button
+              variant="outline"
+              size={btn}
+              onClick={() => void shareWithPdf(true)}
+              disabled={pdfBusy}
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              <T>WhatsApp</T>
+            </Button>
+          </>
+        )}
         <Button
-          variant="default"
+          variant={isPhone ? "outline" : "default"}
           size={btn}
-          onClick={() => void shareWithPdf(false)}
+          onClick={() => void handleDownloadPdf()}
           disabled={pdfBusy}
-          data-tour="invoice-share-pdf"
+          data-tour="invoice-download-pdf"
         >
           {pdfBusy ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           ) : (
-            <Share2 className="h-4 w-4 mr-2" />
+            <Download className="h-4 w-4 mr-2" />
           )}
-          <T>Share PDF</T>
-        </Button>
-        <Button
-          variant="outline"
-          size={btn}
-          onClick={() => void shareWithPdf(true)}
-          disabled={pdfBusy}
-        >
-          <MessageCircle className="h-4 w-4 mr-2" />
-          <T>WhatsApp</T>
-        </Button>
-        <Button
-          variant="outline"
-          size={btn}
-          onClick={() => void handleDownloadPdf()}
-          disabled={pdfBusy}
-        >
-          <Download className="h-4 w-4 mr-2" />
           <T>Download PDF</T>
         </Button>
         <Button
@@ -332,26 +296,12 @@ export function InvoiceShareActions({
           )}
           <T>SMS</T>
         </Button>
-        <Button
-          variant="outline"
-          size={btn}
-          onClick={handleBluetooth}
-          disabled={btPrinting}
-        >
-          {btPrinting ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Bluetooth className="h-4 w-4 mr-2" />
-          )}
-          <T>Bluetooth</T>
+        <Button variant="ghost" size={btn} asChild>
+          <Link href={hardwareHref}>
+            <Wrench className="h-4 w-4 mr-2" />
+            <T>Receipt printer</T>
+          </Link>
         </Button>
-        {canBluetooth && (
-          <Button variant="ghost" size={btn} asChild>
-            <Link href="/m/settings/hardware">
-              <T>Hardware</T>
-            </Link>
-          </Button>
-        )}
       </div>
 
       <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
