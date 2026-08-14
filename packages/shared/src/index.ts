@@ -14,6 +14,7 @@ export * from "./invoice/bill-templates";
 export * from "./ai/credits";
 export * from "./ai/variation-billing";
 export * from "./product/description-templates";
+export * from "./product/hallmark-id";
 
 // Utilities
 export * from "./location-data";

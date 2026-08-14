@@ -10,6 +10,7 @@
  * - rfq: Custom order reference images (large: 1200px, medium: 600px, thumb: 200px)
  * - designs: AI-generated design images (large: 1024px, medium: 512px, thumb: 200px)
  * - kyc: KYC/verification documents (large: 1600px, medium: 800px, thumb: 200px)
+ * - certificate: Hallmark / gemstone certificates (images + PDF)
  */
 
 export interface Env {
@@ -76,6 +77,11 @@ const VARIANTS: Record<string, ImageVariant[]> = {
     { suffix: "_medium", maxWidth: 800, maxHeight: 800, quality: 90 },
     { suffix: "_thumb", maxWidth: 200, maxHeight: 200, quality: 85 },
   ],
+  certificate: [
+    { suffix: "", maxWidth: 1600, maxHeight: 1600, quality: 95 },
+    { suffix: "_medium", maxWidth: 800, maxHeight: 800, quality: 90 },
+    { suffix: "_thumb", maxWidth: 200, maxHeight: 200, quality: 85 },
+  ],
 };
 
 // Allowed MIME types — images, videos, and documents
@@ -102,6 +108,7 @@ const MAX_DOC_SIZE = 5 * 1024 * 1024; // 5MB (documents)
 
 // Upload types that allow video and document files
 const MEDIA_UPLOAD_TYPES = ["chat"];
+const CERTIFICATE_UPLOAD_TYPES = ["certificate"];
 
 // Generate a unique filename
 function generateKey(type: string, originalName: string): string {
@@ -220,7 +227,9 @@ export default {
         path.startsWith("/rfq/") ||
         path.startsWith("/designs/") ||
         path.startsWith("/kyc/") ||
-        path.startsWith("/chat/")
+        path.startsWith("/chat/") ||
+        path.startsWith("/certificate/") ||
+        path.startsWith("/review-proof/")
       ) {
         const key = decodeURIComponent(path.substring(1)); // Remove leading slash
         return handleServe(key, env, corsHeaders, request);
@@ -347,11 +356,13 @@ async function handleUpload(
     );
   }
 
-  // Validate file type — chat uploads allow video/document, others only images
+  // Validate file type — chat allows video/docs, certificates allow PDF, others images only
   const isMediaUpload = MEDIA_UPLOAD_TYPES.includes(uploadType);
+  const isCertificateUpload = CERTIFICATE_UPLOAD_TYPES.includes(uploadType);
   const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
   const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
   const isDoc = ALLOWED_DOC_TYPES.includes(file.type);
+  const isPdf = file.type === "application/pdf";
 
   if (isMediaUpload) {
     if (!isImage && !isVideo && !isDoc) {
@@ -359,6 +370,19 @@ async function handleUpload(
         JSON.stringify({
           success: false,
           error: `Invalid file type: ${file.type}. Allowed: images, videos (MP4/WebM), documents (PDF/DOC/DOCX)`,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+  } else if (isCertificateUpload) {
+    if (!isImage && !isPdf) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Invalid file type: ${file.type}. Allowed: JPEG, PNG, WebP, GIF, or PDF`,
         }),
         {
           status: 400,
@@ -518,6 +542,9 @@ async function handleServe(
   headers.set("ETag", object.httpEtag);
   headers.set("Cache-Control", "public, max-age=31536000");
   headers.set("Accept-Ranges", "bytes");
+  if ((headers.get("Content-Type") || "").includes("pdf")) {
+    headers.set("Content-Disposition", "inline");
+  }
 
   // Add CORS headers
   Object.entries(corsHeaders).forEach(([k, v]) => {

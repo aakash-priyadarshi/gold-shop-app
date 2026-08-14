@@ -1,6 +1,7 @@
 "use client";
 
 import { T } from "@/components/ui/T";
+import { WalkInProductView, type WalkInProduct } from "@/components/shop/WalkInProductView";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
@@ -13,6 +14,7 @@ import {
   Eye,
   FileText,
   Lock,
+  Maximize2,
   MessageSquare,
   Minus,
   Plus,
@@ -516,8 +518,85 @@ interface CatalogueItemPublic {
     images: string[];
     totalPriceNpr?: number;
     status: string;
+    jewelleryType?: string;
+    descriptionEn?: string;
+    hallmarkNumber?: string;
+    certificateUrl?: string;
+    purityCertUrl?: string;
+    composition?: unknown;
+    gemstones?: unknown;
+    weightGrams?: number;
+    metalValueNpr?: number;
+    makingChargeNpr?: number;
+    gemstoneValueNpr?: number;
+    wastagePercent?: number;
     variants?: { id: string; size: string; stock: number }[];
   };
+}
+
+function catalogueItemToWalkIn(item: CatalogueItemPublic): WalkInProduct {
+  const inv = item.inventoryItem;
+  return {
+    nameEn: inv.title,
+    jewelleryType: inv.jewelleryType || inv.metal,
+    images: inv.images,
+    totalPriceNpr: item.overridePrice ?? inv.totalPriceNpr,
+    hallmarkNumber: inv.hallmarkNumber,
+    descriptionEn: inv.descriptionEn,
+    certificateUrl: inv.certificateUrl,
+    purityCertUrl: inv.purityCertUrl,
+    composition: inv.composition,
+    gemstones: inv.gemstones,
+    totalWeightGrams: inv.weightGrams,
+    metalValueNpr: inv.metalValueNpr,
+    makingChargeNpr: inv.makingChargeNpr,
+    gemstoneValueNpr: inv.gemstoneValueNpr,
+    wastagePercent: inv.wastagePercent,
+    variants: inv.variants?.map((v) => ({
+      id: v.id,
+      sizeLabel: v.size,
+      size: v.size,
+      stock: v.stock,
+    })),
+  };
+}
+
+function CatalogueItemDetail({
+  item,
+  onClose,
+}: {
+  item: CatalogueItemPublic;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] bg-white dark:bg-gray-950 overflow-y-auto">
+      <header className="sticky top-0 z-10 flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white/95 dark:bg-gray-950/95 backdrop-blur">
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        <div className="min-w-0">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+            <T>Product details</T>
+          </p>
+          <h2 className="text-sm font-semibold truncate">
+            {item.inventoryItem.title}
+          </h2>
+        </div>
+      </header>
+      <div className="mx-auto max-w-xl px-4 py-4 pb-10">
+        <WalkInProductView
+          item={catalogueItemToWalkIn(item)}
+          currency="NPR"
+          weightUnit="GRAM"
+        />
+      </div>
+    </div>
+  );
 }
 
 /* ---------- password unlock form ---------- */
@@ -577,10 +656,12 @@ function ShowroomView({
   items,
   isOwner,
   onWalkInRfq,
+  onOpenDetails,
 }: {
   items: CatalogueItemPublic[];
   isOwner: boolean;
   onWalkInRfq: (selectedItems: CatalogueItemPublic[]) => void;
+  onOpenDetails: (item: CatalogueItemPublic) => void;
 }) {
   const [idx, setIdx] = useState(0);
   const [sessionItems, setSessionItems] = useState<CatalogueItemPublic[]>([]);
@@ -704,6 +785,13 @@ function ShowroomView({
         {/* Action buttons */}
         <div className="flex gap-3">
           <button
+            onClick={() => onOpenDetails(item)}
+            className="flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 bg-white/10 text-white backdrop-blur-sm"
+          >
+            <Maximize2 className="h-4 w-4" />
+            <T>Full details</T>
+          </button>
+          <button
             onClick={() => toggleSession(item)}
             className={`flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 ${
               inSession(item)
@@ -812,6 +900,7 @@ export default function PublicCataloguePage() {
   const [loading, setLoading] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [showShowroom, setShowShowroom] = useState(false);
+  const [detailItem, setDetailItem] = useState<CatalogueItemPublic | null>(null);
   const [error, setError] = useState("");
   const t = useT();
 
@@ -984,7 +1073,14 @@ export default function PublicCataloguePage() {
           items={items}
           isOwner={isOwner}
           onWalkInRfq={handleWalkInRfq}
+          onOpenDetails={setDetailItem}
         />
+        {detailItem && (
+          <CatalogueItemDetail
+            item={detailItem}
+            onClose={() => setDetailItem(null)}
+          />
+        )}
         {walkInModal && (
           <WalkInRfqModal
             items={walkInItems}
@@ -1080,9 +1176,11 @@ export default function PublicCataloguePage() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {items.map((item) => (
-              <div
+              <button
+                type="button"
                 key={item.id}
-                className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-lg transition-shadow group"
+                onClick={() => setDetailItem(item)}
+                className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-lg transition-shadow group text-left"
               >
                 <div className="aspect-square relative overflow-hidden">
                   {item.inventoryItem.images?.[0] ? (
@@ -1152,7 +1250,7 @@ export default function PublicCataloguePage() {
                       </div>
                     )}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -1184,6 +1282,12 @@ export default function PublicCataloguePage() {
             });
             router.push(`/dashboard/shop/rfqs`);
           }}
+        />
+      )}
+      {detailItem && (
+        <CatalogueItemDetail
+          item={detailItem}
+          onClose={() => setDetailItem(null)}
         />
       )}
     </div>

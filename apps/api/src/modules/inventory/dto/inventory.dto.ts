@@ -14,6 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { HALLMARK_ID_MAX_LENGTH, normalizeHallmarkId } from '@gold-shop/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateInventoryItemDto {
@@ -129,9 +130,13 @@ export class CreateInventoryItemDto {
   @IsOptional()
   certificateUrl?: string;
 
-  @ApiPropertyOptional({ description: 'Hallmark number' })
+  @ApiPropertyOptional({ description: 'HUID or hallmark / certificate number' })
   @IsString()
   @IsOptional()
+  @MaxLength(HALLMARK_ID_MAX_LENGTH)
+  @Transform(({ value }) =>
+    typeof value === 'string' ? normalizeHallmarkId(value) : value,
+  )
   hallmarkNumber?: string;
 
   @ApiPropertyOptional({ description: 'Physical RFID / EPC code', maxLength: 128 })
@@ -293,9 +298,13 @@ export class UpdateInventoryItemDto {
   @IsOptional()
   certificateUrl?: string;
 
-  @ApiPropertyOptional({ description: 'Hallmark number' })
+  @ApiPropertyOptional({ description: 'HUID or hallmark / certificate number' })
   @IsString()
   @IsOptional()
+  @MaxLength(HALLMARK_ID_MAX_LENGTH)
+  @Transform(({ value }) =>
+    typeof value === 'string' ? normalizeHallmarkId(value) : value,
+  )
   hallmarkNumber?: string;
 
   @ApiPropertyOptional({ description: 'Physical RFID / EPC code', maxLength: 128 })

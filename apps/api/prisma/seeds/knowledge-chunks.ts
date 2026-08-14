@@ -91,7 +91,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "hallmark",
     content:
-      "Every invoice can carry HUID (Hallmark Unique ID), purity (24K, 22K, 18K, 14K, 9K), gross weight, net weight, and stone weight. Orivraa is fully BIS-compliant. Full hallmarking compliance checklist available at /blog/hallmarking-compliance-checklist-jewellers-india.",
+      "Every invoice can carry HUID (Hallmark Unique ID), purity (24K, 22K, 18K, 14K, 9K), gross weight, net weight, and stone weight. On each product you can store a 6-character BIS HUID or a longer hallmark/assay number, plus upload hallmark and gemstone certificates (photo or PDF). Walk-in full-details and shared catalogue links show See certificate. Orivraa is fully BIS-compliant. Full hallmarking compliance checklist available at /blog/hallmarking-compliance-checklist-jewellers-india.",
   },
   {
     topic: "offline_pos",

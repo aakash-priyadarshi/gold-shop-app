@@ -50,12 +50,14 @@ import { inventoryApi } from "@/lib/api";
 import { getImageUrl } from "@/lib/image-upload";
 import { SetBuilderDialog } from "@/components/shop/SetBuilderDialog";
 import { ProductDescriptionGenerator } from "@/components/shop/ProductDescriptionGenerator";
+import { CertificateUploadField } from "@/components/shop/CertificateUploadField";
 import { useT } from "@/providers/translation-provider";
 import {
     Edit,
     GripVertical,
     Image as ImageIcon,
     Loader2,
+    Maximize2,
     Package,
     Plus,
     RefreshCw,
@@ -67,8 +69,14 @@ import {
     Zap,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  HALLMARK_ID_MAX_LENGTH,
+  classifyHallmarkId,
+  normalizeHallmarkId,
+} from "@gold-shop/shared";
 
 interface InventoryItem {
   id: string;
@@ -88,6 +96,8 @@ interface InventoryItem {
   status: string;
   stockQuantity: number;
   hallmarkNumber?: string;
+  certificateUrl?: string | null;
+  purityCertUrl?: string | null;
   rfidCode?: string | null;
   locationId?: string | null;
   setComponents?: any[];
@@ -230,6 +240,8 @@ interface ProductFormData {
   images: string[];
   gemstones: GemstoneData[];
   hallmarkNumber: string;
+  certificateUrl: string;
+  purityCertUrl: string;
   rfidCode: string;
   assayOffice: string;
   locationId: string;
@@ -252,6 +264,8 @@ const emptyForm: ProductFormData = {
   images: [],
   gemstones: [],
   hallmarkNumber: "",
+  certificateUrl: "",
+  purityCertUrl: "",
   rfidCode: "",
   assayOffice: "",
   locationId: "",
@@ -456,6 +470,8 @@ export default function ShopProductsPage() {
           }))
         : [],
       hallmarkNumber: product.hallmarkNumber || "",
+      certificateUrl: product.certificateUrl || "",
+      purityCertUrl: product.purityCertUrl || "",
       rfidCode: product.rfidCode || "",
       assayOffice: (product as any).assayOffice || "",
       locationId: product.locationId || "",
@@ -668,7 +684,9 @@ export default function ShopProductsPage() {
         gemstoneValueNpr: parseFloat(formData.gemstoneValueNpr) || 0,
         stockQuantity: parseInt(formData.stockQuantity) || 1,
         images: formData.images,
-        hallmarkNumber: formData.hallmarkNumber.trim() || undefined,
+        hallmarkNumber: normalizeHallmarkId(formData.hallmarkNumber) || undefined,
+        certificateUrl: formData.certificateUrl.trim() || null,
+        purityCertUrl: formData.purityCertUrl.trim() || null,
         rfidCode: formData.rfidCode.trim() || undefined,
         assayOffice: formData.assayOffice || null,
         locationId: formData.locationId || null,
@@ -1294,6 +1312,19 @@ export default function ShopProductsPage() {
                             <Button
                               size="sm"
                               variant="ghost"
+                              asChild
+                              title={t("Show full details to customer")}
+                            >
+                              <Link
+                                href={`/dashboard/shop/products/${product.id}`}
+                                target="_blank"
+                              >
+                                <Maximize2 className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               className="text-red-600 hover:text-red-700"
                               onClick={() => setDeleteId(product.id)}
                               title="Delete product"
@@ -1367,32 +1398,26 @@ export default function ShopProductsPage() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        // BIS HUID is a 6-character alphanumeric code; normalise
-                        // to uppercase and strip spaces/symbols as the user types.
-                        hallmarkNumber: e.target.value
-                          .toUpperCase()
-                          .replace(/[^A-Z0-9]/g, "")
-                          .slice(0, 6),
+                        hallmarkNumber: normalizeHallmarkId(e.target.value),
                       })
                     }
-                    placeholder="e.g. 8A9B1C"
-                    maxLength={6}
+                    placeholder="e.g. 8A9B1C or AHM-22K-88421"
+                    maxLength={HALLMARK_ID_MAX_LENGTH}
                     autoCapitalize="characters"
                     autoComplete="off"
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    {formData.hallmarkNumber.length === 0 ? (
+                    {classifyHallmarkId(formData.hallmarkNumber) === "empty" ? (
                       <T>
-                        Optional. The 6-character code laser-marked on hallmarked
-                        items.
+                        Optional. BIS HUID is 6 characters. Hallmark and assay numbers can be longer.
                       </T>
-                    ) : formData.hallmarkNumber.length === 6 ? (
+                    ) : classifyHallmarkId(formData.hallmarkNumber) === "huid" ? (
                       <span className="text-green-600 dark:text-green-400">
-                        <T>Looks valid ✓</T>
+                        <T>Looks like a BIS HUID</T>
                       </span>
                     ) : (
-                      <span className="text-amber-600 dark:text-amber-400">
-                        {`${formData.hallmarkNumber.length}/6 characters`}
+                      <span className="text-green-600 dark:text-green-400">
+                        <T>Hallmark / certificate number</T>
                       </span>
                     )}
                   </p>
@@ -1842,22 +1867,19 @@ export default function ShopProductsPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                          <Input
-                            placeholder="Certificate no."
-                            className="h-9"
-                            value={gem.certNumber || ""}
-                            onChange={(e) =>
-                              updateGemstone(idx, "certNumber", e.target.value)
-                            }
-                          />
-                          <Input
-                            placeholder="Report URL"
-                            className="h-9"
-                            value={gem.reportUrl || ""}
-                            onChange={(e) =>
-                              updateGemstone(idx, "reportUrl", e.target.value)
-                            }
-                          />
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-muted-foreground">
+                              <T>Gemstone certificate no.</T>
+                            </Label>
+                            <Input
+                              placeholder="e.g. GIA-2141438171"
+                              className="h-9"
+                              value={gem.certNumber || ""}
+                              onChange={(e) =>
+                                updateGemstone(idx, "certNumber", e.target.value)
+                              }
+                            />
+                          </div>
                           <Input
                             type="date"
                             placeholder="Report date"
@@ -1868,6 +1890,16 @@ export default function ShopProductsPage() {
                             }
                           />
                         </div>
+                        <CertificateUploadField
+                          label={<T>Gemstone report file</T>}
+                          hint={
+                            <T>
+                              Photo or PDF of this stone&apos;s lab report. Also used as See certificate.
+                            </T>
+                          }
+                          value={gem.reportUrl || ""}
+                          onChange={(url) => updateGemstone(idx, "reportUrl", url)}
+                        />
                       </div>
                     ))}
                   </div>
@@ -1892,6 +1924,38 @@ export default function ShopProductsPage() {
                   gemstones: formData.gemstones,
                 }}
               />
+
+              <div
+                data-tour="product-certificates"
+                className="rounded-lg border bg-muted/20 p-4 space-y-4"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <T>Certificates</T>
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  <T>
+                    Upload hallmark and gemstone certificates so walk-in customers and shared catalogue links can open See certificate. Photos are compressed; PDFs must be under 5MB.
+                  </T>
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <CertificateUploadField
+                    label={<T>Hallmark certificate</T>}
+                    hint={<T>BIS / assay certificate for the metal.</T>}
+                    value={formData.certificateUrl}
+                    onChange={(certificateUrl) =>
+                      setFormData({ ...formData, certificateUrl })
+                    }
+                  />
+                  <CertificateUploadField
+                    label={<T>Gemstone certificate</T>}
+                    hint={<T>Lab report for diamonds or coloured stones on this piece.</T>}
+                    value={formData.purityCertUrl}
+                    onChange={(purityCertUrl) =>
+                      setFormData({ ...formData, purityCertUrl })
+                    }
+                  />
+                </div>
+              </div>
 
               {/* Pricing */}
               <div className="rounded-lg border bg-muted/20 p-4 space-y-4">

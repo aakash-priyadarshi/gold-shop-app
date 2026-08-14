@@ -58,6 +58,7 @@ import { useT } from "@/providers/translation-provider";
 import {
     Heart,
     Loader2,
+    Maximize2,
     Minus,
     Package,
     Plus,
@@ -69,6 +70,7 @@ import {
     X,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 interface PosSessionItem {
@@ -659,11 +661,23 @@ function PosPageInner() {
                 {counterLoading && <div className="text-center py-6 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>}
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[65vh] overflow-y-auto pr-1">
                   {counterItems.map((item: any) => (
-                    <button
+                    <div
                       key={item.id}
-                      onClick={() => handleAddItem(item.id)}
                       className="group relative border rounded-xl p-3 text-left hover:border-primary hover:shadow-md transition-all bg-card"
                     >
+                      <Link
+                        href={`/dashboard/shop/products/${item.id}`}
+                        target="_blank"
+                        className="absolute top-2 left-2 z-10 rounded-full bg-white/90 dark:bg-gray-900/90 p-1.5 text-amber-800 shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title={t("Show full details to customer")}
+                      >
+                        <Maximize2 className="h-3.5 w-3.5" />
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleAddItem(item.id)}
+                        className="w-full text-left"
+                      >
                       <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-2">
                         {item.images?.[0] ? (
                           <Image
@@ -692,7 +706,8 @@ function PosPageInner() {
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="bg-primary text-primary-foreground rounded-full p-1"><Plus className="h-3 w-3" /></div>
                       </div>
-                    </button>
+                      </button>
+                    </div>
                   ))}
                   {!counterLoading && counterItems.length === 0 && (
                     <div className="col-span-full text-center py-12 text-muted-foreground">

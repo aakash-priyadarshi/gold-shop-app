@@ -88,6 +88,16 @@ function GemstoneCard({
               {[gem.lab, gem.certNumber].filter(Boolean).join(" ")}
             </p>
           )}
+          {gem.reportUrl && (
+            <a
+              href={gem.reportUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-[11px] font-semibold text-amber-700 underline mt-1"
+            >
+              <T>See certificate</T>
+            </a>
+          )}
         </div>
         {gem.valueNpr > 0 && (
           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 tabular-nums">

@@ -51,6 +51,16 @@ export class CatalogueService {
       status: inv.status,
       visibility: inv.visibility,
       jewelleryType: inv.jewelleryType,
+      descriptionEn: inv.descriptionEn,
+      hallmarkNumber: inv.hallmarkNumber,
+      certificateUrl: inv.certificateUrl,
+      purityCertUrl: inv.purityCertUrl,
+      composition: inv.composition,
+      gemstones: inv.gemstones,
+      metalValueNpr: inv.metalValueNpr,
+      makingChargeNpr: inv.makingChargeNpr,
+      gemstoneValueNpr: inv.gemstoneValueNpr,
+      wastagePercent: inv.wastagePercent,
       variants: inv.variants?.map((v: any) => this.mapVariant(v)),
     };
   }
@@ -499,6 +509,16 @@ export class CatalogueService {
             totalWeightGrams: true,
             status: true,
             visibility: true,
+            descriptionEn: true,
+            hallmarkNumber: true,
+            certificateUrl: true,
+            purityCertUrl: true,
+            composition: true,
+            gemstones: true,
+            metalValueNpr: true,
+            makingChargeNpr: true,
+            gemstoneValueNpr: true,
+            wastagePercent: true,
             variants: {
               select: {
                 id: true,

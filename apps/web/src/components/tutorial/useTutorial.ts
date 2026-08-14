@@ -335,6 +335,16 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='product-certificates']",
+      popover: {
+        title: "Certificates",
+        description:
+          "Upload a hallmark certificate and a gemstone certificate as a photo or PDF. Walk-in customers and shared catalogue links can open See certificate from the full product page.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
       element: "[data-tour='inventory-reprice']",
       popover: {
         title: "Reprice from rates",

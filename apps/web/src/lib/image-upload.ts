@@ -9,7 +9,13 @@
 const WORKER_URL =
   process.env.NEXT_PUBLIC_IMAGE_WORKER_URL || "https://images.orivraa.com";
 
-export type UploadType = "product" | "profile" | "rfq" | "kyc" | "review-proof";
+export type UploadType =
+  | "product"
+  | "profile"
+  | "rfq"
+  | "kyc"
+  | "review-proof"
+  | "certificate";
 
 export interface UploadResult {
   success: boolean;
@@ -44,6 +50,7 @@ const DEFAULT_OPTIONS: Record<
   rfq: { maxWidth: 1200, maxHeight: 1200, quality: 90 },
   kyc: { maxWidth: 1600, maxHeight: 1600, quality: 95 },
   "review-proof": { maxWidth: 1600, maxHeight: 1600, quality: 95 },
+  certificate: { maxWidth: 1600, maxHeight: 1600, quality: 90 },
 };
 
 /**
@@ -205,6 +212,98 @@ export async function uploadImage(
     return result;
   } catch (error) {
     console.error("Upload error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Upload failed",
+    };
+  }
+}
+
+const CERTIFICATE_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
+const CERTIFICATE_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const CERTIFICATE_MAX_PDF_BYTES = 5 * 1024 * 1024;
+
+function isPdfFile(file: File): boolean {
+  return (
+    file.type === "application/pdf" ||
+    file.name.toLowerCase().endsWith(".pdf")
+  );
+}
+
+/**
+ * Upload a hallmark or gemstone certificate. Photos are resized/compressed
+ * before upload. PDFs are stored as-is and must be 5MB or smaller.
+ */
+export async function uploadCertificate(
+  file: File,
+  options?: { onProgress?: (progress: number) => void },
+): Promise<UploadResult> {
+  const onProgress = options?.onProgress;
+  const pdf = isPdfFile(file);
+  const image = CERTIFICATE_IMAGE_TYPES.includes(file.type);
+
+  if (!pdf && !image) {
+    return {
+      success: false,
+      error: "Upload a photo (JPG, PNG, WebP) or a PDF.",
+    };
+  }
+  if (pdf && file.size > CERTIFICATE_MAX_PDF_BYTES) {
+    return {
+      success: false,
+      error: "PDF must be 5MB or smaller. Photograph the certificate instead to save space.",
+    };
+  }
+  if (image && file.size > CERTIFICATE_MAX_IMAGE_BYTES) {
+    return {
+      success: false,
+      error: "Image must be 10MB or smaller.",
+    };
+  }
+
+  try {
+    onProgress?.(10);
+    let body: Blob = file;
+    let filename = file.name;
+    if (image) {
+      const compressed = await compressImage(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 90,
+        mimeType: "image/webp",
+      });
+      body = compressed;
+      filename = filenameForCompressed(file.name, compressed);
+    }
+    onProgress?.(40);
+    const upload = async (type: "certificate" | "kyc") => {
+      const formData = new FormData();
+      formData.append("file", body, filename);
+      const response = await fetch(`${WORKER_URL}/upload`, {
+        method: "POST",
+        headers: { "X-Upload-Type": type },
+        body: formData,
+      });
+      return (await response.json()) as UploadResult;
+    };
+
+    let result = await upload("certificate");
+    if (
+      image &&
+      !result.success &&
+      /invalid upload type/i.test(result.error || "")
+    ) {
+      result = await upload("kyc");
+    }
+    onProgress?.(100);
+    return result;
+  } catch (error) {
+    console.error("Certificate upload error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Upload failed",
