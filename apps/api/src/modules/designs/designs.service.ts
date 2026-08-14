@@ -20,6 +20,7 @@ import { AiCreditsService } from "../core/ai-credits/ai-credits.service";
 import {
   AI_CREDIT_COSTS,
   variationBatchRedisKey,
+  shouldUsePrepaidVariationSlot,
 } from "@gold-shop/shared";
 import { randomUUID } from "crypto";
 import { RedisService } from "../../common/redis";
@@ -343,17 +344,23 @@ export class DesignsService {
     additionalSpecs?: Record<string, unknown>,
   ): Promise<boolean> {
     if (typeof additionalSpecs?.variationOf !== "string") return false;
-    if (!this.redis.isAvailable()) {
-      // Redis down: skip a second wallet debit so a paid batch is not double-charged.
-      return true;
-    }
-    const key = variationBatchRedisKey(userId);
-    const current = await this.redis.get(key);
+    const current = this.redis.isAvailable()
+      ? await this.redis.get(variationBatchRedisKey(userId))
+      : null;
     const remainingBefore = parseInt(current || "", 10);
-    if (!Number.isFinite(remainingBefore) || remainingBefore <= 0) {
+    if (
+      !shouldUsePrepaidVariationSlot({
+        variationOf: additionalSpecs.variationOf,
+        redisAvailable: this.redis.isAvailable(),
+        prepaidRemaining: Number.isFinite(remainingBefore)
+          ? remainingBefore
+          : null,
+      })
+    ) {
       return false;
     }
-    const remaining = await this.redis.decr(key);
+    if (!this.redis.isAvailable()) return true;
+    const remaining = await this.redis.decr(variationBatchRedisKey(userId));
     return remaining >= 0;
   }
 

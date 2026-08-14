@@ -45,6 +45,18 @@ describe("ProductDescriptionService", () => {
     expect(credits.debitForShopkeeperGeneration).not.toHaveBeenCalled();
   });
 
+  it("does not debit when the caller is not a shopkeeper", async () => {
+    credits.debitForShopkeeperGeneration.mockResolvedValue({ skipped: true });
+    await expect(
+      service.generateAiDescription({
+        userId: "u1",
+        shopId: "s1",
+        specs,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(credits.refundCredits).not.toHaveBeenCalled();
+  });
+
   it("debits 0.25 credits and refunds when Gemini fails", async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,

@@ -63,6 +63,38 @@ describe("variation-estimate", () => {
     expect(composition.gemstones[0].count).toBe(2);
   });
 
+  it("maps plated brass to Method C", () => {
+    const req = specToEstimateRequest(
+      spec({
+        metalType: "BRASS",
+        buildMethod: "METHOD_C",
+        platingDetails: { baseMetal: "BRASS" },
+      }),
+      { country: asSupportedCountry("NP"), currency: "NPR" },
+    );
+    expect(req.buildMethod).toBe("METHOD_C");
+    expect(req.methodC?.coreMetal).toBeDefined();
+    expect(req.country).toBe("NP");
+  });
+
+  it("defaults unknown countries to India", () => {
+    expect(asSupportedCountry("ZZ")).toBe("IN");
+    expect(asSupportedCountry(undefined)).toBe("IN");
+  });
+
+  it("overlays live rates when the total is positive", () => {
+    const next = applyCostBreakdown(spec(), {
+      metal: 12000.4,
+      making: 1999.6,
+      gemstones: 500.2,
+      finish: 100.4,
+      total: 14600.6,
+      currency: "NPR",
+    });
+    expect(next.estimatedCost.total).toBe(14601);
+    expect(next.estimatedCost.currency).toBe("NPR");
+  });
+
   it("keeps Gemini costs when live total is zero", () => {
     const original = spec();
     const next = applyCostBreakdown(original, {

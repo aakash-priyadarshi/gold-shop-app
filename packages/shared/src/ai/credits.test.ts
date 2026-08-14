@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  AI_CREDITS_BILLING_PATH,
   AI_CREDIT_COSTS,
+  AI_VARIATION_BATCH_SIZE,
+  AI_VARIATION_BATCH_TTL_SEC,
   formatAiCredits,
   hasEnoughAiCredits,
   toCreditNumber,
+  variationBatchRedisKey,
 } from "./credits";
 
 describe("AI credit math", () => {
@@ -18,6 +22,19 @@ describe("AI credit math", () => {
     expect(formatAiCredits(0.25)).toBe("0.25");
   });
 
+  it("treats null and NaN balances as zero", () => {
+    expect(toCreditNumber(null)).toBe(0);
+    expect(toCreditNumber(undefined)).toBe(0);
+    expect(toCreditNumber("nope")).toBe(0);
+  });
+
+  it("keys the prepaid 5-pack in Redis per user", () => {
+    expect(variationBatchRedisKey("user-1")).toBe("ai:varbatch:user-1");
+    expect(AI_VARIATION_BATCH_SIZE).toBe(5);
+    expect(AI_VARIATION_BATCH_TTL_SEC).toBe(1800);
+    expect(AI_CREDITS_BILLING_PATH).toContain("tab=credits");
+  });
+
   it("unlocks AI description when balance covers 0.25", () => {
     expect(hasEnoughAiCredits(0.25, AI_CREDIT_COSTS.PRODUCT_DESCRIPTION)).toBe(
       true,
@@ -29,5 +46,9 @@ describe("AI credit math", () => {
     expect(AI_CREDIT_COSTS.DESIGN_VARIATIONS).toBe(
       AI_CREDIT_COSTS.DESIGN_IMAGE * 5,
     );
+    expect(hasEnoughAiCredits(4.99, AI_CREDIT_COSTS.DESIGN_VARIATIONS)).toBe(
+      false,
+    );
+    expect(hasEnoughAiCredits(5, AI_CREDIT_COSTS.DESIGN_VARIATIONS)).toBe(true);
   });
 });

@@ -44,6 +44,30 @@ export class TestingController {
     return this.testingService.runSmokeTests();
   }
 
+  /** GET /api/testing/seller-core — Run tax/rates/shop-api probes */
+  @Get("seller-core")
+  async runSellerCoreTestsGet(): Promise<SmokeTestReport> {
+    return this.testingService.runSellerCoreTests();
+  }
+
+  /** POST /api/testing/seller-core — Same as GET (button + CI) */
+  @Post("seller-core")
+  async runSellerCoreTests(): Promise<SmokeTestReport> {
+    return this.testingService.runSellerCoreTests();
+  }
+
+  /** GET /api/testing/ai-credits — Schema + chat privacy + design auth probes */
+  @Get("ai-credits")
+  async runAiFeatureTestsGet(): Promise<SmokeTestReport> {
+    return this.testingService.runAiFeatureTests();
+  }
+
+  /** POST /api/testing/ai-credits — Same as GET (admin button) */
+  @Post("ai-credits")
+  async runAiFeatureTests(): Promise<SmokeTestReport> {
+    return this.testingService.runAiFeatureTests();
+  }
+
   // ── E2E (Playwright) ──────────────────────────────────
 
   /** POST /api/testing/e2e — Run E2E tests (triggers CI on production) */

@@ -12,6 +12,7 @@ export * from "./invoice/bill-templates";
 
 // Product catalogue helpers
 export * from "./ai/credits";
+export * from "./ai/variation-billing";
 export * from "./product/description-templates";
 
 // Utilities

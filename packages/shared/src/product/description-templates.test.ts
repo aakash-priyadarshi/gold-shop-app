@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildHardcodedProductDescription,
   getMissingProductDescriptionSpecs,
+  missingProductDescriptionLabels,
   productDescriptionSpecsReady,
 } from "./description-templates";
 
@@ -35,6 +36,16 @@ describe("product description templates", () => {
     expect(text).toContain("5.5 g");
     expect(text).toContain("diamond");
     expect(text.toLowerCase()).toContain("0.5 ct");
+  });
+
+  it("lists missing field labels for the UI", () => {
+    expect(
+      missingProductDescriptionLabels({
+        jewelleryType: "",
+        metalType: "",
+        weightGrams: 0,
+      }),
+    ).toEqual(["Jewellery type", "Material type", "Material weight"]);
   });
 
   it("uses tola when that is the shop display unit", () => {

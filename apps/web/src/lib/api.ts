@@ -2034,6 +2034,7 @@ export const testingApi = {
   runSmokeTests: () => api.get("/testing/smoke"),
   triggerSmokeTests: () => api.post("/testing/smoke"),
   runSellerCoreTests: () => api.post("/testing/seller-core"),
+  runAiCreditsTests: () => api.post("/testing/ai-credits"),
   // E2E (Playwright)
   runE2ETests: () => api.post("/testing/e2e"),
   getLatestE2EReport: () => api.get("/testing/e2e"),

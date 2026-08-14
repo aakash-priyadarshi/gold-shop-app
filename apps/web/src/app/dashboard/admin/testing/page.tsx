@@ -45,7 +45,9 @@ import {
   RefreshCw,
   Rocket,
   RotateCcw,
+  Scale,
   Server,
+  Sparkles,
   TestTube2,
   Trash2,
   XCircle,
@@ -153,7 +155,14 @@ interface RuntimeInfo {
 
 interface HistoryEntry {
   id: string;
-  type: "smoke" | "e2e" | "integration" | "full" | "ci";
+  type:
+    | "smoke"
+    | "e2e"
+    | "integration"
+    | "full"
+    | "ci"
+    | "seller-core"
+    | "ai-credits";
   timestamp: string;
   duration: number;
   passed: number;
@@ -289,6 +298,10 @@ function statusBadge(status: string) {
 function typeBadge(type: string) {
   const colors: Record<string, string> = {
     smoke: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    "seller-core":
+      "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+    "ai-credits":
+      "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200",
     e2e: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
     integration:
       "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
@@ -311,6 +324,12 @@ function typeBadge(type: string) {
 export default function TestingDashboardPage() {
   // State
   const [smokeReport, setSmokeReport] = useState<SmokeReport | null>(null);
+  const [sellerCoreReport, setSellerCoreReport] = useState<SmokeReport | null>(
+    null,
+  );
+  const [aiCreditsReport, setAiCreditsReport] = useState<SmokeReport | null>(
+    null,
+  );
   const [e2eReport, setE2EReport] = useState<E2EReport | null>(null);
   const [integrationReport, setIntegrationReport] =
     useState<IntegrationReport | null>(null);
@@ -319,6 +338,8 @@ export default function TestingDashboardPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   const [loadingSmoke, setLoadingSmoke] = useState(false);
+  const [loadingSellerCore, setLoadingSellerCore] = useState(false);
+  const [loadingAiCredits, setLoadingAiCredits] = useState(false);
   const [loadingE2E, setLoadingE2E] = useState(false);
   const [loadingIntegration, setLoadingIntegration] = useState(false);
   const [ciStatus, setCIStatus] = useState<CIStatus | null>(null);
@@ -482,6 +503,42 @@ export default function TestingDashboardPage() {
     }
   }, [fetchHistory]);
 
+  const runSellerCore = useCallback(async () => {
+    setLoadingSellerCore(true);
+    setError(null);
+    try {
+      const { data } = await testingApi.runSellerCoreTests();
+      setSellerCoreReport(data);
+      fetchHistory();
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Seller core probe failed",
+      );
+    } finally {
+      setLoadingSellerCore(false);
+    }
+  }, [fetchHistory]);
+
+  const runAiCredits = useCallback(async () => {
+    setLoadingAiCredits(true);
+    setError(null);
+    try {
+      const { data } = await testingApi.runAiCreditsTests();
+      setAiCreditsReport(data);
+      fetchHistory();
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "AI credits probe failed",
+      );
+    } finally {
+      setLoadingAiCredits(false);
+    }
+  }, [fetchHistory]);
+
   const runE2E = useCallback(async () => {
     setLoadingE2E(true);
     setError(null);
@@ -559,13 +616,21 @@ export default function TestingDashboardPage() {
 
   const totalPassed =
     (smokeReport?.passed || 0) +
+    (sellerCoreReport?.passed || 0) +
+    (aiCreditsReport?.passed || 0) +
     (e2eReport?.passed || 0) +
     (integrationReport?.passed || 0);
   const totalFailed =
     (smokeReport?.failed || 0) +
+    (sellerCoreReport?.failed || 0) +
+    (aiCreditsReport?.failed || 0) +
     (e2eReport?.failed || 0) +
     (integrationReport?.failed || 0);
-  const totalSkipped = (smokeReport?.skipped || 0) + (e2eReport?.skipped || 0);
+  const totalSkipped =
+    (smokeReport?.skipped || 0) +
+    (sellerCoreReport?.skipped || 0) +
+    (aiCreditsReport?.skipped || 0) +
+    (e2eReport?.skipped || 0);
   const totalAll = totalPassed + totalFailed + totalSkipped;
   const overallRate = passRate(totalPassed, totalAll);
 
@@ -593,6 +658,32 @@ export default function TestingDashboardPage() {
                     <Zap className="mr-2 h-4 w-4" />
                   )}
                   Run Smoke
+                </Button>
+                <Button
+                  onClick={runSellerCore}
+                  disabled={loadingSellerCore}
+                  size="sm"
+                  variant="outline"
+                >
+                  {loadingSellerCore ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Scale className="mr-2 h-4 w-4" />
+                  )}
+                  Run Seller Core
+                </Button>
+                <Button
+                  onClick={runAiCredits}
+                  disabled={loadingAiCredits}
+                  size="sm"
+                  variant="outline"
+                >
+                  {loadingAiCredits ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Run AI Credits
                 </Button>
                 <Button
                   onClick={() => triggerCI()}
@@ -910,7 +1001,10 @@ export default function TestingDashboardPage() {
                         </p>
                         <p>
                           They check: health endpoints, auth guards, public
-                          routes, error handling, and response times.
+                          routes, error handling, and response times. They do
+                          not calculate tax or check gold rates — use Seller
+                          Core for that. Browser flows use Playwright (already
+                          wired here), not Cypress.
                         </p>
                         <p className="font-medium text-foreground">
                           These run against production by default. Set{" "}
@@ -923,6 +1017,175 @@ export default function TestingDashboardPage() {
                     </Card>
                   </div>
                 </div>
+
+                <Card className="mt-2">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Scale className="h-5 w-5 text-amber-600" /> Seller
+                        core
+                      </CardTitle>
+                      <CardDescription>
+                        {sellerCoreReport
+                          ? `${sellerCoreReport.totalTests} probes in ${fmt(sellerCoreReport.duration)} — ${new Date(sellerCoreReport.timestamp).toLocaleString()}`
+                          : "Live tax aliases, gold rates, and optional shop APIs. Does not create invoices or POS sales."}
+                      </CardDescription>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={runSellerCore}
+                      disabled={loadingSellerCore}
+                    >
+                      {loadingSellerCore ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    {sellerCoreReport ? (
+                      <ScrollArea className="h-[280px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-8" />
+                              <TableHead>Check</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead>Detail</TableHead>
+                              <TableHead className="text-right">Time</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {sellerCoreReport.results.map((r, i) => (
+                              <TableRow
+                                key={i}
+                                className={
+                                  r.status === "fail"
+                                    ? "bg-red-50/50 dark:bg-red-950/20"
+                                    : ""
+                                }
+                              >
+                                <TableCell>{statusIcon(r.status)}</TableCell>
+                                <TableCell className="text-sm font-medium">
+                                  {r.name}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {r.category}
+                                </TableCell>
+                                <TableCell className="max-w-md truncate text-xs text-muted-foreground">
+                                  {r.message || "—"}
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-xs">
+                                  {fmt(r.duration)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Click Run Seller Core. This is the check that catches
+                        tax/rate/shop-API breakage smoke tests miss.
+                      </p>
+                    )}
+                    {sellerCoreReport && (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        {sellerCoreReport.passed} passed ·{" "}
+                        {sellerCoreReport.failed} failed ·{" "}
+                        {sellerCoreReport.skipped} skipped. Shop API rows skip
+                        until{" "}
+                        <code className="rounded bg-muted px-1">
+                          SHOP_SMOKE_TOKEN
+                        </code>{" "}
+                        is set on the API.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="mt-2">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Sparkles className="h-5 w-5 text-violet-600" /> AI
+                        credits & chat
+                      </CardTitle>
+                      <CardDescription>
+                        {aiCreditsReport
+                          ? `${aiCreditsReport.totalTests} probes in ${fmt(aiCreditsReport.duration)} — ${new Date(aiCreditsReport.timestamp).toLocaleString()}`
+                          : "Decimal migration, 0.25/1/5 billing, public chat privacy, design-route auth. Does not generate images or debit credits."}
+                      </CardDescription>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={runAiCredits}
+                      disabled={loadingAiCredits}
+                    >
+                      {loadingAiCredits ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    {aiCreditsReport ? (
+                      <ScrollArea className="h-[320px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-8" />
+                              <TableHead>Check</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead>Detail</TableHead>
+                              <TableHead className="text-right">Time</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {aiCreditsReport.results.map((r, i) => (
+                              <TableRow
+                                key={i}
+                                className={
+                                  r.status === "fail"
+                                    ? "bg-red-50/50 dark:bg-red-950/20"
+                                    : ""
+                                }
+                              >
+                                <TableCell>{statusIcon(r.status)}</TableCell>
+                                <TableCell className="text-sm font-medium">
+                                  {r.name}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {r.category}
+                                </TableCell>
+                                <TableCell className="max-w-md truncate text-xs text-muted-foreground">
+                                  {r.message || "—"}
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-xs">
+                                  {fmt(r.duration)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Click Run AI Credits after a deploy that includes the
+                        decimal credit migration and chat privacy limits.
+                      </p>
+                    )}
+                    {aiCreditsReport && (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        {aiCreditsReport.passed} passed ·{" "}
+                        {aiCreditsReport.failed} failed ·{" "}
+                        {aiCreditsReport.skipped} skipped.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
 
                 {/* ── E2E Browser Results ── */}
                 <Card className="mt-2">
@@ -2202,6 +2465,14 @@ export default function TestingDashboardPage() {
                           <CmdRow
                             cmd="pnpm smoke-test:full"
                             desc="Enhanced smoke suite"
+                          />
+                          <CmdRow
+                            cmd="pnpm kane:public"
+                            desc="Optional KaneAI public UI (not money)"
+                          />
+                          <CmdRow
+                            cmd="k6 run k6/smoke.js"
+                            desc="Load smoke (1 VU) — not on every deploy"
                           />
                           <CmdRow cmd="pnpm e2e" desc="Playwright headless" />
                           <CmdRow
