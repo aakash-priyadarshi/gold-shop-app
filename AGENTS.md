@@ -362,6 +362,12 @@ cd e2e && npx playwright install chromium && npx ts-node auth-setup.ts
 - **API:** `/inventory/shop/:shopId/storage-locations`, `POST .../transfer-location`
 - `InventoryItem.locationId` → `StorageLocation`; replaces the old `labels[]` location hack
 
+## Karigar ledger & large workshop
+
+- **Shop karigar book (shipped):** `/dashboard/shop/supply-chain` — vault, issue/return, job stages, gold loss. Feature: `karigarSupplyChain`.
+- **Large workshop (future, do not build yet):** shop setting `workshopMode` (plus plan flag `workshopManufacturing`). When on, hide Supply Chain and show `/dashboard/shop/workshop/*` (control tower, jobs, floor queues, metal, QC). Departments are filters on Floor, not their own sidebar pages. Do not put a shop/workshop toggle on the karigar page — this product needs more than one page.
+- Plan: `plans/workshop-manufacturing.md`
+
 ## Walk-in Customer / Quote Feature
 
 - **Create page:** `apps/web/src/app/dashboard/shop/quotes/create/page.tsx`

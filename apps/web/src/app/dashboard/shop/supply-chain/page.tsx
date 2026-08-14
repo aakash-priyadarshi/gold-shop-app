@@ -124,6 +124,7 @@ function KarigarSupplyChainContent() {
     currency: "INR",
     updatedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     changePercent: 0.85,
+    live: false,
   });
   const ratesRef = useRef(false);
 
@@ -186,7 +187,7 @@ function KarigarSupplyChainContent() {
   const [addJobModalOpen, setAddJobModalOpen] = useState(false);
   const [jobForm, setJobForm] = useState({
     product: "",
-    artisan: "",
+    workshopId: "",
     grossWeight: "",
   });
 
@@ -230,7 +231,9 @@ function KarigarSupplyChainContent() {
       const params = getMobileMarketParams(user?.shop ?? null);
       const res = await materialsApi.getMarketRates(params);
       const data = res.data;
-      const rate24k = readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]) || 7250;
+      const live24 = readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]);
+      const live = live24 > 0;
+      const rate24k = live ? live24 : 7250;
       setGoldRates({
         rate24k: Math.round(rate24k),
         rate22k: Math.round(readMetalRate(data, ["GOLD_22K"]) || rate24k * (22 / 24)),
@@ -240,10 +243,11 @@ function KarigarSupplyChainContent() {
         updatedAt: data?.updatedAt
           ? new Date(data.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
           : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        changePercent: data?.changePercent ?? 0.85,
+        changePercent: live ? (data?.changePercent ?? 0) : 0,
+        live,
       });
     } catch {
-      // safe fallback remains
+      setGoldRates((prev) => ({ ...prev, live: false }));
     } finally {
       ratesRef.current = false;
     }
@@ -401,6 +405,10 @@ function KarigarSupplyChainContent() {
       showToast(t("Please enter a valid weight to issue."), "error");
       return;
     }
+    if (!allotForm.workshopId) {
+      showToast(t("Select a karigar before issuing metal."), "error");
+      return;
+    }
 
     const vaultKey = getVaultKeyForMetal(allotForm.metalType);
     try {
@@ -428,14 +436,20 @@ function KarigarSupplyChainContent() {
     }
 
     const vaultKey = getVaultKeyForMetal(procureForm.metalType);
-    let updatedReserves = { ...vaultReserves };
-    updatedReserves[vaultKey] = Number(((updatedReserves[vaultKey] || 0) + wt).toFixed(2));
-
-    setVaultReserves(updatedReserves);
-    setProcureForm((prev) => ({ ...prev, weight: "" }));
-    setProcureModalOpen(false);
-    showToast(t(`Procured ${wt}g into vault reserves!`));
-    await persistState(updatedReserves, workshops, jobs);
+    try {
+      await karigarApi.addMovement({
+        type: "ADJUST",
+        weightGrams: wt,
+        metalKey: vaultKey,
+        note: "Procure",
+      });
+      setProcureForm((prev) => ({ ...prev, weight: "" }));
+      setProcureModalOpen(false);
+      showToast(t(`Procured ${wt}g into vault reserves!`));
+      await loadDatabaseConfig();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || t("Could not procure bullion"), "error");
+    }
   };
 
   // ── Add Custom Material Type ──
@@ -467,20 +481,24 @@ function KarigarSupplyChainContent() {
 
   // ── Add Job ──
   const handleAddJob = async () => {
-    if (!jobForm.product.trim() || !jobForm.artisan.trim()) {
-      showToast(t("Please fill in the product name and artisan!"), "error");
+    if (!jobForm.product.trim() || !jobForm.workshopId) {
+      showToast(t("Please fill in the product name and select a karigar."), "error");
       return;
     }
-    const workshopId = workshops.find((w) => w.artisan === jobForm.artisan)?.id;
+    const workshop = workshops.find((w) => w.id === jobForm.workshopId);
+    if (!workshop) {
+      showToast(t("Select a karigar for this job."), "error");
+      return;
+    }
     try {
       await karigarApi.createJob({
         product: jobForm.product,
-        artisan: jobForm.artisan,
-        workshopId,
+        artisan: workshop.artisan,
+        workshopId: workshop.id,
         grossWeight: parseFloat(jobForm.grossWeight) || 0,
       });
       setAddJobModalOpen(false);
-      setJobForm({ product: "", artisan: "", grossWeight: "" });
+      setJobForm({ product: "", workshopId: "", grossWeight: "" });
       showToast(t(`Job "${jobForm.product}" created!`));
       await loadDatabaseConfig();
     } catch (err: any) {
@@ -495,6 +513,7 @@ function KarigarSupplyChainContent() {
       await karigarApi.updateJob(editJobForm.id, {
         product: editJobForm.product,
         artisan: editJobForm.artisan,
+        workshopId: editJobForm.workshopId || null,
         grossWeight: editJobForm.grossWeight,
       });
       setEditJobModalOpen(false);
@@ -547,16 +566,26 @@ function KarigarSupplyChainContent() {
         className="bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/20 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-4 backdrop-blur-md"
       >
         <div className="flex items-center gap-3">
-          <div className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-          </div>
+          {goldRates.live ? (
+            <div className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+            </div>
+          ) : (
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-400" />
+          )}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              <T>Live Metal Rate Feed</T>
+              {goldRates.live ? <T>Live Metal Rate Feed</T> : <T>Fallback metal rates</T>}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              <T>Updated at</T> {goldRates.updatedAt} ({goldRates.currency})
+              {goldRates.live ? (
+                <>
+                  <T>Updated at</T> {goldRates.updatedAt} ({goldRates.currency})
+                </>
+              ) : (
+                <T>Live feed unavailable — these are last-known fallback prices, not a live ticker.</T>
+              )}
             </p>
           </div>
         </div>
@@ -630,7 +659,14 @@ function KarigarSupplyChainContent() {
             data-tour="supply-add-job"
             variant="outline"
             className="border-blue-500/30 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 bg-white dark:bg-gray-900"
-            onClick={() => setAddJobModalOpen(true)}
+            onClick={() => {
+              if (workshops.length === 0) {
+                showToast(t("Add a karigar before creating a job."), "error");
+                return;
+              }
+              setJobForm((p) => ({ ...p, workshopId: p.workshopId || workshops[0].id }));
+              setAddJobModalOpen(true);
+            }}
           >
             <Plus className="h-4 w-4 mr-1" />
             <T>Add Job</T>
@@ -654,7 +690,11 @@ function KarigarSupplyChainContent() {
           <Button
             className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
             onClick={() => {
-              setAllotForm((p) => ({ ...p, workshopId: workshops[0]?.id || "" }));
+              if (workshops.length === 0) {
+                showToast(t("Add a karigar before issuing metal."), "error");
+                return;
+              }
+              setAllotForm((p) => ({ ...p, workshopId: p.workshopId || workshops[0].id }));
               setAllotModalOpen(true);
             }}
           >
@@ -1118,7 +1158,7 @@ function KarigarSupplyChainContent() {
                   onValueChange={(val) => setAllotForm((p) => ({ ...p, workshopId: val }))}
                 >
                   <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
-                    <SelectValue />
+                    <SelectValue placeholder={t("Select artisan...")} />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                     {workshops.map((w) => (
@@ -1177,6 +1217,7 @@ function KarigarSupplyChainContent() {
               <Button
                 className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
                 size="sm"
+                disabled={!allotForm.workshopId}
                 onClick={handleAllot}
               >
                 <T>Issue Metal</T>
@@ -1643,28 +1684,21 @@ function KarigarSupplyChainContent() {
                 <Label className="text-gray-700 dark:text-gray-300">
                   <T>Artisan / Workshop *</T>
                 </Label>
-                {workshops.length > 0 ? (
-                  <Select value={jobForm.artisan} onValueChange={(val) => setJobForm((p) => ({ ...p, artisan: val }))}>
-                    <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
-                      <SelectValue placeholder={t("Select artisan...")} />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
-                      {workshops.map((w) => (
-                        <SelectItem key={w.id} value={`${w.artisan} (${w.name})`}>
-                          {w.artisan} ({w.name})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    type="text"
-                    placeholder="e.g. Rakesh Kumar (Patna Goldsmiths)"
-                    value={jobForm.artisan}
-                    onChange={(e) => setJobForm((p) => ({ ...p, artisan: e.target.value }))}
-                    className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
-                  />
-                )}
+                <Select
+                  value={jobForm.workshopId}
+                  onValueChange={(val) => setJobForm((p) => ({ ...p, workshopId: val }))}
+                >
+                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
+                    <SelectValue placeholder={t("Select artisan...")} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
+                    {workshops.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.artisan} ({w.name})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-1">
@@ -1734,13 +1768,34 @@ function KarigarSupplyChainContent() {
               </div>
               <div className="space-y-1">
                 <Label className="text-gray-700 dark:text-gray-300">
-                  <T>Artisan</T>
+                  <T>Artisan / Workshop</T>
                 </Label>
-                <Input
-                  value={editJobForm.artisan}
-                  onChange={(e) => setEditJobForm((p) => (p ? { ...p, artisan: e.target.value } : p))}
-                  className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
-                />
+                <Select
+                  value={editJobForm.workshopId || undefined}
+                  onValueChange={(val) => {
+                    const workshop = workshops.find((w) => w.id === val);
+                    setEditJobForm((p) =>
+                      p
+                        ? {
+                            ...p,
+                            workshopId: val,
+                            artisan: workshop?.artisan || p.artisan,
+                          }
+                        : p,
+                    );
+                  }}
+                >
+                  <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
+                    <SelectValue placeholder={t("Select artisan...")} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
+                    {workshops.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.artisan} ({w.name})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label className="text-gray-700 dark:text-gray-300">

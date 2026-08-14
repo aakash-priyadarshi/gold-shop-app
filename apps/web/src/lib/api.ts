@@ -535,7 +535,7 @@ export const karigarApi = {
   createJob: (data: {
     product: string;
     artisan: string;
-    workshopId?: string;
+    workshopId: string;
     grossWeight?: number;
     metalKey?: string;
     allowedWastagePercent?: number;

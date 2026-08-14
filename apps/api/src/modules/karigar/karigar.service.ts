@@ -24,6 +24,10 @@ import {
   UpdateKarigarJobDto,
   UpdateKarigarStageDto,
 } from "./dto/karigar.dto";
+import {
+  issueRequiresWorkshop,
+  wageForFinishedReturn,
+} from "./karigar-ledger";
 
 const BUILT_IN_VAULT: Record<string, string> = {
   goldGrains24k: "Gold Grains (24K)",
@@ -197,6 +201,15 @@ export class KarigarService {
   }
 
   async createJob(shopId: string, dto: CreateKarigarJobDto) {
+    const workshopId = dto.workshopId.trim();
+    if (!issueRequiresWorkshop(workshopId)) {
+      throw new BadRequestException("Select a karigar for this job");
+    }
+    const workshop = await this.prisma.karigarWorkshop.findFirst({
+      where: { id: workshopId, shopId },
+    });
+    if (!workshop) throw new NotFoundException("Karigar not found");
+
     const id = dto.id?.trim() || `job-${Date.now()}`;
     const allowed = dto.allowedWastagePercent ?? 1;
     const job = await this.prisma.$transaction(async (tx) => {
@@ -204,9 +217,9 @@ export class KarigarService {
         data: {
           id,
           shopId,
-          workshopId: dto.workshopId || null,
+          workshopId: workshop.id,
           product: dto.product,
-          artisan: dto.artisan,
+          artisan: dto.artisan?.trim() || workshop.artisan,
           grossWeight: dto.grossWeight ?? 0,
           metalKey: dto.metalKey ?? "goldGrains24k",
           allowedWastagePercent: allowed,
@@ -220,7 +233,7 @@ export class KarigarService {
           },
         },
       });
-      await this.ensureStages(tx, shopId, created.id, dto.workshopId, allowed);
+      await this.ensureStages(tx, shopId, created.id, workshop.id, allowed);
       return created;
     });
     return this.getJob(shopId, job.id);
@@ -294,18 +307,24 @@ export class KarigarService {
     const type = dto.type as KarigarMovementType;
     const workshopId = dto.workshopId ?? job?.workshopId ?? null;
 
+    if (type === "ISSUE" && !issueRequiresWorkshop(workshopId)) {
+      throw new BadRequestException("Select a karigar before issuing metal");
+    }
+
     await this.prisma.$transaction(async (tx) => {
       if (type === "ISSUE") {
+        const workshop = await tx.karigarWorkshop.findFirst({
+          where: { id: workshopId as string, shopId },
+        });
+        if (!workshop) throw new NotFoundException("Karigar not found");
         await this.adjustVault(tx, shopId, metalKey, -weight);
-        if (workshopId) {
-          await tx.karigarWorkshop.update({
-            where: { id: workshopId },
-            data: {
-              metalIssued: { increment: weight },
-              outstandingBalance: { increment: weight },
-            },
-          });
-        }
+        await tx.karigarWorkshop.update({
+          where: { id: workshop.id },
+          data: {
+            metalIssued: { increment: weight },
+            outstandingBalance: { increment: weight },
+          },
+        });
         if (job) {
           const targetStage = stage ?? KarigarStage.CASTING;
           await tx.karigarJobStage.update({
@@ -321,13 +340,23 @@ export class KarigarService {
       ) {
         await this.adjustVault(tx, shopId, metalKey, weight);
         if (workshopId) {
-          await tx.karigarWorkshop.update({
-            where: { id: workshopId },
-            data: {
-              metalReturned: { increment: weight },
-              outstandingBalance: { decrement: weight },
-            },
+          const workshop = await tx.karigarWorkshop.findFirst({
+            where: { id: workshopId, shopId },
           });
+          if (workshop) {
+            const wage =
+              type === "RETURN_FINISHED"
+                ? wageForFinishedReturn(weight, workshop.wageRatePerGram)
+                : 0;
+            await tx.karigarWorkshop.update({
+              where: { id: workshop.id },
+              data: {
+                metalReturned: { increment: weight },
+                outstandingBalance: { decrement: weight },
+                ...(wage > 0 ? { wageDue: { increment: wage } } : {}),
+              },
+            });
+          }
         }
       } else if (type === "ADJUST") {
         await this.adjustVault(tx, shopId, metalKey, weight);

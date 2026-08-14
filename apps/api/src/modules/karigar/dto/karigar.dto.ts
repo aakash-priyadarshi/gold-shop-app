@@ -3,12 +3,14 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsNotEmpty,
   IsNumber,
   IsObject,
   IsOptional,
   IsString,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from "class-validator";
 
@@ -197,10 +199,10 @@ export class CreateKarigarJobDto {
   @MaxLength(200)
   artisan: string;
 
-  @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(64)
-  workshopId?: string;
+  workshopId: string;
 
   @IsOptional()
   @IsNumber()
@@ -263,8 +265,9 @@ export class CreateKarigarMovementDto {
   @Min(0.001)
   weightGrams: number;
 
-  @IsOptional()
+  @ValidateIf((dto) => dto.type === "ISSUE")
   @IsString()
+  @IsNotEmpty()
   @MaxLength(64)
   workshopId?: string;
 

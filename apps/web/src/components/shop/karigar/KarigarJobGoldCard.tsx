@@ -44,6 +44,8 @@ export type JobGold = {
   }>;
 };
 
+type CastingTree = NonNullable<JobGold["trees"]>[number];
+
 function grams(n: number | undefined) {
   return (n ?? 0).toFixed(3);
 }
@@ -74,27 +76,27 @@ function LossGrid({ loss }: { loss?: GoldLossResult }) {
   );
 }
 
-export function KarigarJobGoldCard({
-  job,
+function CastingTreeEditor({
+  jobId,
+  tree,
+  defaultAllowed,
   onChanged,
-  onEdit,
-  onDelete,
+  onCancelNew,
 }: {
-  job: JobGold;
+  jobId: string;
+  tree?: CastingTree;
+  defaultAllowed: number;
   onChanged: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onCancelNew?: () => void;
 }) {
-  const tree = job.trees?.[0];
   const [treeForm, setTreeForm] = useState({
-    issued: String(tree?.issuedGrams ?? job.goldLoss?.issued ?? ""),
+    issued: String(tree?.issuedGrams ?? ""),
     finished: String(tree?.finishedGrams ?? ""),
     sprue: String(tree?.sprueButtonGrams ?? ""),
     recoverable: String(tree?.recoverableGrams ?? ""),
-    allowed: String(tree?.allowedWastagePercent ?? job.allowedWastagePercent ?? 1),
+    allowed: String(tree?.allowedWastagePercent ?? defaultAllowed),
   });
   const [saving, setSaving] = useState(false);
-  const [stageDraft, setStageDraft] = useState<Record<string, { in: string; out: string; scrap: string; dust: string }>>({});
 
   const saveTree = async () => {
     setSaving(true);
@@ -108,21 +110,88 @@ export function KarigarJobGoldCard({
         allowedWastagePercent: parseFloat(treeForm.allowed) || 0,
       };
       if (tree) {
-        await karigarApi.updateTree(job.id, tree.id, payload);
+        await karigarApi.updateTree(jobId, tree.id, payload);
       } else if (issued > 0) {
-        const created = await karigarApi.createTree(job.id, {
+        const created = await karigarApi.createTree(jobId, {
           issuedGrams: issued,
           allowedWastagePercent: payload.allowedWastagePercent,
         });
         const raw = created.data as { id?: string; data?: { id?: string } };
         const treeId = raw?.data?.id ?? raw?.id;
-        if (treeId) await karigarApi.updateTree(job.id, treeId, payload);
+        if (treeId) await karigarApi.updateTree(jobId, treeId, payload);
       }
       onChanged();
     } finally {
       setSaving(false);
     }
   };
+
+  return (
+    <div className="rounded-lg border border-amber-100 dark:border-amber-900/40 bg-white dark:bg-gray-900 p-3 space-y-2">
+      <p className="text-[11px] font-semibold uppercase text-amber-700">
+        {tree?.label ? tree.label : <T>New casting tree</T>}
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        {(
+          [
+            ["issued", "Issued g"],
+            ["finished", "Finished g"],
+            ["sprue", "Sprue / button g"],
+            ["recoverable", "Recoverable g"],
+            ["allowed", "Allowed %"],
+          ] as const
+        ).map(([key, label]) => (
+          <label key={key} className="text-[10px] text-gray-500 space-y-1">
+            <T>{label}</T>
+            <Input
+              className="h-8 text-xs"
+              value={treeForm[key]}
+              onChange={(e) =>
+                setTreeForm((prev) => ({ ...prev, [key]: e.target.value }))
+              }
+            />
+          </label>
+        ))}
+      </div>
+      {tree?.goldLoss && <LossGrid loss={tree.goldLoss} />}
+      {tree?.lines && tree.lines.length > 0 && (
+        <ul className="text-[11px] text-gray-600 space-y-0.5">
+          {tree.lines.map((line) => (
+            <li key={line.id}>
+              {line.label}: {grams(line.weightGrams)} g
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex gap-2">
+        <Button size="sm" disabled={saving} onClick={() => void saveTree()} className="bg-amber-500 text-white">
+          <T>Save tree</T>
+        </Button>
+        {onCancelNew && (
+          <Button size="sm" variant="ghost" disabled={saving} onClick={onCancelNew}>
+            <T>Cancel</T>
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function KarigarJobGoldCard({
+  job,
+  onChanged,
+  onEdit,
+  onDelete,
+}: {
+  job: JobGold;
+  onChanged: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const trees = job.trees ?? [];
+  const [addingTree, setAddingTree] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [stageDraft, setStageDraft] = useState<Record<string, { in: string; out: string; scrap: string; dust: string }>>({});
 
   const saveStage = async (stage: KarigarStageCode) => {
     const draft = stageDraft[stage];
@@ -168,46 +237,43 @@ export function KarigarJobGoldCard({
 
       <LossGrid loss={job.goldLoss} />
 
-      <div data-tour="supply-casting-tree" className="rounded-lg border border-amber-100 dark:border-amber-900/40 bg-white dark:bg-gray-900 p-3 space-y-2">
+      <div data-tour="supply-casting-tree" className="space-y-2">
         <p className="text-[11px] font-semibold uppercase text-amber-700">
-          <T>Casting tree</T>
+          <T>Casting trees</T>
         </p>
         <p className="text-[11px] text-gray-500">
           <T>Issued gold vs finished pieces, sprue/button, and recoverable scrap. Loss is calculated — it is not billing wastage.</T>
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {[
-            ["issued", "Issued g"],
-            ["finished", "Finished g"],
-            ["sprue", "Sprue / button g"],
-            ["recoverable", "Recoverable g"],
-            ["allowed", "Allowed %"],
-          ].map(([key, label]) => (
-            <label key={key} className="text-[10px] text-gray-500 space-y-1">
-              <T>{label}</T>
-              <Input
-                className="h-8 text-xs"
-                value={treeForm[key as keyof typeof treeForm]}
-                onChange={(e) =>
-                  setTreeForm((prev) => ({ ...prev, [key]: e.target.value }))
-                }
-              />
-            </label>
-          ))}
-        </div>
-        {tree?.goldLoss && <LossGrid loss={tree.goldLoss} />}
-        {tree?.lines && tree.lines.length > 0 && (
-          <ul className="text-[11px] text-gray-600 space-y-0.5">
-            {tree.lines.map((line) => (
-              <li key={line.id}>
-                {line.label}: {grams(line.weightGrams)} g
-              </li>
-            ))}
-          </ul>
+        {trees.map((tree) => (
+          <CastingTreeEditor
+            key={tree.id}
+            jobId={job.id}
+            tree={tree}
+            defaultAllowed={job.allowedWastagePercent ?? 1}
+            onChanged={onChanged}
+          />
+        ))}
+        {addingTree && (
+          <CastingTreeEditor
+            jobId={job.id}
+            defaultAllowed={job.allowedWastagePercent ?? 1}
+            onChanged={() => {
+              setAddingTree(false);
+              onChanged();
+            }}
+            onCancelNew={() => setAddingTree(false)}
+          />
         )}
-        <Button size="sm" disabled={saving} onClick={() => void saveTree()} className="bg-amber-500 text-white">
-          <T>Save tree</T>
-        </Button>
+        {!addingTree && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[11px]"
+            onClick={() => setAddingTree(true)}
+          >
+            <T>Add casting tree</T>
+          </Button>
+        )}
       </div>
 
       <div className="space-y-2">
