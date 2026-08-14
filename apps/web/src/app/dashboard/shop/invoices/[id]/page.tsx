@@ -38,6 +38,7 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { useAuth } from "@/hooks/useAuth";
 import { invoicesApi, shopsApi } from "@/lib/api";
 import { printBill, type BillSettings } from "@/lib/billPrint";
+import { invalidateInvoicePdfCache } from "@/lib/invoicePdf";
 import {
   resolveBillShopAddress,
   resolveBillShopName,
@@ -489,6 +490,7 @@ export default function InvoiceDetailPage() {
           });
           recorded += 1;
         }
+        invalidateInvoicePdfCache(invoiceId);
         toast({
           title: t("Split payment recorded"),
           description: formatPaymentSummary(legs, invoice.currency),
@@ -508,6 +510,7 @@ export default function InvoiceDetailPage() {
                 )
               : error.response?.data?.message || t("Error"),
         });
+        invalidateInvoicePdfCache(invoiceId);
         loadInvoice();
       } finally {
         setIsSubmitting(false);
@@ -538,6 +541,7 @@ export default function InvoiceDetailPage() {
         paymentMethod,
         idempotencyKey: crypto.randomUUID(),
       });
+      invalidateInvoicePdfCache(invoiceId);
       toast({
         title: t("Payment Recorded"),
         description: `${invoice?.currency} ${amount.toLocaleString()} via ${paymentMethodLabel(paymentMethod)}`,
@@ -560,6 +564,7 @@ export default function InvoiceDetailPage() {
     setIsSubmitting(true);
     try {
       await invoicesApi.void(invoiceId);
+      invalidateInvoicePdfCache(invoiceId);
       toast({ title: t("Invoice Voided") });
       setVoidDialogOpen(false);
       loadInvoice();

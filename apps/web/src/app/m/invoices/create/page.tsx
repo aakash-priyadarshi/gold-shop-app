@@ -358,6 +358,7 @@ function MobileInvoiceCreateInner() {
         wastageRule,
         customerName,
         customerPhone: customerPhone.trim() || undefined,
+        phoneCountryCode: COUNTRY_PHONE_CODES[shopCountry] || "+977",
         customerEmail: customerEmail.trim() || undefined,
         customerAddress: customerAddress.trim() || undefined,
         customerType,

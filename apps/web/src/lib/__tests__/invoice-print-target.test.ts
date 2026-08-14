@@ -121,4 +121,49 @@ describe("targetFromConfig", () => {
     expect(target.mode).toBe("system");
     expect(target.subtitle).toContain("HP LaserJet Pro");
   });
+
+  it("does not send BLE/USB jobs to an OS thermal spooler name", () => {
+    const cfg = {
+      ...defaultHardwareConfig,
+      printer: {
+        ...defaultHardwareConfig.printer,
+        enabled: true,
+        transport: "bluetooth" as const,
+        paperWidth: 58 as const,
+        deviceLabel: "SEZNIK MiniX",
+      },
+    };
+    const target = targetFromConfig(cfg, [
+      {
+        id: "os:TM",
+        name: "EPSON TM-T20",
+        kind: "thermal" as const,
+        source: "os" as const,
+      },
+    ]);
+    expect(target.mode).toBe("thermal");
+    expect(target.transport).toBe("bluetooth");
+    expect(target.osPrinterName).toBeUndefined();
+  });
+
+  it("keeps A4 when the seller explicitly chose office print", () => {
+    const cfg = {
+      ...defaultHardwareConfig,
+      printer: {
+        ...defaultHardwareConfig.printer,
+        transport: "browser" as const,
+        preferA4: true,
+      },
+    };
+    const target = targetFromConfig(cfg, [
+      {
+        id: "os:TM",
+        name: "EPSON TM-T20",
+        kind: "thermal" as const,
+        source: "os" as const,
+      },
+    ]);
+    expect(target.mode).toBe("system");
+    expect(target.osPrinterName).toBeUndefined();
+  });
 });

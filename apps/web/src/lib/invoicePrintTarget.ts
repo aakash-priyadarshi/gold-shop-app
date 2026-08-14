@@ -100,12 +100,12 @@ export function targetFromConfig(
       osPrinterName:
         cfg.printer.transport === "os"
           ? cfg.printer.deviceLabel || osThermal?.name
-          : osThermal?.name,
+          : undefined,
       detected,
     };
   }
 
-  if (osThermal) {
+  if (osThermal && !cfg.printer.preferA4) {
     return {
       mode: "thermal",
       subtitle: `Thermal receipt · ${paperWidthLabel(cfg)} · ${osThermal.name}`,

@@ -8,6 +8,15 @@ const pdfCache = new Map<
   { blob: Blob; filename: string; at: number }
 >();
 
+/** Drop a cached PDF after payment/void so Share/Download shows current balance. */
+export function invalidateInvoicePdfCache(invoiceId?: string) {
+  if (!invoiceId) {
+    pdfCache.clear();
+    return;
+  }
+  pdfCache.delete(invoiceId);
+}
+
 async function blobErrorMessage(blob: Blob, status: number): Promise<string> {
   try {
     const text = await blob.text();

@@ -122,6 +122,69 @@ jobs:
         env:
           SMOKE_TEST_URL: "https://api.orivraa.com/api"
 
+  seller-api:
+    name: Seller API pipeline (Production)
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Restore modules
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            e2e/node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Authenticated seller API pipeline
+        continue-on-error: true
+        run: node e2e/scripts/api-core-pipeline.mjs
+        env:
+          E2E_API_URL: "https://api.orivraa.com/api"
+          E2E_TOKEN: ${{ secrets.SHOP_SMOKE_TOKEN }}
+
+      - name: Admin seller-core probe
+        continue-on-error: true
+        run: |
+          TOKEN="${{ secrets.ORIVRAA_ADMIN_TOKEN }}"
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::ORIVRAA_ADMIN_TOKEN not set — skip in-process seller-core"
+            exit 0
+          fi
+          CODE=$(curl -s -o /tmp/seller_core.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/json" \
+            -H "User-Agent: Mozilla/5.0 (compatible; Orivraa-SmokeTest/1.0; +https://orivraa.com)" \
+            "https://api.orivraa.com/api/testing/seller-core")
+          echo "HTTP $CODE"
+          head -c 2000 /tmp/seller_core.json || true
+          echo ""
+          if [ "$CODE" != "200" ] && [ "$CODE" != "201" ]; then
+            echo "::warning::seller-core returned $CODE (admin JWT/gshop token must have ADMIN role)"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          data = json.load(open("/tmp/seller_core.json"))
+          payload = data.get("data", data)
+          failed = payload.get("failed", 0)
+          print(f"passed={payload.get('passed')} failed={failed} skipped={payload.get('skipped')}")
+          if failed:
+            raise SystemExit(1)
+          PY
+
   # ══════════════════════════════════════════════════════════
   # E2E Browser Tests (Playwright → production)
   # ══════════════════════════════════════════════════════════

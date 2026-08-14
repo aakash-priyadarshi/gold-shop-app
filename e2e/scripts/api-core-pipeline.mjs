@@ -66,8 +66,11 @@ const endpoints = [
   ['component-pricing', 'GET component pricing', '/shops/my-shop/component-pricing'],
   ['quotes', 'GET shop quotes', '/shop-quotes?limit=5'],
   ['invoices', 'GET invoices', '/invoices?limit=5'],
+  ['invoice-settings', 'GET invoice settings', '/invoices/settings'],
   ['inventory', 'GET in-stock inventory', '/inventory?inStock=true&limit=5'],
   ['market-rates', 'GET market rates', '/market-rates?country=NP&currency=NPR'],
+  ['pos-session', 'GET POS active session', '/pos/session/active'],
+  ['tax-summary-np', 'GET NP tax summary', '/pricing/tax/summary?region=NP'],
 ];
 
 for (const [id, name, path] of endpoints) {
@@ -90,6 +93,22 @@ if (shopId) {
       record('verify-bill', 'Public verify-bill page', verify.status === 200, `HTTP ${verify.status}`);
     } else {
       record('verify-bill', 'Public verify-bill page', true, 'skipped (no invoice with token)');
+    }
+    const invoiceId = first?.id;
+    if (invoiceId) {
+      const pdfRes = await fetch(`${API}/invoices/${invoiceId}/pdf`, {
+        headers: { ...BROWSER_HEADERS, Accept: 'application/pdf' },
+      });
+      const buf = Buffer.from(await pdfRes.arrayBuffer());
+      const magic = buf.subarray(0, 4).toString('utf8');
+      record(
+        'invoice-pdf',
+        'GET invoice PDF',
+        pdfRes.ok && magic.startsWith('%PDF'),
+        `HTTP ${pdfRes.status} magic=${magic.slice(0, 4)} bytes=${buf.length}`,
+      );
+    } else {
+      record('invoice-pdf', 'GET invoice PDF', true, 'skipped (no invoice id)');
     }
   }
 }

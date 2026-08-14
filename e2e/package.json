@@ -11,6 +11,9 @@
     "demo:setup": "ts-node auth-setup.ts",
     "demo": "playwright test seller-demo --project=chromium --headed --workers=1",
     "auth:import": "node scripts/import-session.mjs",
+    "seller-api": "node scripts/api-core-pipeline.mjs",
+    "kane:public": "node kane/run.mjs --suite public",
+    "kane:seller": "node kane/run.mjs --suite seller",
     "postinstall": "playwright install chromium"
   },
   "devDependencies": {

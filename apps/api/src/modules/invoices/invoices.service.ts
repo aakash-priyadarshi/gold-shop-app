@@ -33,6 +33,7 @@ import {
 import { AccountingService } from "../accounting/accounting.service";
 import { StockCommitService } from "./stock-commit.service";
 import { SaleBuilderService } from "./sale-builder.service";
+import { invoiceTaxCategoryAliases } from "./tax-category-aliases";
 import { MailService, EMAIL_SENDERS } from "../mail/mail.service";
 import { SmsService } from "../notifications/sms.service";
 import { InvoicePdfService } from "./invoice-pdf.service";
@@ -101,12 +102,6 @@ export class InvoicesService {
     return "OTHER";
   }
 
-  private taxCategoryAliases(category: TaxableComponent["category"]): string[] {
-    if (category.endsWith("_METAL")) return [category, "METAL"];
-    if (category.endsWith("_MAKING")) return [category, "MAKING"];
-    return [category];
-  }
-
   private async calculateServerTax(
     region: MarketRegion,
     components: TaxableComponent[],
@@ -134,7 +129,7 @@ export class InvoicesService {
 
     if (dbRules.length > 0) {
       const lines = components.map((component) => {
-        const aliases = this.taxCategoryAliases(component.category);
+        const aliases = invoiceTaxCategoryAliases(component.category);
         const rule = dbRules.find(
           (candidate) =>
             aliases.includes(candidate.category.toUpperCase()) ||
@@ -212,12 +207,13 @@ export class InvoicesService {
     const stockLines = StockCommitService.linesFromInvoiceItems(dto.lineItems);
     const seenIds = new Set<string>();
     for (const line of stockLines) {
-      if (seenIds.has(line.inventoryItemId)) {
+      const key = `${line.inventoryItemId}:${line.variantId || ""}`;
+      if (seenIds.has(key)) {
         throw new BadRequestException(
           `Duplicate catalog item on invoice: ${line.label || line.inventoryItemId}`,
         );
       }
-      seenIds.add(line.inventoryItemId);
+      seenIds.add(key);
     }
 
     // Run plan check + shop load in parallel (was sequential ~2 round-trips)
@@ -1149,7 +1145,7 @@ export class InvoicesService {
           status: "VOID",
           voidedAt: new Date(),
           paidAmount: 0,
-          balanceDue: invoice.totalAmount,
+          balanceDue: 0,
           paymentStatus: "UNPAID",
           paidAt: null,
         },

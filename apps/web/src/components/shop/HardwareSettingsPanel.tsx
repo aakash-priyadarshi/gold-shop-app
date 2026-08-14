@@ -103,7 +103,7 @@ const TRANSPORTS: {
     label: "Wi-Fi thermal (raw)",
     Icon: Wifi,
     hint: "58/80mm ESC/POS over TCP 9100 — Orivraa Desktop app",
-    available: () => true,
+    available: () => isTauriDesktop(),
   },
 ];
 
@@ -476,7 +476,9 @@ export default function HardwareSettingsPanel({
               return (
                 <button
                   key={t.id}
-                  onClick={() => updatePrinter({ transport: t.id })}
+                  onClick={() =>
+                    updatePrinter({ transport: t.id, preferA4: false })
+                  }
                   disabled={disabled}
                   className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-colors ${
                     active
@@ -569,6 +571,7 @@ export default function HardwareSettingsPanel({
                           ? {
                               ...c.printer,
                               enabled: true,
+                              preferA4: false,
                               transport:
                                 item.source === "os"
                                   ? ("os" as const)
@@ -581,7 +584,11 @@ export default function HardwareSettingsPanel({
                                         : c.printer.transport,
                               deviceLabel: item.name,
                             }
-                          : { ...c.printer, transport: "browser" as const };
+                          : {
+                              ...c.printer,
+                              transport: "browser" as const,
+                              preferA4: true,
+                            };
                       const next = { ...c, printer };
                       saveHardwareConfig(next);
                       return next;

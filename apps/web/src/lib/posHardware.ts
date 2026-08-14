@@ -52,6 +52,11 @@ export interface PrinterConfig {
   autoPrint: boolean;
   /** Open the cash drawer on every cash bill. */
   kickCashDrawer: boolean;
+  /**
+   * Seller explicitly chose A4 / office print. When true, Desktop must not
+   * auto-pick an OS-listed thermal over that choice.
+   */
+  preferA4?: boolean;
 }
 
 /** Zebra / ZPL jewellery tag printer (Web Serial or .zpl download). */
@@ -739,10 +744,37 @@ export async function printReceipt(
   }
 }
 
-/** Send only a cash-drawer kick pulse through the printer. */
+async function sendRawToConfiguredPrinter(
+  bytes: Uint8Array<ArrayBuffer>,
+): Promise<void> {
+  const cfg = loadHardwareConfig();
+  if (cfg.printer.transport === "os" && isTauriDesktop()) {
+    await printDesktopNamedPrinter(cfg.printer.deviceLabel, bytes);
+    return;
+  }
+  if (cfg.printer.transport === "webusb") {
+    await printReceiptBytes(bytes);
+    return;
+  }
+  if (cfg.printer.transport === "network") {
+    await printDesktopRawTcp(cfg.printer.host, cfg.printer.port, bytes);
+    return;
+  }
+  if (cfg.printer.transport === "bluetooth") {
+    await printBluetoothReceiptBytes(bytes);
+    return;
+  }
+  throw new Error(
+    "Cash drawer kick needs a paired thermal printer (USB, Bluetooth, Wi-Fi, or Desktop).",
+  );
+}
+
+/** Send only a cash-drawer kick pulse through the configured printer. */
 export async function kickCashDrawer(): Promise<void> {
-  const bytes = new Uint8Array([ESC, 0x70, 0x00, 0x32, 0x32]);
-  await printReceiptBytes(bytes);
+  const bytes: Uint8Array<ArrayBuffer> = new Uint8Array([
+    ESC, 0x70, 0x00, 0x32, 0x32,
+  ]);
+  await sendRawToConfiguredPrinter(bytes);
 }
 
 /**

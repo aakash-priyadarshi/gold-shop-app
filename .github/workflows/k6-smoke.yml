@@ -1,0 +1,27 @@
+# Light k6 smoke against production. Manual or weekly — never on every deploy.
+# Heavy load.js / stress.js can take the shop down; do not wire those to master.
+
+name: k6 smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 0" # Sunday 03:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  k6-smoke:
+    name: k6 production smoke (1 VU)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run k6 smoke
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: k6/smoke.js
+        env:
+          API_BASE_URL: https://api.orivraa.com/api
+          WEB_BASE_URL: https://www.orivraa.com

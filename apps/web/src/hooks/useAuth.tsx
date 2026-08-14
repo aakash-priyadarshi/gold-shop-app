@@ -391,14 +391,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         syncShopCountryToPreferences(user.shop);
       }
     } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401 || status === 403) {
+        clearTokens();
+        setState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: null,
+        });
+        return;
+      }
       console.error("Failed to fetch user:", error);
-      clearTokens();
-      setState({
-        user: null,
-        isAuthenticated: false,
+      setState((prev) => ({
+        ...prev,
         isLoading: false,
-        error: null,
-      });
+      }));
     }
   }, []);
 

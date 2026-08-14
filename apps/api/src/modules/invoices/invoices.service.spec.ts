@@ -18,8 +18,9 @@ const mockPrisma: any = {
   invoicePayment: { findUnique: jest.fn(), create: jest.fn() },
   order: { findFirst: jest.fn() },
   journalEntry: { findMany: jest.fn() },
-  invoiceSequence: { upsert: invoiceSequenceUpsert },
-  taxRuleConfig: { findMany: jest.fn() },
+    invoiceSequence: { upsert: invoiceSequenceUpsert },
+    taxRuleConfig: { findMany: jest.fn() },
+    inventoryItem: { findMany: jest.fn() },
   $transaction: jest.fn(async (callback: (tx: any) => unknown) =>
     callback(mockPrisma),
   ),
@@ -87,6 +88,7 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
     mockPrisma.invoicePayment.findUnique.mockResolvedValue(null);
     mockPrisma.order.findFirst.mockResolvedValue(null);
     mockPrisma.journalEntry.findMany.mockResolvedValue([]);
+    mockPrisma.inventoryItem.findMany.mockResolvedValue([]);
     mockPrisma.invoice.update.mockImplementation(({ data }: any) =>
       Promise.resolve({ id: "invoice-1", totalAmount: 118, ...data }),
     );
@@ -270,5 +272,100 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
 
     expect((result as any).idempotentReplay).toBe(true);
     expect(mockAccounting.prepareMonetaryContext).not.toHaveBeenCalled();
+  });
+
+  it("matches GOLD_METAL / GOLD_MAKING lines to seeded PRECIOUS_METAL / MAKING_CHARGE rules", async () => {
+    mockPrisma.shop.findUnique.mockResolvedValue({
+      id: "shop-np",
+      shopName: "Kathmandu Gold",
+      country: "NP",
+      currency: "NPR",
+      address: "New Road",
+      city: "Kathmandu",
+      state: null,
+      contactPhone: "+9779800000000",
+      vatNumber: null,
+      vatRegistrationStatus: "NOT_REGISTERED",
+      panNumber: null,
+      invoiceSettings: null,
+    });
+    mockPrisma.taxRuleConfig.findMany.mockResolvedValue([
+      {
+        category: "PRECIOUS_METAL",
+        rate: 0.005,
+        taxType: "SKILL_PROMOTION_FEE",
+        taxName: "Skill Promotion Fee",
+      },
+      {
+        category: "MAKING_CHARGE",
+        rate: 0.005,
+        taxType: "SKILL_PROMOTION_FEE",
+        taxName: "Skill Promotion Fee",
+      },
+    ]);
+
+    const result = await service.create("shop-np", {
+      customerName: "Walk-in",
+      invoiceCountry: "NP",
+      currency: "NPR",
+      lineItems: [
+        {
+          label: "Gold ring metal",
+          category: "GOLD_METAL",
+          quantity: 1,
+          unitPrice: 10000,
+          amount: 10000,
+        },
+        {
+          label: "Making",
+          category: "GOLD_MAKING",
+          quantity: 1,
+          unitPrice: 2000,
+          amount: 2000,
+        },
+      ],
+    } as any);
+
+    expect(result.taxAmount).toBe(60);
+    expect(result.taxLabel).toContain("Skill Promotion Fee");
+  });
+
+  it("allows the same catalog item twice when variant ids differ", async () => {
+    mockPrisma.inventoryItem.findMany.mockResolvedValue([
+      {
+        id: "item-1",
+        nameEn: "Gold ring",
+        stockQuantity: 10,
+        status: "AVAILABLE",
+      },
+    ]);
+
+    await expect(
+      service.create("shop-123456789", {
+        customerName: "Walk-in",
+        invoiceCountry: "LK",
+        currency: "LKR",
+        lineItems: [
+          {
+            label: "Ring 18k",
+            category: "GOLD_METAL",
+            quantity: 1,
+            unitPrice: 100,
+            amount: 100,
+            inventoryItemId: "item-1",
+            variantId: "var-a",
+          },
+          {
+            label: "Ring 22k",
+            category: "GOLD_METAL",
+            quantity: 1,
+            unitPrice: 100,
+            amount: 100,
+            inventoryItemId: "item-1",
+            variantId: "var-b",
+          },
+        ],
+      } as any),
+    ).resolves.toBeDefined();
   });
 });

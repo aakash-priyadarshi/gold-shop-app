@@ -107,7 +107,8 @@ export function InvoicePrintButton({
             return;
           }
           await printReceipt(receiptPayload, {
-            osPrinterName: next.osPrinterName,
+            osPrinterName:
+              next.transport === "os" ? next.osPrinterName : undefined,
           });
           toast({
             title: t("Sent to thermal receipt printer"),

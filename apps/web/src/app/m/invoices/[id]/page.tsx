@@ -6,6 +6,7 @@ import { InvoiceShareActions } from "@/components/shop/InvoiceShareActions";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { invoicesApi } from "@/lib/api";
+import { invalidateInvoicePdfCache } from "@/lib/invoicePdf";
 import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
 import { printBill } from "@/lib/billPrint";
@@ -84,6 +85,7 @@ export default function MobileInvoiceDetailPage() {
         paymentMethod: method,
         idempotencyKey: crypto.randomUUID(),
       });
+      invalidateInvoicePdfCache(id);
       setAmount("");
       await load();
       toast({ title: "Payment recorded" });

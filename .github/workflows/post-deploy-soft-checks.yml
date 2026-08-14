@@ -100,6 +100,14 @@ jobs:
           fi
           echo "AUTH_SMOKE=ok" >> "$GITHUB_OUTPUT"
 
+      - name: Seller API pipeline + PDF
+        id: seller-api
+        continue-on-error: true
+        run: node e2e/scripts/api-core-pipeline.mjs
+        env:
+          E2E_API_URL: ${{ secrets.PRODUCTION_API_URL }}/api
+          E2E_TOKEN: ${{ secrets.SHOP_SMOKE_TOKEN }}
+
       - name: Summary
         if: always()
         run: |
@@ -109,9 +117,10 @@ jobs:
           echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Public smoke | ${{ steps.smoke.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Auth smoke | ${{ steps.auth-smoke.outcome || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Seller API + PDF | ${{ steps.seller-api.outcome || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "These checks are **warnings only** — deploy is not rolled back." >> "$GITHUB_STEP_SUMMARY"
-          if [[ "${{ steps.smoke.outcome }}" != "success" || "${{ steps.auth-smoke.outcome }}" == "failure" ]]; then
+          if [[ "${{ steps.smoke.outcome }}" != "success" || "${{ steps.auth-smoke.outcome }}" == "failure" || "${{ steps.seller-api.outcome }}" == "failure" ]]; then
             echo "::warning::Post-deploy soft checks reported issues — review job logs"
           fi
 

@@ -30,6 +30,8 @@ export interface MapToCreateDtoInput {
   wastageRule: Pick<ResolvedWastageRule, "mode" | "label">;
   customerName: string;
   customerPhone?: string;
+  /** E.164 prefix such as +977. Applied when customerPhone has no leading +. */
+  phoneCountryCode?: string;
   customerEmail?: string;
   customerAddress?: string;
   customerType?: "B2C" | "B2B";
@@ -122,6 +124,19 @@ export function mapLineItemsToApi(
     });
 }
 
+/** Prefix a local phone with the shop country code unless it is already E.164. */
+export function withPhoneCountryCode(
+  phone?: string,
+  countryCode?: string,
+): string | undefined {
+  const raw = phone?.trim();
+  if (!raw) return undefined;
+  if (raw.startsWith("+")) return raw;
+  const prefix = countryCode?.trim();
+  if (!prefix) return raw;
+  return `${prefix}${raw.replace(/^0+/, "")}`;
+}
+
 export function mapToCreateDto(input: MapToCreateDtoInput): Record<string, unknown> {
   const apiLineItems = mapLineItemsToApi(
     input.lineItems,
@@ -134,7 +149,10 @@ export function mapToCreateDto(input: MapToCreateDtoInput): Record<string, unkno
     walkInCustomerId: input.walkInCustomerId || undefined,
     shopQuoteId: input.shopQuoteId || undefined,
     customerName: input.customerName.trim(),
-    customerPhone: input.customerPhone || undefined,
+    customerPhone: withPhoneCountryCode(
+      input.customerPhone,
+      input.phoneCountryCode,
+    ),
     customerEmail: input.customerEmail || undefined,
     customerAddress: input.customerAddress || undefined,
     lineItems: apiLineItems,

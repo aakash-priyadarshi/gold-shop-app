@@ -1,0 +1,22 @@
+You are checking the Orivraa shopkeeper UI. This run is read-only.
+
+If you are not already logged in as a shopkeeper, stop and report that login
+is required. Do not submit the login form. Cloudflare Turnstile blocks
+headless login.
+
+If you are logged in, visit these pages and confirm they render without a
+crash or error boundary:
+
+1. Shop dashboard
+2. POS
+3. Invoices list
+4. One existing invoice detail page if a row exists — confirm a Print button
+   is visible. Do not print. Do not record a payment. Do not void.
+5. Hardware / receipt printer settings — confirm thermal vs A4 / office
+   options are described.
+
+Do not create invoices, quotes, POS sales, or customers.
+Do not change hardware settings unless you can revert them; prefer looking only.
+
+Report: which pages loaded, which controls you saw, and any error toasts or
+broken layouts.

@@ -35,7 +35,7 @@
 | `api.orivraa.com`      | `adj2paqz.up.railway.app`   | NestJS API                                  |
 | `images.orivraa.com`   | Cloudflare Worker (`100::`) | R2 image CDN — **not Railway**              |
 | `releases.orivraa.com` | Cloudflare Worker           | Desktop installer CDN — **not Railway**     |
-| `team.orivraa.com`     | Vercel DNS                  | Separate team product — **still on Vercel** |
+| `team.orivraa.com`     | —                           | Team product paused; Vercel project removed |
 
 All production hostnames above are **proxied through Cloudflare** (orange cloud).
 
@@ -588,8 +588,8 @@ Railway and Cloudflare MCP servers have **permanent authentication** configured 
 - **Cloudflare** — `user-cloudflare-api` MCP for DNS, Workers, R2. Account `c3219a748734c4ae628206c10c8b2c05`.
   Use for DNS changes when adding Railway custom domains.
 
-- **Vercel** — Still used for `team.orivraa.com` only. MCP token may remain configured but
-  **Orivraa main frontend is no longer on Vercel.**
+- **Vercel** — Not used for Orivraa. Shop web + API are Railway; `orivraa.com` was
+  removed from the Vercel domain list. MCP may still exist for other products (e.g. ViharaOS).
 
 If either MCP stops working, check the config file first. Do NOT delete OAuth session
 files or change the auth method without explicit user instruction.

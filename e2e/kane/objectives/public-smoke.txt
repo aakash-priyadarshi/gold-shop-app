@@ -1,0 +1,12 @@
+Go to the starting URL.
+
+Verify the Orivraa marketing or login experience loads in a real browser.
+
+Checks:
+1. The page is reachable (not a blank error or 5xx).
+2. If this is the login page, confirm email and password fields are visible. Do not submit the form. Do not solve CAPTCHA.
+3. If a navigation menu exists, confirm there is a way to reach Login or Dashboard.
+4. Optionally open /download and confirm installer download links are present.
+
+Do not create an account. Do not click through checkout, POS, or invoice create.
+Report which URLs you opened and whether each loaded.
