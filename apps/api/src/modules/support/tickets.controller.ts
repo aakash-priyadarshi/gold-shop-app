@@ -125,6 +125,7 @@ export class TicketsController {
     @Req() req: any,
     @CurrentUser("role") role: string,
     @CurrentUser("firstName") firstName: string | undefined,
+    @CurrentUser("email") email: string | undefined,
     @Body()
     body: {
       message: string;
@@ -141,7 +142,7 @@ export class TicketsController {
       req.ip,
       body.sessionId,
       userAgent,
-      { botName: body.botName, userName: body.userName || firstName },
+      { botName: body.botName, userName: body.userName || firstName, authenticatedEmail: email },
       role,
     );
   }

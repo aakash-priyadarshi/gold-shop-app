@@ -22,6 +22,7 @@ import {
     sellerSubscriptionsApi,
     subscriptionPlansApi,
 } from "@/lib/api";
+import { formatAiCredits, toCreditNumber } from "@gold-shop/shared";
 import { useT } from "@/providers/translation-provider";
 import {
     ArrowRight,
@@ -134,8 +135,31 @@ export default function SellerBillingPage() {
 function SellerBillingPageInner() {
   const t = useT();
   const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const billingTab =
+    tabParam === "credits" || tabParam === "upgrade" ? tabParam : "plan";
 
   useEffect(() => {
+    const creditsStatus = searchParams.get("credits");
+    if (creditsStatus === "success") {
+      toast({
+        title: t("Payment received"),
+        description: t(
+          "Your AI credits will appear in a few seconds. Refresh this tab if the balance has not updated yet.",
+        ),
+      });
+      window.history.replaceState({}, "", "/dashboard/shop/billing?tab=credits");
+      return;
+    }
+    if (creditsStatus === "cancelled") {
+      toast({
+        title: t("Purchase cancelled"),
+        description: t("No credits were added. You can buy credits anytime from this tab."),
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", "/dashboard/shop/billing?tab=credits");
+      return;
+    }
     if (searchParams.get("success") === "true") {
       toast({
         title: t("Payment Successful!"),
@@ -168,12 +192,12 @@ function SellerBillingPageInner() {
             </p>
           </div>
 
-          <Tabs defaultValue="plan" className="space-y-4" data-tour="billing-tabs">
+          <Tabs defaultValue={billingTab} className="space-y-4" data-tour="billing-tabs">
             <TabsList>
               <TabsTrigger value="plan">
                 <T>My Plan</T>
               </TabsTrigger>
-              <TabsTrigger value="credits">
+              <TabsTrigger value="credits" data-tour="billing-credits">
                 <T>AI Credits</T>
               </TabsTrigger>
               <TabsTrigger value="upgrade">
@@ -697,7 +721,7 @@ function AiCreditsTab() {
           .getMySubscription()
           .catch(() => ({ data: null })),
       ]);
-      setBalance(balRes.data?.balance ?? 0);
+      setBalance(toCreditNumber(balRes.data?.balance));
       setLedger(
         Array.isArray(ledRes.data) ? ledRes.data : (ledRes.data?.data ?? []),
       );
@@ -751,6 +775,9 @@ function AiCreditsTab() {
 
     try {
       setBuying(true);
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem("pendingAiCreditPurchase", "1");
+      }
       const res = await aiCreditsApi.purchaseCredits({
         creditAmount: buyAmount,
         pricePerCredit: planInfo.extraCreditPrice,
@@ -843,7 +870,7 @@ function AiCreditsTab() {
                   <T>Available AI Credits</T>
                 </p>
                 <p className="text-3xl font-bold">
-                  {balance?.toLocaleString() ?? 0}
+                  {formatAiCredits(balance ?? 0)}
                 </p>
               </div>
             </div>
@@ -1071,10 +1098,10 @@ function AiCreditsTab() {
                       {entry.action === "DEBIT" || entry.action === "EXPIRE"
                         ? "-"
                         : "+"}
-                      {entry.amount}
+                      {formatAiCredits(entry.amount)}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      bal: {entry.balanceAfter}
+                      bal: {formatAiCredits(entry.balanceAfter)}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {new Date(entry.createdAt).toLocaleDateString()}

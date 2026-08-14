@@ -325,6 +325,16 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='product-desc-generate']",
+      popover: {
+        title: "Auto description",
+        description:
+          "After jewellery type, metal, and weight are filled, Fill from specs writes a template you can edit. Pro+ shops can also Generate with AI for 0.25 credits. If credits run out, buy more from Billing → AI Credits.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
       element: "[data-tour='inventory-reprice']",
       popover: {
         title: "Reprice from rates",
@@ -1150,10 +1160,13 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='billing-credits']",
       popover: {
         title: "AI Credits",
         description:
-          "Credits are used for AI-powered features: auto-generated product descriptions, the voice sales agent, smart message replies, and price suggestions. Top up credits anytime from the AI Credits tab.",
+          "Pro+ includes monthly AI credits. Product descriptions cost 0.25 credits. One design preview image costs 1 credit; generating 5 Design Studio variations costs 5 credits. Buy more from this tab if the balance runs out. Failed generations are refunded. The AI assistant chat and in-app tooltips stay free on every plan.",
+        side: "bottom",
+        align: "start",
       },
     },
   ],

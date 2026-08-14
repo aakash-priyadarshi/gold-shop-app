@@ -128,6 +128,20 @@ export class RedisService implements OnModuleDestroy {
   }
 
   /**
+   * Decrement a counter. Missing keys become -1 (Redis DECR).
+   * Returns the new value, or -1 if Redis is unavailable.
+   */
+  async decr(key: string): Promise<number> {
+    if (!this.isAvailable()) return -1;
+    try {
+      return await this.client!.decr(key);
+    } catch (error) {
+      this.logger.error(`Redis DECR error for key ${key}: ${error.message}`);
+      return -1;
+    }
+  }
+
+  /**
    * Check if a key exists
    */
   async exists(key: string): Promise<boolean> {

@@ -42,7 +42,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -50,6 +49,7 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi } from "@/lib/api";
 import { getImageUrl } from "@/lib/image-upload";
 import { SetBuilderDialog } from "@/components/shop/SetBuilderDialog";
+import { ProductDescriptionGenerator } from "@/components/shop/ProductDescriptionGenerator";
 import { useT } from "@/providers/translation-provider";
 import {
     Edit,
@@ -1501,20 +1501,6 @@ export default function ShopProductsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="description">
-                    <T>Description</T>
-                  </Label>
-                  <Textarea
-                    id="description"
-                    value={formData.descriptionEn}
-                    onChange={(e) =>
-                      setFormData({ ...formData, descriptionEn: e.target.value })
-                    }
-                    placeholder="Describe your product..."
-                    rows={2}
-                  />
-                </div>
               </div>
               </div>
 
@@ -1887,6 +1873,25 @@ export default function ShopProductsPage() {
                   </div>
                 )}
               </div>
+
+              <ProductDescriptionGenerator
+                shopId={user?.shop?.id}
+                value={formData.descriptionEn}
+                onChange={(descriptionEn) =>
+                  setFormData({ ...formData, descriptionEn })
+                }
+                specs={{
+                  jewelleryType: formData.jewelleryType,
+                  metalType: formData.metalType,
+                  purity: formData.purity,
+                  weightGrams:
+                    weightUnit === "tola"
+                      ? tolaToGrams(parseFloat(formData.totalWeightGrams) || 0)
+                      : parseFloat(formData.totalWeightGrams) || 0,
+                  weightUnit: weightUnit === "tola" ? "TOLA" : "GRAM",
+                  gemstones: formData.gemstones,
+                }}
+              />
 
               {/* Pricing */}
               <div className="rounded-lg border bg-muted/20 p-4 space-y-4">

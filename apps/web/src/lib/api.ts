@@ -375,6 +375,18 @@ export const inventoryApi = {
   getById: (id: string) => api.get(`/inventory/${id}`),
   create: (shopId: string, data: any) =>
     api.post(`/inventory/shop/${shopId}`, data),
+  generateDescription: (
+    shopId: string,
+    data: {
+      jewelleryType?: string;
+      metalType?: string;
+      purity?: string;
+      weightGrams?: number;
+      weightUnit?: "GRAM" | "TOLA";
+      gemstones?: Array<{ type?: string; cut?: string; caratWeight?: number }>;
+      idempotencyKey?: string;
+    },
+  ) => api.post(`/inventory/shop/${shopId}/generate-description`, data),
   update: (id: string, data: any) => api.patch(`/inventory/${id}`, data),
   delete: (id: string) => api.delete(`/inventory/${id}`),
   getShopInventory: (shopId: string, params?: any) =>
@@ -2021,6 +2033,7 @@ export const testingApi = {
   // Smoke tests
   runSmokeTests: () => api.get("/testing/smoke"),
   triggerSmokeTests: () => api.post("/testing/smoke"),
+  runSellerCoreTests: () => api.post("/testing/seller-core"),
   // E2E (Playwright)
   runE2ETests: () => api.post("/testing/e2e"),
   getLatestE2EReport: () => api.get("/testing/e2e"),

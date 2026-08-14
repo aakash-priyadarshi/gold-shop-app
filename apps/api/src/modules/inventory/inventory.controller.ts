@@ -15,6 +15,7 @@ import { InventoryService } from "./inventory.service";
 import { InventorySetsService, InventoryLocationTransferService } from "./inventory-sets.service";
 import { StorageLocationsService } from "./storage-locations.service";
 import { StockAuditService } from "./stock-audit.service";
+import { ProductDescriptionService } from "./product-description.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
@@ -24,6 +25,7 @@ import {
   UpdateInventoryItemDto,
   InventoryFilterDto,
   MultiTagPrintDto,
+  GenerateProductDescriptionDto,
 } from "./dto/inventory.dto";
 import {
   CreateSetDto,
@@ -45,6 +47,7 @@ export class InventoryController {
     private locationsService: StorageLocationsService,
     private transferService: InventoryLocationTransferService,
     private stockAuditService: StockAuditService,
+    private productDescriptionService: ProductDescriptionService,
   ) {}
 
   // Public endpoints
@@ -218,6 +221,38 @@ export class InventoryController {
       throw new ForbiddenException("You can only add items to your own shop");
     }
     return this.inventoryService.create(shopId, userId, dto);
+  }
+
+  @Post("shop/:shopId/generate-description")
+  @UseGuards(JwtAuthGuard, RolesGuard, FeatureGateGuard)
+  @Roles("SHOPKEEPER")
+  @RequireFeature("aiDesignGeneration")
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Generate a Pro+ AI product description (0.25 AI credits)",
+  })
+  async generateDescription(
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body() dto: GenerateProductDescriptionDto,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only generate descriptions for your own shop");
+    }
+    return this.productDescriptionService.generateAiDescription({
+      userId,
+      shopId,
+      specs: {
+        jewelleryType: dto.jewelleryType,
+        metalType: dto.metalType,
+        purity: dto.purity,
+        weightGrams: dto.weightGrams,
+        weightUnit: dto.weightUnit,
+        gemstones: dto.gemstones,
+      },
+      idempotencyKey: dto.idempotencyKey,
+    });
   }
 
   @Get("shop/:shopId/items")

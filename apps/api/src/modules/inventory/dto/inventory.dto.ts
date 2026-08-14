@@ -4,12 +4,14 @@ import {
   IsOptional,
   IsArray,
   IsBoolean,
+  IsIn,
   ArrayMaxSize,
   ArrayMinSize,
   Max,
   MaxLength,
   Min,
   IsObject,
+  ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -434,4 +436,48 @@ export class MultiTagPrintDto {
   @Min(1)
   @Max(50)
   copies?: number;
+}
+
+export class GenerateProductDescriptionGemstoneDto {
+  @IsString()
+  type: string;
+
+  @IsOptional()
+  @IsString()
+  cut?: string;
+
+  @IsOptional()
+  @IsNumber()
+  caratWeight?: number;
+}
+
+export class GenerateProductDescriptionDto {
+  @IsString()
+  jewelleryType: string;
+
+  @IsString()
+  metalType: string;
+
+  @IsOptional()
+  @IsString()
+  purity?: string;
+
+  @IsNumber()
+  @Min(0.01)
+  weightGrams: number;
+
+  @IsOptional()
+  @IsIn(["GRAM", "TOLA"])
+  weightUnit?: "GRAM" | "TOLA";
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GenerateProductDescriptionGemstoneDto)
+  gemstones?: GenerateProductDescriptionGemstoneDto[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  idempotencyKey?: string;
 }

@@ -171,6 +171,10 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
     label: "Orivraa AI Assistant",
     category: "Support & Integration",
   },
+  freeInAppTours: {
+    label: "In-app tooltips & guided tours",
+    category: "Support & Integration",
+  },
   prioritySupport: {
     label: "Priority support",
     category: "Support & Integration",
@@ -480,6 +484,7 @@ function buildFeatureList(
     "taxCaShare",
     "customBranding",
     "freeAiChatbot",
+    "freeInAppTours",
     "prioritySupport",
   ];
   if (customerFlowEnabled) {
@@ -489,7 +494,10 @@ function buildFeatureList(
   for (const key of featureKeys) {
     const display = FEATURE_DISPLAY[key];
     if (!display) continue;
-    const val = key === "freeAiChatbot" ? true : plan.features?.[key];
+    const val =
+      key === "freeAiChatbot" || key === "freeInAppTours"
+        ? true
+        : plan.features?.[key];
     items.push({ text: display.label, included: !!val });
   }
 
@@ -570,6 +578,7 @@ function buildComparisonTable(plans: PlanFromAPI[], customerFlowEnabled: boolean
     if (p.features) Object.keys(p.features).forEach((k) => allKeys.add(k));
   }
   allKeys.add("freeAiChatbot");
+  allKeys.add("freeInAppTours");
 
   const actualCategoryOrder = customerFlowEnabled 
     ? CATEGORY_ORDER 
@@ -630,7 +639,7 @@ function buildComparisonTable(plans: PlanFromAPI[], customerFlowEnabled: boolean
     if (!cat) continue;
 
     const values = plans.map((p) => {
-      if (key === "freeAiChatbot") return true;
+      if (key === "freeAiChatbot" || key === "freeInAppTours") return true;
       const val = p.features?.[key];
       if (typeof val === "boolean") return val;
       if (typeof val === "string") return val;
@@ -1054,7 +1063,8 @@ export default function PricingPage() {
                         </td>
                       </tr>
                       {cat.features.map((f) => {
-                        const isAiBotRow = f.key === "freeAiChatbot";
+                        const isAiBotRow =
+                          f.key === "freeAiChatbot" || f.key === "freeInAppTours";
                         return (
                           <tr
                             key={f.key}

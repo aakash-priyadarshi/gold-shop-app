@@ -32,6 +32,11 @@ const SUPPORT = {
   phoneDisplay: BRAND.contact.phone,
 } as const;
 
+const PUBLIC_CHAT_MAX_CHARS = 500;
+const DASHBOARD_CHAT_MAX_CHARS = 1500;
+const PUBLIC_HISTORY_MAX = 8;
+const DASHBOARD_HISTORY_MAX = 12;
+
 type Message = {
   id: string;
   from: "bot" | "user";
@@ -659,6 +664,21 @@ export function SupportBot() {
     const text = raw.trim();
     if (!text || isTyping) return;
 
+    const maxChars = user ? DASHBOARD_CHAT_MAX_CHARS : PUBLIC_CHAT_MAX_CHARS;
+    if (text.length > maxChars) {
+      setMessages((m) => [
+        ...m,
+        { id: `${Date.now()}-u`, from: "user", text },
+        {
+          id: `${Date.now()}-b`,
+          from: "bot",
+          text: `Please keep messages under ${maxChars} characters.`,
+        },
+      ]);
+      setInput("");
+      return;
+    }
+
     const userMsg: Message = { id: `${Date.now()}-u`, from: "user", text };
     setMessages((m) => [...m, userMsg]);
     setInput("");
@@ -680,6 +700,7 @@ export function SupportBot() {
     // Build history from current messages (exclude welcome, map to API shape)
     const history = messages
       .filter((m) => m.id !== "welcome")
+      .slice(-(user ? DASHBOARD_HISTORY_MAX : PUBLIC_HISTORY_MAX))
       .map((m) => ({
         role: m.from === "user" ? ("user" as const) : ("assistant" as const),
         content: m.text,
@@ -703,19 +724,6 @@ export function SupportBot() {
           dashboardMode,
           botName: botName || undefined,
           userName: effectiveUserName || undefined,
-          // Enrich chatbot request with comprehensive live user and plan context:
-          userContext: {
-            isSellerLoggedIn,
-            role: user?.role,
-            firstName: user?.firstName,
-            lastName: user?.lastName,
-            email: user?.email,
-            shopName: shopName,
-            planName: planName,
-            isVerified: isVerified,
-            daysLeft: daysLeft,
-            isWithinSandbox: isWithinSandbox
-          }
         },
       );
 
@@ -726,14 +734,21 @@ export function SupportBot() {
         cta: res.data.shouldEscalate ? ESCALATION_CTA : undefined,
       };
       setMessages((m) => [...m, botMsg]);
-    } catch {
+    } catch (err: unknown) {
+      const axiosErr = err as {
+        response?: { status?: number; data?: { message?: string | string[] } };
+      };
+      const raw = axiosErr.response?.data?.message;
+      const serverMsg = Array.isArray(raw) ? raw[0] : raw;
       setMessages((m) => [
         ...m,
         {
           id: `${Date.now()}-b`,
           from: "bot",
-          text: `Sorry, I couldn't reach the server. You can reach ${SUPPORT.name} directly:`,
-          cta: ESCALATION_CTA,
+          text:
+            serverMsg ||
+            `Sorry, I couldn't reach the server. You can reach ${SUPPORT.name} directly:`,
+          cta: serverMsg ? undefined : ESCALATION_CTA,
         },
       ]);
     } finally {
@@ -1423,7 +1438,7 @@ export function SupportBot() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask anything about Orivraa..."
               className="flex-1 text-sm bg-amber-50/20 dark:bg-amber-950/10 border border-amber-100/30 dark:border-amber-950/20 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 rounded-full px-4 py-2 outline-none text-gray-900 dark:text-gray-100 placeholder:text-gray-500"
-              maxLength={500}
+              maxLength={user ? DASHBOARD_CHAT_MAX_CHARS : PUBLIC_CHAT_MAX_CHARS}
               disabled={isTyping}
             />
             <Button

@@ -38,7 +38,28 @@ function PaymentCallbackContent() {
 
   const verifyPendingOrder = useCallback(async () => {
     if (wasFailed) {
+      if (
+        typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("pendingAiCreditPurchase")
+      ) {
+        sessionStorage.removeItem("pendingAiCreditPurchase");
+        window.location.replace(
+          "/dashboard/shop/billing?tab=credits&credits=cancelled",
+        );
+        return;
+      }
       setState("failed");
+      return;
+    }
+
+    if (
+      typeof sessionStorage !== "undefined" &&
+      sessionStorage.getItem("pendingAiCreditPurchase")
+    ) {
+      sessionStorage.removeItem("pendingAiCreditPurchase");
+      window.location.replace(
+        "/dashboard/shop/billing?tab=credits&credits=success",
+      );
       return;
     }
 

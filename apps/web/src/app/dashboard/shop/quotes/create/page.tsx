@@ -3,6 +3,7 @@ import {
     AiDesignStudio,
     type AiDesignVariation,
 } from "@/components/ai/AiDesignStudio";
+import { AiCreditsDepletedNotice, AiCreditCostHint } from "@/components/ai/AiCreditsDepletedNotice";
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import {
@@ -47,7 +48,13 @@ import { useMarket, WEIGHT_UNIT_SYMBOLS, type WeightUnit } from "@/hooks/useMark
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { getApiUrl, shopQuotesApi, shopsApi } from "@/lib/api";
-import { toGrams, fromGrams, getSupportedWeightUnits } from "@gold-shop/shared";
+import { isInsufficientAiCreditsError } from "@/lib/aiCredits";
+import {
+    AI_CREDIT_COSTS,
+    toGrams,
+    fromGrams,
+    getSupportedWeightUnits,
+} from "@gold-shop/shared";
 import {
     BUILD_METHODS,
     JEWELLERY_TYPES,
@@ -316,6 +323,7 @@ export default function CreateShopQuotePage() {
   const [lastGenerationPrompt, setLastGenerationPrompt] = useState<string | null>(
     null,
   );
+  const [creditsDepleted, setCreditsDepleted] = useState(false);
 
   const { selectedWeightUnit, setWeightUnit, config: marketConfig } = useMarket();
 
@@ -660,6 +668,7 @@ export default function CreateShopQuotePage() {
     }
     setGeneratingPreview(true);
     setError("");
+    setCreditsDepleted(false);
     try {
       const weightG = parseFloat(formData.targetTotalWeightG) || 0;
       const designSpecs = buildDesignSpecsPayload(formData, {
@@ -681,7 +690,13 @@ export default function CreateShopQuotePage() {
         body: JSON.stringify(designSpecs),
       });
       if (!response.ok) {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
+        if (
+          data?.error === "INSUFFICIENT_AI_CREDITS" ||
+          isInsufficientAiCreditsError({ response: { data } })
+        ) {
+          setCreditsDepleted(true);
+        }
         throw new Error(data.message || "Failed to generate preview");
       }
       const result = await response.json();
@@ -1994,6 +2009,16 @@ export default function CreateShopQuotePage() {
                           <p className="text-xs text-muted-foreground mt-2">
                             <T>Show the customer an AI preview of the final piece</T>
                           </p>
+                          <div className="mt-2">
+                            <AiCreditCostHint cost={AI_CREDIT_COSTS.DESIGN_IMAGE} />
+                          </div>
+                          {creditsDepleted && (
+                            <div className="mt-2 text-left">
+                              <AiCreditsDepletedNotice
+                                required={AI_CREDIT_COSTS.DESIGN_IMAGE}
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

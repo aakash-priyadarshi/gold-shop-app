@@ -16,6 +16,13 @@ import {
 import { PrismaService } from "../../prisma/prisma.service";
 import { DescriptionGeneratorService } from "./description-generator.service";
 import { ImageGenerationService } from "./image-generation.service";
+import { AiCreditsService } from "../core/ai-credits/ai-credits.service";
+import {
+  AI_CREDIT_COSTS,
+  variationBatchRedisKey,
+} from "@gold-shop/shared";
+import { randomUUID } from "crypto";
+import { RedisService } from "../../common/redis";
 
 interface CreateDesignDto {
   jewelryType: JewelleryType;
@@ -90,6 +97,8 @@ export class DesignsService {
     private imageGenService: ImageGenerationService,
     private descriptionGenService: DescriptionGeneratorService,
     private configService: ConfigService,
+    private aiCredits: AiCreditsService,
+    private redis: RedisService,
   ) {
     // Use existing Cloudflare Worker for image uploads
     this.imageWorkerUrl =
@@ -140,10 +149,26 @@ export class DesignsService {
       };
     }
 
+    const prepaidVariation = await this.consumeVariationSlot(
+      userId,
+      dto.additionalSpecs,
+    );
+    const debitKey = `image_gen:${userId}:${randomUUID()}`;
+    const debit = prepaidVariation
+      ? { skipped: true as const }
+      : await this.aiCredits.debitForShopkeeperGeneration({
+          userId,
+          amount: AI_CREDIT_COSTS.DESIGN_IMAGE,
+          reason: "image_gen",
+          referenceId: specHash,
+          idempotencyKey: debitKey,
+        });
+
     // Determine image source and generate/refine image
     let imageResult;
     let imageSource: DesignImageSource = DesignImageSource.GENERATED;
 
+    try {
     if (dto.referenceImageUrl) {
       // Customer provided a reference image - refine it
       imageResult = await this.imageGenService.refineImage(
@@ -275,6 +300,61 @@ export class DesignsService {
       design,
       cached: false,
     };
+    } catch (error) {
+      if (prepaidVariation) {
+        await this.aiCredits
+          .refundCredits({
+            userId,
+            amount: AI_CREDIT_COSTS.DESIGN_IMAGE,
+            reason: "image_gen_failed",
+            referenceId: specHash,
+            idempotencyKey: `refund:var:${debitKey}`,
+          })
+          .catch((refundErr) =>
+            this.logger.error(
+              `Failed to refund prepaid variation credit: ${refundErr.message}`,
+            ),
+          );
+      } else if (!debit.skipped) {
+        await this.aiCredits
+          .refundCredits({
+            userId,
+            amount: AI_CREDIT_COSTS.DESIGN_IMAGE,
+            reason: "image_gen_failed",
+            referenceId: specHash,
+            idempotencyKey: `refund:${debitKey}`,
+          })
+          .catch((refundErr) =>
+            this.logger.error(
+              `Failed to refund image-gen credits: ${refundErr.message}`,
+            ),
+          );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Consume one prepaid slot from a 5-variation batch. Missing/expired keys
+   * fall through to a normal 1-credit debit so spoofed `variationOf` is billed.
+   */
+  private async consumeVariationSlot(
+    userId: string,
+    additionalSpecs?: Record<string, unknown>,
+  ): Promise<boolean> {
+    if (typeof additionalSpecs?.variationOf !== "string") return false;
+    if (!this.redis.isAvailable()) {
+      // Redis down: skip a second wallet debit so a paid batch is not double-charged.
+      return true;
+    }
+    const key = variationBatchRedisKey(userId);
+    const current = await this.redis.get(key);
+    const remainingBefore = parseInt(current || "", 10);
+    if (!Number.isFinite(remainingBefore) || remainingBefore <= 0) {
+      return false;
+    }
+    const remaining = await this.redis.decr(key);
+    return remaining >= 0;
   }
 
   /**

@@ -1,8 +1,25 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
+import {
+  AI_CREDIT_COSTS,
+  AI_VARIATION_BATCH_SIZE,
+  AI_VARIATION_BATCH_TTL_SEC,
+  variationBatchRedisKey,
+} from "@gold-shop/shared";
 import { RedisService } from "../../common/redis";
+import { PrismaService } from "../../prisma/prisma.service";
+import { AiCreditsService } from "../core/ai-credits/ai-credits.service";
+import { PriceResolverService } from "../core/pricing/services/price-resolver.service";
+import { PricingEstimateService } from "../core/pricing/services/pricing-estimate.service";
 import { DesignsService } from "./designs.service";
+import {
+  applyCostBreakdown,
+  asSupportedCountry,
+  asSupportedCurrency,
+  specToEstimateRequest,
+  specToResolverComposition,
+} from "./variation-estimate";
 
 /**
  * AI Design Variations Service
@@ -103,6 +120,10 @@ export class DesignVariationsService {
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
     private readonly designsService: DesignsService,
+    private readonly aiCredits: AiCreditsService,
+    private readonly priceResolver: PriceResolverService,
+    private readonly pricingEstimate: PricingEstimateService,
+    private readonly prisma: PrismaService,
   ) {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
   }
@@ -113,6 +134,7 @@ export class DesignVariationsService {
   async generateSpecsOnly(
     userId: string,
     dto: DesignVariationRequest,
+    opts?: { shopId?: string },
   ): Promise<{
     variations: DesignVariationSpec[];
     prompt: string;
@@ -120,26 +142,63 @@ export class DesignVariationsService {
     budgetMax?: number;
     currency: string;
   }> {
-    void userId;
     if (!dto.prompt || dto.prompt.trim().length < 5) {
       throw new BadRequestException(
         "Please describe what jewellery you would like (at least a few words).",
       );
     }
     const currency = (dto.currency || "INR").toUpperCase();
-    const specs = await this.callGeminiForSpecs(dto, currency);
-    return {
-      variations: specs,
-      prompt: dto.prompt,
-      budgetMin: dto.budgetMin,
-      budgetMax: dto.budgetMax,
-      currency,
-    };
+    const debitKey = `design_variations:${userId}:${randomUUID()}`;
+    const debit = await this.aiCredits.debitForShopkeeperGeneration({
+      userId,
+      shopId: opts?.shopId,
+      amount: AI_CREDIT_COSTS.DESIGN_VARIATIONS,
+      reason: "design_variations",
+      referenceId: debitKey,
+      idempotencyKey: debitKey,
+    });
+
+    try {
+      const specs = await this.callGeminiForSpecs(dto, currency);
+      const priced = await this.applyLiveCosts(specs, dto, opts?.shopId);
+      if (!debit.skipped) {
+        await this.redisService.set(
+          variationBatchRedisKey(userId),
+          String(AI_VARIATION_BATCH_SIZE),
+          AI_VARIATION_BATCH_TTL_SEC,
+        );
+      }
+      return {
+        variations: priced,
+        prompt: dto.prompt,
+        budgetMin: dto.budgetMin,
+        budgetMax: dto.budgetMax,
+        currency,
+      };
+    } catch (error) {
+      if (!debit.skipped) {
+        await this.aiCredits
+          .refundCredits({
+            userId,
+            amount: AI_CREDIT_COSTS.DESIGN_VARIATIONS,
+            reason: "design_variations_failed",
+            referenceId: debitKey,
+            idempotencyKey: `refund:${debitKey}`,
+          })
+          .catch((refundErr) =>
+            this.logger.error(
+              `Failed to refund variation credits: ${(refundErr as Error).message}`,
+            ),
+          );
+      }
+      throw error;
+    }
   }
 
   async generateVariations(
     userId: string,
     dto: DesignVariationRequest,
+    opts?: { shopId?: string },
   ): Promise<DesignVariationsResponse> {
     if (!dto.prompt || dto.prompt.trim().length < 5) {
       throw new BadRequestException(
@@ -162,8 +221,30 @@ export class DesignVariationsService {
       /* fall through */
     }
 
-    // 1. Ask Gemini for 5 specs
-    const specs = await this.callGeminiForSpecs(dto, currency);
+    const debitKey = `design_variations:${userId}:${randomUUID()}`;
+    const debit = await this.aiCredits.debitForShopkeeperGeneration({
+      userId,
+      shopId: opts?.shopId,
+      amount: AI_CREDIT_COSTS.DESIGN_VARIATIONS,
+      reason: "design_variations",
+      referenceId: debitKey,
+      idempotencyKey: debitKey,
+    });
+    if (!debit.skipped) {
+      await this.redisService.set(
+        variationBatchRedisKey(userId),
+        String(AI_VARIATION_BATCH_SIZE),
+        AI_VARIATION_BATCH_TTL_SEC,
+      );
+    }
+
+    try {
+    // 1. Ask Gemini for 5 specs, then overlay live metal/gemstone rates.
+    const specs = await this.applyLiveCosts(
+      await this.callGeminiForSpecs(dto, currency),
+      dto,
+      opts?.shopId,
+    );
 
     // 2. Render each variation's image in parallel via DesignsService.
     //    We swallow individual failures — a missing image shouldn't kill the batch.
@@ -231,6 +312,24 @@ export class DesignVariationsService {
     }
 
     return response;
+    } catch (error) {
+      if (!debit.skipped) {
+        await this.aiCredits
+          .refundCredits({
+            userId,
+            amount: AI_CREDIT_COSTS.DESIGN_VARIATIONS,
+            reason: "design_variations_failed",
+            referenceId: debitKey,
+            idempotencyKey: `refund:${debitKey}`,
+          })
+          .catch((refundErr) =>
+            this.logger.error(
+              `Failed to refund variation credits: ${(refundErr as Error).message}`,
+            ),
+          );
+      }
+      throw error;
+    }
   }
 
   private async callGeminiForSpecs(
@@ -352,14 +451,7 @@ Return STRICT JSON of shape:
       "platingDetails": { "baseMetal": "BRASS|...", "platingType": "GOLD_PLATED|...", "platingTier": "STANDARD|PREMIUM|ECONOMY" },
       "italianMachineDetails": { "purity": "22K|18K|14K|SILVER_925", "chainStyle": "ROPE|FIGARO|CURB|BOX|..." },
       "gemstones": [{ "stoneType":"DIAMOND","shape":"ROUND","color":"D","clarity":"VS1","cut":"EXCELLENT","settingStyle":"PRONG","count":1,"sizeValue":0.5,"sizeUnit":"CARAT"}],
-      "estimatedCost": {
-        "metal": <number in ${currency}>,
-        "making": <number in ${currency}>,
-        "gemstones": <number in ${currency}>,
-        "finish": <number in ${currency}>,
-        "total": <number in ${currency}>,
-        "currency": "${currency}"
-      },
+      "estimatedCost": { "metal": 0, "making": 0, "gemstones": 0, "finish": 0, "total": 0, "currency": "${currency}" },
       "highlights": ["3-5 short bullet points the customer will love"]
     }
     /* …5 total… */
@@ -370,7 +462,7 @@ ${metalConstraintRule}
 RULES:
 - Only include alloyDetails when buildMethod=METHOD_B; only platingDetails for METHOD_C; only italianMachineDetails for METHOD_D. Omit the others.
 - Spread variations across budget: cheapest near the lower bound, premium near the upper bound. If no budget given, range from accessible to luxury.
-- Estimated total cost MUST stay within the budget when given. Use realistic 2026 market prices.
+- Estimated total cost is filled by the server from live metal APIs and shop/platform gemstone rates. Put 0 for all estimatedCost numbers.
 - All numeric fields are plain numbers (no currency symbols, no commas).
 - jewelryType, buildMethod, metalType, weightCategory, surfaceFinish must be exact enum values (UPPER_SNAKE_CASE).
 - Be creative: vary finish, stone choice, weight, and design style across the 5.${metalConstraint ? " Respect the METAL CONSTRAINT above — do not swap gold for silver or vice versa." : " You may vary metal colour and build method only when the customer did not specify a metal."}
@@ -492,6 +584,84 @@ RULES:
     };
 
     return spec;
+  }
+
+  private async applyLiveCosts(
+    specs: DesignVariationSpec[],
+    dto: DesignVariationRequest,
+    shopId?: string,
+  ): Promise<DesignVariationSpec[]> {
+    const currency = asSupportedCurrency(dto.currency);
+    let country = asSupportedCountry(dto.marketRegion);
+    if (shopId) {
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { country: true },
+      });
+      if (shop?.country) country = asSupportedCountry(shop.country);
+    }
+
+    return Promise.all(
+      specs.map(async (spec) => {
+        try {
+          if (shopId) {
+            const resolved = await this.priceResolver.resolvePrice({
+              shopId,
+              composition: specToResolverComposition(spec),
+            });
+            const metal =
+              resolved.components.find((c) => c.component === "METAL")
+                ?.effectiveAmount || 0;
+            const making =
+              resolved.components.find((c) => c.component === "MAKING")
+                ?.effectiveAmount || 0;
+            const gemstones =
+              resolved.components.find((c) => c.component === "GEMSTONE")
+                ?.effectiveAmount || 0;
+            const finish =
+              (resolved.components.find((c) => c.component === "FINISH")
+                ?.effectiveAmount || 0) +
+              (resolved.components.find((c) => c.component === "PLATING")
+                ?.effectiveAmount || 0);
+            return applyCostBreakdown(spec, {
+              metal,
+              making,
+              gemstones,
+              finish,
+              total: resolved.effectiveTotal,
+              currency: resolved.currency || currency,
+            });
+          }
+
+          const estimate = await this.pricingEstimate.calculateEstimate(
+            specToEstimateRequest(spec, { country, currency }),
+          );
+          const metal = estimate.lineItems
+            .filter((i) => i.category === "METAL")
+            .reduce((s, i) => s + i.amount, 0);
+          const making = estimate.makingCharge;
+          const gemstones = estimate.lineItems
+            .filter((i) => i.category === "GEMSTONE")
+            .reduce((s, i) => s + i.amount, 0);
+          const finish = estimate.lineItems
+            .filter((i) => i.category === "FINISH")
+            .reduce((s, i) => s + i.amount, 0);
+          return applyCostBreakdown(spec, {
+            metal,
+            making,
+            gemstones,
+            finish,
+            total: estimate.subtotal + estimate.makingCharge,
+            currency: estimate.currency,
+          });
+        } catch (err: unknown) {
+          this.logger.warn(
+            `Live cost overlay failed for ${spec.id}: ${(err as Error).message}`,
+          );
+          return spec;
+        }
+      }),
+    );
   }
 
   /** Deterministic non-AI fallback — keeps the UX alive if Gemini is down. */

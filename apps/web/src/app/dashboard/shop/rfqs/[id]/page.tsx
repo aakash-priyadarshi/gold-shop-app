@@ -1,5 +1,6 @@
 "use client";
 
+import { AiCreditsDepletedNotice, AiCreditCostHint } from "@/components/ai/AiCreditsDepletedNotice";
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,8 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { designsApi, offersApi, rfqApi } from "@/lib/api";
+import { isInsufficientAiCreditsError } from "@/lib/aiCredits";
+import { AI_CREDIT_COSTS } from "@gold-shop/shared";
 import {
   ALLOY_FAMILY_COLORS,
   getBuildMethodInfo,
@@ -175,6 +178,7 @@ export default function ShopRfqDetailPage() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiDesignUrl, setAiDesignUrl] = useState<string | null>(null);
+  const [creditsDepleted, setCreditsDepleted] = useState(false);
 
   // Dialog states for customer counter-offer responses
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
@@ -442,6 +446,7 @@ export default function ShopRfqDetailPage() {
   const handleGenerateAiDesign = useCallback(async () => {
     if (!rfq) return;
     setAiGenerating(true);
+    setCreditsDepleted(false);
     try {
       const response = await designsApi.create({
         jewelryType: rfq.jewelleryType,
@@ -463,6 +468,9 @@ export default function ShopRfqDetailPage() {
         });
       }
     } catch (error: any) {
+      if (isInsufficientAiCreditsError(error)) {
+        setCreditsDepleted(true);
+      }
       toast({
         variant: "destructive",
         title: "Design Generation Failed",
@@ -1595,6 +1603,16 @@ export default function ShopRfqDetailPage() {
                       </>
                     )}
                   </Button>
+                  <div className="mt-2">
+                    <AiCreditCostHint cost={AI_CREDIT_COSTS.DESIGN_IMAGE} />
+                  </div>
+                  {creditsDepleted && (
+                    <div className="mt-2">
+                      <AiCreditsDepletedNotice
+                        required={AI_CREDIT_COSTS.DESIGN_IMAGE}
+                      />
+                    </div>
+                  )}
                   {aiDesignUrl && (
                     <div
                       className="mt-3 relative aspect-square rounded-lg overflow-hidden border cursor-pointer group"

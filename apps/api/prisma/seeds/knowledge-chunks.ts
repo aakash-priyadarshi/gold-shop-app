@@ -219,6 +219,11 @@ const CHUNKS: { topic: string; content: string }[] = [
       "On mobile POS, tap a product to open its detail sheet with metal, wastage (jarti), gemstones, making charges, and the stored calculation. Tap Show full details to customer to open a full-screen page at /m/products/:id that you can hand to the buyer. This is a seller inventory view, not the public marketplace product page. Stock Ledger item names also open the same page. Wastage is a default % applied when you bill; estimated bill = catalog price (metal + making + gems + tax) plus wastage.",
   },
   {
+    topic: "product_description_generation",
+    content:
+      "On Products (Add/Edit) the description field stays locked until jewellery type, material type, and weight are filled. Gemstones are optional. Free and Pro get Fill from specs — a hardcoded non-AI template you can edit. Pro+ also gets Generate with AI (Gemini 2.5 Flash) which costs 0.25 AI credits. Shopkeeper AI design previews cost 1 credit per Imagen image. The Design Studio / RFQ 5-variation generator charges 5 credits up front (1 per image). Metal totals use live market rates (or the shop's own metal price if set); gemstones use the platform catalog or the shopkeeper's gemstone rates. Customers are not billed credits; they have a daily preview cap. Buy extra credits at Billing → AI Credits (/dashboard/shop/billing?tab=credits). If a generation fails, credits are refunded. The Orivraa AI assistant chat and in-app tooltips/tours are free on every plan. Public chat cannot look up users or shops. A signed-in user only sees their own account/shop data.",
+  },
+  {
     topic: "karigar_gold_loss_ledger",
     content:
       "Karigar Gold Loss on Supply Chain tracks physical workshop metal, not customer billing wastage (jarti) on invoices. Issue gold from the vault to a karigar or job. Each job has stages (casting, filing, polishing, stone setting, final polish, QC) with gold in, gold out, scrap, and dust. Casting trees reconcile issued grams against finished pieces, sprue/button, and recoverable scrap. Actual loss = issued − finished − sprue − recoverable. Unexplained loss is anything above the allowed %. Catalogue and RFQ bills never feed this ledger. Use Load sample 1 kg job for a demo: 1000g issued, 920g finished, 50g sprue, 20g recoverable, 10g actual loss at 1% allowed. Print the Gold Loss report for job-wise, tree-wise, and karigar-wise accountability.",
@@ -284,6 +289,7 @@ async function main() {
     "billing_wastage",
     "invoice_share_and_bluetooth",
     "mobile_invoice_full_billing",
+    "product_description_generation",
   ]);
 
   for (const chunk of CHUNKS) {

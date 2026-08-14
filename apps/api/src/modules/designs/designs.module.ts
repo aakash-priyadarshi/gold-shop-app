@@ -3,6 +3,8 @@ import { ConfigModule } from "@nestjs/config";
 import { AuditModule } from "../audit/audit.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { SubscriptionPlansModule } from "../core/subscriptions/subscription-plans.module";
+import { AiCreditsModule } from "../core/ai-credits/ai-credits.module";
+import { PricingModule } from "../core/pricing/pricing.module";
 import { DescriptionGeneratorService } from "./description-generator.service";
 import { DesignVariationsService } from "./design-variations.service";
 import { DesignsController } from "./designs.controller";
@@ -15,6 +17,8 @@ import { ImageGenerationService } from "./image-generation.service";
     NotificationsModule,
     ConfigModule,
     SubscriptionPlansModule,
+    AiCreditsModule,
+    PricingModule,
   ],
   controllers: [DesignsController],
   providers: [

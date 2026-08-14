@@ -39,6 +39,7 @@ interface AuthenticatedRequest extends ExpressRequest {
     id: string;
     email: string;
     role: string;
+    shopId?: string;
   };
 }
 
@@ -318,6 +319,7 @@ export class DesignsController {
       return await this.designVariationsService.generateSpecsOnly(
         req.user!.id,
         dto,
+        { shopId: req.user?.shopId },
       );
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -342,6 +344,7 @@ export class DesignsController {
       const result = await this.designVariationsService.generateVariations(
         req.user!.id,
         dto,
+        { shopId: req.user?.shopId },
       );
       this.logger.log(
         `Generated ${result.variations.length} variations (cached=${result.cached})`,

@@ -23,9 +23,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { T } from "@/components/ui/T";
+import {
+    AiCreditCostHint,
+    AiCreditsDepletedNotice,
+} from "@/components/ai/AiCreditsDepletedNotice";
 import { toast } from "@/hooks/use-toast";
 import { getStoredAuthToken } from "@/hooks/useAuth";
 import { getApiUrl } from "@/lib/api";
+import { isInsufficientAiCreditsError } from "@/lib/aiCredits";
+import { AI_CREDIT_COSTS } from "@gold-shop/shared";
 import { variationToDesignPayload } from "@/lib/design/variation-to-design-payload";
 import {
     AlertCircle,
@@ -131,6 +137,7 @@ export function AiDesignStudio({
   const [loading, setLoading] = useState(false);
   const [variations, setVariations] = useState<AiDesignVariation[]>([]);
   const [planLocked, setPlanLocked] = useState(false);
+  const [creditsDepleted, setCreditsDepleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
@@ -140,6 +147,7 @@ export function AiDesignStudio({
     setVariations([]);
     setError(null);
     setPlanLocked(false);
+    setCreditsDepleted(false);
   };
 
   const handleGenerate = async () => {
@@ -175,6 +183,7 @@ export function AiDesignStudio({
     setRenderingImages(false);
     setError(null);
     setPlanLocked(false);
+    setCreditsDepleted(false);
     try {
       const specsRes = await fetch(`${API_URL}/designs/variations/specs`, {
         method: "POST",
@@ -198,6 +207,12 @@ export function AiDesignStudio({
       }
       if (!specsRes.ok) {
         const body = await specsRes.json().catch(() => ({}));
+        if (
+          body?.error === "INSUFFICIENT_AI_CREDITS" ||
+          isInsufficientAiCreditsError({ response: { data: body } })
+        ) {
+          setCreditsDepleted(true);
+        }
         throw new Error(body?.message || `Request failed (${specsRes.status})`);
       }
 
@@ -234,7 +249,16 @@ export function AiDesignStudio({
                 ),
               ),
             });
-            if (!designRes.ok) return;
+            if (!designRes.ok) {
+              const body = await designRes.json().catch(() => ({}));
+              if (
+                body?.error === "INSUFFICIENT_AI_CREDITS" ||
+                isInsufficientAiCreditsError({ response: { data: body } })
+              ) {
+                setCreditsDepleted(true);
+              }
+              return;
+            }
             const designData = await designRes.json();
             const imageUrl = designData?.design?.imageUrl;
             const designId = designData?.design?.id;
@@ -437,6 +461,9 @@ export function AiDesignStudio({
                   <span>{error}</span>
                 </div>
               )}
+              {creditsDepleted && (
+                <AiCreditsDepletedNotice required={AI_CREDIT_COSTS.DESIGN_VARIATIONS} />
+              )}
 
               <Button
                 onClick={handleGenerate}
@@ -456,9 +483,13 @@ export function AiDesignStudio({
                 )}
               </Button>
               <p className="text-center text-xs text-muted-foreground">
-                AI generations are powered by Gemini. Each generation creates
-                fresh, unique designs tailored to your budget.
+                <T>
+                  5 design previews use 5 AI credits for Pro+ shops (1 credit per
+                  Imagen image). A single design preview uses 1 credit. Customers
+                  have a daily preview limit instead.
+                </T>
               </p>
+              <AiCreditCostHint cost={AI_CREDIT_COSTS.DESIGN_VARIATIONS} />
             </div>
           ) : (
             <div className="space-y-4">
@@ -484,6 +515,9 @@ export function AiDesignStudio({
                   Refine prompt
                 </Button>
               </div>
+              {creditsDepleted && (
+                <AiCreditsDepletedNotice required={AI_CREDIT_COSTS.DESIGN_VARIATIONS} />
+              )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {variations.map((v) => (
