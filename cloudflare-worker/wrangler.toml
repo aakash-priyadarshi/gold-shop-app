@@ -14,7 +14,7 @@ bucket_name = "orivraa-demos"
 
 # Environment variables (set these in Cloudflare dashboard)
 [vars]
-ALLOWED_ORIGINS = "https://orivraa.com,https://www.orivraa.com"
+ALLOWED_ORIGINS = "https://orivraa.com,https://www.orivraa.com,https://m.orivraa.com"
 
 # Production environment
 [env.production]
