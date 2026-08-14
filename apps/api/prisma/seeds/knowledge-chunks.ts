@@ -176,7 +176,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "catalog_currency_reprice",
     content:
-      "Product catalog prices are stored in your shop's base currency (INR for India, NPR for Nepal, AED for UAE, etc.) even if older field names mention NPR. When gold rates change, use Product Catalog → Reprice from rates to preview and apply new metal values from your Pricing Setup rates. Making charges can stay as-is or recalculate from your shop making %. Every reprice is audited.",
+      "Product catalog, walk-in quotes, custom RFQs, shop metal/gem rates, and karigar wage amounts are stored in your shop's base currency (INR for India, NPR for Nepal, USD for the USA, etc.) even if older field names mention NPR. Changing shop country converts those stored amounts at the live exchange rate so a ₹3000 piece becomes about $36, not $3000. Issued invoices keep the currency they were billed in. When gold rates change without a country switch, use Product Catalog → Reprice from rates. Making charge percents are not converted.",
   },
   {
     topic: "invoice_catalog_and_tax_country",

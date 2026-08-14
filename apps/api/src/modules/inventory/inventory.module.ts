@@ -4,6 +4,7 @@ import { PrismaModule } from "../../prisma/prisma.module";
 import { MarketRatesModule } from "../core/market-rates/market-rates.module";
 import { SubscriptionPlansModule } from "../core/subscriptions/subscription-plans.module";
 import { AiCreditsModule } from "../core/ai-credits/ai-credits.module";
+import { ShopPriceRebaseModule } from "../shops/shop-price-rebase.module";
 import { InventoryController } from "./inventory.controller";
 import { InventoryService } from "./inventory.service";
 import {
@@ -21,6 +22,7 @@ import { ProductDescriptionService } from "./product-description.service";
     MarketRatesModule,
     SubscriptionPlansModule,
     AiCreditsModule,
+    ShopPriceRebaseModule,
   ],
   controllers: [InventoryController],
   providers: [

@@ -4,13 +4,7 @@ import OrivraaLoader, {
     useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import { api } from "@/lib/api";
-import {
-    COUNTRIES,
-    usePreferencesStore,
-    type CountryCode,
-    type CurrencyCode,
-} from "@/store/preferences";
-import { resolveShopCurrency } from "@gold-shop/shared";
+import { syncShopCountryToPreferences } from "@/lib/shop-settings";
 import { usePathname, useRouter } from "next/navigation";
 import React, {
     createContext,
@@ -144,43 +138,6 @@ interface AuthResponse {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Map shop/DB country codes (ISO 3166-1 alpha-2) to preferences store CountryCode.
-// Only codes that exist in the COUNTRIES map are listed here.
-const SHOP_TO_PREF_COUNTRY: Record<string, CountryCode> = {
-  NP: "NP",
-  IN: "IN",
-  AE: "AE",
-  GB: "UK",
-  UK: "UK",
-  US: "US",
-  EU: "EU",
-  LK: "LK",
-};
-
-/**
- * For SHOPKEEPER users, override the global preferences store with the shop's
- * configured country/currency so that geo-detection never wins over the shop's
- * own locale setting (e.g. an Indian seller travelling abroad still sees INR).
- */
-function syncShopCountryToPreferences(
-  shop: { country: string; currency?: string | null },
-) {
-  const prefCountry = SHOP_TO_PREF_COUNTRY[shop.country.toUpperCase()];
-  if (!prefCountry || !COUNTRIES[prefCountry]) return;
-
-  const resolvedCurrency = resolveShopCurrency(shop) as CurrencyCode;
-  usePreferencesStore.setState({
-    country: prefCountry,
-    currency: resolvedCurrency,
-  });
-
-  // Mark as an explicit choice so initializeFromGeo doesn't overwrite it
-  if (typeof window !== "undefined") {
-    localStorage.setItem("orivraa_user_country_choice", "shop");
-    localStorage.setItem("orivraa_user_currency_choice", "shop");
-  }
-}
 
 // Token management
 const TOKEN_KEY = "token";

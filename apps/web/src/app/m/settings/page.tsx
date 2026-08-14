@@ -4,6 +4,12 @@ import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import api, { shopsApi } from "@/lib/api";
+import {
+  extractPriceConversion,
+  syncShopCountryToPreferences,
+  unwrapShopSettings,
+} from "@/lib/shop-settings";
+import { resolveShopCurrency } from "@gold-shop/shared";
 import { ArrowLeft, Check, Loader2, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,6 +22,9 @@ const COUNTRIES = [
   { code: "AE", name: "UAE", currency: "AED", flag: "🇦🇪" },
   { code: "GB", name: "United Kingdom", currency: "GBP", flag: "🇬🇧" },
   { code: "US", name: "United States", currency: "USD", flag: "🇺🇸" },
+  { code: "AU", name: "Australia", currency: "AUD", flag: "🇦🇺" },
+  { code: "CA", name: "Canada", currency: "CAD", flag: "🇨🇦" },
+  { code: "SG", name: "Singapore", currency: "SGD", flag: "🇸🇬" },
   { code: "DE", name: "Germany (EU)", currency: "EUR", flag: "🇪🇺" },
   { code: "FR", name: "France (EU)", currency: "EUR", flag: "🇪🇺" },
   { code: "IT", name: "Italy (EU)", currency: "EUR", flag: "🇪🇺" },
@@ -28,6 +37,7 @@ export default function MobileStoreSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [conversionNote, setConversionNote] = useState<string | null>(null);
   const [country, setCountry] = useState<string>("NP");
   const [city, setCity] = useState<string>("");
   const [address, setAddress] = useState<string>("");
@@ -62,9 +72,9 @@ export default function MobileStoreSettingsPage() {
       setLoading(true);
       try {
         const res = await shopsApi.getSettings();
-        const s = res.data ?? res;
+        const s = unwrapShopSettings(res);
         if (cancelled) return;
-        setCountry(s.country || "NP");
+        setCountry(s.country || user?.shop?.country || "NP");
         setCity(s.city || "");
         setAddress(s.address || "");
         setContactPhone(s.contactPhone || "");
@@ -86,6 +96,7 @@ export default function MobileStoreSettingsPage() {
         setBranchName(s.bankAccountDetails?.branchName || "");
         setSwiftCode(s.bankAccountDetails?.swiftCode || "");
         setKarigarSupplyChain(s.bankAccountDetails?.karigarSupplyChain || null);
+        syncShopCountryToPreferences(s);
       } catch {
         // ignore, fall back to defaults from user.shop
         if (user?.shop) {
@@ -107,12 +118,17 @@ export default function MobileStoreSettingsPage() {
     setSaving(true);
     setError(null);
     setSaved(false);
+    setConversionNote(null);
     try {
-      const defaultCurrency = COUNTRIES.find((c) => c.code === country)?.currency || "NPR";
+      const defaultCurrency = resolveShopCurrency({
+        country,
+        currency: COUNTRIES.find((c) => c.code === country)?.currency,
+      });
       
       // Update shop settings
-      await shopsApi.updateSettings({
+      const saveRes = await shopsApi.updateSettings({
         country,
+        currency: defaultCurrency,
         city: city || undefined,
         address: address || undefined,
         contactPhone: contactPhone || undefined,
@@ -149,7 +165,15 @@ export default function MobileStoreSettingsPage() {
         console.error("Failed to sync user preferences:", prefErr);
       }
 
+      syncShopCountryToPreferences({ country, currency: defaultCurrency });
+
       await refreshUser();
+      const conversion = extractPriceConversion(saveRes.data);
+      if (conversion) {
+        setConversionNote(
+          `Prices converted ${conversion.fromCurrency} → ${conversion.toCurrency} at ${conversion.rate}. Invoices were not changed.`,
+        );
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
       // Reload page after a short delay so currency/tax UI uses new country
@@ -229,8 +253,12 @@ export default function MobileStoreSettingsPage() {
             })}
           </div>
           <p className="text-[11px] text-gray-400 mt-2">
-            <T>Live rates and tax forms switch automatically to</T>{" "}
-            <span className="font-semibold">{selectedCountry.currency}</span>.
+            <T>Live rates, tax forms, and catalog prices switch to</T>{" "}
+            <span className="font-semibold">{selectedCountry.currency}</span>.{" "}
+            <T>
+              Existing product and quote amounts are converted at the live
+              exchange rate. Invoices keep their original currency.
+            </T>
           </p>
         </section>
 
@@ -509,6 +537,11 @@ export default function MobileStoreSettingsPage() {
           </Link>
         </section>
 
+        {conversionNote && (
+          <div className="rounded-xl bg-amber-50 border border-amber-100 text-amber-800 px-4 py-3 text-sm">
+            {conversionNote}
+          </div>
+        )}
         {error && (
           <div className="rounded-xl bg-red-50 border border-red-100 text-red-700 px-4 py-3 text-sm">
             {error}

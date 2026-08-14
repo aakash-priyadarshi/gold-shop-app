@@ -23,6 +23,7 @@ import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
 import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
 import { UpdateVatRegistrationDto } from "./dto/update-vat-registration.dto";
+import { ShopPriceRebaseService } from "./shop-price-rebase.service";
 
 @Injectable()
 export class ShopsService {
@@ -40,6 +41,68 @@ export class ShopsService {
     }
   }
 
+  /**
+   * Persist shop settings and convert stored shop-currency amounts when the
+   * billing currency changes (catalog, quotes, rates, karigar wages).
+   */
+  private async persistShopSettings(params: {
+    shop: { id: string; currency: string };
+    dto: UpdateShopDto;
+    userId: string;
+    marketCountry: string;
+    currency: string;
+    vatNumberChanged: boolean;
+  }) {
+    const { shop, dto, userId, marketCountry, currency, vatNumberChanged } =
+      params;
+    const currencyChanged = shop.currency !== currency;
+    const dtoWithoutMoney: UpdateShopDto = { ...dto };
+    if (currencyChanged) {
+      delete dtoWithoutMoney.minOrderValueNpr;
+      delete dtoWithoutMoney.maxOrderValueNpr;
+      delete dtoWithoutMoney.codMaxValueNpr;
+    }
+    const vatPatch = vatNumberChanged
+      ? {
+          vatRegistrationStatus: dto.vatNumber
+            ? ("PENDING" as const)
+            : ("NOT_REGISTERED" as const),
+          vatRegistrationVerifiedAt: null,
+        }
+      : {};
+    const shopUpdate = {
+      ...(currencyChanged ? dtoWithoutMoney : dto),
+      country: marketCountry,
+      currency,
+      ...vatPatch,
+    };
+
+    if (currencyChanged) {
+      const conversion = await this.priceRebase.rebaseShopPrices({
+        shopId: shop.id,
+        fromCurrency: shop.currency,
+        toCurrency: currency,
+        userId,
+        shopUpdate: shopUpdate as never,
+      });
+      const updated = await this.prisma.shop.findUnique({
+        where: { id: shop.id },
+      });
+      return { updated, conversion };
+    }
+
+    const updated = await this.prisma.shop.update({
+      where: { id: shop.id },
+      data: shopUpdate as never,
+    });
+    const conversion = await this.priceRebase.ensureShopPricesMatchCurrency(
+      shop.id,
+    );
+    if (!conversion) return { updated, conversion: null };
+    const fresh = await this.prisma.shop.findUnique({ where: { id: shop.id } });
+    return { updated: fresh ?? updated, conversion };
+  }
+
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
@@ -47,6 +110,7 @@ export class ShopsService {
     private configService: PlatformConfigService,
     private moderationService: ContentModerationService,
     private sellerSubscriptionsService: SellerSubscriptionsService,
+    private priceRebase: ShopPriceRebaseService,
   ) {}
 
   /**
@@ -489,22 +553,17 @@ export class ShopsService {
 
     const vatNumberChanged =
       dto.vatNumber !== undefined && dto.vatNumber !== shop.vatNumber;
-    const updated = await this.prisma.shop.update({
-      where: { id: shopId },
-      data: {
-        ...dto,
-        country: marketCountry,
-        currency,
-        ...(vatNumberChanged
-          ? {
-              vatRegistrationStatus: dto.vatNumber
-                ? "PENDING" as const
-                : "NOT_REGISTERED" as const,
-              vatRegistrationVerifiedAt: null,
-            }
-          : {}),
-      },
+    const { updated } = await this.persistShopSettings({
+      shop,
+      dto,
+      userId,
+      marketCountry,
+      currency,
+      vatNumberChanged,
     });
+    if (!updated) {
+      throw new NotFoundException("Shop not found");
+    }
 
     await this.auditService.log({
       userId,
@@ -917,10 +976,20 @@ export class ShopsService {
       select: { activeShopId: true },
     });
 
+    const shopWhere = user?.activeShopId
+      ? { id: user.activeShopId, userId }
+      : { userId };
+    const existing = await this.prisma.shop.findFirst({
+      where: shopWhere,
+      select: { id: true },
+    });
+    if (!existing) {
+      throw new NotFoundException("Shop not found for this user");
+    }
+    await this.priceRebase.ensureShopPricesMatchCurrency(existing.id);
+
     const shop = await this.prisma.shop.findFirst({
-      where: user?.activeShopId
-        ? { id: user.activeShopId, userId }
-        : { userId },
+      where: shopWhere,
       include: {
         metalRates: true,
         finishPricing: true,
@@ -1196,22 +1265,17 @@ export class ShopsService {
     const vatNumberChanged =
       dto.vatNumber !== undefined && dto.vatNumber !== shop.vatNumber;
 
-    const updated = await this.prisma.shop.update({
-      where: { id: shop.id },
-      data: {
-        ...dto,
-        country: marketCountry,
-        currency,
-        ...(vatNumberChanged
-          ? {
-              vatRegistrationStatus: dto.vatNumber
-                ? "PENDING" as const
-                : "NOT_REGISTERED" as const,
-              vatRegistrationVerifiedAt: null,
-            }
-          : {}),
-      },
+    const { updated, conversion } = await this.persistShopSettings({
+      shop,
+      dto,
+      userId,
+      marketCountry,
+      currency,
+      vatNumberChanged,
     });
+    if (!updated) {
+      throw new NotFoundException("Shop not found for this user");
+    }
 
     await this.auditService.log({
       userId,
@@ -1223,7 +1287,7 @@ export class ShopsService {
       newValue: dto,
     });
 
-    return updated;
+    return conversion ? { ...updated, priceConversion: conversion } : updated;
   }
 
   /**
@@ -1339,6 +1403,7 @@ export class ShopsService {
     if (!shopId) {
       throw new BadRequestException("Shop ID required");
     }
+    await this.priceRebase.ensureShopPricesMatchCurrency(shopId);
 
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
@@ -1702,6 +1767,7 @@ export class ShopsService {
     if (!shopId) {
       throw new BadRequestException("Shop ID required");
     }
+    await this.priceRebase.ensureShopPricesMatchCurrency(shopId);
 
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
@@ -3197,6 +3263,7 @@ export class ShopsService {
    * Returns a structured object with prices keyed by item code.
    */
   async getShopComponentPricing(shopId: string) {
+    await this.priceRebase.ensureShopPricesMatchCurrency(shopId);
     const overrides = await this.prisma.shopPriceOverride.findMany({
       where: {
         shopId,

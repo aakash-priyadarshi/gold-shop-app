@@ -30,6 +30,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { resolveShopCurrency } from "@gold-shop/shared";
 import api, { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
+import {
+  extractPriceConversion,
+  syncShopCountryToPreferences,
+  unwrapShopSettings,
+} from "@/lib/shop-settings";
 import { useT } from "@/providers/translation-provider";
 import { getCitiesForCountry, getStatesForCountry } from "@gold-shop/shared";
 import {
@@ -123,6 +128,10 @@ const countries = [
   { code: "CA", name: "Canada", currency: "CAD" },
   { code: "AE", name: "UAE", currency: "AED" },
   { code: "SG", name: "Singapore", currency: "SGD" },
+  { code: "DE", name: "Germany (EU)", currency: "EUR" },
+  { code: "FR", name: "France (EU)", currency: "EUR" },
+  { code: "IT", name: "Italy (EU)", currency: "EUR" },
+  { code: "ES", name: "Spain (EU)", currency: "EUR" },
 ];
 
 const currencies = [
@@ -318,16 +327,16 @@ export default function ShopSettingsPage() {
     setIsLoading(true);
     try {
       const response = await shopsApi.getSettings();
-      const data = response.data;
-
-      // Handle both formats: { shop, user } or direct shop object
-      const shop = data.shop || data;
-      const userData = data.user || shop.user;
+      const shop = unwrapShopSettings(response);
+      const userData = response.data?.user || shop.user;
 
       setShopData({
         ...shop,
         user: userData,
-      });
+      } as ShopData);
+      if (shop.country) {
+        syncShopCountryToPreferences(shop);
+      }
 
       // Store original phone for comparison
       setPhoneCheckState((prev) => ({
@@ -355,7 +364,7 @@ export default function ShopSettingsPage() {
         country: shopData.country,
         currency: shopData.currency,
       });
-      await shopsApi.updateSettings({
+      const saveRes = await shopsApi.updateSettings({
         shopName: shopData.shopName,
         shopNameNe: shopData.shopNameNe,
         description: shopData.description,
@@ -393,10 +402,22 @@ export default function ShopSettingsPage() {
         console.error("Failed to sync user preferences:", prefErr);
       }
 
+      syncShopCountryToPreferences({
+        country: shopData.country,
+        currency: resolvedCurrency,
+      });
+
       toast({
         title: "Settings Saved",
         description: "Your shop settings have been updated successfully",
       });
+      const conversion = extractPriceConversion(saveRes.data);
+      if (conversion) {
+        toast({
+          title: "Prices converted",
+          description: `Catalog, quotes, and shop rates were converted from ${conversion.fromCurrency} to ${conversion.toCurrency} at ${conversion.rate}. Invoices were left unchanged.`,
+        });
+      }
       // Refresh auth user so the updated shop.country propagates to the
       // preferences store (which makes it the overriding factor over geo).
       await refreshUser();
@@ -715,7 +736,12 @@ export default function ShopSettingsPage() {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        <T>This determines your market rates and tax rules</T>
+                        <T>
+                          This sets your tax rules, market rates, and shop
+                          currency. Catalog prices, quotes, and shop rates are
+                          converted at the live exchange rate. Issued invoices
+                          keep their original currency.
+                        </T>
                       </p>
                     </div>
                     <div className="space-y-2">

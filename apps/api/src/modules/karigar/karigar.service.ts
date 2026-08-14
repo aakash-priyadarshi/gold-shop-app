@@ -15,6 +15,7 @@ import {
   type KarigarStageCode,
 } from "@gold-shop/shared";
 import { PrismaService } from "../../prisma/prisma.service";
+import { ShopPriceRebaseService } from "../shops/shop-price-rebase.service";
 import {
   CreateCastingTreeDto,
   CreateKarigarJobDto,
@@ -37,12 +38,16 @@ const BUILT_IN_VAULT: Record<string, string> = {
 
 @Injectable()
 export class KarigarService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private priceRebase: ShopPriceRebaseService,
+  ) {}
 
   async getSnapshot(shopId: string) {
     if (!shopId) {
       return { vaultReserves: {}, workshops: [], jobs: [], customMaterials: [] };
     }
+    await this.priceRebase.ensureShopPricesMatchCurrency(shopId);
 
     const [workshops, jobs, reserves, movements] = await Promise.all([
       this.prisma.karigarWorkshop.findMany({

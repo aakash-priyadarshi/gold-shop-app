@@ -55,6 +55,8 @@ interface Rfq {
   targetGoldWeightG?: number;
   budgetMinNpr?: number;
   budgetMaxNpr?: number;
+  source?: string;
+  createdByShopId?: string;
   surfaceFinish?: string;
   specialInstructions?: string;
   status: string;
@@ -71,7 +73,6 @@ interface Rfq {
     viewedAt?: string;
     respondedAt?: string;
   }>;
-  source?: string;
   walkInMeta?: {
     customerName?: string;
     catalogueSlug?: string;
@@ -93,8 +94,7 @@ const statusColors: Record<string, string> = {
 
 export default function ShopRfqsPage() {
   const { user } = useAuth();
-  const { symbol: currencySymbol, format: formatShopCurrency } =
-    useShopCurrency();
+  const { currencyCode } = useShopCurrency();
   const [rfqs, setRfqs] = useState<Rfq[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("ALL");
@@ -318,10 +318,19 @@ export default function ShopRfqsPage() {
                               <DollarSign className="h-3 w-3 text-muted-foreground" />
                               <span className="text-sm">
                                 {rfq.budgetMinNpr
-                                  ? `${currencySymbol} ${rfq.budgetMinNpr.toLocaleString()} - `
+                                  ? `${formatCurrency(
+                                      rfq.budgetMinNpr,
+                                      rfq.source === "WALK_IN" || rfq.createdByShopId
+                                        ? currencyCode
+                                        : "NPR",
+                                    )} - `
                                   : ""}
-                                {currencySymbol}{" "}
-                                {rfq.budgetMaxNpr.toLocaleString()}
+                                {formatCurrency(
+                                  rfq.budgetMaxNpr,
+                                  rfq.source === "WALK_IN" || rfq.createdByShopId
+                                    ? currencyCode
+                                    : "NPR",
+                                )}
                               </span>
                             </div>
                           ) : (

@@ -24,6 +24,7 @@ import { AuditService } from "../audit/audit.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { ContentModerationService } from "./content-moderation.service";
 import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
+import { ShopPriceRebaseService } from "./shop-price-rebase.service";
 import { ShopsService } from "./shops.service";
 
 // ═══════════════════════════════════════════
@@ -102,6 +103,10 @@ const mockModerationService = {
 const mockSellerSubscriptionsService = {
   autoActivateFreePlan: jest.fn(),
 };
+const mockPriceRebase = {
+  rebaseShopPrices: jest.fn(),
+  ensureShopPricesMatchCurrency: jest.fn().mockResolvedValue(null),
+};
 
 // ═══════════════════════════════════════════
 // TEST SUITE
@@ -125,6 +130,7 @@ describe("ShopsService - Seller Matching", () => {
         { provide: RedisService, useValue: mockRedisService },
         { provide: PlatformConfigService, useValue: mockConfigService },
         { provide: ContentModerationService, useValue: mockModerationService },
+        { provide: ShopPriceRebaseService, useValue: mockPriceRebase },
       ],
     }).compile();
 

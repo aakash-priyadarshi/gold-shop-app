@@ -15,6 +15,7 @@ import {
   PlanLimitExceededException,
   PlanLimitsService,
 } from "../core/subscriptions/plan-limits.service";
+import { ShopPriceRebaseService } from "../shops/shop-price-rebase.service";
 import {
   CreateInventoryItemDto,
   InventoryFilterDto,
@@ -33,6 +34,7 @@ export class InventoryService {
     private prisma: PrismaService,
     private planLimitsService: PlanLimitsService,
     private marketRatesService: MarketRatesService,
+    private priceRebase: ShopPriceRebaseService,
   ) {}
 
   // Create inventory item
@@ -267,6 +269,7 @@ export class InventoryService {
    * Returns { item, variant? } or null when nothing matches.
    */
   async findByCode(shopId: string, code: string) {
+    await this.priceRebase.ensureShopPricesMatchCurrency(shopId);
     const trimmed = normalizeInventoryScanCode(code);
     if (!trimmed) return null;
 
@@ -364,6 +367,13 @@ export class InventoryService {
 
   // Get single item
   async findOne(itemId: string) {
+    const owned = await this.prisma.inventoryItem.findUnique({
+      where: { id: itemId },
+      select: { shopId: true },
+    });
+    if (owned?.shopId) {
+      await this.priceRebase.ensureShopPricesMatchCurrency(owned.shopId);
+    }
     const item = await this.prisma.inventoryItem.findUnique({
       where: { id: itemId },
       include: {
@@ -511,6 +521,7 @@ export class InventoryService {
     if (!shop) {
       throw new ForbiddenException("You do not own this shop");
     }
+    await this.priceRebase.ensureShopPricesMatchCurrency(shopId);
 
     const {
       search,

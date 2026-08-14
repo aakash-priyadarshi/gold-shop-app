@@ -96,6 +96,8 @@ interface RfqDetails {
   targetGoldWeightG?: number;
   budgetMinNpr?: number;
   budgetMaxNpr?: number;
+  source?: string;
+  createdByShopId?: string;
   preferredDeliveryDays?: number;
   specialInstructions?: string;
   referenceImages?: string[];
@@ -425,6 +427,12 @@ export default function ShopRfqDetailPage() {
     setCounterDialogOpen(true);
   };
 
+  const isLocalRfq =
+    Boolean(rfq?.createdByShopId) || rfq?.source === "WALK_IN";
+  const offerCurrency = isLocalRfq
+    ? shopCurrencyData.currencyCode
+    : "NPR";
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -434,10 +442,11 @@ export default function ShopRfqDetailPage() {
   };
 
   const formatCurrency = (amount: number, currency?: string) => {
-    const { currencyCode, locale } = shopCurrencyData;
+    const { locale } = shopCurrencyData;
+    const code = currency || offerCurrency;
     return new Intl.NumberFormat(locale, {
       style: "currency",
-      currency: currency || currencyCode,
+      currency: code,
       minimumFractionDigits: 0,
     }).format(amount);
   };
@@ -1096,7 +1105,7 @@ export default function ShopRfqDetailPage() {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="metalCost">
-                              <T>Metal Cost (NPR) *</T>
+                              <T>Metal Cost</T> ({offerCurrency}) *
                             </Label>
                             <Input
                               id="metalCost"
@@ -1108,7 +1117,7 @@ export default function ShopRfqDetailPage() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="makingCharge">
-                              <T>Making Charge (NPR) *</T>
+                              <T>Making Charge</T> ({offerCurrency}) *
                             </Label>
                             <Input
                               id="makingCharge"
@@ -1122,7 +1131,7 @@ export default function ShopRfqDetailPage() {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="finishCost">
-                              <T>Finish Cost (NPR)</T>
+                              <T>Finish Cost</T> ({offerCurrency})
                             </Label>
                             <Input
                               id="finishCost"
@@ -1134,7 +1143,7 @@ export default function ShopRfqDetailPage() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="gemstoneCost">
-                              <T>Gemstone Cost (NPR)</T>
+                              <T>Gemstone Cost</T> ({offerCurrency})
                             </Label>
                             <Input
                               id="gemstoneCost"
@@ -1179,13 +1188,12 @@ export default function ShopRfqDetailPage() {
                               <T>Estimated Total</T>
                             </p>
                             <p className="text-lg font-bold">
-                              Rs.{" "}
-                              {(
+                              {formatCurrency(
                                 (parseFloat(metalCost) || 0) +
-                                (parseFloat(makingCharge) || 0) +
-                                (parseFloat(finishCost) || 0) +
-                                (parseFloat(gemstoneCost) || 0)
-                              ).toLocaleString()}
+                                  (parseFloat(makingCharge) || 0) +
+                                  (parseFloat(finishCost) || 0) +
+                                  (parseFloat(gemstoneCost) || 0),
+                              )}
                             </p>
                           </div>
                         )}
@@ -1258,7 +1266,7 @@ export default function ShopRfqDetailPage() {
                               <T>Metal Cost</T>
                             </Label>
                             <p className="font-medium">
-                              Rs. {myOffer.metalCostNpr?.toLocaleString() || 0}
+                              {formatCurrency(myOffer.metalCostNpr || 0)}
                             </p>
                           </div>
                           <div>
@@ -1266,8 +1274,7 @@ export default function ShopRfqDetailPage() {
                               <T>Making Charge</T>
                             </Label>
                             <p className="font-medium">
-                              Rs.{" "}
-                              {myOffer.makingChargeNpr?.toLocaleString() || 0}
+                              {formatCurrency(myOffer.makingChargeNpr || 0)}
                             </p>
                           </div>
                           <div>
@@ -1275,7 +1282,7 @@ export default function ShopRfqDetailPage() {
                               <T>Total</T>
                             </Label>
                             <p className="font-medium text-lg">
-                              Rs. {myOffer.totalPriceNpr?.toLocaleString() || 0}
+                              {formatCurrency(myOffer.totalPriceNpr || 0)}
                             </p>
                           </div>
                           <div>
@@ -1352,7 +1359,7 @@ export default function ShopRfqDetailPage() {
                               <T>Proposed Price</T>
                             </Label>
                             <p className="font-bold text-lg text-amber-700 dark:text-amber-300">
-                              Rs. {counter.totalPriceNpr?.toLocaleString() || 0}
+                              {formatCurrency(counter.totalPriceNpr || 0)}
                             </p>
                           </div>
                           {counter.preferredDeliveryDays && (
@@ -1481,7 +1488,7 @@ export default function ShopRfqDetailPage() {
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="font-semibold">
-                              Rs. {offer.totalPriceNpr?.toLocaleString() || 0}
+                              {formatCurrency(offer.totalPriceNpr || 0)}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {formatDate(offer.createdAt)}
@@ -1773,7 +1780,7 @@ export default function ShopRfqDetailPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="counterMetalCost">
-                    <T>Metal Cost (NPR) *</T>
+                    <T>Metal Cost</T> ({offerCurrency}) *
                   </Label>
                   <Input
                     id="counterMetalCost"
@@ -1785,7 +1792,7 @@ export default function ShopRfqDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="counterMakingCharge">
-                    <T>Making Charge (NPR) *</T>
+                    <T>Making Charge</T> ({offerCurrency}) *
                   </Label>
                   <Input
                     id="counterMakingCharge"
@@ -1799,7 +1806,7 @@ export default function ShopRfqDetailPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="counterFinishCost">
-                    <T>Finish Cost (NPR)</T>
+                    <T>Finish Cost</T> ({offerCurrency})
                   </Label>
                   <Input
                     id="counterFinishCost"
@@ -1811,7 +1818,7 @@ export default function ShopRfqDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="counterGemstoneCost">
-                    <T>Gemstone Cost (NPR)</T>
+                    <T>Gemstone Cost</T> ({offerCurrency})
                   </Label>
                   <Input
                     id="counterGemstoneCost"
@@ -1856,13 +1863,12 @@ export default function ShopRfqDetailPage() {
                     <T>Estimated Total</T>
                   </p>
                   <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
-                    Rs.{" "}
-                    {(
+                    {formatCurrency(
                       (parseFloat(counterMetalCost) || 0) +
-                      (parseFloat(counterMakingCharge) || 0) +
-                      (parseFloat(counterFinishCost) || 0) +
-                      (parseFloat(counterGemstoneCost) || 0)
-                    ).toLocaleString()}
+                        (parseFloat(counterMakingCharge) || 0) +
+                        (parseFloat(counterFinishCost) || 0) +
+                        (parseFloat(counterGemstoneCost) || 0),
+                    )}
                   </p>
                 </div>
               )}

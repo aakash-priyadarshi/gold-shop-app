@@ -40,6 +40,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+const FIELD =
+  "w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400";
+
 interface InventoryItem {
   id: string;
   nameEn: string;
@@ -280,7 +283,7 @@ function CartDrawer({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => onQtyChange(c.item.id, c.qty - 1, c.variantId)}
-                className="h-10 w-10 rounded-full border border-gray-200 flex items-center justify-center active:bg-gray-100"
+                className="h-10 w-10 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center active:bg-gray-100 dark:active:bg-gray-800"
               >
                 <Minus className="h-4 w-4" />
               </button>
@@ -289,7 +292,7 @@ function CartDrawer({
               </span>
               <button
                 onClick={() => onQtyChange(c.item.id, c.qty + 1, c.variantId)}
-                className="h-10 w-10 rounded-full border border-gray-200 flex items-center justify-center active:bg-gray-100"
+                className="h-10 w-10 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center active:bg-gray-100 dark:active:bg-gray-800"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -317,7 +320,7 @@ function CartDrawer({
                 className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                   makingPct === p.pct
                     ? "bg-amber-500 border-amber-500 text-white"
-                    : "border-gray-200 text-gray-600 bg-white"
+                    : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900"
                 }`}
               >
                 <T>{p.label}</T>
@@ -364,7 +367,7 @@ function CartDrawer({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder={`${phoneCode} …`}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className={FIELD}
             />
             {customerId && (
               <p className="mt-1 text-[11px] font-medium text-emerald-600">
@@ -381,14 +384,14 @@ function CartDrawer({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("Walk-in customer")}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className={FIELD}
             />
           </div>
         </div>
 
         {/* Payment method */}
         <div className="pb-6">
-          <label className="text-sm font-semibold text-gray-700 block mb-3">
+          <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 block mb-3">
             <T>Select Payment Method</T>
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -398,8 +401,8 @@ function CartDrawer({
                 onClick={() => setMethod(pm.value)}
                 className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${
                   method === pm.value
-                    ? "bg-amber-50 border-amber-500 text-amber-700 shadow-sm"
-                    : "border-gray-100 text-gray-600 bg-white hover:border-gray-200"
+                    ? "bg-amber-50 dark:bg-amber-950/40 border-amber-500 text-amber-700 dark:text-amber-300 shadow-sm"
+                    : "border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 hover:border-gray-200 dark:hover:border-gray-600"
                 }`}
               >
                 <T>{pm.label}</T>
@@ -483,7 +486,7 @@ function BillSuccess({
         <Check className="h-10 w-10 text-green-600" />
       </div>
       <div>
-        <h2 className="text-xl font-bold text-gray-900">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
           {pendingSync ? <T>Sale saved for sync</T> : <T>Bill Created!</T>}
         </h2>
         <p className="text-sm text-gray-500 mt-1">
@@ -513,7 +516,7 @@ function BillSuccess({
           onClick={() => {
             void navigator.clipboard?.writeText(verifyUrl);
           }}
-          className="w-full max-w-xs py-4 border border-gray-200 text-gray-700 text-base font-medium rounded-2xl flex items-center justify-center gap-2"
+          className="w-full max-w-xs py-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-base font-medium rounded-2xl flex items-center justify-center gap-2"
         >
           <Share2 className="h-5 w-5" />
           <T>Copy Bill Link</T>
@@ -611,7 +614,7 @@ function ProductDetailSheet({
             </div>
           )}
           {loading && (
-            <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+            <div className="absolute inset-0 bg-white/70 dark:bg-gray-950/70 flex items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
             </div>
           )}
@@ -620,37 +623,37 @@ function ProductDetailSheet({
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-lg font-bold text-gray-900">{item.nameEn}</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{item.nameEn}</h3>
               <p className="text-xs text-gray-400">SKU {item.sku || item.id}</p>
             </div>
-            <p className="text-base font-bold text-amber-700 whitespace-nowrap">
+            <p className="text-base font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">
               {formatMoney(price, currency)}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {item.jewelleryType && (
-              <span className="px-2 py-1 rounded-full bg-gray-100 text-xs text-gray-600">
+              <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300">
                 {item.jewelleryType.replace(/_/g, " ")}
               </span>
             )}
             {item.metalPurity && (
-              <span className="px-2 py-1 rounded-full bg-amber-100 text-xs text-amber-700">
+              <span className="px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-950/50 text-xs text-amber-700 dark:text-amber-300">
                 {item.metalPurity}
               </span>
             )}
             {weight ? (
-              <span className="px-2 py-1 rounded-full bg-gray-100 text-xs text-gray-600">
+              <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300">
                 {weight}g
               </span>
             ) : null}
-            <span className="px-2 py-1 rounded-full bg-gray-100 text-xs text-gray-600">
+            <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300">
               {item.stockQuantity} in stock
             </span>
           </div>
         </div>
 
         {variants.length > 0 && (
-          <div className="rounded-2xl border border-gray-100 p-4 space-y-2">
+          <div className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-2">
             <p className="text-xs font-semibold text-gray-400 uppercase"><T>Select size</T></p>
             <div className="flex flex-wrap gap-2">
               {variants.map((variant) => (
@@ -661,8 +664,8 @@ function ProductDetailSheet({
                   onClick={() => setSelectedVariantId(variant.id)}
                   className={`rounded-xl border px-3 py-2 text-sm font-semibold disabled:opacity-40 ${
                     selectedVariantId === variant.id
-                      ? "border-amber-500 bg-amber-50 text-amber-700"
-                      : "border-gray-200 text-gray-600"
+                      ? "border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300"
+                      : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300"
                   }`}
                 >
                   {variant.sizeLabel} {(variant.stock ?? 0) > 0 ? `(${variant.stock})` : <T>Out</T>}
@@ -673,11 +676,11 @@ function ProductDetailSheet({
         )}
 
         {(item.descriptionEn || item.descriptionNe) && (
-          <div className="rounded-2xl bg-gray-50 p-4">
+          <div className="rounded-2xl bg-gray-50 dark:bg-gray-900 p-4">
             <p className="text-xs font-semibold text-gray-400 uppercase mb-2">
               <T>Description</T>
             </p>
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+            <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
               {item.descriptionEn || item.descriptionNe}
             </p>
           </div>
@@ -693,36 +696,36 @@ function ProductDetailSheet({
         <Link
           data-tour="m-pos-show-customer"
           href={`/m/products/${item.id}`}
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-800"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-sm font-semibold text-amber-800 dark:text-amber-200"
         >
           <Maximize2 className="h-4 w-4" />
           <T>Show full details to customer</T>
         </Link>
       </div>
 
-      <div className="p-4 border-t bg-white space-y-2">
+      <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 space-y-2">
         {inCartQty > 0 ? (
           <div className="flex items-center gap-2">
             <button
               onClick={() => onQtyChange(inCartQty - 1, selectedVariant)}
-              className="h-12 w-12 rounded-2xl border border-gray-200 flex items-center justify-center"
+              className="h-12 w-12 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center"
               aria-label="Decrease quantity"
             >
               <Minus className="h-4 w-4" />
             </button>
-            <div className="flex-1 h-12 rounded-2xl bg-amber-50 text-amber-800 flex items-center justify-center text-sm font-bold">
+            <div className="flex-1 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 flex items-center justify-center text-sm font-bold">
               {inCartQty} <T>in bill</T>
             </div>
             <button
               onClick={() => onQtyChange(inCartQty + 1, selectedVariant)}
-              className="h-12 w-12 rounded-2xl border border-gray-200 flex items-center justify-center"
+              className="h-12 w-12 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center"
               aria-label="Increase quantity"
             >
               <Plus className="h-4 w-4" />
             </button>
             <button
               onClick={() => onRemove(selectedVariant)}
-              className="h-12 w-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center"
+              className="h-12 w-12 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-500 flex items-center justify-center"
               aria-label="Remove from bill"
             >
               <Trash2 className="h-4 w-4" />
@@ -827,12 +830,12 @@ function AddProductSheet({
             <input
               value={sku}
               onChange={(e) => setSku(e.target.value)}
-              className="flex-1 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="flex-1 px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             <button
               type="button"
               onClick={() => setSkuScanOpen(true)}
-              className="h-11 w-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0"
+              className="h-11 w-11 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 flex items-center justify-center flex-shrink-0"
               aria-label="Scan barcode"
             >
               <ScanLine className="h-4 w-4" />
@@ -849,7 +852,7 @@ function AddProductSheet({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("e.g. Gold Necklace 22K")}
-            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className={FIELD}
           />
         </div>
 
@@ -867,7 +870,7 @@ function AddProductSheet({
                 className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                   jewelleryType === jt
                     ? "bg-amber-500 border-amber-500 text-white"
-                    : "border-gray-200 text-gray-600 bg-white"
+                    : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900"
                 }`}
               >
                 {jt.replace(/_/g, " ")}
@@ -885,7 +888,7 @@ function AddProductSheet({
             <select
               value={metalType}
               onChange={(e) => setMetalType(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className={FIELD}
             >
               {["GOLD", "SILVER", "PLATINUM", "PALLADIUM"].map((m) => (
                 <option key={m} value={m}>{m}</option>
@@ -899,7 +902,7 @@ function AddProductSheet({
             <select
               value={purity}
               onChange={(e) => setPurity(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className={FIELD}
             >
               {["24K", "22K", "18K", "14K", "10K", "925", "999"].map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -920,7 +923,7 @@ function AddProductSheet({
             value={weightGrams}
             onChange={(e) => setWeightGrams(e.target.value)}
             placeholder={t("e.g. 12.50")}
-            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className={FIELD}
           />
         </div>
 
@@ -936,7 +939,7 @@ function AddProductSheet({
               value={metalValue}
               onChange={(e) => setMetalValue(e.target.value)}
               placeholder="0"
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className={FIELD}
             />
           </div>
           <div>
@@ -949,7 +952,7 @@ function AddProductSheet({
               value={makingCharge}
               onChange={(e) => setMakingCharge(e.target.value)}
               placeholder="0"
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className={FIELD}
             />
           </div>
         </div>
@@ -964,13 +967,13 @@ function AddProductSheet({
             min="1"
             value={stockQty}
             onChange={(e) => setStockQty(e.target.value)}
-            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className={FIELD}
           />
         </div>
       </div>
 
       {/* Submit */}
-      <div className="p-4 border-t bg-white">
+      <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
         <button
           onClick={handleSubmit}
           disabled={saving}
@@ -1374,14 +1377,14 @@ export default function MobilePOSPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setScannerOpen(true)}
-              className="h-9 px-3 rounded-xl bg-amber-100 text-amber-700 text-xs font-semibold flex items-center gap-1.5 active:bg-amber-200"
+              className="h-9 px-3 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center gap-1.5 active:bg-amber-200 dark:active:bg-amber-900"
             >
               <ScanLine className="h-4 w-4" />
               <T>Scan</T>
             </button>
             <button
               onClick={() => setAddProductOpen(true)}
-              className="h-9 px-3 rounded-xl bg-gray-100 text-gray-700 text-xs font-semibold flex items-center gap-1.5 active:bg-gray-200"
+              className="h-9 px-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-semibold flex items-center gap-1.5 active:bg-gray-200 dark:active:bg-gray-700"
               aria-label="Add product"
             >
               <Package className="h-4 w-4" />
@@ -1457,8 +1460,8 @@ export default function MobilePOSPage() {
                     }}
                     className={`relative flex flex-col rounded-2xl border overflow-hidden text-left active:scale-95 transition-transform cursor-pointer ${
                       inCartQty > 0
-                        ? "border-amber-400 bg-amber-50"
-                        : "border-gray-200 bg-white"
+                        ? "border-amber-400 bg-amber-50 dark:bg-amber-950/40"
+                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
                     }`}
                   >
                     {/* Product image */}
@@ -1488,15 +1491,15 @@ export default function MobilePOSPage() {
 
                     {/* Info */}
                     <div className="p-2.5">
-                      <p className="text-xs font-medium text-gray-800 line-clamp-2 leading-tight">
+                      <p className="text-xs font-medium text-gray-800 dark:text-gray-100 line-clamp-2 leading-tight">
                         {item.nameEn}
                       </p>
-                      <p className="text-xs text-amber-700 font-semibold mt-1">
+                      <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold mt-1">
                         {formatMoney(item.totalPriceNpr ?? 0, shopCurrency)}
                       </p>
                       <div className="mt-2 flex items-center justify-between gap-1.5">
                         {item.metalPurity ? (
-                          <span className="text-[11px] px-2 py-1 bg-amber-100 text-amber-800 rounded-full font-bold truncate">
+                          <span className="text-[11px] px-2 py-1 bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 rounded-full font-bold truncate">
                             {item.metalPurity}
                           </span>
                         ) : (
@@ -1516,26 +1519,26 @@ export default function MobilePOSPage() {
                         </button>
                       </div>
                       {inCartQty > 0 && !hasVariants && (
-                        <div className="mt-3 flex items-center justify-between rounded-xl bg-amber-50 border border-amber-200 p-1.5">
+                        <div className="mt-3 flex items-center justify-between rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 p-1.5">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               updateQty(item.id, inCartQty - 1);
                             }}
-                            className="h-8 w-8 rounded-lg flex items-center justify-center bg-white text-gray-700 shadow-sm active:bg-gray-100"
+                            className="h-8 w-8 rounded-lg flex items-center justify-center bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-100 shadow-sm active:bg-gray-100 dark:active:bg-gray-700"
                             aria-label={`Decrease ${item.nameEn}`}
                           >
                             <Minus className="h-4 w-4" />
                           </button>
-                          <span className="text-sm font-black text-amber-800">{inCartQty}</span>
+                          <span className="text-sm font-black text-amber-800 dark:text-amber-200">{inCartQty}</span>
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               removeFromCart(item.id);
                             }}
-                            className="h-8 w-8 rounded-lg flex items-center justify-center bg-red-100 text-red-600 shadow-sm active:bg-red-200"
+                            className="h-8 w-8 rounded-lg flex items-center justify-center bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 shadow-sm active:bg-red-200 dark:active:bg-red-900"
                             aria-label={`Remove ${item.nameEn}`}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1552,7 +1555,7 @@ export default function MobilePOSPage() {
 
         {/* Cart FAB */}
         {cartCount > 0 && (
-          <div className="px-4 pb-3 pt-2 bg-white border-t border-gray-100">
+          <div className="px-4 pb-3 pt-2 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
             <button
               data-tour="m-pos-bill-btn"
               onClick={() => setShowCart(true)}

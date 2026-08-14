@@ -122,7 +122,7 @@ export function WalkInProductView({
       <div className="space-y-1">
         <h2 className="text-xl font-bold leading-tight">{item.nameEn}</h2>
         {item.totalPriceNpr != null && (
-          <p className="text-lg font-bold text-amber-700">
+          <p className="text-lg font-bold text-amber-700 dark:text-amber-400">
             {formatCurrencyAmount(item.totalPriceNpr, currency, { decimals: 2 })}
           </p>
         )}
@@ -138,7 +138,7 @@ export function WalkInProductView({
             </span>
           )}
           {item.hallmarkNumber && (
-            <span className="px-2 py-1 rounded-full bg-amber-50 text-xs text-amber-800">
+            <span className="px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-950/50 text-xs text-amber-800 dark:text-amber-200">
               {idLabel} {item.hallmarkNumber}
             </span>
           )}

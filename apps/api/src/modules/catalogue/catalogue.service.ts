@@ -10,6 +10,7 @@ import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
+import { ShopPriceRebaseService } from "../shops/shop-price-rebase.service";
 import {
   createCatalogueToken,
   hashViewerIp,
@@ -26,6 +27,7 @@ export class CatalogueService {
     private prisma: PrismaService,
     private auditService: AuditService,
     private planLimitsService: PlanLimitsService,
+    private priceRebase: ShopPriceRebaseService,
   ) {}
 
   // ─── Field mapping helpers (Prisma → API contract) ─────────────────
@@ -494,6 +496,8 @@ export class CatalogueService {
         );
       }
     }
+
+    await this.priceRebase.ensureShopPricesMatchCurrency(catalogue.shopId);
 
     const items = await this.prisma.catalogueItem.findMany({
       where: {
