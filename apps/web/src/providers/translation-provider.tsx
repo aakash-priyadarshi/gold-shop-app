@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/lib/api";
+import { usePresentationLocaleStore } from "@/store/presentation-locale";
 import { usePreferencesStore, type Language } from "@/store/preferences";
 import {
     createContext,
@@ -129,7 +130,9 @@ function saveToStorage(locale: string, dict: Record<string, string>) {
 /* ────────────────────────────────────────────────────────────── */
 
 export function TranslationProvider({ children }: { children: ReactNode }) {
-  const locale = usePreferencesStore((s) => s.language);
+  const storeLocale = usePreferencesStore((s) => s.language);
+  const presentationLocale = usePresentationLocaleStore((s) => s.locale);
+  const locale = presentationLocale ?? storeLocale;
   const [dict, setDict] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 

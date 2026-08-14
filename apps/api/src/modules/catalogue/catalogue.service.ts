@@ -82,6 +82,9 @@ export class CatalogueService {
       logo: shop.profileImage,
       city: shop.city,
       slug: shop.slug,
+      currency: shop.currency,
+      country: shop.country,
+      language: shop.user?.preferredLanguage || "en",
     };
   }
 
@@ -413,6 +416,11 @@ export class CatalogueService {
             slug: true,
             profileImage: true,
             city: true,
+            currency: true,
+            country: true,
+            user: {
+              select: { preferredLanguage: true },
+            },
           },
         },
       },

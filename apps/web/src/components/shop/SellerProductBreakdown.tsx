@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { CertificatePreviewButton } from "@/components/shop/CertificateLightbox";
 import { T } from "@/components/ui/T";
 import {
   formatCurrencyAmount,
@@ -89,14 +90,15 @@ function GemstoneCard({
             </p>
           )}
           {gem.reportUrl && (
-            <a
-              href={gem.reportUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block text-[11px] font-semibold text-amber-700 underline mt-1"
+            <CertificatePreviewButton
+              url={gem.reportUrl}
+              label={[gem.lab, gem.certNumber || gem.type]
+                .filter(Boolean)
+                .join(" ")}
+              className="inline-block bg-transparent p-0 border-0 text-[11px] font-semibold text-amber-700 underline mt-1 cursor-pointer"
             >
               <T>See certificate</T>
-            </a>
+            </CertificatePreviewButton>
           )}
         </div>
         {gem.valueNpr > 0 && (

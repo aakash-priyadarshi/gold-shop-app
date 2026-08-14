@@ -1,5 +1,6 @@
 "use client";
 
+import { CertificatePreviewButton } from "@/components/shop/CertificateLightbox";
 import { T } from "@/components/ui/T";
 import {
   collectProductCertificates,
@@ -38,12 +39,11 @@ export function ProductCertificatesPanel({
           const pdf = isCertificatePdfUrl(link.url);
           const href = pdf ? link.url : getImageUrl(link.url);
           return (
-            <a
+            <CertificatePreviewButton
               key={`${link.kind}-${link.url}`}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-xl border border-amber-100 dark:border-amber-900/30 bg-white dark:bg-gray-900 p-3 hover:border-amber-300"
+              url={link.url}
+              label={link.label}
+              className="flex w-full items-center gap-3 rounded-xl border border-amber-100 dark:border-amber-900/30 bg-white dark:bg-gray-900 p-3 text-left hover:border-amber-300"
             >
               {pdf ? (
                 <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-50 text-amber-800">
@@ -63,7 +63,7 @@ export function ProductCertificatesPanel({
                   {link.label}
                 </span>
               </span>
-            </a>
+            </CertificatePreviewButton>
           );
         })}
       </div>

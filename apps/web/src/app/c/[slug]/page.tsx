@@ -4,9 +4,19 @@ import { T } from "@/components/ui/T";
 import { WalkInProductView, type WalkInProduct } from "@/components/shop/WalkInProductView";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { catalogueApi, rfqApi } from "@/lib/api";
+import {
+  formatCurrencyAmount,
+  getCurrencyForShop,
+  type SupportedCurrencyCode,
+} from "@/lib/currency";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { useT } from "@/providers/translation-provider";
+import {
+  parseShopLanguage,
+  usePresentationLocaleStore,
+} from "@/store/presentation-locale";
+import { getDefaultWeightUnit, type WeightUnit } from "@gold-shop/shared";
 import {
   ChevronLeft,
   ChevronRight,
@@ -24,17 +34,19 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /* ---------- Walk-in RFQ Modal (3-step) ---------- */
 function WalkInRfqModal({
   items,
   slug,
+  currency,
   onClose,
   onSuccess,
 }: {
   items: CatalogueItemPublic[];
   slug: string;
+  currency: SupportedCurrencyCode;
   onClose: () => void;
   onSuccess: (rfqId: string) => void;
 }) {
@@ -294,7 +306,7 @@ function WalkInRfqModal({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>
-                    <T>Budget Min (NPR)</T>
+                    {t("Budget Min")} ({currency})
                   </label>
                   <input
                     type="number"
@@ -306,7 +318,7 @@ function WalkInRfqModal({
                 </div>
                 <div>
                   <label className={labelClass}>
-                    <T>Budget Max (NPR)</T>
+                    {t("Budget Max")} ({currency})
                   </label>
                   <input
                     type="number"
@@ -500,7 +512,15 @@ interface CataloguePublic {
   isPublic: boolean;
   requiresPassword: boolean;
   expiresAt?: string;
-  shop: { id: string; name: string; logo?: string; slug: string };
+  shop: {
+    id: string;
+    name: string;
+    logo?: string;
+    slug: string;
+    currency?: string;
+    country?: string;
+    language?: string;
+  };
 }
 
 interface CatalogueItemPublic {
@@ -561,16 +581,42 @@ function catalogueItemToWalkIn(item: CatalogueItemPublic): WalkInProduct {
   };
 }
 
+function shopDisplaySettings(shop: CataloguePublic["shop"]): {
+  currency: SupportedCurrencyCode;
+  weightUnit: WeightUnit;
+} {
+  return {
+    currency: getCurrencyForShop(shop),
+    weightUnit: getDefaultWeightUnit(shop.country || "NP"),
+  };
+}
+
+function catalogueMoney(amount: number, currency: SupportedCurrencyCode) {
+  return formatCurrencyAmount(amount, currency, { decimals: 0 });
+}
+
 function CatalogueItemDetail({
   item,
+  currency,
+  weightUnit,
   onClose,
 }: {
   item: CatalogueItemPublic;
+  currency: SupportedCurrencyCode;
+  weightUnit: WeightUnit;
   onClose: () => void;
 }) {
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-[60] bg-white dark:bg-gray-950 overflow-y-auto">
-      <header className="sticky top-0 z-10 flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white/95 dark:bg-gray-950/95 backdrop-blur">
+    <div className="fixed inset-0 z-[60] flex h-dvh flex-col bg-white dark:bg-gray-950">
+      <header className="sticky top-0 z-10 flex shrink-0 items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white/95 dark:bg-gray-950/95 backdrop-blur">
         <button
           type="button"
           onClick={onClose}
@@ -588,12 +634,14 @@ function CatalogueItemDetail({
           </h2>
         </div>
       </header>
-      <div className="mx-auto max-w-xl px-4 py-4 pb-10">
-        <WalkInProductView
-          item={catalogueItemToWalkIn(item)}
-          currency="NPR"
-          weightUnit="GRAM"
-        />
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 pb-10 [-webkit-overflow-scrolling:touch]">
+        <div className="mx-auto max-w-xl">
+          <WalkInProductView
+            item={catalogueItemToWalkIn(item)}
+            currency={currency}
+            weightUnit={weightUnit}
+          />
+        </div>
       </div>
     </div>
   );
@@ -655,11 +703,15 @@ function PasswordGate({ onUnlock }: { onUnlock: (token: string) => void }) {
 function ShowroomView({
   items,
   isOwner,
+  currency,
+  onClose,
   onWalkInRfq,
   onOpenDetails,
 }: {
   items: CatalogueItemPublic[];
   isOwner: boolean;
+  currency: SupportedCurrencyCode;
+  onClose: () => void;
   onWalkInRfq: (selectedItems: CatalogueItemPublic[]) => void;
   onOpenDetails: (item: CatalogueItemPublic) => void;
 }) {
@@ -668,6 +720,14 @@ function ShowroomView({
   const [showSession, setShowSession] = useState(false);
   const t = useT();
   const item = items[idx];
+
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, []);
 
   const prev = () => setIdx((i) => (i > 0 ? i - 1 : items.length - 1));
   const next = () => setIdx((i) => (i < items.length - 1 ? i + 1 : 0));
@@ -690,8 +750,10 @@ function ShowroomView({
       {/* Top bar */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/60 to-transparent">
         <button
-          onClick={() => window.history.back()}
+          type="button"
+          onClick={onClose}
           className="p-2 rounded-full bg-white/10 text-white backdrop-blur-sm"
+          aria-label={t("Close")}
         >
           <X className="h-5 w-5" />
         </button>
@@ -744,7 +806,7 @@ function ShowroomView({
       </div>
 
       {/* Bottom info */}
-      <div className="bg-gradient-to-t from-black/80 to-transparent p-6 space-y-3">
+      <div className="max-h-[45vh] overflow-y-auto overscroll-contain bg-gradient-to-t from-black/80 to-transparent p-6 space-y-3">
         <h3 className="text-xl font-semibold text-white">
           {item.inventoryItem.title}
         </h3>
@@ -754,12 +816,10 @@ function ShowroomView({
             <span>· {item.inventoryItem.purity}</span>
           )}
           <span className="text-gold-400 font-semibold">
-            NPR{" "}
-            {(
-              item.overridePrice ||
-              item.inventoryItem.totalPriceNpr ||
-              0
-            ).toLocaleString()}
+            {catalogueMoney(
+              item.overridePrice || item.inventoryItem.totalPriceNpr || 0,
+              currency,
+            )}
           </span>
         </div>
 
@@ -851,12 +911,12 @@ function ShowroomView({
                       {si.inventoryItem.title}
                     </div>
                     <div className="text-xs text-gray-400">
-                      NPR{" "}
-                      {(
+                      {catalogueMoney(
                         si.overridePrice ||
-                        si.inventoryItem.totalPriceNpr ||
-                        0
-                      ).toLocaleString()}
+                          si.inventoryItem.totalPriceNpr ||
+                          0,
+                        currency,
+                      )}
                     </div>
                   </div>
                   <button
@@ -953,14 +1013,20 @@ export default function PublicCataloguePage() {
     void fetchCatalogue();
   }, [fetchCatalogue]);
 
-  // Check for showroom mode
+  const autoOpenedShowroom = useRef(false);
+
+  // Kiosk/staff links can force slides with ?mode=showroom. Catalogue mode
+  // SHOWROOM still starts on the scrolling grid so the close control can exit.
   useEffect(() => {
     if (
-      catalogue &&
-      (catalogue.mode === "SHOWROOM" || searchParams.get("mode") === "showroom")
+      !catalogue ||
+      autoOpenedShowroom.current ||
+      searchParams.get("mode") !== "showroom"
     ) {
-      setShowShowroom(true);
+      return;
     }
+    autoOpenedShowroom.current = true;
+    setShowShowroom(true);
   }, [catalogue, searchParams]);
 
   // Record view
@@ -1018,6 +1084,18 @@ export default function PublicCataloguePage() {
   // Walk-in RFQ modal state
   const [walkInModal, setWalkInModal] = useState(false);
   const [walkInItems, setWalkInItems] = useState<CatalogueItemPublic[]>([]);
+  const setPresentationLocale = usePresentationLocaleStore(
+    (state) => state.setLocale,
+  );
+  const display = catalogue
+    ? shopDisplaySettings(catalogue.shop)
+    : { currency: "NPR" as SupportedCurrencyCode, weightUnit: "GRAM" as WeightUnit };
+
+  useEffect(() => {
+    if (!catalogue?.shop) return;
+    setPresentationLocale(parseShopLanguage(catalogue.shop.language));
+    return () => setPresentationLocale(null);
+  }, [catalogue, setPresentationLocale]);
 
   const handleWalkInRfq = (selectedItems: CatalogueItemPublic[]) => {
     setWalkInItems(selectedItems);
@@ -1027,6 +1105,13 @@ export default function PublicCataloguePage() {
   const handleWalkInRfqClose = () => {
     setWalkInModal(false);
     setWalkInItems([]);
+  };
+
+  const closeShowroom = () => {
+    setShowShowroom(false);
+    if (searchParams.get("mode") === "showroom") {
+      router.replace(`/c/${slug}`);
+    }
   };
 
   // Password gate
@@ -1072,12 +1157,16 @@ export default function PublicCataloguePage() {
         <ShowroomView
           items={items}
           isOwner={isOwner}
+          currency={display.currency}
+          onClose={closeShowroom}
           onWalkInRfq={handleWalkInRfq}
           onOpenDetails={setDetailItem}
         />
         {detailItem && (
           <CatalogueItemDetail
             item={detailItem}
+            currency={display.currency}
+            weightUnit={display.weightUnit}
             onClose={() => setDetailItem(null)}
           />
         )}
@@ -1085,6 +1174,7 @@ export default function PublicCataloguePage() {
           <WalkInRfqModal
             items={walkInItems}
             slug={slug}
+            currency={display.currency}
             onClose={handleWalkInRfqClose}
             onSuccess={(rfqId) => {
               handleWalkInRfqClose();
@@ -1101,7 +1191,7 @@ export default function PublicCataloguePage() {
 
   // Normal catalogue view
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-dvh overflow-y-auto bg-gray-50 dark:bg-gray-950">
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-6xl mx-auto px-4 py-6">
@@ -1219,12 +1309,12 @@ export default function PublicCataloguePage() {
                     )}
                   </div>
                   <div className="text-sm font-semibold text-gold-600 dark:text-gold-400">
-                    NPR{" "}
-                    {(
+                    {catalogueMoney(
                       item.overridePrice ||
-                      item.inventoryItem.totalPriceNpr ||
-                      0
-                    ).toLocaleString()}
+                        item.inventoryItem.totalPriceNpr ||
+                        0,
+                      display.currency,
+                    )}
                   </div>
                   {/* Size chips */}
                   {item.inventoryItem.variants &&
@@ -1274,6 +1364,7 @@ export default function PublicCataloguePage() {
         <WalkInRfqModal
           items={walkInItems}
           slug={slug}
+          currency={display.currency}
           onClose={handleWalkInRfqClose}
           onSuccess={(rfqId) => {
             handleWalkInRfqClose();
@@ -1287,6 +1378,8 @@ export default function PublicCataloguePage() {
       {detailItem && (
         <CatalogueItemDetail
           item={detailItem}
+          currency={display.currency}
+          weightUnit={display.weightUnit}
           onClose={() => setDetailItem(null)}
         />
       )}
