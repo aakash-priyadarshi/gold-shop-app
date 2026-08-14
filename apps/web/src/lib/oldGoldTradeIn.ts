@@ -16,7 +16,11 @@ export interface TradeInPayload {
     deductionPct?: number;
     calculatedCredit?: number;
   }>;
-  rateSnapshot?: { rate24k?: number; fetchedAt?: string };
+  rateSnapshot?: {
+    rate24k?: number;
+    silver999?: number;
+    fetchedAt?: string;
+  };
   createdAt: string;
 }
 

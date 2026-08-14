@@ -18,9 +18,9 @@ import Link from "next/link";
 
 const tools = [
   {
-    title: "Old Gold Exchange",
+    title: "Old Gold / Silver Exchange",
     description:
-      "Calculate exchange value when trading old gold for new jewellery",
+      "Calculate exchange value when trading old gold or silver for new jewellery",
     href: "/dashboard/shop/tools/old-gold",
     icon: ArrowLeftRight,
     color: "text-amber-500 bg-amber-50 dark:bg-amber-950/30",

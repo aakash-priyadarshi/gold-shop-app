@@ -228,6 +228,11 @@ const CHUNKS: { topic: string; content: string }[] = [
     content:
       "Karigar Gold Loss on Supply Chain tracks physical workshop metal, not customer billing wastage (jarti) on invoices. Issue gold from the vault to a karigar or job. Each job has stages (casting, filing, polishing, stone setting, final polish, QC) with gold in, gold out, scrap, and dust. Casting trees reconcile issued grams against finished pieces, sprue/button, and recoverable scrap. Actual loss = issued − finished − sprue − recoverable. Unexplained loss is anything above the allowed %. Catalogue and RFQ bills never feed this ledger. Use Load sample 1 kg job for a demo: 1000g issued, 920g finished, 50g sprue, 20g recoverable, 10g actual loss at 1% allowed. Print the Gold Loss report for job-wise, tree-wise, and karigar-wise accountability.",
   },
+  {
+    topic: "old_gold_silver_exchange",
+    content:
+      "Old Gold / Silver Exchange is one shop tool at /dashboard/shop/tools/old-gold. Stay on that page and switch Gold or Silver at the top. Gold uses the live 24K rate and karat purities (24K–9K). Silver uses the live 999 rate and jewellery purities 999, 925 sterling, 900, 835, and 800. Weight, impurity %, melting loss, and making % work the same for both metals. Apply the calculated credit to Create Invoice or POS. Invoice notes say Old gold or Old silver based on the metal. This is customer trade-in / buy-back, not karigar workshop gold loss and not billing wastage (jarti).",
+  },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

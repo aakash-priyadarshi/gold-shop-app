@@ -428,6 +428,38 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
+  "/dashboard/shop/tools/old-gold": [
+    {
+      element: "[data-tour='exchange-metal']",
+      popover: {
+        title: "Gold or silver",
+        description:
+          "Switch metal here. Gold uses the live 24K rate and karat purities. Silver uses the live 999 rate and 999 / 925 / 900 / 835 / 800.",
+        side: "bottom",
+        align: "end",
+      },
+    },
+    {
+      element: "[data-tour='exchange-rate']",
+      popover: {
+        title: "Live metal rate",
+        description:
+          "The rate card follows the selected metal. Refresh pulls the latest shop-currency rate for gold 24K or silver 999.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='exchange-old']",
+      popover: {
+        title: "Old metal credit",
+        description:
+          "Enter weight, purity, impurity, and melting loss. The buy-back value is fine metal after deductions times the live rate. Apply the credit to Invoice or POS.",
+        side: "right",
+        align: "start",
+      },
+    },
+  ],
   "/dashboard/shop/tools": [
     {
       element: "[data-tour='tools-grid']",
@@ -441,9 +473,9 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     },
     {
       popover: {
-        title: "Old Gold Exchange",
+        title: "Old Gold / Silver Exchange",
         description:
-          "Calculate exchange value when a customer trades old gold for new jewellery. Get the exact buy-back rate based on live gold prices.",
+          "Calculate exchange value when a customer trades old gold or silver for new jewellery. Switch metal on the page and use the live rate for that metal.",
       },
     },
     {

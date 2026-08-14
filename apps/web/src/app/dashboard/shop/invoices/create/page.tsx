@@ -2194,18 +2194,22 @@ export default function CreateInvoicePage() {
       payload?.calculatedCredit &&
       payload.finalCredit !== payload.calculatedCredit
     ) {
+      const metalName =
+        payload.items?.[0]?.metal === "SILVER" ? "Old silver" : "Old gold";
       reason =
         reason ||
-        `Old gold trade-in (calculated ${payload.calculatedCredit}, applied ${payload.finalCredit})`;
+        `${metalName} trade-in (calculated ${payload.calculatedCredit}, applied ${payload.finalCredit})`;
     }
     if (Number.isFinite(credit) && credit > 0) {
       setDiscountMode("right");
       setDiscountValue(String(Math.round(credit)));
+      const metalName =
+        payload?.items?.[0]?.metal === "SILVER" ? "Old silver" : "Old gold";
       const note =
-        reason || `Old gold trade-in credit: ${Math.round(credit)}`;
+        reason || `${metalName} trade-in credit: ${Math.round(credit)}`;
       setTradeInNote(note);
       setNotes((prev) =>
-        prev?.includes("Old gold")
+        prev?.includes("Old gold") || prev?.includes("Old silver")
           ? prev
           : [prev, note].filter(Boolean).join("\n"),
       );

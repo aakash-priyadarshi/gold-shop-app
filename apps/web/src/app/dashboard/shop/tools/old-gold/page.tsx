@@ -15,8 +15,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { T } from "@/components/ui/T";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { toast } from "@/hooks/use-toast";
 import { materialsApi } from "@/lib/api";
 import { saveTradeInPayload } from "@/lib/oldGoldTradeIn";
+import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
@@ -30,19 +32,101 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { toast } from "@/hooks/use-toast";
+import { useCallback, useEffect, useState } from "react";
 
-// Purity multipliers for gold
-const GOLD_PURITIES: { label: string; karat: number; purity: number }[] = [
-  { label: "24K (999)", karat: 24, purity: 0.999 },
-  { label: "22K (916)", karat: 22, purity: 0.916 },
-  { label: "21K (875)", karat: 21, purity: 0.875 },
-  { label: "18K (750)", karat: 18, purity: 0.75 },
-  { label: "14K (585)", karat: 14, purity: 0.585 },
-  { label: "10K (417)", karat: 10, purity: 0.417 },
-  { label: "9K (375)", karat: 9, purity: 0.375 },
+type ExchangeMetal = "GOLD" | "SILVER";
+
+type PurityOption = { key: string; label: string; purity: number };
+
+const GOLD_PURITIES: PurityOption[] = [
+  { key: "24k", label: "24K (999)", purity: 0.999 },
+  { key: "22k", label: "22K (916)", purity: 0.916 },
+  { key: "21k", label: "21K (875)", purity: 0.875 },
+  { key: "18k", label: "18K (750)", purity: 0.75 },
+  { key: "14k", label: "14K (585)", purity: 0.585 },
+  { key: "10k", label: "10K (417)", purity: 0.417 },
+  { key: "9k", label: "9K (375)", purity: 0.375 },
 ];
+
+const SILVER_PURITIES: PurityOption[] = [
+  { key: "999", label: "Fine 999", purity: 0.999 },
+  { key: "925", label: "Sterling 925", purity: 0.925 },
+  { key: "900", label: "Coin 900", purity: 0.9 },
+  { key: "835", label: "Continental 835", purity: 0.835 },
+  { key: "800", label: "800", purity: 0.8 },
+];
+
+const GOLD_DEFAULT_PURITY = 0.916;
+const SILVER_DEFAULT_PURITY = 0.925;
+
+const GOLD_RATE_FALLBACKS: Record<string, number> = {
+  NP: 11500,
+  IN: 7200,
+  AE: 230,
+  US: 85,
+  GB: 68,
+  EU: 78,
+  LK: 65000,
+};
+
+const SILVER_RATE_FALLBACKS: Record<string, number> = {
+  NP: 150,
+  IN: 90,
+  AE: 3,
+  US: 1,
+  GB: 0.8,
+  EU: 0.9,
+  LK: 280,
+};
+
+function asPositiveRate(...values: unknown[]): number {
+  for (const value of values) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return 0;
+}
+
+function readMetalRate(data: unknown, codes: string[]): number {
+  const payload = data as Record<string, unknown> | null;
+  const metals = payload?.metals ?? payload?.rates ?? data;
+  if (Array.isArray(metals)) {
+    const match = metals.find((m: Record<string, unknown>) => {
+      const code = String(m.code ?? m.metalCode ?? "");
+      const name = String(m.name ?? "");
+      return codes.includes(code) || codes.includes(name);
+    });
+    if (!match) return 0;
+    return asPositiveRate(
+      match.ratePerGram,
+      match.pricePerGram,
+      match.rate,
+      match.price,
+    );
+  }
+  if (metals && typeof metals === "object") {
+    const map = metals as Record<string, unknown>;
+    for (const code of codes) {
+      const value = map[code];
+      if (typeof value === "number") {
+        const n = asPositiveRate(value);
+        if (n) return n;
+        continue;
+      }
+      if (value && typeof value === "object") {
+        const nested = value as Record<string, unknown>;
+        const n = asPositiveRate(
+          nested.ratePerGram,
+          nested.pricePerGram,
+          nested.rate,
+          nested.price,
+        );
+        if (n) return n;
+      }
+    }
+  }
+  return 0;
+}
 
 export default function OldGoldExchangePage() {
   const router = useRouter();
@@ -52,83 +136,92 @@ export default function OldGoldExchangePage() {
     currencyCode,
   } = useShopCurrency();
   const t = useT();
+  const [metal, setMetal] = useState<ExchangeMetal>("GOLD");
   const [goldRate24k, setGoldRate24k] = useState<number>(0);
+  const [silverRate999, setSilverRate999] = useState<number>(0);
   const [rateLoading, setRateLoading] = useState(true);
 
-  // Old gold inputs
   const [oldWeight, setOldWeight] = useState("");
-  const [oldPurity, setOldPurity] = useState(0.916); // Default 22K
-  const [impurityDeduct, setImpurityDeduct] = useState("2"); // % deducted
-  const [meltingLoss, setMeltingLoss] = useState("0.5"); // % melting loss (typical)
+  const [oldPurity, setOldPurity] = useState(GOLD_DEFAULT_PURITY);
+  const [impurityDeduct, setImpurityDeduct] = useState("2");
+  const [meltingLoss, setMeltingLoss] = useState("0.5");
 
-  // New item inputs
   const [newWeight, setNewWeight] = useState("");
-  const [newPurity, setNewPurity] = useState(0.916);
-  const [makingCharge, setMakingCharge] = useState("12"); // % making charge
-  const [finalOldCredit, setFinalOldCredit] = useState(""); // shopkeeper override
-  const [finalNewCost, setFinalNewCost] = useState(""); // shopkeeper override
+  const [newPurity, setNewPurity] = useState(GOLD_DEFAULT_PURITY);
+  const [makingCharge, setMakingCharge] = useState("12");
+  const [finalOldCredit, setFinalOldCredit] = useState("");
+  const [finalNewCost, setFinalNewCost] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
 
-  useEffect(() => {
-    void loadGoldRate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
-  }, []);
+  const isSilver = metal === "SILVER";
+  const purities = isSilver ? SILVER_PURITIES : GOLD_PURITIES;
+  const liveRate = isSilver ? silverRate999 : goldRate24k;
 
-  const loadGoldRate = async () => {
+  const loadRates = useCallback(async () => {
     setRateLoading(true);
+    const country = shopCountry || "NP";
     try {
       const res = await materialsApi.getMarketRates({
         currency: currencyCode,
-        country: shopCountry || "NP",
+        country,
       });
-      // Find gold 24k rate
-      const rates = res.data?.metals || res.data?.rates || res.data;
-      if (Array.isArray(rates)) {
-        const gold = rates.find(
-          (r: any) => r.metalCode === "GOLD_24K" || r.name === "Gold 24K",
-        );
-        if (gold) setGoldRate24k(gold.pricePerGram || gold.price || 0);
-      } else if (rates?.GOLD_24K) {
-        setGoldRate24k(rates.GOLD_24K);
-      }
+      const data = res.data;
+      const gold =
+        readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]) ||
+        Number(data?.rate24k ?? data?.goldRate24k ?? 0);
+      const silverFine =
+        readMetalRate(data, ["SILVER_999", "XAG", "SILVER"]) ||
+        Number(data?.silver ?? data?.silverRate ?? 0);
+      const silver925 = readMetalRate(data, ["SILVER_925"]);
+      setGoldRate24k(gold || GOLD_RATE_FALLBACKS[country] || 7200);
+      setSilverRate999(
+        silverFine ||
+          (silver925 > 0 ? silver925 / 0.925 : 0) ||
+          SILVER_RATE_FALLBACKS[country] ||
+          90,
+      );
     } catch {
-      // Dynamic fallback rate based on shop country
-      const fallbacks: Record<string, number> = {
-        NP: 11500,
-        IN: 7200,
-        AE: 230,
-        US: 85,
-        GB: 68,
-        EU: 78,
-      };
-      setGoldRate24k(fallbacks[shopCountry] || 7200);
+      setGoldRate24k(GOLD_RATE_FALLBACKS[country] || 7200);
+      setSilverRate999(SILVER_RATE_FALLBACKS[country] || 90);
     } finally {
       setRateLoading(false);
     }
+  }, [currencyCode, shopCountry]);
+
+  useEffect(() => {
+    void loadRates();
+  }, [loadRates]);
+
+  const selectMetal = (next: ExchangeMetal) => {
+    if (next === metal) return;
+    const defaultPurity =
+      next === "SILVER" ? SILVER_DEFAULT_PURITY : GOLD_DEFAULT_PURITY;
+    setMetal(next);
+    setOldPurity(defaultPurity);
+    setNewPurity(defaultPurity);
+    setFinalOldCredit("");
+    setFinalNewCost("");
   };
 
-  // Calculate old gold value
   const oldWeightG = parseFloat(oldWeight) || 0;
   const impurityPct = parseFloat(impurityDeduct) || 0;
   const meltLossPct = parseFloat(meltingLoss) || 0;
-  const pureGoldInOld = oldWeightG * oldPurity;
-  const afterImpurity = pureGoldInOld * (1 - impurityPct / 100);
+  const pureMetalInOld = oldWeightG * oldPurity;
+  const afterImpurity = pureMetalInOld * (1 - impurityPct / 100);
   const afterMelting = afterImpurity * (1 - meltLossPct / 100);
-  const oldGoldValue = afterMelting * goldRate24k;
+  const oldMetalValue = afterMelting * liveRate;
 
-  // Calculate new item cost
   const newWeightG = parseFloat(newWeight) || 0;
-  const pureGoldInNew = newWeightG * newPurity;
-  const newGoldCost = pureGoldInNew * goldRate24k;
+  const pureMetalInNew = newWeightG * newPurity;
+  const newMetalCost = pureMetalInNew * liveRate;
   const makingPct = parseFloat(makingCharge) || 0;
-  const makingCost = newGoldCost * (makingPct / 100);
-  const newTotalCost = newGoldCost + makingCost;
+  const makingCost = newMetalCost * (makingPct / 100);
+  const newTotalCost = newMetalCost + makingCost;
 
-  // Exchange result (honour shopkeeper final overrides when set)
   const effectiveOldCredit =
     finalOldCredit !== "" && Number.isFinite(parseFloat(finalOldCredit))
       ? parseFloat(finalOldCredit)
-      : oldGoldValue;
+      : oldMetalValue;
   const effectiveNewCost =
     finalNewCost !== "" && Number.isFinite(parseFloat(finalNewCost))
       ? parseFloat(finalNewCost)
@@ -141,24 +234,28 @@ export default function OldGoldExchangePage() {
     if (effectiveOldCredit <= 0) {
       toast({
         variant: "destructive",
-        title: t("Enter old gold details first"),
+        title: isSilver
+          ? t("Enter old silver details first")
+          : t("Enter old gold details first"),
       });
       return;
     }
     saveTradeInPayload({
-      calculatedCredit: Math.round(oldGoldValue),
+      calculatedCredit: Math.round(oldMetalValue),
       finalCredit: Math.round(effectiveOldCredit),
       overrideReason: overrideReason || undefined,
       currency: currencyCode,
       items: [
         {
-          metal: "GOLD",
+          metal,
           karatOrPurity: oldPurity,
           weightG: oldWeightG,
           calculatedCredit: Math.round(effectiveOldCredit),
         },
       ],
-      rateSnapshot: { rate24k: goldRate24k, fetchedAt: new Date().toISOString() },
+      rateSnapshot: isSilver
+        ? { silver999: silverRate999, fetchedAt: new Date().toISOString() }
+        : { rate24k: goldRate24k, fetchedAt: new Date().toISOString() },
     });
     toast({
       title: t("Trade-in credit ready"),
@@ -179,7 +276,7 @@ export default function OldGoldExchangePage() {
     <ShopGuard>
       <DashboardLayout>
         <div className="space-y-6 max-w-4xl mx-auto">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -190,44 +287,101 @@ export default function OldGoldExchangePage() {
               </Button>
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
-                  <ArrowLeftRight className="h-6 w-6 text-amber-500" />
-                  <T>Old Gold Exchange Calculator</T>
+                  <ArrowLeftRight
+                    className={cn(
+                      "h-6 w-6",
+                      isSilver ? "text-slate-500" : "text-amber-500",
+                    )}
+                  />
+                  <T>Old Gold / Silver Exchange</T>
                 </h1>
                 <p className="text-muted-foreground">
                   <T>
-                    Calculate exchange value when customers trade old gold for
-                    new jewellery
+                    Calculate exchange value when customers trade old gold or
+                    silver for new jewellery
                   </T>
                 </p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadGoldRate}
-              disabled={rateLoading}
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${rateLoading ? "animate-spin" : ""}`}
-              />
-              <T>Refresh Rate</T>
-            </Button>
+            <div className="flex items-center gap-2">
+              <div
+                className="inline-flex h-10 items-center rounded-md bg-muted p-1"
+                data-tour="exchange-metal"
+              >
+                <button
+                  type="button"
+                  className={cn(
+                    "rounded-sm px-4 py-1.5 text-sm font-medium transition-all",
+                    metal === "GOLD"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground",
+                  )}
+                  onClick={() => selectMetal("GOLD")}
+                >
+                  <T>Gold</T>
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    "rounded-sm px-4 py-1.5 text-sm font-medium transition-all",
+                    metal === "SILVER"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground",
+                  )}
+                  onClick={() => selectMetal("SILVER")}
+                >
+                  <T>Silver</T>
+                </button>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void loadRates()}
+                disabled={rateLoading}
+              >
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${rateLoading ? "animate-spin" : ""}`}
+                />
+                <T>Refresh Rate</T>
+              </Button>
+            </div>
           </div>
 
-          {/* Current Gold Rate */}
-          <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200 dark:from-amber-950/30 dark:to-yellow-950/30 dark:border-amber-800/50">
+          <Card
+            data-tour="exchange-rate"
+            className={cn(
+              "bg-gradient-to-r",
+              isSilver
+                ? "from-slate-50 to-zinc-100 border-slate-300 dark:from-slate-950/40 dark:to-zinc-950/40 dark:border-slate-700"
+                : "from-amber-50 to-yellow-50 border-amber-200 dark:from-amber-950/30 dark:to-yellow-950/30 dark:border-amber-800/50",
+            )}
+          >
             <CardContent className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <Coins className="h-8 w-8 text-amber-500" />
+                <Coins
+                  className={cn(
+                    "h-8 w-8",
+                    isSilver ? "text-slate-500" : "text-amber-500",
+                  )}
+                />
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    <T>Live Gold Rate (24K)</T>
+                    {isSilver ? (
+                      <T>Live Silver Rate (999)</T>
+                    ) : (
+                      <T>Live Gold Rate (24K)</T>
+                    )}
                   </p>
-                  <p className="text-2xl font-bold text-amber-600">
+                  <p
+                    className={cn(
+                      "text-2xl font-bold",
+                      isSilver ? "text-slate-600 dark:text-slate-300" : "text-amber-600",
+                    )}
+                  >
                     {rateLoading ? (
                       <Loader2 className="h-5 w-5 animate-spin inline" />
                     ) : (
-                      `${currencySymbol} ${goldRate24k.toLocaleString()}/g`
+                      `${currencySymbol} ${liveRate.toLocaleString()}/g`
                     )}
                   </p>
                 </div>
@@ -236,14 +390,25 @@ export default function OldGoldExchangePage() {
           </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Old Gold Section */}
-            <Card className="border-red-200 dark:border-red-800/50">
+            <Card
+              data-tour="exchange-old"
+              className="border-red-200 dark:border-red-800/50"
+            >
               <CardHeader className="bg-red-50/50 dark:bg-red-950/30 rounded-t-lg">
                 <CardTitle className="text-red-700 dark:text-red-300 flex items-center gap-2">
-                  <Scale className="h-5 w-5" /> <T>Customer&apos;s Old Gold</T>
+                  <Scale className="h-5 w-5" />
+                  {isSilver ? (
+                    <T>Customer&apos;s Old Silver</T>
+                  ) : (
+                    <T>Customer&apos;s Old Gold</T>
+                  )}
                 </CardTitle>
                 <CardDescription>
-                  <T>Gold being exchanged/sold</T>
+                  {isSilver ? (
+                    <T>Silver being exchanged/sold</T>
+                  ) : (
+                    <T>Gold being exchanged/sold</T>
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 pt-4">
@@ -268,8 +433,8 @@ export default function OldGoldExchangePage() {
                     onChange={(e) => setOldPurity(parseFloat(e.target.value))}
                     className="w-full h-10 px-3 border rounded-md bg-background"
                   >
-                    {GOLD_PURITIES.map((p) => (
-                      <option key={p.karat} value={p.purity}>
+                    {purities.map((p) => (
+                      <option key={p.key} value={p.purity}>
                         {p.label}
                       </option>
                     ))}
@@ -301,9 +466,13 @@ export default function OldGoldExchangePage() {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>
-                      <T>Pure gold content</T>
+                      {isSilver ? (
+                        <T>Pure silver content</T>
+                      ) : (
+                        <T>Pure gold content</T>
+                      )}
                     </span>
-                    <span>{pureGoldInOld.toFixed(3)}g</span>
+                    <span>{pureMetalInOld.toFixed(3)}g</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>
@@ -320,11 +489,15 @@ export default function OldGoldExchangePage() {
                   <Separator />
                   <div className="flex justify-between font-bold text-lg text-red-600">
                     <span>
-                      <T>Old Gold Value</T>
+                      {isSilver ? (
+                        <T>Old Silver Value</T>
+                      ) : (
+                        <T>Old Gold Value</T>
+                      )}
                     </span>
                     <span>
                       {currencySymbol}{" "}
-                      {oldGoldValue.toLocaleString(undefined, {
+                      {oldMetalValue.toLocaleString(undefined, {
                         maximumFractionDigits: 0,
                       })}
                     </span>
@@ -333,7 +506,6 @@ export default function OldGoldExchangePage() {
               </CardContent>
             </Card>
 
-            {/* New Item Section */}
             <Card className="border-green-200 dark:border-green-800/50">
               <CardHeader className="bg-green-50/50 dark:bg-green-950/30 rounded-t-lg">
                 <CardTitle className="text-green-700 dark:text-green-300 flex items-center gap-2">
@@ -365,8 +537,8 @@ export default function OldGoldExchangePage() {
                     onChange={(e) => setNewPurity(parseFloat(e.target.value))}
                     className="w-full h-10 px-3 border rounded-md bg-background"
                   >
-                    {GOLD_PURITIES.map((p) => (
-                      <option key={p.karat} value={p.purity}>
+                    {purities.map((p) => (
+                      <option key={p.key} value={p.purity}>
                         {p.label}
                       </option>
                     ))}
@@ -380,24 +552,28 @@ export default function OldGoldExchangePage() {
                     onChange={(e) => setMakingCharge(e.target.value)}
                     step="0.5"
                     min="0"
-                    max="30"
+                    max="50"
                   />
                 </div>
                 <Separator />
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>
-                      <T>Pure gold content</T>
+                      {isSilver ? (
+                        <T>Pure silver content</T>
+                      ) : (
+                        <T>Pure gold content</T>
+                      )}
                     </span>
-                    <span>{pureGoldInNew.toFixed(3)}g</span>
+                    <span>{pureMetalInNew.toFixed(3)}g</span>
                   </div>
                   <div className="flex justify-between">
                     <span>
-                      <T>Gold cost</T>
+                      {isSilver ? <T>Silver cost</T> : <T>Gold cost</T>}
                     </span>
                     <span>
                       {currencySymbol}{" "}
-                      {newGoldCost.toLocaleString(undefined, {
+                      {newMetalCost.toLocaleString(undefined, {
                         maximumFractionDigits: 0,
                       })}
                     </span>
@@ -430,9 +606,16 @@ export default function OldGoldExchangePage() {
             </Card>
           </div>
 
-          {/* Exchange Summary */}
           {(oldWeightG > 0 || newWeightG > 0) && (
-            <Card className="border-2 border-amber-300 dark:border-amber-600 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30">
+            <Card
+              data-tour="exchange-summary"
+              className={cn(
+                "border-2 bg-gradient-to-r",
+                isSilver
+                  ? "border-slate-300 dark:border-slate-600 from-slate-50 to-zinc-50 dark:from-slate-950/30 dark:to-zinc-950/30"
+                  : "border-amber-300 dark:border-amber-600 from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30",
+              )}
+            >
               <CardHeader>
                 <CardTitle className="text-center text-xl">
                   <T>Exchange Summary</T>
@@ -442,17 +625,26 @@ export default function OldGoldExchangePage() {
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      <T>Old Gold Value</T>
+                      {isSilver ? (
+                        <T>Old Silver Value</T>
+                      ) : (
+                        <T>Old Gold Value</T>
+                      )}
                     </p>
                     <p className="text-xl font-bold text-red-600">
                       {currencySymbol}{" "}
-                      {oldGoldValue.toLocaleString(undefined, {
+                      {oldMetalValue.toLocaleString(undefined, {
                         maximumFractionDigits: 0,
                       })}
                     </p>
                   </div>
                   <div className="flex items-center justify-center">
-                    <ArrowLeftRight className="h-8 w-8 text-amber-500" />
+                    <ArrowLeftRight
+                      className={cn(
+                        "h-8 w-8",
+                        isSilver ? "text-slate-500" : "text-amber-500",
+                      )}
+                    />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">
@@ -471,17 +663,22 @@ export default function OldGoldExchangePage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
                     <div>
                       <Label>
-                        <T>Final old gold credit</T> ({currencySymbol})
+                        {isSilver ? (
+                          <T>Final old silver credit</T>
+                        ) : (
+                          <T>Final old gold credit</T>
+                        )}{" "}
+                        ({currencySymbol})
                       </Label>
                       <Input
                         type="number"
                         value={finalOldCredit}
                         onChange={(e) => setFinalOldCredit(e.target.value)}
-                        placeholder={String(Math.round(oldGoldValue))}
+                        placeholder={String(Math.round(oldMetalValue))}
                       />
                       <p className="text-[11px] text-muted-foreground mt-1">
                         <T>Calculated</T>: {currencySymbol}{" "}
-                        {Math.round(oldGoldValue).toLocaleString()} —{" "}
+                        {Math.round(oldMetalValue).toLocaleString()} —{" "}
                         <T>edit to negotiate</T>
                       </p>
                     </div>
@@ -550,7 +747,10 @@ export default function OldGoldExchangePage() {
                       <FileText className="h-4 w-4 mr-2" />
                       <T>Apply to Invoice</T>
                     </Button>
-                    <Button variant="outline" onClick={() => applyTradeIn("pos")}>
+                    <Button
+                      variant="outline"
+                      onClick={() => applyTradeIn("pos")}
+                    >
                       <ShoppingCart className="h-4 w-4 mr-2" />
                       <T>Apply to POS</T>
                     </Button>
