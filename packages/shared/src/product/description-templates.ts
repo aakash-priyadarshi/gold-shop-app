@@ -21,9 +21,9 @@ const REQUIRED_SPEC_LABELS: Record<
   "jewelleryType" | "metalType" | "weightGrams",
   string
 > = {
-  jewelleryType: "Jewellery type",
-  metalType: "Material type",
-  weightGrams: "Material weight",
+  jewelleryType: "Jewellery Type",
+  metalType: "Metal Type",
+  weightGrams: "Total Weight",
 };
 
 export function getMissingProductDescriptionSpecs(
@@ -54,7 +54,7 @@ export function buildHardcodedProductDescription(
   specs: ProductDescriptionSpecs,
 ): string {
   if (!productDescriptionSpecsReady(specs)) {
-    throw new Error("Jewellery type, material type, and weight are required");
+    throw new Error("Jewellery Type, Metal Type, and Total Weight are required");
   }
 
   const piece = titleCase(String(specs.jewelleryType).replace(/_/g, " "));

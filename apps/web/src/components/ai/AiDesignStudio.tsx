@@ -462,7 +462,10 @@ export function AiDesignStudio({
                 </div>
               )}
               {creditsDepleted && (
-                <AiCreditsDepletedNotice required={AI_CREDIT_COSTS.DESIGN_VARIATIONS} />
+                <AiCreditsDepletedNotice
+                  action="Generate 5 variations"
+                  required={AI_CREDIT_COSTS.DESIGN_VARIATIONS}
+                />
               )}
 
               <Button
@@ -516,7 +519,10 @@ export function AiDesignStudio({
                 </Button>
               </div>
               {creditsDepleted && (
-                <AiCreditsDepletedNotice required={AI_CREDIT_COSTS.DESIGN_VARIATIONS} />
+                <AiCreditsDepletedNotice
+                  action="Generate 5 variations"
+                  required={AI_CREDIT_COSTS.DESIGN_VARIATIONS}
+                />
               )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

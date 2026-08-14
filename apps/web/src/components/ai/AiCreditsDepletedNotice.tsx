@@ -11,9 +11,13 @@ import Link from "next/link";
 
 export function AiCreditsDepletedNotice({
   required = AI_CREDIT_COSTS.DESIGN_IMAGE,
+  action = "This AI button",
+  balance,
   className,
 }: {
   required?: number;
+  action?: string;
+  balance?: number | null;
   className?: string;
 }) {
   return (
@@ -26,9 +30,17 @@ export function AiCreditsDepletedNotice({
       <p className="flex items-start gap-2">
         <Coins className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
-          <T>AI credits depleted.</T>{" "}
-          <T>This action needs</T> {formatAiCredits(required)}{" "}
+          <T>{action}</T> <T>needs</T> {formatAiCredits(required)}{" "}
           <T>credits.</T>{" "}
+          {typeof balance === "number" ? (
+            <>
+              <T>Your balance is</T> {formatAiCredits(balance)}.{" "}
+            </>
+          ) : (
+            <>
+              <T>Your balance is too low.</T>{" "}
+            </>
+          )}
           <Link
             href={AI_CREDITS_BILLING_HREF}
             className="font-semibold underline underline-offset-2"
@@ -51,7 +63,7 @@ export function AiCreditCostHint({
   const showBalance = typeof balance === "number";
   return (
     <p className="text-[11px] text-muted-foreground">
-      <T>Uses</T> {formatAiCredits(cost)} <T>AI credits</T>
+      <T>Generate with AI uses</T> {formatAiCredits(cost)} <T>credits</T>
       {showBalance ? (
         <>
           {" · "}

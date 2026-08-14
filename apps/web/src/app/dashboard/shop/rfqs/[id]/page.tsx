@@ -1609,6 +1609,7 @@ export default function ShopRfqDetailPage() {
                   {creditsDepleted && (
                     <div className="mt-2">
                       <AiCreditsDepletedNotice
+                        action="Generate AI Design"
                         required={AI_CREDIT_COSTS.DESIGN_IMAGE}
                       />
                     </div>

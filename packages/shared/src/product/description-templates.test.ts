@@ -45,7 +45,7 @@ describe("product description templates", () => {
         metalType: "",
         weightGrams: 0,
       }),
-    ).toEqual(["Jewellery type", "Material type", "Material weight"]);
+    ).toEqual(["Jewellery Type", "Metal Type", "Total Weight"]);
   });
 
   it("uses tola when that is the shop display unit", () => {

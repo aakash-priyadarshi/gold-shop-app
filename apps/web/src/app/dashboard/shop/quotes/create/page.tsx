@@ -2015,6 +2015,7 @@ export default function CreateShopQuotePage() {
                           {creditsDepleted && (
                             <div className="mt-2 text-left">
                               <AiCreditsDepletedNotice
+                                action="Generate AI Design Preview"
                                 required={AI_CREDIT_COSTS.DESIGN_IMAGE}
                               />
                             </div>

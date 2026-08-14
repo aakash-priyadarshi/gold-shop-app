@@ -13,6 +13,7 @@ import { useFeatures } from "@/hooks/useFeatures";
 import { useT } from "@/providers/translation-provider";
 import { inventoryApi, aiCreditsApi } from "@/lib/api";
 import { isInsufficientAiCreditsError } from "@/lib/aiCredits";
+import { specsLockMessage } from "@/lib/productDescriptionUi";
 import {
   AI_CREDIT_COSTS,
   buildHardcodedProductDescription,
@@ -23,7 +24,7 @@ import {
   type ProductDescriptionSpecs,
 } from "@gold-shop/shared";
 import { Loader2, Sparkles, Wand2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 type Props = {
   shopId?: string;
@@ -31,6 +32,23 @@ type Props = {
   onChange: (next: string) => void;
   specs: ProductDescriptionSpecs;
 };
+
+function LockedButton({
+  locked,
+  reason,
+  children,
+}: {
+  locked: boolean;
+  reason: string;
+  children: ReactNode;
+}) {
+  if (!locked) return <>{children}</>;
+  return (
+    <span className="inline-flex" title={reason}>
+      {children}
+    </span>
+  );
+}
 
 export function ProductDescriptionGenerator({
   shopId,
@@ -46,6 +64,7 @@ export function ProductDescriptionGenerator({
     () => missingProductDescriptionLabels(specs),
     [specs],
   );
+  const lockReason = t(specsLockMessage(missing, canUseAi));
   const [balance, setBalance] = useState<number | null>(null);
   const [templateBusy, setTemplateBusy] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
@@ -85,6 +104,10 @@ export function ProductDescriptionGenerator({
 
   const generateWithAi = async () => {
     if (!shopId || !specsReady || !canUseAi) return;
+    if (balance !== null && !enoughCredits) {
+      setCreditsDepleted(true);
+      return;
+    }
     setAiBusy(true);
     setCreditsDepleted(false);
     try {
@@ -117,7 +140,12 @@ export function ProductDescriptionGenerator({
     } catch (error: unknown) {
       if (isInsufficientAiCreditsError(error)) {
         setCreditsDepleted(true);
-        setBalance(0);
+        const payload = (
+          error as { response?: { data?: { balance?: number } } }
+        )?.response?.data;
+        if (typeof payload?.balance === "number") {
+          setBalance(toCreditNumber(payload.balance));
+        }
         return;
       }
       const payload = (error as { response?: { data?: { message?: string } } })
@@ -139,41 +167,40 @@ export function ProductDescriptionGenerator({
           <T>Description</T>
         </Label>
         <div className="flex flex-wrap justify-end gap-1.5">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            disabled={!specsReady || templateBusy}
-            onClick={fillFromSpecs}
-          >
-            {templateBusy ? (
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-            ) : (
-              <Wand2 className="mr-1 h-3 w-3" />
-            )}
-            <T>Fill from specs</T>
-          </Button>
-          {canUseAi && (
+          <LockedButton locked={!specsReady} reason={lockReason}>
             <Button
               type="button"
+              variant="outline"
               size="sm"
               className="h-7 px-2 text-xs"
-              disabled={
-                !specsReady ||
-                aiBusy ||
-                featuresLoading ||
-                (balance !== null && !enoughCredits)
-              }
-              onClick={generateWithAi}
+              disabled={!specsReady || templateBusy}
+              onClick={fillFromSpecs}
             >
-              {aiBusy ? (
+              {templateBusy ? (
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />
               ) : (
-                <Sparkles className="mr-1 h-3 w-3" />
+                <Wand2 className="mr-1 h-3 w-3" />
               )}
-              <T>Generate with AI</T>
+              <T>Fill from specs</T>
             </Button>
+          </LockedButton>
+          {canUseAi && (
+            <LockedButton locked={!specsReady} reason={lockReason}>
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={!specsReady || aiBusy || featuresLoading}
+                onClick={generateWithAi}
+              >
+                {aiBusy ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-1 h-3 w-3" />
+                )}
+                <T>Generate with AI</T>
+              </Button>
+            </LockedButton>
           )}
         </div>
       </div>
@@ -185,10 +212,7 @@ export function ProductDescriptionGenerator({
         rows={3}
       />
       {!specsReady ? (
-        <p className="text-[11px] text-muted-foreground">
-          <T>Add jewellery type, material type, and weight to unlock auto description.</T>
-          {missing.length > 0 ? ` (${missing.join(", ")})` : ""}
-        </p>
+        <p className="text-[11px] text-muted-foreground">{lockReason}</p>
       ) : canUseAi ? (
         <AiCreditCostHint
           cost={AI_CREDIT_COSTS.PRODUCT_DESCRIPTION}
@@ -196,12 +220,14 @@ export function ProductDescriptionGenerator({
         />
       ) : (
         <p className="text-[11px] text-muted-foreground">
-          <T>Template copy is included on Free and Pro. Pro+ can also generate with AI.</T>
+          <T>Fill from specs is free on every plan. Pro+ can also Generate with AI.</T>
         </p>
       )}
-      {(creditsDepleted || (canUseAi && balance !== null && !enoughCredits)) && (
+      {creditsDepleted && !enoughCredits && (
         <AiCreditsDepletedNotice
+          action="Generate with AI"
           required={AI_CREDIT_COSTS.PRODUCT_DESCRIPTION}
+          balance={balance}
         />
       )}
     </div>

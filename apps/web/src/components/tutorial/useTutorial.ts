@@ -329,7 +329,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Auto description",
         description:
-          "After jewellery type, metal, and weight are filled, Fill from specs writes a template you can edit. Pro+ shops can also Generate with AI for 0.25 credits. If credits run out, buy more from Billing → AI Credits.",
+          "Fill from specs and Generate with AI stay locked until Jewellery Type, Metal Type, and Total Weight are filled. The page names whichever box is still empty. Fill from specs is free. Generate with AI costs 0.25 credits and only asks you to buy more after you click it.",
         side: "top",
         align: "start",
       },
