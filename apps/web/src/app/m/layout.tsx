@@ -294,7 +294,7 @@ export default function MobileLayout({
 
   return (
     <OfflineProvider>
-    <div className="flex flex-col h-dvh bg-gray-50 dark:bg-gray-950 overflow-hidden">
+    <div className="m-app flex flex-col h-dvh bg-gray-50 dark:bg-gray-950 overflow-hidden text-gray-900 dark:text-gray-100">
       {!isCustomerMobileRoute && !isProductShowRoute && (
       <>
       {/* Top bar */}

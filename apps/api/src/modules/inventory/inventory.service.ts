@@ -20,12 +20,12 @@ import {
   InventoryFilterDto,
   UpdateInventoryItemDto,
 } from "./dto/inventory.dto";
+import {
+  normalizeInventoryScanCode,
+  parseInventoryTagCode,
+} from "./inventory-scan";
 
-/** Canonical payload encoded in an Orivraa inventory QR label. */
-export function parseInventoryTagCode(code: string): string | null {
-  const match = /^orivraa:inventory:([a-z0-9-]{8,})$/i.exec(code.trim());
-  return match?.[1] ?? null;
-}
+export { parseInventoryTagCode, normalizeInventoryScanCode } from "./inventory-scan";
 
 @Injectable()
 export class InventoryService {
@@ -257,16 +257,24 @@ export class InventoryService {
   }
 
   /**
-   * Lookup an inventory item (or variant) by barcode / SKU within a shop.
-   * Used by the POS barcode scanner. Matches in order:
-   *   1. InventoryItem.sku    (exact)
-   *   2. ProductVariant.sku   (exact)
-   *   3. InventoryItem.hallmarkNumber (exact)  – BIS hallmark also commonly barcoded
+   * Lookup an inventory item (or variant) by QR / RFID-EPC / SKU / hallmark.
+   * Used by POS scanners. Matches in order:
+   *   1. Orivraa inventory QR payload (`orivraa:inventory:<id>`)
+   *   2. InventoryItem.rfidCode (HID RFID/EPC guns)
+   *   3. InventoryItem.sku
+   *   4. ProductVariant.sku
+   *   5. InventoryItem.hallmarkNumber
    * Returns { item, variant? } or null when nothing matches.
    */
   async findByCode(shopId: string, code: string) {
-    const trimmed = code?.trim();
+    const trimmed = normalizeInventoryScanCode(code);
     if (!trimmed) return null;
+
+    const active = { not: InventoryStatus.DISCONTINUED } as const;
+    const equalsCi = {
+      equals: trimmed,
+      mode: "insensitive" as const,
+    };
 
     const qrItemId = parseInventoryTagCode(trimmed);
     if (qrItemId) {
@@ -274,7 +282,7 @@ export class InventoryService {
         where: {
           id: qrItemId,
           shopId,
-          status: { not: InventoryStatus.DISCONTINUED },
+          status: active,
         },
       });
       if (byQr) return { item: byQr, variant: null };
@@ -283,26 +291,24 @@ export class InventoryService {
     const byRfid = await this.prisma.inventoryItem.findFirst({
       where: {
         shopId,
-        rfidCode: trimmed,
-        status: { not: InventoryStatus.DISCONTINUED },
+        rfidCode: equalsCi,
+        status: active,
       },
     });
     if (byRfid) return { item: byRfid, variant: null };
 
-    // 1. Direct SKU on inventory item
     const bySku = await this.prisma.inventoryItem.findFirst({
       where: {
         shopId,
-        sku: trimmed,
-        status: { not: InventoryStatus.DISCONTINUED },
+        sku: equalsCi,
+        status: active,
       },
     });
     if (bySku) return { item: bySku, variant: null };
 
-    // 2. Variant SKU
     const variant = await this.prisma.productVariant.findFirst({
       where: {
-        sku: trimmed,
+        sku: equalsCi,
         isActive: true,
         inventoryItem: { shopId },
       },
@@ -313,12 +319,11 @@ export class InventoryService {
       return { item: inventoryItem, variant: rest };
     }
 
-    // 3. Hallmark number (some shops barcode the BIS hallmark)
     const byHallmark = await this.prisma.inventoryItem.findFirst({
       where: {
         shopId,
-        hallmarkNumber: trimmed,
-        status: { not: InventoryStatus.DISCONTINUED },
+        hallmarkNumber: equalsCi,
+        status: active,
       },
     });
     if (byHallmark) return { item: byHallmark, variant: null };
@@ -525,6 +530,7 @@ export class InventoryService {
       where.OR = [
         { nameEn: { contains: search, mode: "insensitive" } },
         { sku: { contains: search, mode: "insensitive" } },
+        { rfidCode: { contains: search, mode: "insensitive" } },
         { hallmarkNumber: { contains: search, mode: "insensitive" } },
       ];
     }

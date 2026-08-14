@@ -5,7 +5,6 @@ import { T } from "@/components/ui/T";
 import { useToast } from "@/hooks/use-toast";
 import {
     defaultHardwareConfig,
-    hasBarcodeDetector,
     hasCameraScanning,
     hasWebBluetooth,
     hasWebSerial,
@@ -125,8 +124,8 @@ const SCANNER_SOURCES: {
     id: "camera",
     label: "Phone camera",
     Icon: Camera,
-    hint: "Uses the back camera + BarcodeDetector API",
-    available: () => hasBarcodeDetector() && hasCameraScanning(),
+    hint: "Uses the back camera for barcodes, QR, and Data Matrix. RFID/EPC needs a USB or Bluetooth gun.",
+    available: () => hasCameraScanning(),
   },
   {
     id: "manual",

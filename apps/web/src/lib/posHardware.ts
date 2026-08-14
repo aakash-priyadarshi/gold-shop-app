@@ -6,7 +6,7 @@
  *                            The browser sees rapid keystrokes ending in Enter,
  *                            so we just listen at the document level.
  *                            (Camera scanning lives in BarcodeScannerSheet.tsx
- *                             using the built-in BarcodeDetector API.)
+ *                             using BarcodeDetector or a ZXing fallback.)
  *   • Receipt printers    – ESC/POS thermal printers over WebUSB (Epson TM,
  *                            Star micronics, generic 58mm/80mm Bluetooth printers
  *                            that expose a USB CDC interface).
@@ -92,7 +92,7 @@ export const defaultHardwareConfig: HardwareConfig = {
     enabled: true,
     source: "keyboard-wedge",
     minLength: 4,
-    maxIntervalMs: 50,
+    maxIntervalMs: 80,
     autoAdd: true,
   },
   printer: {
@@ -165,6 +165,11 @@ export function hasWebBluetooth(): boolean {
 export function hasCameraScanning(): boolean {
   if (typeof navigator === "undefined") return false;
   return !!navigator.mediaDevices?.getUserMedia;
+}
+
+/** Native BarcodeDetector is Chromium-only; iOS Safari uses the ZXing fallback. */
+export function canOpenScanCamera(): boolean {
+  return hasCameraScanning();
 }
 
 // ────────────────────────────────────────────────────────────────────────────

@@ -2,18 +2,20 @@
 
 import { useEffect, useRef } from "react";
 import { loadHardwareConfig } from "@/lib/posHardware";
+import {
+  applyWedgeKey,
+  isEditableTarget,
+  isPosScanField,
+} from "@/lib/scan-code";
 
 /**
- * useBarcodeScanner – listens for keyboard-wedge HID barcode scanners.
+ * Listens for keyboard-wedge HID barcode / RFID-EPC / QR scanners.
  *
- * A wedge scanner types the barcode characters very quickly (< 50 ms between
- * keys) and finishes with Enter. We buffer keystrokes; if a burst arrives
- * within the threshold and ends in Enter, we emit the buffered string.
+ * A wedge scanner types characters in a burst and finishes with Enter or Tab.
+ * Camera scanning is separate (BarcodeScannerSheet). HID guns still work even
+ * when hardware settings list the source as "camera" or "manual".
  *
- * The listener intentionally ignores events that target an editable element
- * (so manual typing in the POS search box still works). Pass
- * `ignoreEditable: false` to capture even when an input is focused (useful
- * when the focused input *is* meant to receive scans).
+ * Editable fields are ignored unless they opt in with `data-pos-scan`.
  */
 export function useBarcodeScanner(
   onScan: (code: string) => void,
@@ -27,45 +29,27 @@ export function useBarcodeScanner(
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
     const cfg = loadHardwareConfig().scanner;
-    if (!cfg.enabled || cfg.source !== "keyboard-wedge") return;
+    if (!cfg.enabled) return;
 
-    let buffer = "";
-    let lastTime = 0;
-
-    const isEditableTarget = (target: EventTarget | null) => {
-      if (!target || !(target instanceof HTMLElement)) return false;
-      const tag = target.tagName.toLowerCase();
-      if (tag === "input" || tag === "textarea" || tag === "select") return true;
-      return target.isContentEditable;
-    };
+    let state = { buffer: "", lastTime: 0 };
 
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.altKey || e.metaKey) return;
-      if (ignoreEditable && isEditableTarget(e.target)) return;
-
-      const now = performance.now();
-      const interval = now - lastTime;
-      lastTime = now;
-
-      if (interval > cfg.maxIntervalMs * 4) {
-        // gap too long → previous buffer was likely human typing, reset
-        buffer = "";
-      }
-
-      if (e.key === "Enter") {
-        const code = buffer.trim();
-        buffer = "";
-        if (code.length >= cfg.minLength) {
-          e.preventDefault();
-          onScanRef.current(code);
-        }
+      const onScanField = isPosScanField(e.target);
+      if (ignoreEditable && isEditableTarget(e.target) && !onScanField) {
         return;
       }
-      if (e.key.length === 1) {
-        // printable
-        buffer += e.key;
-      } else {
-        // non-printable key during burst – ignore
+
+      const result = applyWedgeKey(state, e.key, performance.now(), {
+        minLength: cfg.minLength,
+        maxIntervalMs: cfg.maxIntervalMs,
+      });
+      state = result.state;
+
+      if (result.commit) {
+        e.preventDefault();
+        e.stopPropagation();
+        onScanRef.current(result.commit);
       }
     };
 

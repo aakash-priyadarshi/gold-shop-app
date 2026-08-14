@@ -109,6 +109,33 @@
   h3 {
     @apply text-lg sm:text-xl;
   }
+
+  /*
+   * Mobile native inputs/cards often use bg-white without a text color.
+   * Body is text-foreground (near-white in dark), so numbers vanish.
+   */
+  .dark .m-app input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
+  .dark .m-app textarea,
+  .dark .m-app select {
+    color: hsl(var(--foreground));
+    background-color: hsl(var(--input));
+    border-color: hsl(var(--border));
+  }
+
+  .dark .m-app .bg-white {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+  }
+
+  .dark .m-app .bg-white\/95 {
+    background-color: hsl(var(--card) / 0.95);
+    color: hsl(var(--card-foreground));
+  }
+
+  .dark .m-app .bg-amber-50 {
+    background-color: hsl(32 40% 16%);
+    color: hsl(40 90% 90%);
+  }
 }
 
 @layer components {

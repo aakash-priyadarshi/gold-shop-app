@@ -2,6 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { BarcodeScannerSheet } from "@/components/mobile/BarcodeScannerSheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi, invoicesApi, posApi, shopsApi } from "@/lib/api";
 import { ManagerPinDialog } from "@/components/shop/ManagerPinDialog";
@@ -52,6 +54,7 @@ import {
   type ShopBankAccountDetails,
 } from "@/lib/counterPayments";
 import { loadTradeInPayload } from "@/lib/oldGoldTradeIn";
+import { normalizeScanCode } from "@/lib/scan-code";
 import { usePreferencesStore } from "@/store/preferences";
 import Image from "next/image";
 import { useT } from "@/providers/translation-provider";
@@ -166,6 +169,7 @@ function PosPageInner() {
   const [counterSearch, setCounterSearch] = useState("");
   const [counterItems, setCounterItems] = useState<any[]>([]);
   const [counterLoading, setCounterLoading] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // Checkout form
   const [customerName, setCustomerName] = useState("");
@@ -343,7 +347,7 @@ function PosPageInner() {
 
   // ─── Add Item to Basket ───
 
-  const handleAddItem = async (
+  const handleAddItem = useCallback(async (
     inventoryItemId: string,
     variantId?: string,
     qty = 1,
@@ -362,7 +366,46 @@ function PosPageInner() {
         variant: "destructive",
       });
     }
-  };
+  }, [session, t]);
+
+  const handleScannedCode = useCallback(
+    async (raw: string) => {
+      const shopId = user?.shop?.id;
+      const code = normalizeScanCode(raw);
+      if (!shopId || !code) return;
+      if (!session) {
+        toast({
+          title: t("Start a POS session first"),
+          description: t("Then scan a barcode, QR, or RFID tag to add it to the cart."),
+        });
+        return;
+      }
+      try {
+        const res = await inventoryApi.lookupByCode(shopId, code);
+        const found = res.data?.item ?? null;
+        if (!found?.id) {
+          toast({
+            title: t("Not found"),
+            description: t("No matching SKU, RFID, or QR in this shop."),
+            variant: "destructive",
+          });
+          return;
+        }
+        await handleAddItem(found.id, res.data?.variant?.id);
+        setCounterSearch("");
+        setScannerOpen(false);
+      } catch (err: any) {
+        toast({
+          title: t("Lookup failed"),
+          description: err?.response?.data?.message || t("Could not look up that code"),
+          variant: "destructive",
+        });
+      }
+    },
+    [handleAddItem, session, t, user?.shop?.id],
+  );
+
+  useBarcodeScanner(handleScannedCode, { enabled: !!session });
 
   // ─── Update Item Qty ───
 
@@ -590,6 +633,14 @@ function PosPageInner() {
             </div>
             {session && (
               <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setScannerOpen(true)}
+                >
+                  <ScanLine className="h-4 w-4 mr-1" /> <T>Scan</T>
+                </Button>
                 <Badge
                   variant={minsRemaining > 5 ? "default" : "destructive"}
                   className="text-sm"
@@ -652,9 +703,17 @@ function PosPageInner() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     className="pl-9 h-11 text-base"
-                    placeholder={t("Search by name, SKU, or category...")}
+                    placeholder={t("Search or scan SKU, RFID, QR...")}
                     value={counterSearch}
+                    data-pos-scan="true"
                     onChange={(e) => setCounterSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      const code = counterSearch.trim();
+                      if (!code) return;
+                      e.preventDefault();
+                      void handleScannedCode(code);
+                    }}
                     autoFocus
                   />
                 </div>
@@ -906,6 +965,7 @@ function PosPageInner() {
                   </CardHeader>
                   <CardContent>
                     <ManualAddForm
+                      shopId={user?.shop?.id}
                       onAdd={(itemId, variantId) =>
                         handleAddItem(itemId, variantId)
                       }
@@ -1520,40 +1580,86 @@ function PosPageInner() {
             await runCheckout();
           }}
         />
+
+        <BarcodeScannerSheet
+          open={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          onScan={handleScannedCode}
+          shopId={user?.shop?.id}
+          hint="Scan a printed barcode or QR with the webcam, type a SKU, or use a USB / Bluetooth barcode or RFID gun."
+        />
       </DashboardLayout>
     </ShopGuard>
   );
 }
 
-// ─── Manual Add mini-form (search by inventory item ID for now) ───
-
 function ManualAddForm({
+  shopId,
   onAdd,
 }: {
+  shopId?: string;
   onAdd: (itemId: string, variantId?: string) => void;
 }) {
-  const [itemId, setItemId] = useState("");
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
   const t = useT();
+
+  const submit = async () => {
+    const trimmed = normalizeScanCode(code);
+    if (!trimmed || !shopId) return;
+    setBusy(true);
+    try {
+      const res = await inventoryApi.lookupByCode(shopId, trimmed);
+      const item = res.data?.item;
+      if (!item?.id) {
+        toast({
+          title: t("Not found"),
+          description: t("No matching SKU, RFID, or QR in this shop."),
+          variant: "destructive",
+        });
+        return;
+      }
+      onAdd(item.id, res.data?.variant?.id);
+      setCode("");
+    } catch (err: any) {
+      toast({
+        title: t("Lookup failed"),
+        description: err?.response?.data?.message || t("Could not look up that code"),
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="flex items-end gap-2">
       <div className="flex-1">
-        <Label><T>Inventory Item ID</T></Label>
+        <Label><T>SKU / RFID / QR</T></Label>
         <Input
-          placeholder={t("Paste item ID")}
-          value={itemId}
-          onChange={(e) => setItemId(e.target.value)}
+          data-pos-scan="true"
+          placeholder={t("Scan or type SKU, RFID, or QR")}
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void submit();
+            }
+          }}
         />
       </div>
       <Button
         size="sm"
-        disabled={!itemId.trim()}
-        onClick={() => {
-          onAdd(itemId.trim());
-          setItemId("");
-        }}
+        disabled={!code.trim() || !shopId || busy}
+        onClick={() => void submit()}
       >
-        <Plus className="h-4 w-4 mr-1" /> <T>Add</T>
+        {busy ? (
+          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+        ) : (
+          <Plus className="h-4 w-4 mr-1" />
+        )}{" "}
+        <T>Add</T>
       </Button>
     </div>
   );

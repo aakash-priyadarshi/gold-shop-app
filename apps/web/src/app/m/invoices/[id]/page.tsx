@@ -169,7 +169,7 @@ export default function MobileInvoiceDetailPage() {
 
   const currency = invoice.currency ?? "NPR";
   return (
-    <div className="space-y-4 px-4 py-4 pb-28">
+    <div className="space-y-4 px-4 py-4 pb-28 text-gray-900 dark:text-gray-100">
       {showCreatedBanner && (
         <section className="rounded-2xl border border-green-200 bg-green-50 p-4 space-y-3">
           <div className="flex items-start justify-between gap-3">
@@ -206,19 +206,19 @@ export default function MobileInvoiceDetailPage() {
         <p className="mt-3 text-3xl font-black">{currency} {Number(invoice.totalAmount || 0).toLocaleString()}</p>
         <p className="mt-1 text-sm opacity-90">{invoice.customerName || "Walk-in customer"}</p>
       </section>
-      <section className="rounded-2xl border border-gray-100 bg-white p-4">
+      <section className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
         <div className="space-y-3">
-          {(invoice.lineItems ?? []).map((line: any, index: number) => <div key={`${line.label}-${index}`} className="flex justify-between gap-4 text-sm"><span>{line.label}{line.quantity ? ` × ${line.quantity}` : ""}</span><strong>{currency} {Number(line.amount || 0).toLocaleString()}</strong></div>)}
-          <div className="flex justify-between border-t pt-3 text-sm"><span><T>Tax</T></span><strong>{currency} {Number(invoice.taxAmount || 0).toLocaleString()}</strong></div>
-          <div className="flex justify-between text-base font-black"><span><T>Total</T></span><span>{currency} {Number(invoice.totalAmount || 0).toLocaleString()}</span></div>
+          {(invoice.lineItems ?? []).map((line: any, index: number) => <div key={`${line.label}-${index}`} className="flex justify-between gap-4 text-sm"><span>{line.label}{line.quantity ? ` × ${line.quantity}` : ""}</span><strong className="tabular-nums text-gray-900 dark:text-gray-100">{currency} {Number(line.amount || 0).toLocaleString()}</strong></div>)}
+          <div className="flex justify-between border-t pt-3 text-sm"><span><T>Tax</T></span><strong className="tabular-nums">{currency} {Number(invoice.taxAmount || 0).toLocaleString()}</strong></div>
+          <div className="flex justify-between text-base font-black"><span><T>Total</T></span><span className="tabular-nums">{currency} {Number(invoice.totalAmount || 0).toLocaleString()}</span></div>
         </div>
       </section>
-      <section className="rounded-2xl border border-gray-100 bg-white p-4 space-y-2">
+      <section className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
         <h2 className="font-bold"><T>Payment history</T></h2>
         {(invoice.payments ?? []).map((payment: any) => <div key={payment.id} className="flex justify-between text-sm"><span>{payment.method?.replace(/_/g, " ")}</span><strong className="text-emerald-600">{currency} {Number(payment.amount || 0).toLocaleString()}</strong></div>)}
         <div className="flex justify-between border-t pt-2 text-sm font-bold"><span><T>Balance due</T></span><span className={Number(invoice.balanceDue || 0) > 0 ? "text-amber-700" : "text-emerald-600"}>{currency} {Number(invoice.balanceDue || 0).toLocaleString()}</span></div>
       </section>
-      <section className="rounded-2xl border border-gray-100 bg-white p-4">
+      <section className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
         <InvoiceShareActions
           invoice={{
             id: invoice.id,
@@ -245,7 +245,7 @@ export default function MobileInvoiceDetailPage() {
       {Number(invoice.balanceDue || 0) > 0 && (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-3">
           <h2 className="flex items-center gap-2 font-bold text-amber-900"><WalletCards className="h-4 w-4" /><T>Record payment</T></h2>
-          <input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" type="number" min="0.01" max={invoice.balanceDue} placeholder={`Amount in ${currency}`} className="w-full rounded-xl border border-amber-200 bg-white px-3 py-2.5 text-sm" />
+          <input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" type="number" min="0.01" max={invoice.balanceDue} placeholder={`Amount in ${currency}`} className="w-full rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-950 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100" />
           <div className="flex flex-wrap gap-2">{methods.map((item) => <button key={item.value} onClick={() => setMethod(item.value)} className={`rounded-xl border px-3 py-2 text-xs font-bold ${method === item.value ? "border-amber-500 bg-amber-500 text-white" : "border-amber-200 bg-white text-amber-800"}`}><T>{item.label}</T></button>)}</div>
           <button disabled={saving} onClick={() => void recordPayment()} className="w-full rounded-xl bg-amber-600 py-3 text-sm font-bold text-white disabled:opacity-50">{saving ? <T>Saving…</T> : <T>Record payment</T>}</button>
         </section>

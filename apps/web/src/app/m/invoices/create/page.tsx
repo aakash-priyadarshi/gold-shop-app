@@ -438,7 +438,7 @@ function MobileInvoiceCreateInner() {
   };
 
   return (
-    <div className="space-y-4 px-4 py-4 pb-44" data-tour="mobile-invoice-create">
+    <div className="space-y-4 px-4 py-4 pb-44 text-gray-900 dark:text-gray-100" data-tour="mobile-invoice-create">
       <div className="flex items-center gap-3">
         <Link href="/m/invoices" className="rounded-xl bg-gray-100 p-2">
           <ArrowLeft className="h-5 w-5" />
@@ -476,13 +476,13 @@ function MobileInvoiceCreateInner() {
 
       {/* Step 0 — Customer */}
       {step === 0 && (
-        <section className="space-y-3 rounded-2xl border border-gray-100 bg-white p-4">
+        <section className="space-y-3 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
           <label className="block text-xs font-bold text-gray-500">
             <T>Invoice country</T>
             <select
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm"
+              className="mt-1.5 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100"
             >
               {MARKETS.map((m) => (
                 <option key={m} value={m}>
@@ -496,7 +496,7 @@ function MobileInvoiceCreateInner() {
             <input
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+              className="mt-1.5 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100"
               data-tour="invoice-customer-name"
             />
           </label>
@@ -506,7 +506,7 @@ function MobileInvoiceCreateInner() {
               value={customerPhone}
               onChange={(e) => handlePhoneChange(e.target.value)}
               inputMode="tel"
-              className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+              className="mt-1.5 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100"
             />
           </label>
           {customerHits.length > 0 && (
@@ -539,7 +539,7 @@ function MobileInvoiceCreateInner() {
               value={customerEmail}
               onChange={(e) => setCustomerEmail(e.target.value)}
               type="email"
-              className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+              className="mt-1.5 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100"
             />
           </label>
           <label className="block text-xs font-bold text-gray-500">
@@ -548,7 +548,7 @@ function MobileInvoiceCreateInner() {
               value={customerAddress}
               onChange={(e) => setCustomerAddress(e.target.value)}
               rows={2}
-              className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+              className="mt-1.5 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100"
             />
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -581,7 +581,7 @@ function MobileInvoiceCreateInner() {
               <input
                 value={customerTaxId}
                 onChange={(e) => setCustomerTaxId(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+                className="mt-1.5 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100"
               />
             </label>
           )}
@@ -601,7 +601,7 @@ function MobileInvoiceCreateInner() {
                   type="date"
                   value={supplyDate}
                   onChange={(e) => setSupplyDate(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+                  className="mt-1.5 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100"
                 />
               </label>
             </>
@@ -673,7 +673,7 @@ function MobileInvoiceCreateInner() {
               type="number"
               min="0"
               step="0.1"
-              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
             />
           </label>
 
@@ -717,12 +717,12 @@ function MobileInvoiceCreateInner() {
                       value={line.label}
                       onChange={(e) => updateLine(index, { label: e.target.value })}
                       placeholder="Description (e.g. 22K Ring)"
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                     />
                     <select
                       value={line.category}
                       onChange={(e) => updateLine(index, { category: e.target.value })}
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                     >
                       {JEWELLERY_TYPES.map((jt) => (
                         <option key={jt.value} value={jt.value}>
@@ -733,7 +733,7 @@ function MobileInvoiceCreateInner() {
                     <select
                       value={line.metalType}
                       onChange={(e) => updateLine(index, { metalType: e.target.value })}
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                       data-tour="invoice-metal-type"
                     >
                       <option value="">Metal type</option>
@@ -752,7 +752,7 @@ function MobileInvoiceCreateInner() {
                           type="number"
                           min="0"
                           step="0.001"
-                          className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                          className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                           data-tour="invoice-metal-weight"
                         />
                       </label>
@@ -765,7 +765,7 @@ function MobileInvoiceCreateInner() {
                           }
                           type="number"
                           min="0"
-                          className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                          className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                           data-tour="invoice-metal-cost"
                         />
                       </label>
@@ -833,7 +833,7 @@ function MobileInvoiceCreateInner() {
                           }
                           type="number"
                           min="0"
-                          className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                          className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                         />
                       </label>
                       <label className="block text-xs font-bold text-gray-500">
@@ -845,7 +845,7 @@ function MobileInvoiceCreateInner() {
                           }
                           type="number"
                           min="0"
-                          className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                          className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                         />
                       </label>
                     </div>
@@ -923,7 +923,7 @@ function MobileInvoiceCreateInner() {
       {/* Step 2 — Review */}
       {step === 2 && (
         <section className="space-y-3">
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 space-y-2">
+          <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
             <p className="font-bold">{customerName}</p>
             <p className="text-xs text-gray-500">
               {customerPhone || "—"} · {country} · {customerType}
@@ -948,7 +948,7 @@ function MobileInvoiceCreateInner() {
           </div>
 
           <div
-            className="rounded-2xl border border-amber-100 bg-amber-50 p-3 space-y-1 text-sm"
+            className="rounded-2xl border border-amber-100 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3 space-y-1 text-sm text-gray-800 dark:text-amber-100"
             data-tour="invoice-tax-breakdown"
           >
             <div className="flex justify-between text-xs text-gray-600">
@@ -981,7 +981,7 @@ function MobileInvoiceCreateInner() {
                 </span>
               </div>
             )}
-            <div className="flex justify-between border-t border-amber-200 pt-1.5 text-sm font-black text-amber-900">
+            <div className="flex justify-between border-t border-amber-200 dark:border-amber-800 pt-1.5 text-sm font-black text-amber-900 dark:text-amber-100">
               <span><T>Grand total</T></span>
               <span>
                 {currency} {grandTotal.toLocaleString()}
@@ -989,7 +989,7 @@ function MobileInvoiceCreateInner() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 space-y-2">
+          <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
             <div className="flex gap-2">
               {(["FIXED", "PERCENT"] as const).map((t) => (
                 <button
@@ -1011,13 +1011,13 @@ function MobileInvoiceCreateInner() {
                 type="number"
                 min="0"
                 placeholder="Discount"
-                className="flex-1 rounded-xl border border-gray-200 px-3 py-1.5 text-sm"
+                className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100"
               />
             </div>
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
             >
               <option value="CASH">Cash</option>
               <option value="CARD">Card</option>
@@ -1031,7 +1031,7 @@ function MobileInvoiceCreateInner() {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Notes"
               rows={2}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
             />
           </div>
         </section>
@@ -1040,7 +1040,7 @@ function MobileInvoiceCreateInner() {
       {/* Catalog picker */}
       {catalogOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40">
-          <div className="max-h-[80vh] overflow-auto rounded-t-3xl bg-white p-4 space-y-3">
+          <div className="max-h-[80vh] overflow-auto rounded-t-3xl bg-white dark:bg-gray-900 p-4 space-y-3 text-gray-900 dark:text-gray-100">
             <div className="flex items-center justify-between">
               <h2 className="font-bold"><T>Add from catalog</T></h2>
               <button type="button" onClick={() => setCatalogOpen(false)} className="text-sm font-bold text-gray-500">
@@ -1097,7 +1097,7 @@ function MobileInvoiceCreateInner() {
       {/* Quote picker */}
       {quoteOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40">
-          <div className="max-h-[80vh] overflow-auto rounded-t-3xl bg-white p-4 space-y-3">
+          <div className="max-h-[80vh] overflow-auto rounded-t-3xl bg-white dark:bg-gray-900 p-4 space-y-3 text-gray-900 dark:text-gray-100">
             <div className="flex items-center justify-between">
               <h2 className="font-bold"><T>Import shop quote</T></h2>
               <button type="button" onClick={() => setQuoteOpen(false)} className="text-sm font-bold text-gray-500">
@@ -1137,7 +1137,7 @@ function MobileInvoiceCreateInner() {
       )}
 
       {/* Bottom dock: compact totals + CTA (clears mobile tab bar at bottom-16) */}
-      <div className="fixed bottom-16 left-0 right-0 z-30 border-t border-gray-100 bg-white/95 backdrop-blur-sm">
+      <div className="fixed bottom-16 left-0 right-0 z-30 border-t border-gray-100 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm text-gray-900 dark:text-gray-100">
         {(step === 1 || step === 2) && (
           <div
             className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50 px-4 py-1.5 text-xs"

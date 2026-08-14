@@ -990,6 +990,7 @@ function AddProductSheet({
         onClose={() => setSkuScanOpen(false)}
         onScan={(code) => { setSku(code); setSkuScanOpen(false); }}
         hint="Scan the product barcode/QR to auto-fill the SKU"
+        shopId={shopId}
       />
     </div>
   );
@@ -1137,6 +1138,7 @@ export default function MobilePOSPage() {
       try {
         const res = await inventoryApi.lookupByCode(shopId, code);
         const found = res.data?.item ?? null;
+        const variant = res.data?.variant as ProductVariant | undefined;
         if (!found) {
           haptic("error");
           toast({
@@ -1148,7 +1150,7 @@ export default function MobilePOSPage() {
         }
         const cfg = loadHardwareConfig().scanner;
         if (cfg.autoAdd) {
-          addToCart(found as InventoryItem);
+          addToCart(found as InventoryItem, variant);
           haptic("success");
           toast({
             title: "Added to cart",
@@ -1364,9 +1366,9 @@ export default function MobilePOSPage() {
           </div>
         )}
         {/* Page header with help */}
-        <div className="flex items-center justify-between px-4 pt-3 pb-1 bg-white">
+        <div className="flex items-center justify-between px-4 pt-3 pb-1 bg-white dark:bg-gray-900">
           <div>
-            <h1 className="text-base font-bold text-gray-900"><T>Quick Bill</T></h1>
+            <h1 className="text-base font-bold text-gray-900 dark:text-gray-100"><T>Quick Bill</T></h1>
             <p className="text-[11px] text-gray-400">{cart.length > 0 ? `${cart.length} item${cart.length === 1 ? "" : "s"} in cart` : t("Tap products to view, use cart buttons to add")}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -1388,17 +1390,25 @@ export default function MobilePOSPage() {
           </div>
         </div>
         {/* Search bar */}
-        <div data-tour="m-pos-search" className="px-4 pt-1 pb-2 bg-white border-b border-gray-100">
+        <div data-tour="m-pos-search" className="px-4 pt-1 pb-2 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 ref={searchRef}
                 type="search"
+                data-pos-scan="true"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  const code = search.trim();
+                  if (!code) return;
+                  e.preventDefault();
+                  void handleScannedCode(code);
+                }}
                 placeholder={t("Search products by name or SKU…")}
-                className="w-full pl-9 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="w-full pl-9 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
           </div>
@@ -1592,7 +1602,8 @@ export default function MobilePOSPage() {
         open={scannerOpen}
         onClose={() => setScannerOpen(false)}
         onScan={handleScannedCode}
-        hint="Scan with the camera or type the SKU. A connected USB / Bluetooth scanner works anywhere on this screen."
+        shopId={shopId}
+        hint="Scan a barcode or QR with the camera, type a SKU, or use a USB / Bluetooth barcode or RFID gun."
       />
 
       {addProductOpen && shopId && (
