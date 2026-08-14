@@ -50,6 +50,46 @@ export function missingProductDescriptionLabels(
   );
 }
 
+const PIECE_COPY: Record<string, string> = {
+  RING: "A ring stays on the hand through work, prayer, and celebration, which is why families still choose one for engagement, marriage, and everyday promise.",
+  NECKLACE:
+    "A necklace sits at the neckline, so it is the piece people notice first at a wedding, a festival, or a dressed evening.",
+  PENDANT:
+    "A pendant is small enough for every day and clear enough to gift — wear it alone or on a chain already at home.",
+  EARRING:
+    "Earrings frame the face from morning to function, light enough for daily wear and bright enough when guests are expected.",
+  EARRINGS:
+    "Earrings frame the face from morning to function, light enough for daily wear and bright enough when guests are expected.",
+  BRACELET:
+    "A bracelet moves with the wrist. It works alone in the shop and office, and it stacks when the customer wants more presence for a function.",
+  BANGLE:
+    "Bangles belong to wedding sets, festive wear, and the everyday pair kept on the stand at home — they are meant to be heard as well as seen.",
+  CHAIN:
+    "A chain is the everyday metal people rarely take off, simple on its own and ready to hold a pendant later.",
+  ANKLET:
+    "An anklet is a traditional finishing touch for festive and bridal dressing, light on the foot and noticed when you walk.",
+  BROOCH:
+    "A brooch pins one heirloom accent onto a saree, shawl, or coat when a full set is more than the occasion needs.",
+  NOSE_PIN:
+    "A nose pin is a classic detail for brides and for daily wear — small, central to the face, and easy to match with other jewellery.",
+  MAANG_TIKKA:
+    "A maang tikka is made for bridal and festive dressing, resting at the hairline so the whole look reads as ceremony.",
+  SET: "A set is meant to be worn together so the metal and finish match across the occasion, from the house to the wedding hall.",
+};
+
+const DEFAULT_PIECE_COPY =
+  "This piece is made for both daily wear and occasion, ready for the tray or for an outfit that needs one finished detail.";
+
+const METAL_COPY: Record<"gold" | "silver" | "platinum" | "other", string> = {
+  gold: "Gold keeps a warm colour in the shop and in sunlight, and it is still the metal families buy for marriage, gifting, and keeping.",
+  silver:
+    "Silver has a cooler shine that suits oxidised traditional work and plain modern shapes, and it is comfortable for everyday wear.",
+  platinum:
+    "Platinum stays naturally white without plating, feels dense on the skin, and holds a setting firmly over years of wear.",
+  other:
+    "The metal is polished for regular wear and will take a cloth at the counter when it needs to look tended again.",
+};
+
 export function buildHardcodedProductDescription(
   specs: ProductDescriptionSpecs,
 ): string {
@@ -64,9 +104,37 @@ export function buildHardcodedProductDescription(
     specs.weightUnit || "GRAM",
   );
   const gems = formatGemstones(specs.gemstones);
-
   const gemClause = gems ? `, ${gems}` : "";
-  return `Handcrafted ${metal} ${piece.toLowerCase()} weighing ${weight}${gemClause}. Crafted for daily wear and occasion.`;
+
+  return [
+    `Handcrafted ${metal} ${piece.toLowerCase()} weighing ${weight}${gemClause}.`,
+    pieceOccasionCopy(specs.jewelleryType),
+    metalCharacterCopy(specs.metalType),
+  ].join(" ");
+}
+
+function pieceOccasionCopy(jewelleryType?: string): string {
+  const key = String(jewelleryType || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
+  return PIECE_COPY[key] || DEFAULT_PIECE_COPY;
+}
+
+function metalFamily(
+  metalType?: string,
+): "gold" | "silver" | "platinum" | "other" {
+  const metal = String(metalType || "").toUpperCase();
+  if (metal.includes("PLATINUM") || metal.includes("PALLADIUM")) {
+    return "platinum";
+  }
+  if (metal.includes("SILVER")) return "silver";
+  if (metal.includes("GOLD")) return "gold";
+  return "other";
+}
+
+function metalCharacterCopy(metalType?: string): string {
+  return METAL_COPY[metalFamily(metalType)];
 }
 
 function formatWeightCopy(
