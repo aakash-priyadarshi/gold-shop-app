@@ -1,5 +1,6 @@
 import {
   GEMINI_TRANSLATION_MODELS,
+  GEMINI_TRANSLATION_TIMEOUT_MS,
   parseGeminiTranslationArray,
   TranslationService,
 } from "./translation.service";
@@ -68,9 +69,11 @@ describe("TranslationService locale and persistence safeguards", () => {
       } as any,
     );
 
-    await (service as any).saveToDb("he", [
-      { sourceText: "Workshop", translation: "סדנה" },
-    ]);
+    await (service as any).saveToDb(
+      "he",
+      [{ sourceText: "Workshop", translation: "סדנה" }],
+      "gemini-2.5-flash",
+    );
 
     expect(upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -84,10 +87,12 @@ describe("TranslationService locale and persistence safeguards", () => {
           locale: "he",
           sourceText: "Workshop",
           translation: "סדנה",
+          model: "gemini-2.5-flash",
         }),
         update: expect.objectContaining({
           sourceText: "Workshop",
           translation: "סדנה",
+          model: "gemini-2.5-flash",
         }),
       }),
     );
@@ -152,6 +157,12 @@ describe("TranslationService Gemini model fallback", () => {
       (global.fetch as jest.Mock).mock.calls[1][1].body as string,
     );
     expect(fallbackBody.generationConfig.thinkingConfig).toBeUndefined();
+    expect(prisma.translation.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ model: "gemini-2.5-flash" }),
+        update: expect.objectContaining({ model: "gemini-2.5-flash" }),
+      }),
+    );
     expect(prisma.$transaction).toHaveBeenCalled();
   });
 
@@ -164,6 +175,27 @@ describe("TranslationService Gemini model fallback", () => {
     expect(result.translations).toEqual(["Welcome home"]);
     expect(result.translated).toEqual([false]);
     expect(global.fetch).toHaveBeenCalledTimes(GEMINI_TRANSLATION_MODELS.length);
+  });
+
+  it("aborts a stalled Gemini request and falls back to the next model", async () => {
+    const { service } = createService();
+    global.fetch = jest.fn(async (url: unknown, init?: RequestInit) => {
+      expect(init?.signal).toBeDefined();
+      const href = String(url);
+      if (href.includes("gemini-3.1-flash-lite:")) {
+        const err = new Error("The operation was aborted");
+        err.name = "TimeoutError";
+        throw err;
+      }
+      return geminiOk(["स्वागत है"]) as any;
+    }) as any;
+
+    const result = await service.translateBatch(["Welcome home"], "hi");
+
+    expect(result.translations).toEqual(["स्वागत है"]);
+    expect(result.translated).toEqual([true]);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(GEMINI_TRANSLATION_TIMEOUT_MS).toBe(20_000);
   });
 
   it("translates Hindi with Gemini 3.1 Flash-Lite and minimal thinking", async () => {

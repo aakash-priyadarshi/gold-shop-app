@@ -9,6 +9,7 @@ import {
 } from "class-validator";
 import {
   LOCALE_REGISTRY,
+  TRANSLATION_TEXT_MAX_LENGTH,
   UI_LOCALE_CODES,
   type UiLocale,
 } from "@gold-shop/shared";
@@ -18,7 +19,7 @@ export type SupportedLocale = UiLocale;
 
 /** Server-side ceiling. The web client chunks below this (typically 80). */
 export const TRANSLATION_BATCH_MAX_SIZE = 200;
-export const TRANSLATION_TEXT_MAX_LENGTH = 2000;
+export { TRANSLATION_TEXT_MAX_LENGTH };
 
 export const LOCALE_NAMES = Object.fromEntries(
   SUPPORTED_LOCALES.map((locale) => [locale, LOCALE_REGISTRY[locale].name]),

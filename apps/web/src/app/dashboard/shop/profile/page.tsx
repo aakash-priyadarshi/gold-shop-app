@@ -684,6 +684,7 @@ export default function ShopkeeperProfilePage() {
                         <T>Preferred Language</T>
                       </Label>
                       <LanguageMegaMenu
+                        id="language"
                         value={storeLanguage}
                         onValueChange={(value) => {
                           setStoreLanguage(value);

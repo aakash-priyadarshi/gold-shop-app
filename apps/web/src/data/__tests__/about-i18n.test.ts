@@ -23,9 +23,28 @@ describe("public About language routes", () => {
   });
 
   it("advertises the same language count as the UI locale registry", () => {
-    expect(ABOUT_CONTENT.en.languageGuideDesc).toContain(
-      `${UI_LOCALE_CODES.length} languages`,
-    );
+    const count = String(UI_LOCALE_CODES.length);
+    const localizedCount: Record<string, string> = {
+      en: `${count} languages`,
+      fr: `${count} langues`,
+      de: `${count} Sprachen`,
+      hi: `${count} भाषाओं`,
+      es: `${count} idiomas`,
+      ar: "14 لغة",
+      ne: "१४ भाषाहरूमा",
+    };
+
+    for (const [locale, content] of Object.entries(ABOUT_CONTENT)) {
+      const marker = localizedCount[locale];
+      expect(marker, `${locale} language-count phrase`).toBeDefined();
+      expect(content.languageGuideDesc).toContain(marker);
+    }
+  });
+
+  it("does not advertise tutorial pages for locales without video assets", () => {
+    expect(PUBLIC_LANGUAGE_PAGES.si.tutorial).toBeUndefined();
+    expect(PUBLIC_LANGUAGE_PAGES.he.tutorial).toBeUndefined();
+    expect(PUBLIC_LANGUAGE_PAGES.hi.tutorial).toBe("/tutorial/hi");
   });
 
   it("includes every summary page in static generation", () => {

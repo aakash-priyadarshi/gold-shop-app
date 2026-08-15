@@ -1,9 +1,12 @@
+import { TRANSLATION_TEXT_MAX_LENGTH } from "@gold-shop/shared";
 import { describe, expect, it } from "vitest";
 import {
   chunkTranslationTexts,
+  mapPreparedResultsToOriginals,
   mergeTranslationResponse,
   prepareTranslationBatch,
   TRANSLATION_BATCH_CHUNK_SIZE,
+  TRANSLATION_MAX_TEXT_LENGTH,
   translationBatchErrorDetail,
 } from "../translation-batch";
 
@@ -19,7 +22,43 @@ describe("prepareTranslationBatch", () => {
         "Shop currency",
         "   ",
       ]),
-    ).toEqual(["Welcome home", "Shop currency"]);
+    ).toEqual({
+      unique: ["Welcome home", "Shop currency"],
+      aliases: {
+        "Welcome home": ["  Welcome home  ", "Welcome home"],
+        "Shop currency": ["Shop currency"],
+      },
+      dropped: ["", tooLong, "   "],
+    });
+  });
+});
+
+describe("mapPreparedResultsToOriginals", () => {
+  it("writes dictionary and cooldown keys for every raw alias, including dropped texts", () => {
+    const prepared = prepareTranslationBatch([
+      "  Welcome home  ",
+      "Welcome home",
+      "   ",
+    ]);
+    const mapped = mapPreparedResultsToOriginals(
+      prepared.aliases,
+      { "Welcome home": "ברוכים הבאים הביתה" },
+      [],
+      prepared.dropped,
+    );
+
+    expect(mapped.confirmed).toEqual({
+      "  Welcome home  ": "ברוכים הבאים הביתה",
+      "Welcome home": "ברוכים הבאים הביתה",
+    });
+    expect(mapped.failed).toEqual(["   "]);
+    expect(mapped.confirmed["  Welcome home  "]).toBe(
+      mapped.confirmed["Welcome home"],
+    );
+  });
+
+  it("keeps the web client on the shared 2000-character ceiling", () => {
+    expect(TRANSLATION_MAX_TEXT_LENGTH).toBe(TRANSLATION_TEXT_MAX_LENGTH);
   });
 });
 

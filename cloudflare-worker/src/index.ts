@@ -106,6 +106,22 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB (images in chat)
 const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB (videos, max 30s)
 const MAX_DOC_SIZE = 5 * 1024 * 1024; // 5MB (documents)
 
+/** Voiced demo/tutorial langs in R2. UI also has si/he; those have no video assets yet. */
+const SUPPORTED_DEMO_LANGS = [
+  "en",
+  "hi",
+  "fr",
+  "de",
+  "es",
+  "ar",
+  "ta",
+  "ne",
+  "gu",
+  "mr",
+  "te",
+  "kn",
+];
+
 // Upload types that allow video and document files
 const MEDIA_UPLOAD_TYPES = ["chat"];
 const CERTIFICATE_UPLOAD_TYPES = ["certificate"];
@@ -190,7 +206,6 @@ export default {
       // Used on the homepage hero card and the /demo SEO page.
       if (path.startsWith("/demo/") && request.method === "GET") {
         const lang = path.replace("/demo/", "").split("/")[0];
-        const SUPPORTED_DEMO_LANGS = ["en", "hi", "fr", "de", "es", "ar", "ta", "ne", "gu", "mr", "te", "kn"];
         if (!SUPPORTED_DEMO_LANGS.includes(lang)) {
           return new Response(JSON.stringify({ error: `Invalid language. Supported: ${SUPPORTED_DEMO_LANGS.join(", ")}` }), {
             status: 400,
@@ -204,7 +219,6 @@ export default {
       // Used on the /tutorial SEO page and the seller dashboard help page.
       if (path.startsWith("/tutorial/") && request.method === "GET") {
         const lang = path.replace("/tutorial/", "").split("/")[0];
-        const SUPPORTED_DEMO_LANGS = ["en", "hi", "fr", "de", "es", "ar", "ta", "ne", "gu", "mr", "te", "kn"];
         if (!SUPPORTED_DEMO_LANGS.includes(lang)) {
           return new Response(JSON.stringify({ error: `Invalid language. Supported: ${SUPPORTED_DEMO_LANGS.join(", ")}` }), {
             status: 400,

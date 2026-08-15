@@ -36,6 +36,9 @@ reviews:
 chat:
   auto_reply: true
 knowledge_base:
-  learnings: local
-  issues: local
-  pull_requests: local
+  learnings:
+    scope: local
+  issues:
+    scope: local
+  pull_requests:
+    scope: local

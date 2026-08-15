@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TRANSLATION_TEXT_MAX_LENGTH } from "./translation";
 import {
   filterLocaleGroups,
   getLocaleDirection,
@@ -40,5 +41,11 @@ describe("UI locale registry", () => {
     expect(hindi.every((group) => group.locales.length > 0)).toBe(true);
 
     expect(filterLocaleGroups("zzzz-not-a-language")).toEqual([]);
+  });
+});
+
+describe("translation batch limits", () => {
+  it("exports a single 2000-character text ceiling for API and web", () => {
+    expect(TRANSLATION_TEXT_MAX_LENGTH).toBe(2000);
   });
 });
