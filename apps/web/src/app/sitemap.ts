@@ -1,5 +1,9 @@
 import { BLOG_POSTS } from "@/data/blog-posts";
 import generatedRoutes from "@/data/generated-routes.json";
+import {
+  PUBLIC_LANGUAGE_PAGES,
+  SUPPORTED_ABOUT_LANGS,
+} from "@/data/about-i18n";
 import { SITE_URL } from "@/config/site";
 import { MetadataRoute } from "next";
 
@@ -10,7 +14,10 @@ const SHOP_SITEMAP_PAGE_SIZE = 200;
 const SHOP_SITEMAP_MAX_PAGES = 250;
 const SHOP_FETCH_RETRIES = 3;
 
-const ABOUT_LANGUAGES = ["fr", "de", "hi", "es", "ar", "ne"] as const;
+const ABOUT_LANGUAGES = SUPPORTED_ABOUT_LANGS;
+const TUTORIAL_LANGUAGES = Object.entries(PUBLIC_LANGUAGE_PAGES)
+  .filter(([code, pages]) => code !== "en" && pages.tutorial)
+  .map(([code]) => code);
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
 type ChangeFrequency = NonNullable<SitemapEntry["changeFrequency"]>;
@@ -392,6 +399,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   );
 
+  const localizedTutorialPages: MetadataRoute.Sitemap = TUTORIAL_LANGUAGES.map(
+    (lang) => ({
+      url: `${BASE_URL}/tutorial/${lang}`,
+      lastModified: new Date("2026-05-15"),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    }),
+  );
+
   // ─── DYNAMIC: Shop pages ──────────────────────────────────────
   let shopPages: MetadataRoute.Sitemap = [];
   if (customerFlowEnabled) {
@@ -422,6 +438,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticPages,
     ...localizedAboutPages,
+    ...localizedTutorialPages,
     ...shopPages,
     ...blogIndex,
     ...blogPages,

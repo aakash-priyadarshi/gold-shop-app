@@ -13,6 +13,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CustomerCrmService } from "./customer-crm.service";
 import { AddCustomerNoteDto } from "./dto/customer-note.dto";
+import { UpsertWalkInCustomerDto } from "./dto/upsert-walk-in-customer.dto";
 
 // NOTE: Customer CRM is a core USP feature and is intentionally NOT gated behind
 // a paid plan, so new shops can always build their customer directory. Only
@@ -41,6 +42,16 @@ export class CustomerCrmController {
       parseInt(page || "1"),
       parseInt(limit || "20"),
     );
+  }
+
+  @Post("walk-in")
+  @ApiOperation({ summary: "Create or update a walk-in customer by phone" })
+  async upsertWalkInCustomer(
+    @CurrentUser("shopId") shopId: string,
+    @Body() dto: UpsertWalkInCustomerDto,
+  ) {
+    if (!shopId) throw new NotFoundException("Shop not found");
+    return this.crmService.upsertWalkInCustomer(shopId, dto);
   }
 
   @Get(":id/profile")

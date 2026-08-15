@@ -233,6 +233,16 @@ const CHUNKS: { topic: string; content: string }[] = [
     content:
       "Old Gold / Silver Exchange is one shop tool at /dashboard/shop/tools/old-gold. Stay on that page and switch Gold or Silver at the top. Gold uses the live 24K rate and karat purities (24K–9K). Silver uses the live 999 rate and jewellery purities 999, 925 sterling, 900, 835, and 800. Weight, impurity %, melting loss, and making % work the same for both metals. Apply the calculated credit to Create Invoice or POS. Invoice notes say Old gold or Old silver based on the metal. This is customer trade-in / buy-back, not karigar workshop gold loss and not billing wastage (jarti).",
   },
+  {
+    topic: "workshop_manufacturing_mode",
+    content:
+      "Workshop manufacturing is a separate factory product from the shop Karigar / Supply Chain book. Turn it on in Shop Settings → Workshop mode. It also requires the workshopManufacturing plan flag (Pro+ and Enterprise). When both are on, the sidebar hides Supply Chain and shows Workshop (control tower), Jobs, Floor, Metal, and QC. Departments (casting, filing, setting, polish, QC) are filters on Floor, not their own pages. Do not look for a shop/workshop switch on the karigar page. Floor advances a job by transferring a gold-out weight to the next department. QC can approve, rework, or reject. Receive finished goods creates an inventory item from the job — it does not write invoices. Gold loss on the tower is the same workshop metal math as Supply Chain, not billing jarti.",
+  },
+  {
+    topic: "product_gross_weight_and_pos_customer",
+    content:
+      "Product metal weight is the net metal-only weight used for metal pricing. Gemstones are entered in carats; 1 carat is exactly 0.2 grams. Gross weight is read-only and equals metal weight plus the converted weight of every gemstone line. Gross weight appears in Products, catalogues, desktop product details, and mobile customer-facing product details. From a Products detail popup, Add to POS basket uses the active POS session or starts one if needed. POS can search existing customers by phone, save a new walk-in customer in the same CRM store used by quotes and invoices, and attach or change that customer during a session. Both camera QR/barcode scanning and USB/Bluetooth RFID or barcode scanners use the same POS lookup. Advanced and Easy POS modes can browse the product catalogue.",
+  },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -295,6 +305,8 @@ async function main() {
     "invoice_share_and_bluetooth",
     "mobile_invoice_full_billing",
     "product_description_generation",
+    "workshop_manufacturing_mode",
+    "product_gross_weight_and_pos_customer",
   ]);
 
   for (const chunk of CHUNKS) {

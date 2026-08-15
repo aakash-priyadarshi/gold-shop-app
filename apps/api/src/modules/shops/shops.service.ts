@@ -6,7 +6,7 @@ import {
     Logger,
     NotFoundException,
 } from "@nestjs/common";
-import { UserRole, InventoryStatus, JewelleryType } from "@prisma/client";
+import { Prisma, UserRole, InventoryStatus, JewelleryType } from "@prisma/client";
 import { RedisService } from "../../common";
 import {
   getDefaultCurrencyForMarket,
@@ -70,8 +70,18 @@ export class ShopsService {
           vatRegistrationVerifiedAt: null,
         }
       : {};
+    const baseDto = currencyChanged ? dtoWithoutMoney : dto;
+    const { workshopDepartments, ...dtoRest } = baseDto;
     const shopUpdate = {
-      ...(currencyChanged ? dtoWithoutMoney : dto),
+      ...dtoRest,
+      ...(workshopDepartments !== undefined
+        ? {
+            workshopDepartments:
+              workshopDepartments === null
+                ? Prisma.JsonNull
+                : workshopDepartments,
+          }
+        : {}),
       country: marketCountry,
       currency,
       ...vatPatch,
@@ -847,6 +857,7 @@ export class ShopsService {
           buildMethod: "CASTING",
           composition: { metal: "GOLD", purity: "22K", weight: 4.5 },
           totalWeightGrams: 4.5,
+          grossWeightGrams: 4.5,
           metalValueNpr: 53571.43,
           makingChargeNpr: 6428.57,
           totalPriceNpr: 60000,
@@ -864,6 +875,7 @@ export class ShopsService {
           buildMethod: "HANDMADE",
           composition: { metal: "GOLD", purity: "24K", weight: 25.0 },
           totalWeightGrams: 25.0,
+          grossWeightGrams: 25.0,
           metalValueNpr: 304347.83,
           makingChargeNpr: 45652.17,
           totalPriceNpr: 350000,
@@ -881,6 +893,7 @@ export class ShopsService {
           buildMethod: "HANDMADE",
           composition: { metal: "GOLD", purity: "18K", weight: 2.2 },
           totalWeightGrams: 2.5,
+          grossWeightGrams: 2.5,
           metalValueNpr: 40000,
           makingChargeNpr: 5000,
           totalPriceNpr: 45000,
@@ -2049,9 +2062,20 @@ export class ShopsService {
 
     const previousValue = { ...shop };
 
+    const { workshopDepartments, ...dtoRest } = dto;
     const updated = await this.prisma.shop.update({
       where: { id: shopId },
-      data: dto,
+      data: {
+        ...dtoRest,
+        ...(workshopDepartments !== undefined
+          ? {
+              workshopDepartments:
+                workshopDepartments === null
+                  ? Prisma.JsonNull
+                  : workshopDepartments,
+            }
+          : {}),
+      },
     });
 
     await this.auditService.log({

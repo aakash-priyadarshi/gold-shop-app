@@ -100,7 +100,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Search Products",
         description:
-          "Type a product name or scan a barcode to find items quickly.",
+          "Type a product name or scan a barcode, QR label, or RFID tag to find items quickly.",
         side: "bottom",
         align: "start",
       },
@@ -329,7 +329,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Auto description",
         description:
-          "Fill from specs and Generate with AI stay locked until Jewellery Type, Metal Type, and Total Weight are filled. The page names whichever box is still empty. Fill from specs is free. Generate with AI costs 0.25 credits and only asks you to buy more after you click it.",
+          "Fill from specs and Generate with AI stay locked until Jewellery Type, Metal Type, and Metal Weight are filled. Gross weight is calculated from metal plus gemstone carats. Fill from specs is free. Generate with AI costs 0.25 credits and only asks you to buy more after you click it.",
         side: "top",
         align: "start",
       },
@@ -561,6 +561,86 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
         description:
           "Reply to buyers in real-time. All messages are moderated — if a message violates policy you'll see a warning banner with details.",
         side: "left",
+        align: "start",
+      },
+    },
+  ],
+  "/dashboard/shop/workshop": [
+    {
+      element: "[data-tour='workshop-tower']",
+      popover: {
+        title: "Workshop control tower",
+        description:
+          "Factory home: overdue jobs, department bottlenecks, gold-loss breaches, QC, and low vault. This replaces Supply Chain when Workshop mode is on. It is not the shop karigar book.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-overdue']",
+      popover: {
+        title: "Exceptions first",
+        description:
+          "Start with overdue work orders, then waiting-on-next, unexplained gold loss, and unreceived finished goods.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-load']",
+      popover: {
+        title: "Department load",
+        description:
+          "Casting, filing, setting, polish, and QC are filters on Floor — not extra sidebar pages. Tap a department to open that queue.",
+        side: "top",
+        align: "start",
+      },
+    },
+  ],
+  "/dashboard/shop/workshop/jobs": [
+    {
+      element: "[data-tour='workshop-jobs']",
+      popover: {
+        title: "Work orders",
+        description:
+          "Create manufacturing jobs with due date and priority. Open a job card for casting trees, stage weights, and finished-goods receipt into inventory.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+  ],
+  "/dashboard/shop/workshop/floor": [
+    {
+      element: "[data-tour='workshop-floor']",
+      popover: {
+        title: "Floor queues",
+        description:
+          "Advance a job by entering gold out for the current department. The next stage receives that weight. Do not tick checkboxes — transfer a weight.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+  ],
+  "/dashboard/shop/workshop/ledger": [
+    {
+      element: "[data-tour='workshop-metal']",
+      popover: {
+        title: "Metal ledger",
+        description:
+          "Issue from vault, return finished/sprue/scrap, or adjust inbound bullion. Optional lot id starts genealogy later. Unexplained loss never returns to vault.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+  ],
+  "/dashboard/shop/workshop/qc": [
+    {
+      element: "[data-tour='workshop-qc-page']",
+      popover: {
+        title: "QC inspect",
+        description:
+          "Approve, rework back to filing, or reject. This does not write customer invoices.",
+        side: "bottom",
         align: "start",
       },
     },

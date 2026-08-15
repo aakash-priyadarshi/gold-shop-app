@@ -1,22 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import * as en from './locales/en.json';
-import * as hi from './locales/hi.json';
-import * as ne from './locales/ne.json';
+import { Injectable } from "@nestjs/common";
+import { LOCALE_REGISTRY, isUiLocale, type UiLocale } from "@gold-shop/shared";
+import * as en from "./locales/en.json";
+import * as hi from "./locales/hi.json";
+import * as ne from "./locales/ne.json";
 
-export type SupportedLocale =
-  | 'en'
-  | 'fr'
-  | 'de'
-  | 'ne'
-  | 'hi'
-  | 'es'
-  | 'ar'
-  | 'gu'
-  | 'mr'
-  | 'ta'
-  | 'si'
-  | 'te'
-  | 'kn';
+export type SupportedLocale = UiLocale;
 
 const locales: Record<SupportedLocale, any> = {
   en,
@@ -32,27 +20,12 @@ const locales: Record<SupportedLocale, any> = {
   si: en,
   te: en,
   kn: en,
-};
-
-const intlLocaleMap: Record<SupportedLocale, string> = {
-  en: 'en-US',
-  fr: 'fr-FR',
-  de: 'de-DE',
-  ne: 'ne-NP',
-  hi: 'hi-IN',
-  es: 'es-ES',
-  ar: 'ar-AE',
-  gu: 'gu-IN',
-  mr: 'mr-IN',
-  ta: 'ta-IN',
-  si: 'si-LK',
-  te: 'te-IN',
-  kn: 'kn-IN',
+  he: en,
 };
 
 @Injectable()
 export class I18nService {
-  private defaultLocale: SupportedLocale = 'en';
+  private defaultLocale: SupportedLocale = "en";
 
   // Get translation for a key
   translate(
@@ -60,7 +33,7 @@ export class I18nService {
     locale: SupportedLocale = this.defaultLocale,
     params?: Record<string, string | number>,
   ): string {
-    const keys = key.split('.');
+    const keys = key.split(".");
     let translation: any = locales[locale] || locales[this.defaultLocale];
 
     for (const k of keys) {
@@ -72,7 +45,7 @@ export class I18nService {
       }
     }
 
-    if (typeof translation !== 'string') {
+    if (typeof translation !== "string") {
       return key; // Return key if translation not found
     }
 
@@ -94,7 +67,10 @@ export class I18nService {
   }
 
   // Get all translations for a namespace
-  getNamespace(namespace: string, locale: SupportedLocale = this.defaultLocale): any {
+  getNamespace(
+    namespace: string,
+    locale: SupportedLocale = this.defaultLocale,
+  ): any {
     const localeData = locales[locale] || locales[this.defaultLocale];
     return localeData[namespace] || {};
   }
@@ -106,27 +82,17 @@ export class I18nService {
 
   // Get locale info
   getLocaleInfo(locale: SupportedLocale) {
-    const info: Record<SupportedLocale, { name: string; nativeName: string; direction: string }> = {
-      en: { name: 'English', nativeName: 'English', direction: 'ltr' },
-      fr: { name: 'French', nativeName: 'Français', direction: 'ltr' },
-      de: { name: 'German', nativeName: 'Deutsch', direction: 'ltr' },
-      ne: { name: 'Nepali', nativeName: 'नेपाली', direction: 'ltr' },
-      hi: { name: 'Hindi', nativeName: 'हिन्दी', direction: 'ltr' },
-      es: { name: 'Spanish', nativeName: 'Español', direction: 'ltr' },
-      ar: { name: 'Arabic', nativeName: 'العربية', direction: 'rtl' },
-      gu: { name: 'Gujarati', nativeName: 'ગુજરાતી', direction: 'ltr' },
-      mr: { name: 'Marathi', nativeName: 'मराठी', direction: 'ltr' },
-      ta: { name: 'Tamil', nativeName: 'தமிழ்', direction: 'ltr' },
-      si: { name: 'Sinhala', nativeName: 'සිංහල', direction: 'ltr' },
-      te: { name: 'Telugu', nativeName: 'తెలుగు', direction: 'ltr' },
-      kn: { name: 'Kannada', nativeName: 'ಕನ್ನಡ', direction: 'ltr' },
+    const info = LOCALE_REGISTRY[locale] || LOCALE_REGISTRY.en;
+    return {
+      name: info.name,
+      nativeName: info.nativeName,
+      direction: info.direction,
     };
-    return info[locale] || info.en;
   }
 
   // Check if locale is supported
   isSupported(locale: string): locale is SupportedLocale {
-    return locale in locales;
+    return isUiLocale(locale);
   }
 
   // Set default locale
@@ -138,7 +104,7 @@ export class I18nService {
 
   // Get fallback translation from English
   private getFallbackTranslation(key: string): any {
-    const keys = key.split('.');
+    const keys = key.split(".");
     let translation: any = locales.en;
 
     for (const k of keys) {
@@ -162,18 +128,23 @@ export class I18nService {
   }
 
   // Format number according to locale
-  formatNumber(value: number, locale: SupportedLocale = this.defaultLocale): string {
-    return new Intl.NumberFormat(intlLocaleMap[locale]).format(value);
+  formatNumber(
+    value: number,
+    locale: SupportedLocale = this.defaultLocale,
+  ): string {
+    return new Intl.NumberFormat(LOCALE_REGISTRY[locale].intlLocale).format(
+      value,
+    );
   }
 
   // Format currency
   formatCurrency(
     value: number,
-    currency = 'NPR',
+    currency = "NPR",
     locale: SupportedLocale = this.defaultLocale,
   ): string {
-    return new Intl.NumberFormat(intlLocaleMap[locale], {
-      style: 'currency',
+    return new Intl.NumberFormat(LOCALE_REGISTRY[locale].intlLocale, {
+      style: "currency",
       currency,
     }).format(value);
   }
@@ -184,6 +155,9 @@ export class I18nService {
     locale: SupportedLocale = this.defaultLocale,
     options?: Intl.DateTimeFormatOptions,
   ): string {
-    return new Intl.DateTimeFormat(intlLocaleMap[locale], options).format(date);
+    return new Intl.DateTimeFormat(
+      LOCALE_REGISTRY[locale].intlLocale,
+      options,
+    ).format(date);
   }
 }

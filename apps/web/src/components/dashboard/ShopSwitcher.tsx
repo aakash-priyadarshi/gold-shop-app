@@ -21,8 +21,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   AlertCircle,
   Building2,
@@ -52,6 +54,7 @@ export function ShopSwitcher({
   currentShopId,
   onShopChange,
 }: ShopSwitcherProps) {
+  const t = useT();
   const router = useRouter();
   const [shops, setShops] = useState<Shop[]>([]);
   const [activeShop, setActiveShop] = useState<Shop | null>(null);
@@ -113,16 +116,18 @@ export function ShopSwitcher({
       setActiveShop(shop);
       onShopChange?.(shop.id);
       toast({
-        title: "Shop Switched",
-        description: `Now managing ${shop.name}`,
+        title: t("Shop Switched"),
+        description: `${t("Now managing")} ${shop.name}`,
       });
       // Refresh the page to load new shop data
       router.refresh();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Switch Failed",
-        description: error.response?.data?.message || "Could not switch shop",
+        title: t("Switch Failed"),
+        description: t(
+          error.response?.data?.message || "Could not switch shop",
+        ),
       });
     } finally {
       setIsSwitching(false);
@@ -139,8 +144,8 @@ export function ShopSwitcher({
     ) {
       toast({
         variant: "destructive",
-        title: "Missing Fields",
-        description: "Please fill in all required fields",
+        title: t("Missing Fields"),
+        description: t("Please fill in all required fields"),
       });
       return;
     }
@@ -160,16 +165,18 @@ export function ShopSwitcher({
       });
       await loadShops();
       toast({
-        title: "Shop Created",
-        description: "Your new shop is pending verification",
+        title: t("Shop Created"),
+        description: t("Your new shop is pending verification"),
       });
       // Switch to the new shop
       switchShop(response.data);
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Creation Failed",
-        description: error.response?.data?.message || "Could not create shop",
+        title: t("Creation Failed"),
+        description: t(
+          error.response?.data?.message || "Could not create shop",
+        ),
       });
     } finally {
       setIsCreating(false);
@@ -179,8 +186,8 @@ export function ShopSwitcher({
   if (isLoading) {
     return (
       <Button variant="outline" disabled className="w-full justify-start">
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-        Loading shops...
+        <Loader2 className="h-4 w-4 me-2 animate-spin" />
+        <T>Loading shops...</T>
       </Button>
     );
   }
@@ -192,8 +199,8 @@ export function ShopSwitcher({
         className="w-full justify-start"
         onClick={() => setNewShopDialogOpen(true)}
       >
-        <Plus className="h-4 w-4 mr-2" />
-        Create Your First Shop
+        <Plus className="h-4 w-4 me-2" />
+        <T>Create Your First Shop</T>
       </Button>
     );
   }
@@ -202,18 +209,22 @@ export function ShopSwitcher({
     if (!shop.isVerified) {
       return (
         <Badge variant="outline" className="text-amber-600 border-amber-300">
-          Pending
+          <T>Pending</T>
         </Badge>
       );
     }
     if (shop.status === "ACTIVE") {
       return (
         <Badge variant="default" className="bg-green-600">
-          Active
+          <T>Active</T>
         </Badge>
       );
     }
-    return <Badge variant="secondary">{shop.status}</Badge>;
+    return (
+      <Badge variant="secondary">
+        <T>{shop.status}</T>
+      </Badge>
+    );
   };
 
   return (
@@ -228,7 +239,7 @@ export function ShopSwitcher({
             <div className="flex items-center gap-2 truncate">
               <Store className="h-4 w-4 flex-shrink-0" />
               <span className="truncate">
-                {activeShop?.name || "Select Shop"}
+                <span dir="auto">{activeShop?.name || t("Select Shop")}</span>
               </span>
             </div>
             {isSwitching ? (
@@ -241,7 +252,7 @@ export function ShopSwitcher({
         <DropdownMenuContent align="start" className="w-64">
           <DropdownMenuLabel className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            Your Shops
+            <T>Your Shops</T>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
 
@@ -256,7 +267,8 @@ export function ShopSwitcher({
                   <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
                 )}
                 <span
-                  className={`truncate ${shop.id !== activeShop?.id ? "ml-6" : ""}`}
+                  className={`truncate ${shop.id !== activeShop?.id ? "ms-6" : ""}`}
+                  dir="auto"
                 >
                   {shop.name}
                 </span>
@@ -270,8 +282,8 @@ export function ShopSwitcher({
             onClick={() => setNewShopDialogOpen(true)}
             className="cursor-pointer"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Shop
+            <Plus className="h-4 w-4 me-2" />
+            <T>Add New Shop</T>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -280,27 +292,36 @@ export function ShopSwitcher({
       <Dialog open={newShopDialogOpen} onOpenChange={setNewShopDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Create New Shop</DialogTitle>
+            <DialogTitle>
+              <T>Create New Shop</T>
+            </DialogTitle>
             <DialogDescription>
-              Add another shop to your account. It will require verification
-              before going live.
+              <T>
+                Add another shop to your account. It will require verification
+                before going live.
+              </T>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             <div className="space-y-2">
-              <Label htmlFor="shopName">Shop Name *</Label>
+              <Label htmlFor="shopName">
+                <T>Shop Name *</T>
+              </Label>
               <Input
                 id="shopName"
                 value={newShopForm.name}
                 onChange={(e) =>
                   setNewShopForm({ ...newShopForm, name: e.target.value })
                 }
-                placeholder="e.g., Golden Jewelers Main Branch"
+                placeholder={t("e.g., Golden Jewelers Main Branch")}
+                dir="auto"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="shopDescription">Description</Label>
+              <Label htmlFor="shopDescription">
+                <T>Description</T>
+              </Label>
               <Textarea
                 id="shopDescription"
                 value={newShopForm.description}
@@ -310,51 +331,63 @@ export function ShopSwitcher({
                     description: e.target.value,
                   })
                 }
-                placeholder="Brief description of your shop"
+                placeholder={t("Brief description of your shop")}
+                dir="auto"
                 rows={3}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="shopCity">City *</Label>
+                <Label htmlFor="shopCity">
+                  <T>City *</T>
+                </Label>
                 <Input
                   id="shopCity"
                   value={newShopForm.city}
                   onChange={(e) =>
                     setNewShopForm({ ...newShopForm, city: e.target.value })
                   }
-                  placeholder="e.g., Kathmandu"
+                  placeholder={t("e.g., Kathmandu")}
+                  dir="auto"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="shopCountry">Country *</Label>
+                <Label htmlFor="shopCountry">
+                  <T>Country *</T>
+                </Label>
                 <Input
                   id="shopCountry"
                   value={newShopForm.country}
                   onChange={(e) =>
                     setNewShopForm({ ...newShopForm, country: e.target.value })
                   }
-                  placeholder="Nepal"
+                  placeholder={t("Nepal")}
+                  dir="auto"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="shopAddress">Address *</Label>
+              <Label htmlFor="shopAddress">
+                <T>Address *</T>
+              </Label>
               <Input
                 id="shopAddress"
                 value={newShopForm.address}
                 onChange={(e) =>
                   setNewShopForm({ ...newShopForm, address: e.target.value })
                 }
-                placeholder="Street address"
+                placeholder={t("Street address")}
+                dir="auto"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="shopPhone">Phone *</Label>
+                <Label htmlFor="shopPhone">
+                  <T>Phone *</T>
+                </Label>
                 <Input
                   id="shopPhone"
                   value={newShopForm.phone}
@@ -362,10 +395,13 @@ export function ShopSwitcher({
                     setNewShopForm({ ...newShopForm, phone: e.target.value })
                   }
                   placeholder="+977 9XXXXXXXXX"
+                  dir="ltr"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="shopEmail">Email *</Label>
+                <Label htmlFor="shopEmail">
+                  <T>Email *</T>
+                </Label>
                 <Input
                   id="shopEmail"
                   type="email"
@@ -374,6 +410,7 @@ export function ShopSwitcher({
                     setNewShopForm({ ...newShopForm, email: e.target.value })
                   }
                   placeholder="shop@example.com"
+                  dir="ltr"
                 />
               </div>
             </div>
@@ -381,8 +418,10 @@ export function ShopSwitcher({
             <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg">
               <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                New shops require admin verification before they can accept
-                orders or appear in search results.
+                <T>
+                  New shops require admin verification before they can accept
+                  orders or appear in search results.
+                </T>
               </p>
             </div>
           </div>
@@ -391,15 +430,15 @@ export function ShopSwitcher({
               variant="outline"
               onClick={() => setNewShopDialogOpen(false)}
             >
-              Cancel
+              <T>Cancel</T>
             </Button>
             <Button onClick={createNewShop} disabled={isCreating}>
               {isCreating ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 me-2 animate-spin" />
               ) : (
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 me-2" />
               )}
-              Create Shop
+              <T>Create Shop</T>
             </Button>
           </DialogFooter>
         </DialogContent>

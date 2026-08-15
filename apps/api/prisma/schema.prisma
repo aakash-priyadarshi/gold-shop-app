@@ -380,6 +380,10 @@ model Shop {
   billingWastageMode        String                @default("AUTO")
   /// When set, overrides country default wastage %. Null = use market default.
   billingWastagePercent     Float?
+  /// Factory floor UI. Off = Supply Chain karigar book. On + workshopManufacturing = Workshop nav.
+  workshopMode              Boolean               @default(false)
+  /// Ordered KarigarStage keys for Floor queues. Null = CASTING → … → QC.
+  workshopDepartments       Json?
   nickelCompliantFlag       Boolean               @default(false)
   isActive                  Boolean               @default(true)
   createdAt                 DateTime              @default(now())
@@ -572,7 +576,10 @@ model InventoryItem {
   descriptionHi     String?
   buildMethod       String
   composition       Json
+  /// Metal-only weight. Gemstone carats are converted separately for gross weight.
   totalWeightGrams  Float
+  /// Read-only derived weight: metal grams + gemstone carats × 0.2g.
+  grossWeightGrams  Float               @default(0)
   dimensions        Json?
   gemstones         Json?
   metalValueNpr     Float
@@ -617,6 +624,7 @@ model InventoryItem {
   memberOfSet       InventorySetComponent?  @relation("SetComponent")
   priceHistory      InventoryPriceHistory[]
   stockAuditScans   StockAuditScan[]
+  sourceKarigarJob  KarigarJob?
 
   @@index([shopId, status])
   @@index([jewelleryType])
@@ -879,6 +887,7 @@ model WalkInCustomer {
   createdByShop Shop        @relation(fields: [createdByShopId], references: [id])
   shopQuotes    ShopQuote[]
   invoices      Invoice[]
+  karigarJobs   KarigarJob[]
 
   @@index([phone])
   @@index([createdByShopId])
@@ -945,6 +954,7 @@ model ShopQuote {
 
   shop           Shop           @relation(fields: [shopId], references: [id])
   walkInCustomer WalkInCustomer @relation(fields: [walkInCustomerId], references: [id])
+  karigarJobs    KarigarJob[]
 
   @@index([shopId])
   @@index([walkInCustomerId])
@@ -4009,16 +4019,35 @@ model KarigarJob {
   allowedWastagePercent  Float    @default(1)
   status                 String   @default("PENDING")
   steps                  Json? // legacy checkboxes; stages table is source of truth
+  walkInCustomerId       String?
+  shopQuoteId            String?
+  inventoryItemId        String?  @unique
+  dueAt                  DateTime?
+  priority               String   @default("NORMAL")
+  qty                    Int      @default(1)
+  sizeLabel              String?
+  purity                 String?
+  metalColor             String?
+  photos                 String[] @default([])
+  notes                  String?
+  bom                    Json?
+  currentStage           KarigarStage?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
   shop                   Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   workshop               KarigarWorkshop? @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  walkInCustomer         WalkInCustomer? @relation(fields: [walkInCustomerId], references: [id], onDelete: SetNull)
+  shopQuote              ShopQuote? @relation(fields: [shopQuoteId], references: [id], onDelete: SetNull)
+  inventoryItem          InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
   stages                 KarigarJobStage[]
   movements              KarigarMetalMovement[]
   trees                  KarigarCastingTree[]
 
   @@index([shopId])
   @@index([workshopId])
+  @@index([shopId, currentStage])
+  @@index([walkInCustomerId])
+  @@index([shopQuoteId])
 }
 
 model KarigarJobStage {
@@ -4033,6 +4062,11 @@ model KarigarJobStage {
   dustGrams             Float        @default(0)
   allowedWastagePercent Float        @default(1)
   status                String       @default("PENDING")
+  notes                 String?
+  photos                String[]     @default([])
+  reworkCount           Int          @default(0)
+  rejectionReason       String?
+  startedAt             DateTime?
   completedAt           DateTime?
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
@@ -4089,6 +4123,7 @@ model KarigarMetalMovement {
   metalKey    String               @default("goldGrains24k")
   weightGrams Float
   purity      String?
+  lotId       String?
   note        String?
   createdBy   String?
   createdAt   DateTime             @default(now())

@@ -118,6 +118,7 @@ async function main() {
           taxReportsDownload: false,
           taxCaShare: false,
           karigarSupplyChain: false,
+          workshopManufacturing: false,
           lending: false,
           // Mobile POS
           mobilePOS: true,
@@ -161,6 +162,7 @@ async function main() {
       taxReportsDownload: true,
       taxCaShare: false,
       karigarSupplyChain: true,
+      workshopManufacturing: false,
       lending: true,
       // Mobile POS
       mobilePOS: true,
@@ -231,6 +233,7 @@ async function main() {
       taxReportsDownload: true,
       taxCaShare: true,
       karigarSupplyChain: true,
+      workshopManufacturing: true,
       lending: true,
       // Mobile POS
       mobilePOS: true,
@@ -315,6 +318,7 @@ async function main() {
       taxReportsDownload: true,
       taxCaShare: true,
       karigarSupplyChain: true,
+      workshopManufacturing: true,
       lending: true,
       // Mobile POS
       mobilePOS: true,

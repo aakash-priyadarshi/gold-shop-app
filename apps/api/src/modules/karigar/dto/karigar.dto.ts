@@ -218,6 +218,59 @@ export class CreateKarigarJobDto {
   @IsNumber()
   @Min(0)
   allowedWastagePercent?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  walkInCustomerId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  shopQuoteId?: string;
+
+  @IsOptional()
+  dueAt?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  @IsIn(["LOW", "NORMAL", "HIGH", "URGENT"])
+  priority?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  qty?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  sizeLabel?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  purity?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  metalColor?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  photos?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+
+  @IsOptional()
+  @IsObject()
+  bom?: Record<string, unknown>;
 }
 
 export class UpdateKarigarJobDto {
@@ -255,6 +308,65 @@ export class UpdateKarigarJobDto {
   @IsString()
   @MaxLength(40)
   status?: string;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  @MaxLength(64)
+  walkInCustomerId?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  @MaxLength(64)
+  shopQuoteId?: string | null;
+
+  @IsOptional()
+  dueAt?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  @IsIn(["LOW", "NORMAL", "HIGH", "URGENT"])
+  priority?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  qty?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  sizeLabel?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  purity?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  metalColor?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  photos?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+
+  @IsOptional()
+  @IsObject()
+  bom?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsIn(KARIGAR_STAGE_VALUES)
+  currentStage?: (typeof KARIGAR_STAGE_VALUES)[number];
 }
 
 export class CreateKarigarMovementDto {
@@ -294,6 +406,11 @@ export class CreateKarigarMovementDto {
   @IsString()
   @MaxLength(400)
   note?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  lotId?: string;
 }
 
 export class UpdateKarigarStageDto {
@@ -331,6 +448,84 @@ export class UpdateKarigarStageDto {
   @IsString()
   @MaxLength(40)
   status?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  photos?: string[];
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  reworkCount?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(400)
+  rejectionReason?: string;
+}
+
+export class AdvanceKarigarFloorDto {
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  goldOutGrams?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  photos?: string[];
+}
+
+export class ReceiveKarigarFgDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  sku?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  nameEn?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  jewelleryType?: string;
+}
+
+export class InspectKarigarQcDto {
+  @IsIn(["APPROVED", "REWORK", "REJECTED"])
+  decision: "APPROVED" | "REWORK" | "REJECTED";
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(400)
+  rejectionReason?: string;
+
+  @IsOptional()
+  @IsIn(KARIGAR_STAGE_VALUES)
+  reworkToStage?: (typeof KARIGAR_STAGE_VALUES)[number];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  photos?: string[];
 }
 
 export class CastingTreeLineDto {

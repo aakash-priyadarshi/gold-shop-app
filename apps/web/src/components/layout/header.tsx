@@ -4,89 +4,94 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { T } from "@/components/ui/T";
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { BRAND } from "@/config/brand";
 import { useCart } from "@/contexts/CartContext";
 import { getDashboardRoute, useAuth, type UserRole } from "@/hooks/useAuth";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { chatApi, notificationsApi, ordersApi } from "@/lib/api";
-import { useT } from "@/providers/translation-provider";
+import { useT, useTranslation } from "@/providers/translation-provider";
+import {
+  PUBLIC_LANGUAGE_PAGES,
+  type Language as PublicLanguage,
+} from "@/data/about-i18n";
 import { useHelpUIStore } from "@/store/help-ui";
 import {
-    COUNTRIES,
-    CURRENCIES,
-    LANGUAGES,
-    usePreferencesStore,
-    type CountryCode,
-    type CurrencyCode,
-    type Language,
+  COUNTRIES,
+  CURRENCIES,
+  LANGUAGES,
+  usePreferencesStore,
+  type CountryCode,
+  type CurrencyCode,
+  type Language,
 } from "@/store/preferences";
 import {
-    ArrowRightOnRectangleIcon,
-    Bars3Icon,
-    BellIcon,
-    BookOpenIcon,
-    BuildingOffice2Icon,
-    BuildingStorefrontIcon,
-    ChatBubbleLeftRightIcon,
-    ChevronRightIcon,
-    ClipboardDocumentListIcon,
-    Cog6ToothIcon,
-    ComputerDesktopIcon,
-    CreditCardIcon,
-    CubeIcon,
-    CurrencyDollarIcon,
-    DocumentTextIcon,
-    GlobeAltIcon,
-    HeartIcon,
-    InformationCircleIcon,
-    MapPinIcon,
-    ShieldCheckIcon,
-    ShoppingBagIcon,
-    ShoppingCartIcon,
-    SparklesIcon,
-    Squares2X2Icon,
-    TrashIcon,
-    TruckIcon,
-    UserIcon,
+  ArrowRightOnRectangleIcon,
+  Bars3Icon,
+  BellIcon,
+  BookOpenIcon,
+  BuildingOffice2Icon,
+  BuildingStorefrontIcon,
+  ChatBubbleLeftRightIcon,
+  ChevronRightIcon,
+  ClipboardDocumentListIcon,
+  Cog6ToothIcon,
+  ComputerDesktopIcon,
+  CreditCardIcon,
+  CubeIcon,
+  CurrencyDollarIcon,
+  DocumentTextIcon,
+  GlobeAltIcon,
+  HeartIcon,
+  InformationCircleIcon,
+  MapPinIcon,
+  ShieldCheckIcon,
+  ShoppingBagIcon,
+  ShoppingCartIcon,
+  SparklesIcon,
+  Squares2X2Icon,
+  TrashIcon,
+  TruckIcon,
+  UserIcon,
 } from "@heroicons/react/24/outline";
 import { HelpCircle, MessageCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -158,9 +163,12 @@ const getRoleQuickActions = (role: UserRole | undefined) => {
 };
 
 export function Header() {
+  const pathname = usePathname();
+  const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const { items, itemCount, subtotal, removeFromCart } = useCart();
   const t = useT();
+  const { locale: effectiveLanguage } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -188,10 +196,10 @@ export function Header() {
     }>
   >([]);
 
-  const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial } = useHelpUIStore();
+  const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial } =
+    useHelpUIStore();
 
   // Get preferences from store
-  const language = usePreferencesStore((state) => state.language);
   const currency = usePreferencesStore((state) => state.currency);
   const country = usePreferencesStore((state) => state.country);
   const setLanguage = usePreferencesStore((state) => state.setLanguage);
@@ -200,6 +208,28 @@ export function Header() {
   const setAuthenticated = usePreferencesStore(
     (state) => state.setAuthenticated,
   );
+
+  const changeLanguage = (value: string) => {
+    const nextLanguage = value as Language;
+    setLanguage(nextLanguage);
+
+    if (!/^\/(?:about|tutorial)(?:\/|$)/.test(pathname)) return;
+
+    const publicPages = PUBLIC_LANGUAGE_PAGES[nextLanguage as PublicLanguage];
+    if (!publicPages) {
+      // Languages can ship in the application before reviewed, indexable
+      // marketing copy exists. The home page can use the runtime pipeline.
+      router.push("/");
+      return;
+    }
+
+    const prefersTutorial = pathname.startsWith("/tutorial");
+    router.push(
+      (prefersTutorial
+        ? (publicPages.tutorial ?? publicPages.about)
+        : (publicPages.about ?? publicPages.tutorial)) ?? "/",
+    );
+  };
 
   // Unread messages count
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -338,24 +368,26 @@ export function Header() {
   const customerFlowEnabled = features.customerFlowEnabled;
 
   // Primary nav links (flat)
-  const navigation = customerFlowEnabled ? [
-    { name: "Shops", href: "/shops", icon: BuildingStorefrontIcon },
-    { name: "Designs", href: "/designs", icon: HeartIcon },
-    { name: "Custom Order", href: "/rfq/create", icon: SparklesIcon },
-  ] : [
-    {
-      name: "Jewellery Software",
-      href: "/jewellery-shop-software",
-      icon: Squares2X2Icon,
-    },
-    { name: "Pricing", href: "/pricing", icon: CreditCardIcon },
-    {
-      name: "Support",
-      href: "/support",
-      icon: ChatBubbleLeftRightIcon,
-    },
-    { name: "Download", href: "/download", icon: ComputerDesktopIcon },
-  ];
+  const navigation = customerFlowEnabled
+    ? [
+        { name: "Shops", href: "/shops", icon: BuildingStorefrontIcon },
+        { name: "Designs", href: "/designs", icon: HeartIcon },
+        { name: "Custom Order", href: "/rfq/create", icon: SparklesIcon },
+      ]
+    : [
+        {
+          name: "Jewellery Software",
+          href: "/jewellery-shop-software",
+          icon: Squares2X2Icon,
+        },
+        { name: "Pricing", href: "/pricing", icon: CreditCardIcon },
+        {
+          name: "Support",
+          href: "/support",
+          icon: ChatBubbleLeftRightIcon,
+        },
+        { name: "Download", href: "/download", icon: ComputerDesktopIcon },
+      ];
 
   // "For Sellers" dropdown items
   const sellerNavItems = [
@@ -548,7 +580,9 @@ export function Header() {
                       }`}
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      <item.icon className={`h-5 w-5 ${item.featured ? "text-gold-600 dark:text-gold-400" : "text-gold-550"}`} />
+                      <item.icon
+                        className={`h-5 w-5 ${item.featured ? "text-gold-600 dark:text-gold-400" : "text-gold-550"}`}
+                      />
                       <T>{item.name}</T>
                     </Link>
                   ))}
@@ -582,8 +616,8 @@ export function Header() {
                   <div className="grid grid-cols-2 gap-2">
                     {/* Language */}
                     <Select
-                      value={language}
-                      onValueChange={(v) => setLanguage(v as Language)}
+                      value={effectiveLanguage}
+                      onValueChange={changeLanguage}
                     >
                       <SelectTrigger className="h-11 text-sm rounded-xl">
                         <GlobeAltIcon className="h-4 w-4 mr-2 text-gray-400" />
@@ -715,8 +749,18 @@ export function Header() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <BrandLogo variant="icon" size="sm" className="lg:hidden" linkToHome={false} />
-          <BrandLogo variant="icon" size="md" className="hidden lg:block" linkToHome={false} />
+          <BrandLogo
+            variant="icon"
+            size="sm"
+            className="lg:hidden"
+            linkToHome={false}
+          />
+          <BrandLogo
+            variant="icon"
+            size="md"
+            className="hidden lg:block"
+            linkToHome={false}
+          />
           <span className="font-bold text-base lg:text-xl tracking-tight">
             {BRAND.name}
           </span>
@@ -768,7 +812,10 @@ export function Header() {
                     initial={{ opacity: 0, y: 8, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 6, scale: 0.98 }}
-                    transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    transition={{
+                      duration: 0.2,
+                      ease: [0.25, 0.46, 0.45, 0.94],
+                    }}
                     className="absolute top-full -left-20 mt-3 w-[640px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/80 dark:border-gray-700/60 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 p-5 z-50"
                   >
                     <div className="grid grid-cols-5 gap-5">
@@ -780,7 +827,9 @@ export function Header() {
                       >
                         <div
                           className="absolute inset-0 bg-cover bg-center"
-                          style={{ backgroundImage: `url('https://images.orivraa.com/images/public/hasan-mrad-9Foi-h8zmIU-unsplash.jpg')` }}
+                          style={{
+                            backgroundImage: `url('https://images.orivraa.com/images/public/hasan-mrad-9Foi-h8zmIU-unsplash.jpg')`,
+                          }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-gray-950/90 via-gray-950/50 to-gray-950/20" />
                         <div className="relative p-5 flex flex-col justify-end min-h-[240px]">
@@ -792,31 +841,36 @@ export function Header() {
                             <T>Start Selling Free</T>
                           </h3>
                           <p className="text-xs text-gray-300 leading-relaxed">
-                            <T>See how Orivraa works for jewellers — free setup, no credit card</T>
+                            <T>
+                              See how Orivraa works for jewellers — free setup,
+                              no credit card
+                            </T>
                           </p>
                         </div>
                       </Link>
 
                       {/* Right: Link Grid (3 cols) */}
                       <div className="col-span-3 grid grid-cols-1 gap-0.5">
-                        {sellerNavItems.filter(item => !item.featured).map((item) => (
-                          <Link
-                            key={item.name}
-                            href={item.href}
-                            className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors group/link"
-                            onClick={() => setSellerDropdownOpen(false)}
-                          >
-                            <item.icon className="h-5 w-5 mt-0.5 shrink-0 text-gold-500 group-hover/link:text-gold-600 dark:group-hover/link:text-gold-400 transition-colors" />
-                            <div>
-                              <div className="text-sm font-semibold text-gray-900 dark:text-white group-hover/link:text-gold-700 dark:group-hover/link:text-gold-300 transition-colors">
-                                <T>{item.name}</T>
+                        {sellerNavItems
+                          .filter((item) => !item.featured)
+                          .map((item) => (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors group/link"
+                              onClick={() => setSellerDropdownOpen(false)}
+                            >
+                              <item.icon className="h-5 w-5 mt-0.5 shrink-0 text-gold-500 group-hover/link:text-gold-600 dark:group-hover/link:text-gold-400 transition-colors" />
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white group-hover/link:text-gold-700 dark:group-hover/link:text-gold-300 transition-colors">
+                                  <T>{item.name}</T>
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                  <T>{item.desc}</T>
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                                <T>{item.desc}</T>
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
+                            </Link>
+                          ))}
                       </div>
                     </div>
                   </motion.div>
@@ -858,7 +912,10 @@ export function Header() {
                     initial={{ opacity: 0, y: 8, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 6, scale: 0.98 }}
-                    transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    transition={{
+                      duration: 0.2,
+                      ease: [0.25, 0.46, 0.45, 0.94],
+                    }}
                     className="absolute top-full right-0 mt-3 w-[380px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/80 dark:border-gray-700/60 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 overflow-hidden z-50"
                   >
                     {/* Featured image header */}
@@ -869,7 +926,9 @@ export function Header() {
                     >
                       <div
                         className="h-36 bg-cover bg-center"
-                        style={{ backgroundImage: `url('https://images.orivraa.com/images/public/amy-vann-85-6iMn5L8g-unsplash%20(1).jpg')` }}
+                        style={{
+                          backgroundImage: `url('https://images.orivraa.com/images/public/amy-vann-85-6iMn5L8g-unsplash%20(1).jpg')`,
+                        }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-gray-950/30 to-transparent" />
                       <div className="absolute bottom-3 left-4 right-4">
@@ -877,7 +936,9 @@ export function Header() {
                           <T>Watch the 30-second demo</T>
                         </p>
                         <p className="text-gray-300 text-xs">
-                          <T>See Orivraa in action — inventory, POS & billing</T>
+                          <T>
+                            See Orivraa in action — inventory, POS & billing
+                          </T>
                         </p>
                       </div>
                     </Link>
@@ -915,10 +976,7 @@ export function Header() {
           {mounted && (
             <>
               {/* Language Selector */}
-              <Select
-                value={language}
-                onValueChange={(v) => setLanguage(v as Language)}
-              >
+              <Select value={effectiveLanguage} onValueChange={changeLanguage}>
                 <SelectTrigger className="w-[100px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
                   <GlobeAltIcon className="h-3 w-3 mr-1 text-gray-400" />
                   <SelectValue />
@@ -1012,7 +1070,9 @@ export function Header() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p><T>Restore AI Chat</T></p>
+                  <p>
+                    <T>Restore AI Chat</T>
+                  </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -1035,7 +1095,9 @@ export function Header() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p><T>Restore Tutorials</T></p>
+                  <p>
+                    <T>Restore Tutorials</T>
+                  </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -1063,7 +1125,9 @@ export function Header() {
                       </PopoverTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p><T>Dashboard</T></p>
+                      <p>
+                        <T>Dashboard</T>
+                      </p>
                     </TooltipContent>
                   </Tooltip>
                   <PopoverContent className="w-56 p-2" align="end">
@@ -1144,7 +1208,9 @@ export function Header() {
                       </PopoverTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p><T>Shop Dashboard</T></p>
+                      <p>
+                        <T>Shop Dashboard</T>
+                      </p>
                     </TooltipContent>
                   </Tooltip>
                   <PopoverContent className="w-56 p-2" align="end">
@@ -1263,7 +1329,9 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <BuildingStorefrontIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm"><T>Shops & CRM</T></span>
+                          <span className="text-sm">
+                            <T>Shops & CRM</T>
+                          </span>
                         </div>
                       </Link>
                       <Link
@@ -1337,7 +1405,9 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <BuildingStorefrontIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm"><T>Shops & CRM</T></span>
+                          <span className="text-sm">
+                            <T>Shops & CRM</T>
+                          </span>
                         </div>
                       </Link>
                       <Link
@@ -1660,7 +1730,10 @@ export function Header() {
 
               {/* Cart Popover */}
               {customerFlowEnabled && (
-                <Popover open={cartPopoverOpen} onOpenChange={setCartPopoverOpen}>
+                <Popover
+                  open={cartPopoverOpen}
+                  onOpenChange={setCartPopoverOpen}
+                >
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <PopoverTrigger asChild>

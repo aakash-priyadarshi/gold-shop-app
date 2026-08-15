@@ -85,6 +85,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.SUBMODULE_PAT }}
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -116,6 +117,10 @@ jobs:
         working-directory: apps/web
         run: pnpm lint || echo "Web lint not configured"
         continue-on-error: true
+
+      - name: Check new seller dashboard strings are translatable
+        working-directory: apps/web
+        run: pnpm check:i18n -- --base "origin/${{ github.base_ref }}"
 
   # ══════════════════════════════════════════════════════════
   # Stage 3: TypeScript Type Check

@@ -63,7 +63,7 @@ export class CreateInventoryItemDto {
   @IsObject()
   composition: Record<string, unknown>;
 
-  @ApiProperty({ description: 'Total weight in grams' })
+  @ApiProperty({ description: 'Metal-only weight in grams; gross weight is derived by the server' })
   @IsNumber()
   @Min(0.01)
   totalWeightGrams: number;
@@ -221,7 +221,7 @@ export class UpdateInventoryItemDto {
   @IsOptional()
   composition?: Record<string, unknown>;
 
-  @ApiPropertyOptional({ description: 'Total weight in grams' })
+  @ApiPropertyOptional({ description: 'Metal-only weight in grams; gross weight is derived by the server' })
   @IsNumber()
   @Min(0.01)
   @IsOptional()

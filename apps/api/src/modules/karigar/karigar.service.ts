@@ -6,6 +6,8 @@ import {
 import {
   KarigarMovementType,
   KarigarStage,
+  JewelleryType,
+  InventoryStatus,
   Prisma,
 } from "@prisma/client";
 import {
@@ -16,10 +18,14 @@ import {
 } from "@gold-shop/shared";
 import { PrismaService } from "../../prisma/prisma.service";
 import { ShopPriceRebaseService } from "../shops/shop-price-rebase.service";
+import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import {
+  AdvanceKarigarFloorDto,
   CreateCastingTreeDto,
   CreateKarigarJobDto,
   CreateKarigarMovementDto,
+  InspectKarigarQcDto,
+  ReceiveKarigarFgDto,
   SaveKarigarStateDto,
   UpdateCastingTreeDto,
   UpdateKarigarJobDto,
@@ -29,6 +35,13 @@ import {
   issueRequiresWorkshop,
   wageForFinishedReturn,
 } from "./karigar-ledger";
+import {
+  buildWorkshopTower,
+  finishedGramsForReceive,
+  nextDepartment,
+  resolveDepartments,
+  type TowerJobInput,
+} from "./karigar-workshop";
 
 const BUILT_IN_VAULT: Record<string, string> = {
   goldGrains24k: "Gold Grains (24K)",
@@ -41,6 +54,7 @@ export class KarigarService {
   constructor(
     private prisma: PrismaService,
     private priceRebase: ShopPriceRebaseService,
+    private planLimits: PlanLimitsService,
   ) {}
 
   async getSnapshot(shopId: string) {
@@ -229,6 +243,18 @@ export class KarigarService {
           metalKey: dto.metalKey ?? "goldGrains24k",
           allowedWastagePercent: allowed,
           status: "Casting",
+          currentStage: KarigarStage.CASTING,
+          walkInCustomerId: dto.walkInCustomerId ?? null,
+          shopQuoteId: dto.shopQuoteId ?? null,
+          dueAt: this.parseDueAt(dto.dueAt),
+          priority: dto.priority ?? "NORMAL",
+          qty: dto.qty ?? 1,
+          sizeLabel: dto.sizeLabel ?? null,
+          purity: dto.purity ?? null,
+          metalColor: dto.metalColor ?? null,
+          photos: dto.photos ?? [],
+          notes: dto.notes ?? null,
+          bom: dto.bom ? (dto.bom as Prisma.InputJsonValue) : Prisma.JsonNull,
           steps: {
             casting: false,
             filing: false,
@@ -260,6 +286,28 @@ export class KarigarService {
           ? { allowedWastagePercent: dto.allowedWastagePercent }
           : {}),
         ...(dto.status != null ? { status: dto.status } : {}),
+        ...(dto.walkInCustomerId !== undefined
+          ? { walkInCustomerId: dto.walkInCustomerId || null }
+          : {}),
+        ...(dto.shopQuoteId !== undefined
+          ? { shopQuoteId: dto.shopQuoteId || null }
+          : {}),
+        ...(dto.dueAt !== undefined ? { dueAt: this.parseDueAt(dto.dueAt) } : {}),
+        ...(dto.priority != null ? { priority: dto.priority } : {}),
+        ...(dto.qty != null ? { qty: dto.qty } : {}),
+        ...(dto.sizeLabel !== undefined ? { sizeLabel: dto.sizeLabel || null } : {}),
+        ...(dto.purity !== undefined ? { purity: dto.purity || null } : {}),
+        ...(dto.metalColor !== undefined
+          ? { metalColor: dto.metalColor || null }
+          : {}),
+        ...(dto.photos != null ? { photos: dto.photos } : {}),
+        ...(dto.notes !== undefined ? { notes: dto.notes || null } : {}),
+        ...(dto.bom !== undefined
+          ? { bom: dto.bom ? (dto.bom as Prisma.InputJsonValue) : Prisma.JsonNull }
+          : {}),
+        ...(dto.currentStage != null
+          ? { currentStage: dto.currentStage as KarigarStage }
+          : {}),
       },
     });
     return this.getJob(shopId, jobId);
@@ -379,6 +427,7 @@ export class KarigarService {
           weightGrams: weight,
           purity: dto.purity ?? null,
           note: dto.note ?? null,
+          lotId: dto.lotId ?? null,
           createdBy: userId ?? null,
         },
       });
@@ -421,6 +470,14 @@ export class KarigarService {
         allowedWastagePercent: allowed,
         workshopId: dto.workshopId ?? existing.workshopId,
         status: dto.status ?? (done ? "DONE" : existing.status),
+        notes: dto.notes !== undefined ? dto.notes : existing.notes,
+        photos: dto.photos ?? existing.photos,
+        reworkCount: dto.reworkCount ?? existing.reworkCount,
+        rejectionReason:
+          dto.rejectionReason !== undefined
+            ? dto.rejectionReason
+            : existing.rejectionReason,
+        startedAt: existing.startedAt ?? (goldIn > 0 ? new Date() : null),
         completedAt: done ? existing.completedAt ?? new Date() : existing.completedAt,
       },
     });
@@ -688,6 +745,353 @@ export class KarigarService {
     return this.serializeJob(job);
   }
 
+  async getTower(shopId: string) {
+    const [jobs, workshops, vault, shop] = await Promise.all([
+      this.prisma.karigarJob.findMany({
+        where: { shopId },
+        include: { stages: true, trees: true },
+      }),
+      this.prisma.karigarWorkshop.findMany({ where: { shopId } }),
+      this.prisma.karigarVaultReserve.findUnique({
+        where: {
+          shopId_materialKey: { shopId, materialKey: "goldGrains24k" },
+        },
+      }),
+      this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { workshopDepartments: true },
+      }),
+    ]);
+    const tower = buildWorkshopTower({
+      jobs: jobs.map((job) => this.toTowerJob(job)),
+      workshops,
+      vaultGoldGrams: vault?.quantity ?? 0,
+    });
+    const slim = (rows: TowerJobInput[]) =>
+      rows.map((job) => ({
+        id: job.id,
+        product: job.product,
+        artisan: job.artisan,
+        status: job.status,
+        dueAt: job.dueAt?.toISOString() ?? null,
+        currentStage: job.currentStage,
+        inventoryItemId: job.inventoryItemId,
+      }));
+    return {
+      departments: resolveDepartments(shop?.workshopDepartments),
+      overdue: slim(tower.overdue),
+      waitingOnNext: slim(tower.waitingOnNext),
+      lossLimit: slim(tower.lossLimit),
+      unreceivedFg: slim(tower.unreceivedFg),
+      qcPending: slim(tower.qcPending),
+      dueThisWeek: slim(tower.dueThisWeek),
+      unreceivedMetal: tower.unreceivedMetal,
+      wagesDue: tower.wagesDue,
+      lowVault: tower.lowVault,
+      vaultGoldGrams: tower.vaultGoldGrams,
+      deptLoad: tower.deptLoad,
+      reworkRate: tower.reworkRate,
+      onTimePercent: tower.onTimePercent,
+    };
+  }
+
+  async getFloor(shopId: string, dept?: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { workshopDepartments: true },
+    });
+    const departments = resolveDepartments(shop?.workshopDepartments);
+    const stageFilter = dept ? this.parseStage(dept) : undefined;
+    const jobs = await this.prisma.karigarJob.findMany({
+      where: {
+        shopId,
+        status: { notIn: ["Completed", "CANCELLED", "REJECTED"] },
+        ...(stageFilter ? { currentStage: stageFilter } : {}),
+      },
+      orderBy: [{ dueAt: "asc" }, { createdAt: "asc" }],
+      include: {
+        stages: { orderBy: { createdAt: "asc" } },
+        trees: { include: { lines: { orderBy: { sortOrder: "asc" } } } },
+      },
+    });
+    return {
+      departments,
+      dept: stageFilter ?? null,
+      jobs: jobs.map((job) => this.serializeJob(job)),
+    };
+  }
+
+  async advanceFloor(
+    shopId: string,
+    jobId: string,
+    dto: AdvanceKarigarFloorDto,
+  ) {
+    const job = await this.requireJob(shopId, jobId);
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { workshopDepartments: true },
+    });
+    const departments = resolveDepartments(shop?.workshopDepartments);
+    await this.ensureStages(
+      this.prisma,
+      shopId,
+      jobId,
+      job.workshopId,
+      job.allowedWastagePercent,
+    );
+    const current = (job.currentStage ??
+      KarigarStage.CASTING) as KarigarStageCode;
+    const existing = await this.prisma.karigarJobStage.findUnique({
+      where: {
+        jobId_stage: { jobId, stage: current as KarigarStage },
+      },
+    });
+    if (!existing) throw new NotFoundException("Stage not found");
+    const goldOut = dto.goldOutGrams ?? existing.goldOutGrams;
+    if (goldOut <= 0) {
+      throw new BadRequestException(
+        "Enter gold out (grams) to send this job to the next department",
+      );
+    }
+    const next = nextDepartment(current, departments);
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.karigarJobStage.update({
+        where: { id: existing.id },
+        data: {
+          goldOutGrams: goldOut,
+          status: "DONE",
+          notes: dto.notes ?? existing.notes,
+          photos: dto.photos ?? existing.photos,
+          startedAt: existing.startedAt ?? now,
+          completedAt: existing.completedAt ?? now,
+        },
+      });
+      if (next) {
+        await tx.karigarJobStage.update({
+          where: { jobId_stage: { jobId, stage: next as KarigarStage } },
+          data: {
+            goldInGrams: { increment: goldOut },
+            startedAt: now,
+            status: "IN_PROGRESS",
+          },
+        });
+        await tx.karigarJob.update({
+          where: { id: jobId },
+          data: { currentStage: next as KarigarStage },
+        });
+      } else {
+        await tx.karigarJob.update({
+          where: { id: jobId },
+          data: { currentStage: KarigarStage.QC, status: "Completed" },
+        });
+      }
+    });
+    await this.syncJobStatus(shopId, jobId);
+    return this.getJob(shopId, jobId);
+  }
+
+  async inspectQc(shopId: string, jobId: string, dto: InspectKarigarQcDto) {
+    const job = await this.requireJob(shopId, jobId);
+    await this.ensureStages(
+      this.prisma,
+      shopId,
+      jobId,
+      job.workshopId,
+      job.allowedWastagePercent,
+    );
+    const qc = await this.prisma.karigarJobStage.findUnique({
+      where: { jobId_stage: { jobId, stage: KarigarStage.QC } },
+    });
+    if (!qc) throw new NotFoundException("QC stage not found");
+    const now = new Date();
+    if (dto.decision === "APPROVED") {
+      await this.prisma.karigarJobStage.update({
+        where: { id: qc.id },
+        data: {
+          status: "DONE",
+          goldOutGrams: qc.goldOutGrams || qc.goldInGrams,
+          notes: dto.notes ?? qc.notes,
+          photos: dto.photos ?? qc.photos,
+          startedAt: qc.startedAt ?? now,
+          completedAt: now,
+        },
+      });
+      await this.prisma.karigarJob.update({
+        where: { id: jobId },
+        data: { currentStage: KarigarStage.QC, status: "Completed" },
+      });
+    } else if (dto.decision === "REWORK") {
+      const backTo = (dto.reworkToStage ?? "FILING") as KarigarStage;
+      await this.prisma.karigarJobStage.update({
+        where: { id: qc.id },
+        data: {
+          status: "REWORK",
+          reworkCount: { increment: 1 },
+          rejectionReason: dto.rejectionReason ?? qc.rejectionReason,
+          notes: dto.notes ?? qc.notes,
+          photos: dto.photos ?? qc.photos,
+        },
+      });
+      await this.prisma.karigarJobStage.update({
+        where: { jobId_stage: { jobId, stage: backTo } },
+        data: { status: "IN_PROGRESS", startedAt: now, completedAt: null },
+      });
+      await this.prisma.karigarJob.update({
+        where: { id: jobId },
+        data: { currentStage: backTo, status: "Rework" },
+      });
+    } else {
+      await this.prisma.karigarJobStage.update({
+        where: { id: qc.id },
+        data: {
+          status: "REJECTED",
+          rejectionReason: dto.rejectionReason ?? "Rejected at QC",
+          notes: dto.notes ?? qc.notes,
+          photos: dto.photos ?? qc.photos,
+          completedAt: now,
+        },
+      });
+      await this.prisma.karigarJob.update({
+        where: { id: jobId },
+        data: { status: "REJECTED", currentStage: KarigarStage.QC },
+      });
+    }
+    return this.getJob(shopId, jobId);
+  }
+
+  async receiveFg(shopId: string, jobId: string, dto: ReceiveKarigarFgDto) {
+    const job = await this.prisma.karigarJob.findFirst({
+      where: { id: jobId, shopId },
+      include: { stages: true, trees: true },
+    });
+    if (!job) throw new NotFoundException("Job not found");
+    const weight = finishedGramsForReceive(job);
+    if (weight <= 0) {
+      throw new BadRequestException(
+        "No finished weight to receive. Complete the casting tree or QC first.",
+      );
+    }
+    const jewelleryType = this.parseJewelleryType(dto.jewelleryType);
+    const nameEn = dto.nameEn?.trim() || job.product;
+    if (job.inventoryItemId) {
+      const item = await this.prisma.inventoryItem.update({
+        where: { id: job.inventoryItemId },
+        data: {
+          nameEn,
+          jewelleryType,
+          totalWeightGrams: weight,
+          grossWeightGrams: weight,
+          images: job.photos ?? [],
+        },
+      });
+      return { job: await this.getJob(shopId, jobId), inventoryItem: item };
+    }
+    await this.planLimits.checkProductLimit(shopId);
+    let sku =
+      dto.sku?.trim() ||
+      `WO-${job.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10)}-${Date.now()
+        .toString(36)
+        .toUpperCase()}`;
+    const skuTaken = await this.prisma.inventoryItem.findFirst({
+      where: { sku },
+    });
+    if (skuTaken) sku = `${sku}-${Math.floor(Math.random() * 99)}`;
+    const item = await this.prisma.inventoryItem.create({
+      data: {
+        shopId,
+        sku,
+        nameEn,
+        jewelleryType,
+        buildMethod: "METHOD_A",
+        composition: {
+          method: "METHOD_A",
+          preciousMetal: "GOLD",
+          purity: 24,
+          eligibleForHallmark: true,
+          labels: ["Solid Gold"],
+        },
+        totalWeightGrams: weight,
+        grossWeightGrams: weight,
+        metalValueNpr: 0,
+        makingChargeNpr: 0,
+        gemstoneValueNpr: 0,
+        taxNpr: 0,
+        totalPriceNpr: 0,
+        images: job.photos ?? [],
+        status: InventoryStatus.AVAILABLE,
+        stockQuantity: job.qty || 1,
+      },
+    });
+    await this.prisma.karigarJob.update({
+      where: { id: jobId },
+      data: { inventoryItemId: item.id },
+    });
+    return { job: await this.getJob(shopId, jobId), inventoryItem: item };
+  }
+
+  private parseDueAt(value?: string | null): Date | null {
+    if (value == null || value === "") return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException("Invalid due date");
+    }
+    return date;
+  }
+
+  private parseJewelleryType(raw?: string): JewelleryType {
+    if (!raw) return JewelleryType.OTHER;
+    const upper = raw.toUpperCase() as JewelleryType;
+    if (!Object.values(JewelleryType).includes(upper)) {
+      return JewelleryType.OTHER;
+    }
+    return upper;
+  }
+
+  private toTowerJob(job: {
+    id: string;
+    product: string;
+    artisan: string;
+    status: string;
+    dueAt: Date | null;
+    currentStage: KarigarStage | null;
+    inventoryItemId: string | null;
+    allowedWastagePercent: number;
+    stages: Array<{
+      stage: KarigarStage;
+      status: string;
+      goldInGrams: number;
+      goldOutGrams: number;
+      scrapGrams: number;
+      dustGrams: number;
+      allowedWastagePercent: number;
+      reworkCount: number;
+    }>;
+    trees: Array<{
+      issuedGrams: number;
+      finishedGrams: number;
+      sprueButtonGrams: number;
+      recoverableGrams: number;
+      allowedWastagePercent: number;
+    }>;
+  }): TowerJobInput {
+    return {
+      id: job.id,
+      product: job.product,
+      artisan: job.artisan,
+      status: job.status,
+      dueAt: job.dueAt,
+      currentStage: (job.currentStage as KarigarStageCode | null) ?? null,
+      inventoryItemId: job.inventoryItemId,
+      allowedWastagePercent: job.allowedWastagePercent,
+      stages: job.stages.map((stage) => ({
+        ...stage,
+        stage: stage.stage as KarigarStageCode,
+      })),
+      trees: job.trees,
+    };
+  }
+
   private async requireJob(shopId: string, jobId: string) {
     const job = await this.prisma.karigarJob.findFirst({
       where: { id: jobId, shopId },
@@ -773,9 +1177,14 @@ export class KarigarService {
       polishing: done.has(KarigarStage.POLISHING),
       hallmark: done.has(KarigarStage.QC),
     };
+    let currentStage: KarigarStage = KarigarStage.CASTING;
+    for (const stage of KARIGAR_STAGES) {
+      currentStage = stage as KarigarStage;
+      if (!done.has(stage as KarigarStage)) break;
+    }
     await this.prisma.karigarJob.update({
       where: { id: jobId },
-      data: { status, steps },
+      data: { status, steps, currentStage },
     });
   }
 
@@ -790,6 +1199,19 @@ export class KarigarService {
     status: string;
     steps: Prisma.JsonValue | null;
     updatedAt: Date;
+    walkInCustomerId?: string | null;
+    shopQuoteId?: string | null;
+    inventoryItemId?: string | null;
+    dueAt?: Date | null;
+    priority?: string;
+    qty?: number;
+    sizeLabel?: string | null;
+    purity?: string | null;
+    metalColor?: string | null;
+    photos?: string[];
+    notes?: string | null;
+    bom?: Prisma.JsonValue | null;
+    currentStage?: KarigarStage | null;
     stages?: Array<{
       id: string;
       stage: KarigarStage;
@@ -800,6 +1222,12 @@ export class KarigarService {
       allowedWastagePercent: number;
       status: string;
       workshopId: string | null;
+      notes?: string | null;
+      photos?: string[];
+      reworkCount?: number;
+      rejectionReason?: string | null;
+      startedAt?: Date | null;
+      completedAt?: Date | null;
     }>;
     trees?: Array<{
       id: string;
@@ -881,6 +1309,19 @@ export class KarigarService {
       status: job.status,
       steps,
       updatedAt: job.updatedAt.toISOString(),
+      walkInCustomerId: job.walkInCustomerId ?? null,
+      shopQuoteId: job.shopQuoteId ?? null,
+      inventoryItemId: job.inventoryItemId ?? null,
+      dueAt: job.dueAt ? job.dueAt.toISOString() : null,
+      priority: job.priority ?? "NORMAL",
+      qty: job.qty ?? 1,
+      sizeLabel: job.sizeLabel ?? null,
+      purity: job.purity ?? null,
+      metalColor: job.metalColor ?? null,
+      photos: job.photos ?? [],
+      notes: job.notes ?? null,
+      bom: job.bom ?? null,
+      currentStage: job.currentStage ?? null,
       stages,
       trees,
       movements: job.movements ?? [],

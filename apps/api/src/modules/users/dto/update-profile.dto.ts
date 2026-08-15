@@ -1,21 +1,9 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
+import { UI_LOCALE_CODES } from "@gold-shop/shared";
 import { CurrencyCode } from "@prisma/client";
 import { IsBoolean, IsEnum, IsOptional, IsString } from "class-validator";
 
-const SUPPORTED_UI_LANGUAGES = [
-  "en",
-  "fr",
-  "de",
-  "hi",
-  "es",
-  "ar",
-  "ne",
-  "gu",
-  "mr",
-  "ta",
-  "te",
-  "kn",
-] as const;
+const SUPPORTED_UI_LANGUAGES = UI_LOCALE_CODES;
 
 export class UpdateProfileDto {
   @ApiPropertyOptional({ example: "John" })

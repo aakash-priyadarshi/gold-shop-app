@@ -3,16 +3,21 @@
  * Server-rendered for SEO — no client-side translation needed.
  */
 
-export type AboutContentLanguage = "en" | "fr" | "de" | "hi" | "es" | "ar" | "ne";
-export type Language =
-  | AboutContentLanguage
-  | "gu"
-  | "mr"
-  | "ta"
-  | "te"
-  | "kn";
+import type { UiLocale } from "@gold-shop/shared";
 
-export const SUPPORTED_ABOUT_LANGS: AboutContentLanguage[] = [
+export type AboutContentLanguage =
+  | "en"
+  | "fr"
+  | "de"
+  | "hi"
+  | "es"
+  | "ar"
+  | "ne";
+export type Language = UiLocale;
+export type AboutSummaryLanguage = Exclude<Language, AboutContentLanguage>;
+export type PublicAboutLanguage = Exclude<Language, "en">;
+
+export const FULL_ABOUT_LANGS: Exclude<AboutContentLanguage, "en">[] = [
   "fr",
   "de",
   "hi",
@@ -21,9 +26,20 @@ export const SUPPORTED_ABOUT_LANGS: AboutContentLanguage[] = [
   "ne",
 ];
 
+export const SUPPORTED_ABOUT_LANGS: PublicAboutLanguage[] = [
+  ...FULL_ABOUT_LANGS,
+  "gu",
+  "mr",
+  "ta",
+  "te",
+  "kn",
+  "si",
+  "he",
+];
+
 export const LANG_META: Record<
   Language,
-  { name: string; nativeName: string; dir?: "rtl"; flag: string }
+  { name: string; nativeName: string; flag: string }
 > = {
   en: { name: "English", nativeName: "English", flag: "🇬🇧" },
   fr: { name: "French", nativeName: "Français", flag: "🇫🇷" },
@@ -34,10 +50,42 @@ export const LANG_META: Record<
   ta: { name: "Tamil", nativeName: "தமிழ்", flag: "🇮🇳" },
   te: { name: "Telugu", nativeName: "తెలుగు", flag: "🇮🇳" },
   kn: { name: "Kannada", nativeName: "ಕನ್ನಡ", flag: "🇮🇳" },
+  si: { name: "Sinhala", nativeName: "සිංහල", flag: "🇱🇰" },
   es: { name: "Spanish", nativeName: "Español", flag: "🇪🇸" },
-  ar: { name: "Arabic", nativeName: "العربية", dir: "rtl", flag: "🇦🇪" },
+  ar: { name: "Arabic", nativeName: "العربية", flag: "🇦🇪" },
   ne: { name: "Nepali", nativeName: "नेपाली", flag: "🇳🇵" },
+  he: { name: "Hebrew", nativeName: "עברית", flag: "🇮🇱" },
 };
+
+/**
+ * Public, crawlable language surfaces. Keep this separate from the UI locale
+ * list: a language can be available in the app before its reviewed SEO page
+ * exists.
+ */
+export const PUBLIC_LANGUAGE_PAGES: Record<
+  Language,
+  { about: string; tutorial?: string }
+> = {
+  en: { about: "/about", tutorial: "/tutorial" },
+  fr: { about: "/about/fr", tutorial: "/tutorial/fr" },
+  de: { about: "/about/de", tutorial: "/tutorial/de" },
+  hi: { about: "/about/hi", tutorial: "/tutorial/hi" },
+  es: { about: "/about/es", tutorial: "/tutorial/es" },
+  ar: { about: "/about/ar", tutorial: "/tutorial/ar" },
+  ne: { about: "/about/ne", tutorial: "/tutorial/ne" },
+  gu: { about: "/about/gu", tutorial: "/tutorial/gu" },
+  mr: { about: "/about/mr", tutorial: "/tutorial/mr" },
+  ta: { about: "/about/ta", tutorial: "/tutorial/ta" },
+  te: { about: "/about/te", tutorial: "/tutorial/te" },
+  kn: { about: "/about/kn", tutorial: "/tutorial/kn" },
+  si: { about: "/about/si" },
+  he: { about: "/about/he" },
+};
+
+/** Footer and About language navigation must always remain on About pages. */
+export function getPublicAboutHref(language: Language): string {
+  return PUBLIC_LANGUAGE_PAGES[language].about;
+}
 
 /* ─── Platform Profiles ─────────────────────────────────────── */
 
@@ -509,8 +557,7 @@ export const ABOUT_CONTENT: Record<AboutContentLanguage, AboutContent> = {
       "हमारे मार्केटप्लेस से जुड़ें और हजारों ग्राहकों तक पहुंचें। हम प्लेटफॉर्म संभालते हैं, आप अपनी कला पर ध्यान दें।",
     registerAsSeller: "विक्रेता के रूप में पंजीकरण करें",
     getInTouch: "संपर्क करें",
-    getInTouchDesc:
-      "कोई सवाल? हम आपसे सुनना चाहेंगे। हमें एक संदेश भेजें।",
+    getInTouchDesc: "कोई सवाल? हम आपसे सुनना चाहेंगे। हमें एक संदेश भेजें।",
     emailUs: "ईमेल करें",
     forSellers: "विक्रेताओं के लिए",
     allRightsReserved: "सर्वाधिकार सुरक्षित।",
@@ -560,8 +607,7 @@ export const ABOUT_CONTENT: Record<AboutContentLanguage, AboutContent> = {
     customOrdersFeatureDesc:
       "कस्टम डिजाइन का अनुरोध करें और कई विक्रेताओं से कोटेशन प्राप्त करें।",
     secureShipping: "सुरक्षित शिपिंग",
-    secureShippingDesc:
-      "सभी ऑर्डर के लिए ट्रैकिंग के साथ बीमित शिपिंग।",
+    secureShippingDesc: "सभी ऑर्डर के लिए ट्रैकिंग के साथ बीमित शिपिंग।",
     sellerBenefits: [
       "दुनिया भर के ग्राहकों तक पहुंचें",
       "आसान दुकान प्रबंधन उपकरण",
@@ -676,21 +722,18 @@ export const ABOUT_CONTENT: Record<AboutContentLanguage, AboutContent> = {
     ourValuesTitle: "قيمنا",
     valuesSubtitle: "المبادئ التي توجه كل ما نقوم به",
     whyChooseTitle: "لماذا تختار Orivraa؟",
-    whyChooseSubtitle:
-      "الميزات التي تجعلنا الخيار الموثوق للمجوهرات الذهبية",
+    whyChooseSubtitle: "الميزات التي تجعلنا الخيار الموثوق للمجوهرات الذهبية",
     becomeSeller: "كن بائعًا",
     becomeSellerDesc:
       "انضم إلى سوقنا وصل إلى آلاف العملاء. نحن ندير المنصة، وأنت تركز على حرفتك.",
     registerAsSeller: "التسجيل كبائع",
     getInTouch: "تواصل معنا",
-    getInTouchDesc:
-      "لديك أسئلة؟ نحب أن نسمع منك. أرسل لنا رسالة.",
+    getInTouchDesc: "لديك أسئلة؟ نحب أن نسمع منك. أرسل لنا رسالة.",
     emailUs: "أرسل لنا بريدًا إلكترونيًا",
     forSellers: "للبائعين",
     allRightsReserved: "جميع الحقوق محفوظة.",
     languageGuideTitle: "متاح بلغتك",
-    languageGuideDesc:
-      "Orivraa متاح بـ 12 لغة. إليك كيفية تبديل اللغة:",
+    languageGuideDesc: "Orivraa متاح بـ 12 لغة. إليك كيفية تبديل اللغة:",
     languageGuideSteps: [
       "انقر على محدد اللغة (أيقونة الكرة الأرضية) في شريط التنقل",
       "اختر لغتك المفضلة من القائمة المنسدلة",

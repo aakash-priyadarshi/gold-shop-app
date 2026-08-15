@@ -1,42 +1,23 @@
 import {
-    ArrayMaxSize,
-    IsArray,
-    IsIn,
-    IsOptional,
-    IsString,
-    MaxLength,
+  ArrayMaxSize,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
 } from "class-validator";
+import {
+  LOCALE_REGISTRY,
+  UI_LOCALE_CODES,
+  type UiLocale,
+} from "@gold-shop/shared";
 
-export const SUPPORTED_LOCALES = [
-  "en",
-  "fr",
-  "de",
-  "hi",
-  "es",
-  "ar",
-  "ne",
-  "gu",
-  "mr",
-  "ta",
-  "te",
-  "kn",
-] as const;
-export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+export const SUPPORTED_LOCALES = UI_LOCALE_CODES;
+export type SupportedLocale = UiLocale;
 
-export const LOCALE_NAMES: Record<SupportedLocale, string> = {
-  en: "English",
-  fr: "French",
-  de: "German",
-  hi: "Hindi",
-  es: "Spanish",
-  ar: "Arabic",
-  ne: "Nepali",
-  gu: "Gujarati",
-  mr: "Marathi",
-  ta: "Tamil",
-  te: "Telugu",
-  kn: "Kannada",
-};
+export const LOCALE_NAMES = Object.fromEntries(
+  SUPPORTED_LOCALES.map((locale) => [locale, LOCALE_REGISTRY[locale].name]),
+) as Record<SupportedLocale, string>;
 
 export class TranslateBatchDto {
   @IsArray()

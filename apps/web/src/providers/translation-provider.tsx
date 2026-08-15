@@ -1,16 +1,21 @@
 "use client";
 
 import { api } from "@/lib/api";
+import {
+  getPublicRouteLocale,
+  isSuspiciousFallback,
+} from "@/lib/i18n/translation-safeguards";
 import { usePresentationLocaleStore } from "@/store/presentation-locale";
 import { usePreferencesStore, type Language } from "@/store/preferences";
+import { usePathname } from "next/navigation";
 import {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useRef,
-    useState,
-    type ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
 } from "react";
 
 /* ────────────────────────────────────────────────────────────── */
@@ -55,14 +60,20 @@ function clearLegacyCache() {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith(LS_LEGACY_PREFIX) && !key.startsWith(LS_KEY_PREFIX)) {
+      if (
+        key &&
+        key.startsWith(LS_LEGACY_PREFIX) &&
+        !key.startsWith(LS_KEY_PREFIX)
+      ) {
         keysToRemove.push(key);
       }
     }
     keysToRemove.forEach((k) => localStorage.removeItem(k));
     if (keysToRemove.length > 0) {
       // eslint-disable-next-line no-console
-      console.info(`[i18n] Cleared ${keysToRemove.length} legacy cache entries.`);
+      console.info(
+        `[i18n] Cleared ${keysToRemove.length} legacy cache entries.`,
+      );
     }
   } catch {
     // ignore
@@ -71,21 +82,6 @@ function clearLegacyCache() {
 
 function failureKey(locale: string, text: string): string {
   return `${locale}::${text}`;
-}
-
-function isSuspiciousFallback(source: string, translated: string): boolean {
-  const normalizedSource = source.trim();
-  const normalizedTranslated = translated.trim();
-
-  if (!normalizedSource || normalizedSource !== normalizedTranslated) {
-    return false;
-  }
-
-  if (!/[A-Za-z]/.test(normalizedSource)) {
-    return false;
-  }
-
-  return /\s/.test(normalizedSource) || normalizedSource.length > 24;
 }
 
 function loadFromStorage(locale: string): Record<string, string> {
@@ -98,8 +94,7 @@ function loadFromStorage(locale: string): Record<string, string> {
     const parsed = JSON.parse(raw) as Record<string, string>;
     const sanitized = Object.fromEntries(
       Object.entries(parsed).filter(
-        ([source, translated]) =>
-          !isSuspiciousFallback(source, translated),
+        ([source, translated]) => !isSuspiciousFallback(source, translated),
       ),
     );
 
@@ -130,27 +125,44 @@ function saveToStorage(locale: string, dict: Record<string, string>) {
 /* ────────────────────────────────────────────────────────────── */
 
 export function TranslationProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const storeLocale = usePreferencesStore((s) => s.language);
   const presentationLocale = usePresentationLocaleStore((s) => s.locale);
-  const locale = presentationLocale ?? storeLocale;
-  const [dict, setDict] = useState<Record<string, string>>({});
+  const routeLocale = getPublicRouteLocale(pathname);
+  const locale = presentationLocale ?? routeLocale ?? storeLocale;
+  const [dictionary, setDictionary] = useState<{
+    locale: Language;
+    values: Record<string, string>;
+  }>({ locale, values: {} });
+  const activeDictionary =
+    dictionary.locale === locale ? dictionary.values : {};
+  const dictRef = useRef<Record<string, string>>(activeDictionary);
+  dictRef.current = activeDictionary;
   const [loading, setLoading] = useState(false);
 
   // Pending texts collected between flushes
   const pending = useRef<Set<string>>(new Set());
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const inflightRef = useRef(false);
+  const flushIdRef = useRef(0);
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
   const failedRef = useRef<Map<string, number>>(new Map());
 
   // Load localStorage cache when locale changes
   useEffect(() => {
+    flushIdRef.current += 1;
+    inflightRef.current = false;
+    pending.current.clear();
+    clearTimeout(timer.current);
+    setLoading(false);
     failedRef.current.clear();
     if (locale === "en") {
-      setDict({});
+      setDictionary({ locale, values: {} });
       return;
     }
     const loaded = loadFromStorage(locale);
-    setDict(loaded);
+    setDictionary({ locale, values: loaded });
     // eslint-disable-next-line no-console
     console.info(
       `[i18n] Locale changed to "${locale}". Loaded ${Object.keys(loaded).length} cached entries.`,
@@ -159,11 +171,18 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
 
   // Flush pending texts → API → dict + localStorage
   const flush = useCallback(async () => {
-    if (locale === "en" || pending.current.size === 0 || inflightRef.current)
+    if (
+      localeRef.current !== locale ||
+      locale === "en" ||
+      pending.current.size === 0 ||
+      inflightRef.current
+    )
       return;
 
     const texts = Array.from(pending.current);
     pending.current.clear();
+    const flushId = flushIdRef.current + 1;
+    flushIdRef.current = flushId;
     inflightRef.current = true;
     setLoading(true);
 
@@ -171,13 +190,16 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       const { data } = await api.post<{
         translations: string[];
         translated?: boolean[];
-      }>(
-        "/translation/batch",
-        { texts, locale },
-      );
+      }>("/translation/batch", { texts, locale });
 
-      setDict((prev) => {
-        const next = { ...prev };
+      if (localeRef.current !== locale || flushIdRef.current !== flushId) {
+        return;
+      }
+
+      setDictionary((prev) => {
+        const next = {
+          ...(prev.locale === locale ? prev.values : {}),
+        };
         texts.forEach((text, index) => {
           const translation = data.translations[index];
           const confirmed = Array.isArray(data.translated)
@@ -193,9 +215,12 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
           failedRef.current.set(failureKey(locale, text), Date.now());
         });
         saveToStorage(locale, next);
-        return next;
+        return { locale, values: next };
       });
     } catch (err) {
+      if (localeRef.current !== locale || flushIdRef.current !== flushId) {
+        return;
+      }
       const now = Date.now();
       texts.forEach((text) => {
         failedRef.current.set(failureKey(locale, text), now);
@@ -203,6 +228,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       // eslint-disable-next-line no-console
       console.warn("[i18n] Translation batch failed:", err);
     } finally {
+      if (flushIdRef.current !== flushId) return;
       inflightRef.current = false;
       setLoading(false);
 
@@ -216,7 +242,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   // Register text for translation. Debounced to batch together.
   const register = useCallback(
     (text: string) => {
-      if (locale === "en" || dict[text]) return;
+      if (locale === "en" || dictRef.current[text]) return;
       const failedAt = failedRef.current.get(failureKey(locale, text));
       if (failedAt && Date.now() - failedAt < FAILURE_COOLDOWN_MS) {
         return;
@@ -225,20 +251,20 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       clearTimeout(timer.current);
       timer.current = setTimeout(flush, 150);
     },
-    [locale, dict, flush],
+    [locale, flush],
   );
 
   // Lookup: returns translation or original English string
   const t = useCallback(
     (text: string) => {
       if (locale === "en") return text;
-      if (!dict[text]) {
+      if (!dictRef.current[text]) {
         // Queue registration async to avoid calling setState during render
         setTimeout(() => register(text), 0);
       }
-      return dict[text] || text;
+      return dictRef.current[text] || text;
     },
-    [locale, dict, register],
+    [locale, register],
   );
 
   return (

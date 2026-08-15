@@ -173,4 +173,22 @@ export class CreateShopDto {
   @IsOptional()
   @IsObject()
   bankAccountDetails?: Record<string, any>;
+
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'When true (and plan includes workshopManufacturing) hide Supply Chain and show Workshop factory nav',
+  })
+  @IsOptional()
+  @IsBoolean()
+  workshopMode?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Ordered KarigarStage keys for Floor queues. Null uses CASTING → QC.',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  workshopDepartments?: string[] | null;
 }

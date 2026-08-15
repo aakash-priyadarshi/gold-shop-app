@@ -3,6 +3,7 @@
 import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatures } from "@/hooks/useFeatures";
 import api, { shopsApi } from "@/lib/api";
 import {
   extractPriceConversion,
@@ -33,6 +34,7 @@ const COUNTRIES = [
 
 export default function MobileStoreSettingsPage() {
   const { user, refreshUser } = useAuth();
+  const { hasFeature } = useFeatures();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,6 +66,7 @@ export default function MobileStoreSettingsPage() {
   const [branchName, setBranchName] = useState<string>("");
   const [swiftCode, setSwiftCode] = useState<string>("");
   const [karigarSupplyChain, setKarigarSupplyChain] = useState<any>(null);
+  const [workshopMode, setWorkshopMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -96,6 +99,7 @@ export default function MobileStoreSettingsPage() {
         setBranchName(s.bankAccountDetails?.branchName || "");
         setSwiftCode(s.bankAccountDetails?.swiftCode || "");
         setKarigarSupplyChain(s.bankAccountDetails?.karigarSupplyChain || null);
+        setWorkshopMode(!!s.workshopMode);
         syncShopCountryToPreferences(s);
       } catch {
         // ignore, fall back to defaults from user.shop
@@ -140,6 +144,7 @@ export default function MobileStoreSettingsPage() {
         state: state || undefined,
         pincode: pincode || undefined,
         isActive,
+        workshopMode: hasFeature("workshopManufacturing") ? workshopMode : false,
         codEnabled,
         codMaxValueNpr: codMaxValueNpr || undefined,
         minOrderValueNpr: minOrderValueNpr || undefined,
@@ -324,6 +329,34 @@ export default function MobileStoreSettingsPage() {
             onChange={(e) => setContactEmail(e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
+        </section>
+
+        <section className="space-y-2">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+            <T>Workshop mode</T>
+          </label>
+          <button
+            type="button"
+            disabled={!hasFeature("workshopManufacturing")}
+            onClick={() => setWorkshopMode((v) => !v)}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-left ${
+              workshopMode
+                ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30"
+                : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+            } ${!hasFeature("workshopManufacturing") ? "opacity-60" : ""}`}
+          >
+            <span className="text-sm">
+              <T>Factory floor instead of Supply Chain</T>
+            </span>
+            <span className="text-xs font-semibold">
+              {workshopMode ? <T>On</T> : <T>Off</T>}
+            </span>
+          </button>
+          {!hasFeature("workshopManufacturing") && (
+            <p className="text-[11px] text-amber-700">
+              <T>Pro+ / Enterprise. Desktop Workshop pages only in this release.</T>
+            </p>
+          )}
         </section>
 
         {/* Location */}

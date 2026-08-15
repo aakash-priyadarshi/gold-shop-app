@@ -14,10 +14,15 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { FeatureGateGuard } from "../core/subscriptions/feature-gate.guard";
+import { RequireFeature } from "../core/subscriptions/require-feature.decorator";
 import {
+  AdvanceKarigarFloorDto,
   CreateCastingTreeDto,
   CreateKarigarJobDto,
   CreateKarigarMovementDto,
+  InspectKarigarQcDto,
+  ReceiveKarigarFgDto,
   SaveKarigarStateDto,
   UpdateCastingTreeDto,
   UpdateKarigarJobDto,
@@ -27,7 +32,7 @@ import { KarigarService } from "./karigar.service";
 
 @ApiTags("karigar")
 @Controller("karigar")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureGateGuard)
 @ApiBearerAuth()
 export class KarigarController {
   constructor(private readonly karigarService: KarigarService) {}
@@ -78,6 +83,34 @@ export class KarigarController {
     return this.karigarService.loadSampleJob(shopId, userId);
   }
 
+  @Get("workshop/tower")
+  @RequireFeature("workshopManufacturing")
+  @ApiOperation({ summary: "Workshop control-tower exceptions" })
+  async workshopTower(@CurrentUser("shopId") shopId: string) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.getTower(shopId);
+  }
+
+  @Get("workshop/floor")
+  @RequireFeature("workshopManufacturing")
+  @ApiOperation({ summary: "Department queues for the factory floor" })
+  async workshopFloor(
+    @CurrentUser("shopId") shopId: string,
+    @Query("dept") dept?: string,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.getFloor(shopId, dept);
+  }
+
+  @Get("jobs/:jobId")
+  async getJob(
+    @CurrentUser("shopId") shopId: string,
+    @Param("jobId") jobId: string,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.getJob(shopId, jobId);
+  }
+
   @Post("jobs")
   async createJob(
     @CurrentUser("shopId") shopId: string,
@@ -123,6 +156,39 @@ export class KarigarController {
   ) {
     if (!shopId) throw new BadRequestException("No active shop selected");
     return this.karigarService.addMovement(shopId, null, userId, dto);
+  }
+
+  @Post("jobs/:jobId/advance")
+  @RequireFeature("workshopManufacturing")
+  async advanceFloor(
+    @CurrentUser("shopId") shopId: string,
+    @Param("jobId") jobId: string,
+    @Body() dto: AdvanceKarigarFloorDto,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.advanceFloor(shopId, jobId, dto);
+  }
+
+  @Post("jobs/:jobId/qc")
+  @RequireFeature("workshopManufacturing")
+  async inspectQc(
+    @CurrentUser("shopId") shopId: string,
+    @Param("jobId") jobId: string,
+    @Body() dto: InspectKarigarQcDto,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.inspectQc(shopId, jobId, dto);
+  }
+
+  @Post("jobs/:jobId/receive-fg")
+  @RequireFeature("workshopManufacturing")
+  async receiveFg(
+    @CurrentUser("shopId") shopId: string,
+    @Param("jobId") jobId: string,
+    @Body() dto: ReceiveKarigarFgDto,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.receiveFg(shopId, jobId, dto);
   }
 
   @Post("jobs/:jobId/movements")

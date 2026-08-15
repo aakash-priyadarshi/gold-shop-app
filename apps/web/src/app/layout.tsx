@@ -8,6 +8,7 @@ import { BRAND } from "@/config/brand";
 import { SITE_URL, MOBILE_SITE_URL } from "@/config/site";
 import { mapCountryToMarket } from "@/lib/geo";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { getLocaleDirection, isUiLocale } from "@gold-shop/shared";
 import dynamic from "next/dynamic";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
@@ -55,6 +56,13 @@ export const metadata: Metadata = {
       "es_ES",
       "ar_AE",
       "ne_NP",
+      "gu_IN",
+      "mr_IN",
+      "ta_IN",
+      "te_IN",
+      "kn_IN",
+      "si_LK",
+      "he_IL",
     ],
     url: SITE_URL,
     siteName: BRAND.name,
@@ -128,17 +136,29 @@ export default function RootLayout({
   const host = headersList.get("host") || "";
   const isMobileDomain = host.startsWith("m.");
   const initialCountry = mapCountryToMarket(
-    headersList.get("cf-ipcountry") ||
-      headersList.get("x-vercel-ip-country"),
+    headersList.get("cf-ipcountry") || headersList.get("x-vercel-ip-country"),
   );
 
   // Build absolute URLs
   const canonicalUrl = `${SITE_URL}${pathname || "/"}`;
   const alternateUrl = `${MOBILE_SITE_URL}${pathname || "/"}`;
-  const languages = ["en", "fr", "de", "hi", "es", "ar", "ne"];
+  // Public localized pages are server-rendered under their real, stable
+  // routes. Generic pages stay English; the client provider can still update
+  // the document after a user changes the dashboard language preference.
+  const routeLocale = pathname.match(
+    /^\/(?:about|tutorial)\/([a-z]{2})(?:\/|$)/,
+  )?.[1];
+  const documentLocale =
+    routeLocale && isUiLocale(routeLocale) ? routeLocale : "en";
+  const documentDirection = getLocaleDirection(documentLocale);
 
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
+    <html
+      lang={documentLocale}
+      dir={documentDirection}
+      suppressHydrationWarning
+      className={inter.variable}
+    >
       <head>
         {/* Dynamic absolute canonical & mobile alternates relationships */}
         <link rel="canonical" href={canonicalUrl} />
@@ -149,20 +169,6 @@ export default function RootLayout({
             href={alternateUrl}
           />
         )}
-        {/* Dynamic translations alternates */}
-        {languages.map((lang) => (
-          <link
-            key={lang}
-            rel="alternate"
-            hrefLang={lang}
-            href={`${SITE_URL}${lang === "en" ? "" : `/${lang}`}${pathname}`}
-          />
-        ))}
-        <link
-          rel="alternate"
-          hrefLang="x-default"
-          href={`${SITE_URL}${pathname}`}
-        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -192,8 +198,24 @@ export default function RootLayout({
                     { "@type": "Country", name: "United States" },
                     { "@type": "Country", name: "United Kingdom" },
                     { "@type": "Country", name: "Sri Lanka" },
+                    { "@type": "Country", name: "Israel" },
                   ],
-                  knowsLanguage: ["en", "fr", "de", "hi", "es", "ar", "ne"],
+                  knowsLanguage: [
+                    "en",
+                    "fr",
+                    "de",
+                    "hi",
+                    "es",
+                    "ar",
+                    "ne",
+                    "gu",
+                    "mr",
+                    "ta",
+                    "te",
+                    "kn",
+                    "si",
+                    "he",
+                  ],
                   availableLanguage: [
                     {
                       "@type": "Language",
@@ -226,6 +248,41 @@ export default function RootLayout({
                       name: "Nepali",
                       alternateName: "ne",
                     },
+                    {
+                      "@type": "Language",
+                      name: "Gujarati",
+                      alternateName: "gu",
+                    },
+                    {
+                      "@type": "Language",
+                      name: "Marathi",
+                      alternateName: "mr",
+                    },
+                    {
+                      "@type": "Language",
+                      name: "Tamil",
+                      alternateName: "ta",
+                    },
+                    {
+                      "@type": "Language",
+                      name: "Telugu",
+                      alternateName: "te",
+                    },
+                    {
+                      "@type": "Language",
+                      name: "Kannada",
+                      alternateName: "kn",
+                    },
+                    {
+                      "@type": "Language",
+                      name: "Sinhala",
+                      alternateName: "si",
+                    },
+                    {
+                      "@type": "Language",
+                      name: "Hebrew",
+                      alternateName: "he",
+                    },
                   ],
                   sameAs: [
                     BRAND.social?.instagram,
@@ -253,13 +310,27 @@ export default function RootLayout({
                   publisher: {
                     "@id": `${SITE_URL}/#organization`,
                   },
-                  inLanguage: ["en", "fr", "de", "hi", "es", "ar", "ne"],
+                  inLanguage: [
+                    "en",
+                    "fr",
+                    "de",
+                    "hi",
+                    "es",
+                    "ar",
+                    "ne",
+                    "gu",
+                    "mr",
+                    "ta",
+                    "te",
+                    "kn",
+                    "si",
+                    "he",
+                  ],
                   potentialAction: {
                     "@type": "SearchAction",
                     target: {
                       "@type": "EntryPoint",
-                      urlTemplate:
-                        `${SITE_URL}/shops?search={search_term_string}`,
+                      urlTemplate: `${SITE_URL}/shops?search={search_term_string}`,
                     },
                     "query-input": "required name=search_term_string",
                   },
@@ -274,17 +345,46 @@ export default function RootLayout({
       >
         {/* Fallback for crawlers/bots that don't execute JS */}
         <noscript>
-          <div style={{ padding: "40px 20px", maxWidth: "800px", margin: "0 auto", textAlign: "center", fontFamily: "system-ui, sans-serif" }}>
-            <h1 style={{ fontSize: "24px", marginBottom: "16px" }}>Orivraa — Premium Jewellery Marketplace</h1>
-            <p style={{ fontSize: "14px", color: "#555", lineHeight: "1.6", marginBottom: "16px" }}>
-              Orivraa is a SaaS marketplace platform that connects customers with verified local
-              jewellers across Nepal, India, Dubai, USA &amp; UK. Browse ready-made gold, silver
-              &amp; diamond pieces, request custom jewellery designs, receive competitive quotes,
-              and track your orders — all in one secure platform.
+          <div
+            style={{
+              padding: "40px 20px",
+              maxWidth: "800px",
+              margin: "0 auto",
+              textAlign: "center",
+              fontFamily: "system-ui, sans-serif",
+            }}
+          >
+            <h1 style={{ fontSize: "24px", marginBottom: "16px" }}>
+              Orivraa — Premium Jewellery Marketplace
+            </h1>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#555",
+                lineHeight: "1.6",
+                marginBottom: "16px",
+              }}
+            >
+              Orivraa is a SaaS marketplace platform that connects customers
+              with verified local jewellers across Nepal, India, Dubai, USA
+              &amp; UK. Browse ready-made gold, silver &amp; diamond pieces,
+              request custom jewellery designs, receive competitive quotes, and
+              track your orders — all in one secure platform.
             </p>
-            <div style={{ display: "flex", justifyContent: "center", gap: "24px", fontSize: "14px" }}>
-              <a href="/privacy" style={{ color: "#B8941F" }}>Privacy Policy</a>
-              <a href="/terms" style={{ color: "#B8941F" }}>Terms of Service</a>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: "24px",
+                fontSize: "14px",
+              }}
+            >
+              <a href="/privacy" style={{ color: "#B8941F" }}>
+                Privacy Policy
+              </a>
+              <a href="/terms" style={{ color: "#B8941F" }}>
+                Terms of Service
+              </a>
             </div>
           </div>
         </noscript>

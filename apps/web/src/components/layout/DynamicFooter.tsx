@@ -3,34 +3,40 @@
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
-import { LANG_META, type Language } from "@/data/about-i18n";
+import {
+  getPublicAboutHref,
+  LANG_META,
+  type Language,
+} from "@/data/about-i18n";
 import { useMarket } from "@/hooks/useMarket";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import {
-    Facebook,
-    Globe,
-    Instagram,
-    Linkedin,
-    Mail,
-    MapPin,
-    Phone,
-    Twitter,
+  Facebook,
+  Globe,
+  Instagram,
+  Linkedin,
+  Mail,
+  MapPin,
+  Phone,
+  Twitter,
 } from "lucide-react";
 import Link from "next/link";
 
-const FOOTER_LANGUAGES: { code: Language; href: string }[] = [
-  { code: "en", href: "/about" },
-  { code: "hi", href: "/about/hi" },
-  { code: "ne", href: "/about/ne" },
-  { code: "gu", href: "/tutorial/gu" },
-  { code: "mr", href: "/tutorial/mr" },
-  { code: "ta", href: "/tutorial/ta" },
-  { code: "te", href: "/tutorial/te" },
-  { code: "kn", href: "/tutorial/kn" },
-  { code: "fr", href: "/about/fr" },
-  { code: "de", href: "/about/de" },
-  { code: "es", href: "/about/es" },
-  { code: "ar", href: "/about/ar" },
+const FOOTER_LANGUAGES: Language[] = [
+  "en",
+  "hi",
+  "ne",
+  "gu",
+  "mr",
+  "ta",
+  "te",
+  "kn",
+  "si",
+  "fr",
+  "de",
+  "es",
+  "he",
+  "ar",
 ];
 
 export function DynamicFooter() {
@@ -85,12 +91,19 @@ export function DynamicFooter() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1 space-y-4">
             <Link href="/" className="flex items-center gap-2">
-              <BrandLogo variant="icon" size="md" theme="dark" linkToHome={false} />
+              <BrandLogo
+                variant="icon"
+                size="md"
+                theme="dark"
+                linkToHome={false}
+              />
               <span className="text-xl font-bold text-white">{BRAND.name}</span>
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
               <T>
-                Orivraa is a SaaS platform and marketplace connecting buyers with verified jewellers across Nepal, India, Dubai, USA & UK for ready-made and custom jewelry orders.
+                Orivraa is a SaaS platform and marketplace connecting buyers
+                with verified jewellers across Nepal, India, Dubai, USA & UK for
+                ready-made and custom jewelry orders.
               </T>
             </p>
             {/* Social Links */}
@@ -207,16 +220,17 @@ export function DynamicFooter() {
           <div className="flex items-center gap-2 mb-3">
             <Globe className="h-4 w-4 text-gold-400" />
             <span className="text-sm font-medium text-gray-300">
-              <T>{`Available in ${FOOTER_LANGUAGES.length} Languages`}</T>
+              <T>About Orivraa</T> · <bdi>{FOOTER_LANGUAGES.length}</bdi>{" "}
+              <T>languages</T>
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {FOOTER_LANGUAGES.map(({ code, href }) => {
+            {FOOTER_LANGUAGES.map((code) => {
               const meta = LANG_META[code];
               return (
                 <Link
                   key={code}
-                  href={href}
+                  href={getPublicAboutHref(code)}
                   className="text-xs px-2.5 py-1 rounded-full bg-gray-800 hover:bg-gold-500/20 hover:text-gold-400 text-gray-400 transition-colors"
                 >
                   {meta.flag} {meta.nativeName}
@@ -233,10 +247,22 @@ export function DynamicFooter() {
               <T>Also reviewed on</T>
             </span>
             {[
-              { label: "G2", href: "https://www.g2.com/products/orivraa/reviews" },
-              { label: "Capterra", href: "https://www.capterra.in/software/1097833/Orivraa" },
-              { label: "Trustpilot", href: "https://www.trustpilot.com/review/orivraa.com" },
-              { label: "Google Business", href: "https://share.google/9XsJWUQnuoWNLtrDb" },
+              {
+                label: "G2",
+                href: "https://www.g2.com/products/orivraa/reviews",
+              },
+              {
+                label: "Capterra",
+                href: "https://www.capterra.in/software/1097833/Orivraa",
+              },
+              {
+                label: "Trustpilot",
+                href: "https://www.trustpilot.com/review/orivraa.com",
+              },
+              {
+                label: "Google Business",
+                href: "https://share.google/9XsJWUQnuoWNLtrDb",
+              },
             ].map((item) => (
               <a
                 key={item.label}

@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { resolveShopCurrency } from "@gold-shop/shared";
 import api, { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
@@ -44,6 +45,7 @@ import {
     CheckCircle,
     CreditCard,
     Crown,
+    Factory,
     Globe,
     Info,
     Loader2,
@@ -96,6 +98,7 @@ interface ShopData {
   makingChargePercent: number;
   billingWastageMode?: string;
   billingWastagePercent?: number | null;
+  workshopMode?: boolean;
   minOrderValueNpr: number;
   maxOrderValueNpr?: number;
   bankAccountDetails?: {
@@ -213,6 +216,7 @@ const TIER_META: Record<
 
 export default function ShopSettingsPage() {
   const { user, refreshUser } = useAuth();
+  const { hasFeature } = useFeatures();
   const t = useT();
   const searchParams = useSearchParams();
   const { placeholders: countryPlaceholders, symbol: currencySymbol } =
@@ -386,6 +390,7 @@ export default function ShopSettingsPage() {
           shopData.billingWastagePercent == null
             ? null
             : Number(shopData.billingWastagePercent),
+        workshopMode: !!shopData.workshopMode,
         minOrderValueNpr: shopData.minOrderValueNpr,
         maxOrderValueNpr: shopData.maxOrderValueNpr,
         bankAccountDetails: shopData.bankAccountDetails,
@@ -903,6 +908,44 @@ export default function ShopSettingsPage() {
                       checked={shopData.isActive ?? true}
                       onCheckedChange={(checked) =>
                         updateShopData({ isActive: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="flex items-center gap-2">
+                        <Factory className="h-4 w-4 text-amber-600" />
+                        <T>Workshop mode</T>
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        <T>
+                          Hide Supply Chain and open the factory floor (tower,
+                          jobs, departments, metal, QC). Keep this off if you
+                          only work with a few karigars.
+                        </T>
+                      </p>
+                      {!hasFeature("workshopManufacturing") && (
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          <T>
+                            Workshop manufacturing is on Pro+ and Enterprise.
+                            Upgrade to turn this on — Supply Chain stays as
+                            your karigar book.
+                          </T>{" "}
+                          <a
+                            href="/dashboard/shop/billing"
+                            className="underline font-medium"
+                          >
+                            <T>View plans</T>
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                    <Switch
+                      checked={!!shopData.workshopMode}
+                      disabled={!hasFeature("workshopManufacturing")}
+                      onCheckedChange={(checked) =>
+                        updateShopData({ workshopMode: checked })
                       }
                     />
                   </div>

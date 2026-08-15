@@ -6,6 +6,7 @@ export * from "./enums/roles";
 export * from "./types/api";
 export * from "./types/composition";
 export * from "./validation/method-validation";
+export * from "./i18n/locales";
 
 // Invoice / bill layouts
 export * from "./invoice/bill-templates";
@@ -22,6 +23,7 @@ export * from "./utils/market-config";
 export * from "./utils/wastage";
 export * from "./utils/gold-loss";
 export * from "./utils/weight-conversion";
+export * from "./utils/jewellery-weight";
 
 // Pricing
 export * from "./pricing/price-resolver.types";

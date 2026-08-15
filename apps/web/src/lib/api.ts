@@ -539,6 +539,13 @@ export const karigarApi = {
     grossWeight?: number;
     metalKey?: string;
     allowedWastagePercent?: number;
+    dueAt?: string;
+    priority?: string;
+    qty?: number;
+    sizeLabel?: string;
+    purity?: string;
+    metalColor?: string;
+    notes?: string;
   }) => api.post("/karigar/jobs", data),
   updateJob: (jobId: string, data: Record<string, unknown>) =>
     api.patch(`/karigar/jobs/${jobId}`, data),
@@ -553,6 +560,7 @@ export const karigarApi = {
       stage?: string;
       metalKey?: string;
       note?: string;
+      lotId?: string;
     },
     jobId?: string,
   ) =>
@@ -591,6 +599,27 @@ export const karigarApi = {
   goldLoss: (params?: { from?: string; to?: string }) =>
     api.get("/karigar/gold-loss", { params }),
   loadSampleJob: () => api.post("/karigar/sample-job"),
+  getJob: (jobId: string) => api.get(`/karigar/jobs/${jobId}`),
+  workshopTower: () => api.get("/karigar/workshop/tower"),
+  workshopFloor: (dept?: string) =>
+    api.get("/karigar/workshop/floor", { params: dept ? { dept } : {} }),
+  advanceFloor: (
+    jobId: string,
+    data: { goldOutGrams?: number; notes?: string; photos?: string[] },
+  ) => api.post(`/karigar/jobs/${jobId}/advance`, data),
+  inspectQc: (
+    jobId: string,
+    data: {
+      decision: "APPROVED" | "REWORK" | "REJECTED";
+      rejectionReason?: string;
+      reworkToStage?: string;
+      notes?: string;
+    },
+  ) => api.post(`/karigar/jobs/${jobId}/qc`, data),
+  receiveFg: (
+    jobId: string,
+    data?: { sku?: string; nameEn?: string; jewelleryType?: string },
+  ) => api.post(`/karigar/jobs/${jobId}/receive-fg`, data ?? {}),
 };
 
 // RFQ API
@@ -1209,6 +1238,16 @@ export const customerCrmApi = {
   // Customer directory
   search: (params: { query?: string; page?: number; limit?: number }) =>
     api.get("/users/customers/search", { params }),
+  upsertWalkIn: (data: {
+    name: string;
+    phoneCountryCode: string;
+    phone: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    notes?: string;
+  }) => api.post("/users/customers/walk-in", data),
   getCustomerProfile: (customerId: string) =>
     api.get(`/users/customers/${customerId}/profile`),
   getCustomerOrders: (customerId: string) =>
@@ -1681,6 +1720,8 @@ export const posApi = {
   getActiveSession: () => api.get("/pos/session/active"),
   createSession: (data: { customerId?: string; conversationId?: string }) =>
     api.post("/pos/session", data),
+  updateCustomer: (sessionId: string, customerId?: string) =>
+    api.patch(`/pos/session/${sessionId}/customer`, { customerId }),
   addItems: (
     sessionId: string,
     items: Array<{ inventoryItemId: string; variantId?: string; qty: number }>,
@@ -1693,6 +1734,9 @@ export const posApi = {
       customerName: string;
       customerPhone?: string;
       customerEmail?: string;
+      customerId?: string;
+      walkInCustomerId?: string;
+      registeredCustomerId?: string;
       notes?: string;
       taxRate?: number;
       discountAmount?: number;
