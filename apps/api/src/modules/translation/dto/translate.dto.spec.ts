@@ -1,10 +1,11 @@
 import "reflect-metadata";
+import { TRANSLATION_TEXT_MAX_LENGTH } from "@gold-shop/shared";
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import {
   TranslateBatchDto,
   TRANSLATION_BATCH_MAX_SIZE,
-  TRANSLATION_TEXT_MAX_LENGTH,
+  TRANSLATION_TEXT_MAX_LENGTH as DTO_TEXT_MAX_LENGTH,
 } from "./translate.dto";
 
 async function validateBatch(body: unknown) {
@@ -47,5 +48,10 @@ describe("TranslateBatchDto", () => {
   it("rejects an empty texts array", async () => {
     const errors = await validateBatch({ texts: [], locale: "hi" });
     expect(errors.some((error) => error.property === "texts")).toBe(true);
+  });
+
+  it("reuses the shared 2000-character text ceiling", () => {
+    expect(DTO_TEXT_MAX_LENGTH).toBe(TRANSLATION_TEXT_MAX_LENGTH);
+    expect(DTO_TEXT_MAX_LENGTH).toBe(2000);
   });
 });

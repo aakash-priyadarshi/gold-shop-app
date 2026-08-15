@@ -83,6 +83,20 @@ describe("LanguageMegaMenu hydration", () => {
     expect(getLanguageTriggerLabel("hi", true)).toBe("हिन्दी");
   });
 
+  it("puts the optional id on the trigger so a Label htmlFor can associate", () => {
+    render(
+      createElement(LanguageMegaMenu, {
+        id: "language",
+        value: "en",
+        onValueChange: () => {},
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Language" })).toHaveAttribute(
+      "id",
+      "language",
+    );
+  });
+
   it("shows the persisted native name after mount", () => {
     render(
       createElement(LanguageMegaMenu, {

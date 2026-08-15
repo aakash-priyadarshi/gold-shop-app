@@ -7,6 +7,7 @@ export * from "./types/api";
 export * from "./types/composition";
 export * from "./validation/method-validation";
 export * from "./i18n/locales";
+export * from "./i18n/translation";
 
 // Invoice / bill layouts
 export * from "./invoice/bill-templates";

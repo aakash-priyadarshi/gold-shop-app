@@ -3,6 +3,7 @@
 import { api } from "@/lib/api";
 import {
   chunkTranslationTexts,
+  mapPreparedResultsToOriginals,
   mergeTranslationResponse,
   prepareTranslationBatch,
   translationBatchErrorDetail,
@@ -187,8 +188,12 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
 
     const texts = Array.from(pending.current);
     pending.current.clear();
-    const unique = prepareTranslationBatch(texts);
-    if (unique.length === 0) {
+    const prepared = prepareTranslationBatch(texts);
+    if (prepared.unique.length === 0) {
+      const now = Date.now();
+      prepared.dropped.forEach((text) => {
+        failedRef.current.set(failureKey(locale, text), now);
+      });
       return;
     }
 
@@ -198,10 +203,10 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     const confirmed: Record<string, string> = {};
-    const failed: string[] = [];
+    const failed: string[] = [...prepared.dropped];
 
     try {
-      for (const chunk of chunkTranslationTexts(unique)) {
+      for (const chunk of chunkTranslationTexts(prepared.unique)) {
         if (localeRef.current !== locale || flushIdRef.current !== flushId) {
           return;
         }
@@ -216,10 +221,17 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
             data.translations,
             data.translated,
           );
-          Object.assign(confirmed, merged.confirmed);
-          failed.push(...merged.failed);
+          const mapped = mapPreparedResultsToOriginals(
+            prepared.aliases,
+            merged.confirmed,
+            merged.failed,
+          );
+          Object.assign(confirmed, mapped.confirmed);
+          failed.push(...mapped.failed);
         } catch (err) {
-          failed.push(...chunk);
+          failed.push(
+            ...mapPreparedResultsToOriginals(prepared.aliases, {}, chunk).failed,
+          );
           // eslint-disable-next-line no-console
           console.warn(
             "[i18n] Translation batch failed:",

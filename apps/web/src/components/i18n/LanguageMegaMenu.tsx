@@ -144,6 +144,8 @@ interface LanguageMegaMenuProps {
   align?: "start" | "center" | "end";
   className?: string;
   triggerClassName?: string;
+  /** Applied to the trigger button so a Label htmlFor can associate. */
+  id?: string;
 }
 
 export function LanguageMegaMenu({
@@ -153,6 +155,7 @@ export function LanguageMegaMenu({
   align = "end",
   className,
   triggerClassName,
+  id,
 }: LanguageMegaMenuProps) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -176,6 +179,7 @@ export function LanguageMegaMenu({
       <PopoverTrigger asChild>
         <button
           type="button"
+          id={id}
           data-tour="language-selector"
           aria-label={t("Language")}
           className={cn(
