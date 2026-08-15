@@ -111,10 +111,10 @@ function segmentHtml(html: string): HtmlSegment[] {
  * Cost: Effectively $0 after initial translation pass (cached forever).
  */
 
-/** Prefer current Flash; lite is a fallback if the primary model 404s. */
+/** High-volume UI strings: 3.1 Flash-Lite; 2.5 Flash if that model 404s. */
 export const GEMINI_TRANSLATION_MODELS = [
+  "gemini-3.1-flash-lite",
   "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
 ] as const;
 
 /**
@@ -402,22 +402,26 @@ ${numbered}
 
 Respond with ONLY the JSON array, no markdown fences.`;
 
-    const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
+    let lastError: Error | null = null;
+    for (const model of this.GEMINI_MODELS) {
+      const generationConfig: Record<string, unknown> = {
         temperature: 0.1,
         maxOutputTokens: 4096,
         responseMimeType: "application/json",
-      },
-    };
+      };
+      // Gemini 3.x defaults to medium thinking; keep UI batches cheap/fast.
+      if (model.startsWith("gemini-3.")) {
+        generationConfig.thinkingConfig = { thinkingLevel: "minimal" };
+      }
 
-    let lastError: Error | null = null;
-    for (const model of this.GEMINI_MODELS) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig,
+        }),
       });
 
       if (!response.ok) {

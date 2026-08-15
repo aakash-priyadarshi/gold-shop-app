@@ -118,21 +118,21 @@ describe("TranslationService Gemini model fallback", () => {
     jest.restoreAllMocks();
   });
 
-  it("uses the same Gemini 2.5 Flash family as the chatbot, not retired 2.0 Flash", () => {
-    expect(GEMINI_TRANSLATION_MODELS[0]).toBe("gemini-2.5-flash");
-    expect(GEMINI_TRANSLATION_MODELS).toContain("gemini-2.5-flash-lite");
+  it("uses Gemini 3.1 Flash-Lite first, with 2.5 Flash as fallback, not retired 2.0", () => {
+    expect(GEMINI_TRANSLATION_MODELS[0]).toBe("gemini-3.1-flash-lite");
+    expect(GEMINI_TRANSLATION_MODELS).toContain("gemini-2.5-flash");
     expect(GEMINI_TRANSLATION_MODELS).not.toContain("gemini-2.0-flash");
+    expect(GEMINI_TRANSLATION_MODELS).not.toContain(
+      "gemini-3.1-flash-lite-preview",
+    );
   });
 
-  it("falls back to the next model when the primary Flash model returns 404", async () => {
+  it("falls back to Gemini 2.5 Flash when 3.1 Flash-Lite returns 404", async () => {
     const { service, prisma } = createService();
     global.fetch = jest.fn(async (url: unknown) => {
       const href = String(url);
-      if (href.includes("gemini-2.5-flash-lite")) {
+      if (href.includes("gemini-2.5-flash:")) {
         return geminiOk(["ברוכים הבאים ללוח הבקרה"]) as any;
-      }
-      if (href.includes("gemini-2.5-flash")) {
-        return geminiNotFound() as any;
       }
       return geminiNotFound() as any;
     }) as any;
@@ -148,6 +148,10 @@ describe("TranslationService Gemini model fallback", () => {
     expect(String((global.fetch as jest.Mock).mock.calls[0][0])).toContain(
       GEMINI_TRANSLATION_MODELS[0],
     );
+    const fallbackBody = JSON.parse(
+      (global.fetch as jest.Mock).mock.calls[1][1].body as string,
+    );
+    expect(fallbackBody.generationConfig.thinkingConfig).toBeUndefined();
     expect(prisma.$transaction).toHaveBeenCalled();
   });
 
@@ -162,7 +166,7 @@ describe("TranslationService Gemini model fallback", () => {
     expect(global.fetch).toHaveBeenCalledTimes(GEMINI_TRANSLATION_MODELS.length);
   });
 
-  it("translates Hindi when Gemini 2.5 Flash succeeds", async () => {
+  it("translates Hindi with Gemini 3.1 Flash-Lite and minimal thinking", async () => {
     const { service } = createService();
     global.fetch = jest.fn(async () => geminiOk(["स्वागत है घर पर"]) as any) as any;
 
@@ -171,7 +175,13 @@ describe("TranslationService Gemini model fallback", () => {
     expect(result.translations).toEqual(["स्वागत है घर पर"]);
     expect(result.translated).toEqual([true]);
     expect(String((global.fetch as jest.Mock).mock.calls[0][0])).toContain(
-      "gemini-2.5-flash:",
+      "gemini-3.1-flash-lite:",
     );
+    const body = JSON.parse(
+      (global.fetch as jest.Mock).mock.calls[0][1].body as string,
+    );
+    expect(body.generationConfig.thinkingConfig).toEqual({
+      thinkingLevel: "minimal",
+    });
   });
 });
