@@ -571,7 +571,7 @@ function ProductDetailSheet({
   const image = item.images?.[0];
   const weight = item.totalWeightGrams ?? item.weightGrams;
   const grossWeight =
-    item.grossWeightGrams ||
+    item.grossWeightGrams ??
     calculateGrossWeightGrams(weight, item.composition);
   const variants = (item.variants ?? []).filter((variant) => variant.isActive !== false);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(

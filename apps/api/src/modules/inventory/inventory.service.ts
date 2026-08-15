@@ -70,7 +70,7 @@ export class InventoryService {
     const metalWeightGrams = dto.totalWeightGrams || 0;
     const grossWeightGrams = calculateGrossWeightGrams(
       metalWeightGrams,
-      dto.composition,
+      dto.gemstones ?? dto.composition,
     );
 
     // Resolve the authoritative cap once, then enforce it INSIDE the same
@@ -214,11 +214,12 @@ export class InventoryService {
 
     if (
       dto.totalWeightGrams !== undefined ||
+      dto.gemstones !== undefined ||
       dto.composition !== undefined
     ) {
       updateData.grossWeightGrams = calculateGrossWeightGrams(
         dto.totalWeightGrams ?? item.totalWeightGrams,
-        dto.composition ?? item.composition,
+        dto.gemstones ?? item.gemstones ?? dto.composition ?? item.composition,
       );
     }
 

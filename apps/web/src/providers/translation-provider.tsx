@@ -228,13 +228,14 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       // eslint-disable-next-line no-console
       console.warn("[i18n] Translation batch failed:", err);
     } finally {
-      if (flushIdRef.current !== flushId) return;
-      inflightRef.current = false;
-      setLoading(false);
+      if (flushIdRef.current === flushId) {
+        inflightRef.current = false;
+        setLoading(false);
 
-      // If more texts were registered while in-flight, flush again
-      if (pending.current.size > 0) {
-        timer.current = setTimeout(flush, 50);
+        // If more texts were registered while in-flight, flush again
+        if (pending.current.size > 0) {
+          timer.current = setTimeout(flush, 50);
+        }
       }
     }
   }, [locale]);

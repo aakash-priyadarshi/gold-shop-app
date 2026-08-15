@@ -36,6 +36,7 @@ export type TowerStageInput = {
   dustGrams: number;
   allowedWastagePercent: number;
   reworkCount: number;
+  completedAt?: Date | null;
 };
 
 export type TowerJobInput = {
@@ -104,8 +105,10 @@ export function buildWorkshopTower(input: {
     outstandingBalance: number;
   }>;
   vaultGoldGrams: number;
+  departments?: KarigarStageCode[];
   now?: Date;
 }) {
+  const departments = input.departments ?? [...KARIGAR_STAGES];
   const now = input.now ?? new Date();
   const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const open = input.jobs.filter(isOpenJob);
@@ -120,10 +123,10 @@ export function buildWorkshopTower(input: {
       job.dueAt.getTime() <= weekEnd.getTime(),
   );
   const waitingOnNext = open.filter((job) => {
-    const current = job.currentStage ?? "CASTING";
+    const current = job.currentStage ?? departments[0] ?? "CASTING";
     const row = job.stages.find((stage) => stage.stage === current);
     if (!row || row.status !== "DONE") return false;
-    const next = nextDepartment(current);
+    const next = nextDepartment(current, departments);
     if (!next) return false;
     const nextRow = job.stages.find((stage) => stage.stage === next);
     return !nextRow || nextRow.goldInGrams <= 0;
@@ -148,10 +151,11 @@ export function buildWorkshopTower(input: {
   const unreceivedMetal = input.workshops.filter(
     (w) => w.outstandingBalance > 0.0005,
   );
-  const deptLoad = KARIGAR_STAGES.map((stage) => ({
+  const deptLoad = departments.map((stage) => ({
     stage,
-    count: open.filter((job) => (job.currentStage ?? "CASTING") === stage)
-      .length,
+    count: open.filter(
+      (job) => (job.currentStage ?? departments[0] ?? "CASTING") === stage,
+    ).length,
   }));
   const reworkJobs = input.jobs.filter((job) =>
     job.stages.some((stage) => stage.reworkCount > 0),
@@ -160,9 +164,13 @@ export function buildWorkshopTower(input: {
   const onTime =
     completed.length === 0
       ? null
-      : completed.filter(
-          (job) => !job.dueAt || job.dueAt.getTime() >= now.getTime(),
-        ).length / completed.length;
+      : completed.filter((job) => {
+          if (!job.dueAt) return true;
+          const qc = job.stages.find((stage) => stage.stage === "QC");
+          const completedAt = qc?.completedAt ?? null;
+          if (!completedAt) return true;
+          return completedAt.getTime() <= job.dueAt.getTime();
+        }).length / completed.length;
 
   return {
     overdue,

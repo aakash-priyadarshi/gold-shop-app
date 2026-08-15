@@ -140,8 +140,12 @@ export default function WorkshopJobCardPage() {
           /* work-order fields live on this page */
         }}
         onDelete={async () => {
-          await karigarApi.deleteJob(job.id);
-          window.location.href = "/dashboard/shop/workshop/jobs";
+          try {
+            await karigarApi.deleteJob(job.id);
+            window.location.href = "/dashboard/shop/workshop/jobs";
+          } catch (err: any) {
+            setError(err?.response?.data?.message || "Could not delete job");
+          }
         }}
       />
       <Card>

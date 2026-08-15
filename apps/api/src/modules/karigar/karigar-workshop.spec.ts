@@ -149,4 +149,106 @@ describe("workshop manufacturing helpers", () => {
     expect(tower.waitingOnNext.map((j) => j.id)).toEqual(["job-overdue"]);
     expect(tower.reworkRate).toBeGreaterThan(0);
   });
+
+  it("calculates onTimePercent using QC completedAt rather than current timestamp", () => {
+    const now = new Date("2026-08-20T12:00:00.000Z");
+    const tower = buildWorkshopTower({
+      now,
+      vaultGoldGrams: 50,
+      workshops: [],
+      jobs: [
+        {
+          id: "job-completed-on-time",
+          product: "Earrings",
+          artisan: "Ravi",
+          status: "Completed",
+          dueAt: new Date("2026-08-10T00:00:00.000Z"),
+          currentStage: "QC",
+          inventoryItemId: "item-1",
+          allowedWastagePercent: 1,
+          stages: [
+            {
+              stage: "QC",
+              status: "DONE",
+              goldInGrams: 10,
+              goldOutGrams: 10,
+              scrapGrams: 0,
+              dustGrams: 0,
+              allowedWastagePercent: 1,
+              reworkCount: 0,
+              completedAt: new Date("2026-08-09T18:00:00.000Z"),
+            },
+          ],
+          trees: [],
+        },
+        {
+          id: "job-completed-late",
+          product: "Pendant",
+          artisan: "Ravi",
+          status: "Completed",
+          dueAt: new Date("2026-08-05T00:00:00.000Z"),
+          currentStage: "QC",
+          inventoryItemId: "item-2",
+          allowedWastagePercent: 1,
+          stages: [
+            {
+              stage: "QC",
+              status: "DONE",
+              goldInGrams: 15,
+              goldOutGrams: 15,
+              scrapGrams: 0,
+              dustGrams: 0,
+              allowedWastagePercent: 1,
+              reworkCount: 0,
+              completedAt: new Date("2026-08-08T12:00:00.000Z"),
+            },
+          ],
+          trees: [],
+        },
+      ],
+    });
+
+    // 1 of 2 completed on time
+    expect(tower.onTimePercent).toBe(0.5);
+  });
+
+  it("builds tower deptLoad according to custom configured shop departments", () => {
+    const tower = buildWorkshopTower({
+      vaultGoldGrams: 100,
+      workshops: [],
+      departments: ["CASTING", "POLISHING", "QC"],
+      jobs: [
+        {
+          id: "job-1",
+          product: "Ring",
+          artisan: "Ravi",
+          status: "Casting",
+          dueAt: null,
+          currentStage: "CASTING",
+          inventoryItemId: null,
+          allowedWastagePercent: 1,
+          stages: [],
+          trees: [],
+        },
+        {
+          id: "job-2",
+          product: "Necklace",
+          artisan: "Ravi",
+          status: "Polishing",
+          dueAt: null,
+          currentStage: "POLISHING",
+          inventoryItemId: null,
+          allowedWastagePercent: 1,
+          stages: [],
+          trees: [],
+        },
+      ],
+    });
+
+    expect(tower.deptLoad).toEqual([
+      { stage: "CASTING", count: 1 },
+      { stage: "POLISHING", count: 1 },
+      { stage: "QC", count: 0 },
+    ]);
+  });
 });

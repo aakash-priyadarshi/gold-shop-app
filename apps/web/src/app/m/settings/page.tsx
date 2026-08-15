@@ -34,7 +34,7 @@ const COUNTRIES = [
 
 export default function MobileStoreSettingsPage() {
   const { user, refreshUser } = useAuth();
-  const { hasFeature } = useFeatures();
+  const { hasFeature, loading: featuresLoading } = useFeatures();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -144,7 +144,11 @@ export default function MobileStoreSettingsPage() {
         state: state || undefined,
         pincode: pincode || undefined,
         isActive,
-        workshopMode: hasFeature("workshopManufacturing") ? workshopMode : false,
+        workshopMode: featuresLoading
+          ? (user?.shop?.workshopMode ?? false)
+          : hasFeature("workshopManufacturing")
+            ? workshopMode
+            : false,
         codEnabled,
         codMaxValueNpr: codMaxValueNpr || undefined,
         minOrderValueNpr: minOrderValueNpr || undefined,
@@ -586,7 +590,7 @@ export default function MobileStoreSettingsPage() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || loading || featuresLoading}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-amber-500 text-white font-semibold disabled:opacity-60 active:bg-amber-600"
           >
             {saving ? (

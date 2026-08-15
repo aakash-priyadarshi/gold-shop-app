@@ -116,7 +116,10 @@ export const LOCALE_REGISTRY: Record<UiLocale, LocaleDefinition> = {
 export const DEFAULT_UI_LOCALE: UiLocale = "en";
 
 export function isUiLocale(value: unknown): value is UiLocale {
-  return typeof value === "string" && value in LOCALE_REGISTRY;
+  return (
+    typeof value === "string" &&
+    Object.prototype.hasOwnProperty.call(LOCALE_REGISTRY, value)
+  );
 }
 
 export function getLocaleDirection(locale: UiLocale): LocaleDirection {

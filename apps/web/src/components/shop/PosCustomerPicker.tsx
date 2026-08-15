@@ -78,6 +78,7 @@ export function PosCustomerPicker({
       setSuggestions([]);
       return;
     }
+    let active = true;
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
@@ -90,6 +91,7 @@ export function PosCustomerPicker({
             ? shopQuotesApi.lookupCustomer({ phoneCountryCode, phone: digits })
             : Promise.resolve(null),
         ]);
+        if (!active) return;
         const exact = exactRes?.data?.found
           ? [exactRes.data.customer]
           : [];
@@ -108,12 +110,15 @@ export function PosCustomerPicker({
           })),
         );
       } catch {
-        setSuggestions([]);
+        if (active) setSuggestions([]);
       } finally {
-        setSearching(false);
+        if (active) setSearching(false);
       }
     }, 250);
-    return () => clearTimeout(timer);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [phone, phoneCountryCode, selected]);
 
   const choose = async (customer: PosCustomer) => {
@@ -173,7 +178,13 @@ export function PosCustomerPicker({
           </p>
         </div>
         {onClear && (
-          <Button type="button" variant="ghost" size="icon" onClick={onClear}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onClear}
+            aria-label={t("Clear selected customer")}
+          >
             <X className="h-4 w-4" />
           </Button>
         )}
@@ -195,16 +206,17 @@ export function PosCustomerPicker({
             </SelectContent>
           </Select>
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              className="pl-9"
+              className="ps-9"
               inputMode="tel"
+              dir="ltr"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
               placeholder={t("Customer phone")}
             />
             {searching && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />
+              <Loader2 className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />
             )}
           </div>
         </div>
@@ -216,7 +228,7 @@ export function PosCustomerPicker({
             <button
               key={`${customer.type}-${customer.id}`}
               type="button"
-              className="w-full p-3 text-left hover:bg-muted flex items-center justify-between gap-2"
+              className="w-full p-3 text-start hover:bg-muted flex items-center justify-between gap-2"
               onClick={() => void choose(customer)}
             >
               <span>
@@ -238,7 +250,7 @@ export function PosCustomerPicker({
         <div><Label><T>City</T></Label><Input value={city} onChange={(e) => setCity(e.target.value)} /></div>
       </div>
       <Button type="button" variant="outline" onClick={save} disabled={saving}>
-        {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
+        {saving ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : <UserPlus className="h-4 w-4 me-2" />}
         <T>Save new customer</T>
       </Button>
     </div>

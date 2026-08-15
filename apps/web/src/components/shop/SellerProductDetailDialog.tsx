@@ -59,6 +59,7 @@ export function SellerProductDetailDialog({
 
   useEffect(() => {
     if (!open || !item?.id) return;
+    let active = true;
     setDetail(item);
     setVariantId("");
     setLoading(true);
@@ -67,6 +68,7 @@ export function SellerProductDetailDialog({
       posApi.getActiveSession(),
     ])
       .then(([productResult, sessionResult]) => {
+        if (!active) return;
         if (productResult.status === "fulfilled") {
           setDetail(productResult.value.data ?? item);
         }
@@ -75,7 +77,12 @@ export function SellerProductDetailDialog({
             Boolean(sessionResult.value.data?.id),
         );
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [item, open]);
 
   const sellableVariants = useMemo(

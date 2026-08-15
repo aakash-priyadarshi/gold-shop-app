@@ -32,4 +32,12 @@ describe("jewellery weight", () => {
       }),
     ).toBe(5);
   });
+
+  it("accepts a raw gemstones array as well as composition object", () => {
+    const gemstones = [
+      { type: "DIAMOND", caratWeight: 2 },
+      { type: "EMERALD", caratWeight: 1 },
+    ];
+    expect(calculateGrossWeightGrams(10, gemstones)).toBe(10.6);
+  });
 });

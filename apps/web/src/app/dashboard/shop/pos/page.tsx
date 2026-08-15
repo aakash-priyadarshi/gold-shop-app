@@ -804,6 +804,9 @@ function PosPageInner() {
                   onClear={() => {
                     setSelectedCustomer(null);
                     setCustomerId("");
+                    setCustomerName("");
+                    setCustomerPhone("");
+                    setCustomerEmail("");
                   }}
                 />
                 <div className="flex justify-end">
@@ -1307,6 +1310,9 @@ function PosPageInner() {
                 }
                 setSelectedCustomer(null);
                 setCustomerId("");
+                setCustomerName("");
+                setCustomerPhone("");
+                setCustomerEmail("");
                 setCustomerPicks([]);
               }}
             />

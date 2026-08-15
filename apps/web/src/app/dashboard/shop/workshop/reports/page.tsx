@@ -8,9 +8,15 @@ import { useEffect, useState } from "react";
 
 export default function WorkshopReportsPage() {
   const [report, setReport] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    karigarApi.goldLoss().then((res) => setReport(res.data ?? res));
+    karigarApi
+      .goldLoss()
+      .then((res) => setReport(res.data ?? res))
+      .catch((err) =>
+        setError(err?.response?.data?.message || "Could not load workshop reports"),
+      );
   }, []);
 
   return (
@@ -24,6 +30,11 @@ export default function WorkshopReportsPage() {
           come later. This is workshop metal, not invoice jarti.
         </T>
       </p>
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900 p-3 text-sm text-red-600 dark:text-red-400">
+          {error}
+        </div>
+      )}
       <GoldLossReport report={report} />
       <Link className="text-sm underline" href="/dashboard/shop/workshop">
         <T>Back to tower</T>

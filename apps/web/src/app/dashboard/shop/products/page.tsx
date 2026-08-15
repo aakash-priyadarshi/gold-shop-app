@@ -1675,6 +1675,7 @@ export default function ShopProductsPage() {
                     id="weight"
                     type="number"
                     step="0.01"
+                    min="0"
                     value={formData.totalWeightGrams}
                     onChange={(e) =>
                       setFormData({

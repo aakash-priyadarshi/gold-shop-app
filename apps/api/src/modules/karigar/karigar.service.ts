@@ -482,7 +482,12 @@ export class KarigarService {
       },
     });
 
-    await this.syncJobStatus(shopId, jobId);
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { workshopDepartments: true },
+    });
+    const departments = resolveDepartments(shop?.workshopDepartments);
+    await this.syncJobStatus(shopId, jobId, departments);
     return this.getJob(shopId, jobId);
   }
 
@@ -745,8 +750,24 @@ export class KarigarService {
     return this.serializeJob(job);
   }
 
+  private async requireWorkshopShop(shopId: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { workshopMode: true, workshopDepartments: true },
+    });
+    if (!shop) throw new NotFoundException("Shop not found");
+    if (!shop.workshopMode) {
+      throw new BadRequestException(
+        "Workshop mode is disabled. Turn on Workshop mode in Shop Settings to use the factory floor.",
+      );
+    }
+    return shop;
+  }
+
   async getTower(shopId: string) {
-    const [jobs, workshops, vault, shop] = await Promise.all([
+    const shop = await this.requireWorkshopShop(shopId);
+    const departments = resolveDepartments(shop.workshopDepartments);
+    const [jobs, workshops, vault] = await Promise.all([
       this.prisma.karigarJob.findMany({
         where: { shopId },
         include: { stages: true, trees: true },
@@ -757,15 +778,12 @@ export class KarigarService {
           shopId_materialKey: { shopId, materialKey: "goldGrains24k" },
         },
       }),
-      this.prisma.shop.findUnique({
-        where: { id: shopId },
-        select: { workshopDepartments: true },
-      }),
     ]);
     const tower = buildWorkshopTower({
       jobs: jobs.map((job) => this.toTowerJob(job)),
       workshops,
       vaultGoldGrams: vault?.quantity ?? 0,
+      departments,
     });
     const slim = (rows: TowerJobInput[]) =>
       rows.map((job) => ({
@@ -778,7 +796,7 @@ export class KarigarService {
         inventoryItemId: job.inventoryItemId,
       }));
     return {
-      departments: resolveDepartments(shop?.workshopDepartments),
+      departments,
       overdue: slim(tower.overdue),
       waitingOnNext: slim(tower.waitingOnNext),
       lossLimit: slim(tower.lossLimit),
@@ -796,11 +814,8 @@ export class KarigarService {
   }
 
   async getFloor(shopId: string, dept?: string) {
-    const shop = await this.prisma.shop.findUnique({
-      where: { id: shopId },
-      select: { workshopDepartments: true },
-    });
-    const departments = resolveDepartments(shop?.workshopDepartments);
+    const shop = await this.requireWorkshopShop(shopId);
+    const departments = resolveDepartments(shop.workshopDepartments);
     const stageFilter = dept ? this.parseStage(dept) : undefined;
     const jobs = await this.prisma.karigarJob.findMany({
       where: {
@@ -826,12 +841,9 @@ export class KarigarService {
     jobId: string,
     dto: AdvanceKarigarFloorDto,
   ) {
+    const shop = await this.requireWorkshopShop(shopId);
+    const departments = resolveDepartments(shop.workshopDepartments);
     const job = await this.requireJob(shopId, jobId);
-    const shop = await this.prisma.shop.findUnique({
-      where: { id: shopId },
-      select: { workshopDepartments: true },
-    });
-    const departments = resolveDepartments(shop?.workshopDepartments);
     await this.ensureStages(
       this.prisma,
       shopId,
@@ -840,6 +852,7 @@ export class KarigarService {
       job.allowedWastagePercent,
     );
     const current = (job.currentStage ??
+      departments[0] ??
       KarigarStage.CASTING) as KarigarStageCode;
     const existing = await this.prisma.karigarJobStage.findUnique({
       where: {
@@ -847,6 +860,9 @@ export class KarigarService {
       },
     });
     if (!existing) throw new NotFoundException("Stage not found");
+    if (existing.status === "DONE") {
+      throw new BadRequestException("This stage has already been advanced");
+    }
     const goldOut = dto.goldOutGrams ?? existing.goldOutGrams;
     if (goldOut <= 0) {
       throw new BadRequestException(
@@ -856,8 +872,8 @@ export class KarigarService {
     const next = nextDepartment(current, departments);
     const now = new Date();
     await this.prisma.$transaction(async (tx) => {
-      await tx.karigarJobStage.update({
-        where: { id: existing.id },
+      const updatedStage = await tx.karigarJobStage.updateMany({
+        where: { id: existing.id, status: { not: "DONE" } },
         data: {
           goldOutGrams: goldOut,
           status: "DONE",
@@ -867,6 +883,9 @@ export class KarigarService {
           completedAt: existing.completedAt ?? now,
         },
       });
+      if (updatedStage.count === 0) {
+        throw new BadRequestException("Stage transition was already applied");
+      }
       if (next) {
         await tx.karigarJobStage.update({
           where: { jobId_stage: { jobId, stage: next as KarigarStage } },
@@ -887,11 +906,12 @@ export class KarigarService {
         });
       }
     });
-    await this.syncJobStatus(shopId, jobId);
+    await this.syncJobStatus(shopId, jobId, departments);
     return this.getJob(shopId, jobId);
   }
 
   async inspectQc(shopId: string, jobId: string, dto: InspectKarigarQcDto) {
+    await this.requireWorkshopShop(shopId);
     const job = await this.requireJob(shopId, jobId);
     await this.ensureStages(
       this.prisma,
@@ -905,62 +925,65 @@ export class KarigarService {
     });
     if (!qc) throw new NotFoundException("QC stage not found");
     const now = new Date();
-    if (dto.decision === "APPROVED") {
-      await this.prisma.karigarJobStage.update({
-        where: { id: qc.id },
-        data: {
-          status: "DONE",
-          goldOutGrams: qc.goldOutGrams || qc.goldInGrams,
-          notes: dto.notes ?? qc.notes,
-          photos: dto.photos ?? qc.photos,
-          startedAt: qc.startedAt ?? now,
-          completedAt: now,
-        },
-      });
-      await this.prisma.karigarJob.update({
-        where: { id: jobId },
-        data: { currentStage: KarigarStage.QC, status: "Completed" },
-      });
-    } else if (dto.decision === "REWORK") {
-      const backTo = (dto.reworkToStage ?? "FILING") as KarigarStage;
-      await this.prisma.karigarJobStage.update({
-        where: { id: qc.id },
-        data: {
-          status: "REWORK",
-          reworkCount: { increment: 1 },
-          rejectionReason: dto.rejectionReason ?? qc.rejectionReason,
-          notes: dto.notes ?? qc.notes,
-          photos: dto.photos ?? qc.photos,
-        },
-      });
-      await this.prisma.karigarJobStage.update({
-        where: { jobId_stage: { jobId, stage: backTo } },
-        data: { status: "IN_PROGRESS", startedAt: now, completedAt: null },
-      });
-      await this.prisma.karigarJob.update({
-        where: { id: jobId },
-        data: { currentStage: backTo, status: "Rework" },
-      });
-    } else {
-      await this.prisma.karigarJobStage.update({
-        where: { id: qc.id },
-        data: {
-          status: "REJECTED",
-          rejectionReason: dto.rejectionReason ?? "Rejected at QC",
-          notes: dto.notes ?? qc.notes,
-          photos: dto.photos ?? qc.photos,
-          completedAt: now,
-        },
-      });
-      await this.prisma.karigarJob.update({
-        where: { id: jobId },
-        data: { status: "REJECTED", currentStage: KarigarStage.QC },
-      });
-    }
+    await this.prisma.$transaction(async (tx) => {
+      if (dto.decision === "APPROVED") {
+        await tx.karigarJobStage.update({
+          where: { id: qc.id },
+          data: {
+            status: "DONE",
+            goldOutGrams: qc.goldOutGrams || qc.goldInGrams,
+            notes: dto.notes ?? qc.notes,
+            photos: dto.photos ?? qc.photos,
+            startedAt: qc.startedAt ?? now,
+            completedAt: now,
+          },
+        });
+        await tx.karigarJob.update({
+          where: { id: jobId },
+          data: { currentStage: KarigarStage.QC, status: "Completed" },
+        });
+      } else if (dto.decision === "REWORK") {
+        const backTo = (dto.reworkToStage ?? "FILING") as KarigarStage;
+        await tx.karigarJobStage.update({
+          where: { id: qc.id },
+          data: {
+            status: "REWORK",
+            reworkCount: { increment: 1 },
+            rejectionReason: dto.rejectionReason ?? qc.rejectionReason,
+            notes: dto.notes ?? qc.notes,
+            photos: dto.photos ?? qc.photos,
+          },
+        });
+        await tx.karigarJobStage.update({
+          where: { jobId_stage: { jobId, stage: backTo } },
+          data: { status: "IN_PROGRESS", startedAt: now, completedAt: null },
+        });
+        await tx.karigarJob.update({
+          where: { id: jobId },
+          data: { currentStage: backTo, status: "Rework" },
+        });
+      } else {
+        await tx.karigarJobStage.update({
+          where: { id: qc.id },
+          data: {
+            status: "REJECTED",
+            rejectionReason: dto.rejectionReason ?? "Rejected at QC",
+            notes: dto.notes ?? qc.notes,
+            photos: dto.photos ?? qc.photos,
+            completedAt: now,
+          },
+        });
+        await tx.karigarJob.update({
+          where: { id: jobId },
+          data: { status: "REJECTED", currentStage: KarigarStage.QC },
+        });
+      }
+    });
     return this.getJob(shopId, jobId);
   }
 
   async receiveFg(shopId: string, jobId: string, dto: ReceiveKarigarFgDto) {
+    await this.requireWorkshopShop(shopId);
     const job = await this.prisma.karigarJob.findFirst({
       where: { id: jobId, shopId },
       include: { stages: true, trees: true },
@@ -994,40 +1017,49 @@ export class KarigarService {
         .toString(36)
         .toUpperCase()}`;
     const skuTaken = await this.prisma.inventoryItem.findFirst({
-      where: { sku },
+      where: { shopId, sku },
     });
-    if (skuTaken) sku = `${sku}-${Math.floor(Math.random() * 99)}`;
-    const item = await this.prisma.inventoryItem.create({
-      data: {
-        shopId,
-        sku,
-        nameEn,
-        jewelleryType,
-        buildMethod: "METHOD_A",
-        composition: {
-          method: "METHOD_A",
-          preciousMetal: "GOLD",
-          purity: 24,
-          eligibleForHallmark: true,
-          labels: ["Solid Gold"],
+    if (skuTaken) sku = `${sku}-${Math.floor(Math.random() * 900 + 100)}`;
+
+    const metalKey = job.metalKey || "goldGrains24k";
+    const isGold = !metalKey.toLowerCase().includes("silver") && !metalKey.toLowerCase().includes("platinum");
+    const purity = job.purity ? parseInt(job.purity, 10) || 24 : 24;
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const item = await tx.inventoryItem.create({
+        data: {
+          shopId,
+          sku,
+          nameEn,
+          jewelleryType,
+          buildMethod: "METHOD_A",
+          composition: {
+            method: "METHOD_A",
+            preciousMetal: isGold ? "GOLD" : metalKey.toUpperCase(),
+            purity,
+            metalColor: job.metalColor ?? "YELLOW",
+            eligibleForHallmark: true,
+            labels: [job.metalKey ?? "Solid Gold"],
+          },
+          totalWeightGrams: weight,
+          grossWeightGrams: weight,
+          metalValueNpr: 0,
+          makingChargeNpr: 0,
+          gemstoneValueNpr: 0,
+          taxNpr: 0,
+          totalPriceNpr: 0,
+          images: job.photos ?? [],
+          status: InventoryStatus.AVAILABLE,
+          stockQuantity: job.qty || 1,
         },
-        totalWeightGrams: weight,
-        grossWeightGrams: weight,
-        metalValueNpr: 0,
-        makingChargeNpr: 0,
-        gemstoneValueNpr: 0,
-        taxNpr: 0,
-        totalPriceNpr: 0,
-        images: job.photos ?? [],
-        status: InventoryStatus.AVAILABLE,
-        stockQuantity: job.qty || 1,
-      },
+      });
+      await tx.karigarJob.update({
+        where: { id: jobId },
+        data: { inventoryItemId: item.id },
+      });
+      return item;
     });
-    await this.prisma.karigarJob.update({
-      where: { id: jobId },
-      data: { inventoryItemId: item.id },
-    });
-    return { job: await this.getJob(shopId, jobId), inventoryItem: item };
+    return { job: await this.getJob(shopId, jobId), inventoryItem: result };
   }
 
   private parseDueAt(value?: string | null): Date | null {
@@ -1066,6 +1098,7 @@ export class KarigarService {
       dustGrams: number;
       allowedWastagePercent: number;
       reworkCount: number;
+      completedAt?: Date | null;
     }>;
     trees: Array<{
       issuedGrams: number;
@@ -1087,6 +1120,7 @@ export class KarigarService {
       stages: job.stages.map((stage) => ({
         ...stage,
         stage: stage.stage as KarigarStageCode,
+        completedAt: stage.completedAt ?? null,
       })),
       trees: job.trees,
     };
@@ -1157,7 +1191,11 @@ export class KarigarService {
     });
   }
 
-  private async syncJobStatus(shopId: string, jobId: string) {
+  private async syncJobStatus(
+    shopId: string,
+    jobId: string,
+    departments: KarigarStageCode[] = [...KARIGAR_STAGES],
+  ) {
     const stages = await this.prisma.karigarJobStage.findMany({
       where: { shopId, jobId },
     });
@@ -1177,8 +1215,8 @@ export class KarigarService {
       polishing: done.has(KarigarStage.POLISHING),
       hallmark: done.has(KarigarStage.QC),
     };
-    let currentStage: KarigarStage = KarigarStage.CASTING;
-    for (const stage of KARIGAR_STAGES) {
+    let currentStage: KarigarStage = (departments[0] ?? KarigarStage.CASTING) as KarigarStage;
+    for (const stage of departments) {
       currentStage = stage as KarigarStage;
       if (!done.has(stage as KarigarStage)) break;
     }

@@ -334,5 +334,8 @@ export const ABOUT_SUMMARY_CONTENT: Record<
 export function isAboutSummaryLanguage(
   language: string,
 ): language is AboutSummaryLanguage {
-  return language in ABOUT_SUMMARY_CONTENT;
+  return (
+    typeof language === "string" &&
+    Object.prototype.hasOwnProperty.call(ABOUT_SUMMARY_CONTENT, language)
+  );
 }

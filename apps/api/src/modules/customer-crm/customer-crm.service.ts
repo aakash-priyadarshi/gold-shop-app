@@ -16,17 +16,18 @@ export class CustomerCrmService {
       where: { phone: fullPhone },
     });
 
+    const isCreator = existing?.createdByShopId === shopId;
     const customer = existing
       ? await this.prisma.walkInCustomer.update({
           where: { id: existing.id },
           data: {
-            name: dto.name.trim(),
-            phoneCountryCode: dto.phoneCountryCode,
-            email: dto.email?.trim() || null,
-            address: dto.address?.trim() ?? existing.address,
-            city: dto.city?.trim() ?? existing.city,
-            country: dto.country?.trim() || existing.country,
-            ...(dto.notes !== undefined ? { notes: dto.notes.trim() || null } : {}),
+            name: isCreator ? dto.name.trim() : (existing.name || dto.name.trim()),
+            phoneCountryCode: isCreator ? dto.phoneCountryCode : existing.phoneCountryCode,
+            email: dto.email?.trim() || existing.email,
+            address: isCreator ? (dto.address?.trim() ?? existing.address) : (existing.address || dto.address?.trim() || ""),
+            city: isCreator ? (dto.city?.trim() ?? existing.city) : (existing.city || dto.city?.trim() || ""),
+            country: isCreator ? (dto.country?.trim() || existing.country) : (existing.country || dto.country?.trim() || ""),
+            ...(isCreator && dto.notes !== undefined ? { notes: dto.notes.trim() || null } : {}),
           },
         })
       : await this.prisma.walkInCustomer.create({
