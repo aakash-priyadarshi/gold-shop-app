@@ -115,6 +115,24 @@ export const LOCALE_REGISTRY: Record<UiLocale, LocaleDefinition> = {
 
 export const DEFAULT_UI_LOCALE: UiLocale = "en";
 
+export interface LocaleGroup {
+  id: "international" | "south-asia" | "europe" | "middle-east";
+  label: string;
+  locales: readonly UiLocale[];
+}
+
+/** Grouped language list for the header / dashboard mega menu. */
+export const LOCALE_GROUPS: readonly LocaleGroup[] = [
+  { id: "international", label: "International", locales: ["en"] },
+  {
+    id: "south-asia",
+    label: "South Asia",
+    locales: ["hi", "ne", "gu", "mr", "ta", "te", "kn", "si"],
+  },
+  { id: "europe", label: "Europe", locales: ["fr", "de", "es"] },
+  { id: "middle-east", label: "Middle East", locales: ["ar", "he"] },
+];
+
 export function isUiLocale(value: unknown): value is UiLocale {
   return (
     typeof value === "string" &&
@@ -124,4 +142,26 @@ export function isUiLocale(value: unknown): value is UiLocale {
 
 export function getLocaleDirection(locale: UiLocale): LocaleDirection {
   return LOCALE_REGISTRY[locale].direction;
+}
+
+export function filterLocaleGroups(query: string): LocaleGroup[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) {
+    return LOCALE_GROUPS.map((group) => ({
+      ...group,
+      locales: [...group.locales],
+    }));
+  }
+
+  return LOCALE_GROUPS.map((group) => ({
+    ...group,
+    locales: group.locales.filter((code) => {
+      const def = LOCALE_REGISTRY[code];
+      return (
+        code.toLowerCase().includes(needle) ||
+        def.name.toLowerCase().includes(needle) ||
+        def.nativeName.toLowerCase().includes(needle)
+      );
+    }),
+  })).filter((group) => group.locales.length > 0);
 }

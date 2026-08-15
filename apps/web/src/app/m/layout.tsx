@@ -51,8 +51,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useHelpUIStore } from "@/store/help-ui";
 import { InformationCircleIcon, ComputerDesktopIcon } from "@heroicons/react/24/outline";
 import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle";
-import { LANGUAGES, usePreferencesStore, type Language } from "@/store/preferences";
-import { Globe } from "lucide-react";
+import { LanguageMegaMenu } from "@/components/i18n/LanguageMegaMenu";
+import { usePreferencesStore } from "@/store/preferences";
 
 // Lazy-load heavy floating widgets (driver.js CSS ~20 KB)
 const TutorialButton = dynamic(
@@ -402,23 +402,12 @@ export default function MobileLayout({
                 className={`h-5 w-5 ${ratesLoading ? "animate-spin text-amber-500" : ""}`}
               />
             </button>
-            <div className="relative flex items-center bg-gray-100 dark:bg-gray-800 dark:bg-gray-800 rounded-lg p-0.5 ml-1">
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as Language)}
-                className="appearance-none bg-transparent text-gray-700 dark:text-gray-300 text-xs font-semibold pr-3 pl-2 py-1 outline-none"
-                style={{ WebkitAppearance: 'none' }}
-              >
-                {Object.entries(LANGUAGES).map(([code, info]) => (
-                  <option key={code} value={code} className="text-gray-900 dark:text-gray-100">
-                    {info.nativeName}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute right-1">
-                <ChevronDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-              </div>
-            </div>
+            <LanguageMegaMenu
+              value={language}
+              onValueChange={setLanguage}
+              variant="compact"
+              align="end"
+            />
             <AnimatedThemeToggle size={32} className="ml-0.5" />
           </div>
         </div>

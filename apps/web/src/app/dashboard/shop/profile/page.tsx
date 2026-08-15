@@ -38,8 +38,9 @@ import { PhoneVerificationDialog } from "@/components/verification/PhoneVerifica
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
+import { LanguageMegaMenu } from "@/components/i18n/LanguageMegaMenu";
 import { useT } from "@/providers/translation-provider";
-import { LANGUAGES, usePreferencesStore, type Language } from "@/store/preferences";
+import { usePreferencesStore } from "@/store/preferences";
 import { format } from "date-fns";
 import {
     AlertTriangle,
@@ -682,24 +683,15 @@ export default function ShopkeeperProfilePage() {
                       <Label htmlFor="language">
                         <T>Preferred Language</T>
                       </Label>
-                      <Select
+                      <LanguageMegaMenu
                         value={storeLanguage}
                         onValueChange={(value) => {
-                          setStoreLanguage(value as Language);
+                          setStoreLanguage(value);
                           updateProfile({ preferredLanguage: value });
                         }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("Select language")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(LANGUAGES).map(([code, info]) => (
-                            <SelectItem key={code} value={code}>
-                              {info.nativeName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        variant="field"
+                        align="start"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>

@@ -1,10 +1,11 @@
 "use client";
 
 import { T } from "@/components/ui/T";
+import { LanguageMegaMenu } from "@/components/i18n/LanguageMegaMenu";
 import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useHelpUIStore } from "@/store/help-ui";
-import { LANGUAGES, usePreferencesStore, type Language } from "@/store/preferences";
+import { usePreferencesStore } from "@/store/preferences";
 import { ComputerDesktopIcon } from "@heroicons/react/24/outline";
 import {
   BarChart2,
@@ -201,17 +202,13 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
                 <T>Language</T>
               </span>
             </div>
-            <select
+            <LanguageMegaMenu
               value={language}
-              onChange={(e) => setLanguage(e.target.value as Language)}
-              className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2 outline-none"
-            >
-              {Object.entries(LANGUAGES).map(([code, info]) => (
-                <option key={code} value={code}>
-                  {info.nativeName}
-                </option>
-              ))}
-            </select>
+              onValueChange={setLanguage}
+              variant="compact"
+              align="end"
+              triggerClassName="min-w-[7.5rem]"
+            />
           </div>
 
           <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800">

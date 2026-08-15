@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { UI_LOCALE_CODES } from "@gold-shop/shared";
 import { ABOUT_SUMMARY_CONTENT } from "../about-summary-i18n";
 import {
+  ABOUT_CONTENT,
   getPublicAboutHref,
   PUBLIC_LANGUAGE_PAGES,
   SUPPORTED_ABOUT_LANGS,
@@ -19,6 +20,12 @@ describe("public About language routes", () => {
       expect(getPublicAboutHref(language as Language)).toBe(expected);
       expect(pages.about).not.toContain("/tutorial");
     }
+  });
+
+  it("advertises the same language count as the UI locale registry", () => {
+    expect(ABOUT_CONTENT.en.languageGuideDesc).toContain(
+      `${UI_LOCALE_CODES.length} languages`,
+    );
   });
 
   it("includes every summary page in static generation", () => {

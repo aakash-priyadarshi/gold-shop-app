@@ -21,13 +21,6 @@ import OrivraaLoader, {
   useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -35,6 +28,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { T } from "@/components/ui/T";
+import { LanguageMegaMenu } from "@/components/i18n/LanguageMegaMenu";
 import { BRAND } from "@/config/brand";
 // ChatPopupProvider is now in root Providers
 import { useAuth, UserRole } from "@/hooks/useAuth";
@@ -54,7 +48,6 @@ import {
 import {
   LANGUAGES,
   usePreferencesStore,
-  type Language,
   type DashboardMode,
 } from "@/store/preferences";
 import {
@@ -189,19 +182,11 @@ function LanguageSelector() {
   const setLanguage = usePreferencesStore((s) => s.setLanguage);
 
   return (
-    <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
-      <SelectTrigger className="w-[110px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
-        <Globe className="h-3.5 w-3.5 me-1 text-gray-400" />
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {Object.entries(LANGUAGES).map(([code, info]) => (
-          <SelectItem key={code} value={code} className="text-xs">
-            {info.nativeName}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <LanguageMegaMenu
+      value={language}
+      onValueChange={setLanguage}
+      variant="toolbar"
+    />
   );
 }
 

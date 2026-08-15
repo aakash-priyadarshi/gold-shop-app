@@ -33,6 +33,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { T } from "@/components/ui/T";
+import { LanguageMegaMenu } from "@/components/i18n/LanguageMegaMenu";
 import {
   Tooltip,
   TooltipContent,
@@ -53,7 +54,6 @@ import { useHelpUIStore } from "@/store/help-ui";
 import {
   COUNTRIES,
   CURRENCIES,
-  LANGUAGES,
   usePreferencesStore,
   type CountryCode,
   type CurrencyCode,
@@ -75,7 +75,6 @@ import {
   CubeIcon,
   CurrencyDollarIcon,
   DocumentTextIcon,
-  GlobeAltIcon,
   HeartIcon,
   InformationCircleIcon,
   MapPinIcon,
@@ -615,22 +614,12 @@ export function Header() {
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {/* Language */}
-                    <Select
+                    <LanguageMegaMenu
                       value={effectiveLanguage}
                       onValueChange={changeLanguage}
-                    >
-                      <SelectTrigger className="h-11 text-sm rounded-xl">
-                        <GlobeAltIcon className="h-4 w-4 mr-2 text-gray-400" />
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(LANGUAGES).map(([code, info]) => (
-                          <SelectItem key={code} value={code}>
-                            {info.nativeName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      variant="field"
+                      align="start"
+                    />
 
                     {/* Currency */}
                     <Select
@@ -976,19 +965,11 @@ export function Header() {
           {mounted && (
             <>
               {/* Language Selector */}
-              <Select value={effectiveLanguage} onValueChange={changeLanguage}>
-                <SelectTrigger className="w-[100px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
-                  <GlobeAltIcon className="h-3 w-3 mr-1 text-gray-400" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(LANGUAGES).map(([code, info]) => (
-                    <SelectItem key={code} value={code} className="text-xs">
-                      {info.nativeName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <LanguageMegaMenu
+                value={effectiveLanguage}
+                onValueChange={changeLanguage}
+                variant="toolbar"
+              />
 
               {/* Currency Selector */}
               <Select

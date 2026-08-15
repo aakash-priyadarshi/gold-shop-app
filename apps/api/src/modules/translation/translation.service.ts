@@ -110,12 +110,39 @@ function segmentHtml(html: string): HtmlSegment[] {
  *
  * Cost: Effectively $0 after initial translation pass (cached forever).
  */
+
+/** Prefer current Flash; lite is a fallback if the primary model 404s. */
+export const GEMINI_TRANSLATION_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+] as const;
+
+/**
+ * Parse Gemini's JSON-array translation payload. Strips optional markdown
+ * fences so a slightly messy model response still succeeds.
+ */
+export function parseGeminiTranslationArray(
+  raw: string,
+  expectedLength: number,
+): string[] {
+  const trimmed = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "");
+  const parsed = JSON.parse(trimmed);
+  if (!Array.isArray(parsed) || parsed.length !== expectedLength) {
+    throw new Error(
+      `Invalid response shape: expected array of ${expectedLength}, got ${parsed?.length}`,
+    );
+  }
+  return parsed.map((item) => (typeof item === "string" ? item : String(item)));
+}
+
 @Injectable()
 export class TranslationService {
   private readonly logger = new Logger(TranslationService.name);
-  private readonly GEMINI_API_URL =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-  private readonly MODEL_NAME = "gemini-2.0-flash";
+  private readonly GEMINI_MODELS = GEMINI_TRANSLATION_MODELS;
+  private modelName: string = GEMINI_TRANSLATION_MODELS[0];
   private readonly apiKey: string;
   private readonly CACHE_PREFIX = "i18n:";
   /** L1: in-process LRU. Bounded to prevent memory growth at scale. */
@@ -199,12 +226,12 @@ export class TranslationService {
               sourceHash: this.sourceHash(it.sourceText),
               sourceText: it.sourceText,
               translation: it.translation,
-              model: this.MODEL_NAME,
+              model: this.modelName,
             },
             update: {
               sourceText: it.sourceText,
               translation: it.translation,
-              model: this.MODEL_NAME,
+              model: this.modelName,
             },
           }),
         ),
@@ -375,38 +402,50 @@ ${numbered}
 
 Respond with ONLY the JSON array, no markdown fences.`;
 
-    const response = await fetch(`${this.GEMINI_API_URL}?key=${this.apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 4096,
-          responseMimeType: "application/json",
-        },
-      }),
-    });
+    const payload = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 4096,
+        responseMimeType: "application/json",
+      },
+    };
 
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+    let lastError: Error | null = null;
+    for (const model of this.GEMINI_MODELS) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const detail = (await response.text().catch(() => "")).slice(0, 300);
+        lastError = new Error(
+          `Gemini API error: ${response.status} (${model})${detail ? ` ${detail}` : ""}`,
+        );
+        if (response.status === 404) {
+          this.logger.warn(
+            `Gemini model ${model} returned 404 — trying next fallback`,
+          );
+          continue;
+        }
+        throw lastError;
+      }
+
+      const data = await response.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        lastError = new Error(`Empty response from Gemini (${model})`);
+        continue;
+      }
+
+      this.modelName = model;
+      return parseGeminiTranslationArray(text, texts.length);
     }
 
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!text) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    const parsed = JSON.parse(text);
-    if (!Array.isArray(parsed) || parsed.length !== texts.length) {
-      throw new Error(
-        `Invalid response shape: expected array of ${texts.length}, got ${parsed?.length}`,
-      );
-    }
-
-    return parsed;
+    throw lastError ?? new Error("Gemini translation failed for all models");
   }
 
   private cacheKey(locale: string, text: string): string {
@@ -703,9 +742,9 @@ Respond with ONLY the JSON array, no markdown fences.`;
             locale,
             contentHash,
             html: translatedHtml,
-            model: this.MODEL_NAME,
+            model: this.modelName,
           },
-          update: { html: translatedHtml, model: this.MODEL_NAME },
+          update: { html: translatedHtml, model: this.modelName },
         })
         .catch((err) =>
           this.logger.warn(
