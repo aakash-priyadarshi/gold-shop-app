@@ -7,7 +7,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { BRAND } from "@/config/brand";
 import { SITE_URL, MOBILE_SITE_URL } from "@/config/site";
 import { mapCountryToMarket } from "@/lib/geo";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { getLocaleDirection, isUiLocale } from "@gold-shop/shared";
 import dynamic from "next/dynamic";
 import type { Metadata, Viewport } from "next";
@@ -394,7 +393,6 @@ export default function RootLayout({
             {children}
             <SupportBot />
             <Toaster />
-            <SpeedInsights />
             <AppTracking />
             <ServiceWorkerRegistrar />
           </ErrorBoundary>
