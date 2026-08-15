@@ -11,6 +11,7 @@ import {
   JewelleryType,
   Prisma,
 } from "@prisma/client";
+import { calculateGrossWeightGrams } from "@gold-shop/shared";
 import { PrismaService } from "../../prisma/prisma.service";
 import {
   PlanLimitExceededException,
@@ -81,6 +82,7 @@ export class InventorySetsService {
             jewelleryType: true,
             composition: true,
             totalWeightGrams: true,
+            grossWeightGrams: true,
             metalValueNpr: true,
             makingChargeNpr: true,
             gemstoneValueNpr: true,
@@ -145,6 +147,7 @@ export class InventorySetsService {
             taxNpr: number;
             totalPriceNpr: number;
             totalWeightGrams: number;
+            grossWeightGrams: number;
           };
         }[] = [];
 
@@ -167,6 +170,8 @@ export class InventorySetsService {
               taxNpr: item.taxNpr,
               totalPriceNpr: item.totalPriceNpr,
               totalWeightGrams: item.totalWeightGrams,
+              grossWeightGrams:
+                item.grossWeightGrams || item.totalWeightGrams,
             },
           });
         }
@@ -179,6 +184,10 @@ export class InventorySetsService {
 
         const weight = resolvedComponents.reduce(
           (a, c) => a + c.pricing.totalWeightGrams,
+          0,
+        );
+        const grossWeight = resolvedComponents.reduce(
+          (a, c) => a + c.pricing.grossWeightGrams,
           0,
         );
 
@@ -197,6 +206,7 @@ export class InventorySetsService {
               discount: priced.discount,
             },
             totalWeightGrams: weight || 0.01,
+            grossWeightGrams: grossWeight || weight || 0.01,
             metalValueNpr: priced.metalValueNpr,
             makingChargeNpr: priced.makingChargeNpr,
             gemstoneValueNpr: priced.gemstoneValueNpr,
@@ -313,6 +323,10 @@ export class InventorySetsService {
           gemstones,
         },
         totalWeightGrams: input.totalWeightGrams || 0.01,
+        grossWeightGrams: calculateGrossWeightGrams(
+          input.totalWeightGrams || 0.01,
+          gemstones,
+        ),
         metalValueNpr: metal,
         makingChargeNpr: making,
         gemstoneValueNpr: gem,
@@ -398,6 +412,14 @@ export class InventorySetsService {
           (a, c) => a + (c.pricing.totalWeightGrams || 0),
           0,
         );
+        const grossWeight = resolved.reduce(
+          (a, c) =>
+            a +
+            (c.pricing.grossWeightGrams ||
+              c.pricing.totalWeightGrams ||
+              0),
+          0,
+        );
 
         await tx.inventoryItem.update({
           where: { id: setId },
@@ -422,6 +444,7 @@ export class InventorySetsService {
             taxNpr: priced.taxNpr,
             totalPriceNpr: priced.totalPriceNpr,
             totalWeightGrams: weight || 0.01,
+            grossWeightGrams: grossWeight || weight || 0.01,
             composition: {
               kind: "SET",
               componentIds: resolved.map((c) => c.componentItemId),

@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InventoryStatus, JewelleryType, Prisma } from "@prisma/client";
+import { calculateGrossWeightGrams } from "@gold-shop/shared";
 import { PrismaService } from "../../prisma/prisma.service";
 import { MarketRatesService } from "../core/market-rates/market-rates.service";
 import {
@@ -66,6 +67,11 @@ export class InventoryService {
     const gemstoneValue = dto.gemstoneValueNpr || 0;
     const tax = dto.taxNpr || 0;
     const totalPrice = metalValue + makingCharge + gemstoneValue + tax;
+    const metalWeightGrams = dto.totalWeightGrams || 0;
+    const grossWeightGrams = calculateGrossWeightGrams(
+      metalWeightGrams,
+      dto.gemstones ?? dto.composition,
+    );
 
     // Resolve the authoritative cap once, then enforce it INSIDE the same
     // serializable transaction as the create. Two concurrent creates can no
@@ -104,7 +110,8 @@ export class InventoryService {
         jewelleryType: dto.jewelleryType as JewelleryType,
         buildMethod: dto.buildMethod,
         composition: dto.composition as object,
-        totalWeightGrams: dto.totalWeightGrams || 0,
+        totalWeightGrams: metalWeightGrams,
+        grossWeightGrams,
         dimensions: (dto.dimensions as object) || null,
         gemstones: (dto.gemstones as object) || null,
         metalValueNpr: metalValue,
@@ -204,6 +211,17 @@ export class InventoryService {
       updateData.certificateUrl = dto.certificateUrl;
     if (dto.purityCertUrl !== undefined)
       updateData.purityCertUrl = dto.purityCertUrl;
+
+    if (
+      dto.totalWeightGrams !== undefined ||
+      dto.gemstones !== undefined ||
+      dto.composition !== undefined
+    ) {
+      updateData.grossWeightGrams = calculateGrossWeightGrams(
+        dto.totalWeightGrams ?? item.totalWeightGrams,
+        dto.gemstones ?? item.gemstones ?? dto.composition ?? item.composition,
+      );
+    }
 
     // Recalculate total if any price component changed
     if (

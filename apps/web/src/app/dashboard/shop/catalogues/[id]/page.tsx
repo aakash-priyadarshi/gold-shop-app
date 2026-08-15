@@ -1,6 +1,10 @@
 "use client";
 
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import {
+  SellerProductDetailDialog,
+  type SellerProductDetail,
+} from "@/components/shop/SellerProductDetailDialog";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +20,7 @@ import {
   GripVertical,
   Link2,
   Monitor,
+  Maximize2,
   Plus,
   QrCode,
   Save,
@@ -41,6 +46,8 @@ interface CatalogueItem {
     purity?: string;
     images: string[];
     totalPriceNpr?: number;
+    weightGrams?: number;
+    grossWeightGrams?: number;
     status: string;
     visibility: string;
     variants?: { id: string; size: string; stock: number }[];
@@ -77,6 +84,8 @@ export default function CatalogueDetailPage() {
   const [availableItems, setAvailableItems] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [analytics, setAnalytics] = useState<any>(null);
+  const [viewingProduct, setViewingProduct] =
+    useState<SellerProductDetail | null>(null);
 
   // Edit form
   const [editForm, setEditForm] = useState({
@@ -616,6 +625,18 @@ export default function CatalogueDetailPage() {
                             "N/A"}
                         </span>
                       )}
+                      {(item.inventoryItem.grossWeightGrams ||
+                        item.inventoryItem.weightGrams) != null && (
+                        <span>
+                          <T>Gross</T>{" "}
+                          {(
+                            item.inventoryItem.grossWeightGrams ||
+                            item.inventoryItem.weightGrams ||
+                            0
+                          ).toFixed(3)}{" "}
+                          g
+                        </span>
+                      )}
                       {item.inventoryItem.visibility === "CATALOGUE_ONLY" && (
                         <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded text-[10px] font-medium">
                           <T>Catalogue Only</T>
@@ -624,6 +645,20 @@ export default function CatalogueDetailPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
+                    <button
+                      onClick={() =>
+                        setViewingProduct({
+                          ...(item.inventoryItem as unknown as SellerProductDetail),
+                          id: item.inventoryItem.id,
+                          nameEn: item.inventoryItem.title,
+                          totalWeightGrams: item.inventoryItem.weightGrams,
+                        })
+                      }
+                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                      title={t("View full product details")}
+                    >
+                      <Maximize2 className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    </button>
                     <button
                       onClick={() => handleToggleHidden(item)}
                       className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -649,6 +684,13 @@ export default function CatalogueDetailPage() {
           )}
         </div>
       </div>
+      <SellerProductDetailDialog
+        item={viewingProduct}
+        open={Boolean(viewingProduct)}
+        onOpenChange={(open) => {
+          if (!open) setViewingProduct(null);
+        }}
+      />
     </DashboardLayout>
   );
 }

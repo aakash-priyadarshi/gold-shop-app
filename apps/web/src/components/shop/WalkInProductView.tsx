@@ -31,6 +31,7 @@ export type WalkInProduct = {
   gemstones?: unknown;
   totalWeightGrams?: number;
   weightGrams?: number;
+  grossWeightGrams?: number;
   metalValueNpr?: number;
   makingChargeNpr?: number;
   wastagePercent?: number;

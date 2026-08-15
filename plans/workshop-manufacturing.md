@@ -1,6 +1,6 @@
-# Large Workshop Manufacturing — Future Plan
+# Large Workshop Manufacturing
 
-> **Status:** Future (Phases 2–3). **Phase 1 (shop ledger integrity) shipped 2026-08-14** on `/dashboard/shop/supply-chain`. Do not start Workshop UI until a factory customer is ready.
+> **Status:** Phases 2–3 shipped 2026-08-14 (desktop). Phase 1 (shop ledger integrity) shipped 2026-08-14 on `/dashboard/shop/supply-chain`.
 >
 > **Not this plan:** growing the current Supply Chain page into an ERP. That page stays the **shop karigar book** (vault → issue → stages → loss).
 

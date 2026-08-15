@@ -16,6 +16,13 @@ export const metadata: Metadata = {
       es: `${BASE_URL}/about/es`,
       ar: `${BASE_URL}/about/ar`,
       ne: `${BASE_URL}/about/ne`,
+      gu: `${BASE_URL}/about/gu`,
+      mr: `${BASE_URL}/about/mr`,
+      ta: `${BASE_URL}/about/ta`,
+      te: `${BASE_URL}/about/te`,
+      kn: `${BASE_URL}/about/kn`,
+      si: `${BASE_URL}/about/si`,
+      he: `${BASE_URL}/about/he`,
     },
   },
   openGraph: {

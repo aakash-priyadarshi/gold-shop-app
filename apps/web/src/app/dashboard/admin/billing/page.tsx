@@ -242,6 +242,12 @@ const ALL_FEATURE_KEYS: {
     enforced: true,
   },
   {
+    key: "workshopManufacturing",
+    label: "Workshop manufacturing (factory floor)",
+    category: "CRM & Business",
+    enforced: true,
+  },
+  {
     key: "purchasableAiCredits",
     label: "Purchasable AI credits",
     category: "AI & Intelligence",

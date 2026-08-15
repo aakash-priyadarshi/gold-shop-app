@@ -52,6 +52,7 @@ export interface User {
     contactEmail?: string;
     currency?: string;
     address?: string;
+    workshopMode?: boolean;
     verificationRequests?: Array<{
       id: string;
       status: string;

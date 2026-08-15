@@ -133,6 +133,13 @@ export function SellerProductBreakdown({
           showGramsEquivalent: weightUnit !== "GRAM",
         })
       : null;
+  const grossWeightLabel =
+    breakdown.grossWeightGrams > 0
+      ? formatWeightFromGrams(breakdown.grossWeightGrams, weightUnit, {
+          showGramsEquivalent: weightUnit !== "GRAM",
+        })
+      : null;
+  const gemstoneWeightLabel = `${breakdown.gemstoneCarats.toFixed(2)} ct = ${breakdown.gemstoneWeightGrams.toFixed(3)} g`;
 
   return (
     <div
@@ -167,7 +174,7 @@ export function SellerProductBreakdown({
               )}
               {weightLabel && (
                 <span className="px-2 py-0.5 rounded-full bg-white dark:bg-gray-900 text-xs font-medium text-gray-700 dark:text-gray-200">
-                  {weightLabel}
+                  <T>Metal weight</T>: {weightLabel}
                 </span>
               )}
             </div>
@@ -178,6 +185,23 @@ export function SellerProductBreakdown({
           <Row
             label={<T>Metal value</T>}
             value={money(breakdown.metalValue, currency)}
+          />
+        )}
+
+        {breakdown.gemstoneCarats > 0 && (
+          <Row
+            label={<T>Gemstone weight</T>}
+            hint={<T>1 carat = 0.2 g</T>}
+            value={gemstoneWeightLabel}
+          />
+        )}
+
+        {grossWeightLabel && (
+          <Row
+            label={<T>Gross weight</T>}
+            hint={<T>Metal weight plus all gemstone weight</T>}
+            value={grossWeightLabel}
+            emphasize
           />
         )}
 

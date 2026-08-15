@@ -546,6 +546,7 @@ interface CatalogueItemPublic {
     composition?: unknown;
     gemstones?: unknown;
     weightGrams?: number;
+    grossWeightGrams?: number;
     metalValueNpr?: number;
     makingChargeNpr?: number;
     gemstoneValueNpr?: number;
@@ -568,6 +569,7 @@ function catalogueItemToWalkIn(item: CatalogueItemPublic): WalkInProduct {
     composition: inv.composition,
     gemstones: inv.gemstones,
     totalWeightGrams: inv.weightGrams,
+    grossWeightGrams: inv.grossWeightGrams,
     metalValueNpr: inv.metalValueNpr,
     makingChargeNpr: inv.makingChargeNpr,
     gemstoneValueNpr: inv.gemstoneValueNpr,

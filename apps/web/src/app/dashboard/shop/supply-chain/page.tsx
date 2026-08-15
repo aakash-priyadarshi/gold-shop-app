@@ -30,6 +30,7 @@ import { materialsApi, karigarApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   ArrowDownLeft,
@@ -96,8 +97,16 @@ interface VaultReserves {
 // ── Default Material Types (built-in) ──
 const BUILT_IN_METALS = [
   { key: "GOLD_24K", label: "Gold Grains (24K)", vaultKey: "goldGrains24k" },
-  { key: "GOLD_BARS_24K", label: "Gold Cast Bars (24K)", vaultKey: "goldBars24k" },
-  { key: "SILVER_999", label: "Silver Bullion (999)", vaultKey: "silverBullion999" },
+  {
+    key: "GOLD_BARS_24K",
+    label: "Gold Cast Bars (24K)",
+    vaultKey: "goldBars24k",
+  },
+  {
+    key: "SILVER_999",
+    label: "Silver Bullion (999)",
+    vaultKey: "silverBullion999",
+  },
 ];
 
 export default function KarigarSupplyChainPage() {
@@ -113,7 +122,18 @@ export default function KarigarSupplyChainPage() {
 function KarigarSupplyChainContent() {
   const { user } = useAuth();
   const { hasFeature, planName, loading: featuresLoading } = useFeatures();
+  const router = useRouter();
   const t = useT();
+
+  useEffect(() => {
+    if (
+      user?.shop?.workshopMode &&
+      !featuresLoading &&
+      hasFeature("workshopManufacturing")
+    ) {
+      router.replace("/dashboard/shop/workshop");
+    }
+  }, [user?.shop?.workshopMode, featuresLoading, hasFeature, router]);
 
   // Tickers and Live Market Rates State
   const [goldRates, setGoldRates] = useState({
@@ -122,25 +142,40 @@ function KarigarSupplyChainContent() {
     rate18k: 5437,
     silver: 85,
     currency: "INR",
-    updatedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    updatedAt: new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
     changePercent: 0.85,
     live: false,
   });
   const ratesRef = useRef(false);
 
   // Database persistent states (start empty — no hardcoded mocks)
-  const [vaultReserves, setVaultReserves] = useState<VaultReserves>({ goldGrains24k: 0, goldBars24k: 0, silverBullion999: 0 });
+  const [vaultReserves, setVaultReserves] = useState<VaultReserves>({
+    goldGrains24k: 0,
+    goldBars24k: 0,
+    silverBullion999: 0,
+  });
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [goldLoss, setGoldLoss] = useState<any>(null);
-  const [customMaterials, setCustomMaterials] = useState<{ key: string; label: string; vaultKey: string }[]>([]);
+  const [customMaterials, setCustomMaterials] = useState<
+    { key: string; label: string; vaultKey: string }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [filterQuery, setFilterQuery] = useState("");
 
   // ── Toast notification ──
-  const [toastMsg, setToastMsg] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  const showToast = (message: string, type: "success" | "error" = "success") => {
+  const [toastMsg, setToastMsg] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+  const showToast = (
+    message: string,
+    type: "success" | "error" = "success",
+  ) => {
     setToastMsg({ message, type });
     setTimeout(() => setToastMsg(null), 4000);
   };
@@ -162,7 +197,10 @@ function KarigarSupplyChainContent() {
 
   // ── Add Custom Material Type ──
   const [addMaterialModalOpen, setAddMaterialModalOpen] = useState(false);
-  const [newMaterialForm, setNewMaterialForm] = useState({ label: "", key: "" });
+  const [newMaterialForm, setNewMaterialForm] = useState({
+    label: "",
+    key: "",
+  });
 
   // ── Add Karigar Modal ──
   const [addKarigarModalOpen, setAddKarigarModalOpen] = useState(false);
@@ -218,7 +256,8 @@ function KarigarSupplyChainContent() {
       for (const code of codes) {
         const value = metals[code];
         if (typeof value === "number") return value;
-        if (value && typeof value === "object") return Number(value.ratePerGram ?? value.rate ?? 0);
+        if (value && typeof value === "object")
+          return Number(value.ratePerGram ?? value.rate ?? 0);
       }
     }
     return 0;
@@ -236,13 +275,26 @@ function KarigarSupplyChainContent() {
       const rate24k = live ? live24 : 7250;
       setGoldRates({
         rate24k: Math.round(rate24k),
-        rate22k: Math.round(readMetalRate(data, ["GOLD_22K"]) || rate24k * (22 / 24)),
-        rate18k: Math.round(readMetalRate(data, ["GOLD_18K"]) || rate24k * (18 / 24)),
-        silver: Math.round(readMetalRate(data, ["SILVER_999", "SILVER_925", "XAG", "SILVER"]) || 85),
+        rate22k: Math.round(
+          readMetalRate(data, ["GOLD_22K"]) || rate24k * (22 / 24),
+        ),
+        rate18k: Math.round(
+          readMetalRate(data, ["GOLD_18K"]) || rate24k * (18 / 24),
+        ),
+        silver: Math.round(
+          readMetalRate(data, ["SILVER_999", "SILVER_925", "XAG", "SILVER"]) ||
+            85,
+        ),
         currency: data?.currency ?? params.currency ?? "INR",
         updatedAt: data?.updatedAt
-          ? new Date(data.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-          : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          ? new Date(data.updatedAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
         changePercent: live ? (data?.changePercent ?? 0) : 0,
         live,
       });
@@ -263,11 +315,15 @@ function KarigarSupplyChainContent() {
         if (dbConfig.vaultReserves) setVaultReserves(dbConfig.vaultReserves);
         if (dbConfig.workshops) setWorkshops(dbConfig.workshops);
         if (dbConfig.jobs) setJobs(dbConfig.jobs);
-        if (dbConfig.customMaterials) setCustomMaterials(dbConfig.customMaterials);
+        if (dbConfig.customMaterials)
+          setCustomMaterials(dbConfig.customMaterials);
         if (dbConfig.goldLoss) setGoldLoss(dbConfig.goldLoss);
       }
     } catch (err) {
-      console.error("Failed to load supply-chain configuration from database:", err);
+      console.error(
+        "Failed to load supply-chain configuration from database:",
+        err,
+      );
     } finally {
       setLoading(false);
     }
@@ -307,24 +363,32 @@ function KarigarSupplyChainContent() {
 
   const formatCurrency = (amount: number): string => {
     try {
-      return new Intl.NumberFormat(goldRates.currency === "NPR" ? "ne-NP" : "en-IN", {
-        style: "currency",
-        currency: goldRates.currency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amount);
+      return new Intl.NumberFormat(
+        goldRates.currency === "NPR" ? "ne-NP" : "en-IN",
+        {
+          style: "currency",
+          currency: goldRates.currency,
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        },
+      ).format(amount);
     } catch {
       return `${goldRates.currency} ${amount.toLocaleString()}`;
     }
   };
 
   // ── Calculations ──
-  const totalGoldGrams = vaultReserves.goldGrains24k + vaultReserves.goldBars24k;
+  const totalGoldGrams =
+    vaultReserves.goldGrains24k + vaultReserves.goldBars24k;
   const totalVaultGoldValue = totalGoldGrams * goldRates.rate24k;
-  const totalVaultSilverValue = vaultReserves.silverBullion999 * goldRates.silver;
+  const totalVaultSilverValue =
+    vaultReserves.silverBullion999 * goldRates.silver;
   const grandVaultAssetValuation = totalVaultGoldValue + totalVaultSilverValue;
 
-  const totalOutstandingKarigarGrams = workshops.reduce((sum, w) => sum + w.outstandingBalance, 0);
+  const totalOutstandingKarigarGrams = workshops.reduce(
+    (sum, w) => sum + w.outstandingBalance,
+    0,
+  );
   const totalWagesDue = workshops.reduce((sum, w) => sum + w.wageDue, 0);
 
   // ═════════════════════════════════════════════════
@@ -369,7 +433,9 @@ function KarigarSupplyChainContent() {
       wastageLimit: "1.0",
       wageRatePerGram: "200",
     });
-    showToast(t(`Karigar "${newKarigar.artisan}" registered successfully!`));
+    showToast(
+      `${t("Karigar")} "${newKarigar.artisan}" ${t("registered successfully!")}`,
+    );
     await persistState(vaultReserves, updatedWorkshops, jobs);
   };
 
@@ -377,7 +443,7 @@ function KarigarSupplyChainContent() {
   const handleEditKarigar = async () => {
     if (!editKarigarForm) return;
     const updatedWorkshops = workshops.map((w) =>
-      w.id === editKarigarForm.id ? { ...editKarigarForm } : w
+      w.id === editKarigarForm.id ? { ...editKarigarForm } : w,
     );
     setWorkshops(updatedWorkshops);
     setEditKarigarModalOpen(false);
@@ -394,7 +460,10 @@ function KarigarSupplyChainContent() {
       showToast(t("Karigar removed from ledger."));
       await loadDatabaseConfig();
     } catch (err: any) {
-      showToast(err?.response?.data?.message || t("Could not remove karigar"), "error");
+      showToast(
+        t(err?.response?.data?.message || "Could not remove karigar"),
+        "error",
+      );
     }
   };
 
@@ -420,10 +489,16 @@ function KarigarSupplyChainContent() {
       });
       setAllotForm((prev) => ({ ...prev, weight: "" }));
       setAllotModalOpen(false);
-      showToast(t(`Issued ${wt}g to workshop successfully!`));
+      showToast(`${t("Issued")} ${wt}g ${t("to workshop successfully!")}`);
       await loadDatabaseConfig();
     } catch (err: any) {
-      showToast(err?.response?.data?.message || t("Insufficient reserves in vault for this material!"), "error");
+      showToast(
+        t(
+          err?.response?.data?.message ||
+            "Insufficient reserves in vault for this material!",
+        ),
+        "error",
+      );
     }
   };
 
@@ -445,10 +520,13 @@ function KarigarSupplyChainContent() {
       });
       setProcureForm((prev) => ({ ...prev, weight: "" }));
       setProcureModalOpen(false);
-      showToast(t(`Procured ${wt}g into vault reserves!`));
+      showToast(`${t("Procured")} ${wt}g ${t("into vault reserves!")}`);
       await loadDatabaseConfig();
     } catch (err: any) {
-      showToast(err?.response?.data?.message || t("Could not procure bullion"), "error");
+      showToast(
+        t(err?.response?.data?.message || "Could not procure bullion"),
+        "error",
+      );
     }
   };
 
@@ -475,14 +553,22 @@ function KarigarSupplyChainContent() {
     setVaultReserves(updatedReserves);
     setAddMaterialModalOpen(false);
     setNewMaterialForm({ label: "", key: "" });
-    showToast(t(`Material "${label}" added to vault!`));
-    await persistState(updatedReserves, workshops, jobs, updatedCustomMaterials);
+    showToast(`${t("Material")} "${label}" ${t("added to vault!")}`);
+    await persistState(
+      updatedReserves,
+      workshops,
+      jobs,
+      updatedCustomMaterials,
+    );
   };
 
   // ── Add Job ──
   const handleAddJob = async () => {
     if (!jobForm.product.trim() || !jobForm.workshopId) {
-      showToast(t("Please fill in the product name and select a karigar."), "error");
+      showToast(
+        t("Please fill in the product name and select a karigar."),
+        "error",
+      );
       return;
     }
     const workshop = workshops.find((w) => w.id === jobForm.workshopId);
@@ -499,10 +585,13 @@ function KarigarSupplyChainContent() {
       });
       setAddJobModalOpen(false);
       setJobForm({ product: "", workshopId: "", grossWeight: "" });
-      showToast(t(`Job "${jobForm.product}" created!`));
+      showToast(`${t("Job")} "${jobForm.product}" ${t("created!")}`);
       await loadDatabaseConfig();
     } catch (err: any) {
-      showToast(err?.response?.data?.message || t("Could not create job"), "error");
+      showToast(
+        t(err?.response?.data?.message || "Could not create job"),
+        "error",
+      );
     }
   };
 
@@ -521,7 +610,10 @@ function KarigarSupplyChainContent() {
       showToast(t("Job details updated!"));
       await loadDatabaseConfig();
     } catch (err: any) {
-      showToast(err?.response?.data?.message || t("Could not update job"), "error");
+      showToast(
+        t(err?.response?.data?.message || "Could not update job"),
+        "error",
+      );
     }
   };
 
@@ -532,14 +624,17 @@ function KarigarSupplyChainContent() {
       showToast(t("Job removed from pipeline."));
       await loadDatabaseConfig();
     } catch (err: any) {
-      showToast(err?.response?.data?.message || t("Could not delete job"), "error");
+      showToast(
+        t(err?.response?.data?.message || "Could not delete job"),
+        "error",
+      );
     }
   };
 
   const filteredWorkshops = workshops.filter(
     (w) =>
       w.name.toLowerCase().includes(filterQuery.toLowerCase()) ||
-      w.artisan.toLowerCase().includes(filterQuery.toLowerCase())
+      w.artisan.toLowerCase().includes(filterQuery.toLowerCase()),
   );
 
   return (
@@ -547,14 +642,18 @@ function KarigarSupplyChainContent() {
       {/* Toast notification */}
       {toastMsg && (
         <div
-          className={`fixed top-4 right-4 z-[60] p-4 rounded-xl shadow-lg border flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${
+          className={`fixed top-4 end-4 z-[60] p-4 rounded-xl shadow-lg border flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${
             toastMsg.type === "success"
               ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/90 dark:border-emerald-800 dark:text-emerald-200"
               : "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/90 dark:border-rose-800 dark:text-rose-200"
           }`}
         >
           <p className="text-sm font-semibold">{toastMsg.message}</p>
-          <button onClick={() => setToastMsg(null)} className="ml-2 text-current opacity-60 hover:opacity-100">
+          <button
+            onClick={() => setToastMsg(null)}
+            className="ms-2 text-current opacity-60 hover:opacity-100"
+            aria-label={t("Dismiss notification")}
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -576,7 +675,11 @@ function KarigarSupplyChainContent() {
           )}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              {goldRates.live ? <T>Live Metal Rate Feed</T> : <T>Fallback metal rates</T>}
+              {goldRates.live ? (
+                <T>Live Metal Rate Feed</T>
+              ) : (
+                <T>Fallback metal rates</T>
+              )}
             </p>
             <p className="text-[10px] text-muted-foreground">
               {goldRates.live ? (
@@ -584,35 +687,46 @@ function KarigarSupplyChainContent() {
                   <T>Updated at</T> {goldRates.updatedAt} ({goldRates.currency})
                 </>
               ) : (
-                <T>Live feed unavailable — these are last-known fallback prices, not a live ticker.</T>
+                <T>
+                  Live feed unavailable — these are last-known fallback prices,
+                  not a live ticker.
+                </T>
               )}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-6 flex-wrap">
-          <div className="text-right">
-            <span className="text-xs text-muted-foreground">Gold 24K: </span>
+          <div className="text-end">
+            <span className="text-xs text-muted-foreground">
+              <T>Gold 24K</T>:{" "}
+            </span>
             <span className="font-bold text-sm text-yellow-600 dark:text-yellow-400">
-              {formatCurrency(goldRates.rate24k)}/g
+              <bdi>{formatCurrency(goldRates.rate24k)}/g</bdi>
             </span>
           </div>
-          <div className="text-right">
-            <span className="text-xs text-muted-foreground">Gold 22K: </span>
+          <div className="text-end">
+            <span className="text-xs text-muted-foreground">
+              <T>Gold 22K</T>:{" "}
+            </span>
             <span className="font-bold text-sm text-yellow-600/80 dark:text-yellow-400/80">
-              {formatCurrency(goldRates.rate22k)}/g
+              <bdi>{formatCurrency(goldRates.rate22k)}/g</bdi>
             </span>
           </div>
-          <div className="text-right">
-            <span className="text-xs text-muted-foreground">Gold 18K: </span>
+          <div className="text-end">
+            <span className="text-xs text-muted-foreground">
+              <T>Gold 18K</T>:{" "}
+            </span>
             <span className="font-bold text-sm text-yellow-700/70 dark:text-yellow-400/70">
-              {formatCurrency(goldRates.rate18k)}/g
+              <bdi>{formatCurrency(goldRates.rate18k)}/g</bdi>
             </span>
           </div>
-          <div className="text-right">
-            <span className="text-xs text-muted-foreground">Silver 999: </span>
+          <div className="text-end">
+            <span className="text-xs text-muted-foreground">
+              <T>Silver 999</T>:{" "}
+            </span>
             <span className="font-bold text-sm text-slate-400">
-              {formatCurrency(goldRates.silver)}/g
+              <bdi>{formatCurrency(goldRates.silver)}/g</bdi>
             </span>
           </div>
         </div>
@@ -626,12 +740,15 @@ function KarigarSupplyChainContent() {
             <T>Karigar & Bullion Supply Chain</T>
           </h1>
           <p className="text-muted-foreground mt-0.5">
-            <T>Procure raw metals, issue materials to artisans, and monitor loss margins.</T>
+            <T>
+              Procure raw metals, issue materials to artisans, and monitor loss
+              margins.
+            </T>
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
           {saving && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground pr-2">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground pe-2">
               <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
               <span>
                 <T>Saving changes...</T>
@@ -643,7 +760,7 @@ function KarigarSupplyChainContent() {
             className="border-amber-500/30 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 bg-white dark:bg-gray-900"
             onClick={() => setProcureModalOpen(true)}
           >
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus className="h-4 w-4 me-1" />
             <T>Procure Bullion</T>
           </Button>
           <Button
@@ -652,7 +769,7 @@ function KarigarSupplyChainContent() {
             className="border-amber-500/30 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 bg-white dark:bg-gray-900"
             onClick={() => setAddKarigarModalOpen(true)}
           >
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus className="h-4 w-4 me-1" />
             <T>Add Karigar</T>
           </Button>
           <Button
@@ -664,11 +781,14 @@ function KarigarSupplyChainContent() {
                 showToast(t("Add a karigar before creating a job."), "error");
                 return;
               }
-              setJobForm((p) => ({ ...p, workshopId: p.workshopId || workshops[0].id }));
+              setJobForm((p) => ({
+                ...p,
+                workshopId: p.workshopId || workshops[0].id,
+              }));
               setAddJobModalOpen(true);
             }}
           >
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus className="h-4 w-4 me-1" />
             <T>Add Job</T>
           </Button>
           <Button
@@ -681,7 +801,12 @@ function KarigarSupplyChainContent() {
                 showToast(t("Sample 1 kg casting job loaded."));
                 await loadDatabaseConfig();
               } catch (err: any) {
-                showToast(err?.response?.data?.message || t("Could not load sample job"), "error");
+                showToast(
+                  t(
+                    err?.response?.data?.message || "Could not load sample job",
+                  ),
+                  "error",
+                );
               }
             }}
           >
@@ -694,11 +819,14 @@ function KarigarSupplyChainContent() {
                 showToast(t("Add a karigar before issuing metal."), "error");
                 return;
               }
-              setAllotForm((p) => ({ ...p, workshopId: p.workshopId || workshops[0].id }));
+              setAllotForm((p) => ({
+                ...p,
+                workshopId: p.workshopId || workshops[0].id,
+              }));
               setAllotModalOpen(true);
             }}
           >
-            <ArrowUpRight className="h-4 w-4 mr-1" />
+            <ArrowUpRight className="h-4 w-4 me-1 rtl:-scale-x-100" />
             <T>Issue Metal</T>
           </Button>
         </div>
@@ -739,7 +867,10 @@ function KarigarSupplyChainContent() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-xs text-muted-foreground">
-                    <T>Asset value of raw 24K gold and silver bullion currently in vault.</T>
+                    <T>
+                      Asset value of raw 24K gold and silver bullion currently
+                      in vault.
+                    </T>
                   </p>
                 </CardContent>
               </Card>
@@ -754,12 +885,17 @@ function KarigarSupplyChainContent() {
                   </div>
                   <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {totalOutstandingKarigarGrams.toFixed(1)}{" "}
-                    <span className="text-xs text-muted-foreground">grams</span>
+                    <span className="text-xs text-muted-foreground">
+                      <T>grams</T>
+                    </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-xs text-muted-foreground">
-                    <T>Raw precious metals issued to Karigars currently in active fabrication.</T>
+                    <T>
+                      Raw precious metals issued to Karigars currently in active
+                      fabrication.
+                    </T>
                   </p>
                 </CardContent>
               </Card>
@@ -778,7 +914,10 @@ function KarigarSupplyChainContent() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-xs text-muted-foreground">
-                    <T>Labor charges pending clearance upon receipt of hallmarked finished stock.</T>
+                    <T>
+                      Labor charges pending clearance upon receipt of hallmarked
+                      finished stock.
+                    </T>
                   </p>
                 </CardContent>
               </Card>
@@ -792,7 +931,10 @@ function KarigarSupplyChainContent() {
                     <T>Vault Physical Reserve Inventory</T>
                   </CardTitle>
                   <CardDescription>
-                    <T>Unfinished raw metal grains and bars currently available for workshop allotment.</T>
+                    <T>
+                      Unfinished raw metal grains and bars currently available
+                      for workshop allotment.
+                    </T>
                   </CardDescription>
                 </div>
                 <Button
@@ -802,7 +944,7 @@ function KarigarSupplyChainContent() {
                   className="border-amber-500/30 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20"
                   onClick={() => setAddMaterialModalOpen(true)}
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  <Plus className="h-3.5 w-3.5 me-1" />
                   <T>Add Material Type</T>
                 </Button>
               </CardHeader>
@@ -819,7 +961,7 @@ function KarigarSupplyChainContent() {
                       </p>
                     </div>
                     <Badge className="bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 text-xs">
-                      Purity: 99.9%
+                      <T>Purity</T>: <bdi>99.9%</bdi>
                     </Badge>
                   </div>
 
@@ -833,7 +975,7 @@ function KarigarSupplyChainContent() {
                       </p>
                     </div>
                     <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-xs">
-                      Hallmarked
+                      <T>Hallmarked</T>
                     </Badge>
                   </div>
 
@@ -847,7 +989,7 @@ function KarigarSupplyChainContent() {
                       </p>
                     </div>
                     <Badge className="bg-slate-500/10 text-slate-600 border border-slate-500/20 text-xs">
-                      Ag 99.9%
+                      <bdi>Ag 99.9%</bdi>
                     </Badge>
                   </div>
                 </div>
@@ -861,13 +1003,15 @@ function KarigarSupplyChainContent() {
                         className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300"
                       >
                         <div>
-                          <p className="text-xs text-muted-foreground font-medium">{mat.label}</p>
+                          <p className="text-xs text-muted-foreground font-medium">
+                            <T>{mat.label}</T>
+                          </p>
                           <p className="text-lg font-bold mt-1 text-amber-500">
                             {(vaultReserves[mat.vaultKey] || 0).toFixed(2)} g
                           </p>
                         </div>
                         <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-xs">
-                          Custom
+                          <T>Custom</T>
                         </Badge>
                       </div>
                     ))}
@@ -882,7 +1026,10 @@ function KarigarSupplyChainContent() {
                     <div className="flex flex-col items-center justify-center py-6 text-center space-y-2 mt-4">
                       <Coins className="h-8 w-8 text-amber-300" />
                       <p className="text-sm text-muted-foreground">
-                        <T>Vault is empty. Procure raw bullion to start issuing metals to your Karigars.</T>
+                        <T>
+                          Vault is empty. Procure raw bullion to start issuing
+                          metals to your Karigars.
+                        </T>
                       </p>
                     </div>
                   )}
@@ -892,23 +1039,29 @@ function KarigarSupplyChainContent() {
             {/* Karigar Ledgers + Jobs */}
             <div className="grid gap-6 lg:grid-cols-3">
               {/* Karigar Ledger Table */}
-              <Card data-tour="supply-ledger" className="lg:col-span-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+              <Card
+                data-tour="supply-ledger"
+                className="lg:col-span-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
+              >
                 <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
                   <div>
                     <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">
                       <T>Artisan (Karigar) Balances & Wastage</T>
                     </CardTitle>
                     <CardDescription>
-                      <T>Tracks metal weight issued to workshops vs finished metal weights returned.</T>
+                      <T>
+                        Tracks metal weight issued to workshops vs finished
+                        metal weights returned.
+                      </T>
                     </CardDescription>
                   </div>
                   <div className="relative w-48">
-                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <Search className="absolute start-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
                       placeholder={t("Search artisans...")}
                       value={filterQuery}
                       onChange={(e) => setFilterQuery(e.target.value)}
-                      className="pl-8 text-xs h-8 rounded-lg border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                      className="ps-8 text-xs h-8 rounded-lg border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
                     />
                   </div>
                 </CardHeader>
@@ -923,7 +1076,11 @@ function KarigarSupplyChainContent() {
                           <T>No artisans registered yet</T>
                         </p>
                         <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                          <T>Register your first Karigar to start tracking workshop metal flows, wastage margins, and outstanding fabrication balances.</T>
+                          <T>
+                            Register your first Karigar to start tracking
+                            workshop metal flows, wastage margins, and
+                            outstanding fabrication balances.
+                          </T>
                         </p>
                       </div>
                       <Button
@@ -932,12 +1089,12 @@ function KarigarSupplyChainContent() {
                         className="border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800/40 dark:text-amber-400"
                         onClick={() => setAddKarigarModalOpen(true)}
                       >
-                        <Plus className="h-3.5 w-3.5 mr-1.5" />
+                        <Plus className="h-3.5 w-3.5 me-1.5" />
                         <T>Register First Karigar</T>
                       </Button>
                     </div>
                   ) : (
-                    <table className="w-full text-sm border-collapse text-left">
+                    <table className="w-full text-sm border-collapse text-start">
                       <thead>
                         <tr className="border-b dark:border-gray-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50">
                           <th className="py-2.5 px-3 font-semibold">
@@ -955,7 +1112,7 @@ function KarigarSupplyChainContent() {
                           <th className="py-2.5 px-3 font-semibold">
                             <T>Float Bal (g)</T>
                           </th>
-                          <th className="py-2.5 px-3 font-semibold text-right">
+                          <th className="py-2.5 px-3 font-semibold text-end">
                             <T>Wage Due</T>
                           </th>
                           <th className="py-2.5 px-3 font-semibold text-center">
@@ -972,20 +1129,36 @@ function KarigarSupplyChainContent() {
                               className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20 text-gray-700 dark:text-gray-300"
                             >
                               <td className="py-3 px-3">
-                                <p className="font-semibold text-gray-900 dark:text-gray-100">{w.artisan}</p>
-                                <p className="text-xs text-muted-foreground">
+                                <p
+                                  className="font-semibold text-gray-900 dark:text-gray-100"
+                                  dir="auto"
+                                >
+                                  {w.artisan}
+                                </p>
+                                <p
+                                  className="text-xs text-muted-foreground"
+                                  dir="auto"
+                                >
                                   {w.name} &middot; {w.location}
                                 </p>
                                 {(w.phone || w.email) && (
                                   <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
                                     {w.phone && (
-                                      <span className="flex items-center gap-0.5">
-                                        <Phone className="h-2.5 w-2.5" /> {w.phone}
+                                      <span
+                                        className="flex items-center gap-0.5"
+                                        dir="ltr"
+                                      >
+                                        <Phone className="h-2.5 w-2.5" />{" "}
+                                        {w.phone}
                                       </span>
                                     )}
                                     {w.email && (
-                                      <span className="flex items-center gap-0.5">
-                                        <Mail className="h-2.5 w-2.5" /> {w.email}
+                                      <span
+                                        className="flex items-center gap-0.5"
+                                        dir="ltr"
+                                      >
+                                        <Mail className="h-2.5 w-2.5" />{" "}
+                                        {w.email}
                                       </span>
                                     )}
                                   </div>
@@ -994,7 +1167,9 @@ function KarigarSupplyChainContent() {
                               <td className="py-3 px-3 font-medium text-gray-900 dark:text-gray-100">
                                 {w.metalIssued.toFixed(1)}
                               </td>
-                              <td className="py-3 px-3">{w.metalReturned.toFixed(1)}</td>
+                              <td className="py-3 px-3">
+                                {w.metalReturned.toFixed(1)}
+                              </td>
                               <td className="py-3 px-3">
                                 <span
                                   className={`inline-flex items-center gap-1 font-semibold text-xs ${
@@ -1011,7 +1186,11 @@ function KarigarSupplyChainContent() {
                               </td>
                               <td className="py-3 px-3">
                                 <Badge
-                                  variant={w.outstandingBalance > 0 ? "outline" : "secondary"}
+                                  variant={
+                                    w.outstandingBalance > 0
+                                      ? "outline"
+                                      : "secondary"
+                                  }
                                   className={
                                     w.outstandingBalance > 0
                                       ? "border-amber-500/25 bg-amber-500/5 text-amber-600 dark:text-amber-400"
@@ -1021,7 +1200,7 @@ function KarigarSupplyChainContent() {
                                   {w.outstandingBalance.toFixed(1)} g
                                 </Badge>
                               </td>
-                              <td className="py-3 px-3 font-bold text-right text-gray-900 dark:text-gray-100">
+                              <td className="py-3 px-3 font-bold text-end text-gray-900 dark:text-gray-100">
                                 {formatCurrency(w.wageDue)}
                               </td>
                               <td className="py-3 px-3">
@@ -1055,13 +1234,20 @@ function KarigarSupplyChainContent() {
               </Card>
 
               {/* Jobs with gold-loss stages + casting trees */}
-              <Card data-tour="supply-pipeline" className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+              <Card
+                data-tour="supply-pipeline"
+                className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
+              >
                 <CardHeader>
                   <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">
                     <T>Artisan Fabrication Pipeline</T>
                   </CardTitle>
                   <CardDescription>
-                    <T>Track gold in and out at each stage. Casting trees reconcile issued metal against finished pieces, sprue, and recoverable scrap.</T>
+                    <T>
+                      Track gold in and out at each stage. Casting trees
+                      reconcile issued metal against finished pieces, sprue, and
+                      recoverable scrap.
+                    </T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1075,7 +1261,10 @@ function KarigarSupplyChainContent() {
                           <T>No active fabrication jobs</T>
                         </p>
                         <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                          <T>Create a job or load the sample 1 kg casting tree to record issued gold, scrap, and unexplained loss.</T>
+                          <T>
+                            Create a job or load the sample 1 kg casting tree to
+                            record issued gold, scrap, and unexplained loss.
+                          </T>
                         </p>
                       </div>
                       <Button
@@ -1084,7 +1273,7 @@ function KarigarSupplyChainContent() {
                         className="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800/40 dark:text-blue-400"
                         onClick={() => setAddJobModalOpen(true)}
                       >
-                        <Plus className="h-3.5 w-3.5 mr-1.5" />
+                        <Plus className="h-3.5 w-3.5 me-1.5" />
                         <T>Create First Job</T>
                       </Button>
                     </div>
@@ -1140,12 +1329,18 @@ function KarigarSupplyChainContent() {
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 <T>Issue Bullion to Workshop</T>
               </h3>
-              <button onClick={() => setAllotModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => setAllotModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              <T>Allot raw metal from vault directly into the artisan float ledger balance.</T>
+              <T>
+                Allot raw metal from vault directly into the artisan float
+                ledger balance.
+              </T>
             </p>
 
             <div className="space-y-3 pt-2">
@@ -1155,7 +1350,9 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Select
                   value={allotForm.workshopId}
-                  onValueChange={(val) => setAllotForm((p) => ({ ...p, workshopId: val }))}
+                  onValueChange={(val) =>
+                    setAllotForm((p) => ({ ...p, workshopId: val }))
+                  }
                 >
                   <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue placeholder={t("Select artisan...")} />
@@ -1176,7 +1373,9 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Select
                   value={allotForm.metalType}
-                  onValueChange={(val) => setAllotForm((p) => ({ ...p, metalType: val }))}
+                  onValueChange={(val) =>
+                    setAllotForm((p) => ({ ...p, metalType: val }))
+                  }
                 >
                   <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue />
@@ -1184,7 +1383,7 @@ function KarigarSupplyChainContent() {
                   <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                     {allMetals.map((m) => (
                       <SelectItem key={m.key} value={m.key}>
-                        {m.label}
+                        <T>{m.label}</T>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1199,7 +1398,9 @@ function KarigarSupplyChainContent() {
                   type="number"
                   placeholder="e.g. 50"
                   value={allotForm.weight}
-                  onChange={(e) => setAllotForm((p) => ({ ...p, weight: e.target.value }))}
+                  onChange={(e) =>
+                    setAllotForm((p) => ({ ...p, weight: e.target.value }))
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1235,12 +1436,18 @@ function KarigarSupplyChainContent() {
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 <T>Procure Raw Bullion</T>
               </h3>
-              <button onClick={() => setProcureModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => setProcureModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              <T>Log wholesale bullion grains purchase, adding raw materials balance to the safe vault reserves.</T>
+              <T>
+                Log wholesale bullion grains purchase, adding raw materials
+                balance to the safe vault reserves.
+              </T>
             </p>
 
             <div className="space-y-3 pt-2">
@@ -1250,7 +1457,9 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Select
                   value={procureForm.metalType}
-                  onValueChange={(val) => setProcureForm((p) => ({ ...p, metalType: val }))}
+                  onValueChange={(val) =>
+                    setProcureForm((p) => ({ ...p, metalType: val }))
+                  }
                 >
                   <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue />
@@ -1258,7 +1467,7 @@ function KarigarSupplyChainContent() {
                   <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                     {allMetals.map((m) => (
                       <SelectItem key={m.key} value={m.key}>
-                        {m.label}
+                        <T>{m.label}</T>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1273,7 +1482,9 @@ function KarigarSupplyChainContent() {
                   type="number"
                   placeholder="e.g. 100"
                   value={procureForm.weight}
-                  onChange={(e) => setProcureForm((p) => ({ ...p, weight: e.target.value }))}
+                  onChange={(e) =>
+                    setProcureForm((p) => ({ ...p, weight: e.target.value }))
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1308,12 +1519,18 @@ function KarigarSupplyChainContent() {
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 <T>Add Custom Material Type</T>
               </h3>
-              <button onClick={() => setAddMaterialModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => setAddMaterialModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              <T>Register a custom material type (e.g. Platinum, Rose Gold 14K, Palladium) to track in your vault and issue to artisans.</T>
+              <T>
+                Register a custom material type (e.g. Platinum, Rose Gold 14K,
+                Palladium) to track in your vault and issue to artisans.
+              </T>
             </p>
 
             <div className="space-y-3 pt-2">
@@ -1323,9 +1540,12 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Input
                   type="text"
-                  placeholder="e.g. Platinum 950"
+                  placeholder={t("e.g. Platinum 950")}
+                  dir="auto"
                   value={newMaterialForm.label}
-                  onChange={(e) => setNewMaterialForm((p) => ({ ...p, label: e.target.value }))}
+                  onChange={(e) =>
+                    setNewMaterialForm((p) => ({ ...p, label: e.target.value }))
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1360,12 +1580,18 @@ function KarigarSupplyChainContent() {
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 <T>Add New Artisan (Karigar)</T>
               </h3>
-              <button onClick={() => setAddKarigarModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => setAddKarigarModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              <T>Register a new artisan ledger to start tracking issued raw metals and labor charges.</T>
+              <T>
+                Register a new artisan ledger to start tracking issued raw
+                metals and labor charges.
+              </T>
             </p>
 
             <div className="space-y-3 pt-2">
@@ -1375,9 +1601,12 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Input
                   type="text"
-                  placeholder="e.g. Shyam Verma"
+                  placeholder={t("e.g. Shyam Verma")}
+                  dir="auto"
                   value={karigarForm.artisan}
-                  onChange={(e) => setKarigarForm((p) => ({ ...p, artisan: e.target.value }))}
+                  onChange={(e) =>
+                    setKarigarForm((p) => ({ ...p, artisan: e.target.value }))
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1388,9 +1617,12 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Input
                   type="text"
-                  placeholder="e.g. Verma Filigree Lab"
+                  placeholder={t("e.g. Verma Filigree Lab")}
+                  dir="auto"
                   value={karigarForm.name}
-                  onChange={(e) => setKarigarForm((p) => ({ ...p, name: e.target.value }))}
+                  onChange={(e) =>
+                    setKarigarForm((p) => ({ ...p, name: e.target.value }))
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1401,9 +1633,12 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Input
                   type="text"
-                  placeholder="e.g. Varanasi, UP"
+                  placeholder={t("e.g. Varanasi, UP")}
+                  dir="auto"
                   value={karigarForm.location}
-                  onChange={(e) => setKarigarForm((p) => ({ ...p, location: e.target.value }))}
+                  onChange={(e) =>
+                    setKarigarForm((p) => ({ ...p, location: e.target.value }))
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1416,8 +1651,11 @@ function KarigarSupplyChainContent() {
                   <Input
                     type="tel"
                     placeholder="+91 62039 65557"
+                    dir="ltr"
                     value={karigarForm.phone}
-                    onChange={(e) => setKarigarForm((p) => ({ ...p, phone: e.target.value }))}
+                    onChange={(e) =>
+                      setKarigarForm((p) => ({ ...p, phone: e.target.value }))
+                    }
                     className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                   />
                 </div>
@@ -1428,8 +1666,11 @@ function KarigarSupplyChainContent() {
                   <Input
                     type="email"
                     placeholder="artisan@example.com"
+                    dir="ltr"
                     value={karigarForm.email}
-                    onChange={(e) => setKarigarForm((p) => ({ ...p, email: e.target.value }))}
+                    onChange={(e) =>
+                      setKarigarForm((p) => ({ ...p, email: e.target.value }))
+                    }
                     className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                   />
                 </div>
@@ -1445,7 +1686,12 @@ function KarigarSupplyChainContent() {
                     step="0.01"
                     placeholder="1.0"
                     value={karigarForm.wastageLimit}
-                    onChange={(e) => setKarigarForm((p) => ({ ...p, wastageLimit: e.target.value }))}
+                    onChange={(e) =>
+                      setKarigarForm((p) => ({
+                        ...p,
+                        wastageLimit: e.target.value,
+                      }))
+                    }
                     className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                   />
                 </div>
@@ -1457,7 +1703,12 @@ function KarigarSupplyChainContent() {
                     type="number"
                     placeholder="200"
                     value={karigarForm.wageRatePerGram}
-                    onChange={(e) => setKarigarForm((p) => ({ ...p, wageRatePerGram: e.target.value }))}
+                    onChange={(e) =>
+                      setKarigarForm((p) => ({
+                        ...p,
+                        wageRatePerGram: e.target.value,
+                      }))
+                    }
                     className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                   />
                 </div>
@@ -1511,7 +1762,12 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Input
                   value={editKarigarForm.artisan}
-                  onChange={(e) => setEditKarigarForm((p) => (p ? { ...p, artisan: e.target.value } : p))}
+                  dir="auto"
+                  onChange={(e) =>
+                    setEditKarigarForm((p) =>
+                      p ? { ...p, artisan: e.target.value } : p,
+                    )
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1521,7 +1777,12 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Input
                   value={editKarigarForm.name}
-                  onChange={(e) => setEditKarigarForm((p) => (p ? { ...p, name: e.target.value } : p))}
+                  dir="auto"
+                  onChange={(e) =>
+                    setEditKarigarForm((p) =>
+                      p ? { ...p, name: e.target.value } : p,
+                    )
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1531,7 +1792,12 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Input
                   value={editKarigarForm.location}
-                  onChange={(e) => setEditKarigarForm((p) => (p ? { ...p, location: e.target.value } : p))}
+                  dir="auto"
+                  onChange={(e) =>
+                    setEditKarigarForm((p) =>
+                      p ? { ...p, location: e.target.value } : p,
+                    )
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1543,8 +1809,13 @@ function KarigarSupplyChainContent() {
                   <Input
                     type="tel"
                     placeholder="+91 62039 65557"
+                    dir="ltr"
                     value={editKarigarForm.phone || ""}
-                    onChange={(e) => setEditKarigarForm((p) => (p ? { ...p, phone: e.target.value } : p))}
+                    onChange={(e) =>
+                      setEditKarigarForm((p) =>
+                        p ? { ...p, phone: e.target.value } : p,
+                      )
+                    }
                     className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                   />
                 </div>
@@ -1555,8 +1826,13 @@ function KarigarSupplyChainContent() {
                   <Input
                     type="email"
                     placeholder="artisan@example.com"
+                    dir="ltr"
                     value={editKarigarForm.email || ""}
-                    onChange={(e) => setEditKarigarForm((p) => (p ? { ...p, email: e.target.value } : p))}
+                    onChange={(e) =>
+                      setEditKarigarForm((p) =>
+                        p ? { ...p, email: e.target.value } : p,
+                      )
+                    }
                     className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                   />
                 </div>
@@ -1571,7 +1847,14 @@ function KarigarSupplyChainContent() {
                     step="0.01"
                     value={editKarigarForm.wastageLimit}
                     onChange={(e) =>
-                      setEditKarigarForm((p) => (p ? { ...p, wastageLimit: parseFloat(e.target.value) || 0 } : p))
+                      setEditKarigarForm((p) =>
+                        p
+                          ? {
+                              ...p,
+                              wastageLimit: parseFloat(e.target.value) || 0,
+                            }
+                          : p,
+                      )
                     }
                     className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                   />
@@ -1584,7 +1867,14 @@ function KarigarSupplyChainContent() {
                     type="number"
                     value={editKarigarForm.wageRatePerGram}
                     onChange={(e) =>
-                      setEditKarigarForm((p) => (p ? { ...p, wageRatePerGram: parseFloat(e.target.value) || 0 } : p))
+                      setEditKarigarForm((p) =>
+                        p
+                          ? {
+                              ...p,
+                              wageRatePerGram: parseFloat(e.target.value) || 0,
+                            }
+                          : p,
+                      )
                     }
                     className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                   />
@@ -1627,7 +1917,10 @@ function KarigarSupplyChainContent() {
               <T>Delete Karigar?</T>
             </h3>
             <p className="text-sm text-muted-foreground">
-              <T>This will permanently remove this artisan from the ledger. This action cannot be undone.</T>
+              <T>
+                This will permanently remove this artisan from the ledger. This
+                action cannot be undone.
+              </T>
             </p>
             <div className="flex justify-center gap-3 pt-2">
               <Button
@@ -1658,12 +1951,18 @@ function KarigarSupplyChainContent() {
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 <T>Create Fabrication Job</T>
               </h3>
-              <button onClick={() => setAddJobModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => setAddJobModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              <T>Register a new custom fabrication job and assign it to an artisan workshop.</T>
+              <T>
+                Register a new custom fabrication job and assign it to an
+                artisan workshop.
+              </T>
             </p>
 
             <div className="space-y-3 pt-2">
@@ -1673,9 +1972,12 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Input
                   type="text"
-                  placeholder="e.g. 22K Traditional Bridal Choker"
+                  placeholder={t("e.g. 22K Traditional Bridal Choker")}
+                  dir="auto"
                   value={jobForm.product}
-                  onChange={(e) => setJobForm((p) => ({ ...p, product: e.target.value }))}
+                  onChange={(e) =>
+                    setJobForm((p) => ({ ...p, product: e.target.value }))
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1686,7 +1988,9 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Select
                   value={jobForm.workshopId}
-                  onValueChange={(val) => setJobForm((p) => ({ ...p, workshopId: val }))}
+                  onValueChange={(val) =>
+                    setJobForm((p) => ({ ...p, workshopId: val }))
+                  }
                 >
                   <SelectTrigger className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectValue placeholder={t("Select artisan...")} />
@@ -1709,7 +2013,9 @@ function KarigarSupplyChainContent() {
                   type="number"
                   placeholder="e.g. 45.5"
                   value={jobForm.grossWeight}
-                  onChange={(e) => setJobForm((p) => ({ ...p, grossWeight: e.target.value }))}
+                  onChange={(e) =>
+                    setJobForm((p) => ({ ...p, grossWeight: e.target.value }))
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1762,7 +2068,12 @@ function KarigarSupplyChainContent() {
                 </Label>
                 <Input
                   value={editJobForm.product}
-                  onChange={(e) => setEditJobForm((p) => (p ? { ...p, product: e.target.value } : p))}
+                  dir="auto"
+                  onChange={(e) =>
+                    setEditJobForm((p) =>
+                      p ? { ...p, product: e.target.value } : p,
+                    )
+                  }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
@@ -1805,7 +2116,11 @@ function KarigarSupplyChainContent() {
                   type="number"
                   value={editJobForm.grossWeight}
                   onChange={(e) =>
-                    setEditJobForm((p) => (p ? { ...p, grossWeight: parseFloat(e.target.value) || 0 } : p))
+                    setEditJobForm((p) =>
+                      p
+                        ? { ...p, grossWeight: parseFloat(e.target.value) || 0 }
+                        : p,
+                    )
                   }
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
@@ -1847,7 +2162,10 @@ function KarigarSupplyChainContent() {
               <T>Delete Fabrication Job?</T>
             </h3>
             <p className="text-sm text-muted-foreground">
-              <T>This will permanently remove this job from the fabrication pipeline. This action cannot be undone.</T>
+              <T>
+                This will permanently remove this job from the fabrication
+                pipeline. This action cannot be undone.
+              </T>
             </p>
             <div className="flex justify-center gap-3 pt-2">
               <Button

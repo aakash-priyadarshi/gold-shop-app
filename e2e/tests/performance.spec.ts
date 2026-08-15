@@ -14,6 +14,10 @@ function isBenignConsoleError(message: string): boolean {
     lower.includes("[next-auth]") ||
     lower.includes("client_fetch_error") ||
     lower.includes("hydration") ||
+    // PR checks target the currently deployed Railway build. Ignore the exact
+    // retired Vercel Speed Insights script until the source removal deploys.
+    (lower.includes("/_vercel/speed-insights/script.js") &&
+      lower.includes("mime type")) ||
     // Chromium noise when blocked by CSP / WAF
     lower.includes("net::err_")
   );

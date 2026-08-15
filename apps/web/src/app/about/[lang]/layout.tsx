@@ -1,9 +1,14 @@
 import {
-    ABOUT_CONTENT,
-    LIVE_PLATFORMS,
-    SUPPORTED_ABOUT_LANGS,
-    type AboutContentLanguage,
+  ABOUT_CONTENT,
+  LIVE_PLATFORMS,
+  SUPPORTED_ABOUT_LANGS,
+  type Language,
+  type PublicAboutLanguage,
 } from "@/data/about-i18n";
+import {
+  ABOUT_SUMMARY_CONTENT,
+  isAboutSummaryLanguage,
+} from "@/data/about-summary-i18n";
 import { BRAND } from "@/config/brand";
 import { SITE_URL } from "@/config/site";
 import { Metadata } from "next";
@@ -17,17 +22,23 @@ const SOCIAL_PROFILES = [
   "https://linkedin.com/company/orivraa",
 ];
 
+function getSeoContent(lang: Language) {
+  return isAboutSummaryLanguage(lang)
+    ? ABOUT_SUMMARY_CONTENT[lang]
+    : ABOUT_CONTENT[lang];
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
   const { lang: rawLang } = await params;
-  if (!SUPPORTED_ABOUT_LANGS.includes(rawLang as AboutContentLanguage)) {
+  if (!SUPPORTED_ABOUT_LANGS.includes(rawLang as PublicAboutLanguage)) {
     return {};
   }
-  const lang = rawLang as AboutContentLanguage;
-  const c = ABOUT_CONTENT[lang];
+  const lang = rawLang as PublicAboutLanguage;
+  const c = getSeoContent(lang);
 
   const languages: Record<string, string> = { en: `${BASE_URL}/about` };
   for (const l of SUPPORTED_ABOUT_LANGS) {
@@ -55,8 +66,8 @@ export async function generateMetadata({
   };
 }
 
-function generateJsonLd(lang: AboutContentLanguage) {
-  const c = ABOUT_CONTENT[lang];
+function generateJsonLd(lang: Language) {
+  const c = getSeoContent(lang);
 
   return [
     {
@@ -67,7 +78,10 @@ function generateJsonLd(lang: AboutContentLanguage) {
       logo: `${BASE_URL}/logo.png`,
       description: c.metaDescription,
       foundingDate: "2024",
-      founder: { "@type": "Organization", name: "Orivraa Technologies Pvt. Ltd." },
+      founder: {
+        "@type": "Organization",
+        name: "Orivraa Technologies Pvt. Ltd.",
+      },
       address: {
         "@type": "PostalAddress",
         addressLocality: "Patna",
@@ -87,6 +101,8 @@ function generateJsonLd(lang: AboutContentLanguage) {
           "Tamil",
           "Telugu",
           "Kannada",
+          "Sinhala",
+          "Hebrew",
           "French",
           "German",
           "Spanish",
@@ -115,7 +131,11 @@ export default async function LocalizedAboutLayout({
   params: Promise<{ lang: string }>;
 }) {
   const { lang: rawLang } = await params;
-  const lang = (SUPPORTED_ABOUT_LANGS.includes(rawLang as AboutContentLanguage) ? rawLang : "en") as AboutContentLanguage;
+  const lang = (
+    SUPPORTED_ABOUT_LANGS.includes(rawLang as PublicAboutLanguage)
+      ? rawLang
+      : "en"
+  ) as Language;
   const jsonLd = generateJsonLd(lang);
 
   return (

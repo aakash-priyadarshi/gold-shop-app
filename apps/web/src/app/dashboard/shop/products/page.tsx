@@ -51,6 +51,10 @@ import { getImageUrl } from "@/lib/image-upload";
 import { SetBuilderDialog } from "@/components/shop/SetBuilderDialog";
 import { ProductDescriptionGenerator } from "@/components/shop/ProductDescriptionGenerator";
 import { CertificateUploadField } from "@/components/shop/CertificateUploadField";
+import {
+  SellerProductDetailDialog,
+  type SellerProductDetail,
+} from "@/components/shop/SellerProductDetailDialog";
 import { useT } from "@/providers/translation-provider";
 import {
     Edit,
@@ -69,10 +73,12 @@ import {
     Zap,
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  calculateGemstoneCarats,
+  calculateGemstoneWeightGrams,
+  calculateGrossWeightGrams,
   HALLMARK_ID_MAX_LENGTH,
   classifyHallmarkId,
   normalizeHallmarkId,
@@ -87,6 +93,7 @@ interface InventoryItem {
   buildMethod: string;
   composition: any;
   totalWeightGrams: number;
+  grossWeightGrams?: number;
   metalValueNpr: number;
   makingChargeNpr: number;
   wastagePercent?: number;
@@ -316,6 +323,8 @@ export default function ShopProductsPage() {
   const [editingProduct, setEditingProduct] = useState<InventoryItem | null>(
     null,
   );
+  const [viewingProduct, setViewingProduct] =
+    useState<SellerProductDetail | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(emptyForm);
   const [newImageUrl, setNewImageUrl] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -421,6 +430,7 @@ export default function ShopProductsPage() {
       ...emptyForm,
       sku: `SKU-${Date.now().toString(36).toUpperCase()}`,
     });
+    setWeightUnit("gram");
     setIsDialogOpen(true);
   };
 
@@ -438,6 +448,7 @@ export default function ShopProductsPage() {
     }
 
     setEditingProduct(product);
+    setWeightUnit("gram");
     const comp = product.composition || {};
     setFormData({
       nameEn: product.nameEn,
@@ -763,6 +774,20 @@ export default function ShopProductsPage() {
     const gemstone = parseFloat(formData.gemstoneValueNpr) || 0;
     return metal + making + gemstone;
   };
+
+  const enteredMetalWeight = parseFloat(formData.totalWeightGrams) || 0;
+  const formMetalWeightGrams =
+    weightUnit === "tola"
+      ? tolaToGrams(enteredMetalWeight)
+      : enteredMetalWeight;
+  const formGemstoneCarats = calculateGemstoneCarats(formData.gemstones);
+  const formGemstoneWeightGrams = calculateGemstoneWeightGrams(
+    formData.gemstones,
+  );
+  const formGrossWeightGrams = calculateGrossWeightGrams(
+    formMetalWeightGrams,
+    formData.gemstones,
+  );
 
   const filteredProducts = products.filter(
     (p) =>
@@ -1138,7 +1163,7 @@ export default function ShopProductsPage() {
                         <T>Type</T>
                       </TableHead>
                       <TableHead>
-                        <T>Weight</T>
+                        <T>Gross weight</T>
                       </TableHead>
                       <TableHead>
                         <T>Price</T>
@@ -1203,10 +1228,19 @@ export default function ShopProductsPage() {
                           <div className="flex items-center gap-1">
                             <Scale className="h-3 w-3 text-muted-foreground" />
                             <span>
-                              {getDisplayWeight(product.totalWeightGrams)}{" "}
+                              {getDisplayWeight(
+                                product.grossWeightGrams ||
+                                  calculateGrossWeightGrams(
+                                    product.totalWeightGrams,
+                                    product.composition,
+                                  ),
+                              )}{" "}
                               {getWeightLabel()}
                             </span>
                           </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            <T>Metal</T>: {getDisplayWeight(product.totalWeightGrams)} {getWeightLabel()}
+                          </p>
                         </TableCell>
                         <TableCell>
                           {livePricing && livePrices[product.id] ? (
@@ -1312,15 +1346,14 @@ export default function ShopProductsPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              asChild
                               title={t("Show full details to customer")}
+                              onClick={() =>
+                                setViewingProduct(
+                                  product as unknown as SellerProductDetail,
+                                )
+                              }
                             >
-                              <Link
-                                href={`/dashboard/shop/products/${product.id}`}
-                                target="_blank"
-                              >
-                                <Maximize2 className="h-4 w-4" />
-                              </Link>
+                              <Maximize2 className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
@@ -1342,6 +1375,14 @@ export default function ShopProductsPage() {
           </Card>
         </div>
 
+        <SellerProductDetailDialog
+          item={viewingProduct}
+          open={Boolean(viewingProduct)}
+          onOpenChange={(open) => {
+            if (!open) setViewingProduct(null);
+          }}
+        />
+
         {/* Add/Edit Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -1362,7 +1403,7 @@ export default function ShopProductsPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <T>Basic details</T>
                 </p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="name">
                     <T>Product Name</T> *
@@ -1607,7 +1648,7 @@ export default function ShopProductsPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <Label htmlFor="weight">
-                      <T>Total Weight</T> *
+                      <T>Metal weight</T> *
                     </Label>
                     <div className="flex gap-1 text-xs">
                       <Button
@@ -1634,6 +1675,7 @@ export default function ShopProductsPage() {
                     id="weight"
                     type="number"
                     step="0.01"
+                    min="0"
                     value={formData.totalWeightGrams}
                     onChange={(e) =>
                       setFormData({
@@ -1647,11 +1689,9 @@ export default function ShopProductsPage() {
                   />
                   {formData.totalWeightGrams && (
                     <p className="text-xs text-muted-foreground">
-                      ={" "}
-                      {getDisplayWeight(
-                        parseFloat(formData.totalWeightGrams) || 0,
-                      )}{" "}
-                      {getWeightLabel()}
+                      {weightUnit === "tola"
+                        ? `= ${formMetalWeightGrams.toFixed(3)} g`
+                        : `= ${gramsToTola(formMetalWeightGrams).toFixed(3)} tola`}
                     </p>
                   )}
                 </div>
@@ -1673,6 +1713,28 @@ export default function ShopProductsPage() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gemstone-weight"><T>Gemstone weight</T></Label>
+                  <Input
+                    id="gemstone-weight"
+                    value={`${formGemstoneCarats.toFixed(2)} ct = ${formGemstoneWeightGrams.toFixed(3)} g`}
+                    readOnly
+                    className="bg-muted tabular-nums"
+                  />
+                  <p className="text-xs text-muted-foreground"><T>1 carat = 0.2 g</T></p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gross-weight"><T>Gross weight</T></Label>
+                  <Input
+                    id="gross-weight"
+                    value={`${getDisplayWeight(formGrossWeightGrams)} ${getWeightLabel()}`}
+                    readOnly
+                    className="bg-muted font-semibold tabular-nums"
+                  />
+                  <p className="text-xs text-muted-foreground"><T>Metal weight plus all gemstone weight</T></p>
+                </div>
+              </div>
               </div>
 
               {/* Gemstones Section */}
@@ -1691,6 +1753,9 @@ export default function ShopProductsPage() {
                     <T>Add Gemstone</T>
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  <T>Gemstones use carats; 1 carat = 0.2 g. Every gemstone is included in gross weight.</T>
+                </p>
                 {formData.gemstones.length === 0 && (
                   <p className="text-xs text-muted-foreground">
                     <T>Optional. Add stones and use the sparkle button for a price suggestion.</T>
@@ -1753,7 +1818,7 @@ export default function ShopProductsPage() {
                           <Input
                             type="number"
                             step="0.01"
-                            placeholder="Carat weight"
+                            placeholder={t("Carat weight")}
                             className="h-9"
                             value={gem.caratWeight || ""}
                             onChange={(e) =>

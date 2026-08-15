@@ -4,8 +4,15 @@ import { ThemeSyncProvider } from "@/components/ThemeSyncProvider";
 import { CartProvider } from "@/contexts/CartContext";
 import { ChatPopupProvider } from "@/contexts/ChatPopupContext";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { MarketProvider, useMarket, type MarketRegion } from "@/hooks/useMarket";
-import { TranslationProvider } from "@/providers/translation-provider";
+import {
+  MarketProvider,
+  useMarket,
+  type MarketRegion,
+} from "@/hooks/useMarket";
+import {
+  TranslationProvider,
+  useTranslation,
+} from "@/providers/translation-provider";
 import {
   LANGUAGES,
   usePreferencesStore,
@@ -159,17 +166,19 @@ function MarketPreferencesSync({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Sync document dir attribute for RTL languages (Arabic)
+ * Sync document direction with the effective presentation locale. This is
+ * intentionally based on useTranslation() rather than only the persisted
+ * preference so catalogues and public localized pages also update direction.
  */
 function DirectionSync({ children }: { children: React.ReactNode }) {
-  const language = usePreferencesStore((s) => s.language);
+  const { locale } = useTranslation();
 
   React.useEffect(() => {
-    const langInfo = LANGUAGES[language];
-    const dir = langInfo?.dir === "rtl" ? "rtl" : "ltr";
+    const langInfo = LANGUAGES[locale];
+    const dir = langInfo?.direction ?? "ltr";
     document.documentElement.dir = dir;
-    document.documentElement.lang = language;
-  }, [language]);
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   return <>{children}</>;
 }

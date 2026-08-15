@@ -208,7 +208,7 @@ model HtmlTranslation {
 }
 
 model EmailLog {
-  id          String   @id @default(uuid())
+  id          String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   direction   String
   fromAddress String
   toAddress   String
@@ -221,7 +221,7 @@ model EmailLog {
   provider    String?
   templateKey String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -232,7 +232,7 @@ model EmailLog {
 }
 
 model EmailTemplate {
-  id          String   @id @default(uuid())
+  id          String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   key         String   @unique
   name        String
   description String?
@@ -244,13 +244,13 @@ model EmailTemplate {
   senderName  String
   senderEmail String
   replyTo     String?
-  variables   String[]
+  variables   String[] @default([])
   isActive    Boolean  @default(true)
   isSystem    Boolean  @default(false)
   createdBy   String?
   updatedBy   String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
 
   versions EmailTemplateVersion[]
 
@@ -259,7 +259,7 @@ model EmailTemplate {
 }
 
 model EmailTemplateVersion {
-  id          String   @id @default(uuid())
+  id          String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   templateId  String
   version     Int
   subject     String   @db.Text
@@ -268,7 +268,7 @@ model EmailTemplateVersion {
   senderName  String
   senderEmail String
   replyTo     String?
-  variables   String[]
+  variables   String[] @default([])
   createdBy   String?
   createdAt   DateTime @default(now())
 
@@ -380,6 +380,10 @@ model Shop {
   billingWastageMode        String                @default("AUTO")
   /// When set, overrides country default wastage %. Null = use market default.
   billingWastagePercent     Float?
+  /// Factory floor UI. Off = Supply Chain karigar book. On + workshopManufacturing = Workshop nav.
+  workshopMode              Boolean               @default(false)
+  /// Ordered KarigarStage keys for Floor queues. Null = CASTING → … → QC.
+  workshopDepartments       Json?
   nickelCompliantFlag       Boolean               @default(false)
   isActive                  Boolean               @default(true)
   createdAt                 DateTime              @default(now())
@@ -572,7 +576,10 @@ model InventoryItem {
   descriptionHi     String?
   buildMethod       String
   composition       Json
+  /// Metal-only weight. Gemstone carats are converted separately for gross weight.
   totalWeightGrams  Float
+  /// Read-only derived weight: metal grams + gemstone carats × 0.2g.
+  grossWeightGrams  Float               @default(0)
   dimensions        Json?
   gemstones         Json?
   metalValueNpr     Float
@@ -617,6 +624,7 @@ model InventoryItem {
   memberOfSet       InventorySetComponent?  @relation("SetComponent")
   priceHistory      InventoryPriceHistory[]
   stockAuditScans   StockAuditScan[]
+  sourceKarigarJob  KarigarJob?
 
   @@index([shopId, status])
   @@index([jewelleryType])
@@ -879,6 +887,7 @@ model WalkInCustomer {
   createdByShop Shop        @relation(fields: [createdByShopId], references: [id])
   shopQuotes    ShopQuote[]
   invoices      Invoice[]
+  karigarJobs   KarigarJob[]
 
   @@index([phone])
   @@index([createdByShopId])
@@ -945,11 +954,14 @@ model ShopQuote {
 
   shop           Shop           @relation(fields: [shopId], references: [id])
   walkInCustomer WalkInCustomer @relation(fields: [walkInCustomerId], references: [id])
+  karigarJobs    KarigarJob[]
 
   @@index([shopId])
   @@index([walkInCustomerId])
   @@index([status])
   @@index([quoteNumber])
+  @@index([trackingToken])
+  @@index([registeredCustomerId])
 }
 
 // Immutable quote-payment history. Quote balances are maintained as a
@@ -2529,7 +2541,7 @@ model Invoice {
   registeredCustomerId String?
 
   // Public bill verification token for QR on printed invoices
-  verificationToken String @default(uuid()) @unique
+  verificationToken String @default(dbgenerated("(gen_random_uuid())::text")) @unique
 
   // Idempotency key for offline-replayed POS sales (client-generated UUID).
   // A replayed sale with the same key returns the existing invoice instead of
@@ -3560,12 +3572,12 @@ model ScheduledReport {
 }
 
 model BackupSchedule {
-  id        String   @id @default(uuid())
+  id        String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   name      String
   cronExp   String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@index([isActive])
   @@index([createdAt])
@@ -4009,16 +4021,35 @@ model KarigarJob {
   allowedWastagePercent  Float    @default(1)
   status                 String   @default("PENDING")
   steps                  Json? // legacy checkboxes; stages table is source of truth
+  walkInCustomerId       String?
+  shopQuoteId            String?
+  inventoryItemId        String?  @unique
+  dueAt                  DateTime?
+  priority               String   @default("NORMAL")
+  qty                    Int      @default(1)
+  sizeLabel              String?
+  purity                 String?
+  metalColor             String?
+  photos                 String[] @default([])
+  notes                  String?
+  bom                    Json?
+  currentStage           KarigarStage?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
   shop                   Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   workshop               KarigarWorkshop? @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  walkInCustomer         WalkInCustomer? @relation(fields: [walkInCustomerId], references: [id], onDelete: SetNull)
+  shopQuote              ShopQuote? @relation(fields: [shopQuoteId], references: [id], onDelete: SetNull)
+  inventoryItem          InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
   stages                 KarigarJobStage[]
   movements              KarigarMetalMovement[]
   trees                  KarigarCastingTree[]
 
   @@index([shopId])
   @@index([workshopId])
+  @@index([shopId, currentStage])
+  @@index([walkInCustomerId])
+  @@index([shopQuoteId])
 }
 
 model KarigarJobStage {
@@ -4033,6 +4064,11 @@ model KarigarJobStage {
   dustGrams             Float        @default(0)
   allowedWastagePercent Float        @default(1)
   status                String       @default("PENDING")
+  notes                 String?
+  photos                String[]     @default([])
+  reworkCount           Int          @default(0)
+  rejectionReason       String?
+  startedAt             DateTime?
   completedAt           DateTime?
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
@@ -4089,6 +4125,7 @@ model KarigarMetalMovement {
   metalKey    String               @default("goldGrains24k")
   weightGrams Float
   purity      String?
+  lotId       String?
   note        String?
   createdBy   String?
   createdAt   DateTime             @default(now())
@@ -4395,7 +4432,7 @@ model BotSession {
   userAgent        String?
   messageCount     Int         @default(0) // counts user turns only
   escalated        Boolean     @default(false)
-  leadIntents      String[] // e.g. ["pricing","trial","comparison"]
+  leadIntents      String[]      @default([]) // e.g. ["pricing","trial","comparison"]
   guestName        String? // populated on escalation or lead capture
   guestEmail       String? // populated on escalation or lead capture
   guestPhone       String? // populated when visitor shares phone number

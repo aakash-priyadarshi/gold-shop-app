@@ -13,10 +13,18 @@
  */
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { LOCALE_REGISTRY, type UiLocale } from "@gold-shop/shared";
 import { api } from "../lib/api";
 
 // Currency types matching backend CurrencyCode enum
-export type CurrencyCode = "NPR" | "INR" | "AED" | "USD" | "GBP" | "EUR" | "LKR";
+export type CurrencyCode =
+  | "NPR"
+  | "INR"
+  | "AED"
+  | "USD"
+  | "GBP"
+  | "EUR"
+  | "LKR";
 
 // Country/Tax jurisdiction types
 export type CountryCode = "NP" | "IN" | "AE" | "UK" | "EU" | "US" | "LK";
@@ -25,20 +33,7 @@ export type ThemeMode = "light" | "dark" | "system";
 
 export type DashboardMode = "EASY" | "ADVANCED";
 
-export type Language =
-  | "en"
-  | "hi"
-  | "ne"
-  | "gu"
-  | "mr"
-  | "ta"
-  | "te"
-  | "kn"
-  | "si"
-  | "fr"
-  | "de"
-  | "es"
-  | "ar";
+export type Language = UiLocale;
 
 // Currency metadata (for DISPLAY only)
 export const CURRENCIES: Record<
@@ -129,24 +124,7 @@ export const COUNTRIES: Record<
 };
 
 // Language metadata
-export const LANGUAGES: Record<
-  Language,
-  { name: string; nativeName: string; dir?: "rtl" }
-> = {
-  en: { name: "English", nativeName: "English" },
-  hi: { name: "Hindi", nativeName: "हिन्दी" },
-  ne: { name: "Nepali", nativeName: "नेपाली" },
-  gu: { name: "Gujarati", nativeName: "ગુજરાતી" },
-  mr: { name: "Marathi", nativeName: "मराठी" },
-  ta: { name: "Tamil", nativeName: "தமிழ்" },
-  te: { name: "Telugu", nativeName: "తెలుగు" },
-  kn: { name: "Kannada", nativeName: "ಕನ್ನಡ" },
-  si: { name: "Sinhala", nativeName: "සිංහල" },
-  fr: { name: "French", nativeName: "Français" },
-  de: { name: "German", nativeName: "Deutsch" },
-  es: { name: "Spanish", nativeName: "Español" },
-  ar: { name: "Arabic", nativeName: "العربية", dir: "rtl" },
-};
+export const LANGUAGES = LOCALE_REGISTRY;
 
 interface PreferencesState {
   // State
@@ -214,7 +192,10 @@ export const usePreferencesStore = create<PreferencesState>()(
       // Set language and sync to server if authenticated
       setLanguage: async (language) => {
         const { tourLangSyncWithApp } = get();
-        set({ language, ...(tourLangSyncWithApp ? { tourLanguage: language } : {}) });
+        set({
+          language,
+          ...(tourLangSyncWithApp ? { tourLanguage: language } : {}),
+        });
         const { isAuthenticated, syncToServer } = get();
         if (isAuthenticated) {
           await syncToServer();
@@ -227,7 +208,10 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       setTourLangSync: (sync) => {
         const { language } = get();
-        set({ tourLangSyncWithApp: sync, ...(sync ? { tourLanguage: language } : {}) });
+        set({
+          tourLangSyncWithApp: sync,
+          ...(sync ? { tourLanguage: language } : {}),
+        });
       },
 
       // Set currency (DISPLAY only - does NOT affect tax)

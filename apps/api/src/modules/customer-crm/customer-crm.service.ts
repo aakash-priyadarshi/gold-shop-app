@@ -1,9 +1,62 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
+import { UpsertWalkInCustomerDto } from "./dto/upsert-walk-in-customer.dto";
 
 @Injectable()
 export class CustomerCrmService {
   constructor(private prisma: PrismaService) {}
+
+  async upsertWalkInCustomer(
+    shopId: string,
+    dto: UpsertWalkInCustomerDto,
+  ) {
+    const localPhone = dto.phone.replace(/\D/g, "");
+    const fullPhone = `${dto.phoneCountryCode}${localPhone}`;
+    const existing = await this.prisma.walkInCustomer.findUnique({
+      where: { phone: fullPhone },
+    });
+
+    const isCreator = existing?.createdByShopId === shopId;
+    const customer = existing
+      ? await this.prisma.walkInCustomer.update({
+          where: { id: existing.id },
+          data: {
+            name: isCreator ? dto.name.trim() : (existing.name || dto.name.trim()),
+            phoneCountryCode: isCreator ? dto.phoneCountryCode : existing.phoneCountryCode,
+            email: dto.email?.trim() || existing.email,
+            address: isCreator ? (dto.address?.trim() ?? existing.address) : (existing.address || dto.address?.trim() || ""),
+            city: isCreator ? (dto.city?.trim() ?? existing.city) : (existing.city || dto.city?.trim() || ""),
+            country: isCreator ? (dto.country?.trim() || existing.country) : (existing.country || dto.country?.trim() || ""),
+            ...(isCreator && dto.notes !== undefined ? { notes: dto.notes.trim() || null } : {}),
+          },
+        })
+      : await this.prisma.walkInCustomer.create({
+          data: {
+            phone: fullPhone,
+            phoneCountryCode: dto.phoneCountryCode,
+            name: dto.name.trim(),
+            email: dto.email?.trim() || null,
+            address: dto.address?.trim() || "",
+            city: dto.city?.trim() || "",
+            country: dto.country?.trim() || "",
+            notes: dto.notes?.trim() || null,
+            createdByShopId: shopId,
+          },
+        });
+
+    return {
+      id: customer.id,
+      type: "WALK_IN" as const,
+      isRegistered: false,
+      name: customer.name,
+      phone: customer.phone,
+      phoneCountryCode: customer.phoneCountryCode,
+      email: customer.email,
+      address: customer.address,
+      city: customer.city,
+      country: customer.country,
+    };
+  }
 
   /**
    * Search customers: registered Users + WalkInCustomers
@@ -32,6 +85,24 @@ export class CustomerCrmService {
         .map((stat) => [stat.registeredCustomerId, stat]),
     );
     const invoiceCustomerIds = [...invoiceStatsByCustomer.keys()];
+    const walkInInvoiceStats = await this.prisma.invoice.groupBy({
+      by: ["walkInCustomerId"],
+      where: {
+        shopId,
+        walkInCustomerId: { not: null },
+        status: { notIn: ["VOID", "CANCELLED"] },
+      },
+      _count: { _all: true },
+      _sum: { totalAmount: true },
+      _max: { createdAt: true },
+    });
+    const invoiceStatsByWalkIn = new Map(
+      walkInInvoiceStats
+        .filter((stat): stat is typeof stat & { walkInCustomerId: string } =>
+          Boolean(stat.walkInCustomerId),
+        )
+        .map((stat) => [stat.walkInCustomerId, stat]),
+    );
 
     // Search registered customers who have ordered from this shop
     const customerWhere: any = {
@@ -119,14 +190,23 @@ export class CustomerCrmService {
 
     // Also search walk-in customers for this shop
     const walkInWhere: any = {
-      createdByShopId: shopId,
+      AND: [
+        {
+          OR: [
+            { createdByShopId: shopId },
+            { invoices: { some: { shopId } } },
+          ],
+        },
+      ],
     };
     if (query) {
-      walkInWhere.OR = [
-        { name: { contains: query, mode: "insensitive" } },
-        { phone: { contains: query, mode: "insensitive" } },
-        { email: { contains: query, mode: "insensitive" } },
-      ];
+      walkInWhere.AND.push({
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { phone: { contains: query, mode: "insensitive" } },
+          { email: { contains: query, mode: "insensitive" } },
+        ],
+      });
     }
 
     const [walkInCustomers, walkInTotal] = await Promise.all([
@@ -173,11 +253,12 @@ export class CustomerCrmService {
         phone: w.phone,
         country: w.country,
         currency: null,
-        orderCount: 0,
+        orderCount: invoiceStatsByWalkIn.get(w.id)?._count._all || 0,
         rfqCount: 0,
-        totalSpent: 0,
+        totalSpent: invoiceStatsByWalkIn.get(w.id)?._sum.totalAmount || 0,
         quoteCount: w._count.shopQuotes,
-        lastActive: w.updatedAt,
+        lastActive:
+          invoiceStatsByWalkIn.get(w.id)?._max.createdAt || w.updatedAt,
         createdAt: w.createdAt,
       })),
     ];
@@ -250,6 +331,15 @@ export class CustomerCrmService {
     });
 
     if (walkIn) {
+      const invoiceStats = await this.prisma.invoice.aggregate({
+        where: {
+          shopId,
+          walkInCustomerId: walkIn.id,
+          status: { notIn: ["VOID", "CANCELLED"] },
+        },
+        _count: true,
+        _sum: { totalAmount: true },
+      });
       return {
         type: "WALK_IN",
         id: walkIn.id,
@@ -267,10 +357,11 @@ export class CustomerCrmService {
           },
         ],
         purchaseStats: [],
-        orderCount: 0,
+        orderCount: invoiceStats._count,
         rfqCount: 0,
         quoteCount: walkIn._count.shopQuotes,
         notes: walkIn.notes,
+        totalSpent: invoiceStats._sum.totalAmount || 0,
         lastActive: walkIn.updatedAt,
         memberSince: walkIn.createdAt,
       };
@@ -289,6 +380,19 @@ export class CustomerCrmService {
     limit = 20,
   ) {
     const skip = (page - 1) * limit;
+    const walkInCustomer = await this.prisma.walkInCustomer.findFirst({
+      where: {
+        id: customerId,
+        OR: [
+          { createdByShopId: shopId },
+          { invoices: { some: { shopId } } },
+        ],
+      },
+      select: { id: true },
+    });
+    const invoiceCustomerWhere = walkInCustomer
+      ? { walkInCustomerId: customerId }
+      : { registeredCustomerId: customerId };
 
     const [orders, total, invoices, invoiceTotal] = await Promise.all([
       this.prisma.order.findMany({
@@ -309,7 +413,7 @@ export class CustomerCrmService {
       this.prisma.invoice.findMany({
         where: {
           shopId,
-          registeredCustomerId: customerId,
+          ...invoiceCustomerWhere,
           status: { notIn: ["VOID", "CANCELLED"] },
         },
         orderBy: { createdAt: "desc" },
@@ -327,7 +431,7 @@ export class CustomerCrmService {
       this.prisma.invoice.count({
         where: {
           shopId,
-          registeredCustomerId: customerId,
+          ...invoiceCustomerWhere,
           status: { notIn: ["VOID", "CANCELLED"] },
         },
       }),
@@ -415,6 +519,19 @@ export class CustomerCrmService {
    * Get customer purchase stats for this shop
    */
   async getCustomerStats(customerId: string, shopId: string) {
+    const walkInCustomer = await this.prisma.walkInCustomer.findFirst({
+      where: {
+        id: customerId,
+        OR: [
+          { createdByShopId: shopId },
+          { invoices: { some: { shopId } } },
+        ],
+      },
+      select: { id: true },
+    });
+    const invoiceCustomerWhere = walkInCustomer
+      ? { walkInCustomerId: customerId }
+      : { registeredCustomerId: customerId };
     // Get orders aggregated
     const orderStats = await this.prisma.order.aggregate({
       where: { customerId, shopId, status: { in: ["DELIVERED", "COMPLETED"] } },
@@ -426,7 +543,7 @@ export class CustomerCrmService {
     const invoiceStats = await this.prisma.invoice.aggregate({
       where: {
         shopId,
-        registeredCustomerId: customerId,
+        ...invoiceCustomerWhere,
         status: { notIn: ["VOID", "CANCELLED"] },
       },
       _sum: { totalAmount: true },
@@ -483,7 +600,7 @@ export class CustomerCrmService {
       this.prisma.invoice.findFirst({
         where: {
           shopId,
-          registeredCustomerId: customerId,
+          ...invoiceCustomerWhere,
           status: { notIn: ["VOID", "CANCELLED"] },
         },
         orderBy: { createdAt: "asc" },
@@ -492,7 +609,7 @@ export class CustomerCrmService {
       this.prisma.invoice.findFirst({
         where: {
           shopId,
-          registeredCustomerId: customerId,
+          ...invoiceCustomerWhere,
           status: { notIn: ["VOID", "CANCELLED"] },
         },
         orderBy: { createdAt: "desc" },

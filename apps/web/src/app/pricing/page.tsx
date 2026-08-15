@@ -112,6 +112,10 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
     label: "Karigar & Bullion Supply Chain Tracker",
     category: "CRM & Business Tools",
   },
+  workshopManufacturing: {
+    label: "Workshop manufacturing (factory floor)",
+    category: "CRM & Business Tools",
+  },
 
   // AI & Intelligence
   purchasableAiCredits: {
@@ -477,6 +481,7 @@ function buildFeatureList(
     "inventoryManagement",
     "customerManagement",
     "karigarSupplyChain",
+    "workshopManufacturing",
     "basicAnalytics",
     "advancedAnalytics",
     "taxReports",

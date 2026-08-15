@@ -21,6 +21,7 @@ import { inventoryApi, shopQuotesApi } from "@/lib/api";
 import { createSale as createOfflineSale } from "@/lib/offline/pos";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { useT } from "@/providers/translation-provider";
+import { calculateGrossWeightGrams } from "@gold-shop/shared";
 import {
     Check,
     Loader2,
@@ -52,6 +53,7 @@ interface InventoryItem {
   stockQuantity: number;
   weightGrams?: number;
   totalWeightGrams?: number;
+  grossWeightGrams?: number;
   metalPurity?: string;
   jewelleryType?: string;
   descriptionEn?: string;
@@ -568,6 +570,9 @@ function ProductDetailSheet({
   const { selectedWeightUnit } = useMarket();
   const image = item.images?.[0];
   const weight = item.totalWeightGrams ?? item.weightGrams;
+  const grossWeight =
+    item.grossWeightGrams ??
+    calculateGrossWeightGrams(weight, item.composition);
   const variants = (item.variants ?? []).filter((variant) => variant.isActive !== false);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(
     variants[0]?.id,
@@ -641,9 +646,9 @@ function ProductDetailSheet({
                 {item.metalPurity}
               </span>
             )}
-            {weight ? (
+            {grossWeight ? (
               <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300">
-                {weight}g
+                <T>Gross</T> {grossWeight.toFixed(3)}g
               </span>
             ) : null}
             <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300">
@@ -992,7 +997,7 @@ function AddProductSheet({
         open={skuScanOpen}
         onClose={() => setSkuScanOpen(false)}
         onScan={(code) => { setSku(code); setSkuScanOpen(false); }}
-        hint="Scan the product barcode/QR to auto-fill the SKU"
+        hint={t("Scan the product barcode or QR to auto-fill the SKU")}
         shopId={shopId}
       />
     </div>

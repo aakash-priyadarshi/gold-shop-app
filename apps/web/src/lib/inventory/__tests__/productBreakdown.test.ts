@@ -89,6 +89,9 @@ describe("buildProductBreakdown", () => {
     expect(breakdown.metalType).toBe("GOLD");
     expect(breakdown.purity).toBe("22K");
     expect(breakdown.weightGrams).toBe(11.66);
+    expect(breakdown.gemstoneCarats).toBe(1.5);
+    expect(breakdown.gemstoneWeightGrams).toBe(0.3);
+    expect(breakdown.grossWeightGrams).toBe(11.96);
     expect(breakdown.metalValue).toBe(100000);
     expect(breakdown.makingCharge).toBe(15000);
     expect(breakdown.wastagePercent).toBe(4);
@@ -110,6 +113,16 @@ describe("buildProductBreakdown", () => {
     expect(breakdown.gemstoneValue).toBe(3000);
     expect(breakdown.catalogTotal).toBe(13000);
     expect(breakdown.estimatedBill).toBe(13000);
+  });
+
+  it("uses the server-derived gross weight when supplied", () => {
+    expect(
+      buildProductBreakdown({
+        totalWeightGrams: 5,
+        grossWeightGrams: 5.25,
+        composition: { gemstones: [{ type: "Diamond", caratWeight: 1 }] },
+      }).grossWeightGrams,
+    ).toBe(5.25);
   });
 });
 

@@ -4,28 +4,37 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BRAND } from "@/config/brand";
 import {
-    ABOUT_CONTENT,
-    COMING_SOON_PLATFORMS,
-    LANG_META,
-    LIVE_PLATFORMS,
-    SUPPORTED_ABOUT_LANGS,
-    TESTIMONIALS,
-    type AboutContentLanguage,
+  ABOUT_SUMMARY_CONTENT,
+  isAboutSummaryLanguage,
+  type AboutSummaryContent,
+} from "@/data/about-summary-i18n";
+import {
+  ABOUT_CONTENT,
+  COMING_SOON_PLATFORMS,
+  LANG_META,
+  LIVE_PLATFORMS,
+  SUPPORTED_ABOUT_LANGS,
+  TESTIMONIALS,
+  getPublicAboutHref,
+  type Language,
+  type AboutContentLanguage,
+  type PublicAboutLanguage,
 } from "@/data/about-i18n";
 import {
-    ArrowRightIcon,
-    BuildingStorefrontIcon,
-    ChartBarIcon,
-    CheckBadgeIcon,
-    GlobeAltIcon,
-    HeartIcon,
-    ShieldCheckIcon,
-    SparklesIcon,
-    StarIcon,
-    TruckIcon,
-    UserGroupIcon,
+  ArrowRightIcon,
+  BuildingStorefrontIcon,
+  ChartBarIcon,
+  CheckBadgeIcon,
+  GlobeAltIcon,
+  HeartIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  StarIcon,
+  TruckIcon,
+  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
+import { getLocaleDirection } from "@gold-shop/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -47,25 +56,157 @@ const featureIconMap = {
   shipping: TruckIcon,
 };
 
+function AboutSummaryPage({
+  lang,
+  content,
+}: {
+  lang: PublicAboutLanguage;
+  content: AboutSummaryContent;
+}) {
+  return (
+    <div
+      className="min-h-screen bg-white dark:bg-gray-950"
+      dir={getLocaleDirection(lang)}
+    >
+      <Header />
+      <main>
+        <section className="relative overflow-hidden bg-gradient-to-br from-amber-600 to-amber-800 text-white">
+          <div className="absolute inset-0 bg-[url('/patterns/gold-pattern.svg')] opacity-10" />
+          <div className="container relative z-10 mx-auto px-4 py-20 text-center md:py-28">
+            <span className="mb-5 inline-flex rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-sm font-semibold">
+              {content.eyebrow}
+            </span>
+            <h1 className="mx-auto max-w-4xl text-4xl font-bold leading-tight md:text-6xl">
+              {content.heroTitle}
+            </h1>
+            <p className="mx-auto mt-6 max-w-3xl text-lg text-amber-100 md:text-xl">
+              {content.heroSubtitle}
+            </p>
+            <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+              <Button
+                size="lg"
+                className="bg-white text-amber-700 hover:bg-amber-50"
+                asChild
+              >
+                <Link href="/auth/register">
+                  {content.startFree}
+                  <ArrowRightIcon className="ms-2 h-4 w-4 rtl:rotate-180" />
+                </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white/50 bg-transparent text-white hover:bg-white/10"
+                asChild
+              >
+                <Link href={content.secondaryHref ?? `/tutorial/${lang}`}>
+                  {content.watchTutorial}
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <section className="container mx-auto px-4 py-16 md:py-20">
+          <h2 className="mx-auto mb-10 max-w-3xl text-center text-3xl font-bold text-gray-900 dark:text-white md:text-4xl">
+            {content.featureTitle}
+          </h2>
+          <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-2">
+            {content.features.map((feature) => (
+              <Card
+                key={feature.title}
+                className="border-amber-100 dark:border-gray-800"
+              >
+                <CardContent className="flex gap-4 p-6">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    <SparklesIcon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {feature.title}
+                    </h3>
+                    <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                      {feature.description}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        <section className="bg-amber-50 px-4 py-16 dark:bg-gray-900">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="mb-8 text-center text-3xl font-bold text-gray-900 dark:text-white">
+              {content.trustTitle}
+            </h2>
+            <div className="grid gap-4 md:grid-cols-3">
+              {content.trustPoints.map((point) => (
+                <div
+                  key={point}
+                  className="flex items-start gap-3 rounded-xl bg-white p-5 shadow-sm dark:bg-gray-950"
+                >
+                  <CheckBadgeIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                  <span className="text-sm leading-6 text-gray-700 dark:text-gray-200">
+                    {point}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-gray-950 px-4 py-16 text-center text-white">
+          <h2 className="text-3xl font-bold">{content.ctaTitle}</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-gray-300">
+            {content.ctaDescription}
+          </p>
+          <Button
+            size="lg"
+            className="mt-7 bg-amber-500 text-gray-950 hover:bg-amber-400"
+            asChild
+          >
+            <Link href="/auth/register">{content.startFree}</Link>
+          </Button>
+        </section>
+      </main>
+      <DynamicFooter />
+    </div>
+  );
+}
+
 export default async function LocalizedAboutPage({
   params,
 }: {
   params: Promise<{ lang: string }>;
 }) {
   const { lang: rawLang } = await params;
-  if (!SUPPORTED_ABOUT_LANGS.includes(rawLang as AboutContentLanguage)) {
+  if (!SUPPORTED_ABOUT_LANGS.includes(rawLang as PublicAboutLanguage)) {
     notFound();
   }
+
+  if (isAboutSummaryLanguage(rawLang)) {
+    return (
+      <AboutSummaryPage
+        lang={rawLang}
+        content={ABOUT_SUMMARY_CONTENT[rawLang]}
+      />
+    );
+  }
+
   const lang = rawLang as AboutContentLanguage;
   const c = ABOUT_CONTENT[lang];
-  const meta = LANG_META[lang];
-  const isRTL = meta.dir === "rtl";
+  const isRTL = getLocaleDirection(lang) === "rtl";
 
-  const allLangs = Object.entries(LANG_META).filter(([l]) => l !== lang);
-  const staticAboutLangs = new Set<string>(["en", ...SUPPORTED_ABOUT_LANGS]);
+  const allLangs = (
+    Object.entries(LANG_META) as Array<[Language, (typeof LANG_META)[Language]]>
+  ).filter(([l]) => l !== lang);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950" dir={isRTL ? "rtl" : "ltr"}>
+    <div
+      className="min-h-screen bg-white dark:bg-gray-950"
+      dir={isRTL ? "rtl" : "ltr"}
+    >
       <Header />
 
       {/* Hero Section */}
@@ -73,12 +214,18 @@ export default async function LocalizedAboutPage({
         <div className="absolute inset-0 bg-[url('/patterns/gold-pattern.svg')] opacity-10" />
         <div className="container mx-auto px-4 py-20 md:py-28 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">{c.heroTitle}</h1>
+            <h1 className="text-4xl md:text-6xl font-bold mb-6">
+              {c.heroTitle}
+            </h1>
             <p className="text-xl md:text-2xl text-amber-100 mb-8">
               {c.heroSubtitle}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="bg-white text-amber-700 hover:bg-amber-50" asChild>
+              <Button
+                size="lg"
+                className="bg-white text-amber-700 hover:bg-amber-50"
+                asChild
+              >
                 <Link href="/shops">
                   {c.browseSellers}
                   <ArrowRightIcon className="ml-2 h-4 w-4" />
@@ -102,7 +249,11 @@ export default async function LocalizedAboutPage({
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             {[
-              { value: "500+", label: c.verifiedSellers, Icon: BuildingStorefrontIcon },
+              {
+                value: "500+",
+                label: c.verifiedSellers,
+                Icon: BuildingStorefrontIcon,
+              },
               { value: "10K+", label: c.happyCustomers, Icon: UserGroupIcon },
               { value: "15+", label: c.countries, Icon: GlobeAltIcon },
               { value: "5K+", label: c.customOrders, Icon: SparklesIcon },
@@ -112,7 +263,9 @@ export default async function LocalizedAboutPage({
                 <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
                   {stat.value}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300">{stat.label}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  {stat.label}
+                </div>
               </div>
             ))}
           </div>
@@ -144,20 +297,33 @@ export default async function LocalizedAboutPage({
               {c.ourValuesTitle}
             </h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
-            <p className="text-lg text-gray-600 dark:text-gray-300">{c.valuesSubtitle}</p>
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              {c.valuesSubtitle}
+            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {(
               [
                 { key: "trust", title: c.trustTitle, desc: c.trustDesc },
                 { key: "quality", title: c.qualityTitle, desc: c.qualityDesc },
-                { key: "customer", title: c.customerFirstTitle, desc: c.customerFirstDesc },
-                { key: "global", title: c.globalReachTitle, desc: c.globalReachDesc },
+                {
+                  key: "customer",
+                  title: c.customerFirstTitle,
+                  desc: c.customerFirstDesc,
+                },
+                {
+                  key: "global",
+                  title: c.globalReachTitle,
+                  desc: c.globalReachDesc,
+                },
               ] as const
             ).map((v) => {
               const Icon = iconMap[v.key];
               return (
-                <Card key={v.key} className="h-full hover:shadow-lg transition-shadow">
+                <Card
+                  key={v.key}
+                  className="h-full hover:shadow-lg transition-shadow"
+                >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       <div className="p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30">
@@ -167,7 +333,9 @@ export default async function LocalizedAboutPage({
                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                           {v.title}
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300">{v.desc}</p>
+                        <p className="text-gray-600 dark:text-gray-300">
+                          {v.desc}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -186,15 +354,33 @@ export default async function LocalizedAboutPage({
               {c.whyChooseTitle}
             </h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
-            <p className="text-lg text-gray-600 dark:text-gray-300">{c.whyChooseSubtitle}</p>
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              {c.whyChooseSubtitle}
+            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {(
               [
-                { key: "liveGold", title: c.liveGoldPrices, desc: c.liveGoldPricesDesc },
-                { key: "verified", title: c.verifiedSellersFeature, desc: c.verifiedSellersFeatureDesc },
-                { key: "custom", title: c.customOrdersFeature, desc: c.customOrdersFeatureDesc },
-                { key: "shipping", title: c.secureShipping, desc: c.secureShippingDesc },
+                {
+                  key: "liveGold",
+                  title: c.liveGoldPrices,
+                  desc: c.liveGoldPricesDesc,
+                },
+                {
+                  key: "verified",
+                  title: c.verifiedSellersFeature,
+                  desc: c.verifiedSellersFeatureDesc,
+                },
+                {
+                  key: "custom",
+                  title: c.customOrdersFeature,
+                  desc: c.customOrdersFeatureDesc,
+                },
+                {
+                  key: "shipping",
+                  title: c.secureShipping,
+                  desc: c.secureShippingDesc,
+                },
               ] as const
             ).map((feature) => {
               const Icon = featureIconMap[feature.key];
@@ -206,7 +392,9 @@ export default async function LocalizedAboutPage({
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm">{feature.desc}</p>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                    {feature.desc}
+                  </p>
                 </div>
               );
             })}
@@ -222,7 +410,9 @@ export default async function LocalizedAboutPage({
               {c.findUsTitle}
             </h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
-            <p className="text-lg text-gray-600 dark:text-gray-300">{c.findUsSubtitle}</p>
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              {c.findUsSubtitle}
+            </p>
           </div>
           {/* Live profiles */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto mb-10">
@@ -240,7 +430,9 @@ export default async function LocalizedAboutPage({
                     <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">
                       {platform.name}
                     </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{platform.category}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {platform.category}
+                    </p>
                     <span className="text-xs text-amber-600 group-hover:underline mt-2 inline-block">
                       {c.visitProfile} →
                     </span>
@@ -287,11 +479,16 @@ export default async function LocalizedAboutPage({
               {c.testimonialsTitle}
             </h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
-            <p className="text-lg text-gray-600 dark:text-gray-300">{c.testimonialsSubtitle}</p>
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              {c.testimonialsSubtitle}
+            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {TESTIMONIALS.map((testimonial) => (
-              <Card key={testimonial.name} className="h-full hover:shadow-lg transition-shadow">
+              <Card
+                key={testimonial.name}
+                className="h-full hover:shadow-lg transition-shadow"
+              >
                 <CardContent className="p-6">
                   <div className="flex gap-1 mb-3">
                     {Array.from({ length: 5 }).map((_, i) =>
@@ -299,7 +496,7 @@ export default async function LocalizedAboutPage({
                         <StarSolid key={i} className="h-4 w-4 text-amber-500" />
                       ) : (
                         <StarIcon key={i} className="h-4 w-4 text-gray-300" />
-                      )
+                      ),
                     )}
                   </div>
                   <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 italic">
@@ -310,7 +507,9 @@ export default async function LocalizedAboutPage({
                       {testimonial.name}
                     </p>
                     <p className="text-xs text-gray-500">{testimonial.role}</p>
-                    <p className="text-xs text-gray-400">{testimonial.location}</p>
+                    <p className="text-xs text-gray-400">
+                      {testimonial.location}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -325,9 +524,13 @@ export default async function LocalizedAboutPage({
           <div className="max-w-5xl mx-auto">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">{c.becomeSeller}</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                  {c.becomeSeller}
+                </h2>
                 <div className="h-1 w-20 bg-amber-500 mb-6" />
-                <p className="text-lg text-gray-300 mb-6">{c.becomeSellerDesc}</p>
+                <p className="text-lg text-gray-300 mb-6">
+                  {c.becomeSellerDesc}
+                </p>
                 <ul className="space-y-3 mb-8">
                   {c.sellerBenefits.map((item, i) => (
                     <li key={i} className="flex items-center gap-3">
@@ -349,8 +552,12 @@ export default async function LocalizedAboutPage({
                   <Card className="relative bg-gray-800/50 border-gray-700">
                     <CardContent className="p-8 text-center">
                       <BuildingStorefrontIcon className="h-16 w-16 mx-auto text-amber-500 mb-4" />
-                      <h3 className="text-2xl font-bold text-white mb-2">500+ Sellers</h3>
-                      <p className="text-gray-400">{c.becomeSellerDesc.split(".")[0]}.</p>
+                      <h3 className="text-2xl font-bold text-white mb-2">
+                        500+ Sellers
+                      </h3>
+                      <p className="text-gray-400">
+                        {c.becomeSellerDesc.split(".")[0]}.
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
@@ -369,12 +576,17 @@ export default async function LocalizedAboutPage({
               {c.languageGuideTitle}
             </h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
-            <p className="text-gray-600 dark:text-gray-300">{c.languageGuideDesc}</p>
+            <p className="text-gray-600 dark:text-gray-300">
+              {c.languageGuideDesc}
+            </p>
           </div>
 
           <div className="max-w-xl mx-auto mb-12 space-y-3">
             {c.languageGuideSteps.map((step, i) => (
-              <div key={i} className="flex gap-3 items-start text-sm text-gray-600 dark:text-gray-300">
+              <div
+                key={i}
+                className="flex gap-3 items-start text-sm text-gray-600 dark:text-gray-300"
+              >
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 font-semibold text-xs flex items-center justify-center">
                   {i + 1}
                 </span>
@@ -391,13 +603,7 @@ export default async function LocalizedAboutPage({
               {allLangs.map(([code, lm]) => (
                 <Link
                   key={code}
-                  href={
-                    code === "en"
-                      ? "/about"
-                      : staticAboutLangs.has(code)
-                        ? `/about/${code}`
-                        : "/about"
-                  }
+                  href={getPublicAboutHref(code)}
                   className="px-4 py-2 rounded-full text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-amber-400 hover:shadow transition-all"
                 >
                   {lm.flag} {lm.nativeName}
@@ -416,20 +622,32 @@ export default async function LocalizedAboutPage({
               {c.getInTouch}
             </h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
-            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">{c.getInTouchDesc}</p>
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
+              {c.getInTouchDesc}
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Card className="flex-1">
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{c.emailUs}</h3>
-                  <a href={`mailto:${BRAND.supportEmail}`} className="text-amber-600 hover:underline">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                    {c.emailUs}
+                  </h3>
+                  <a
+                    href={`mailto:${BRAND.supportEmail}`}
+                    className="text-amber-600 hover:underline"
+                  >
                     {BRAND.supportEmail}
                   </a>
                 </CardContent>
               </Card>
               <Card className="flex-1">
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{c.forSellers}</h3>
-                  <a href={`mailto:${BRAND.supportEmail}`} className="text-amber-600 hover:underline">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                    {c.forSellers}
+                  </h3>
+                  <a
+                    href={`mailto:${BRAND.supportEmail}`}
+                    className="text-amber-600 hover:underline"
+                  >
                     {BRAND.supportEmail}
                   </a>
                 </CardContent>

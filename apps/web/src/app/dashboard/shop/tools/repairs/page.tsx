@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
   CheckCircle,
@@ -104,6 +106,7 @@ function generateTicket() {
 }
 
 export default function RepairTrackingPage() {
+  const t = useT();
   const router = useRouter();
   const { symbol: currencySymbol } = useShopCurrency();
   const [jobs, setJobs] = useState<RepairJob[]>(loadJobs);
@@ -124,7 +127,7 @@ export default function RepairTrackingPage() {
     if (!customerName || !itemDescription) {
       toast({
         variant: "destructive",
-        title: "Customer name and item description are required",
+        title: t("Customer name and item description are required"),
       });
       return;
     }
@@ -148,7 +151,9 @@ export default function RepairTrackingPage() {
     saveJobs(updated);
     setShowForm(false);
     resetForm();
-    toast({ title: `Repair ticket ${job.ticketNumber} created` });
+    toast({
+      title: `${t("Repair ticket")} ${job.ticketNumber} ${t("created")}`,
+    });
   };
 
   const resetForm = () => {
@@ -177,7 +182,9 @@ export default function RepairTrackingPage() {
     });
     setJobs(updated);
     saveJobs(updated);
-    toast({ title: `Status updated to ${STATUS_CONFIG[newStatus].label}` });
+    toast({
+      title: `${t("Status updated to")} ${t(STATUS_CONFIG[newStatus].label)}`,
+    });
   };
 
   const deleteJob = (id: string) => {
@@ -212,15 +219,15 @@ export default function RepairTrackingPage() {
                 size="icon"
                 onClick={() => router.push("/dashboard/shop/tools")}
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
               </Button>
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                   <Wrench className="h-6 w-6 text-amber-500" />
-                  Repair Tracking
+                  <T>Repair Tracking</T>
                 </h1>
                 <p className="text-muted-foreground">
-                  Manage jewellery repair and alteration jobs
+                  <T>Manage jewellery repair and alteration jobs</T>
                 </p>
               </div>
             </div>
@@ -228,7 +235,7 @@ export default function RepairTrackingPage() {
               onClick={() => setShowForm(true)}
               className="bg-amber-500 hover:bg-amber-600"
             >
-              <Plus className="h-4 w-4 mr-2" /> New Repair Job
+              <Plus className="h-4 w-4 me-2" /> <T>New Repair Job</T>
             </Button>
           </div>
 
@@ -237,7 +244,9 @@ export default function RepairTrackingPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold">{jobs.length}</p>
-                <p className="text-xs text-muted-foreground">Total Jobs</p>
+                <p className="text-xs text-muted-foreground">
+                  <T>Total Jobs</T>
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -245,7 +254,9 @@ export default function RepairTrackingPage() {
                 <p className="text-2xl font-bold text-blue-600">
                   {activeCount}
                 </p>
-                <p className="text-xs text-muted-foreground">Active</p>
+                <p className="text-xs text-muted-foreground">
+                  <T>Active</T>
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -254,7 +265,7 @@ export default function RepairTrackingPage() {
                   {readyCount}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Ready for Pickup
+                  <T>Ready for Pickup</T>
                 </p>
               </CardContent>
             </Card>
@@ -263,7 +274,9 @@ export default function RepairTrackingPage() {
                 <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
                   {jobs.filter((j) => j.status === "DELIVERED").length}
                 </p>
-                <p className="text-xs text-muted-foreground">Delivered</p>
+                <p className="text-xs text-muted-foreground">
+                  <T>Delivered</T>
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -272,36 +285,49 @@ export default function RepairTrackingPage() {
           {showForm && (
             <Card className="border-amber-200 dark:border-amber-800/50">
               <CardHeader>
-                <CardTitle className="text-base">New Repair Job</CardTitle>
+                <CardTitle className="text-base">
+                  <T>New Repair Job</T>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Customer Name *</Label>
+                    <Label>
+                      <T>Customer Name *</T>
+                    </Label>
                     <Input
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Name"
+                      placeholder={t("Name")}
+                      dir="auto"
                     />
                   </div>
                   <div>
-                    <Label>Phone</Label>
+                    <Label>
+                      <T>Phone</T>
+                    </Label>
                     <Input
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
-                      placeholder="Phone"
+                      placeholder={t("Phone")}
+                      dir="ltr"
                     />
                   </div>
                   <div>
-                    <Label>Item Description *</Label>
+                    <Label>
+                      <T>Item Description *</T>
+                    </Label>
                     <Input
                       value={itemDescription}
                       onChange={(e) => setItemDescription(e.target.value)}
-                      placeholder="e.g. Gold ring with diamond"
+                      placeholder={t("e.g. Gold ring with diamond")}
+                      dir="auto"
                     />
                   </div>
                   <div>
-                    <Label>Repair Type</Label>
+                    <Label>
+                      <T>Repair Type</T>
+                    </Label>
                     <select
                       value={repairType}
                       onChange={(e) => setRepairType(e.target.value)}
@@ -309,13 +335,15 @@ export default function RepairTrackingPage() {
                     >
                       {REPAIR_TYPES.map((t) => (
                         <option key={t} value={t}>
-                          {t}
+                          <T>{t}</T>
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <Label>Estimated Cost ({currencySymbol})</Label>
+                    <Label>
+                      <T>Estimated Cost</T> (<bdi>{currencySymbol}</bdi>)
+                    </Label>
                     <Input
                       type="number"
                       value={estimatedCost}
@@ -324,7 +352,9 @@ export default function RepairTrackingPage() {
                     />
                   </div>
                   <div>
-                    <Label>Expected Completion</Label>
+                    <Label>
+                      <T>Expected Completion</T>
+                    </Label>
                     <Input
                       type="date"
                       value={expectedDate}
@@ -333,11 +363,14 @@ export default function RepairTrackingPage() {
                   </div>
                 </div>
                 <div>
-                  <Label>Notes</Label>
+                  <Label>
+                    <T>Notes</T>
+                  </Label>
                   <Textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Special instructions..."
+                    placeholder={t("Special instructions...")}
+                    dir="auto"
                     rows={2}
                   />
                 </div>
@@ -349,13 +382,13 @@ export default function RepairTrackingPage() {
                       resetForm();
                     }}
                   >
-                    Cancel
+                    <T>Cancel</T>
                   </Button>
                   <Button
                     onClick={addJob}
                     className="bg-amber-500 hover:bg-amber-600"
                   >
-                    Create Ticket
+                    <T>Create Ticket</T>
                   </Button>
                 </div>
               </CardContent>
@@ -365,12 +398,12 @@ export default function RepairTrackingPage() {
           {/* Search & Filter */}
           <div className="flex gap-4">
             <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search ticket, customer, item..."
-                className="pl-10"
+                placeholder={t("Search ticket, customer, item...")}
+                className="ps-10"
               />
             </div>
             <select
@@ -378,10 +411,12 @@ export default function RepairTrackingPage() {
               onChange={(e) => setFilterStatus(e.target.value)}
               className="h-10 px-3 border rounded-md bg-background text-sm"
             >
-              <option value="ALL">All Status</option>
+              <option value="ALL">
+                <T>All Status</T>
+              </option>
               {Object.entries(STATUS_CONFIG).map(([key, val]) => (
                 <option key={key} value={key}>
-                  {val.label}
+                  <T>{val.label}</T>
                 </option>
               ))}
             </select>
@@ -392,7 +427,9 @@ export default function RepairTrackingPage() {
             <Card>
               <CardContent className="flex flex-col items-center py-12 text-center">
                 <Wrench className="h-12 w-12 text-muted-foreground opacity-30 mb-4" />
-                <p className="text-muted-foreground">No repair jobs found</p>
+                <p className="text-muted-foreground">
+                  <T>No repair jobs found</T>
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -411,27 +448,42 @@ export default function RepairTrackingPage() {
                             <span className="font-mono font-bold">
                               {job.ticketNumber}
                             </span>
-                            <Badge className={cfg.color}>{cfg.label}</Badge>
-                            <Badge variant="outline">{job.repairType}</Badge>
+                            <Badge className={cfg.color}>
+                              <T>{cfg.label}</T>
+                            </Badge>
+                            <Badge variant="outline">
+                              <T>{job.repairType}</T>
+                            </Badge>
                           </div>
-                          <p className="font-medium">{job.itemDescription}</p>
+                          <p className="font-medium" dir="auto">
+                            {job.itemDescription}
+                          </p>
                           <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                            <span>{job.customerName}</span>
+                            <span dir="auto">{job.customerName}</span>
                             {job.customerPhone && (
-                              <span className="flex items-center gap-1">
+                              <span
+                                className="flex items-center gap-1"
+                                dir="ltr"
+                              >
                                 <Phone className="h-3 w-3" />{" "}
                                 {job.customerPhone}
                               </span>
                             )}
                             {job.estimatedCost && (
                               <span>
-                                Est: {currencySymbol}{" "}
-                                {parseInt(job.estimatedCost).toLocaleString()}
+                                <T>Est</T>:{" "}
+                                <bdi>
+                                  {currencySymbol}{" "}
+                                  {parseInt(job.estimatedCost).toLocaleString()}
+                                </bdi>
                               </span>
                             )}
                           </div>
                           {job.notes && (
-                            <p className="text-xs text-muted-foreground mt-1 italic">
+                            <p
+                              className="text-xs text-muted-foreground mt-1 italic"
+                              dir="auto"
+                            >
                               {job.notes}
                             </p>
                           )}
@@ -446,7 +498,7 @@ export default function RepairTrackingPage() {
                                 updateStatus(job.id, "IN_PROGRESS")
                               }
                             >
-                              Start Work
+                              <T>Start Work</T>
                             </Button>
                           )}
                           {job.status === "IN_PROGRESS" && (
@@ -455,7 +507,7 @@ export default function RepairTrackingPage() {
                               className="bg-green-500 hover:bg-green-600"
                               onClick={() => updateStatus(job.id, "READY")}
                             >
-                              Mark Ready
+                              <T>Mark Ready</T>
                             </Button>
                           )}
                           {job.status === "READY" && (
@@ -464,13 +516,14 @@ export default function RepairTrackingPage() {
                               variant="outline"
                               onClick={() => updateStatus(job.id, "DELIVERED")}
                             >
-                              Delivered
+                              <T>Delivered</T>
                             </Button>
                           )}
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => deleteJob(job.id)}
+                            aria-label={t("Delete repair job")}
                           >
                             <Trash2 className="h-4 w-4 text-red-400" />
                           </Button>
@@ -478,19 +531,25 @@ export default function RepairTrackingPage() {
                       </div>
                       <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                         <span>
-                          Received:{" "}
-                          {new Date(job.receivedDate).toLocaleDateString()}
+                          <T>Received</T>:{" "}
+                          <bdi>
+                            {new Date(job.receivedDate).toLocaleDateString()}
+                          </bdi>
                         </span>
                         {job.expectedDate && (
                           <span>
-                            Expected:{" "}
-                            {new Date(job.expectedDate).toLocaleDateString()}
+                            <T>Expected</T>:{" "}
+                            <bdi>
+                              {new Date(job.expectedDate).toLocaleDateString()}
+                            </bdi>
                           </span>
                         )}
                         {job.completedDate && (
                           <span>
-                            Completed:{" "}
-                            {new Date(job.completedDate).toLocaleDateString()}
+                            <T>Completed</T>:{" "}
+                            <bdi>
+                              {new Date(job.completedDate).toLocaleDateString()}
+                            </bdi>
                           </span>
                         )}
                       </div>

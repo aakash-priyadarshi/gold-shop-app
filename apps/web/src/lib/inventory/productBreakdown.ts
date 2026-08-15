@@ -1,3 +1,9 @@
+import {
+  calculateGemstoneCarats,
+  calculateGemstoneWeightGrams,
+  calculateGrossWeightGrams,
+} from "@gold-shop/shared";
+
 export type ProductGemstone = {
   type: string;
   cut?: string;
@@ -17,6 +23,7 @@ export type InventoryBreakdownSource = {
   gemstones?: unknown;
   totalWeightGrams?: number;
   weightGrams?: number;
+  grossWeightGrams?: number;
   metalValueNpr?: number;
   makingChargeNpr?: number;
   wastagePercent?: number;
@@ -30,6 +37,9 @@ export type ProductBreakdown = {
   metalType: string;
   purity: string;
   weightGrams: number;
+  gemstoneCarats: number;
+  gemstoneWeightGrams: number;
+  grossWeightGrams: number;
   metalValue: number;
   makingCharge: number;
   wastagePercent: number;
@@ -138,11 +148,29 @@ export function buildProductBreakdown(
   const catalogTotal =
     readNumber(source.totalPriceNpr) ||
     roundMoney2(metalValue + makingCharge + gemstoneValue + tax);
+  const weightGrams = readNumber(
+    source.totalWeightGrams ?? source.weightGrams,
+  );
+  const gemstoneWeightSource =
+    calculateGemstoneCarats(source.composition) > 0
+      ? source.composition
+      : source.gemstones;
+  const gemstoneCarats = calculateGemstoneCarats(gemstoneWeightSource);
+  const gemstoneWeightGrams = calculateGemstoneWeightGrams(
+    gemstoneWeightSource,
+  );
+  const storedGrossWeight = readNumber(source.grossWeightGrams);
 
   return {
     metalType,
     purity,
-    weightGrams: readNumber(source.totalWeightGrams ?? source.weightGrams),
+    weightGrams,
+    gemstoneCarats,
+    gemstoneWeightGrams,
+    grossWeightGrams:
+      storedGrossWeight > 0
+        ? storedGrossWeight
+        : calculateGrossWeightGrams(weightGrams, gemstoneWeightSource),
     metalValue,
     makingCharge,
     wastagePercent,

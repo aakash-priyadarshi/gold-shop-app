@@ -38,6 +38,7 @@ export const PREMIUM_GATED_FEATURES = new Set<string>([
   "bulkUpload",
   "dedicatedSupport",
   "dedicatedAccountManager",
+  "workshopManufacturing",
 ]);
 
 /**

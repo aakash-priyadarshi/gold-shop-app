@@ -13,9 +13,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useFeatures } from "@/hooks/useFeatures";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   Building2,
   Code,
@@ -130,6 +132,7 @@ export default function EnterprisePage() {
 }
 
 function EnterpriseContent() {
+  const t = useT();
   const { hasFeature, planName, loading: featuresLoading } = useFeatures();
   const [activeTab, setActiveTab] = useState("branches");
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -190,15 +193,17 @@ function EnterpriseContent() {
         }
       } catch {
         toast({
-          title: "Error",
-          description: "Failed to load data. Enterprise plan may be required.",
+          title: t("Error"),
+          description: t(
+            "Failed to load data. Enterprise plan may be required.",
+          ),
           variant: "destructive",
         });
       } finally {
         setLoading(false);
       }
     },
-    [hasFeature],
+    [hasFeature, t],
   );
 
   useEffect(() => {
@@ -211,43 +216,45 @@ function EnterpriseContent() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Shield className="h-6 w-6 text-amber-500" />
-          Enterprise Hub
+          <T>Enterprise Hub</T>
         </h1>
         <p className="text-muted-foreground mt-1">
-          Manage branches, staff, integrations, AI tools, and white-label
-          settings
+          <T>
+            Manage branches, staff, integrations, AI tools, and white-label
+            settings
+          </T>
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-4 lg:grid-cols-7 w-full">
           <TabsTrigger value="branches" className="text-xs">
-            <Building2 className="h-3 w-3 mr-1" />
-            Branches
+            <Building2 className="h-3 w-3 me-1" />
+            <T>Branches</T>
           </TabsTrigger>
           <TabsTrigger value="staff" className="text-xs">
-            <Users className="h-3 w-3 mr-1" />
-            Staff
+            <Users className="h-3 w-3 me-1" />
+            <T>Staff</T>
           </TabsTrigger>
           <TabsTrigger value="api-keys" className="text-xs">
-            <Key className="h-3 w-3 mr-1" />
-            API Keys
+            <Key className="h-3 w-3 me-1" />
+            <T>API Keys</T>
           </TabsTrigger>
           <TabsTrigger value="webhooks" className="text-xs">
-            <Webhook className="h-3 w-3 mr-1" />
-            Webhooks
+            <Webhook className="h-3 w-3 me-1" />
+            <T>Webhooks</T>
           </TabsTrigger>
           <TabsTrigger value="branding" className="text-xs">
-            <Palette className="h-3 w-3 mr-1" />
-            Branding
+            <Palette className="h-3 w-3 me-1" />
+            <T>Branding</T>
           </TabsTrigger>
           <TabsTrigger value="repricing" className="text-xs">
-            <TrendingUp className="h-3 w-3 mr-1" />
-            Repricing
+            <TrendingUp className="h-3 w-3 me-1" />
+            <T>Repricing</T>
           </TabsTrigger>
           <TabsTrigger value="forecasts" className="text-xs">
-            <LineChart className="h-3 w-3 mr-1" />
-            Forecasts
+            <LineChart className="h-3 w-3 me-1" />
+            <T>Forecasts</T>
           </TabsTrigger>
         </TabsList>
 
@@ -261,21 +268,29 @@ function EnterpriseContent() {
             loading={featuresLoading}
           >
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Multi-Branch Management</h2>
+              <h2 className="text-lg font-semibold">
+                <T>Multi-Branch Management</T>
+              </h2>
               <Button size="sm">
-                <Building2 className="h-4 w-4 mr-1" /> Add Branch
+                <Building2 className="h-4 w-4 me-1" /> <T>Add Branch</T>
               </Button>
             </div>
             {loading ? (
-              <p className="text-muted-foreground">Loading...</p>
+              <p className="text-muted-foreground">
+                <T>Loading...</T>
+              </p>
             ) : branches.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
                   <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p>No branches configured yet.</p>
+                  <p>
+                    <T>No branches configured yet.</T>
+                  </p>
                   <p className="text-sm">
-                    Add your first branch location to manage multi-store
-                    operations.
+                    <T>
+                      Add your first branch location to manage multi-store
+                      operations.
+                    </T>
                   </p>
                 </CardContent>
               </Card>
@@ -287,25 +302,27 @@ function EnterpriseContent() {
                       <div className="flex justify-between items-start">
                         <div>
                           <CardTitle className="text-base">
-                            {b.branchName}
+                            <span dir="auto">{b.branchName}</span>
                           </CardTitle>
                           <CardDescription>{b.branchCode}</CardDescription>
                         </div>
                         <div className="flex gap-1">
                           {b.isHeadquarter && (
-                            <Badge variant="default">HQ</Badge>
+                            <Badge variant="default">
+                              <T>HQ</T>
+                            </Badge>
                           )}
                           <Badge variant={b.isActive ? "outline" : "secondary"}>
-                            {b.isActive ? "Active" : "Inactive"}
+                            <T>{b.isActive ? "Active" : "Inactive"}</T>
                           </Badge>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="text-sm text-muted-foreground">
-                      <p>
+                      <p dir="auto">
                         {b.address}, {b.city}, {b.country}
                       </p>
-                      <p>{b.contactPhone}</p>
+                      <p dir="ltr">{b.contactPhone}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -324,20 +341,28 @@ function EnterpriseContent() {
             loading={featuresLoading}
           >
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Staff Accounts</h2>
+              <h2 className="text-lg font-semibold">
+                <T>Staff Accounts</T>
+              </h2>
               <Button size="sm">
-                <UserPlus className="h-4 w-4 mr-1" /> Invite Staff
+                <UserPlus className="h-4 w-4 me-1" /> <T>Invite Staff</T>
               </Button>
             </div>
             {loading ? (
-              <p className="text-muted-foreground">Loading...</p>
+              <p className="text-muted-foreground">
+                <T>Loading...</T>
+              </p>
             ) : staff.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p>No staff members yet.</p>
+                  <p>
+                    <T>No staff members yet.</T>
+                  </p>
                   <p className="text-sm">
-                    Invite team members with specific roles and branch access.
+                    <T>
+                      Invite team members with specific roles and branch access.
+                    </T>
                   </p>
                 </CardContent>
               </Card>
@@ -347,20 +372,26 @@ function EnterpriseContent() {
                   <Card key={s.id}>
                     <CardContent className="py-3 flex items-center justify-between">
                       <div>
-                        <p className="font-medium">
+                        <p className="font-medium" dir="auto">
                           {s.user.firstName} {s.user.lastName}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground" dir="ltr">
                           {s.user.email}
                         </p>
                       </div>
                       <div className="flex gap-2 items-center">
-                        <Badge>{s.staffRole}</Badge>
+                        <Badge>
+                          <T>{s.staffRole.replace(/_/g, " ")}</T>
+                        </Badge>
                         {!s.acceptedAt && (
-                          <Badge variant="secondary">Pending</Badge>
+                          <Badge variant="secondary">
+                            <T>Pending</T>
+                          </Badge>
                         )}
                         {!s.isActive && (
-                          <Badge variant="destructive">Disabled</Badge>
+                          <Badge variant="destructive">
+                            <T>Disabled</T>
+                          </Badge>
                         )}
                       </div>
                     </CardContent>
@@ -381,24 +412,32 @@ function EnterpriseContent() {
             loading={featuresLoading}
           >
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">API Key Management</h2>
+              <h2 className="text-lg font-semibold">
+                <T>API Key Management</T>
+              </h2>
               <Button size="sm">
-                <Key className="h-4 w-4 mr-1" /> Generate Key
+                <Key className="h-4 w-4 me-1" /> <T>Generate Key</T>
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Use API keys to integrate OriVraa with your ERP, POS, or
-              accounting systems.
+              <T>
+                Use API keys to integrate OriVraa with your ERP, POS, or
+                accounting systems.
+              </T>
             </p>
             {loading ? (
-              <p className="text-muted-foreground">Loading...</p>
+              <p className="text-muted-foreground">
+                <T>Loading...</T>
+              </p>
             ) : apiKeys.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
                   <Code className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p>No API keys created yet.</p>
+                  <p>
+                    <T>No API keys created yet.</T>
+                  </p>
                   <p className="text-sm">
-                    Generate keys to integrate with external systems.
+                    <T>Generate keys to integrate with external systems.</T>
                   </p>
                 </CardContent>
               </Card>
@@ -413,17 +452,19 @@ function EnterpriseContent() {
                           {k.keyPrefix}...
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Scopes: {k.scopes.join(", ")}
+                          <T>Scopes</T>: <bdi>{k.scopes.join(", ")}</bdi>
                         </p>
                       </div>
                       <div className="flex gap-2 items-center">
                         <Badge variant={k.isActive ? "outline" : "secondary"}>
-                          {k.isActive ? "Active" : "Revoked"}
+                          <T>{k.isActive ? "Active" : "Revoked"}</T>
                         </Badge>
                         {k.lastUsedAt && (
                           <span className="text-xs text-muted-foreground">
-                            Last used:{" "}
-                            {new Date(k.lastUsedAt).toLocaleDateString()}
+                            <T>Last used</T>:{" "}
+                            <bdi>
+                              {new Date(k.lastUsedAt).toLocaleDateString()}
+                            </bdi>
                           </span>
                         )}
                       </div>
@@ -445,24 +486,34 @@ function EnterpriseContent() {
             loading={featuresLoading}
           >
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Webhook Subscriptions</h2>
+              <h2 className="text-lg font-semibold">
+                <T>Webhook Subscriptions</T>
+              </h2>
               <Button size="sm">
-                <Webhook className="h-4 w-4 mr-1" /> Add Webhook
+                <Webhook className="h-4 w-4 me-1" /> <T>Add Webhook</T>
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Receive real-time push notifications for order changes, payments,
-              inventory events, and more.
+              <T>
+                Receive real-time push notifications for order changes,
+                payments, inventory events, and more.
+              </T>
             </p>
             {loading ? (
-              <p className="text-muted-foreground">Loading...</p>
+              <p className="text-muted-foreground">
+                <T>Loading...</T>
+              </p>
             ) : webhooks.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
                   <Globe className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p>No webhooks configured.</p>
+                  <p>
+                    <T>No webhooks configured.</T>
+                  </p>
                   <p className="text-sm">
-                    Set up HTTPS endpoints to receive event notifications.
+                    <T>
+                      Set up HTTPS endpoints to receive event notifications.
+                    </T>
                   </p>
                 </CardContent>
               </Card>
@@ -473,18 +524,20 @@ function EnterpriseContent() {
                     <CardContent className="py-3">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-mono text-sm">{w.url}</p>
+                          <p className="font-mono text-sm" dir="ltr">
+                            {w.url}
+                          </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Events: {w.events.join(", ")}
+                            <T>Events</T>: <bdi>{w.events.join(", ")}</bdi>
                           </p>
                         </div>
                         <div className="flex gap-1">
                           <Badge variant={w.isActive ? "outline" : "secondary"}>
-                            {w.isActive ? "Active" : "Paused"}
+                            <T>{w.isActive ? "Active" : "Paused"}</T>
                           </Badge>
                           {w.failureCount > 0 && (
                             <Badge variant="destructive">
-                              {w.failureCount} failures
+                              <bdi>{w.failureCount}</bdi> <T>failures</T>
                             </Badge>
                           )}
                         </div>
@@ -506,35 +559,45 @@ function EnterpriseContent() {
             planName={planName}
             loading={featuresLoading}
           >
-            <h2 className="text-lg font-semibold">White-Label Branding</h2>
+            <h2 className="text-lg font-semibold">
+              <T>White-Label Branding</T>
+            </h2>
             <p className="text-sm text-muted-foreground">
-              Customize your storefront appearance, use a custom domain, and
-              remove OriVraa branding.
+              <T>
+                Customize your storefront appearance, use a custom domain, and
+                remove OriVraa branding.
+              </T>
             </p>
             {loading ? (
-              <p className="text-muted-foreground">Loading...</p>
+              <p className="text-muted-foreground">
+                <T>Loading...</T>
+              </p>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Custom Domain</CardTitle>
+                    <CardTitle className="text-base">
+                      <T>Custom Domain</T>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm font-mono">
-                      {whiteLabel?.customDomain || "Not configured"}
+                      {whiteLabel?.customDomain || t("Not configured")}
                     </p>
                     <Badge
                       variant={whiteLabel?.isActive ? "default" : "secondary"}
                       className="mt-2"
                     >
-                      {whiteLabel?.isActive ? "Active" : "Inactive"}
+                      <T>{whiteLabel?.isActive ? "Active" : "Inactive"}</T>
                     </Badge>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Brand Colors</CardTitle>
+                    <CardTitle className="text-base">
+                      <T>Brand Colors</T>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="flex gap-3">
                     <div className="flex flex-col items-center gap-1">
@@ -545,7 +608,9 @@ function EnterpriseContent() {
                             whiteLabel?.primaryColor || "#D4AF37",
                         }}
                       />
-                      <span className="text-xs">Primary</span>
+                      <span className="text-xs">
+                        <T>Primary</T>
+                      </span>
                     </div>
                     <div className="flex flex-col items-center gap-1">
                       <div
@@ -555,7 +620,9 @@ function EnterpriseContent() {
                             whiteLabel?.secondaryColor || "#1F2937",
                         }}
                       />
-                      <span className="text-xs">Secondary</span>
+                      <span className="text-xs">
+                        <T>Secondary</T>
+                      </span>
                     </div>
                     <div className="flex flex-col items-center gap-1">
                       <div
@@ -564,30 +631,38 @@ function EnterpriseContent() {
                           backgroundColor: whiteLabel?.accentColor || "#F59E0B",
                         }}
                       />
-                      <span className="text-xs">Accent</span>
+                      <span className="text-xs">
+                        <T>Accent</T>
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="md:col-span-2">
                   <CardHeader>
-                    <CardTitle className="text-base">Settings</CardTitle>
+                    <CardTitle className="text-base">
+                      <T>Settings</T>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span>Font Family</span>
+                      <span>
+                        <T>Font Family</T>
+                      </span>
                       <span className="text-muted-foreground">
                         {whiteLabel?.fontFamily || "Inter"}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Hide OriVraa Branding</span>
+                      <span>
+                        <T>Hide OriVraa Branding</T>
+                      </span>
                       <Badge
                         variant={
                           whiteLabel?.hideOrivraa ? "default" : "secondary"
                         }
                       >
-                        {whiteLabel?.hideOrivraa ? "Yes" : "No"}
+                        <T>{whiteLabel?.hideOrivraa ? "Yes" : "No"}</T>
                       </Badge>
                     </div>
                   </CardContent>
@@ -608,7 +683,7 @@ function EnterpriseContent() {
           >
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">
-                Automated Repricing Rules
+                <T>Automated Repricing Rules</T>
               </h2>
               <div className="flex gap-2">
                 <Button
@@ -617,29 +692,35 @@ function EnterpriseContent() {
                   onClick={() => {
                     api.post("/enterprise/repricing/evaluate").then((res) => {
                       toast({
-                        title: "Evaluation complete",
-                        description: `${(res.data || []).filter((r: any) => r.triggered).length} rules triggered.`,
+                        title: t("Evaluation complete"),
+                        description: `${(res.data || []).filter((r: any) => r.triggered).length} ${t("rules triggered.")}`,
                       });
                     });
                   }}
                 >
-                  <RefreshCw className="h-4 w-4 mr-1" /> Evaluate Now
+                  <RefreshCw className="h-4 w-4 me-1" /> <T>Evaluate Now</T>
                 </Button>
                 <Button size="sm">
-                  <TrendingUp className="h-4 w-4 mr-1" /> Add Rule
+                  <TrendingUp className="h-4 w-4 me-1" /> <T>Add Rule</T>
                 </Button>
               </div>
             </div>
             {loading ? (
-              <p className="text-muted-foreground">Loading...</p>
+              <p className="text-muted-foreground">
+                <T>Loading...</T>
+              </p>
             ) : repricingRules.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
                   <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p>No repricing rules configured.</p>
+                  <p>
+                    <T>No repricing rules configured.</T>
+                  </p>
                   <p className="text-sm">
-                    Create rules to automatically adjust prices based on gold
-                    rates, stock levels, or time.
+                    <T>
+                      Create rules to automatically adjust prices based on gold
+                      rates, stock levels, or time.
+                    </T>
                   </p>
                 </CardContent>
               </Card>
@@ -651,12 +732,12 @@ function EnterpriseContent() {
                       <div>
                         <p className="font-medium">{r.ruleName}</p>
                         <p className="text-xs text-muted-foreground">
-                          Type: {r.ruleType.replace(/_/g, " ")} &middot;
-                          Triggered {r.triggerCount}x
+                          <T>Type</T>: <T>{r.ruleType.replace(/_/g, " ")}</T>{" "}
+                          &middot; <T>Triggered</T> <bdi>{r.triggerCount}x</bdi>
                         </p>
                       </div>
                       <Badge variant={r.isActive ? "outline" : "secondary"}>
-                        {r.isActive ? "Active" : "Paused"}
+                        <T>{r.isActive ? "Active" : "Paused"}</T>
                       </Badge>
                     </CardContent>
                   </Card>
@@ -676,32 +757,40 @@ function EnterpriseContent() {
             loading={featuresLoading}
           >
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">AI Demand Forecasting</h2>
+              <h2 className="text-lg font-semibold">
+                <T>AI Demand Forecasting</T>
+              </h2>
               <Button
                 size="sm"
                 onClick={() => {
                   api.post("/enterprise/forecasts/generate").then(() => {
                     toast({
-                      title: "Forecasts generated",
-                      description: "New predictions are ready.",
+                      title: t("Forecasts generated"),
+                      description: t("New predictions are ready."),
                     });
                     loadData("forecasts");
                   });
                 }}
               >
-                <LineChart className="h-4 w-4 mr-1" /> Generate Forecasts
+                <LineChart className="h-4 w-4 me-1" /> <T>Generate Forecasts</T>
               </Button>
             </div>
             {loading ? (
-              <p className="text-muted-foreground">Loading...</p>
+              <p className="text-muted-foreground">
+                <T>Loading...</T>
+              </p>
             ) : forecasts.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
                   <LineChart className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p>No forecasts available yet.</p>
+                  <p>
+                    <T>No forecasts available yet.</T>
+                  </p>
                   <p className="text-sm">
-                    Generate AI-powered demand predictions based on your
-                    historical sales data.
+                    <T>
+                      Generate AI-powered demand predictions based on your
+                      historical sales data.
+                    </T>
                   </p>
                 </CardContent>
               </Card>
@@ -712,27 +801,31 @@ function EnterpriseContent() {
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
                         <CardTitle className="text-base">
-                          {f.category}
+                          {t(f.category)}
                         </CardTitle>
                         <Badge variant="outline">{f.period}</Badge>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <div className="flex justify-between text-sm mb-2">
-                        <span>Predicted Demand</span>
+                        <span>
+                          <T>Predicted Demand</T>
+                        </span>
                         <span className="font-bold">
-                          {f.predictedDemand} units
+                          <bdi>{f.predictedDemand}</bdi> <T>units</T>
                         </span>
                       </div>
                       <div className="flex justify-between text-sm mb-2">
-                        <span>Confidence</span>
+                        <span>
+                          <T>Confidence</T>
+                        </span>
                         <span className="font-medium">
                           {Math.round(f.confidenceScore * 100)}%
                         </span>
                       </div>
                       {f.recommendation && (
                         <p className="text-xs text-muted-foreground mt-2 border-t pt-2">
-                          {f.recommendation}
+                          {t(f.recommendation)}
                         </p>
                       )}
                     </CardContent>

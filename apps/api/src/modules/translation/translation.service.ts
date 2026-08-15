@@ -174,8 +174,10 @@ export class TranslationService {
   }
 
   /**
-   * Persist Gemini translations to the DB. Uses createMany with skipDuplicates
-   * so concurrent writers don't conflict. Fire-and-forget from caller.
+   * Persist Gemini translations to the DB. Upsert is intentional here: an
+   * earlier failed translation may have stored an English fallback, and
+   * skipDuplicates would permanently prevent the corrected translation from
+   * replacing it.
    */
   private async saveToDb(
     locale: string,
@@ -183,16 +185,30 @@ export class TranslationService {
   ): Promise<void> {
     if (items.length === 0) return;
     try {
-      await this.prisma.translation.createMany({
-        data: items.map((it) => ({
-          locale,
-          sourceHash: this.sourceHash(it.sourceText),
-          sourceText: it.sourceText,
-          translation: it.translation,
-          model: this.MODEL_NAME,
-        })),
-        skipDuplicates: true,
-      });
+      await this.prisma.$transaction(
+        items.map((it) =>
+          this.prisma.translation.upsert({
+            where: {
+              locale_sourceHash: {
+                locale,
+                sourceHash: this.sourceHash(it.sourceText),
+              },
+            },
+            create: {
+              locale,
+              sourceHash: this.sourceHash(it.sourceText),
+              sourceText: it.sourceText,
+              translation: it.translation,
+              model: this.MODEL_NAME,
+            },
+            update: {
+              sourceText: it.sourceText,
+              translation: it.translation,
+              model: this.MODEL_NAME,
+            },
+          }),
+        ),
+      );
     } catch (err) {
       this.logger.warn(
         `DB translation save failed (non-fatal): ${(err as Error).message}`,
@@ -286,7 +302,8 @@ export class TranslationService {
         const translations = await this.callGemini(chunk, locale);
 
         // Accumulate validated translations for bulk DB write
-        const toPersist: Array<{ sourceText: string; translation: string }> = [];
+        const toPersist: Array<{ sourceText: string; translation: string }> =
+          [];
 
         for (let j = 0; j < chunk.length; j++) {
           const translation =
@@ -308,8 +325,9 @@ export class TranslationService {
           }
         }
 
-        // Fire-and-forget DB persist (durable Tier 3)
-        this.saveToDb(locale, toPersist).catch(() => {});
+        // Complete the durable write before responding. saveToDb handles DB
+        // outages as non-fatal, so translation still degrades gracefully.
+        await this.saveToDb(locale, toPersist);
       } catch (error) {
         this.logger.error(`Gemini translation failed: ${error.message}`);
         // Fallback: return original English text for failed items
@@ -350,7 +368,7 @@ Rules:
 - Keep HTML tags (<strong>, <a>, etc.) intact if present.
 - Keep numbers, currency symbols, and emoji unchanged.
 - Use natural, fluent ${langName} — not machine-sounding translation.
-- For ${locale === "ar" ? "Arabic, use Modern Standard Arabic (فصحى)" : `${langName}, use the most common standard dialect`}.
+- For ${locale === "ar" ? "Arabic, use Modern Standard Arabic (فصحى)" : locale === "he" ? "Hebrew, use modern standard Hebrew and preserve natural right-to-left wording" : `${langName}, use the most common standard dialect`}.
 
 Texts:
 ${numbered}
@@ -403,7 +421,10 @@ Respond with ONLY the JSON array, no markdown fences.`;
    * than 24 characters (short single words may legitimately be the same in
    * both languages, e.g. brand names, "OK", numbers).
    */
-  private isSuspiciousTranslation(source: string, translation: string): boolean {
+  private isSuspiciousTranslation(
+    source: string,
+    translation: string,
+  ): boolean {
     const s = source.trim();
     const t = translation.trim();
     if (!s || s !== t) return false;
@@ -475,7 +496,10 @@ Respond with ONLY the JSON array, no markdown fences.`;
     return createHash("sha256").update(content).digest("hex").slice(0, 20);
   }
 
-  private isSuspiciousHtmlFallback(source: string, translated: string): boolean {
+  private isSuspiciousHtmlFallback(
+    source: string,
+    translated: string,
+  ): boolean {
     if (source.trim() !== translated.trim()) {
       return false;
     }
@@ -574,7 +598,9 @@ Respond with ONLY the JSON array, no markdown fences.`;
 
     // 3. Check per-segment L1+L2 cache; collect uncached
     const segmentResults: (string | null)[] = await Promise.all(
-      textSegments.map((s) => this.getValidatedFromCache(locale, s.value.trim())),
+      textSegments.map((s) =>
+        this.getValidatedFromCache(locale, s.value.trim()),
+      ),
     );
     const segmentTranslated = segmentResults.map((value) => value !== null);
 
@@ -624,7 +650,8 @@ Respond with ONLY the JSON array, no markdown fences.`;
 
         try {
           const translations = await this.callGemini(chunk, locale);
-          const toPersist: Array<{ sourceText: string; translation: string }> = [];
+          const toPersist: Array<{ sourceText: string; translation: string }> =
+            [];
           for (let j = 0; j < chunk.length; j++) {
             const translation =
               translations[j] !== undefined ? translations[j] : chunk[j];
@@ -639,11 +666,9 @@ Respond with ONLY the JSON array, no markdown fences.`;
               toPersist.push({ sourceText: chunk[j], translation });
             }
           }
-          this.saveToDb(locale, toPersist).catch(() => {});
+          await this.saveToDb(locale, toPersist);
         } catch (error) {
-          this.logger.error(
-            `Gemini HTML translation failed: ${error.message}`,
-          );
+          this.logger.error(`Gemini HTML translation failed: ${error.message}`);
           for (let j = 0; j < chunk.length; j++) {
             if (segmentResults[chunkLocalIdx[j]] === null) {
               segmentResults[chunkLocalIdx[j]] = chunk[j];

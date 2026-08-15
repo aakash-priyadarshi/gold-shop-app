@@ -36,8 +36,23 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { inventoryApi, invoicesApi, posApi, shopsApi } from "@/lib/api";
+import {
+  customerCrmApi,
+  inventoryApi,
+  invoicesApi,
+  posApi,
+  shopsApi,
+} from "@/lib/api";
 import { ManagerPinDialog } from "@/components/shop/ManagerPinDialog";
+import {
+  defaultPhoneCountryCode,
+  PosCustomerPicker,
+  type PosCustomer,
+} from "@/components/shop/PosCustomerPicker";
+import {
+  SellerProductDetailDialog,
+  type SellerProductDetail,
+} from "@/components/shop/SellerProductDetailDialog";
 import { printBill, type BillSettings } from "@/lib/billPrint";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
 import {
@@ -70,10 +85,10 @@ import {
     ShoppingCart,
     Split,
     Trash2,
+    UserRound,
     X,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 interface PosSessionItem {
@@ -108,6 +123,7 @@ interface PosSession {
   status: string;
   expiresAt: string;
   items: PosSessionItem[];
+  customer?: PosCustomer | null;
 }
 
 interface WishlistItem {
@@ -157,6 +173,12 @@ function PosPageInner() {
   const [session, setSession] = useState<PosSession | null>(null);
   const [customerPicks, setCustomerPicks] = useState<WishlistItem[]>([]);
   const [customerId, setCustomerId] = useState(urlCustomerId || "");
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<PosCustomer | null>(null);
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [catalogueOpen, setCatalogueOpen] = useState(false);
+  const [viewingProduct, setViewingProduct] =
+    useState<SellerProductDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [picksLoading, setPicksLoading] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -217,6 +239,7 @@ function PosPageInner() {
       const res = await posApi.getActiveSession();
       if (res.data) {
         setSession(res.data);
+        setSelectedCustomer(res.data.customer || null);
       }
     } catch {
       // No active session - that's ok
@@ -276,9 +299,10 @@ function PosPageInner() {
   }, [urlCustomerId, urlConversationId]);
 
   // ── Counter Mode: debounced product search ──
+  const activeSessionId = session?.id;
   useEffect(() => {
     const shopId = user?.shop?.id;
-    if (!isCounterMode || !shopId) return;
+    if (!shopId || !activeSessionId) return;
     const timer = setTimeout(async () => {
       setCounterLoading(true);
       try {
@@ -294,7 +318,7 @@ function PosPageInner() {
       finally { setCounterLoading(false); }
     }, 300);
     return () => clearTimeout(timer);
-  }, [counterSearch, isCounterMode, user?.shop?.id]);
+  }, [activeSessionId, counterSearch, user?.shop?.id]);
 
   // ─── Create Session ───
 
@@ -302,15 +326,18 @@ function PosPageInner() {
     setLoading(true);
     try {
       const res = await posApi.createSession({
-        customerId: cId || customerId || undefined,
+        customerId:
+          cId || selectedCustomer?.id || customerId || undefined,
         conversationId: convId || urlConversationId || undefined,
       });
       setSession(res.data);
+      setSelectedCustomer(res.data.customer || selectedCustomer || null);
       toast({ title: t("POS session started (30 min)") });
 
       // Auto-load picks if we have a customer
-      if (cId || customerId) {
-        await loadCustomerPicks(cId || customerId);
+      const pickedCustomer = res.data.customer as PosCustomer | undefined;
+      if (pickedCustomer?.isRegistered) {
+        await loadCustomerPicks(pickedCustomer.id);
       }
     } catch (err: any) {
       toast({
@@ -342,6 +369,41 @@ function PosPageInner() {
       setCustomerPicks([]);
     } finally {
       setPicksLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const customer = session?.customer;
+    if (!customer) return;
+    setSelectedCustomer(customer);
+    setCustomerId(customer.id);
+    setCustomerName(customer.name || "");
+    setCustomerPhone(customer.phone || "");
+    setCustomerEmail(customer.email || "");
+  }, [session?.customer]);
+
+  const attachCustomer = async (customer: PosCustomer) => {
+    try {
+      const updated = session
+        ? await posApi.updateCustomer(session.id, customer.id)
+        : null;
+      setSelectedCustomer(customer);
+      setCustomerId(customer.id);
+      setCustomerName(customer.name || "");
+      setCustomerPhone(customer.phone || "");
+      setCustomerEmail(customer.email || "");
+      if (!session) return;
+
+      if (updated) setSession(updated.data);
+      setCustomerDialogOpen(false);
+      if (customer.isRegistered) await loadCustomerPicks(customer.id);
+      else setCustomerPicks([]);
+    } catch (error: any) {
+      toast({
+        title: t("Could not attach customer"),
+        description: error?.response?.data?.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -484,12 +546,52 @@ function PosPageInner() {
       return;
     }
 
+    let checkoutCustomerId = session.customerId;
+    if (!checkoutCustomerId && customerName.trim() && customerPhone.trim()) {
+      const phoneCountryCode = defaultPhoneCountryCode(shopCountry);
+      const countryDigits = phoneCountryCode.replace(/\D/g, "");
+      let localPhone = customerPhone.replace(/\D/g, "");
+      if (
+        customerPhone.trim().startsWith(phoneCountryCode) &&
+        localPhone.startsWith(countryDigits)
+      ) {
+        localPhone = localPhone.slice(countryDigits.length);
+      }
+      try {
+        const customerRes = await customerCrmApi.upsertWalkIn({
+          name: customerName.trim(),
+          phoneCountryCode,
+          phone: localPhone,
+          email: customerEmail.trim() || undefined,
+          country: shopCountry,
+        });
+        const savedCustomer = customerRes.data as PosCustomer;
+        checkoutCustomerId = savedCustomer.id;
+        setSelectedCustomer(savedCustomer);
+        const updatedSession = await posApi.updateCustomer(
+          session.id,
+          savedCustomer.id,
+        );
+        setSession(updatedSession.data);
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: t("Could not save customer"),
+          description:
+            error?.response?.data?.message ||
+            t("Use Add customer to check the phone number"),
+        });
+        return;
+      }
+    }
+
     setCheckoutLoading(true);
     try {
       const res = await posApi.checkout(session.id, {
         customerName,
         customerPhone: customerPhone || undefined,
         customerEmail: customerEmail || undefined,
+        customerId: checkoutCustomerId || undefined,
         notes: notes || undefined,
         taxRate,
         discountAmount,
@@ -504,6 +606,8 @@ function PosPageInner() {
       setSession(null);
       setCheckoutOpen(false);
       setCustomerPicks([]);
+      setSelectedCustomer(null);
+      setCustomerId("");
       setSplitMode(false);
       setCheckoutSuccess({
         invoiceNumber: inv?.invoiceNumber || "N/A",
@@ -560,6 +664,8 @@ function PosPageInner() {
       await posApi.cancelSession(session.id);
       setSession(null);
       setCustomerPicks([]);
+      setSelectedCustomer(null);
+      setCustomerId("");
       toast({ title: t("POS session cancelled, stock released") });
     } catch (err: any) {
       toast({
@@ -637,6 +743,23 @@ function PosPageInner() {
                   type="button"
                   variant="outline"
                   size="sm"
+                  onClick={() => setCustomerDialogOpen(true)}
+                >
+                  <UserRound className="h-4 w-4 mr-1" />
+                  {selectedCustomer?.name || <T>Add customer</T>}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCatalogueOpen(true)}
+                >
+                  <Package className="h-4 w-4 mr-1" /> <T>Catalogue</T>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setScannerOpen(true)}
                 >
                   <ScanLine className="h-4 w-4 mr-1" /> <T>Scan</T>
@@ -664,20 +787,29 @@ function PosPageInner() {
               <CardHeader>
                 <CardTitle><T>Start a POS Session</T></CardTitle>
                 <CardDescription>
-                  <T>Create a new POS session. Optionally enter a customer ID to load their liked items. Sessions last 30 minutes.</T>
+                  <T>Search an existing customer by phone or save a new walk-in customer before starting. You can also start without a customer.</T>
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-end gap-3">
-                  <div className="flex-1">
-                    <Label htmlFor="customerId"><T>Customer ID (optional)</T></Label>
-                    <Input
-                      id="customerId"
-                      placeholder={t("Paste customer user ID...")}
-                      value={customerId}
-                      onChange={(e) => setCustomerId(e.target.value)}
-                    />
-                  </div>
+              <CardContent className="space-y-4">
+                <PosCustomerPicker
+                  country={shopCountry}
+                  selected={selectedCustomer}
+                  onSelect={(customer) => {
+                    setSelectedCustomer(customer);
+                    setCustomerId(customer.id);
+                    setCustomerName(customer.name || "");
+                    setCustomerPhone(customer.phone || "");
+                    setCustomerEmail(customer.email || "");
+                  }}
+                  onClear={() => {
+                    setSelectedCustomer(null);
+                    setCustomerId("");
+                    setCustomerName("");
+                    setCustomerPhone("");
+                    setCustomerEmail("");
+                  }}
+                />
+                <div className="flex justify-end">
                   <Button
                     onClick={() => handleCreateSession()}
                     disabled={loading}
@@ -687,7 +819,7 @@ function PosPageInner() {
                     ) : (
                       <ShoppingCart className="h-4 w-4 mr-1" />
                     )}
-                    <T>Start Session</T>
+                    {selectedCustomer ? <T>Start session for customer</T> : <T>Start without customer</T>}
                   </Button>
                 </div>
               </CardContent>
@@ -724,14 +856,16 @@ function PosPageInner() {
                       key={item.id}
                       className="group relative border rounded-xl p-3 text-left hover:border-primary hover:shadow-md transition-all bg-card"
                     >
-                      <Link
-                        href={`/dashboard/shop/products/${item.id}`}
-                        target="_blank"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setViewingProduct(item as SellerProductDetail)
+                        }
                         className="absolute top-2 left-2 z-10 rounded-full bg-white/90 dark:bg-gray-900/90 p-1.5 text-amber-800 shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100"
                         title={t("Show full details to customer")}
                       >
                         <Maximize2 className="h-3.5 w-3.5" />
-                      </Link>
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleAddItem(item.id)}
@@ -876,27 +1010,35 @@ function PosPageInner() {
                     {/* Load picks */}
                     {customerPicks.length === 0 && (
                       <div className="space-y-3">
-                        <div className="flex items-end gap-2">
-                          <div className="flex-1">
-                            <Label><T>Customer ID</T></Label>
-                            <Input
-                              placeholder={t("Customer user ID")}
-                              value={customerId}
-                              onChange={(e) => setCustomerId(e.target.value)}
-                            />
+                        {selectedCustomer ? (
+                          <div className="rounded-lg border p-3">
+                            <p className="text-sm font-medium">{selectedCustomer.name}</p>
+                            <p className="text-xs text-muted-foreground">{selectedCustomer.phone}</p>
                           </div>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            onClick={() => setCustomerDialogOpen(true)}
+                          >
+                            <UserRound className="h-4 w-4 mr-2" />
+                            <T>Add customer</T>
+                          </Button>
+                        )}
+                        {selectedCustomer?.isRegistered && (
                           <Button
                             size="sm"
-                            onClick={() => loadCustomerPicks()}
-                            disabled={picksLoading || !customerId}
+                            onClick={() => loadCustomerPicks(selectedCustomer.id)}
+                            disabled={picksLoading}
                           >
-                            {picksLoading ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Search className="h-4 w-4" />
-                            )}
+                            {picksLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Heart className="h-4 w-4 mr-2" />}
+                            <T>Load customer picks</T>
                           </Button>
-                        </div>
+                        )}
+                        {selectedCustomer && !selectedCustomer.isRegistered && (
+                          <p className="text-xs text-muted-foreground">
+                            <T>Wishlist picks are available for registered customers.</T>
+                          </p>
+                        )}
                         {picksLoading && (
                           <p className="text-xs text-muted-foreground">
                             <T>Loading...</T>
@@ -1148,6 +1290,107 @@ function PosPageInner() {
             </div>
           )}
         </div>
+
+        <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
+          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle><T>POS customer</T></DialogTitle>
+              <DialogDescription>
+                <T>Search by phone or save a walk-in customer. The same customer record is used by quotes and invoices.</T>
+              </DialogDescription>
+            </DialogHeader>
+            <PosCustomerPicker
+              country={shopCountry}
+              selected={selectedCustomer}
+              onSelect={attachCustomer}
+              onClear={async () => {
+                if (session) {
+                  const res = await posApi.updateCustomer(session.id);
+                  setSession(res.data);
+                }
+                setSelectedCustomer(null);
+                setCustomerId("");
+                setCustomerName("");
+                setCustomerPhone("");
+                setCustomerEmail("");
+                setCustomerPicks([]);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={catalogueOpen} onOpenChange={setCatalogueOpen}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle><T>Add from product catalogue</T></DialogTitle>
+              <DialogDescription>
+                <T>Search inventory, review full details, and add an available piece to this basket.</T>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                value={counterSearch}
+                onChange={(event) => setCounterSearch(event.target.value)}
+                placeholder={t("Search product name, SKU, QR, or RFID")}
+              />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 overflow-y-auto py-1">
+              {counterItems.map((item: any) => (
+                <div key={item.id} className="rounded-xl border p-3 space-y-2">
+                  <button
+                    type="button"
+                    className="w-full text-left"
+                    onClick={() => {
+                      setCatalogueOpen(false);
+                      setViewingProduct(item as SellerProductDetail);
+                    }}
+                  >
+                    <div className="relative aspect-square rounded-lg bg-muted overflow-hidden mb-2">
+                      {item.images?.[0] ? (
+                        <Image src={item.images[0]} alt="" fill className="object-cover" sizes="200px" unoptimized />
+                      ) : (
+                        <div className="h-full flex items-center justify-center"><Package className="h-8 w-8 text-muted-foreground/40" /></div>
+                      )}
+                    </div>
+                    <p className="text-sm font-medium truncate">{item.nameEn}</p>
+                    <p className="text-xs text-muted-foreground truncate">{item.sku}</p>
+                    <p className="text-sm font-semibold mt-1">{currencySymbol} {item.totalPriceNpr?.toLocaleString()}</p>
+                  </button>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      if (item.variants?.length) {
+                        setCatalogueOpen(false);
+                        setViewingProduct(item as SellerProductDetail);
+                      } else {
+                        void handleAddItem(item.id);
+                      }
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    {item.variants?.length ? <T>Choose variant</T> : <T>Add to basket</T>}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <SellerProductDetailDialog
+          item={viewingProduct}
+          open={Boolean(viewingProduct)}
+          onOpenChange={(open) => {
+            if (!open) setViewingProduct(null);
+          }}
+          onAddedToPos={async () => {
+            if (!session) return;
+            const res = await posApi.getSession(session.id);
+            setSession(res.data);
+          }}
+        />
 
         {/* Checkout Dialog */}
         <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
@@ -1586,7 +1829,7 @@ function PosPageInner() {
           onClose={() => setScannerOpen(false)}
           onScan={handleScannedCode}
           shopId={user?.shop?.id}
-          hint="Scan a printed barcode or QR with the webcam, type a SKU, or use a USB / Bluetooth barcode or RFID gun."
+          hint={t("Scan a printed barcode or QR with the webcam, type a SKU, or use a USB or Bluetooth barcode or RFID gun.")}
         />
       </DashboardLayout>
     </ShopGuard>

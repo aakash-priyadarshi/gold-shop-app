@@ -960,6 +960,7 @@ export class AuthService {
             makingChargePercent: true,
             isOnHold: true,
             holdReason: true,
+            workshopMode: true,
           },
         },
       },

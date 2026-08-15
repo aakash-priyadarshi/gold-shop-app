@@ -10,98 +10,103 @@ import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import OrivraaLoader, {
-    useMinLoadingTime,
+  useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 // ChatPopupProvider is now in root Providers
 import { useAuth, UserRole } from "@/hooks/useAuth";
+import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { useT } from "@/providers/translation-provider";
+import { useT, useTranslation } from "@/providers/translation-provider";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { useHelpUIStore } from "@/store/help-ui";
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-    LANGUAGES,
-    usePreferencesStore,
-    type Language,
-    type DashboardMode,
+  LANGUAGES,
+  usePreferencesStore,
+  type Language,
+  type DashboardMode,
 } from "@/store/preferences";
 import {
-    Activity,
-    Award,
-    Bell,
-    BookOpen,
-    Brain,
-    Bug,
-    Calculator,
-    ChevronDown,
-    ClipboardList,
-    CreditCard,
-    FileEdit,
-    FileText,
-    FlaskConical,
-    Gift,
-    Hammer,
-    Globe,
-    Heart,
-    Home,
-    LayoutDashboard,
-    LifeBuoy,
-    LogOut,
-    Menu,
-    MessageSquare,
-    Package,
-    Receipt,
-    ScanLine,
-    Search,
-    Settings,
-    Shield,
-    ShieldAlert,
-    ShieldCheck,
-    ShoppingCart,
-    Star,
-    MessageCircle,
-    HelpCircle,
-    Store,
-    Target,
-    Ticket,
-    TrendingUp,
-    UserCircle,
-    Briefcase,
-    Users,
-    Wrench,
-    Coins,
-    PiggyBank,
+  Activity,
+  Award,
+  Bell,
+  BookOpen,
+  Brain,
+  Bug,
+  Calculator,
+  ChevronDown,
+  ClipboardList,
+  CreditCard,
+  FileEdit,
+  FileText,
+  FlaskConical,
+  Gift,
+  Hammer,
+  Globe,
+  Heart,
+  Home,
+  LayoutDashboard,
+  LifeBuoy,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Package,
+  Receipt,
+  ScanLine,
+  Search,
+  Settings,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  ShoppingCart,
+  Star,
+  MessageCircle,
+  HelpCircle,
+  Store,
+  Target,
+  Ticket,
+  TrendingUp,
+  UserCircle,
+  Briefcase,
+  Users,
+  Wrench,
+  Coins,
+  PiggyBank,
+  Factory,
+  Layers,
+  Scale,
+  ClipboardCheck,
 } from "lucide-react";
 import { useDesktopShortcuts } from "@/hooks/useDesktopShortcuts";
 import dynamic from "next/dynamic";
@@ -119,7 +124,8 @@ const TutorialButton = dynamic(
 );
 
 function RecallButtons() {
-  const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial } = useHelpUIStore();
+  const { isChatDismissed, isTutorialDismissed, recallChat, recallTutorial } =
+    useHelpUIStore();
   const t = useT();
 
   if (!isChatDismissed && !isTutorialDismissed) return null;
@@ -135,9 +141,10 @@ function RecallButtons() {
                 size="icon"
                 className="relative h-9 w-9 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30"
                 onClick={() => recallChat()}
+                aria-label={t("Restore AI Chat")}
               >
                 <MessageCircle className="h-5 w-5" />
-                <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                <span className="absolute top-1.5 end-1.5 flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
                 </span>
@@ -158,9 +165,10 @@ function RecallButtons() {
                 size="icon"
                 className="relative h-9 w-9 rounded-lg text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/30"
                 onClick={() => recallTutorial()}
+                aria-label={t("Restore Tutorials")}
               >
                 <HelpCircle className="h-5 w-5" />
-                <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                <span className="absolute top-1.5 end-1.5 flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
                 </span>
@@ -183,7 +191,7 @@ function LanguageSelector() {
   return (
     <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
       <SelectTrigger className="w-[110px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
-        <Globe className="h-3.5 w-3.5 mr-1 text-gray-400" />
+        <Globe className="h-3.5 w-3.5 me-1 text-gray-400" />
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -220,6 +228,7 @@ function getDashboardProfileHref(role: UserRole): string {
  * Read-only shop currency badge. Sellers change currency in shop settings only.
  */
 function ShopCurrencyBadge({ compact = false }: { compact?: boolean }) {
+  const t = useT();
   const { user } = useAuth();
   const { currencyCode, symbol } = useShopCurrency();
   const hasShop = Boolean(user?.shop?.id);
@@ -234,8 +243,8 @@ function ShopCurrencyBadge({ compact = false }: { compact?: boolean }) {
         "inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-[#161B22]/70 text-xs font-medium text-gray-700 dark:text-gray-200 hover:border-amber-300 dark:hover:border-amber-600 transition-colors",
         compact ? "h-8 px-2" : "h-9 px-2.5",
       )}
-      title="Shop currency — change in Settings"
-      aria-label={`Shop currency ${currencyCode}. Open settings to change.`}
+      title={t("Shop currency — change in Settings")}
+      aria-label={`${t("Shop currency")} ${currencyCode}. ${t("Open settings to change.")}`}
     >
       <CreditCard
         className={cn(
@@ -527,6 +536,36 @@ const navItems: NavItem[] = [
     label: "Supply Chain",
     href: "/dashboard/shop/supply-chain",
     icon: Hammer,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Workshop",
+    href: "/dashboard/shop/workshop",
+    icon: Factory,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Jobs",
+    href: "/dashboard/shop/workshop/jobs",
+    icon: ClipboardList,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Floor",
+    href: "/dashboard/shop/workshop/floor",
+    icon: Layers,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Metal",
+    href: "/dashboard/shop/workshop/ledger",
+    icon: Scale,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "QC",
+    href: "/dashboard/shop/workshop/qc",
+    icon: ClipboardCheck,
     roles: ["SHOPKEEPER"],
   },
   {
@@ -906,7 +945,7 @@ function SidebarContent({
                     />
                   </button>
                   {isOpen && (
-                    <div className="ml-4 mt-0.5 space-y-0.5 border-l-2 border-gray-100 dark:border-gray-800 pl-2">
+                    <div className="ms-4 mt-0.5 space-y-0.5 border-s-2 border-gray-100 dark:border-gray-800 ps-2">
                       {item.children.map((child) => {
                         const isChildActive =
                           pathname === child.href ||
@@ -986,7 +1025,7 @@ function SidebarContent({
 
         {/* Scroll-down indicator */}
         {canScrollDown && (
-          <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
+          <div className="absolute bottom-0 inset-x-0 pointer-events-none">
             <div className="h-10 bg-gradient-to-t from-white dark:from-card to-transparent" />
             <div className="absolute bottom-1 left-1/2 -translate-x-1/2 pointer-events-auto">
               <button
@@ -1036,9 +1075,13 @@ function SidebarContent({
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const t = useT();
+  const { locale } = useTranslation();
+  const isRtl = LANGUAGES[locale].direction === "rtl";
   const { user, logout, isLoading } = useAuth();
   const pathname = usePathname();
   const { features } = usePlatformFeatures();
+  const { hasFeature, loading: featuresLoading } = useFeatures();
   const customerFlowEnabled = features.customerFlowEnabled;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
@@ -1074,67 +1117,81 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // TypeScript narrowing: user is guaranteed non-null after loader gate
   if (!user) return null;
 
+  const workshopNav =
+    user.role === "SHOPKEEPER" &&
+    !!user.shop?.workshopMode &&
+    !featuresLoading &&
+    hasFeature("workshopManufacturing");
+
   // Filter nav items for user's role and feature flags
   const rawNavItems = navItems.filter((item) => {
     if (!item.roles.includes(user.role)) return false;
-    
+
     // Hide marketplace-specific features if customer flow is disabled
     if (!customerFlowEnabled && user.role === "SHOPKEEPER") {
       const marketplaceLinks = [
-        "/dashboard/shop/engagement", 
-        "/dashboard/shop/reviews", 
-        "/dashboard/shop/referrals", 
-        "/dashboard/shop/commissions"
+        "/dashboard/shop/engagement",
+        "/dashboard/shop/reviews",
+        "/dashboard/shop/referrals",
+        "/dashboard/shop/commissions",
       ];
       if (marketplaceLinks.includes(item.href)) {
         return false;
       }
     }
+    if (item.href === "/dashboard/shop/supply-chain" && workshopNav) {
+      return false;
+    }
+    if (item.href.startsWith("/dashboard/shop/workshop") && !workshopNav) {
+      return false;
+    }
     return true;
   });
 
-  const userNavItems = user.role === "SHOPKEEPER" && dashboardMode === "EASY"
-    ? rawNavItems.reduce((acc, item) => {
-        const easyLinks = [
-          "/dashboard/shop",
-          "/dashboard/shop/pos",
-          "/dashboard/shop/quotes",
-          "/dashboard/shop/invoices",
-          "/dashboard/shop/orders",
-          "/dashboard/shop/rfqs",
-          "/dashboard/shop/products",
-          "/dashboard/shop/inventory",
-          "/dashboard/shop/stock",
-          "/dashboard/shop/lending",
-          "/dashboard/shop/savings",
-          "/dashboard/shop/chit",
-          "/dashboard/shop/accounting",
-          "/dashboard/shop/customers",
-          "/dashboard/shop/messages",
-          "/dashboard/shop/settings",
-          "/dashboard/shop/support",
-          "/dashboard/shop/help"
-        ];
-        if (easyLinks.includes(item.href)) {
-          acc.push(item);
-        } else {
-          // Put the rest in "More ERP Tools" group
-          let moreGroup = acc.find((i) => i.label === "More ERP Tools");
-          if (!moreGroup) {
-            moreGroup = {
-              label: "More ERP Tools",
-              href: "#",
-              icon: Settings,
-              roles: ["SHOPKEEPER"],
-              children: [],
-            };
-            acc.push(moreGroup);
+  const userNavItems =
+    user.role === "SHOPKEEPER" && dashboardMode === "EASY"
+      ? rawNavItems.reduce((acc, item) => {
+          const easyLinks = [
+            "/dashboard/shop",
+            "/dashboard/shop/pos",
+            "/dashboard/shop/quotes",
+            "/dashboard/shop/invoices",
+            "/dashboard/shop/orders",
+            "/dashboard/shop/rfqs",
+            "/dashboard/shop/products",
+            "/dashboard/shop/inventory",
+            "/dashboard/shop/stock",
+            ...(workshopNav ? ["/dashboard/shop/workshop"] : []),
+            "/dashboard/shop/lending",
+            "/dashboard/shop/savings",
+            "/dashboard/shop/chit",
+            "/dashboard/shop/accounting",
+            "/dashboard/shop/customers",
+            "/dashboard/shop/messages",
+            "/dashboard/shop/settings",
+            "/dashboard/shop/support",
+            "/dashboard/shop/help",
+          ];
+          if (easyLinks.includes(item.href)) {
+            acc.push(item);
+          } else {
+            // Put the rest in "More ERP Tools" group
+            let moreGroup = acc.find((i) => i.label === "More ERP Tools");
+            if (!moreGroup) {
+              moreGroup = {
+                label: "More ERP Tools",
+                href: "#",
+                icon: Settings,
+                roles: ["SHOPKEEPER"],
+                children: [],
+              };
+              acc.push(moreGroup);
+            }
+            moreGroup.children!.push(item);
           }
-          moreGroup.children!.push(item);
-        }
-        return acc;
-      }, [] as NavItem[])
-    : rawNavItems;
+          return acc;
+        }, [] as NavItem[])
+      : rawNavItems;
 
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
@@ -1180,13 +1237,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="touch-target -ml-2"
+                className="touch-target -ms-2"
+                aria-label={t("Open menu")}
               >
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">
+                  <T>Open menu</T>
+                </span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] p-0">
+            <SheetContent
+              side={isRtl ? "right" : "left"}
+              className="w-[280px] p-0"
+            >
               <SheetHeader className="p-4 border-b border-gray-100 dark:border-gray-800">
                 <SheetTitle className="flex items-center gap-2">
                   <BrandLogo variant="icon" size="sm" />
@@ -1232,10 +1295,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div>
-                    <p className="font-medium">
+                    <p className="font-medium" dir="auto">
                       {user.firstName} {user.lastName}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p
+                      className="text-xs text-gray-500 dark:text-gray-400"
+                      dir="ltr"
+                    >
                       {user.email}
                     </p>
                   </div>
@@ -1243,21 +1309,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href={getDashboardProfileHref(user.role)}>
-                    <UserCircle className="h-4 w-4 mr-2" />
+                    <UserCircle className="h-4 w-4 me-2" />
                     <T>Profile</T>
                   </Link>
                 </DropdownMenuItem>
                 {user.role === "SHOPKEEPER" && (
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard/shop/settings">
-                      <Settings className="h-4 w-4 mr-2" />
+                      <Settings className="h-4 w-4 me-2" />
                       <T>Shop Settings</T>
                     </Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem asChild>
                   <Link href="/">
-                    <Store className="h-4 w-4 mr-2" />
+                    <Store className="h-4 w-4 me-2" />
                     <T>Browse Marketplace</T>
                   </Link>
                 </DropdownMenuItem>
@@ -1266,7 +1332,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   onClick={logout}
                   className="text-red-600 dark:text-red-400"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
+                  <LogOut className="h-4 w-4 me-2 rtl:-scale-x-100" />
                   <T>Sign out</T>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -1278,7 +1344,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Desktop Layout */}
       <div className="hidden lg:flex">
         {/* Desktop Sidebar */}
-        <aside className="fixed top-0 left-0 z-40 h-screen w-72 bg-white dark:bg-[#161B22] border-r border-gray-100 dark:border-gray-800 shadow-sm">
+        <aside className="fixed top-0 start-0 z-40 h-screen w-72 bg-white dark:bg-[#161B22] border-e border-gray-100 dark:border-gray-800 shadow-sm">
           {/* Logo */}
           <div className="flex items-center h-16 px-6 border-b border-gray-100 dark:border-gray-800">
             <Link href="/" className="flex items-center gap-3">
@@ -1301,7 +1367,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </aside>
 
         {/* Desktop Main Content */}
-        <div className="flex-1 ml-72">
+        <div className="flex-1 ms-72">
           {/* Desktop Header */}
           <header className="sticky top-0 z-30 h-16 bg-white/80 dark:bg-[#161B22]/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-6">
             <div className="flex items-center gap-4">
@@ -1309,7 +1375,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Search className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
-                  placeholder="Search..."
+                  placeholder={t("Search...")}
+                  aria-label={t("Search dashboard")}
+                  dir="auto"
                   className="bg-transparent border-none outline-none text-sm w-full placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-gray-200"
                 />
               </div>
@@ -1330,7 +1398,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
               {/* Shopkeeper Mode Toggle */}
               {user.role === "SHOPKEEPER" && (
-                <div 
+                <div
                   className="hidden md:inline-flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1"
                   data-tour="dashboard-mode-toggle"
                 >
@@ -1338,9 +1406,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     onClick={() => setDashboardMode("EASY")}
                     className={cn(
                       "px-3 py-1 rounded-full text-xs font-medium transition-all",
-                      dashboardMode === "EASY" 
-                        ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" 
-                        : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      dashboardMode === "EASY"
+                        ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100"
+                        : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
                     )}
                   >
                     <T>Easy</T>
@@ -1349,9 +1417,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     onClick={() => setDashboardMode("ADVANCED")}
                     className={cn(
                       "px-3 py-1 rounded-full text-xs font-medium transition-all",
-                      dashboardMode === "ADVANCED" 
-                        ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" 
-                        : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      dashboardMode === "ADVANCED"
+                        ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100"
+                        : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
                     )}
                   >
                     <T>Advanced</T>
@@ -1373,7 +1441,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         {getInitials()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="hidden xl:block text-left">
+                    <div className="hidden xl:block text-start">
                       <p className="text-sm font-medium dark:text-gray-200">
                         {user.firstName}
                       </p>
@@ -1398,21 +1466,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href={getDashboardProfileHref(user.role)}>
-                      <UserCircle className="h-4 w-4 mr-2" />
+                      <UserCircle className="h-4 w-4 me-2" />
                       <T>Profile</T>
                     </Link>
                   </DropdownMenuItem>
                   {user.role === "SHOPKEEPER" && (
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard/shop/settings">
-                        <Settings className="h-4 w-4 mr-2" />
+                        <Settings className="h-4 w-4 me-2" />
                         <T>Shop Settings</T>
                       </Link>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem asChild>
                     <Link href="/">
-                      <Store className="h-4 w-4 mr-2" />
+                      <Store className="h-4 w-4 me-2" />
                       <T>Browse Marketplace</T>
                     </Link>
                   </DropdownMenuItem>
@@ -1421,7 +1489,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     onClick={logout}
                     className="text-red-600 dark:text-red-400"
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
+                    <LogOut className="h-4 w-4 me-2 rtl:-scale-x-100" />
                     <T>Sign out</T>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
