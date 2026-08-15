@@ -1,5 +1,6 @@
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsIn,
   IsOptional,
@@ -15,15 +16,20 @@ import {
 export const SUPPORTED_LOCALES = UI_LOCALE_CODES;
 export type SupportedLocale = UiLocale;
 
+/** Server-side ceiling. The web client chunks below this (typically 80). */
+export const TRANSLATION_BATCH_MAX_SIZE = 200;
+export const TRANSLATION_TEXT_MAX_LENGTH = 2000;
+
 export const LOCALE_NAMES = Object.fromEntries(
   SUPPORTED_LOCALES.map((locale) => [locale, LOCALE_REGISTRY[locale].name]),
 ) as Record<SupportedLocale, string>;
 
 export class TranslateBatchDto {
   @IsArray()
-  @ArrayMaxSize(100)
+  @ArrayMinSize(1)
+  @ArrayMaxSize(TRANSLATION_BATCH_MAX_SIZE)
   @IsString({ each: true })
-  @MaxLength(2000, { each: true })
+  @MaxLength(TRANSLATION_TEXT_MAX_LENGTH, { each: true })
   texts: string[];
 
   @IsString()

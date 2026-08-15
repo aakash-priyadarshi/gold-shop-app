@@ -2,6 +2,12 @@
 
 import { api } from "@/lib/api";
 import {
+  chunkTranslationTexts,
+  mergeTranslationResponse,
+  prepareTranslationBatch,
+  translationBatchErrorDetail,
+} from "@/lib/i18n/translation-batch";
+import {
   getPublicRouteLocale,
   isSuspiciousFallback,
 } from "@/lib/i18n/translation-safeguards";
@@ -181,52 +187,67 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
 
     const texts = Array.from(pending.current);
     pending.current.clear();
+    const unique = prepareTranslationBatch(texts);
+    if (unique.length === 0) {
+      return;
+    }
+
     const flushId = flushIdRef.current + 1;
     flushIdRef.current = flushId;
     inflightRef.current = true;
     setLoading(true);
 
+    const confirmed: Record<string, string> = {};
+    const failed: string[] = [];
+
     try {
-      const { data } = await api.post<{
-        translations: string[];
-        translated?: boolean[];
-      }>("/translation/batch", { texts, locale });
+      for (const chunk of chunkTranslationTexts(unique)) {
+        if (localeRef.current !== locale || flushIdRef.current !== flushId) {
+          return;
+        }
+        try {
+          const { data } = await api.post<{
+            translations: string[];
+            translated?: boolean[];
+          }>("/translation/batch", { texts: chunk, locale });
+
+          const merged = mergeTranslationResponse(
+            chunk,
+            data.translations,
+            data.translated,
+          );
+          Object.assign(confirmed, merged.confirmed);
+          failed.push(...merged.failed);
+        } catch (err) {
+          failed.push(...chunk);
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[i18n] Translation batch failed:",
+            translationBatchErrorDetail(err),
+          );
+        }
+      }
 
       if (localeRef.current !== locale || flushIdRef.current !== flushId) {
         return;
       }
+
+      const now = Date.now();
+      failed.forEach((text) => {
+        failedRef.current.set(failureKey(locale, text), now);
+      });
+      Object.keys(confirmed).forEach((text) => {
+        failedRef.current.delete(failureKey(locale, text));
+      });
 
       setDictionary((prev) => {
         const next = {
           ...(prev.locale === locale ? prev.values : {}),
+          ...confirmed,
         };
-        texts.forEach((text, index) => {
-          const translation = data.translations[index];
-          const confirmed = Array.isArray(data.translated)
-            ? data.translated[index] === true
-            : translation !== text;
-
-          if (translation && confirmed) {
-            next[text] = translation;
-            failedRef.current.delete(failureKey(locale, text));
-            return;
-          }
-
-          failedRef.current.set(failureKey(locale, text), Date.now());
-        });
         saveToStorage(locale, next);
         return { locale, values: next };
       });
-    } catch (err) {
-      if (localeRef.current !== locale || flushIdRef.current !== flushId) {
-        return;
-      }
-      const now = Date.now();
-      texts.forEach((text) => {
-        failedRef.current.set(failureKey(locale, text), now);
-      });
-      // eslint-disable-next-line no-console
-      console.warn("[i18n] Translation batch failed:", err);
     } finally {
       if (flushIdRef.current === flushId) {
         inflightRef.current = false;

@@ -1023,7 +1023,7 @@ CONTACT (FOUNDER — AAKASH):
 
 DEMO & TUTORIAL VIDEOS (recommend these proactively when users ask "how do I…", "show me…", or seem unfamiliar):
 - Quick 30-second visual demo (homepage tour): https://orivraa.com/demo
-- Full 24-minute walkthrough tutorial available in 12 languages:
+- Full 24-minute walkthrough tutorial available in 14 languages:
   · English: https://orivraa.com/tutorial
   · Hindi (हिन्दी): https://orivraa.com/tutorial/hi
   · Nepali (नेपाली): https://orivraa.com/tutorial/ne
@@ -1032,10 +1032,12 @@ DEMO & TUTORIAL VIDEOS (recommend these proactively when users ask "how do I…"
   · Tamil (தமிழ்): https://orivraa.com/tutorial/ta
   · Telugu (తెలుగు): https://orivraa.com/tutorial/te
   · Kannada (ಕನ್ನಡ): https://orivraa.com/tutorial/kn
+  · Sinhala (සිංහල): https://orivraa.com/tutorial/si
   · French (Français): https://orivraa.com/tutorial/fr
   · German (Deutsch): https://orivraa.com/tutorial/de
   · Spanish (Español): https://orivraa.com/tutorial/es
   · Arabic (العربية): https://orivraa.com/tutorial/ar
+  · Hebrew (עברית): https://orivraa.com/tutorial/he
 - For logged-in shop owners, the full tutorial is also inside the app: /dashboard/shop/help
 - The tutorial covers, with timestamps you can cite directly:
   · 1:12 — Dashboard with live gold/silver rates

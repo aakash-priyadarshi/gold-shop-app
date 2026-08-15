@@ -84,6 +84,11 @@ const CHUNKS: { topic: string; content: string }[] = [
       "Orivraa supports Sri Lankan jewellery shops under the LK market with Sri Lankan Rupee (LKR) billing. The configured standard VAT rate is 18%, but tax applicability, exemptions, registration thresholds, and filing obligations can change; shops should confirm current treatment with Sri Lanka's Inland Revenue Department or a qualified local accountant. Card payments use Orivraa's existing Stripe account, with canonical NPR base amounts converted to the actual LKR charge and the FX details recorded. Jewellery weights remain stored internally in grams and can be displayed in grams or tola. Sinhala (si) UI translation is supported through dynamic translation with English fallback, and Tamil support remains available.",
   },
   {
+    topic: "ui-languages",
+    content:
+      "The header and dashboard globe opens a language mega menu grouped into International (English), South Asia (Hindi, Nepali, Gujarati, Marathi, Tamil, Telugu, Kannada, Sinhala), Europe (French, German, Spanish), and Middle East (Arabic, Hebrew). Arabic and Hebrew switch the layout to right-to-left. UI strings are translated on demand via the translation API and cached; English is shown until a confirmed translation arrives.",
+  },
+  {
     topic: "live_rates_autofill",
     content:
       "On the invoice creation page, Orivraa shows live gold and silver market rates in a collapsible panel. Click the 'Live' button next to any line item's Metal Cost to autofill the cost as weight × live rate per gram. The autofilled cost is fully editable afterwards. Rates are fetched per market (Nepal, India, UAE, etc.) in the local currency. Live rates update every 10 minutes.",
