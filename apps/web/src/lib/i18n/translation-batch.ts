@@ -1,66 +1,40 @@
-import { TRANSLATION_TEXT_MAX_LENGTH } from "@gold-shop/shared";
-
 /** Must stay below the API `ArrayMaxSize` (currently 200, previously 100). */
 export const TRANSLATION_BATCH_CHUNK_SIZE = 80;
-export const TRANSLATION_MAX_TEXT_LENGTH = TRANSLATION_TEXT_MAX_LENGTH;
-
-export interface PreparedTranslationBatch {
-  /** Deduped, trimmed strings sent to the API. */
-  unique: string[];
-  /** Prepared API key → original caller strings (including untrimmed aliases). */
-  aliases: Record<string, string[]>;
-  /** Original strings that cannot be translated (empty, whitespace, oversize). */
-  dropped: string[];
-}
+export const TRANSLATION_MAX_TEXT_LENGTH = 2000;
 
 /**
  * Drop empties, oversize strings, and duplicates while preserving first-seen
- * order. The API returns translations in the same order as `unique`.
- * Caller keys (`t` / `register`) stay on the original strings via `aliases`.
+ * order. The API returns translations in the same order as this array.
+ * Returns both the prepared batch and a set of all original raw texts that
+ * were dropped (for tracking failures/cooldowns).
  */
-export function prepareTranslationBatch(texts: string[]): PreparedTranslationBatch {
+export function prepareTranslationBatch(texts: string[]): {
+  prepared: string[];
+  dropped: Set<string>;
+} {
   const seen = new Set<string>();
-  const unique: string[] = [];
-  const aliases: Record<string, string[]> = {};
-  const dropped: string[] = [];
+  const prepared: string[] = [];
+  const dropped = new Set<string>();
 
   for (const raw of texts) {
-    if (typeof raw !== "string") continue;
-    const key = raw.trim();
-    if (!key || key.length > TRANSLATION_MAX_TEXT_LENGTH) {
-      dropped.push(raw);
+    if (typeof raw !== "string") {
+      dropped.add(raw);
       continue;
     }
-    if (!aliases[key]) aliases[key] = [];
-    if (!aliases[key].includes(raw)) aliases[key].push(raw);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(key);
-  }
-
-  return { unique, aliases, dropped };
-}
-
-/** Write dictionary and cooldown entries for every original caller string. */
-export function mapPreparedResultsToOriginals(
-  aliases: Record<string, string[]>,
-  confirmed: Record<string, string>,
-  failedPrepared: string[],
-  dropped: string[] = [],
-): { confirmed: Record<string, string>; failed: string[] } {
-  const expandedConfirmed: Record<string, string> = {};
-  for (const [prepared, translation] of Object.entries(confirmed)) {
-    for (const raw of aliases[prepared] ?? [prepared]) {
-      expandedConfirmed[raw] = translation;
+    const text = raw.trim();
+    if (!text || text.length > TRANSLATION_MAX_TEXT_LENGTH) {
+      dropped.add(raw);
+      continue;
     }
+    if (seen.has(text)) {
+      dropped.add(raw);
+      continue;
+    }
+    seen.add(text);
+    prepared.push(text);
   }
 
-  const failed: string[] = [...dropped];
-  for (const prepared of failedPrepared) {
-    failed.push(...(aliases[prepared] ?? [prepared]));
-  }
-
-  return { confirmed: expandedConfirmed, failed };
+  return { prepared, dropped };
 }
 
 export function chunkTranslationTexts(

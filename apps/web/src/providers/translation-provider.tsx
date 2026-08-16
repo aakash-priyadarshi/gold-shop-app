@@ -3,7 +3,6 @@
 import { api } from "@/lib/api";
 import {
   chunkTranslationTexts,
-  mapPreparedResultsToOriginals,
   mergeTranslationResponse,
   prepareTranslationBatch,
   translationBatchErrorDetail,
@@ -188,12 +187,15 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
 
     const texts = Array.from(pending.current);
     pending.current.clear();
-    const prepared = prepareTranslationBatch(texts);
-    if (prepared.unique.length === 0) {
-      const now = Date.now();
-      prepared.dropped.forEach((text) => {
-        failedRef.current.set(failureKey(locale, text), now);
-      });
+    const { prepared, dropped } = prepareTranslationBatch(texts);
+    if (prepared.length === 0) {
+      // Mark dropped texts as failed so they don't get re-requested repeatedly
+      if (dropped.size > 0) {
+        const now = Date.now();
+        dropped.forEach((text) => {
+          failedRef.current.set(failureKey(locale, text), now);
+        });
+      }
       return;
     }
 
@@ -203,10 +205,10 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     const confirmed: Record<string, string> = {};
-    const failed: string[] = [...prepared.dropped];
+    const failed: string[] = [];
 
     try {
-      for (const chunk of chunkTranslationTexts(prepared.unique)) {
+      for (const chunk of chunkTranslationTexts(prepared)) {
         if (localeRef.current !== locale || flushIdRef.current !== flushId) {
           return;
         }
@@ -221,17 +223,10 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
             data.translations,
             data.translated,
           );
-          const mapped = mapPreparedResultsToOriginals(
-            prepared.aliases,
-            merged.confirmed,
-            merged.failed,
-          );
-          Object.assign(confirmed, mapped.confirmed);
-          failed.push(...mapped.failed);
+          Object.assign(confirmed, merged.confirmed);
+          failed.push(...merged.failed);
         } catch (err) {
-          failed.push(
-            ...mapPreparedResultsToOriginals(prepared.aliases, {}, chunk).failed,
-          );
+          failed.push(...chunk);
           // eslint-disable-next-line no-console
           console.warn(
             "[i18n] Translation batch failed:",
@@ -245,9 +240,15 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       }
 
       const now = Date.now();
+      // Mark dropped texts as failed so they don't get re-requested
+      dropped.forEach((text) => {
+        failedRef.current.set(failureKey(locale, text), now);
+      });
+      // Mark failed API responses
       failed.forEach((text) => {
         failedRef.current.set(failureKey(locale, text), now);
       });
+      // Clear failure state for confirmed translations
       Object.keys(confirmed).forEach((text) => {
         failedRef.current.delete(failureKey(locale, text));
       });

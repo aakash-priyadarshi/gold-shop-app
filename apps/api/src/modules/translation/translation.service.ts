@@ -117,16 +117,6 @@ export const GEMINI_TRANSLATION_MODELS = [
   "gemini-2.5-flash",
 ] as const;
 
-/** Per-model fetch timeout. Chunks run sequentially and each can try every model. */
-export const GEMINI_TRANSLATION_TIMEOUT_MS = 20_000;
-
-function isAbortError(err: unknown): boolean {
-  return (
-    err instanceof Error &&
-    (err.name === "AbortError" || err.name === "TimeoutError")
-  );
-}
-
 /**
  * Parse Gemini's JSON-array translation payload. Strips optional markdown
  * fences so a slightly messy model response still succeeds.
@@ -152,6 +142,7 @@ export function parseGeminiTranslationArray(
 export class TranslationService {
   private readonly logger = new Logger(TranslationService.name);
   private readonly GEMINI_MODELS = GEMINI_TRANSLATION_MODELS;
+  private modelName: string = GEMINI_TRANSLATION_MODELS[0];
   private readonly apiKey: string;
   private readonly CACHE_PREFIX = "i18n:";
   /** L1: in-process LRU. Bounded to prevent memory growth at scale. */
@@ -218,7 +209,6 @@ export class TranslationService {
   private async saveToDb(
     locale: string,
     items: Array<{ sourceText: string; translation: string }>,
-    model: string,
   ): Promise<void> {
     if (items.length === 0) return;
     try {
@@ -236,12 +226,12 @@ export class TranslationService {
               sourceHash: this.sourceHash(it.sourceText),
               sourceText: it.sourceText,
               translation: it.translation,
-              model,
+              model: this.modelName,
             },
             update: {
               sourceText: it.sourceText,
               translation: it.translation,
-              model,
+              model: this.modelName,
             },
           }),
         ),
@@ -336,7 +326,7 @@ export class TranslationService {
       const chunkIndices = uncachedIndices.slice(i, i + CHUNK_SIZE);
 
       try {
-        const { translations, model } = await this.callGemini(chunk, locale);
+        const translations = await this.callGemini(chunk, locale);
 
         // Accumulate validated translations for bulk DB write
         const toPersist: Array<{ sourceText: string; translation: string }> =
@@ -364,7 +354,7 @@ export class TranslationService {
 
         // Complete the durable write before responding. saveToDb handles DB
         // outages as non-fatal, so translation still degrades gracefully.
-        await this.saveToDb(locale, toPersist, model);
+        await this.saveToDb(locale, toPersist);
       } catch (error) {
         this.logger.error(`Gemini translation failed: ${error.message}`);
         // Fallback: return original English text for failed items
@@ -386,7 +376,7 @@ export class TranslationService {
   private async callGemini(
     texts: string[],
     locale: SupportedLocale,
-  ): Promise<{ translations: string[]; model: string }> {
+  ): Promise<string[]> {
     if (!this.apiKey) {
       throw new Error("GEMINI_API_KEY is not configured");
     }
@@ -425,26 +415,20 @@ Respond with ONLY the JSON array, no markdown fences.`;
       }
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
-      let response: Response;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       try {
-        response = await fetch(url, {
+        var response = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig,
           }),
-          signal: AbortSignal.timeout(GEMINI_TRANSLATION_TIMEOUT_MS),
+          signal: controller.signal,
         });
-      } catch (err) {
-        if (isAbortError(err)) {
-          lastError = new Error(`Gemini request timed out (${model})`);
-          this.logger.warn(
-            `Gemini model ${model} timed out — trying next fallback`,
-          );
-          continue;
-        }
-        throw err;
+      } finally {
+        clearTimeout(timeoutId);
       }
 
       if (!response.ok) {
@@ -468,10 +452,8 @@ Respond with ONLY the JSON array, no markdown fences.`;
         continue;
       }
 
-      return {
-        translations: parseGeminiTranslationArray(text, texts.length),
-        model,
-      };
+      this.modelName = model;
+      return parseGeminiTranslationArray(text, texts.length);
     }
 
     throw lastError ?? new Error("Gemini translation failed for all models");
@@ -710,7 +692,6 @@ Respond with ONLY the JSON array, no markdown fences.`;
     );
 
     // 4. Translate uncached via Gemini in chunks
-    let selectedModel: string = GEMINI_TRANSLATION_MODELS[0];
     if (uncachedTexts.length > 0) {
       const CHUNK_SIZE = 30;
       for (let i = 0; i < uncachedTexts.length; i += CHUNK_SIZE) {
@@ -718,8 +699,7 @@ Respond with ONLY the JSON array, no markdown fences.`;
         const chunkLocalIdx = uncachedIdx.slice(i, i + CHUNK_SIZE);
 
         try {
-          const { translations, model } = await this.callGemini(chunk, locale);
-          selectedModel = model;
+          const translations = await this.callGemini(chunk, locale);
           const toPersist: Array<{ sourceText: string; translation: string }> =
             [];
           for (let j = 0; j < chunk.length; j++) {
@@ -736,7 +716,7 @@ Respond with ONLY the JSON array, no markdown fences.`;
               toPersist.push({ sourceText: chunk[j], translation });
             }
           }
-          await this.saveToDb(locale, toPersist, model);
+          await this.saveToDb(locale, toPersist);
         } catch (error) {
           this.logger.error(`Gemini HTML translation failed: ${error.message}`);
           for (let j = 0; j < chunk.length; j++) {
@@ -773,9 +753,9 @@ Respond with ONLY the JSON array, no markdown fences.`;
             locale,
             contentHash,
             html: translatedHtml,
-            model: selectedModel,
+            model: this.modelName,
           },
-          update: { html: translatedHtml, model: selectedModel },
+          update: { html: translatedHtml, model: this.modelName },
         })
         .catch((err) =>
           this.logger.warn(

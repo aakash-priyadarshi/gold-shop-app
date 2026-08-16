@@ -144,7 +144,6 @@ interface LanguageMegaMenuProps {
   align?: "start" | "center" | "end";
   className?: string;
   triggerClassName?: string;
-  /** Applied to the trigger button so a Label htmlFor can associate. */
   id?: string;
 }
 
