@@ -217,9 +217,10 @@ export default function ShopQuotesPage() {
       await shopQuotesApi.updateStatus(quoteId, payload);
       toast({
         title: t("Status Updated"),
-        description: `${t("Quote status changed to")} ${
-          t(statusConfig[newStatus]?.label || newStatus)
-        }`,
+        description: t("Quote status changed to {status}").replace(
+          "{status}",
+          t(statusConfig[newStatus]?.label || newStatus),
+        ),
       });
       loadData();
     } catch (error: any) {

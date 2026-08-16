@@ -11,6 +11,7 @@ describe("dashboard sidebar scroll restore", () => {
   it("persists desktop nav scroll and restores after group auto-expand", () => {
     expect(source).toContain("persistScroll");
     expect(source).toContain("handleNavClick");
+    expect(source).toContain("getDashboardNavScrollStorage");
     expect(source).toContain("writeDashboardNavScroll");
     expect(source).toContain("[openGroups, persistScroll, scrollStorage]");
   });

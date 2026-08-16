@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DASHBOARD_NAV_SCROLL_KEY,
+  getDashboardNavScrollStorage,
   readDashboardNavScroll,
   writeDashboardNavScroll,
 } from "../sidebar-scroll";
@@ -27,5 +28,29 @@ describe("dashboard sidebar scroll persistence", () => {
     writeDashboardNavScroll(640, storage);
     expect(storage.store[DASHBOARD_NAV_SCROLL_KEY]).toBe("640");
     expect(readDashboardNavScroll(storage)).toBe(640);
+  });
+
+  it("treats blocked Web Storage as no saved scroll instead of throwing", () => {
+    expect(
+      getDashboardNavScrollStorage(() => {
+        throw new Error("SecurityError");
+      }),
+    ).toBeNull();
+    expect(
+      readDashboardNavScroll({
+        getItem: () => {
+          throw new Error("SecurityError");
+        },
+        setItem: () => undefined,
+      }),
+    ).toBe(0);
+    expect(() =>
+      writeDashboardNavScroll(10, {
+        getItem: () => null,
+        setItem: () => {
+          throw new Error("QuotaExceededError");
+        },
+      }),
+    ).not.toThrow();
   });
 });

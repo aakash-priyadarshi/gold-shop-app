@@ -40,6 +40,7 @@ import { useT, useTranslation } from "@/providers/translation-provider";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { useHelpUIStore } from "@/store/help-ui";
 import {
+  getDashboardNavScrollStorage,
   readDashboardNavScroll,
   writeDashboardNavScroll,
 } from "@/lib/dashboard/sidebar-scroll";
@@ -820,8 +821,7 @@ function SidebarContent({
   const navRef = useRef<HTMLElement>(null);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const t = useT();
-  const scrollStorage =
-    typeof sessionStorage === "undefined" ? null : sessionStorage;
+  const scrollStorage = getDashboardNavScrollStorage();
 
   const persistNavScroll = useCallback(() => {
     if (!persistScroll) return;

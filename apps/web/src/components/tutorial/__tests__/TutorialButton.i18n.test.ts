@@ -10,9 +10,14 @@ describe("TutorialButton live translation", () => {
 
   it("waits for cold locales before driving so Hindi cache is not the only working path", () => {
     expect(source).toContain("waitForTranslations");
-    expect(source).toContain("collectTourStrings(source)");
+    expect(source).toContain('collectTourStrings(source), "Next →", "← Back", "Done"');
     expect(source).toContain("hasTranslation");
     expect(source).toContain("rawSteps");
+  });
+
+  it("cancels start when the page tour changes during the wait", () => {
+    expect(source).toContain("rawStepsRef.current !== source");
+    expect(source).toContain("setRunning(false)");
   });
 
   it("pushes dictionary updates into the running driver instance", () => {

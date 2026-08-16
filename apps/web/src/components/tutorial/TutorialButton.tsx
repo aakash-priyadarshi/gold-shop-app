@@ -106,10 +106,16 @@ export function TutorialButton({ className }: TutorialButtonProps) {
       register("← Back");
       register("Done");
       register("Ask me if you need help");
-      await waitForTranslations(collectTourStrings(source), hasTranslation);
+      await waitForTranslations(
+        [...collectTourStrings(source), "Next →", "← Back", "Done"],
+        hasTranslation,
+      );
     }
 
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || rawStepsRef.current !== source) {
+      if (mountedRef.current) setRunning(false);
+      return;
+    }
     const liveT = tRef.current;
 
     const driverObj = driver({

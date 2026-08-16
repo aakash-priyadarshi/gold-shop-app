@@ -15,5 +15,6 @@ describe("quotes list i18n leftovers", () => {
     expect(source).toContain("<T>View Details</T>");
     expect(source).toContain("getJewelleryTypeLabel");
     expect(source).toContain("LANGUAGES[locale].intlLocale");
+    expect(source).toContain('t("Quote status changed to {status}")');
   });
 });
