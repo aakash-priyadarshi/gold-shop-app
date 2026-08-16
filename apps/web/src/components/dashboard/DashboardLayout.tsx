@@ -40,6 +40,10 @@ import { useT, useTranslation } from "@/providers/translation-provider";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { useHelpUIStore } from "@/store/help-ui";
 import {
+  readDashboardNavScroll,
+  writeDashboardNavScroll,
+} from "@/lib/dashboard/sidebar-scroll";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -105,7 +109,7 @@ import { useDesktopShortcuts } from "@/hooks/useDesktopShortcuts";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 // Lazy-load tutorial button (driver.js CSS is ~20KB)
 const TutorialButton = dynamic(
@@ -801,6 +805,7 @@ function SidebarContent({
   onLogout,
   getRoleBadge,
   getInitials,
+  persistScroll = false,
 }: {
   user: ReturnType<typeof useAuth>["user"];
   userNavItems: NavItem[];
@@ -810,17 +815,49 @@ function SidebarContent({
   onLogout: () => void;
   getRoleBadge: (role: UserRole) => React.ReactNode;
   getInitials: () => string;
+  persistScroll?: boolean;
 }) {
   const navRef = useRef<HTMLElement>(null);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const t = useT();
+  const scrollStorage =
+    typeof sessionStorage === "undefined" ? null : sessionStorage;
+
+  const persistNavScroll = useCallback(() => {
+    if (!persistScroll) return;
+    writeDashboardNavScroll(navRef.current?.scrollTop ?? 0, scrollStorage);
+  }, [persistScroll, scrollStorage]);
+
+  const handleNavClick = useCallback(() => {
+    persistNavScroll();
+    onNavClick?.();
+  }, [onNavClick, persistNavScroll]);
 
   const checkScroll = useCallback(() => {
     const el = navRef.current;
     if (!el) return;
+    persistNavScroll();
     const hasMore = el.scrollHeight - el.scrollTop - el.clientHeight > 8;
     setCanScrollDown(hasMore);
-  }, []);
+  }, [persistNavScroll]);
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  useLayoutEffect(() => {
+    if (!persistScroll) return;
+    const el = navRef.current;
+    if (!el) return;
+    const restore = () => {
+      el.scrollTop = readDashboardNavScroll(scrollStorage);
+    };
+    restore();
+    const frame = requestAnimationFrame(restore);
+    const timeout = window.setTimeout(restore, 0);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [openGroups, persistScroll, scrollStorage]);
 
   useEffect(() => {
     const el = navRef.current;
@@ -834,9 +871,6 @@ function SidebarContent({
       ro.disconnect();
     };
   }, [checkScroll]);
-
-  // Track which collapsible groups are open
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   // Auto-expand group if a child is currently active
   useEffect(() => {
@@ -940,7 +974,7 @@ function SidebarContent({
                             key={child.href}
                             href={child.href}
                             scroll={false}
-                            onClick={onNavClick}
+                            onClick={handleNavClick}
                             data-active={isChildActive}
                             className={cn(
                               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200",
@@ -976,7 +1010,7 @@ function SidebarContent({
                 key={item.href}
                 href={item.href}
                 scroll={false}
-                onClick={onNavClick}
+                onClick={handleNavClick}
                 data-active={isActive}
                 className={cn(
                   "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 touch-target",
@@ -1019,7 +1053,7 @@ function SidebarContent({
                 }
                 className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white/90 dark:bg-gray-800/90 rounded-full shadow-sm border border-gray-100 dark:border-gray-700 transition-colors"
               >
-                <ChevronDown className="h-3 w-3" /> more
+                <ChevronDown className="h-3 w-3" /> <T>more</T>
               </button>
             </div>
           </div>
@@ -1030,7 +1064,7 @@ function SidebarContent({
       <div className="p-3 border-t border-gray-100 dark:border-gray-800 space-y-1">
         <Link
           href="/"
-          onClick={onNavClick}
+          onClick={handleNavClick}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-target"
         >
           <Home className="h-5 w-5" />
@@ -1348,6 +1382,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             onLogout={logout}
             getRoleBadge={getRoleBadge}
             getInitials={getInitials}
+            persistScroll
           />
         </aside>
 

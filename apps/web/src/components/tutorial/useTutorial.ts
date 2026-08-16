@@ -4,6 +4,7 @@ import { useT, useTranslation } from "@/providers/translation-provider";
 import type { DriveStep } from "driver.js";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo } from "react";
+import { translateTourSteps } from "./translate-tour-steps";
 import { useTourContext } from "./useTourContext";
 
 /** Tour steps keyed by pathname prefix */
@@ -1939,24 +1940,10 @@ export function useTutorial() {
     }
   }, [rawSteps, locale, register]);
 
-  const steps = useMemo<DriveStep[]>(() => {
-    const translateSteps = (source: DriveStep[]) =>
-      source.map((step) => ({
-        ...step,
-        popover: step.popover
-          ? {
-              ...step.popover,
-              title: step.popover.title
-                ? t(step.popover.title)
-                : step.popover.title,
-              description: step.popover.description
-                ? t(step.popover.description)
-                : step.popover.description,
-            }
-          : step.popover,
-      }));
-    return translateSteps(rawSteps);
-  }, [rawSteps, t]);
+  const steps = useMemo<DriveStep[]>(
+    () => translateTourSteps(rawSteps, t),
+    [rawSteps, t],
+  );
 
-  return { steps, hasSteps: steps.length > 0 };
+  return { steps, rawSteps, hasSteps: steps.length > 0 };
 }

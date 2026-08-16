@@ -25,11 +25,15 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { getJewelleryTypeLabel } from "@/lib/constants/jewellery";
 import { shopQuotesApi } from "@/lib/api";
+import { useT, useTranslation } from "@/providers/translation-provider";
+import { LANGUAGES } from "@/store/preferences";
 import {
     CheckCircle,
     Clock,
@@ -123,6 +127,8 @@ const statusConfig: Record<
 };
 
 export default function ShopQuotesPage() {
+  const t = useT();
+  const { locale } = useTranslation();
   const { user } = useAuth();
   const {
     currencyCode: shopCurrency,
@@ -139,6 +145,8 @@ export default function ShopQuotesPage() {
     if (user?.shop?.id) {
       loadData();
     }
+    // Refetch only when the shop changes; toast copy reads the latest t().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.shop?.id]);
 
   const loadData = async () => {
@@ -154,8 +162,8 @@ export default function ShopQuotesPage() {
       console.error("Failed to load quotes:", error);
       toast({
         variant: "destructive",
-        title: "Failed to load quotes",
-        description: "Could not fetch quote data",
+        title: t("Failed to load quotes"),
+        description: t("Could not fetch quote data"),
       });
     } finally {
       setIsLoading(false);
@@ -166,16 +174,19 @@ export default function ShopQuotesPage() {
     try {
       const res = await shopQuotesApi.convertToInvoice(quoteId);
       toast({
-        title: "Invoice Created",
-        description: `Invoice ${res.data.invoiceNumber} generated successfully.`,
+        title: t("Invoice Created"),
+        description: t("Invoice {number} generated successfully.").replace(
+          "{number}",
+          res.data.invoiceNumber,
+        ),
       });
       loadData();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Failed to create invoice",
+        title: t("Failed to create invoice"),
         description:
-          error.response?.data?.message || "Could not convert to invoice",
+          error.response?.data?.message || t("Could not convert to invoice"),
       });
     }
   };
@@ -188,7 +199,7 @@ export default function ShopQuotesPage() {
       } = { status: newStatus };
       if (newStatus === "READY") {
         const raw = window.prompt(
-          "Billing wastage % for this built piece (0 allowed):",
+          t("Billing wastage % for this built piece (0 allowed):"),
           "0",
         );
         if (raw === null) return;
@@ -196,8 +207,8 @@ export default function ShopQuotesPage() {
         if (!Number.isFinite(pct) || pct < 0) {
           toast({
             variant: "destructive",
-            title: "Invalid wastage %",
-            description: "Enter 0 or a positive number.",
+            title: t("Invalid wastage %"),
+            description: t("Enter 0 or a positive number."),
           });
           return;
         }
@@ -205,24 +216,24 @@ export default function ShopQuotesPage() {
       }
       await shopQuotesApi.updateStatus(quoteId, payload);
       toast({
-        title: "Status Updated",
-        description: `Quote status changed to ${
-          statusConfig[newStatus]?.label || newStatus
+        title: t("Status Updated"),
+        description: `${t("Quote status changed to")} ${
+          t(statusConfig[newStatus]?.label || newStatus)
         }`,
       });
       loadData();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Failed to update status",
+        title: t("Failed to update status"),
         description:
-          error.response?.data?.message || "Could not update quote status",
+          error.response?.data?.message || t("Could not update quote status"),
       });
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString(LANGUAGES[locale].intlLocale, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -249,22 +260,24 @@ export default function ShopQuotesPage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Walk-in Quotes</h1>
+              <h1 className="text-2xl font-bold">
+                <T>Walk-in Quotes</T>
+              </h1>
               <p className="text-muted-foreground">
-                Manage quotes for walk-in customers
+                <T>Manage quotes for walk-in customers</T>
               </p>
             </div>
             <div className="flex items-center gap-3">
               <Link href="/dashboard/shop/rfqs">
                 <Button variant="outline">
                   <FileText className="h-4 w-4 mr-2" />
-                  Online RFQs
+                  <T>Online RFQs</T>
                 </Button>
               </Link>
               <Link href="/dashboard/shop/quotes/create" data-tour="quotes-create">
                 <Button className="bg-amber-500 hover:bg-amber-600">
                   <UserPlus className="h-4 w-4 mr-2" />
-                  New Walk-in Quote
+                  <T>New Walk-in Quote</T>
                 </Button>
               </Link>
             </div>
@@ -278,7 +291,7 @@ export default function ShopQuotesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        Total Quotes
+                        <T>Total Quotes</T>
                       </p>
                       <p className="text-2xl font-bold">{stats.total}</p>
                     </div>
@@ -291,7 +304,7 @@ export default function ShopQuotesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        Active Orders
+                        <T>Active Orders</T>
                       </p>
                       <p className="text-2xl font-bold">
                         {stats.byStatus.confirmed + stats.byStatus.inProgress}
@@ -306,7 +319,7 @@ export default function ShopQuotesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        Total Revenue
+                        <T>Total Revenue</T>
                       </p>
                       <p className="text-2xl font-bold">
                         {formatCurrency(stats.totalRevenue)}
@@ -321,7 +334,7 @@ export default function ShopQuotesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        Unique Customers
+                        <T>Unique Customers</T>
                       </p>
                       <p className="text-2xl font-bold">
                         {stats.uniqueCustomers}
@@ -337,26 +350,30 @@ export default function ShopQuotesPage() {
           {/* Quotes Table */}
           <Card data-tour="quotes-list">
             <CardHeader>
-              <CardTitle>Quotes</CardTitle>
+              <CardTitle>
+                <T>Quotes</T>
+              </CardTitle>
               <CardDescription>
-                View and manage all walk-in customer quotes
+                <T>View and manage all walk-in customer quotes</T>
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-4">
-                  <TabsTrigger value="all">All ({quotes.length})</TabsTrigger>
+                  <TabsTrigger value="all">
+                    <T>All</T> ({quotes.length})
+                  </TabsTrigger>
                   <TabsTrigger value="quoted">
-                    Pending ({stats?.byStatus.pending || 0})
+                    <T>Pending</T> ({stats?.byStatus.pending || 0})
                   </TabsTrigger>
                   <TabsTrigger value="confirmed">
-                    Confirmed ({stats?.byStatus.confirmed || 0})
+                    <T>Confirmed</T> ({stats?.byStatus.confirmed || 0})
                   </TabsTrigger>
                   <TabsTrigger value="in_progress">
-                    In Progress ({stats?.byStatus.inProgress || 0})
+                    <T>In Progress</T> ({stats?.byStatus.inProgress || 0})
                   </TabsTrigger>
                   <TabsTrigger value="completed">
-                    Completed ({stats?.byStatus.completed || 0})
+                    <T>Completed</T> ({stats?.byStatus.completed || 0})
                   </TabsTrigger>
                 </TabsList>
 
@@ -368,11 +385,13 @@ export default function ShopQuotesPage() {
                   ) : filteredQuotes.length === 0 ? (
                     <div className="text-center py-8">
                       <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">No quotes found</p>
+                      <p className="text-muted-foreground">
+                        <T>No quotes found</T>
+                      </p>
                       <Link href="/dashboard/shop/quotes/create">
                         <Button className="mt-4">
                           <Plus className="h-4 w-4 mr-2" />
-                          Create First Quote
+                          <T>Create First Quote</T>
                         </Button>
                       </Link>
                     </div>
@@ -380,12 +399,24 @@ export default function ShopQuotesPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Quote #</TableHead>
-                          <TableHead>Customer</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Price</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Date</TableHead>
+                          <TableHead>
+                            <T>Quote #</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Customer</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Type</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Price</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Status</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Date</T>
+                          </TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -413,7 +444,7 @@ export default function ShopQuotesPage() {
                               </TableCell>
                               <TableCell>
                                 <div>
-                                  <p>{quote.jewelleryType}</p>
+                                  <p><T>{getJewelleryTypeLabel(quote.jewelleryType)}</T></p>
                                   {quote.targetTotalWeightG && (
                                     <p className="text-xs text-muted-foreground">
                                       {quote.targetTotalWeightG}g
@@ -430,14 +461,14 @@ export default function ShopQuotesPage() {
                                     {quote.balanceDueNpr &&
                                       quote.balanceDueNpr > 0 && (
                                         <p className="text-xs text-orange-600">
-                                          Due:{" "}
+                                          <T>Due:</T>{" "}
                                           {formatCurrency(quote.balanceDueNpr)}
                                         </p>
                                       )}
                                   </div>
                                 ) : (
                                   <span className="text-muted-foreground">
-                                    Not set
+                                    <T>Not set</T>
                                   </span>
                                 )}
                               </TableCell>
@@ -446,7 +477,7 @@ export default function ShopQuotesPage() {
                                   className={`${status.color} flex items-center gap-1 w-fit`}
                                 >
                                   <StatusIcon className="h-3 w-3" />
-                                  {status.label}
+                                  <T>{status.label}</T>
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-muted-foreground">
@@ -465,7 +496,7 @@ export default function ShopQuotesPage() {
                                     >
                                       <DropdownMenuItem>
                                         <Eye className="h-4 w-4 mr-2" />
-                                        View Details
+                                        <T>View Details</T>
                                       </DropdownMenuItem>
                                     </Link>
                                     {/* Convert to Invoice — show if not already invoiced */}
@@ -477,7 +508,7 @@ export default function ShopQuotesPage() {
                                           }
                                         >
                                           <Receipt className="h-4 w-4 mr-2" />
-                                          Create Invoice
+                                          <T>Create Invoice</T>
                                         </DropdownMenuItem>
                                       )}
                                     {quote.invoiceNumber && (
@@ -496,7 +527,7 @@ export default function ShopQuotesPage() {
                                         }
                                       >
                                         <CheckCircle className="h-4 w-4 mr-2" />
-                                        Confirm Order
+                                        <T>Confirm Order</T>
                                       </DropdownMenuItem>
                                     )}
                                     {quote.status === "CONFIRMED" && (
@@ -509,7 +540,7 @@ export default function ShopQuotesPage() {
                                         }
                                       >
                                         <Play className="h-4 w-4 mr-2" />
-                                        Start Production
+                                        <T>Start Production</T>
                                       </DropdownMenuItem>
                                     )}
                                     {quote.status === "IN_PROGRESS" && (
@@ -519,7 +550,7 @@ export default function ShopQuotesPage() {
                                         }
                                       >
                                         <Package className="h-4 w-4 mr-2" />
-                                        Mark Ready
+                                        <T>Mark Ready</T>
                                       </DropdownMenuItem>
                                     )}
                                     {quote.status === "READY" && (
@@ -532,7 +563,7 @@ export default function ShopQuotesPage() {
                                         }
                                       >
                                         <CheckCircle className="h-4 w-4 mr-2" />
-                                        Complete & Deliver
+                                        <T>Complete & Deliver</T>
                                       </DropdownMenuItem>
                                     )}
                                     {!["COMPLETED", "CANCELLED"].includes(
@@ -548,7 +579,7 @@ export default function ShopQuotesPage() {
                                         className="text-red-600"
                                       >
                                         <XCircle className="h-4 w-4 mr-2" />
-                                        Cancel Quote
+                                        <T>Cancel Quote</T>
                                       </DropdownMenuItem>
                                     )}
                                   </DropdownMenuContent>

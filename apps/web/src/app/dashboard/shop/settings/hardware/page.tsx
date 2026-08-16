@@ -3,6 +3,7 @@
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import HardwareSettingsPanel from "@/components/shop/HardwareSettingsPanel";
+import { T } from "@/components/ui/T";
 
 export default function DesktopHardwareSettingsPage() {
   return (
@@ -15,9 +16,7 @@ export default function DesktopHardwareSettingsPage() {
           />
         </div>
         <p className="mx-auto mt-4 max-w-3xl text-sm text-muted-foreground">
-          Invoice <strong>Print</strong> sends to a thermal receipt printer when
-          one is paired or listed by the Orivraa Desktop app, otherwise the A4 /
-          office print dialog. Use the chevron on Print to pick either type.
+          <T>Invoice Print sends to a thermal receipt printer when one is paired or listed by the Orivraa Desktop app, otherwise the A4 / office print dialog. Use the chevron on Print to pick either type.</T>
         </p>
       </DashboardLayout>
     </ShopGuard>

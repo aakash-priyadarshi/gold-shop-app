@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { describe, expect, it } from "vitest";
 import {
   getPublicRouteLocale,
@@ -27,5 +29,17 @@ describe("translation provider safeguards", () => {
     ).toBe(true);
     expect(isSuspiciousFallback("SKU", "SKU")).toBe(false);
     expect(isSuspiciousFallback("Gold", "זהב")).toBe(false);
+  });
+});
+
+describe("translation provider dictionary refresh", () => {
+  it("rebuilds t() when the dictionary fills so memoized callers are not stuck on English", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "src/providers/translation-provider.tsx"),
+      "utf-8",
+    );
+    expect(source).toMatch(/\[locale, register, dictionary\]/);
+    expect(source).toContain("hasTranslation");
+    expect(source).toContain("dictRef.current = next");
   });
 });

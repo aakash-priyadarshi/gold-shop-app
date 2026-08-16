@@ -1,0 +1,22 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import { describe, expect, it } from "vitest";
+
+describe("TutorialButton live translation", () => {
+  const source = readFileSync(
+    resolve(process.cwd(), "src/components/tutorial/TutorialButton.tsx"),
+    "utf-8",
+  );
+
+  it("waits for cold locales before driving so Hindi cache is not the only working path", () => {
+    expect(source).toContain("waitForTranslations");
+    expect(source).toContain("collectTourStrings(source)");
+    expect(source).toContain("hasTranslation");
+    expect(source).toContain("rawSteps");
+  });
+
+  it("pushes dictionary updates into the running driver instance", () => {
+    expect(source).toContain("instance.setConfig");
+    expect(source).toContain("instance.drive(index)");
+  });
+});
