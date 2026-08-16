@@ -1,12 +1,17 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useT } from "@/providers/translation-provider";
+import { useTranslation } from "@/providers/translation-provider";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import { HelpCircle, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { translateTourSteps } from "./translate-tour-steps";
 import { useTutorial } from "./useTutorial";
+import {
+  collectTourStrings,
+  waitForTranslations,
+} from "./wait-for-tour-translations";
 import { useHelpUIStore } from "@/store/help-ui";
 import { usePathname } from "next/navigation";
 import { LANGUAGES, usePreferencesStore, type Language } from "@/store/preferences";
@@ -16,8 +21,8 @@ interface TutorialButtonProps {
 }
 
 export function TutorialButton({ className }: TutorialButtonProps) {
-  const { steps, hasSteps } = useTutorial();
-  const t = useT();
+  const { rawSteps, hasSteps } = useTutorial();
+  const { t, register, locale, hasTranslation } = useTranslation();
   const pathname = usePathname();
   const isMobile = pathname.startsWith("/m/") || pathname === "/m";
   const [running, setRunning] = useState(false);
@@ -70,15 +75,48 @@ export function TutorialButton({ className }: TutorialButtonProps) {
   }, [hovered]);
 
   // Pre-register these at render time so they're cached before the tour starts
-  const nextLabel = t("Next →");
-  const backLabel = t("← Back");
-  const doneLabel = t("Done");
   const bubbleText = t("Ask me if you need help");
+  const driverRef = useRef<ReturnType<typeof driver> | null>(null);
+  const rawStepsRef = useRef(rawSteps);
+  const tRef = useRef(t);
+  const mountedRef = useRef(true);
+  rawStepsRef.current = rawSteps;
+  tRef.current = t;
 
-  const startTour = useCallback(() => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      driverRef.current?.destroy();
+      driverRef.current = null;
+    };
+  }, []);
+
+  const startTour = useCallback(async () => {
     if (!hasSteps || running) return;
 
+    const source = rawStepsRef.current;
     setRunning(true);
+    if (locale !== "en") {
+      for (const step of source) {
+        if (step.popover?.title) register(step.popover.title);
+        if (step.popover?.description) register(step.popover.description);
+      }
+      register("Next →");
+      register("← Back");
+      register("Done");
+      register("Ask me if you need help");
+      await waitForTranslations(
+        [...collectTourStrings(source), "Next →", "← Back", "Done"],
+        hasTranslation,
+      );
+    }
+
+    if (!mountedRef.current || rawStepsRef.current !== source) {
+      if (mountedRef.current) setRunning(false);
+      return;
+    }
+    const liveT = tRef.current;
 
     const driverObj = driver({
       showProgress: true,
@@ -90,11 +128,12 @@ export function TutorialButton({ className }: TutorialButtonProps) {
       stageRadius: 8,
       popoverClass: "orivraa-tour-popover",
       progressText: "{{current}} / {{total}}",
-      nextBtnText: nextLabel,
-      prevBtnText: backLabel,
-      doneBtnText: doneLabel,
+      nextBtnText: liveT("Next →"),
+      prevBtnText: liveT("← Back"),
+      doneBtnText: liveT("Done"),
       onDestroyStarted: () => {
         driverObj.destroy();
+        driverRef.current = null;
         setRunning(false);
       },
       onPopoverRender: (popover) => {
@@ -130,11 +169,25 @@ export function TutorialButton({ className }: TutorialButtonProps) {
           header.parentElement?.insertBefore(wrap, header);
         }, 10);
       },
-      steps,
+      steps: translateTourSteps(source, liveT),
     });
 
+    driverRef.current = driverObj;
     driverObj.drive();
-  }, [steps, hasSteps, running, nextLabel, backLabel, doneLabel]);
+  }, [hasSteps, running, locale, register, hasTranslation]);
+
+  useEffect(() => {
+    const instance = driverRef.current;
+    if (!running || !instance) return;
+    const index = instance.getState().activeIndex ?? 0;
+    instance.setConfig({
+      steps: translateTourSteps(rawSteps, t),
+      nextBtnText: t("Next →"),
+      prevBtnText: t("← Back"),
+      doneBtnText: t("Done"),
+    });
+    instance.drive(index);
+  }, [rawSteps, t, running]);
 
   // Auto-launch the mobile onboarding tour exactly once, on the first time the
   // user lands on the mobile POS ("make your first sale") screen. After that the
@@ -238,7 +291,7 @@ export function TutorialButton({ className }: TutorialButtonProps) {
             <span className={`text-[10px] font-semibold transition-colors ${
               isOverDismissZone ? "text-red-500" : "text-gray-400"
             }`}>
-              Drop to hide
+              {t("Drop to hide")}
             </span>
           </div>
         </div>
@@ -320,7 +373,7 @@ export function TutorialButton({ className }: TutorialButtonProps) {
                 dismissTutorial();
               }}
               className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-white text-gray-500 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 shadow-sm z-10"
-              title="Hide tutorial button"
+              title={t("Hide tutorial button")}
               aria-label={t("Hide tutorial button")}
             >
               <X className="h-2.5 w-2.5" />

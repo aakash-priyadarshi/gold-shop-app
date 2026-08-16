@@ -142,11 +142,15 @@ describe("Tutorial — Pre-registration Logic", () => {
   });
 
   test("useTutorial still uses t() for live translation", () => {
-    expect(sourceFile).toContain("t(step.popover.title)");
-    expect(sourceFile).toContain("t(step.popover.description)");
+    expect(sourceFile).toContain("translateTourSteps(rawSteps, t)");
+  });
+
+  test("translated steps recompute when t() identity changes after the dictionary fills", () => {
+    expect(sourceFile).toContain("translateTourSteps(rawSteps, t)");
   });
 
   test("rawSteps and steps are separated (pre-registration on raw, translation on steps)", () => {
     expect(sourceFile).toContain("rawSteps");
+    expect(sourceFile).toContain("return { steps, rawSteps, hasSteps: steps.length > 0 }");
   });
 });

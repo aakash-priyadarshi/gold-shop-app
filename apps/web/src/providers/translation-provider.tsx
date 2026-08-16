@@ -38,6 +38,8 @@ interface TranslationContextValue {
   register: (text: string) => void;
   /** True while a translation batch is in-flight */
   loading: boolean;
+  /** True when English is selected or this source string is already in the dictionary */
+  hasTranslation: (text: string) => boolean;
 }
 
 const TranslationContext = createContext<TranslationContextValue>({
@@ -45,6 +47,7 @@ const TranslationContext = createContext<TranslationContextValue>({
   t: (text) => text,
   register: () => {},
   loading: false,
+  hasTranslation: () => true,
 });
 
 /* ────────────────────────────────────────────────────────────── */
@@ -258,6 +261,9 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
           ...confirmed,
         };
         saveToStorage(locale, next);
+        if (localeRef.current === locale) {
+          dictRef.current = next;
+        }
         return { locale, values: next };
       });
     } finally {
@@ -292,17 +298,27 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   const t = useCallback(
     (text: string) => {
       if (locale === "en") return text;
-      if (!dictRef.current[text]) {
+      const values = dictionary.locale === locale ? dictRef.current : {};
+      if (!values[text]) {
         // Queue registration async to avoid calling setState during render
         setTimeout(() => register(text), 0);
       }
-      return dictRef.current[text] || text;
+      return values[text] || text;
     },
-    [locale, register],
+    [locale, register, dictionary],
+  );
+
+  const hasTranslation = useCallback(
+    (text: string) =>
+      locale === "en" ||
+      Boolean((dictionary.locale === locale ? dictRef.current : {})[text]),
+    [locale, dictionary],
   );
 
   return (
-    <TranslationContext.Provider value={{ locale, t, register, loading }}>
+    <TranslationContext.Provider
+      value={{ locale, t, register, loading, hasTranslation }}
+    >
       {children}
     </TranslationContext.Provider>
   );

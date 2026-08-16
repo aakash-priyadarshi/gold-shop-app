@@ -21,6 +21,7 @@ import { useFeatures } from "@/hooks/useFeatures";
 import { api } from "@/lib/api";
 import { OPEN_SUPPORT_CHAT_EVENT, useHelpUIStore } from "@/store/help-ui";
 import { usePreferencesStore } from "@/store/preferences";
+import { useT } from "@/providers/translation-provider";
 import { Mail, MessageCircle, Pencil, Phone, Send, Sparkles, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -314,6 +315,7 @@ function renderMessageContent(text: string) {
 }
 
 export function SupportBot() {
+  const t = useT();
   const pathname = usePathname();
   const { user } = useAuth();
   const { planName } = useFeatures();
@@ -1008,7 +1010,7 @@ export function SupportBot() {
               onPointerMove={onLauncherPointerMove}
               onPointerUp={onLauncherPointerUp}
               onPointerCancel={onLauncherPointerUp}
-              aria-label="Open Orivraa support chat (drag to reposition)"
+              aria-label={t("Open Orivraa support chat (drag to reposition)")}
               data-tour="support-bot"
               style={{
                 width: `${launcherSizePx}px`,
@@ -1241,8 +1243,8 @@ export function SupportBot() {
                   dismissChat();
                 }}
                 className="absolute -top-0.5 -left-0.5 h-4 w-4 bg-white text-gray-500 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 shadow-sm z-10"
-                title="Hide chat widget"
-                aria-label="Hide chat widget"
+                title={t("Hide chat widget")}
+                aria-label={t("Hide chat widget")}
               >
                 <X className="h-2.5 w-2.5" />
               </button>
@@ -1296,8 +1298,8 @@ export function SupportBot() {
                     }}
                     onBlur={commitRename}
                     maxLength={40}
-                    placeholder="Name your assistant…"
-                    aria-label="Assistant name"
+                    placeholder={t("Name your assistant…")}
+                    aria-label={t("Assistant name")}
                     className="w-full bg-white/20 placeholder-white/70 text-white text-sm font-semibold rounded px-2 py-0.5 outline-none focus:bg-white/30"
                   />
                 </div>
@@ -1312,8 +1314,8 @@ export function SupportBot() {
                       setRenameDraft(botName);
                       setIsRenaming(true);
                     }}
-                    title="Name your assistant"
-                    aria-label="Name your assistant"
+                    title={t("Name your assistant")}
+                    aria-label={t("Name your assistant")}
                     className="opacity-70 hover:opacity-100 transition-opacity flex-shrink-0"
                   >
                     <Pencil className="h-3 w-3" />
@@ -1321,9 +1323,11 @@ export function SupportBot() {
                 </div>
               )}
               <p className="text-[11px] opacity-90 leading-tight">
-                {isMobile
-                  ? "POS · Quotes · Repairs · Savings"
-                  : "Powered by Gemini | Founder on standby"}
+                {isMobile ? (
+                  <T>POS · Quotes · Repairs · Savings</T>
+                ) : (
+                  <T>Powered by Gemini | Founder on standby</T>
+                )}
               </p>
             </div>
             <button
@@ -1332,16 +1336,16 @@ export function SupportBot() {
                 dismissChat();
                 setOpen(false);
               }}
-              title="Hide chat widget completely"
-              aria-label="Hide chat widget"
+              title={t("Hide chat widget completely")}
+              aria-label={t("Hide chat widget")}
               className="text-[10px] px-2 py-1 mr-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors uppercase font-medium tracking-wide"
             >
-              Hide
+              <T>Hide</T>
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              aria-label="Close chat"
+              aria-label={t("Close chat")}
               className="h-8 w-8 rounded-full hover:bg-white/15 flex items-center justify-center"
             >
               <X className="h-4 w-4" />
@@ -1419,7 +1423,7 @@ export function SupportBot() {
                       onClick={() => void send(q)}
                       className="text-xs px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 border border-amber-100/60 dark:border-amber-950/40 text-gray-700 dark:text-gray-200 hover:border-amber-500 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-950/15 transition-all shadow-[0_2px_4px_rgba(0,0,0,0.01)] active:scale-95"
                     >
-                      {q}
+                      <T>{q}</T>
                     </button>
                   ))}
                 </div>
@@ -1436,7 +1440,7 @@ export function SupportBot() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask anything about Orivraa..."
+              placeholder={t("Ask anything about Orivraa...")}
               className="flex-1 text-sm bg-amber-50/20 dark:bg-amber-950/10 border border-amber-100/30 dark:border-amber-950/20 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 rounded-full px-4 py-2 outline-none text-gray-900 dark:text-gray-100 placeholder:text-gray-500"
               maxLength={user ? DASHBOARD_CHAT_MAX_CHARS : PUBLIC_CHAT_MAX_CHARS}
               disabled={isTyping}
@@ -1446,13 +1450,13 @@ export function SupportBot() {
               size="icon"
               disabled={!input.trim() || isTyping}
               className="h-9 w-9 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white disabled:opacity-40 shadow-md shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all"
-              aria-label="Send"
+              aria-label={t("Send")}
             >
               <Send className="h-4 w-4" />
             </Button>
           </form>
           <p className={`text-[10px] text-center text-gray-400 dark:text-gray-500 ${isMobile ? "pb-[max(0.375rem,env(safe-area-inset-bottom))]" : "pb-1.5"}`}>
-            Need a human?{" "}
+            <T>Need a human?</T>{" "}
             <a
               href={`https://wa.me/${SUPPORT.phone.replace(/\+/g, "")}`}
               target="_blank"
