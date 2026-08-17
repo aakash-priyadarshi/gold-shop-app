@@ -1048,7 +1048,7 @@ export default function ShopDashboard() {
                     </CardTitle>
                     <CardDescription>
                       <T>
-                        Karigar book plus factory tabs: Tower, Jobs, Floor, Metal, QC, and Reports
+                        Karigar book. When Workshop mode is on and your plan includes workshop manufacturing, Supply Chain also shows Tower, Jobs, Floor, Metal, QC, and Reports.
                       </T>
                     </CardDescription>
                   </div>

@@ -40,7 +40,7 @@ describe("workshop chat context", () => {
     );
   });
 
-  it("respects an admin turning the live plan flag off", () => {
+  it("requires an explicit workshopManufacturing true in live plan JSON", () => {
     expect(
       selectPlansWithFeature(
         [
@@ -56,10 +56,16 @@ describe("workshop chat context", () => {
             country: "IN",
             features: { crm: true },
           },
+          {
+            displayName: "Pro+ (UAE)",
+            name: "PRO_PLUS",
+            country: "AE",
+            features: { workshopManufacturing: true },
+          },
         ],
         "workshopManufacturing",
       ).map((plan) => plan.displayName),
-    ).toEqual(["Pro+ (India)"]);
+    ).toEqual(["Pro+ (UAE)"]);
   });
 
   it("uses this shop's live plan even when the catalog also lists others", () => {

@@ -2320,13 +2320,14 @@ SELLER RESPONSE RULES:
         ipAddress,
       );
 
-      snapshot = await this.buildSellerSnapshot(
+      const seller = await this.buildSellerSnapshot(
         resolvedShopId,
         userId,
         currentPath,
         dashboardMode,
       );
-      const directAnswer = this.maybeAnswerSellerQuestion(snapshot, message);
+      snapshot = seller;
+      const directAnswer = this.maybeAnswerSellerQuestion(seller, message);
       if (directAnswer) {
         await this.supportService.logAiChat(
           sessionId ?? null,
@@ -2343,11 +2344,11 @@ SELLER RESPONSE RULES:
         this.logger.error(
           "sellerChat: GEMINI_API_KEY is not set — returning seller fallback",
         );
-        return this.fallbackSellerResponse(snapshot);
+        return this.fallbackSellerResponse(seller);
       }
 
       const knowledgeContext = await this.searchKnowledge(message);
-      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: snapshot.sellerName, authenticatedEmail: snapshot.sellerEmail }, "SHOPKEEPER", formatWorkshopPlanCatalog(snapshot.workshopPlanNames.map((displayName) => ({ displayName, country: snapshot.country }))))}\n\n${this.buildSellerContext(snapshot)}`;
+      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: seller.sellerName, authenticatedEmail: seller.sellerEmail }, "SHOPKEEPER", formatWorkshopPlanCatalog(seller.workshopPlanNames.map((displayName) => ({ displayName, country: seller.country }))))}\n\n${this.buildSellerContext(seller)}`;
 
       const contents = this.buildContents(
         systemPrompt,
@@ -2428,7 +2429,7 @@ SELLER RESPONSE RULES:
 
       if (!response.ok) {
         this.logger.warn(`Gemini API error (sellerChat): ${response.status}`);
-        return this.limitReply(this.fallbackSellerResponse(snapshot), audience);
+        return this.limitReply(this.fallbackSellerResponse(seller), audience);
       }
 
       const data = await response.json();
@@ -2438,7 +2439,7 @@ SELLER RESPONSE RULES:
         return this.limitReply(
           await this.handleFunctionCall(functionCall, ipAddress, sessionId, {
             audience,
-            authenticatedEmail: snapshot.sellerEmail,
+            authenticatedEmail: seller.sellerEmail,
             latestUserMessage: message,
           }),
           audience,
@@ -2997,20 +2998,21 @@ ADMIN RESPONSE RULES:
         ipAddress,
       );
 
-      snapshot = await this.buildAdminSnapshot(userId, currentPath);
+      const admin = await this.buildAdminSnapshot(userId, currentPath);
+      snapshot = admin;
 
       if (!this.apiKey) {
         this.logger.error(
           "adminChat: GEMINI_API_KEY is not set — returning admin fallback",
         );
-        return this.fallbackAdminResponse(snapshot);
+        return this.fallbackAdminResponse(admin);
       }
 
       const [knowledgeContext, workshopPlans] = await Promise.all([
         this.searchKnowledge(message),
         this.listLiveWorkshopPlans().catch(() => []),
       ]);
-      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: snapshot.adminName }, "ADMIN", formatWorkshopPlanCatalog(workshopPlans))}\n\n${this.buildAdminContext(snapshot)}`;
+      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: admin.adminName }, "ADMIN", formatWorkshopPlanCatalog(workshopPlans))}\n\n${this.buildAdminContext(admin)}`;
       const contents = this.buildContents(
         systemPrompt,
         conversationHistory,
@@ -3060,7 +3062,7 @@ ADMIN RESPONSE RULES:
 
       if (!response.ok) {
         this.logger.warn(`Gemini API error (adminChat): ${response.status}`);
-        return this.limitReply(this.fallbackAdminResponse(snapshot), audience);
+        return this.limitReply(this.fallbackAdminResponse(admin), audience);
       }
 
       const data = await response.json();

@@ -326,24 +326,31 @@ async function main() {
       console.log(`  Skipping [${chunk.topic}] (already done)`);
       continue;
     }
-    if (FORCE_REFRESH.has(chunk.topic) && done.has(chunk.topic)) {
-      await prisma.$executeRawUnsafe(
-        `DELETE FROM "KnowledgeChunk" WHERE topic = $1`,
-        chunk.topic,
-      );
-      console.log(`  Refreshing [${chunk.topic}]…`);
-    }
-    process.stdout.write(`  Embedding [${chunk.topic}]… `);
+    const refreshing =
+      FORCE_REFRESH.has(chunk.topic) && done.has(chunk.topic);
+    process.stdout.write(
+      refreshing
+        ? `  Refreshing [${chunk.topic}]… `
+        : `  Embedding [${chunk.topic}]… `,
+    );
     const vector = await embedWithRetry(chunk.content);
     const vectorLiteral = `[${vector.join(",")}]`;
 
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "KnowledgeChunk" (id, topic, content, embedding, "createdAt", "updatedAt")
-       VALUES (gen_random_uuid(), $1, $2, $3::vector, NOW(), NOW())`,
-      chunk.topic,
-      chunk.content,
-      vectorLiteral,
-    );
+    await prisma.$transaction(async (tx) => {
+      if (refreshing) {
+        await tx.$executeRawUnsafe(
+          `DELETE FROM "KnowledgeChunk" WHERE topic = $1`,
+          chunk.topic,
+        );
+      }
+      await tx.$executeRawUnsafe(
+        `INSERT INTO "KnowledgeChunk" (id, topic, content, embedding, "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3::vector, NOW(), NOW())`,
+        chunk.topic,
+        chunk.content,
+        vectorLiteral,
+      );
+    });
     console.log("done");
     count++;
     // gemini-embedding-001 free tier = 5 RPM → need ≥12s between calls

@@ -7,12 +7,14 @@ export type LiveWorkshopPlan = {
   features?: unknown;
 };
 
+/** Catalog: require the flag set true in live JSON (ignore Pro+/Enterprise missing-key defaults). */
 export function selectPlansWithFeature(
   plans: LiveWorkshopPlan[],
   featureKey: string,
 ): LiveWorkshopPlan[] {
-  return plans.filter((plan) =>
-    PlanLimitsService.isFeatureEnabledOnPlan(plan, featureKey),
+  return plans.filter(
+    (plan) =>
+      PlanLimitsService.planFeatureRecord(plan.features)[featureKey] === true,
   );
 }
 
