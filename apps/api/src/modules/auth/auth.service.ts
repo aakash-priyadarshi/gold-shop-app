@@ -985,7 +985,12 @@ export class AuthService {
       phoneVerifiedAt: user.phoneVerifiedAt,
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt,
-      shop: user.shops?.[0] || null,
+      shop:
+        (user.activeShopId
+          ? user.shops?.find((shop) => shop.id === user.activeShopId)
+          : undefined) ??
+        user.shops?.[0] ??
+        null,
     };
   }
 

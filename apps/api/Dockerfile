@@ -21,12 +21,19 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 
-# Clone private submodule (Railway doesn't checkout submodules automatically)
-# SUBMODULE_PAT is a Railway build variable — a GitHub PAT with read access to gold-shop-core
+# Clone private submodule (Railway doesn't checkout submodules automatically).
+# Always pin to the SHA recorded in apps/api/core-submodule.sha — cloning the
+# default branch (master) silently ships an older gold-shop-core than the
+# parent gitlink, which drops new FEATURE_LABELS such as workshopManufacturing.
 ARG SUBMODULE_PAT
-RUN if [ ! -f apps/api/src/modules/core/subscriptions/subscription-plans.module.ts ] && [ -n "$SUBMODULE_PAT" ]; then \
+COPY apps/api/core-submodule.sha /tmp/core-submodule.sha
+RUN if [ -n "$SUBMODULE_PAT" ]; then \
+      SHA="$(tr -d '[:space:]' < /tmp/core-submodule.sha)" && \
       rm -rf apps/api/src/modules/core && \
-      git clone https://${SUBMODULE_PAT}@github.com/aakash-priyadarshi/gold-shop-core.git apps/api/src/modules/core; \
+      git clone https://${SUBMODULE_PAT}@github.com/aakash-priyadarshi/gold-shop-core.git apps/api/src/modules/core && \
+      git -C apps/api/src/modules/core checkout "$SHA"; \
+    elif [ ! -f apps/api/src/modules/core/subscriptions/subscription-plans.module.ts ]; then \
+      echo "ERROR: gold-shop-core submodule missing and SUBMODULE_PAT not set" && exit 1; \
     fi
 
 # Install all dependencies (dev included — needed for @nestjs/cli and prisma)

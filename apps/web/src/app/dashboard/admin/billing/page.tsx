@@ -554,10 +554,9 @@ function PlansTab() {
       if (Number(f.sortOrder) !== p.sortOrder)
         payload.sortOrder = Number(f.sortOrder);
 
-      // Features — always send if changed
-      const currentFeatures = JSON.stringify(p.features ?? {});
-      const newFeatures = JSON.stringify(f.features ?? {});
-      if (newFeatures !== currentFeatures) payload.features = f.features;
+      if (f.features && typeof f.features === "object") {
+        payload.features = f.features;
+      }
 
       // Display customization
       if ((f.badgeText ?? "") !== (p.badgeText ?? ""))

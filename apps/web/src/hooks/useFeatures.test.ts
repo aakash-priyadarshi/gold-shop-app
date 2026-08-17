@@ -54,13 +54,54 @@ describe("useFeatures", () => {
     expect(state.map.workshopManufacturing).toBe(true);
   });
 
-  it("treats a missing feature key as disabled", () => {
-    const state = buildFeaturesState({
-      planName: "Enterprise (UAE)",
-      planId: "enterprise-ae",
+  it("defaults a missing workshop key to enabled on Pro+ and Enterprise", () => {
+    const enterprise = buildFeaturesState({
+      planName: "Enterprise (India)",
+      planId: "enterprise-in",
+      planTier: "ENTERPRISE",
+      features: [{ key: "crm", label: "CRM", category: "CRM", enabled: true }],
+    });
+    expect(enterprise.map.workshopManufacturing).toBe(true);
+
+    const proPlus = buildFeaturesState({
+      planName: "Pro+ (India)",
+      planTier: "PRO_PLUS",
+      features: { crm: true },
+    });
+    expect(proPlus.map.workshopManufacturing).toBe(true);
+  });
+
+  it("does not invent workshop access on Free or Pro", () => {
+    const free = buildFeaturesState({
+      planName: "Free (India)",
+      planTier: "FREE",
       features: [],
     });
-    expect(state.map.workshopManufacturing).not.toBe(true);
+    expect(free.map.workshopManufacturing).not.toBe(true);
+
+    const pro = buildFeaturesState({
+      planName: "Pro (India)",
+      planTier: "PRO",
+      features: [],
+    });
+    expect(pro.map.workshopManufacturing).not.toBe(true);
+  });
+
+  it("respects an explicit workshopManufacturing false", () => {
+    const state = buildFeaturesState(response(false, "Enterprise (India)").data);
+    expect(state.map.workshopManufacturing).toBe(false);
+  });
+
+  it("reads a nested data envelope and a raw plan JSON map", () => {
+    const nested = buildFeaturesState({
+      data: {
+        planName: "Pro+ (India)",
+        planTier: "PRO_PLUS",
+        features: { workshopManufacturing: true },
+      },
+    });
+    expect(nested.map.workshopManufacturing).toBe(true);
+    expect(nested.planName).toBe("Pro+ (India)");
   });
 
   it("reports a feature API failure instead of calling it a plan denial", async () => {
