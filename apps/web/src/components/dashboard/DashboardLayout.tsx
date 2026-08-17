@@ -32,7 +32,6 @@ import { LanguageMegaMenu } from "@/components/i18n/LanguageMegaMenu";
 import { BRAND } from "@/config/brand";
 // ChatPopupProvider is now in root Providers
 import { useAuth, UserRole } from "@/hooks/useAuth";
-import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -101,10 +100,6 @@ import {
   Wrench,
   Coins,
   PiggyBank,
-  Factory,
-  Layers,
-  Scale,
-  ClipboardCheck,
 } from "lucide-react";
 import { useDesktopShortcuts } from "@/hooks/useDesktopShortcuts";
 import dynamic from "next/dynamic";
@@ -526,36 +521,6 @@ const navItems: NavItem[] = [
     label: "Supply Chain",
     href: "/dashboard/shop/supply-chain",
     icon: Hammer,
-    roles: ["SHOPKEEPER"],
-  },
-  {
-    label: "Workshop",
-    href: "/dashboard/shop/workshop",
-    icon: Factory,
-    roles: ["SHOPKEEPER"],
-  },
-  {
-    label: "Jobs",
-    href: "/dashboard/shop/workshop/jobs",
-    icon: ClipboardList,
-    roles: ["SHOPKEEPER"],
-  },
-  {
-    label: "Floor",
-    href: "/dashboard/shop/workshop/floor",
-    icon: Layers,
-    roles: ["SHOPKEEPER"],
-  },
-  {
-    label: "Metal",
-    href: "/dashboard/shop/workshop/ledger",
-    icon: Scale,
-    roles: ["SHOPKEEPER"],
-  },
-  {
-    label: "QC",
-    href: "/dashboard/shop/workshop/qc",
-    icon: ClipboardCheck,
     roles: ["SHOPKEEPER"],
   },
   {
@@ -1100,7 +1065,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout, isLoading } = useAuth();
   const pathname = usePathname();
   const { features } = usePlatformFeatures();
-  const { hasFeature, loading: featuresLoading } = useFeatures();
   const customerFlowEnabled = features.customerFlowEnabled;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
@@ -1136,12 +1100,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // TypeScript narrowing: user is guaranteed non-null after loader gate
   if (!user) return null;
 
-  const workshopNav =
-    user.role === "SHOPKEEPER" &&
-    !!user.shop?.workshopMode &&
-    !featuresLoading &&
-    hasFeature("workshopManufacturing");
-
   // Filter nav items for user's role and feature flags
   const rawNavItems = navItems.filter((item) => {
     if (!item.roles.includes(user.role)) return false;
@@ -1157,12 +1115,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       if (marketplaceLinks.includes(item.href)) {
         return false;
       }
-    }
-    if (item.href === "/dashboard/shop/supply-chain" && workshopNav) {
-      return false;
-    }
-    if (item.href.startsWith("/dashboard/shop/workshop") && !workshopNav) {
-      return false;
     }
     return true;
   });
@@ -1180,7 +1132,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             "/dashboard/shop/products",
             "/dashboard/shop/inventory",
             "/dashboard/shop/stock",
-            ...(workshopNav ? ["/dashboard/shop/workshop"] : []),
+            "/dashboard/shop/supply-chain",
             "/dashboard/shop/lending",
             "/dashboard/shop/savings",
             "/dashboard/shop/chit",

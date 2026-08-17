@@ -1,8 +1,18 @@
 "use client";
 
+import WorkshopFloorView from "@/app/dashboard/shop/workshop/floor/page";
+import WorkshopJobsView from "@/app/dashboard/shop/workshop/jobs/page";
+import WorkshopKarigarsView from "@/app/dashboard/shop/workshop/karigars/page";
+import WorkshopMetalView from "@/app/dashboard/shop/workshop/ledger/page";
+import WorkshopTowerView from "@/app/dashboard/shop/workshop/page";
+import WorkshopProcurementView from "@/app/dashboard/shop/workshop/procurement/page";
+import WorkshopQcView from "@/app/dashboard/shop/workshop/qc/page";
+import WorkshopReportsView from "@/app/dashboard/shop/workshop/reports/page";
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { FeatureGate } from "@/components/FeatureGate";
+import { WorkshopJobCardView } from "@/components/shop/workshop/WorkshopJobCardView";
+import { useTourContext } from "@/components/tutorial/useTourContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +38,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { materialsApi, karigarApi } from "@/lib/api";
 import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import {
+  parseWorkshopView,
+  supplyChainHref,
+  type WorkshopView,
+} from "@/lib/workshop-route";
 import { useT } from "@/providers/translation-provider";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Activity,
   ArrowDownLeft,
@@ -46,7 +62,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 // ── Types ──
 interface Workshop {
@@ -113,27 +129,212 @@ export default function KarigarSupplyChainPage() {
   return (
     <ShopGuard>
       <DashboardLayout>
-        <KarigarSupplyChainContent />
+        <Suspense
+          fallback={
+            <div className="flex min-h-[240px] items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <T>Loading Supply Chain…</T>
+            </div>
+          }
+        >
+          <SupplyChainRouteContent />
+        </Suspense>
       </DashboardLayout>
     </ShopGuard>
   );
 }
 
-function KarigarSupplyChainContent() {
+const FACTORY_VIEWS: Array<{ view: WorkshopView; label: string }> = [
+  { view: "tower", label: "Tower" },
+  { view: "jobs", label: "Jobs" },
+  { view: "floor", label: "Floor" },
+  { view: "metal", label: "Metal" },
+  { view: "qc", label: "QC" },
+  { view: "reports", label: "Reports" },
+];
+
+function SupplyChainRouteContent() {
   const { user } = useAuth();
-  const { hasFeature, planName, loading: featuresLoading } = useFeatures();
-  const router = useRouter();
-  const t = useT();
+  const {
+    hasFeature,
+    planName,
+    loading,
+    status,
+    error,
+    refresh,
+  } = useFeatures();
+  const searchParams = useSearchParams();
+  const requested = searchParams.get("view");
+  const view = requested ? parseWorkshopView(requested) : null;
+  const workshopMode = !!user?.shop?.workshopMode;
+  const workshopEnabled = hasFeature("workshopManufacturing");
+  const activeNav = view === "job" ? "jobs" : view;
+  const setTourSubKey = useTourContext((state) => state.setSubKey);
 
   useEffect(() => {
-    if (
-      user?.shop?.workshopMode &&
-      !featuresLoading &&
-      hasFeature("workshopManufacturing")
-    ) {
-      router.replace("/dashboard/shop/workshop");
-    }
-  }, [user?.shop?.workshopMode, featuresLoading, hasFeature, router]);
+    const tourView = view === "job" ? "jobs" : view;
+    setTourSubKey(tourView ? `workshop-${tourView}` : null);
+    return () => setTourSubKey(null);
+  }, [setTourSubKey, view]);
+
+  const nav = (
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-2">
+      <Button variant={view ? "ghost" : "default"} size="sm" asChild>
+        <Link href={supplyChainHref()}>
+          <T>Karigar book</T>
+        </Link>
+      </Button>
+      {FACTORY_VIEWS.map((item) => (
+        <Button
+          key={item.view}
+          variant={activeNav === item.view ? "default" : "ghost"}
+          size="sm"
+          asChild
+        >
+          <Link href={supplyChainHref(item.view)}>
+            <T>{item.label}</T>
+          </Link>
+        </Button>
+      ))}
+      <span className="ms-auto px-2 text-xs text-muted-foreground">
+        {workshopMode ? <T>Workshop mode on</T> : <T>Workshop mode off</T>}
+      </span>
+    </div>
+  );
+
+  if (!view) {
+    return (
+      <div className="space-y-4">
+        {nav}
+        <KarigarSupplyChainLedger />
+      </div>
+    );
+  }
+
+  if (loading && status !== "ready") {
+    return (
+      <div className="space-y-4">
+        {nav}
+        <div className="flex min-h-[240px] items-center justify-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <T>Checking workshop access…</T>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !workshopEnabled) {
+    return (
+      <div className="space-y-4">
+        {nav}
+        <Card className="max-w-xl border-red-200">
+          <CardHeader>
+            <CardTitle>
+              <T>Could not verify workshop access</T>
+            </CardTitle>
+            <CardDescription>{error}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => void refresh()}>
+              <T>Retry plan check</T>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!workshopEnabled) {
+    return (
+      <div className="space-y-4">
+        {nav}
+        <FeatureGate
+          feature="workshopManufacturing"
+          featureLabel="Workshop manufacturing (factory floor)"
+          hasFeature={hasFeature}
+          planName={planName}
+          loading={false}
+        >
+          <WorkshopWorkspace view={view} jobId={searchParams.get("id")} />
+        </FeatureGate>
+      </div>
+    );
+  }
+
+  if (!workshopMode) {
+    return (
+      <div className="space-y-4">
+        {nav}
+        <Card className="max-w-xl">
+          <CardHeader>
+            <CardTitle>
+              <T>Workshop mode is off</T>
+            </CardTitle>
+            <CardDescription>
+              <T>
+                Turn on Workshop mode in Shop Settings to use factory views
+                inside Supply Chain. Your karigar book remains available.
+              </T>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/dashboard/shop/settings?tab=preferences">
+                <T>Open shop settings</T>
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {nav}
+      <WorkshopWorkspace view={view} jobId={searchParams.get("id")} />
+    </div>
+  );
+}
+
+function WorkshopWorkspace({
+  view,
+  jobId,
+}: {
+  view: WorkshopView;
+  jobId: string | null;
+}) {
+  switch (view) {
+    case "jobs":
+      return <WorkshopJobsView />;
+    case "job":
+      return jobId ? (
+        <WorkshopJobCardView jobId={jobId} />
+      ) : (
+        <WorkshopJobsView />
+      );
+    case "floor":
+      return <WorkshopFloorView />;
+    case "metal":
+      return <WorkshopMetalView />;
+    case "qc":
+      return <WorkshopQcView />;
+    case "reports":
+      return <WorkshopReportsView />;
+    case "karigars":
+      return <WorkshopKarigarsView />;
+    case "procurement":
+      return <WorkshopProcurementView />;
+    case "tower":
+    default:
+      return <WorkshopTowerView />;
+  }
+}
+
+function KarigarSupplyChainLedger() {
+  const { user } = useAuth();
+  const { hasFeature, planName, loading: featuresLoading } = useFeatures();
+  const t = useT();
 
   // Tickers and Live Market Rates State
   const [goldRates, setGoldRates] = useState({

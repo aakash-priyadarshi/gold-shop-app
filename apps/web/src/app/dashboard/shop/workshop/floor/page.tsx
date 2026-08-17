@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { T } from "@/components/ui/T";
 import { karigarApi } from "@/lib/api";
+import { supplyChainHref } from "@/lib/workshop-route";
 import { useT } from "@/providers/translation-provider";
 import {
   KARIGAR_STAGE_LABELS,
@@ -86,7 +87,7 @@ function FloorInner() {
       </div>
       <div className="flex flex-wrap gap-2">
         <Button variant={!dept ? "default" : "outline"} asChild>
-          <Link href="/dashboard/shop/workshop/floor">
+          <Link href={supplyChainHref("floor")}>
             <T>All</T>
           </Link>
         </Button>
@@ -96,7 +97,7 @@ function FloorInner() {
             variant={dept === stage ? "default" : "outline"}
             asChild
           >
-            <Link href={`/dashboard/shop/workshop/floor?dept=${stage}`}>
+            <Link href={supplyChainHref("floor", { dept: stage })}>
               <T>{KARIGAR_STAGE_LABELS[stage]}</T>
             </Link>
           </Button>
@@ -113,7 +114,7 @@ function FloorInner() {
                 <CardTitle className="text-base">
                   <Link
                     className="hover:underline"
-                    href={`/dashboard/shop/workshop/jobs/${job.id}`}
+                    href={supplyChainHref("job", { id: job.id })}
                   >
                     <span dir="auto">{job.product}</span>
                   </Link>

@@ -15,6 +15,7 @@ import {
 } from "../../common/market/country-currency";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
 import { ContentModerationService } from "./content-moderation.service";
@@ -120,6 +121,7 @@ export class ShopsService {
     private configService: PlatformConfigService,
     private moderationService: ContentModerationService,
     private sellerSubscriptionsService: SellerSubscriptionsService,
+    private planLimitsService: PlanLimitsService,
     private priceRebase: ShopPriceRebaseService,
   ) {}
 
@@ -1245,6 +1247,16 @@ export class ShopsService {
 
     if (!shop) {
       throw new NotFoundException("Shop not found for this user");
+    }
+
+    // A stale or modified client must not enable factory mode without the
+    // live plan flag. Disabling remains available after a downgrade so shops
+    // are never trapped in a mode their current plan no longer includes.
+    if (dto.workshopMode === true && !shop.workshopMode) {
+      await this.planLimitsService.checkFeature(
+        shop.id,
+        "workshopManufacturing",
+      );
     }
 
     // Enforce making charge cap based on seller tier

@@ -241,7 +241,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "workshop_manufacturing_mode",
     content:
-      "Workshop manufacturing is a separate factory product from the shop Karigar / Supply Chain book. Turn it on in Shop Settings → Workshop mode. It also requires the workshopManufacturing plan flag (Pro+ and Enterprise). When both are on, the sidebar hides Supply Chain and shows Workshop (control tower), Jobs, Floor, Metal, and QC. Departments (casting, filing, setting, polish, QC) are filters on Floor, not their own pages. Do not look for a shop/workshop switch on the karigar page. Floor advances a job by transferring a gold-out weight to the next department. QC can approve, rework, or reject. Receive finished goods creates an inventory item from the job — it does not write invoices. Gold loss on the tower is the same workshop metal math as Supply Chain, not billing jarti.",
+      "Workshop manufacturing lives inside /dashboard/shop/supply-chain. Turn it on in Shop Settings → Workshop mode; the active plan must also enable the workshopManufacturing feature. Supply Chain then provides Karigar book, Tower, Jobs, Floor, Metal, QC, and Reports views on the same page. Departments (casting, filing, setting, polish, QC) are filters on Floor, not sidebar pages. Floor advances a job by transferring a gold-out weight to the next department. QC can approve, rework, or reject. Receive finished goods creates an inventory item from the job — it does not write invoices. Gold loss on the tower is physical workshop metal math, not billing wastage (jarti).",
   },
   {
     topic: "product_gross_weight_and_pos_customer",

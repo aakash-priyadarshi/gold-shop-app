@@ -566,7 +566,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
-  "/dashboard/shop/workshop": [
+  "/dashboard/shop/supply-chain#workshop-tower": [
     {
       element: "[data-tour='workshop-tower']",
       popover: {
@@ -598,7 +598,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
-  "/dashboard/shop/workshop/jobs": [
+  "/dashboard/shop/supply-chain#workshop-jobs": [
     {
       element: "[data-tour='workshop-jobs']",
       popover: {
@@ -610,7 +610,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
-  "/dashboard/shop/workshop/floor": [
+  "/dashboard/shop/supply-chain#workshop-floor": [
     {
       element: "[data-tour='workshop-floor']",
       popover: {
@@ -622,7 +622,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
-  "/dashboard/shop/workshop/ledger": [
+  "/dashboard/shop/supply-chain#workshop-metal": [
     {
       element: "[data-tour='workshop-metal']",
       popover: {
@@ -634,7 +634,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
-  "/dashboard/shop/workshop/qc": [
+  "/dashboard/shop/supply-chain#workshop-qc": [
     {
       element: "[data-tour='workshop-qc-page']",
       popover: {

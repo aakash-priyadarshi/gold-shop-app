@@ -401,7 +401,7 @@ export function SupportBot() {
         state = action.state;
         animation = action.animation;
       } else if (pathname.includes("supply-chain")) {
-        text = "<T>Track your gold reserves, add custom metals, and check Karigar wastages with me! 🛠️</T>";
+        text = "<T>Use Supply Chain for your Karigar book, workshop tower, floor queues, metal movements, QC, and gold-loss reports! 🛠️</T>";
         state = "gold_bar";
         animation = "spin";
       } else if (pathname.includes("tax") || pathname.includes("vat") || pathname.includes("gst")) {

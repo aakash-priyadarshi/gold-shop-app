@@ -365,7 +365,7 @@ cd e2e && npx playwright install chromium && npx ts-node auth-setup.ts
 ## Karigar ledger & large workshop
 
 - **Shop karigar book (shipped):** `/dashboard/shop/supply-chain` — vault, issue/return, job stages, gold loss. Feature: `karigarSupplyChain`.
-- **Workshop manufacturing (shipped, gated):** shop setting `workshopMode` (default off) plus plan flag `workshopManufacturing` (Pro+ and Enterprise). Both must be on to hide Supply Chain and show `/dashboard/shop/workshop/*` (control tower, jobs, floor queues, metal, QC). Setting on + flag off → upgrade prompt; Supply Chain stays. Departments are filters on Floor (`?dept=`), not sidebar pages. Do not put a shop/workshop toggle on the karigar page.
+- **Workshop manufacturing (shipped, gated):** shop setting `workshopMode` (default off) plus admin-configurable plan flag `workshopManufacturing`. Factory views (Tower, Jobs, Floor, Metal, QC, Reports) stay inside `/dashboard/shop/supply-chain` using `?view=`; legacy `/dashboard/shop/workshop/*` URLs redirect there. The Karigar book remains available on the same page. Departments are Floor filters (`?view=floor&dept=`), not sidebar pages.
 - **API:** `GET /karigar/workshop/tower`, `GET /karigar/workshop/floor`, `POST /karigar/jobs/:id/advance`, `POST /karigar/jobs/:id/qc`, `POST /karigar/jobs/:id/receive-fg`. Snapshot stays on `karigarSupplyChain` / ungated JWT.
 - Plan: `plans/workshop-manufacturing.md`
 

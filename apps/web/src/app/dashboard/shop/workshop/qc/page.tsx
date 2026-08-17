@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { T } from "@/components/ui/T";
 import { karigarApi } from "@/lib/api";
+import { supplyChainHref } from "@/lib/workshop-route";
 import { useT } from "@/providers/translation-provider";
 import { KARIGAR_STAGE_LABELS, type KarigarStageCode } from "@gold-shop/shared";
 import Link from "next/link";
@@ -74,7 +75,7 @@ export default function WorkshopQcPage() {
             <CardTitle className="text-base">
               <Link
                 className="hover:underline"
-                href={`/dashboard/shop/workshop/jobs/${job.id}`}
+                href={supplyChainHref("job", { id: job.id })}
               >
                 <span dir="auto">{job.product}</span>
               </Link>

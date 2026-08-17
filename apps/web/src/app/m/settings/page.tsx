@@ -34,7 +34,14 @@ const COUNTRIES = [
 
 export default function MobileStoreSettingsPage() {
   const { user, refreshUser } = useAuth();
-  const { hasFeature, loading: featuresLoading } = useFeatures();
+  const {
+    hasFeature,
+    planName,
+    loading: featuresLoading,
+    status: featuresStatus,
+    error: featuresError,
+    refresh: refreshFeatures,
+  } = useFeatures();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -144,11 +151,9 @@ export default function MobileStoreSettingsPage() {
         state: state || undefined,
         pincode: pincode || undefined,
         isActive,
-        workshopMode: featuresLoading
-          ? (user?.shop?.workshopMode ?? false)
-          : hasFeature("workshopManufacturing")
-            ? workshopMode
-            : false,
+        // Preserve the explicit setting during feature refresh/errors. The API
+        // independently verifies the live plan when changing false → true.
+        workshopMode,
         codEnabled,
         codMaxValueNpr: codMaxValueNpr || undefined,
         minOrderValueNpr: minOrderValueNpr || undefined,
@@ -341,24 +346,55 @@ export default function MobileStoreSettingsPage() {
           </label>
           <button
             type="button"
-            disabled={!hasFeature("workshopManufacturing")}
+            disabled={
+              !workshopMode &&
+              (featuresLoading ||
+                !!featuresError ||
+                !hasFeature("workshopManufacturing"))
+            }
             onClick={() => setWorkshopMode((v) => !v)}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-left ${
               workshopMode
                 ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30"
                 : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
-            } ${!hasFeature("workshopManufacturing") ? "opacity-60" : ""}`}
+            } ${
+              !workshopMode &&
+              (featuresLoading ||
+                !!featuresError ||
+                !hasFeature("workshopManufacturing"))
+                ? "opacity-60"
+                : ""
+            }`}
           >
             <span className="text-sm">
-              <T>Factory floor instead of Supply Chain</T>
+              <T>Factory views inside Supply Chain</T>
             </span>
             <span className="text-xs font-semibold">
               {workshopMode ? <T>On</T> : <T>Off</T>}
             </span>
           </button>
-          {!hasFeature("workshopManufacturing") && (
+          {featuresLoading && !workshopMode && (
+            <p className="text-[11px] text-gray-500">
+              <T>Checking your current plan...</T>
+            </p>
+          )}
+          {featuresError && (
+            <p className="text-[11px] text-red-700">
+              <T>Could not verify your plan features.</T>{" "}
+              <button
+                type="button"
+                className="underline font-semibold"
+                onClick={() => void refreshFeatures()}
+              >
+                <T>Retry plan check</T>
+              </button>
+            </p>
+          )}
+          {featuresStatus === "ready" &&
+            !hasFeature("workshopManufacturing") && (
             <p className="text-[11px] text-amber-700">
-              <T>Pro+ / Enterprise. Desktop Workshop pages only in this release.</T>
+              <T>Workshop manufacturing is not enabled on your resolved plan.</T>{" "}
+              {planName && <span className="font-semibold">({planName})</span>}
             </p>
           )}
         </section>

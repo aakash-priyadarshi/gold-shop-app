@@ -21,6 +21,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { RedisService } from "../../common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { ContentModerationService } from "./content-moderation.service";
 import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
@@ -103,6 +104,9 @@ const mockModerationService = {
 const mockSellerSubscriptionsService = {
   autoActivateFreePlan: jest.fn(),
 };
+const mockPlanLimitsService = {
+  checkFeature: jest.fn(),
+};
 const mockPriceRebase = {
   rebaseShopPrices: jest.fn(),
   ensureShopPricesMatchCurrency: jest.fn().mockResolvedValue(null),
@@ -127,6 +131,7 @@ describe("ShopsService - Seller Matching", () => {
           provide: SellerSubscriptionsService,
           useValue: mockSellerSubscriptionsService,
         },
+        { provide: PlanLimitsService, useValue: mockPlanLimitsService },
         { provide: RedisService, useValue: mockRedisService },
         { provide: PlatformConfigService, useValue: mockConfigService },
         { provide: ContentModerationService, useValue: mockModerationService },

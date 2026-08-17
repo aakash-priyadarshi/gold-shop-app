@@ -3,6 +3,7 @@
 import { GoldLossReport } from "@/components/shop/karigar/GoldLossReport";
 import { T } from "@/components/ui/T";
 import { karigarApi } from "@/lib/api";
+import { supplyChainHref } from "@/lib/workshop-route";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -36,7 +37,7 @@ export default function WorkshopReportsPage() {
         </div>
       )}
       <GoldLossReport report={report} />
-      <Link className="text-sm underline" href="/dashboard/shop/workshop">
+      <Link className="text-sm underline" href={supplyChainHref("tower")}>
         <T>Back to tower</T>
       </Link>
     </div>

@@ -216,7 +216,14 @@ const TIER_META: Record<
 
 export default function ShopSettingsPage() {
   const { user, refreshUser } = useAuth();
-  const { hasFeature } = useFeatures();
+  const {
+    hasFeature,
+    planName,
+    loading: featuresLoading,
+    status: featuresStatus,
+    error: featuresError,
+    refresh: refreshFeatures,
+  } = useFeatures();
   const t = useT();
   const searchParams = useSearchParams();
   const { placeholders: countryPlaceholders, symbol: currencySymbol } =
@@ -920,18 +927,38 @@ export default function ShopSettingsPage() {
                       </Label>
                       <p className="text-sm text-muted-foreground">
                         <T>
-                          Hide Supply Chain and open the factory floor (tower,
-                          jobs, departments, metal, QC). Keep this off if you
-                          only work with a few karigars.
+                          Add factory views (tower, jobs, floor, metal, QC) inside
+                          Supply Chain. Keep this off for the basic karigar
+                          ledger only.
                         </T>
                       </p>
-                      {!hasFeature("workshopManufacturing") && (
+                      {featuresLoading && !shopData.workshopMode && (
+                        <p className="text-xs text-muted-foreground">
+                          <T>Checking your current plan...</T>
+                        </p>
+                      )}
+                      {featuresError && (
+                        <p className="text-xs text-red-700 dark:text-red-400">
+                          <T>Could not verify your plan features.</T>{" "}
+                          <button
+                            type="button"
+                            className="underline font-medium"
+                            onClick={() => void refreshFeatures()}
+                          >
+                            <T>Retry plan check</T>
+                          </button>
+                        </p>
+                      )}
+                      {featuresStatus === "ready" &&
+                        !hasFeature("workshopManufacturing") && (
                         <p className="text-xs text-amber-700 dark:text-amber-400">
                           <T>
-                            Workshop manufacturing is on Pro+ and Enterprise.
-                            Upgrade to turn this on — Supply Chain stays as
-                            your karigar book.
+                            Workshop manufacturing is not enabled on your
+                            resolved plan.
                           </T>{" "}
+                          {planName && (
+                            <span className="font-medium">({planName}) </span>
+                          )}
                           <a
                             href="/dashboard/shop/billing"
                             className="underline font-medium"
@@ -940,10 +967,24 @@ export default function ShopSettingsPage() {
                           </a>
                         </p>
                       )}
+                      {featuresStatus === "ready" &&
+                        hasFeature("workshopManufacturing") && (
+                          <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                            <T>Included in your resolved plan.</T>{" "}
+                            {planName && (
+                              <span className="font-medium">({planName})</span>
+                            )}
+                          </p>
+                        )}
                     </div>
                     <Switch
                       checked={!!shopData.workshopMode}
-                      disabled={!hasFeature("workshopManufacturing")}
+                      disabled={
+                        !shopData.workshopMode &&
+                        (featuresLoading ||
+                          !!featuresError ||
+                          !hasFeature("workshopManufacturing"))
+                      }
                       onCheckedChange={(checked) =>
                         updateShopData({ workshopMode: checked })
                       }

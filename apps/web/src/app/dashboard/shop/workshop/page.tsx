@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
 import { karigarApi } from "@/lib/api";
+import { supplyChainHref } from "@/lib/workshop-route";
 import { useT } from "@/providers/translation-provider";
 import { KARIGAR_STAGE_LABELS, type KarigarStageCode } from "@gold-shop/shared";
 import {
@@ -73,7 +74,7 @@ function JobList({ jobs }: { jobs: SlimJob[] }) {
       {jobs.map((job) => (
         <li key={job.id}>
           <Link
-            href={`/dashboard/shop/workshop/jobs/${job.id}`}
+            href={supplyChainHref("job", { id: job.id })}
             className="text-sm hover:underline"
           >
             <span dir="auto">{job.product}</span>{" "}
@@ -140,12 +141,12 @@ export default function WorkshopTowerPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
-            <Link href="/dashboard/shop/workshop/jobs">
+            <Link href={supplyChainHref("jobs")}>
               <T>Jobs</T>
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/dashboard/shop/workshop/floor">
+            <Link href={supplyChainHref("floor")}>
               <T>Floor</T>
             </Link>
           </Button>
@@ -329,7 +330,7 @@ export default function WorkshopTowerPage() {
           {tower.deptLoad.map((row) => (
             <Link
               key={row.stage}
-              href={`/dashboard/shop/workshop/floor?dept=${row.stage}`}
+              href={supplyChainHref("floor", { dept: row.stage })}
             >
               <Badge variant={row.count > 0 ? "default" : "secondary"}>
                 <T>{KARIGAR_STAGE_LABELS[row.stage]}</T>: <bdi>{row.count}</bdi>
@@ -351,13 +352,13 @@ export default function WorkshopTowerPage() {
               : `${(tower.onTimePercent * 100).toFixed(0)}%`}
           </bdi>
         </span>
-        <Link className="underline" href="/dashboard/shop/workshop/karigars">
+        <Link className="underline" href={supplyChainHref("karigars")}>
           <T>Karigars</T>
         </Link>
-        <Link className="underline" href="/dashboard/shop/workshop/procurement">
+        <Link className="underline" href={supplyChainHref("procurement")}>
           <T>Procurement</T>
         </Link>
-        <Link className="underline" href="/dashboard/shop/workshop/reports">
+        <Link className="underline" href={supplyChainHref("reports")}>
           <T>Reports</T>
         </Link>
       </div>

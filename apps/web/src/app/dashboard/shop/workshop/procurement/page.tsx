@@ -1,6 +1,7 @@
 "use client";
 
 import { T } from "@/components/ui/T";
+import { supplyChainHref } from "@/lib/workshop-route";
 import Link from "next/link";
 
 export default function WorkshopProcurementPage() {
@@ -17,7 +18,7 @@ export default function WorkshopProcurementPage() {
       </p>
       <Link
         className="text-sm underline"
-        href="/dashboard/shop/workshop/ledger"
+        href={supplyChainHref("metal")}
       >
         <T>Open metal ledger</T>
       </Link>
