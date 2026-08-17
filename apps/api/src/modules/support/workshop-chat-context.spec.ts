@@ -133,5 +133,9 @@ describe("workshop chat context", () => {
         workshopManufacturingEnabled: true,
       }),
     ).toContain("Metal tab");
+    expect(isWorkshopMetalOperationQuestion("where is gold loss?")).toBe(true);
+    expect(isWorkshopMetalOperationQuestion("open the gold-loss report")).toBe(
+      true,
+    );
   });
 });

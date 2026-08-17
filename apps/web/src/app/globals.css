@@ -614,6 +614,7 @@
   font-weight: 700 !important;
   letter-spacing: 0.01em !important;
   padding-bottom: 0.5rem !important;
+  padding-right: 7.25rem !important;
   margin-bottom: 0.5rem !important;
   border-bottom: 1px solid rgba(212, 175, 55, 0.35) !important;
 }
@@ -650,8 +651,9 @@
   transition: all 0.2s ease !important;
 }
 .orivraa-tour-popover .driver-popover-next-btn {
-  background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%) !important;
+  background: #d4af37 !important;
   color: #0b1420 !important;
+  -webkit-text-fill-color: #0b1420 !important;
   border: none !important;
   box-shadow: 0 4px 12px rgba(212, 175, 55, 0.35) !important;
 }
@@ -661,6 +663,7 @@
 .orivraa-tour-popover .driver-popover-prev-btn {
   background: transparent !important;
   color: #d4af37 !important;
+  -webkit-text-fill-color: #d4af37 !important;
   border: 1px solid rgba(212, 175, 55, 0.55) !important;
 }
 .orivraa-tour-popover .driver-popover-prev-btn:hover {
@@ -690,10 +693,29 @@
   border-top-color: #0b1420 !important;
 }
 .orivraa-tour-popover .driver-lang-wrap {
-  background: rgba(11, 20, 32, 0.92) !important;
-  border: 1px solid rgba(212, 175, 55, 0.45) !important;
+  position: absolute !important;
+  top: 0.7rem !important;
+  right: 2.1rem !important;
+  z-index: 2 !important;
+  display: flex !important;
+  align-items: center !important;
+  background: #d4af37 !important;
+  border: 1px solid #f3e3a8 !important;
   border-radius: 0.4rem !important;
+  padding: 0.15rem 0.35rem !important;
 }
-.orivraa-tour-popover .driver-lang-wrap select {
-  color: #d4af37 !important;
+.orivraa-tour-popover .driver-lang-wrap select,
+.orivraa-tour-popover .driver-lang-select {
+  color: #0b1420 !important;
+  background: #d4af37 !important;
+  border: none !important;
+  min-width: 5.75rem;
+  max-width: 8.5rem;
+  font-size: 0.65rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  line-height: 1.2;
+  cursor: pointer;
+  outline: none;
+  color-scheme: light;
 }

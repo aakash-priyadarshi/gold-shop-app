@@ -20,6 +20,15 @@ interface TutorialButtonProps {
   className?: string;
 }
 
+function tourKey(steps: ReturnType<typeof useTutorial>["rawSteps"]): string {
+  return steps
+    .map(
+      (step) =>
+        `${typeof step.element === "string" ? step.element : ""}:${step.popover?.title ?? ""}`,
+    )
+    .join("|");
+}
+
 export function TutorialButton({ className }: TutorialButtonProps) {
   const { rawSteps, hasSteps } = useTutorial();
   const { t, register, locale, hasTranslation } = useTranslation();
@@ -80,6 +89,7 @@ export function TutorialButton({ className }: TutorialButtonProps) {
   const rawStepsRef = useRef(rawSteps);
   const tRef = useRef(t);
   const mountedRef = useRef(true);
+  const tourKeyRef = useRef(tourKey(rawSteps));
   rawStepsRef.current = rawSteps;
   tRef.current = t;
 
@@ -142,15 +152,14 @@ export function TutorialButton({ className }: TutorialButtonProps) {
         setTimeout(() => {
           const header = wrapper.querySelector(".driver-popover-title");
           if (!header || header.parentElement?.querySelector(".driver-lang-wrap")) return;
-          
+
           const wrap = document.createElement("div");
-          wrap.className = "driver-lang-wrap absolute top-[14px] right-10 z-10 flex items-center rounded px-1.5 py-0.5";
-          
+          wrap.className = "driver-lang-wrap";
+
           const select = document.createElement("select");
-          select.className = "text-[10px] bg-transparent border-none font-bold uppercase outline-none cursor-pointer p-0 m-0 leading-none";
-          select.style.appearance = "none";
-          select.style.webkitAppearance = "none";
-          
+          select.className = "driver-lang-select";
+          select.setAttribute("aria-label", "Language");
+
           const currentLang = usePreferencesStore.getState().language;
           Object.entries(LANGUAGES).forEach(([code, info]) => {
             const opt = document.createElement("option");
@@ -159,12 +168,11 @@ export function TutorialButton({ className }: TutorialButtonProps) {
             opt.selected = code === currentLang;
             select.appendChild(opt);
           });
-          
+
           select.onchange = (e) => {
             usePreferencesStore.getState().setLanguage((e.target as HTMLSelectElement).value as Language);
-            // The text will update automatically on next step, but ideally we force refresh.
           };
-          
+
           wrap.appendChild(select);
           header.parentElement?.insertBefore(wrap, header);
         }, 10);
@@ -173,12 +181,20 @@ export function TutorialButton({ className }: TutorialButtonProps) {
     });
 
     driverRef.current = driverObj;
+    tourKeyRef.current = tourKey(source);
     driverObj.drive();
   }, [hasSteps, running, locale, register, hasTranslation]);
 
   useEffect(() => {
     const instance = driverRef.current;
     if (!running || !instance) return;
+    const nextKey = tourKey(rawSteps);
+    if (nextKey !== tourKeyRef.current) {
+      instance.destroy();
+      driverRef.current = null;
+      setRunning(false);
+      return;
+    }
     const index = instance.getState().activeIndex ?? 0;
     instance.setConfig({
       steps: translateTourSteps(rawSteps, t),

@@ -24,4 +24,16 @@ describe("TutorialButton live translation", () => {
     expect(source).toContain("instance.setConfig");
     expect(source).toContain("instance.drive(index)");
   });
+
+  it("stops the running tour when Supply Chain view steps change instead of auto-driving the next view", () => {
+    expect(source).toContain("tourKey");
+    expect(source).toContain("nextKey !== tourKeyRef.current");
+    expect(source).toContain("setRunning(false)");
+  });
+
+  it("keeps the language control contrast independent of locale", () => {
+    expect(source).toContain('select.className = "driver-lang-select"');
+    expect(source).toContain('select.setAttribute("aria-label", "Language")');
+    expect(source).not.toContain('select.style.appearance = "none"');
+  });
 });
