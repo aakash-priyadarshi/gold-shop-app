@@ -108,7 +108,7 @@ export function formatSellerWorkshopReply(access: LiveWorkshopAccess): string {
 
 export function isWorkshopMetalOperationQuestion(message: string): boolean {
   const normalized = message.toLowerCase();
-  return /(scrap return|return scrap|recoverable scrap|custom metal|custom material|issue metal|bullion reserve|process wastage|metal movement|return metal to vault)/.test(
+  return /(scrap return|return scrap|recoverable scrap|custom metal|custom material|issue metal|bullion reserve|process wastage|metal movement|return metal to vault|gold[-\s]loss)/.test(
     normalized,
   );
 }

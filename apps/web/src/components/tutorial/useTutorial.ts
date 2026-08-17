@@ -25,6 +25,31 @@ function activateShopSettingsPreferencesTab() {
     ?.click();
 }
 
+let preferencesAdvancePending = false;
+
+function waitForTourElement(
+  selector: string,
+  timeoutMs = 2000,
+): Promise<boolean> {
+  if (typeof document === "undefined") return Promise.resolve(false);
+  if (document.querySelector(selector)) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const tick = () => {
+      if (document.querySelector(selector)) {
+        resolve(true);
+        return;
+      }
+      if (Date.now() - start >= timeoutMs) {
+        resolve(false);
+        return;
+      }
+      window.setTimeout(tick, 40);
+    };
+    tick();
+  });
+}
+
 /** Tour steps keyed by pathname prefix */
 const HARDWARE_TOUR_STEPS: DriveStep[] = [
   {
@@ -553,8 +578,16 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
         side: "bottom",
         align: "start",
         onNextClick: (_el, _step, { driver }) => {
+          if (preferencesAdvancePending) return;
+          preferencesAdvancePending = true;
           activateShopSettingsPreferencesTab();
-          window.setTimeout(() => driver.moveNext(), 80);
+          void waitForTourElement("[data-tour='settings-workshop-mode']")
+            .then((ready) => {
+              if (ready) driver.moveNext();
+            })
+            .finally(() => {
+              preferencesAdvancePending = false;
+            });
         },
       },
     },

@@ -60,6 +60,8 @@ describe("Tutorial TOUR_STEPS — Structure", () => {
     expect(sourceFile).toContain("settings-preferences-tab");
     expect(sourceFile).toContain("settings-workshop-mode");
     expect(sourceFile).toContain("activateShopSettingsPreferencesTab");
+    expect(sourceFile).toContain("preferencesAdvancePending");
+    expect(sourceFile).toContain("waitForTourElement");
   });
 
   test("has tour steps for invoice detail Print", () => {
