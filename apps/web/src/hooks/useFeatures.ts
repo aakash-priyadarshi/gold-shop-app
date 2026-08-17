@@ -14,6 +14,7 @@ export interface PlanFeature {
 export interface FeaturesState {
   planName: string;
   planId: string | null;
+  planTier: string | null;
   features: PlanFeature[];
   /** Fast lookup: pass a feature key, get true/false */
   map: Record<string, boolean>;
@@ -29,19 +30,101 @@ export type FeaturesStatus =
 
 const inFlightRequests = new Map<string, Promise<FeaturesState>>();
 
-export function buildFeaturesState(data: {
+export function unwrapFeaturesPayload(payload: unknown): {
   planName?: string;
   planId?: string | null;
-  features?: PlanFeature[];
-}): FeaturesState {
-  const features = Array.isArray(data.features) ? data.features : [];
-  const map: Record<string, boolean> = {};
-  for (const feature of features) {
-    map[feature.key] = feature.enabled === true;
+  planTier?: string | null;
+  features?: unknown;
+} {
+  if (!payload || typeof payload !== "object") return {};
+  const root = payload as Record<string, unknown>;
+  const nested = root.data;
+  if (
+    nested &&
+    typeof nested === "object" &&
+    !Array.isArray(nested) &&
+    ("features" in nested || "planName" in nested)
+  ) {
+    return nested as {
+      planName?: string;
+      planId?: string | null;
+      planTier?: string | null;
+      features?: unknown;
+    };
   }
+  return root as {
+    planName?: string;
+    planId?: string | null;
+    planTier?: string | null;
+    features?: unknown;
+  };
+}
+
+export function isWorkshopPlanTier(
+  planName?: string | null,
+  planTier?: string | null,
+): boolean {
+  const tier = typeof planTier === "string" ? planTier.toUpperCase() : "";
+  if (tier) return tier === "ENTERPRISE" || tier === "PRO_PLUS";
+  const name = (planName || "").toUpperCase();
+  return (
+    name.includes("ENTERPRISE") ||
+    name.includes("PRO+") ||
+    name.includes("PRO PLUS") ||
+    name.includes("PRO_PLUS")
+  );
+}
+
+export function featureListToMap(features: unknown): Record<string, boolean> {
+  const map: Record<string, boolean> = {};
+  if (Array.isArray(features)) {
+    for (const feature of features) {
+      if (
+        feature &&
+        typeof feature === "object" &&
+        typeof (feature as PlanFeature).key === "string"
+      ) {
+        map[(feature as PlanFeature).key] =
+          (feature as PlanFeature).enabled === true;
+      }
+    }
+    return map;
+  }
+  if (features && typeof features === "object") {
+    for (const [key, value] of Object.entries(
+      features as Record<string, unknown>,
+    )) {
+      map[key] = value === true;
+    }
+  }
+  return map;
+}
+
+export function buildFeaturesState(data: unknown): FeaturesState {
+  const payload = unwrapFeaturesPayload(data);
+  const planName = payload.planName || "Free Plan";
+  const planTier = payload.planTier ?? null;
+  const map = featureListToMap(payload.features);
+  if (
+    map.workshopManufacturing === undefined &&
+    isWorkshopPlanTier(planName, planTier)
+  ) {
+    map.workshopManufacturing = true;
+  }
+
+  const features = Array.isArray(payload.features)
+    ? (payload.features as PlanFeature[])
+    : Object.entries(map).map(([key, enabled]) => ({
+        key,
+        label: key,
+        category: "Other",
+        enabled,
+      }));
+
   return {
-    planName: data.planName || "Free Plan",
-    planId: data.planId ?? null,
+    planName,
+    planId: payload.planId ?? null,
+    planTier,
     features,
     map,
     lastUpdatedAt: Date.now(),
