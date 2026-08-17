@@ -123,7 +123,7 @@ export function TutorialButton({ className }: TutorialButtonProps) {
       animate: true,
       smoothScroll: true,
       allowClose: true,
-      overlayColor: "rgba(0,0,0,0.6)",
+      overlayColor: "rgba(11, 20, 32, 0.72)",
       stagePadding: 6,
       stageRadius: 8,
       popoverClass: "orivraa-tour-popover",
@@ -144,10 +144,10 @@ export function TutorialButton({ className }: TutorialButtonProps) {
           if (!header || header.parentElement?.querySelector(".driver-lang-wrap")) return;
           
           const wrap = document.createElement("div");
-          wrap.className = "driver-lang-wrap absolute top-[14px] right-10 z-10 flex items-center bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5";
+          wrap.className = "driver-lang-wrap absolute top-[14px] right-10 z-10 flex items-center rounded px-1.5 py-0.5";
           
           const select = document.createElement("select");
-          select.className = "text-[10px] bg-transparent border-none text-gray-600 dark:text-gray-300 font-bold uppercase outline-none cursor-pointer p-0 m-0 leading-none";
+          select.className = "text-[10px] bg-transparent border-none font-bold uppercase outline-none cursor-pointer p-0 m-0 leading-none";
           select.style.appearance = "none";
           select.style.webkitAppearance = "none";
           

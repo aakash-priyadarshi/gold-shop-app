@@ -1013,7 +1013,13 @@ export default function ShopDashboard() {
                     <T>Karigar &amp; Bullion Supply Chain Tracker</T>
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                    <T>Take complete control of your workshop. Track raw 24K Gold and 999 Silver bullion reserves, manage artisan ledgers with custom wastage loss tolerances, and record multi-stage metal fabrication jobs securely in the cloud.</T>
+                    <T>
+                      Take complete control of your workshop. Track raw 24K gold
+                      and 999 silver bullion, manage artisan ledgers, and — when
+                      Workshop mode is on and your plan includes workshop
+                      manufacturing — run Tower, Jobs, Floor, Metal, QC, and
+                      Reports on the same Supply Chain page.
+                    </T>
                   </p>
                 </div>
 
@@ -1042,7 +1048,9 @@ export default function ShopDashboard() {
                       <T>Karigar &amp; Bullion Supply Chain Tracker</T>
                     </CardTitle>
                     <CardDescription>
-                      <T>Real-time workshop materials and artisan wastage balance sheets</T>
+                      <T>
+                        Karigar book. When Workshop mode is on and your plan includes workshop manufacturing, Supply Chain also shows Tower, Jobs, Floor, Metal, QC, and Reports.
+                      </T>
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">

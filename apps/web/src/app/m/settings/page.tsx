@@ -373,6 +373,13 @@ export default function MobileStoreSettingsPage() {
               {workshopMode ? <T>On</T> : <T>Off</T>}
             </span>
           </button>
+          <p className="text-[11px] text-gray-500">
+            <T>
+              Karigar book stays on Supply Chain without Workshop mode. Turn
+              this on to also show Tower, Jobs, Floor, Metal, QC, and Reports
+              when your plan includes workshop manufacturing.
+            </T>
+          </p>
           {featuresLoading && !workshopMode && (
             <p className="text-[11px] text-gray-500">
               <T>Checking your current plan...</T>

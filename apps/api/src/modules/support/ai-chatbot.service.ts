@@ -9,6 +9,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { RedisService } from "../../common/redis";
+import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { AuthService } from "../auth/auth.service";
@@ -28,6 +29,18 @@ import {
 import { SupportService } from "./support.service";
 import { TicketsService } from "./tickets.service";
 import { formatTutorialVideoPromptLines } from "./tutorial-videos";
+import {
+  formatLiveWorkshopAccess,
+  formatSellerWorkshopReply,
+  formatWorkshopPlanCatalog,
+  formatWorkshopMetalOperationReply,
+  isWorkshopAccessQuestion,
+  isWorkshopMetalOperationQuestion,
+  selectPlansWithFeature,
+  type LiveWorkshopAccess,
+  type LiveWorkshopPlan,
+  type WorkshopPlanCatalogInput,
+} from "./workshop-chat-context";
 
 export interface AiChatResponse {
   reply: string;
@@ -71,6 +84,12 @@ interface SellerSnapshot {
   nepalAuditThresholdUsedPct: number;
   isVerified?: boolean;
   userCreatedAt?: string;
+  planName: string;
+  planTier?: string | null;
+  workshopMode: boolean;
+  workshopManufacturingEnabled: boolean | null;
+  workshopPlanNames: string[];
+  workshopPlanCatalogUnavailable: boolean;
 }
 
 interface AdminSnapshot {
@@ -133,6 +152,7 @@ export class AiChatbotService {
     private healthService: HealthService,
     private auditService: AuditService,
     private redis: RedisService,
+    private planLimits: PlanLimitsService,
   ) {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
   }
@@ -460,12 +480,23 @@ export class AiChatbotService {
       }
 
       // Enrich context with pgvector RAG (gracefully skipped if not configured)
-      const knowledgeContext = await this.searchKnowledge(message);
+      const [knowledgeContext, workshopCatalog] = await Promise.all([
+        this.searchKnowledge(message),
+        this.listLiveWorkshopPlans()
+          .then((plans) => ({ status: "ok" as const, plans }))
+          .catch((error) => {
+            this.logger.warn(
+              `chat: live workshop plan catalog failed: ${error instanceof Error ? error.message : error}`,
+            );
+            return { status: "unavailable" as const };
+          }),
+      ]);
 
       const systemPrompt = this.buildSystemPrompt(
         knowledgeContext || undefined,
         persona,
         viewerRole,
+        formatWorkshopPlanCatalog(workshopCatalog),
       );
       const contents = this.buildContents(
         systemPrompt,
@@ -906,6 +937,7 @@ VIEWER CONTEXT — REGISTERED CUSTOMER / BUYER (overrides seller-oriented behavi
     knowledgeContext?: string,
     persona?: { botName?: string; userName?: string; authenticatedEmail?: string },
     viewerRole?: string,
+    liveWorkshopCatalog?: string,
   ): string {
     const botName = (persona?.botName || "").trim().slice(0, 40);
     const userName = (persona?.userName || "").trim().slice(0, 60);
@@ -952,7 +984,7 @@ KEY FEATURES:
 9. AI sales agents (beta) — 24/7 voice agents in 42 languages, follow-up automation
 10. CA / accountant share links — securely share tax documents (PRO_PLUS+)
 11. Old-gold exchange — correct GST treatment on exchange transactions
-12. Karigar & Bullion Supply Chain Console — everything lives at /dashboard/shop/supply-chain. The Karigar book covers raw gold/silver reserves, artisan float, loss tolerances, jobs, and custom materials. When Workshop mode and the workshopManufacturing plan flag are enabled, the same page adds Tower, Jobs, Floor, Metal, QC, and Reports views for factory operations.
+12. Karigar & Bullion Supply Chain — one page at /dashboard/shop/supply-chain with seven tabs. Karigar book (default) is the artisan ledger. Factory tabs (Tower, Jobs, Floor, Metal, QC, Reports) appear only when BOTH are true: (a) the shop's live plan JSON has workshopManufacturing enabled, and (b) the shopkeeper turns on Workshop mode at Shop Settings → Preferences (desktop /dashboard/shop/settings?tab=preferences) or Store Settings (mobile /m/settings). Which plans include that flag is DYNAMIC — an admin can add or remove it on any plan. For guests, use LIVE WORKSHOP PLAN CATALOG below. For a signed-in seller, use LIVE WORKSHOP ACCESS in seller context. Never say "typically Pro+" or guess from the public price page.
 13. Stock Ledger — finished goods catalogued stock table searchable by HUID or barcode, physical transfers between showcases and strongroom vault, and live vault fiat valuations
 14. Repairs & service tracking — log repair/service jobs (resizing, polishing, soldering, stone setting, plating), photos, charges, status, and WhatsApp ready-notifications (PRO+ in all countries incl. India & Nepal)
 15. Gold savings & instalment schemes — track customer monthly deposits / committee / chitti plans, accrued gold/value, maturity and redemption, with WhatsApp due reminders (PRO+ in all countries incl. India & Nepal)
@@ -1061,6 +1093,7 @@ RESPONSE RULES:
 - For password/account issues, use the sendPasswordReset tool
 - For locked accounts, suspensions, or complex billing issues, use the autoEscalateTicket tool
 - Never fabricate prices or percentages not stated here
+- Never fabricate which subscription plans include a feature. Use LIVE WORKSHOP PLAN CATALOG / LIVE WORKSHOP ACCESS. An admin can change plan feature JSON at any time.
 - If unsure, offer to connect the user with Aakash directly
 
 LEAD CONTACT CAPTURE (guest visitors only — this does NOT apply to logged-in sellers):
@@ -1082,10 +1115,14 @@ AVAILABLE TOOLS:
 2. autoEscalateTicket — call for locked accounts, suspensions, missing refunds, technical bugs; ask for name and email first if not provided
 3. captureLeadContact — call IMMEDIATELY when a visitor shares their email or phone number (do NOT ask for both — one is enough)`;
 
+    const liveWorkshopBlock = liveWorkshopCatalog
+      ? `\n\nLIVE WORKSHOP PLAN CATALOG (queried now from active SubscriptionPlan rows; admin feature JSON can change anytime):\n${liveWorkshopCatalog}\nShopkeepers turn factory tabs on at Shop Settings → Preferences → Workshop mode only if their current plan has workshopManufacturing. Do not guess from the public price page.`
+      : "";
+
     if (knowledgeContext) {
-      return `${base}\n\nADDITIONAL CONTEXT FROM KNOWLEDGE BASE:\n${knowledgeContext}`;
+      return `${base}\n\nADDITIONAL CONTEXT FROM KNOWLEDGE BASE:\n${knowledgeContext}${liveWorkshopBlock}`;
     }
-    return base;
+    return `${base}${liveWorkshopBlock}`;
   }
 
   private buildContents(
@@ -1463,6 +1500,8 @@ Items running low (<=1 in stock): ${snapshot.lowStockCount}
 Tax audit status: ${auditStatus}
 Shop KYC Verification Status: ${kycStatus}
 
+${formatLiveWorkshopAccess(this.workshopAccessFromSnapshot(snapshot))}
+
 NEW SHOPKEEPER PC FEATURES:
 - Dashboard Mode Toggle: Switch between EASY and ADVANCED using the toggle in the top header.
   * EASY MODE shows 12 core links including Dashboard, POS, Invoices, Orders, Products, Inventory, and the new Stock Ledger. Other complex modules (like Karigar & Bullion Supply Chain) are grouped under "More ERP Tools".
@@ -1484,6 +1523,14 @@ CRM FEATURE MAP (DESKTOP — left sidebar navigation):
 - Inventory: /dashboard/shop/inventory
 - Stock Ledger: /dashboard/shop/stock
 - Karigar & Bullion Supply Chain: /dashboard/shop/supply-chain
+- Karigar book (default tab): vault, artisan float, jobs, gold loss
+- Workshop Tower: /dashboard/shop/supply-chain?view=tower
+- Workshop Jobs: /dashboard/shop/supply-chain?view=jobs
+- Workshop Floor: /dashboard/shop/supply-chain?view=floor (add &dept=CASTING|FILING|SETTING|POLISH|QC)
+- Workshop Metal: /dashboard/shop/supply-chain?view=metal
+- Workshop QC: /dashboard/shop/supply-chain?view=qc
+- Workshop Reports: /dashboard/shop/supply-chain?view=reports
+- Workshop job card: /dashboard/shop/supply-chain?view=job&id={id}
 - Invoices: /dashboard/shop/invoices
 - Create invoice: /dashboard/shop/invoices/create
 - Invoice settings (logo / layout): /dashboard/shop/invoices/settings
@@ -1527,7 +1574,8 @@ SELLER RESPONSE RULES:
 - If the seller is currently on a mobile path (starts with /m/), guide them using the MOBILE FEATURE MAP and mobile UI language ("tap the More tab", "open Tax Audit from the More menu"). Do NOT mention the desktop left sidebar.
 - If the seller is on a desktop path (/dashboard/), guide them using the DESKTOP CRM FEATURE MAP and desktop UI language ("open Tax Reports from the left sidebar").
 - If a requested metric is genuinely unavailable in the context above, say it is unavailable instead of inventing it.
-- Prefer direct, operational instructions for CRM navigation and tax-report workflows.`;
+- Prefer direct, operational instructions for CRM navigation and tax-report workflows.
+- When asked how to unlock workshop / factory tabs, quote LIVE WORKSHOP ACCESS. The switch is Shop Settings → Preferences → Workshop mode. Which plans include it is the live catalog, not a hardcoded Pro+ rule.`;
   }
 
   private maybeAnswerSellerQuestion(
@@ -1709,14 +1757,36 @@ SELLER RESPONSE RULES:
     }
 
     if (
-      /(karigar|artisan|workshop|goldsmith|fabrication job|bullion reserves|custom metal|custom material|scrap returned|process wastage)/.test(
+      isWorkshopMetalOperationQuestion(message)
+    ) {
+      return {
+        reply: formatWorkshopMetalOperationReply(
+          this.workshopAccessFromSnapshot(snapshot),
+        ),
+        shouldEscalate: false,
+        confidence: 0.94,
+      };
+    }
+
+    if (isWorkshopAccessQuestion(message)) {
+      return {
+        reply: formatSellerWorkshopReply(
+          this.workshopAccessFromSnapshot(snapshot),
+        ),
+        shouldEscalate: false,
+        confidence: 0.96,
+      };
+    }
+
+    if (
+      /(karigar book|artisan ledger|supply chain page|where.*karigar|where.*supply chain)/.test(
         normalized,
       )
     ) {
       return {
-        reply: `The Karigar & Bullion Supply Chain Console helps you manage your raw gold and silver bullion procurement, track artisan outstanding float balance sheets, calculate loss tolerance, and maintain order checklists. It's a comprehensive module designed to streamline your manufacturing and supply chain operations.`,
+        reply: `Karigar & Supply Chain is at /dashboard/shop/supply-chain. Karigar book is the default tab for artisan ledgers, vault bullion, custom materials, and jobs.${snapshot.workshopMode && snapshot.workshopManufacturingEnabled ? " Factory tabs (Tower, Jobs, Floor, Metal, QC, Reports) are on the same page." : " Factory tabs appear when your plan includes workshop manufacturing and Workshop mode is on in Settings → Preferences."}`,
         shouldEscalate: false,
-        confidence: 0.96,
+        confidence: 0.9,
       };
     }
 
@@ -1942,7 +2012,12 @@ SELLER RESPONSE RULES:
       }),
       this.prisma.shop.findUnique({
         where: { id: shopId },
-        select: { shopName: true, country: true, isVerified: true },
+        select: {
+          shopName: true,
+          country: true,
+          isVerified: true,
+          workshopMode: true,
+        },
       }),
       this.prisma.invoice.aggregate({
         where: {
@@ -2100,6 +2175,33 @@ SELLER RESPONSE RULES:
         ? Math.min(999, Math.round((yearlySales / nepalThreshold) * 100))
         : 0;
 
+    const [activeFeatures, workshopPlansResult] = await Promise.all([
+      this.planLimits.getActiveFeatures(shopId).catch((error) => {
+        this.logger.warn(
+          `sellerChat: active features failed: ${error instanceof Error ? error.message : error}`,
+        );
+        return null;
+      }),
+      this.listLiveWorkshopPlans(country)
+        .then((plans) => ({ ok: true as const, plans }))
+        .catch((error) => {
+          this.logger.warn(
+            `sellerChat: workshop plan catalog failed: ${error instanceof Error ? error.message : error}`,
+          );
+          return { ok: false as const };
+        }),
+    ]);
+
+    const workshopPlanCatalogUnavailable = !workshopPlansResult.ok;
+    const workshopPlans = workshopPlansResult.ok ? workshopPlansResult.plans : [];
+
+    const workshopManufacturingEnabled =
+      activeFeatures === null
+        ? null
+        : activeFeatures.features.find(
+            (feature) => feature.key === "workshopManufacturing",
+          )?.enabled === true;
+
     return {
       sellerName,
       sellerEmail: user?.email ?? undefined,
@@ -2134,6 +2236,67 @@ SELLER RESPONSE RULES:
       dashboardMode,
       isVerified: shop?.isVerified ?? false,
       userCreatedAt: user?.createdAt ? user.createdAt.toISOString() : undefined,
+      planName: activeFeatures?.planName ?? "Free Plan",
+      planTier: activeFeatures?.planTier ?? null,
+      workshopMode: shop?.workshopMode === true,
+      workshopManufacturingEnabled,
+      workshopPlanNames: workshopPlans.map((plan) => plan.displayName),
+      workshopPlanCatalogUnavailable,
+    };
+  }
+
+  private async listLiveWorkshopPlans(
+    country?: string,
+  ): Promise<LiveWorkshopPlan[]> {
+    const plans = await this.prisma.subscriptionPlan.findMany({
+      where: {
+        isActive: true,
+        ...(country ? { country: country as import("@prisma/client").MarketRegion } : {}),
+      },
+      select: {
+        name: true,
+        displayName: true,
+        country: true,
+        features: true,
+      },
+      orderBy: [{ country: "asc" }, { sortOrder: "asc" }],
+    });
+    return selectPlansWithFeature(
+      plans.map((plan) => ({
+        displayName: plan.displayName,
+        name: plan.name,
+        country: plan.country,
+        features: plan.features,
+      })),
+      "workshopManufacturing",
+    );
+  }
+
+  private workshopAccessFromSnapshot(
+    snapshot: SellerSnapshot,
+  ): LiveWorkshopAccess {
+    return {
+      planName: snapshot.planName,
+      country: snapshot.country,
+      workshopMode: snapshot.workshopMode,
+      workshopManufacturingEnabled: snapshot.workshopManufacturingEnabled,
+      workshopPlanNames: snapshot.workshopPlanNames,
+      workshopPlanCatalogUnavailable: snapshot.workshopPlanCatalogUnavailable,
+    };
+  }
+
+  private workshopCatalogFromSnapshot(
+    snapshot: SellerSnapshot,
+  ): WorkshopPlanCatalogInput {
+    if (snapshot.workshopPlanCatalogUnavailable) {
+      return { status: "unavailable" };
+    }
+    return {
+      status: "ok",
+      plans: snapshot.workshopPlanNames.map((displayName) => ({
+        displayName,
+        country: snapshot.country,
+      })),
     };
   }
 
@@ -2208,13 +2371,14 @@ SELLER RESPONSE RULES:
         ipAddress,
       );
 
-      snapshot = await this.buildSellerSnapshot(
+      const seller = await this.buildSellerSnapshot(
         resolvedShopId,
         userId,
         currentPath,
         dashboardMode,
       );
-      const directAnswer = this.maybeAnswerSellerQuestion(snapshot, message);
+      snapshot = seller;
+      const directAnswer = this.maybeAnswerSellerQuestion(seller, message);
       if (directAnswer) {
         await this.supportService.logAiChat(
           sessionId ?? null,
@@ -2231,11 +2395,11 @@ SELLER RESPONSE RULES:
         this.logger.error(
           "sellerChat: GEMINI_API_KEY is not set — returning seller fallback",
         );
-        return this.fallbackSellerResponse(snapshot);
+        return this.fallbackSellerResponse(seller);
       }
 
       const knowledgeContext = await this.searchKnowledge(message);
-      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: snapshot.sellerName, authenticatedEmail: snapshot.sellerEmail }, "SHOPKEEPER")}\n\n${this.buildSellerContext(snapshot)}`;
+      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: seller.sellerName, authenticatedEmail: seller.sellerEmail }, "SHOPKEEPER", formatWorkshopPlanCatalog(this.workshopCatalogFromSnapshot(seller)))}\n\n${this.buildSellerContext(seller)}`;
 
       const contents = this.buildContents(
         systemPrompt,
@@ -2316,7 +2480,7 @@ SELLER RESPONSE RULES:
 
       if (!response.ok) {
         this.logger.warn(`Gemini API error (sellerChat): ${response.status}`);
-        return this.limitReply(this.fallbackSellerResponse(snapshot), audience);
+        return this.limitReply(this.fallbackSellerResponse(seller), audience);
       }
 
       const data = await response.json();
@@ -2326,7 +2490,7 @@ SELLER RESPONSE RULES:
         return this.limitReply(
           await this.handleFunctionCall(functionCall, ipAddress, sessionId, {
             audience,
-            authenticatedEmail: snapshot.sellerEmail,
+            authenticatedEmail: seller.sellerEmail,
             latestUserMessage: message,
           }),
           audience,
@@ -2885,17 +3049,28 @@ ADMIN RESPONSE RULES:
         ipAddress,
       );
 
-      snapshot = await this.buildAdminSnapshot(userId, currentPath);
+      const admin = await this.buildAdminSnapshot(userId, currentPath);
+      snapshot = admin;
 
       if (!this.apiKey) {
         this.logger.error(
           "adminChat: GEMINI_API_KEY is not set — returning admin fallback",
         );
-        return this.fallbackAdminResponse(snapshot);
+        return this.fallbackAdminResponse(admin);
       }
 
-      const knowledgeContext = await this.searchKnowledge(message);
-      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: snapshot.adminName }, "ADMIN")}\n\n${this.buildAdminContext(snapshot)}`;
+      const [knowledgeContext, workshopCatalog] = await Promise.all([
+        this.searchKnowledge(message),
+        this.listLiveWorkshopPlans()
+          .then((plans) => ({ status: "ok" as const, plans }))
+          .catch((error) => {
+            this.logger.warn(
+              `adminChat: live workshop plan catalog failed: ${error instanceof Error ? error.message : error}`,
+            );
+            return { status: "unavailable" as const };
+          }),
+      ]);
+      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: admin.adminName }, "ADMIN", formatWorkshopPlanCatalog(workshopCatalog))}\n\n${this.buildAdminContext(admin)}`;
       const contents = this.buildContents(
         systemPrompt,
         conversationHistory,
@@ -2945,7 +3120,7 @@ ADMIN RESPONSE RULES:
 
       if (!response.ok) {
         this.logger.warn(`Gemini API error (adminChat): ${response.status}`);
-        return this.limitReply(this.fallbackAdminResponse(snapshot), audience);
+        return this.limitReply(this.fallbackAdminResponse(admin), audience);
       }
 
       const data = await response.json();

@@ -231,7 +231,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "karigar_gold_loss_ledger",
     content:
-      "Karigar Gold Loss on Supply Chain tracks physical workshop metal, not customer billing wastage (jarti) on invoices. Issue gold from the vault to a karigar or job. Each job has stages (casting, filing, polishing, stone setting, final polish, QC) with gold in, gold out, scrap, and dust. Casting trees reconcile issued grams against finished pieces, sprue/button, and recoverable scrap. Actual loss = issued − finished − sprue − recoverable. Unexplained loss is anything above the allowed %. Catalogue and RFQ bills never feed this ledger. Use Load sample 1 kg job for a demo: 1000g issued, 920g finished, 50g sprue, 20g recoverable, 10g actual loss at 1% allowed. Print the Gold Loss report for job-wise, tree-wise, and karigar-wise accountability.",
+      "Karigar Gold Loss tracks physical workshop metal, not customer billing wastage (jarti) on invoices. You will find it in two places on /dashboard/shop/supply-chain: the Gold Loss / Wastage Report card at the bottom of Karigar book (the default tab), and the Reports tab (?view=reports) when Workshop mode is on. Issue gold from the vault to a karigar or job. Each job has stages (casting, filing, polishing, stone setting, final polish, QC) with gold in, gold out, scrap, and dust. Casting trees live on the job card: issued grams vs finished pieces, sprue/button, and recoverable scrap. Actual loss = issued − finished − sprue − recoverable. Unexplained loss is anything above the allowed %. Catalogue and RFQ bills never feed this ledger. Use Load sample 1 kg job for a demo: 1000g issued, 920g finished, 50g sprue, 20g recoverable, 10g actual loss at 1% allowed.",
   },
   {
     topic: "old_gold_silver_exchange",
@@ -241,7 +241,12 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "workshop_manufacturing_mode",
     content:
-      "Workshop manufacturing lives inside /dashboard/shop/supply-chain. Turn it on in Shop Settings → Workshop mode; the active plan must also enable the workshopManufacturing feature. Supply Chain then provides Karigar book, Tower, Jobs, Floor, Metal, QC, and Reports views on the same page. Departments (casting, filing, setting, polish, QC) are filters on Floor, not sidebar pages. Floor advances a job by transferring a gold-out weight to the next department. QC can approve, rework, or reject. Receive finished goods creates an inventory item from the job — it does not write invoices. Gold loss on the tower is physical workshop metal math, not billing wastage (jarti).",
+      "Workshop manufacturing lives inside /dashboard/shop/supply-chain as seven tabs, not seven sidebar pages. Turn factory tabs on at Shop Settings → Preferences → Workshop mode (desktop /dashboard/shop/settings?tab=preferences) or Store Settings on mobile (/m/settings). The switch is disabled until the shop's current live plan JSON includes workshopManufacturing. That flag is not a fixed Pro+ rule — an admin can include or exclude it on any plan, so the chatbot must read the live catalog, not the marketing price page. 1) Karigar book (default, no ?view=): vault bullion, custom materials, artisan balances, wastage limits, Issue Metal, jobs, pipeline, and Gold Loss. 2) Tower (?view=tower): overdue jobs, waiting on next department, loss-limit breaches, unreceived finished goods, QC pending, vault gold, department load. 3) Jobs (?view=jobs): create work orders with due date, priority, qty; open a row for the job card (?view=job&id=) with casting trees and Receive finished goods (creates inventory, does not write invoices). 4) Floor (?view=floor): department queues; filter with ?dept=CASTING (or FILING, SETTING, POLISH, QC). Advance by entering gold-out grams — that weight becomes the next department's gold-in. Departments are Floor filters, not extra pages. 5) Metal (?view=metal): ISSUE, RETURN_FINISHED, RETURN_SPRUE, SCRAP, DUST, ADJUST. Same vault as Karigar book. Unexplained loss never returns to the vault. 6) QC (?view=qc): Approve, Rework (back to filing), or Reject. Does not create invoices. 7) Reports (?view=reports): gold loss by job, tree, and karigar — workshop metal math, not invoice jarti. Legacy /dashboard/shop/workshop/* URLs redirect here.",
+  },
+  {
+    topic: "supply_chain_workspace_views",
+    content:
+      "The desktop Supply Chain workspace is one page: /dashboard/shop/supply-chain. Tabs at the top: Karigar book, Tower, Jobs, Floor, Metal, QC, Reports. Karigar book is the artisan ledger. The other six tabs appear when Workshop mode is on AND the shop's live plan includes workshopManufacturing (admin-editable per plan). Turn Workshop mode on at Shop Settings → Preferences. Floor departments are query filters (?view=floor&dept=), not sidebar items. Job cards are ?view=job&id=. Gold loss on Karigar book and on Reports is physical workshop metal. Billing wastage (jarti) is only on Create Invoice. Old-gold / old-silver exchange is a separate shop tool, not this ledger. In-app help tours on each tab describe the buttons that are actually on that view.",
   },
   {
     topic: "product_gross_weight_and_pos_customer",
@@ -311,6 +316,8 @@ async function main() {
     "mobile_invoice_full_billing",
     "product_description_generation",
     "workshop_manufacturing_mode",
+    "supply_chain_workspace_views",
+    "karigar_gold_loss_ledger",
     "product_gross_weight_and_pos_customer",
   ]);
 
@@ -319,24 +326,31 @@ async function main() {
       console.log(`  Skipping [${chunk.topic}] (already done)`);
       continue;
     }
-    if (FORCE_REFRESH.has(chunk.topic) && done.has(chunk.topic)) {
-      await prisma.$executeRawUnsafe(
-        `DELETE FROM "KnowledgeChunk" WHERE topic = $1`,
-        chunk.topic,
-      );
-      console.log(`  Refreshing [${chunk.topic}]…`);
-    }
-    process.stdout.write(`  Embedding [${chunk.topic}]… `);
+    const refreshing =
+      FORCE_REFRESH.has(chunk.topic) && done.has(chunk.topic);
+    process.stdout.write(
+      refreshing
+        ? `  Refreshing [${chunk.topic}]… `
+        : `  Embedding [${chunk.topic}]… `,
+    );
     const vector = await embedWithRetry(chunk.content);
     const vectorLiteral = `[${vector.join(",")}]`;
 
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "KnowledgeChunk" (id, topic, content, embedding, "createdAt", "updatedAt")
-       VALUES (gen_random_uuid(), $1, $2, $3::vector, NOW(), NOW())`,
-      chunk.topic,
-      chunk.content,
-      vectorLiteral,
-    );
+    await prisma.$transaction(async (tx) => {
+      if (refreshing) {
+        await tx.$executeRawUnsafe(
+          `DELETE FROM "KnowledgeChunk" WHERE topic = $1`,
+          chunk.topic,
+        );
+      }
+      await tx.$executeRawUnsafe(
+        `INSERT INTO "KnowledgeChunk" (id, topic, content, embedding, "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3::vector, NOW(), NOW())`,
+        chunk.topic,
+        chunk.content,
+        vectorLiteral,
+      );
+    });
     console.log("done");
     count++;
     // gemini-embedding-001 free tier = 5 RPM → need ≥12s between calls

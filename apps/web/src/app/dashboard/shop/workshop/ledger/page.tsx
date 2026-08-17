@@ -92,7 +92,7 @@ export default function WorkshopLedgerPage() {
           </T>
         </p>
       </div>
-      <Card>
+      <Card data-tour="workshop-metal-vault">
         <CardHeader>
           <CardTitle>
             <T>Vault</T>
@@ -107,7 +107,7 @@ export default function WorkshopLedgerPage() {
           ))}
         </CardContent>
       </Card>
-      <Card>
+      <Card data-tour="workshop-metal-form">
         <CardHeader>
           <CardTitle>
             <T>Record movement</T>

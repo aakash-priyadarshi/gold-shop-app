@@ -56,6 +56,12 @@ describe("Tutorial TOUR_STEPS — Structure", () => {
     expect(sourceFile).toContain("hardware-receipt-printer");
   });
 
+  test("opens Preferences before highlighting Workshop mode", () => {
+    expect(sourceFile).toContain("settings-preferences-tab");
+    expect(sourceFile).toContain("settings-workshop-mode");
+    expect(sourceFile).toContain("activateShopSettingsPreferencesTab");
+  });
+
   test("has tour steps for invoice detail Print", () => {
     expect(sourceFile).toContain('"/dashboard/shop/invoices/"');
     expect(sourceFile).toContain('"/m/invoices/"');
@@ -66,6 +72,30 @@ describe("Tutorial TOUR_STEPS — Structure", () => {
   test("has tour steps for admin crash reports", () => {
     expect(sourceFile).toContain('"/dashboard/admin/crash-reports"');
     expect(sourceFile).toContain("crash-reports-filters");
+  });
+
+  test("has tour steps for all seven Supply Chain views", () => {
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-tower"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-jobs"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-floor"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-metal"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-qc"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-reports"');
+    expect(sourceFile).toContain("supply-chain-nav");
+    expect(sourceFile).toContain("supply-nav-book");
+    expect(sourceFile).toContain("supply-nav-tower");
+    expect(sourceFile).toContain("workshop-floor-depts");
+    expect(sourceFile).toContain("workshop-metal-form");
+    expect(sourceFile).toContain("workshop-qc-queue");
+    expect(sourceFile).toContain("workshop-reports");
+  });
+
+  test("Supply Chain factory tours do not claim Tower replaces the karigar book", () => {
+    expect(sourceFile).not.toContain(
+      "This replaces Supply Chain when Workshop mode is on",
+    );
+    expect(sourceFile).toContain("does not replace the Karigar book");
   });
 });
 

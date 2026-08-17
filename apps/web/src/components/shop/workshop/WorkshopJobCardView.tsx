@@ -78,7 +78,7 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
+        <div data-tour="workshop-job-card">
           <h2 className="text-2xl font-bold" dir="auto">
             {job.product}
           </h2>
@@ -147,7 +147,7 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
           }
         }}
       />
-      <Card>
+      <Card data-tour="workshop-receive-fg">
         <CardHeader>
           <CardTitle>
             <T>Receive finished goods</T>

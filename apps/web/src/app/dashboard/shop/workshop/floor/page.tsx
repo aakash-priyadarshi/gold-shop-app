@@ -85,7 +85,7 @@ function FloorInner() {
           </T>
         </p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2" data-tour="workshop-floor-depts">
         <Button variant={!dept ? "default" : "outline"} asChild>
           <Link href={supplyChainHref("floor")}>
             <T>All</T>
@@ -104,7 +104,7 @@ function FloorInner() {
         ))}
       </div>
       {error && <p className="text-sm text-rose-600">{t(error)}</p>}
-      <div className="grid gap-3">
+      <div className="grid gap-3" data-tour="workshop-floor-queue">
         {jobs.map((job) => {
           const stage = job.currentStage ?? "CASTING";
           const row = job.stages?.find((s) => s.stage === stage);

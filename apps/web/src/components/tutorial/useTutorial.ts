@@ -7,6 +7,24 @@ import { useEffect, useMemo } from "react";
 import { translateTourSteps } from "./translate-tour-steps";
 import { useTourContext } from "./useTourContext";
 
+const SUPPLY_CHAIN_NAV_STEP: DriveStep = {
+  element: "[data-tour='supply-chain-nav']",
+  popover: {
+    title: "Seven views on one page",
+    description:
+      "Karigar book is the artisan ledger. With Workshop mode on, the same Supply Chain page also has Tower, Jobs, Floor, Metal, QC, and Reports. These are tabs here — not extra sidebar pages.",
+    side: "bottom",
+    align: "start",
+  },
+};
+
+function activateShopSettingsPreferencesTab() {
+  if (typeof document === "undefined") return;
+  document
+    .querySelector<HTMLElement>("[data-tour='settings-preferences-tab']")
+    ?.click();
+}
+
 /** Tour steps keyed by pathname prefix */
 const HARDWARE_TOUR_STEPS: DriveStep[] = [
   {
@@ -182,72 +200,43 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     },
   ],
   "/dashboard/shop/supply-chain": [
+    SUPPLY_CHAIN_NAV_STEP,
+    {
+      element: "[data-tour='supply-nav-book']",
+      popover: {
+        title: "Karigar book",
+        description:
+          "This default tab is the shop karigar ledger: vault bullion, artisan float, jobs, and gold loss. Factory tabs (Tower through Reports) stay on this same page when Workshop mode is on.",
+        side: "bottom",
+        align: "start",
+      },
+    },
     {
       element: "[data-tour='supply-ticker']",
       popover: {
-        title: "Live Bullion Ticker",
+        title: "Live bullion rates",
         description:
-          "Real-time feed of raw materials (gold grains 24K, 22K, 18K, silver) dynamically synced from international commodities markets for accurate valuation.",
+          "Gold 24K / 22K / 18K and silver rates used to value vault stock on this page.",
         side: "bottom",
         align: "start",
-      },
-    },
-    {
-      element: "[data-tour='supply-vault']",
-      popover: {
-        title: "Bullion Safe Vault Reserves",
-        description:
-          "Track the total raw materials physical stock (gold cast bars, silver scrap, grains) currently locked inside your strong-room vault.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='supply-add-material']",
-      popover: {
-        title: "Add Custom Material Types",
-        description:
-          "Click here to add custom metal types (such as Platinum 950, Rose Gold 14K, or Palladium) dynamically to your strong-room vault grid. Once added, they will be available across all procurement and allotment modules!",
-        side: "bottom",
-        align: "end",
-      },
-    },
-    {
-      element: "[data-tour='supply-ledger']",
-      popover: {
-        title: "Artisan Balance Ledger",
-        description:
-          "Complete CRUD dashboard for registered Karigars. View their name, contact phone, email, wastage limit (%), float balances (gold/silver), and total pending wages. You can also edit details or delete records securely.",
-        side: "top",
-        align: "center",
       },
     },
     {
       element: "[data-tour='supply-add-karigar']",
       popover: {
-        title: "Register New Karigar",
+        title: "Add Karigar",
         description:
-          "Click here to register a new goldsmith or artisan. Save their name, workshop name, location, phone (with country code), email, wastage target limit, and basic labor rates directly to the cloud.",
+          "Register a goldsmith: workshop name, artisan, location, phone, email, wastage limit, and wage rate.",
         side: "bottom",
-        align: "center",
-      },
-    },
-    {
-      element: "[data-tour='supply-pipeline']",
-      popover: {
-        title: "Artisan Fabrication Pipeline",
-        description:
-          "Track active jobs with gold in/out at each stage. Casting trees show issued metal vs finished pieces, sprue/button, recoverable scrap, allowed loss, and unexplained loss. This is workshop metal — not customer billing wastage.",
-        side: "top",
         align: "center",
       },
     },
     {
       element: "[data-tour='supply-add-job']",
       popover: {
-        title: "Create Fabrication Job",
+        title: "Add Job",
         description:
-          "Launch a new custom job. Then record a casting tree (for example 1 kg issued) and department weights. Use Load sample 1 kg job for a walkthrough of the Gold Loss report.",
+          "Create a fabrication job on this ledger. Add a karigar first. For factory due dates and priority, use the Jobs tab after Workshop mode is on.",
         side: "bottom",
         align: "center",
       },
@@ -255,29 +244,69 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='supply-sample-job']",
       popover: {
-        title: "Sample 1 kg casting job",
+        title: "Sample 1 kg job",
         description:
-          "Loads a demo: 1000g issued, 920g finished, 50g sprue, 20g recoverable. Actual loss is 10g, which matches 1% allowed — unexplained stays at 0. Open the Gold Loss report after it loads.",
+          "Loads a demo: 1000 g issued, 920 g finished, 50 g sprue, 20 g recoverable. Actual loss is 10 g at 1% allowed, so unexplained stays 0.",
         side: "bottom",
         align: "center",
       },
     },
     {
-      element: "[data-tour='supply-casting-tree']",
+      element: "[data-tour='supply-issue-metal']",
       popover: {
-        title: "Casting tree reconciliation",
+        title: "Issue Metal",
         description:
-          "Enter issued gold, finished pieces, sprue/button, and recoverable scrap. Actual loss and unexplained loss (above the allowed %) calculate automatically.",
+          "Allot raw gold or silver from the vault into a karigar's outstanding float. Returns and scrap come back through the same ledger.",
+        side: "bottom",
+        align: "end",
+      },
+    },
+    {
+      element: "[data-tour='supply-vault']",
+      popover: {
+        title: "Vault valuation",
+        description:
+          "Fiat value of raw 24K gold and silver currently in the strong-room vault — not finished jewellery in Stock Ledger.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='supply-add-material']",
+      popover: {
+        title: "Add material type",
+        description:
+          "Add custom metals such as platinum or rose gold to the vault grid. They then appear in procurement and allotment.",
+        side: "bottom",
+        align: "end",
+      },
+    },
+    {
+      element: "[data-tour='supply-ledger']",
+      popover: {
+        title: "Artisan balances",
+        description:
+          "Each karigar's issued vs returned metal, wastage limit, outstanding float, and wages due. Edit or delete from the row actions.",
         side: "top",
         align: "center",
       },
     },
     {
-      element: "[data-tour='supply-gold-loss']",
+      element: "[data-tour='supply-pipeline']",
+      popover: {
+        title: "Fabrication pipeline",
+        description:
+          "Active jobs with gold in and out by stage. Open a job card to enter the casting tree. This is workshop metal, not customer billing wastage (jarti).",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='supply-gold-loss-card']",
       popover: {
         title: "Gold Loss report",
         description:
-          "Job-wise, tree-wise, and karigar-wise gold accountability. Print this for a factory walkthrough. Catalogue and invoice wastage are separate and never mix into this ledger.",
+          "Job, tree, and karigar accountability for issued vs returned metal. The Reports tab shows the same workshop math when factory views are on. Invoice jarti never mixes in.",
         side: "top",
         align: "center",
       },
@@ -516,11 +545,29 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='settings-preferences-tab']",
       popover: {
         title: "Preferences Tab",
         description:
-          "Under Preferences, configure making charge %, Billing Wastage (jarti) mode and default %, Cash on Delivery, and min/max order values. Under Payment Methods, add your bank account for payouts.",
+          "Under Preferences, configure making charge %, Billing Wastage (jarti) mode and default %, Cash on Delivery, min/max order values, and Workshop mode (factory tabs on Supply Chain). Under Payment Methods, add your bank account for payouts.",
+        side: "bottom",
+        align: "start",
+        onNextClick: (_el, _step, { driver }) => {
+          activateShopSettingsPreferencesTab();
+          window.setTimeout(() => driver.moveNext(), 80);
+        },
       },
+    },
+    {
+      element: "[data-tour='settings-workshop-mode']",
+      popover: {
+        title: "Workshop mode",
+        description:
+          "Turn this on to add Tower, Jobs, Floor, Metal, QC, and Reports as tabs on Supply Chain. The Karigar book stays the default tab. Your plan must include workshopManufacturing.",
+        side: "top",
+        align: "start",
+      },
+      onHighlightStarted: activateShopSettingsPreferencesTab,
     },
     {
       element: "[data-tour='shop-wastage-settings']",
@@ -566,13 +613,47 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
+  "/dashboard/shop/supply-chain#workshop-locked": [
+    SUPPLY_CHAIN_NAV_STEP,
+    {
+      element: "[data-tour='workshop-locked']",
+      popover: {
+        title: "Factory views are locked",
+        description:
+          "Tower, Jobs, Floor, Metal, QC, and Reports need Workshop mode on in Shop Settings, plus workshopManufacturing on your plan. Use Karigar book until both are on.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='supply-nav-book']",
+      popover: {
+        title: "Open Karigar book",
+        description:
+          "This tab always stays available. It is the vault, artisan float, jobs, and gold-loss ledger.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+  ],
   "/dashboard/shop/supply-chain#workshop-tower": [
+    SUPPLY_CHAIN_NAV_STEP,
+    {
+      element: "[data-tour='supply-nav-tower']",
+      popover: {
+        title: "Tower",
+        description:
+          "Factory exceptions on this same Supply Chain page. It does not replace the Karigar book — switch back with that tab.",
+        side: "bottom",
+        align: "start",
+      },
+    },
     {
       element: "[data-tour='workshop-tower']",
       popover: {
-        title: "Workshop control tower",
+        title: "Control tower",
         description:
-          "Factory home: overdue jobs, department bottlenecks, gold-loss breaches, QC, and low vault. This replaces Supply Chain when Workshop mode is on. It is not the shop karigar book.",
+          "Overdue work, department bottlenecks, gold-loss breaches, QC, and vault gold. This is factory status, not the artisan balance sheet.",
         side: "bottom",
         align: "start",
       },
@@ -580,9 +661,39 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='workshop-overdue']",
       popover: {
-        title: "Exceptions first",
+        title: "Overdue jobs",
         description:
-          "Start with overdue work orders, then waiting-on-next, unexplained gold loss, and unreceived finished goods.",
+          "Start here. Open a job to see its card. Then check waiting-on-next, loss-limit, and unreceived finished goods.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-waiting']",
+      popover: {
+        title: "Waiting on next department",
+        description:
+          "Jobs finished in one stage but not yet advanced. Floor is where you enter gold out and tap Advance.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-loss']",
+      popover: {
+        title: "Loss-limit breaches",
+        description:
+          "Physical workshop metal above the allowed %. This is not invoice jarti. Open Reports for the full gold-loss table.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-qc']",
+      popover: {
+        title: "QC pending",
+        description:
+          "Jobs waiting for inspect. The QC tab is where you Approve, Rework, or Reject — that does not write invoices.",
         side: "bottom",
         align: "start",
       },
@@ -592,57 +703,237 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Department load",
         description:
-          "Casting, filing, setting, polish, and QC are filters on Floor — not extra sidebar pages. Tap a department to open that queue.",
+          "Open jobs by current stage. Tap a badge to open Floor with that department filter. Departments are filters, not extra sidebar pages.",
         side: "top",
         align: "start",
       },
     },
   ],
   "/dashboard/shop/supply-chain#workshop-jobs": [
+    SUPPLY_CHAIN_NAV_STEP,
+    {
+      element: "[data-tour='supply-nav-jobs']",
+      popover: {
+        title: "Jobs",
+        description:
+          "Factory work orders. The Karigar book also lists jobs; this tab is for due date, priority, qty, and the job card.",
+        side: "bottom",
+        align: "start",
+      },
+    },
     {
       element: "[data-tour='workshop-jobs']",
       popover: {
         title: "Work orders",
         description:
-          "Create manufacturing jobs with due date and priority. Open a job card for casting trees, stage weights, and finished-goods receipt into inventory.",
+          "Manufacturing jobs assigned to a karigar. Floor only advances the current stage — it does not create jobs.",
         side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-jobs-create']",
+      popover: {
+        title: "New job",
+        description:
+          "Requires a karigar. Set product, due date, priority, and qty. Issue metal from the Metal tab after you create it.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-jobs-list']",
+      popover: {
+        title: "Job list",
+        description:
+          "Open a product name for the job card: casting tree, stage weights, and Receive finished goods into inventory.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
+  "/dashboard/shop/supply-chain#workshop-job": [
+    SUPPLY_CHAIN_NAV_STEP,
+    {
+      element: "[data-tour='workshop-job-card']",
+      popover: {
+        title: "Job card",
+        description:
+          "One work order: artisan, stage, due date, size, purity, and notes. Use All jobs to return to the Jobs tab.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='supply-casting-tree']",
+      popover: {
+        title: "Casting tree",
+        description:
+          "Enter issued gold, finished pieces, sprue/button, and recoverable scrap. Actual loss and unexplained loss (above the allowed %) calculate here.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='workshop-receive-fg']",
+      popover: {
+        title: "Receive finished goods",
+        description:
+          "Creates an inventory item from this job. It does not write a customer invoice. Optional SKU is stored on that product.",
+        side: "top",
         align: "start",
       },
     },
   ],
   "/dashboard/shop/supply-chain#workshop-floor": [
+    SUPPLY_CHAIN_NAV_STEP,
+    {
+      element: "[data-tour='supply-nav-floor']",
+      popover: {
+        title: "Floor",
+        description:
+          "Department queues on this page. Casting, filing, setting, polish, and QC are filters — not separate routes.",
+        side: "bottom",
+        align: "start",
+      },
+    },
     {
       element: "[data-tour='workshop-floor']",
       popover: {
         title: "Floor queues",
         description:
-          "Advance a job by entering gold out for the current department. The next stage receives that weight. Do not tick checkboxes — transfer a weight.",
+          "Advance a job by transferring a gold-out weight to the next department. Do not tick checkboxes — enter grams and tap Advance.",
         side: "bottom",
         align: "start",
       },
     },
+    {
+      element: "[data-tour='workshop-floor-depts']",
+      popover: {
+        title: "Department filters",
+        description:
+          "All, or one stage. The URL uses ?view=floor&dept= so you can bookmark a bench. Tower load badges open the same filters.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-floor-queue']",
+      popover: {
+        title: "Gold out and Advance",
+        description:
+          "Gold in is what this stage received. Type gold out, then Advance. That weight becomes the next stage's gold in.",
+        side: "top",
+        align: "center",
+      },
+    },
   ],
   "/dashboard/shop/supply-chain#workshop-metal": [
+    SUPPLY_CHAIN_NAV_STEP,
+    {
+      element: "[data-tour='supply-nav-metal']",
+      popover: {
+        title: "Metal",
+        description:
+          "Factory metal movements. Same physical vault as the Karigar book — unexplained loss never returns to the vault.",
+        side: "bottom",
+        align: "start",
+      },
+    },
     {
       element: "[data-tour='workshop-metal']",
       popover: {
         title: "Metal ledger",
         description:
-          "Issue from vault, return finished/sprue/scrap, or adjust inbound bullion. Optional lot id starts genealogy later. Unexplained loss never returns to vault.",
+          "Issue, return finished or sprue, scrap, dust, or adjust inbound bullion. Optional lot id starts genealogy later.",
         side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-metal-vault']",
+      popover: {
+        title: "Vault balances",
+        description:
+          "Grams on hand by metal key. Karigar book valuation uses live rates; this grid is the physical weight.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-metal-form']",
+      popover: {
+        title: "Record movement",
+        description:
+          "Pick type, weight in grams, karigar, and optional job. Post movement writes the same ledger the Karigar book uses.",
+        side: "top",
         align: "start",
       },
     },
   ],
   "/dashboard/shop/supply-chain#workshop-qc": [
+    SUPPLY_CHAIN_NAV_STEP,
+    {
+      element: "[data-tour='supply-nav-qc']",
+      popover: {
+        title: "QC",
+        description:
+          "Inspect queue for jobs in the QC stage. Approve, rework, or reject — this is not Create Invoice.",
+        side: "bottom",
+        align: "start",
+      },
+    },
     {
       element: "[data-tour='workshop-qc-page']",
       popover: {
         title: "QC inspect",
         description:
-          "Approve, rework back to filing, or reject. This does not write customer invoices.",
+          "Approve passes the job. Rework sends it back to filing. Reject stops it. None of these write customer invoices.",
         side: "bottom",
         align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-qc-queue']",
+      popover: {
+        title: "Approve, Rework, Reject",
+        description:
+          "Add a reason for rework or reject. Open the product name for the full job card if you need the casting tree.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
+  "/dashboard/shop/supply-chain#workshop-reports": [
+    SUPPLY_CHAIN_NAV_STEP,
+    {
+      element: "[data-tour='supply-nav-reports']",
+      popover: {
+        title: "Reports",
+        description:
+          "Workshop gold-loss tables. The Karigar book also shows this report at the bottom of that tab.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='workshop-reports']",
+      popover: {
+        title: "Workshop reports",
+        description:
+          "Gold loss by job, tree, and karigar. Yield, wages, and ageing reports come later. This is workshop metal, not invoice jarti.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='supply-gold-loss']",
+      popover: {
+        title: "Gold loss table",
+        description:
+          "Issued vs finished vs sprue vs recoverable. Unexplained is anything above the allowed %. Print from the Karigar book card if you need a walkthrough sheet.",
+        side: "top",
+        align: "center",
       },
     },
   ],
@@ -1433,7 +1724,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Karigar & Bullion Supply Chain Tracker",
         description:
-          "Your unified manufacturing workspace! Monitor live raw gold/silver bullion reserves in your safe vault, track outstanding float balances allotted to Karigars (artisans), record process wastages, and issue metal or receive finished pieces with direct cloud-persisted ledgers.",
+          "Your unified manufacturing workspace at Supply Chain. Karigar book is the artisan ledger. With Workshop mode on, the same page adds Tower, Jobs, Floor, Metal, QC, and Reports as tabs.",
         side: "top",
         align: "center",
       },
@@ -1918,6 +2209,9 @@ export function useTutorial() {
     if (subKey) {
       const subKeyPath = `${pathname}#${subKey}`;
       if (TOUR_STEPS[subKeyPath]) return TOUR_STEPS[subKeyPath];
+      // Factory tabs share this pathname with Karigar book. Do not use the
+      // book tour — those data-tour anchors are not mounted on factory views.
+      if (pathname === "/dashboard/shop/supply-chain") return [];
     }
     // Exact match, then prefix match (longest first)
     if (TOUR_STEPS[pathname]) return TOUR_STEPS[pathname];
