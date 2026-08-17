@@ -62,6 +62,7 @@ const QUICK_ASKS_SELLER = [
   "What's my pending invoice amount?",
   "How do I create an invoice?",
   "How do I share my tax report with my CA?",
+  "How do the seven Supply Chain views work?",
 ];
 
 const QUICK_ASKS_MOBILE = [
@@ -401,7 +402,7 @@ export function SupportBot() {
         state = action.state;
         animation = action.animation;
       } else if (pathname.includes("supply-chain")) {
-        text = "<T>Use Supply Chain for your Karigar book, workshop tower, floor queues, metal movements, QC, and gold-loss reports! 🛠️</T>";
+        text = "<T>Supply Chain has seven views: Karigar book, Tower, Jobs, Floor, Metal, QC, and Reports. Ask me about any of them.</T>";
         state = "gold_bar";
         animation = "spin";
       } else if (pathname.includes("tax") || pathname.includes("vat") || pathname.includes("gst")) {

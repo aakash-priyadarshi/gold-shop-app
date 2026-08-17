@@ -22,7 +22,7 @@ export default function WorkshopReportsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">
+      <h1 className="text-2xl font-bold" data-tour="workshop-reports">
         <T>Workshop reports</T>
       </h1>
       <p className="text-sm text-muted-foreground">

@@ -373,6 +373,11 @@ export default function MobileStoreSettingsPage() {
               {workshopMode ? <T>On</T> : <T>Off</T>}
             </span>
           </button>
+          <p className="text-[11px] text-gray-500">
+            <T>
+              Opens Tower, Jobs, Floor, Metal, QC, and Reports on Supply Chain.
+            </T>
+          </p>
           {featuresLoading && !workshopMode && (
             <p className="text-[11px] text-gray-500">
               <T>Checking your current plan...</T>

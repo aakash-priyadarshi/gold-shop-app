@@ -919,7 +919,10 @@ export default function ShopSettingsPage() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div
+                    className="flex items-center justify-between"
+                    data-tour="settings-workshop-mode"
+                  >
                     <div className="space-y-0.5">
                       <Label className="flex items-center gap-2">
                         <Factory className="h-4 w-4 text-amber-600" />
@@ -927,9 +930,9 @@ export default function ShopSettingsPage() {
                       </Label>
                       <p className="text-sm text-muted-foreground">
                         <T>
-                          Add factory views (tower, jobs, floor, metal, QC) inside
-                          Supply Chain. Keep this off for the basic karigar
-                          ledger only.
+                          Add factory views (Tower, Jobs, Floor, Metal, QC,
+                          Reports) as tabs on Supply Chain. Keep this off for
+                          the Karigar book only.
                         </T>
                       </p>
                       {featuresLoading && !shopData.workshopMode && (

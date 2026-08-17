@@ -69,6 +69,7 @@ export default function WorkshopQcPage() {
         </p>
       </div>
       {error && <p className="text-sm text-rose-600">{t(error)}</p>}
+      <div className="space-y-3" data-tour="workshop-qc-queue">
       {jobs.map((job) => (
         <Card key={job.id}>
           <CardHeader>
@@ -124,6 +125,7 @@ export default function WorkshopQcPage() {
           <T>No jobs waiting in QC.</T>
         </p>
       )}
+      </div>
     </div>
   );
 }

@@ -130,7 +130,7 @@ export default function WorkshopTowerPage() {
             data-tour="workshop-tower"
           >
             <Factory className="h-6 w-6 text-amber-600" />
-            <T>Workshop</T>
+            <T>Control tower</T>
           </h1>
           <p className="text-sm text-muted-foreground">
             <T>
@@ -171,7 +171,7 @@ export default function WorkshopTowerPage() {
             <JobList jobs={tower.overdue} />
           </CardContent>
         </Card>
-        <Card>
+        <Card data-tour="workshop-waiting">
           <CardHeader className="pb-2">
             <CardDescription>
               <T>Waiting on next department</T>
@@ -184,7 +184,10 @@ export default function WorkshopTowerPage() {
             <JobList jobs={tower.waitingOnNext} />
           </CardContent>
         </Card>
-        <Card className={tower.lossLimit.length ? "border-rose-300" : ""}>
+        <Card
+          data-tour="workshop-loss"
+          className={tower.lossLimit.length ? "border-rose-300" : ""}
+        >
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />

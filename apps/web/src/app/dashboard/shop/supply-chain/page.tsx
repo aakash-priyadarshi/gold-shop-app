@@ -172,14 +172,33 @@ function SupplyChainRouteContent() {
   const setTourSubKey = useTourContext((state) => state.setSubKey);
 
   useEffect(() => {
-    const tourView = view === "job" ? "jobs" : view;
-    setTourSubKey(tourView ? `workshop-${tourView}` : null);
+    if (!view) {
+      setTourSubKey(null);
+      return () => setTourSubKey(null);
+    }
+    if (loading && status !== "ready") {
+      setTourSubKey(null);
+      return () => setTourSubKey(null);
+    }
+    if (!workshopEnabled || !workshopMode) {
+      setTourSubKey("workshop-locked");
+      return () => setTourSubKey(null);
+    }
+    setTourSubKey(view === "job" ? "workshop-job" : `workshop-${view}`);
     return () => setTourSubKey(null);
-  }, [setTourSubKey, view]);
+  }, [loading, setTourSubKey, status, view, workshopEnabled, workshopMode]);
 
   const nav = (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-2">
-      <Button variant={view ? "ghost" : "default"} size="sm" asChild>
+    <div
+      data-tour="supply-chain-nav"
+      className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-2"
+    >
+      <Button
+        data-tour="supply-nav-book"
+        variant={view ? "ghost" : "default"}
+        size="sm"
+        asChild
+      >
         <Link href={supplyChainHref()}>
           <T>Karigar book</T>
         </Link>
@@ -187,6 +206,7 @@ function SupplyChainRouteContent() {
       {FACTORY_VIEWS.map((item) => (
         <Button
           key={item.view}
+          data-tour={`supply-nav-${item.view}`}
           variant={activeNav === item.view ? "default" : "ghost"}
           size="sm"
           asChild
@@ -196,7 +216,10 @@ function SupplyChainRouteContent() {
           </Link>
         </Button>
       ))}
-      <span className="ms-auto px-2 text-xs text-muted-foreground">
+      <span
+        data-tour="supply-nav-mode"
+        className="ms-auto px-2 text-xs text-muted-foreground"
+      >
         {workshopMode ? <T>Workshop mode on</T> : <T>Workshop mode off</T>}
       </span>
     </div>
@@ -227,7 +250,7 @@ function SupplyChainRouteContent() {
     return (
       <div className="space-y-4">
         {nav}
-        <Card className="max-w-xl border-red-200">
+        <Card data-tour="workshop-locked" className="max-w-xl border-red-200">
           <CardHeader>
             <CardTitle>
               <T>Could not verify workshop access</T>
@@ -248,15 +271,17 @@ function SupplyChainRouteContent() {
     return (
       <div className="space-y-4">
         {nav}
-        <FeatureGate
-          feature="workshopManufacturing"
-          featureLabel="Workshop manufacturing (factory floor)"
-          hasFeature={hasFeature}
-          planName={planName}
-          loading={false}
-        >
-          <WorkshopWorkspace view={view} jobId={searchParams.get("id")} />
-        </FeatureGate>
+        <div data-tour="workshop-locked">
+          <FeatureGate
+            feature="workshopManufacturing"
+            featureLabel="Workshop manufacturing (factory floor)"
+            hasFeature={hasFeature}
+            planName={planName}
+            loading={false}
+          >
+            <WorkshopWorkspace view={view} jobId={searchParams.get("id")} />
+          </FeatureGate>
+        </div>
       </div>
     );
   }
@@ -265,7 +290,7 @@ function SupplyChainRouteContent() {
     return (
       <div className="space-y-4">
         {nav}
-        <Card className="max-w-xl">
+        <Card data-tour="workshop-locked" className="max-w-xl">
           <CardHeader>
             <CardTitle>
               <T>Workshop mode is off</T>
@@ -1014,6 +1039,7 @@ function KarigarSupplyChainLedger() {
             <T>Load sample 1 kg job</T>
           </Button>
           <Button
+            data-tour="supply-issue-metal"
             className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
             onClick={() => {
               if (workshops.length === 0) {
@@ -1494,7 +1520,10 @@ function KarigarSupplyChainLedger() {
                   )}
                 </CardContent>
               </Card>
-              <Card className="md:col-span-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+              <Card
+                data-tour="supply-gold-loss-card"
+                className="md:col-span-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
+              >
                 <CardHeader>
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="text-base font-semibold">

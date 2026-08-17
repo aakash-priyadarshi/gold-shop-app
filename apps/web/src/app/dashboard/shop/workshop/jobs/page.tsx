@@ -101,7 +101,7 @@ export default function WorkshopJobsPage() {
         </p>
       </div>
 
-      <Card>
+      <Card data-tour="workshop-jobs-create">
         <CardHeader>
           <CardTitle>
             <T>New job</T>
@@ -189,7 +189,7 @@ export default function WorkshopJobsPage() {
       </Card>
       {error && <p className="text-sm text-rose-600">{t(error)}</p>}
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" data-tour="workshop-jobs-list">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-start text-xs text-muted-foreground border-b">
