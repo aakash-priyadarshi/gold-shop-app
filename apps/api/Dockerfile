@@ -27,13 +27,21 @@ COPY apps/api/ ./apps/api/
 # parent gitlink, which drops new FEATURE_LABELS such as workshopManufacturing.
 ARG SUBMODULE_PAT
 COPY apps/api/core-submodule.sha /tmp/core-submodule.sha
-RUN if [ -n "$SUBMODULE_PAT" ]; then \
-      SHA="$(tr -d '[:space:]' < /tmp/core-submodule.sha)" && \
+RUN SHA="$(tr -d '[:space:]' < /tmp/core-submodule.sha)" && \
+    if [ -z "$SHA" ]; then echo "ERROR: apps/api/core-submodule.sha is empty" && exit 1; fi && \
+    if [ -n "$SUBMODULE_PAT" ]; then \
       rm -rf apps/api/src/modules/core && \
       git clone https://${SUBMODULE_PAT}@github.com/aakash-priyadarshi/gold-shop-core.git apps/api/src/modules/core && \
       git -C apps/api/src/modules/core checkout "$SHA"; \
     elif [ ! -f apps/api/src/modules/core/subscriptions/subscription-plans.module.ts ]; then \
       echo "ERROR: gold-shop-core submodule missing and SUBMODULE_PAT not set" && exit 1; \
+    fi && \
+    if [ ! -d apps/api/src/modules/core/.git ]; then \
+      echo "ERROR: gold-shop-core checkout has no git metadata to verify $SHA" && exit 1; \
+    fi && \
+    CURRENT="$(git -C apps/api/src/modules/core rev-parse HEAD)" && \
+    if [ "$CURRENT" != "$SHA" ]; then \
+      echo "ERROR: gold-shop-core HEAD $CURRENT does not match recorded $SHA" && exit 1; \
     fi
 
 # Install all dependencies (dev included — needed for @nestjs/cli and prisma)

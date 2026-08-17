@@ -87,6 +87,15 @@ describe("useFeatures", () => {
     expect(pro.map.workshopManufacturing).not.toBe(true);
   });
 
+  it("does not treat a Free tier as workshop-capable when the name contains Pro+", () => {
+    const state = buildFeaturesState({
+      planName: "Pro+ trial leftover",
+      planTier: "FREE",
+      features: [],
+    });
+    expect(state.map.workshopManufacturing).not.toBe(true);
+  });
+
   it("respects an explicit workshopManufacturing false", () => {
     const state = buildFeaturesState(response(false, "Enterprise (India)").data);
     expect(state.map.workshopManufacturing).toBe(false);

@@ -64,8 +64,8 @@ export function isWorkshopPlanTier(
   planName?: string | null,
   planTier?: string | null,
 ): boolean {
-  const tier = (planTier || "").toUpperCase();
-  if (tier === "ENTERPRISE" || tier === "PRO_PLUS") return true;
+  const tier = typeof planTier === "string" ? planTier.toUpperCase() : "";
+  if (tier) return tier === "ENTERPRISE" || tier === "PRO_PLUS";
   const name = (planName || "").toUpperCase();
   return (
     name.includes("ENTERPRISE") ||
