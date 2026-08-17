@@ -570,7 +570,7 @@ export default function ShopSettingsPage() {
               <TabsTrigger value="location">
                 <T>Location</T>
               </TabsTrigger>
-              <TabsTrigger value="preferences">
+              <TabsTrigger value="preferences" data-tour="settings-preferences-tab">
                 <T>Preferences</T>
               </TabsTrigger>
               <TabsTrigger value="payments">

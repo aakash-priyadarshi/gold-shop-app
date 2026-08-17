@@ -18,6 +18,13 @@ const SUPPLY_CHAIN_NAV_STEP: DriveStep = {
   },
 };
 
+function activateShopSettingsPreferencesTab() {
+  if (typeof document === "undefined") return;
+  document
+    .querySelector<HTMLElement>("[data-tour='settings-preferences-tab']")
+    ?.click();
+}
+
 /** Tour steps keyed by pathname prefix */
 const HARDWARE_TOUR_STEPS: DriveStep[] = [
   {
@@ -538,10 +545,17 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='settings-preferences-tab']",
       popover: {
         title: "Preferences Tab",
         description:
           "Under Preferences, configure making charge %, Billing Wastage (jarti) mode and default %, Cash on Delivery, min/max order values, and Workshop mode (factory tabs on Supply Chain). Under Payment Methods, add your bank account for payouts.",
+        side: "bottom",
+        align: "start",
+        onNextClick: (_el, _step, { driver }) => {
+          activateShopSettingsPreferencesTab();
+          window.setTimeout(() => driver.moveNext(), 80);
+        },
       },
     },
     {
@@ -553,6 +567,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
         side: "top",
         align: "start",
       },
+      onHighlightStarted: activateShopSettingsPreferencesTab,
     },
     {
       element: "[data-tour='shop-wastage-settings']",

@@ -56,6 +56,12 @@ describe("Tutorial TOUR_STEPS — Structure", () => {
     expect(sourceFile).toContain("hardware-receipt-printer");
   });
 
+  test("opens Preferences before highlighting Workshop mode", () => {
+    expect(sourceFile).toContain("settings-preferences-tab");
+    expect(sourceFile).toContain("settings-workshop-mode");
+    expect(sourceFile).toContain("activateShopSettingsPreferencesTab");
+  });
+
   test("has tour steps for invoice detail Print", () => {
     expect(sourceFile).toContain('"/dashboard/shop/invoices/"');
     expect(sourceFile).toContain('"/m/invoices/"');

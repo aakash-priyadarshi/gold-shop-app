@@ -375,7 +375,9 @@ export default function MobileStoreSettingsPage() {
           </button>
           <p className="text-[11px] text-gray-500">
             <T>
-              Opens Tower, Jobs, Floor, Metal, QC, and Reports on Supply Chain.
+              Karigar book stays on Supply Chain without Workshop mode. Turn
+              this on to also show Tower, Jobs, Floor, Metal, QC, and Reports
+              when your plan includes workshop manufacturing.
             </T>
           </p>
           {featuresLoading && !workshopMode && (

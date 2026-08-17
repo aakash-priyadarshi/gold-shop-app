@@ -33,9 +33,13 @@ import {
   formatLiveWorkshopAccess,
   formatSellerWorkshopReply,
   formatWorkshopPlanCatalog,
+  formatWorkshopMetalOperationReply,
+  isWorkshopAccessQuestion,
+  isWorkshopMetalOperationQuestion,
   selectPlansWithFeature,
   type LiveWorkshopAccess,
   type LiveWorkshopPlan,
+  type WorkshopPlanCatalogInput,
 } from "./workshop-chat-context";
 
 export interface AiChatResponse {
@@ -83,8 +87,9 @@ interface SellerSnapshot {
   planName: string;
   planTier?: string | null;
   workshopMode: boolean;
-  workshopManufacturingEnabled: boolean;
+  workshopManufacturingEnabled: boolean | null;
   workshopPlanNames: string[];
+  workshopPlanCatalogUnavailable: boolean;
 }
 
 interface AdminSnapshot {
@@ -475,13 +480,15 @@ export class AiChatbotService {
       }
 
       // Enrich context with pgvector RAG (gracefully skipped if not configured)
-      const [knowledgeContext, workshopPlans] = await Promise.all([
+      const [knowledgeContext, workshopCatalog] = await Promise.all([
         this.searchKnowledge(message),
-        this.listLiveWorkshopPlans().catch((error) => {
+        this.listLiveWorkshopPlans()
+          .then((plans) => ({ status: "ok" as const, plans }))
+          .catch((error) => {
             this.logger.warn(
               `chat: live workshop plan catalog failed: ${error instanceof Error ? error.message : error}`,
             );
-            return [];
+            return { status: "unavailable" as const };
           }),
       ]);
 
@@ -489,7 +496,7 @@ export class AiChatbotService {
         knowledgeContext || undefined,
         persona,
         viewerRole,
-        formatWorkshopPlanCatalog(workshopPlans),
+        formatWorkshopPlanCatalog(workshopCatalog),
       );
       const contents = this.buildContents(
         systemPrompt,
@@ -1750,16 +1757,36 @@ SELLER RESPONSE RULES:
     }
 
     if (
-      /(karigar|artisan|workshop|goldsmith|fabrication job|bullion reserves|custom metal|custom material|scrap returned|process wastage|workshop mode|factory tab)/.test(
-        normalized,
-      )
+      isWorkshopMetalOperationQuestion(message)
     ) {
+      return {
+        reply: formatWorkshopMetalOperationReply(
+          this.workshopAccessFromSnapshot(snapshot),
+        ),
+        shouldEscalate: false,
+        confidence: 0.94,
+      };
+    }
+
+    if (isWorkshopAccessQuestion(message)) {
       return {
         reply: formatSellerWorkshopReply(
           this.workshopAccessFromSnapshot(snapshot),
         ),
         shouldEscalate: false,
         confidence: 0.96,
+      };
+    }
+
+    if (
+      /(karigar book|artisan ledger|supply chain page|where.*karigar|where.*supply chain)/.test(
+        normalized,
+      )
+    ) {
+      return {
+        reply: `Karigar & Supply Chain is at /dashboard/shop/supply-chain. Karigar book is the default tab for artisan ledgers, vault bullion, custom materials, and jobs.${snapshot.workshopMode && snapshot.workshopManufacturingEnabled ? " Factory tabs (Tower, Jobs, Floor, Metal, QC, Reports) are on the same page." : " Factory tabs appear when your plan includes workshop manufacturing and Workshop mode is on in Settings → Preferences."}`,
+        shouldEscalate: false,
+        confidence: 0.9,
       };
     }
 
@@ -2148,25 +2175,32 @@ SELLER RESPONSE RULES:
         ? Math.min(999, Math.round((yearlySales / nepalThreshold) * 100))
         : 0;
 
-    const [activeFeatures, workshopPlans] = await Promise.all([
+    const [activeFeatures, workshopPlansResult] = await Promise.all([
       this.planLimits.getActiveFeatures(shopId).catch((error) => {
         this.logger.warn(
           `sellerChat: active features failed: ${error instanceof Error ? error.message : error}`,
         );
         return null;
       }),
-      this.listLiveWorkshopPlans(country).catch((error) => {
+      this.listLiveWorkshopPlans(country)
+        .then((plans) => ({ ok: true as const, plans }))
+        .catch((error) => {
           this.logger.warn(
             `sellerChat: workshop plan catalog failed: ${error instanceof Error ? error.message : error}`,
           );
-          return [];
+          return { ok: false as const };
         }),
     ]);
 
+    const workshopPlanCatalogUnavailable = !workshopPlansResult.ok;
+    const workshopPlans = workshopPlansResult.ok ? workshopPlansResult.plans : [];
+
     const workshopManufacturingEnabled =
-      activeFeatures?.features.find(
-        (feature) => feature.key === "workshopManufacturing",
-      )?.enabled === true;
+      activeFeatures === null
+        ? null
+        : activeFeatures.features.find(
+            (feature) => feature.key === "workshopManufacturing",
+          )?.enabled === true;
 
     return {
       sellerName,
@@ -2207,6 +2241,7 @@ SELLER RESPONSE RULES:
       workshopMode: shop?.workshopMode === true,
       workshopManufacturingEnabled,
       workshopPlanNames: workshopPlans.map((plan) => plan.displayName),
+      workshopPlanCatalogUnavailable,
     };
   }
 
@@ -2246,6 +2281,22 @@ SELLER RESPONSE RULES:
       workshopMode: snapshot.workshopMode,
       workshopManufacturingEnabled: snapshot.workshopManufacturingEnabled,
       workshopPlanNames: snapshot.workshopPlanNames,
+      workshopPlanCatalogUnavailable: snapshot.workshopPlanCatalogUnavailable,
+    };
+  }
+
+  private workshopCatalogFromSnapshot(
+    snapshot: SellerSnapshot,
+  ): WorkshopPlanCatalogInput {
+    if (snapshot.workshopPlanCatalogUnavailable) {
+      return { status: "unavailable" };
+    }
+    return {
+      status: "ok",
+      plans: snapshot.workshopPlanNames.map((displayName) => ({
+        displayName,
+        country: snapshot.country,
+      })),
     };
   }
 
@@ -2348,7 +2399,7 @@ SELLER RESPONSE RULES:
       }
 
       const knowledgeContext = await this.searchKnowledge(message);
-      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: seller.sellerName, authenticatedEmail: seller.sellerEmail }, "SHOPKEEPER", formatWorkshopPlanCatalog(seller.workshopPlanNames.map((displayName) => ({ displayName, country: seller.country }))))}\n\n${this.buildSellerContext(seller)}`;
+      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: seller.sellerName, authenticatedEmail: seller.sellerEmail }, "SHOPKEEPER", formatWorkshopPlanCatalog(this.workshopCatalogFromSnapshot(seller)))}\n\n${this.buildSellerContext(seller)}`;
 
       const contents = this.buildContents(
         systemPrompt,
@@ -3008,11 +3059,18 @@ ADMIN RESPONSE RULES:
         return this.fallbackAdminResponse(admin);
       }
 
-      const [knowledgeContext, workshopPlans] = await Promise.all([
+      const [knowledgeContext, workshopCatalog] = await Promise.all([
         this.searchKnowledge(message),
-        this.listLiveWorkshopPlans().catch(() => []),
+        this.listLiveWorkshopPlans()
+          .then((plans) => ({ status: "ok" as const, plans }))
+          .catch((error) => {
+            this.logger.warn(
+              `adminChat: live workshop plan catalog failed: ${error instanceof Error ? error.message : error}`,
+            );
+            return { status: "unavailable" as const };
+          }),
       ]);
-      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: admin.adminName }, "ADMIN", formatWorkshopPlanCatalog(workshopPlans))}\n\n${this.buildAdminContext(admin)}`;
+      const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: admin.adminName }, "ADMIN", formatWorkshopPlanCatalog(workshopCatalog))}\n\n${this.buildAdminContext(admin)}`;
       const contents = this.buildContents(
         systemPrompt,
         conversationHistory,

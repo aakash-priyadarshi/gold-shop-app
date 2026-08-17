@@ -1015,8 +1015,9 @@ export default function ShopDashboard() {
                   <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                     <T>
                       Take complete control of your workshop. Track raw 24K gold
-                      and 999 silver bullion, manage artisan ledgers, and — with
-                      Workshop mode — run Tower, Jobs, Floor, Metal, QC, and
+                      and 999 silver bullion, manage artisan ledgers, and — when
+                      Workshop mode is on and your plan includes workshop
+                      manufacturing — run Tower, Jobs, Floor, Metal, QC, and
                       Reports on the same Supply Chain page.
                     </T>
                   </p>
