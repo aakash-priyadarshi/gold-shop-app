@@ -175,6 +175,18 @@ export function filterLocaleGroups(query: string): LocaleGroup[] {
 
 const collatorCache = new Map<string, Intl.Collator>();
 
+function resolveCollatorTag(locale: string | null | undefined): string {
+  const tag = getIntlLocale(locale);
+  try {
+    if (Intl.Collator.supportedLocalesOf([tag]).length > 0) {
+      return tag;
+    }
+  } catch {
+    // Malformed tags throw RangeError; fall back to English.
+  }
+  return "en";
+}
+
 /** Resolve a BCP-47 tag for `Intl.Collator` from a UI locale or raw locale string. */
 export function getIntlLocale(locale: string | null | undefined): string {
   if (isUiLocale(locale)) {
@@ -184,7 +196,7 @@ export function getIntlLocale(locale: string | null | undefined): string {
 }
 
 function getCollator(locale: string | null | undefined): Intl.Collator {
-  const tag = getIntlLocale(locale);
+  const tag = resolveCollatorTag(locale);
   let collator = collatorCache.get(tag);
   if (!collator) {
     collator = new Intl.Collator(tag, { sensitivity: "base", numeric: true });

@@ -14,7 +14,8 @@ export class GoogleAuthGuard extends AuthGuard("google") {
       request.query?.mode ||
       request.query?.desktop_port ||
       request.query?.desktop_exchange ||
-      request.query?.rememberMe
+      request.query?.rememberMe ||
+      request.query?.referralCode
     ) {
       const stateData: Record<string, string> = {
         role: request.query.role || "CUSTOMER",
@@ -29,6 +30,14 @@ export class GoogleAuthGuard extends AuthGuard("google") {
       }
       if (request.query.rememberMe !== undefined) {
         stateData.rememberMe = String(request.query.rememberMe);
+      }
+      if (request.query.referralCode) {
+        const referralCode = String(request.query.referralCode)
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "")
+          .slice(0, 32);
+        if (referralCode) stateData.referralCode = referralCode;
       }
       // Sign the state with HMAC to prevent tampering
       const secret = process.env.JWT_SECRET!;

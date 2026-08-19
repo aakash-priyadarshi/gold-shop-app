@@ -732,6 +732,7 @@ export default function ShopEngagementPage() {
   const [referralEmail, setReferralEmail] = useState("");
   const [referralSending, setReferralSending] = useState(false);
   const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null);
+  const [reviewUrls, setReviewUrls] = useState<Record<string, string>>({});
   const {
     uploading: reviewUploading,
     progress: reviewUploadProgress,
@@ -906,14 +907,29 @@ export default function ShopEngagementPage() {
     }
   };
 
-  const copyReferralCode = (code: string) => {
-    navigator.clipboard.writeText(
-      `${window.location.origin}/auth/register?ref=${code}`,
-    );
-    toast({ title: t("Referral link copied!") });
+  const copyReferralCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/auth/register?ref=${code}`,
+      );
+      toast({ title: t("Referral link copied!") });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: t("Could not copy to clipboard"),
+      });
+    }
   };
 
-  const handleReviewSubmit = async (platform: string, reviewUrl: string) => {
+  const handleReviewSubmit = async (platform: string, fallbackUrl: string) => {
+    const reviewUrl = (reviewUrls[platform] || fallbackUrl).trim();
+    if (!reviewUrl) {
+      toast({
+        variant: "destructive",
+        title: t("Add the public review URL"),
+      });
+      return;
+    }
     setReviewSubmitting(platform);
     try {
       // Prompt user to upload proof screenshot
@@ -1937,11 +1953,36 @@ export default function ShopEngagementPage() {
                                     {review.adminNotes}
                                   </p>
                                 )}
+                                <Label
+                                  htmlFor={`${entry.platform}-engagement-rejected-url`}
+                                  className="text-xs"
+                                >
+                                  <T>Review URL</T>
+                                </Label>
+                                <Input
+                                  id={`${entry.platform}-engagement-rejected-url`}
+                                  type="url"
+                                  placeholder={info.url}
+                                  value={
+                                    reviewUrls[entry.platform] ??
+                                    review.reviewUrl ??
+                                    ""
+                                  }
+                                  onChange={(e) =>
+                                    setReviewUrls((prev) => ({
+                                      ...prev,
+                                      [entry.platform]: e.target.value,
+                                    }))
+                                  }
+                                />
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() =>
-                                    handleReviewSubmit(entry.platform, info.url)
+                                    handleReviewSubmit(
+                                      entry.platform,
+                                      review.reviewUrl || "",
+                                    )
                                   }
                                   disabled={reviewSubmitting === entry.platform}
                                 >
@@ -1975,14 +2016,33 @@ export default function ShopEngagementPage() {
                               </div>
                             )}
                             {!review && (
-                              <Button
-                                size="sm"
-                                className="w-full"
-                                onClick={() =>
-                                  handleReviewSubmit(entry.platform, info.url)
-                                }
-                                disabled={reviewSubmitting === entry.platform}
-                              >
+                              <div className="space-y-2">
+                                <Label
+                                  htmlFor={`${entry.platform}-engagement-review-url`}
+                                  className="text-xs"
+                                >
+                                  <T>Review URL</T>
+                                </Label>
+                                <Input
+                                  id={`${entry.platform}-engagement-review-url`}
+                                  type="url"
+                                  placeholder={info.url}
+                                  value={reviewUrls[entry.platform] ?? ""}
+                                  onChange={(e) =>
+                                    setReviewUrls((prev) => ({
+                                      ...prev,
+                                      [entry.platform]: e.target.value,
+                                    }))
+                                  }
+                                />
+                                <Button
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() =>
+                                    handleReviewSubmit(entry.platform, "")
+                                  }
+                                  disabled={reviewSubmitting === entry.platform}
+                                >
                                 {reviewSubmitting === entry.platform ? (
                                   <Loader2 className="h-4 w-4 animate-spin mr-1" />
                                 ) : (
@@ -1990,6 +2050,7 @@ export default function ShopEngagementPage() {
                                 )}
                                 <T>Upload Review Screenshot</T>
                               </Button>
+                              </div>
                             )}
                           </CardContent>
                         </Card>
@@ -2016,19 +2077,39 @@ export default function ShopEngagementPage() {
                           </CardDescription>
                         </CardHeader>
                         <CardContent>
-                          <Button
-                            size="sm"
-                            className="w-full"
-                            onClick={() => handleReviewSubmit(key, info.url)}
-                            disabled={reviewSubmitting === key}
-                          >
-                            {reviewSubmitting === key ? (
-                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                            ) : (
-                              <Upload className="h-4 w-4 mr-1" />
-                            )}
-                            <T>Upload Review Screenshot</T>
-                          </Button>
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor={`${key}-engagement-fallback-url`}
+                              className="text-xs"
+                            >
+                              <T>Review URL</T>
+                            </Label>
+                            <Input
+                              id={`${key}-engagement-fallback-url`}
+                              type="url"
+                              placeholder={info.url}
+                              value={reviewUrls[key] ?? ""}
+                              onChange={(e) =>
+                                setReviewUrls((prev) => ({
+                                  ...prev,
+                                  [key]: e.target.value,
+                                }))
+                              }
+                            />
+                            <Button
+                              size="sm"
+                              className="w-full"
+                              onClick={() => handleReviewSubmit(key, "")}
+                              disabled={reviewSubmitting === key}
+                            >
+                              {reviewSubmitting === key ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                              ) : (
+                                <Upload className="h-4 w-4 mr-1" />
+                              )}
+                              <T>Upload Review Screenshot</T>
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     ))}
@@ -2077,9 +2158,10 @@ export default function ShopEngagementPage() {
                         <T>Refer a Seller</T>
                       </h3>
                       <p className="text-sm text-purple-700 dark:text-purple-300 mb-2">
+                        <T>Invite another jeweller to Orivraa. You earn</T>{" "}
+                        {referralSettings?.commissionPercent ?? 10}%{" "}
                         <T>
-                          Invite another jeweller to Orivraa. You earn 10% of
-                          every paid subscription invoice while they stay
+                          of every paid subscription invoice while they stay
                           subscribed — applied to your next Pro invoice first.
                         </T>
                       </p>

@@ -18,6 +18,7 @@ import { AuditService } from "../audit/audit.service";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
+import { SellerEngagementService } from "../core/seller-performance/seller-engagement.service";
 import { ContentModerationService } from "./content-moderation.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
@@ -121,6 +122,7 @@ export class ShopsService {
     private configService: PlatformConfigService,
     private moderationService: ContentModerationService,
     private sellerSubscriptionsService: SellerSubscriptionsService,
+    private sellerEngagementService: SellerEngagementService,
     private planLimitsService: PlanLimitsService,
     private priceRebase: ShopPriceRebaseService,
   ) {}
@@ -268,6 +270,25 @@ export class ShopsService {
       shop.id,
       marketCountry,
     );
+
+    const pendingCode =
+      dto.referralCode?.trim() ||
+      (await this.redisService.get(`pending-referral:${userId}`)) ||
+      undefined;
+    if (pendingCode) {
+      try {
+        await this.sellerEngagementService.processReferralSignup(
+          user.email,
+          shop.id,
+          pendingCode,
+        );
+        await this.redisService.del(`pending-referral:${userId}`);
+      } catch (error) {
+        this.logger.warn(
+          `Referral signup linking failed for user ${userId} shop ${shop.id}: ${(error as { name?: string })?.name || "UNKNOWN"}`,
+        );
+      }
+    }
 
     return shop;
   }

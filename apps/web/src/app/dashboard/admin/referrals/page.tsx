@@ -33,6 +33,7 @@ import {
   Settings,
   Trash2,
   Users,
+  Wallet,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -219,7 +220,8 @@ export default function AdminReferralsPage() {
                 Referral Programme — Admin
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Manage invitations, commission ledger, and 10% invoice-share settings
+                Manage invitations, commission ledger, and{" "}
+                {settings?.commissionPercent ?? 10}% invoice-share settings
               </p>
             </div>
           </div>
@@ -235,7 +237,7 @@ export default function AdminReferralsPage() {
                 )}
               </TabsTrigger>
               <TabsTrigger value="commissions" className="gap-1.5">
-                Commissions
+                <Wallet className="h-4 w-4" /> Commissions
               </TabsTrigger>
               <TabsTrigger value="settings" className="gap-1.5">
                 <Settings className="h-4 w-4" /> Settings
@@ -456,7 +458,10 @@ export default function AdminReferralsPage() {
                             <TableCell>{row.referrerShop?.shopName}</TableCell>
                             <TableCell>{row.refereeShop?.shopName}</TableCell>
                             <TableCell>
-                              {row.commissionAmount} {row.currency}
+                              {new Intl.NumberFormat(undefined, {
+                                style: "currency",
+                                currency: row.currency || "USD",
+                              }).format(row.commissionAmount)}
                             </TableCell>
                             <TableCell>
                               <Badge variant="secondary">{row.status}</Badge>

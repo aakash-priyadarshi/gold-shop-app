@@ -284,7 +284,14 @@ export default function SellerReviewsPage() {
                             </p>
                           )}
                           <div className="w-full space-y-2">
+                            <Label
+                              htmlFor={`${entry.platform}-rejected-review-url`}
+                              className="text-xs"
+                            >
+                              <T>Review URL</T>
+                            </Label>
                             <Input
+                              id={`${entry.platform}-rejected-review-url`}
                               type="url"
                               placeholder={info.url}
                               value={reviewUrls[entry.platform] ?? review.reviewUrl ?? ""}
@@ -295,7 +302,14 @@ export default function SellerReviewsPage() {
                                 }))
                               }
                             />
+                            <Label
+                              htmlFor={`${entry.platform}-rejected-review-screenshot`}
+                              className="text-xs"
+                            >
+                              <T>Screenshot</T>
+                            </Label>
                             <Input
+                              id={`${entry.platform}-rejected-review-screenshot`}
                               type="file"
                               accept="image/*"
                               onChange={(e) =>
@@ -311,7 +325,7 @@ export default function SellerReviewsPage() {
                               onClick={() =>
                                 handleReviewSubmit(
                                   entry.platform,
-                                  review.reviewUrl || info.url,
+                                  review.reviewUrl || "",
                                 )
                               }
                               disabled={reviewSubmitting === entry.platform}
@@ -330,10 +344,14 @@ export default function SellerReviewsPage() {
                       {!review && (
                         <div className="w-full space-y-3">
                           <div className="text-left">
-                            <Label className="text-xs">
+                            <Label
+                              htmlFor={`${entry.platform}-review-url`}
+                              className="text-xs"
+                            >
                               <T>Review URL</T>
                             </Label>
                             <Input
+                              id={`${entry.platform}-review-url`}
                               type="url"
                               placeholder={info.url}
                               value={reviewUrls[entry.platform] ?? ""}
@@ -346,10 +364,14 @@ export default function SellerReviewsPage() {
                             />
                           </div>
                           <div className="text-left">
-                            <Label className="text-xs">
+                            <Label
+                              htmlFor={`${entry.platform}-review-screenshot`}
+                              className="text-xs"
+                            >
                               <T>Screenshot</T>
                             </Label>
                             <Input
+                              id={`${entry.platform}-review-screenshot`}
                               type="file"
                               accept="image/*"
                               onChange={(e) =>
@@ -363,7 +385,7 @@ export default function SellerReviewsPage() {
                           </div>
                           <Button
                             onClick={() =>
-                              handleReviewSubmit(entry.platform, info.url)
+                              handleReviewSubmit(entry.platform, "")
                             }
                             disabled={reviewSubmitting === entry.platform}
                             className="w-full"

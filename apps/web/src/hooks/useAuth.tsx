@@ -618,6 +618,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ? `&desktop_exchange=${desktopExchange}`
         : "";
       const rememberParam = `&rememberMe=${rememberMe ? "1" : "0"}`;
+      const storedReferral =
+        typeof window !== "undefined"
+          ? sessionStorage.getItem("orivraa_referral_code")?.trim()
+          : null;
+      const referralParam = storedReferral
+        ? `&referralCode=${encodeURIComponent(storedReferral)}`
+        : "";
       // If initiating OAuth from the mobile subdomain, set a cross-subdomain cookie
       // so the callback (which always lands on orivraa.com) knows to redirect back to m.*
       if (
@@ -627,7 +634,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const secure = window.location.protocol === "https:" ? "; Secure" : "";
         document.cookie = `orivraa_mobile=1; domain=.orivraa.com; path=/; SameSite=Lax${secure}; max-age=600`;
       }
-      window.location.href = `${baseUrl}/auth/google?role=${role}&mode=${mode}${portParam}${exchangeParam}${rememberParam}`;
+      window.location.href = `${baseUrl}/auth/google?role=${role}&mode=${mode}${portParam}${exchangeParam}${rememberParam}${referralParam}`;
     },
     [],
   );

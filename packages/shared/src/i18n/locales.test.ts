@@ -70,6 +70,16 @@ describe("UI locale registry", () => {
 
     expect(filterLocaleGroups("zzzz-not-a-language")).toEqual([]);
   });
+
+  it("falls back to English collation for malformed or unsupported locale tags", () => {
+    expect(() => compareByLocale("banana", "apple", "not a locale")).not.toThrow();
+    expect(compareByLocale("apple", "banana", "not a locale")).toBe(
+      compareByLocale("apple", "banana", "en"),
+    );
+    expect(compareByLocale("apple", "banana", "xx-YY")).toBe(
+      compareByLocale("apple", "banana", "en"),
+    );
+  });
 });
 
 describe("translation batch limits", () => {

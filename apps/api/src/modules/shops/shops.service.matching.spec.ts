@@ -26,6 +26,7 @@ import { PlatformConfigService } from "../platform-config/platform-config.servic
 import { ContentModerationService } from "./content-moderation.service";
 import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
 import { ShopPriceRebaseService } from "./shop-price-rebase.service";
+import { SellerEngagementService } from "../core/seller-performance/seller-engagement.service";
 import { ShopsService } from "./shops.service";
 
 // ═══════════════════════════════════════════
@@ -136,6 +137,10 @@ describe("ShopsService - Seller Matching", () => {
         { provide: PlatformConfigService, useValue: mockConfigService },
         { provide: ContentModerationService, useValue: mockModerationService },
         { provide: ShopPriceRebaseService, useValue: mockPriceRebase },
+        {
+          provide: SellerEngagementService,
+          useValue: { processReferralSignup: jest.fn() },
+        },
       ],
     }).compile();
 

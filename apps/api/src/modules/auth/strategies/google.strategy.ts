@@ -42,6 +42,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
     let desktopExchange: string | undefined;
     let source: string | undefined;
     let rememberMe = true;
+    let referralCode: string | undefined;
 
     if (req.query?.state) {
       try {
@@ -68,6 +69,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
             desktopPort = stateData.desktop_port;
             desktopExchange = stateData.desktop_exchange;
             source = stateData.source;
+            if (typeof stateData.referralCode === "string") {
+              referralCode = stateData.referralCode;
+            }
             if (stateData.rememberMe !== undefined) {
               rememberMe =
                 stateData.rememberMe === "1" ||
@@ -132,6 +136,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
       desktopPort,
       desktopExchange,
       source,
+      referralCode,
       // Enriched People API data stored on User model
       googleBirthday,
       googleGender,

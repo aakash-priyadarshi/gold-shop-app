@@ -85,6 +85,10 @@ export function ConvertAccountCard() {
       const res = await api.post("/auth/convert-to-shopkeeper", {
         ...formData,
         currency,
+        referralCode:
+          typeof window !== "undefined"
+            ? sessionStorage.getItem("orivraa_referral_code") || undefined
+            : undefined,
       });
 
       // Update token in API client

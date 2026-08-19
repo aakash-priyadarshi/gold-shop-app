@@ -64,6 +64,7 @@ export default function SellerReferralsPage() {
     accrued: 0,
     applied: 0,
     paidOut: 0,
+    currency: "USD",
     commissions: [] as CommissionRow[],
   });
   const [payoutProfile, setPayoutProfile] = useState<PayoutProfile | null>(
@@ -76,17 +77,18 @@ export default function SellerReferralsPage() {
   const [cashOutLoading, setCashOutLoading] = useState(false);
 
   useEffect(() => {
-    loadReferrals();
-  }, []);
-
-  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("connect") === "return" || params.get("connect") === "refresh") {
+    const returning =
+      params.get("connect") === "return" ||
+      params.get("connect") === "refresh";
+    if (returning) {
       sellerPerformanceApi
         .refreshReferralConnect()
-        .then(() => loadReferrals())
-        .catch(() => undefined);
+        .catch(() => undefined)
+        .finally(() => loadReferrals());
+      return;
     }
+    loadReferrals();
   }, []);
 
   const loadReferrals = async () => {
@@ -102,6 +104,7 @@ export default function SellerReferralsPage() {
             accrued: 0,
             applied: 0,
             paidOut: 0,
+            currency: "USD",
             commissions: [],
           },
         );
@@ -139,9 +142,16 @@ export default function SellerReferralsPage() {
     }
   };
 
-  const copyText = (value: string, label: string) => {
-    navigator.clipboard.writeText(value);
-    toast({ title: t(label) });
+  const copyText = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast({ title: t(label) });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: t("Could not copy to clipboard"),
+      });
+    }
   };
 
   const startConnect = async () => {
@@ -194,6 +204,21 @@ export default function SellerReferralsPage() {
   };
 
   const percent = referralSettings?.commissionPercent ?? 10;
+  const minCashout = referralSettings?.minCashoutAmount ?? 0;
+  const walletCurrency =
+    earnings.currency ||
+    earnings.commissions.find((row) => row.currency)?.currency ||
+    "USD";
+  const formatWallet = (amount: number) => {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: walletCurrency,
+      }).format(amount);
+    } catch {
+      return `${amount.toFixed(2)} ${walletCurrency}`;
+    }
+  };
   const completedCount = referrals.filter(
     (r) => r.status === "COMPLETED",
   ).length;
@@ -211,10 +236,11 @@ export default function SellerReferralsPage() {
             <T>Referral Programme</T>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
+            <T>Invite jewellery shops to Orivraa. You earn</T> {percent}%{" "}
             <T>
-              Invite jewellery shops to Orivraa. You earn 10% of every paid
-              subscription invoice while they stay subscribed — applied to your
-              next Pro invoice first, leftover via Stripe Connect.
+              of every paid subscription invoice while they stay subscribed —
+              applied to your next Pro invoice first, leftover via Stripe
+              Connect.
             </T>
           </p>
         </div>
@@ -246,7 +272,7 @@ export default function SellerReferralsPage() {
               <div className="flex flex-col items-center text-center gap-2 p-4 rounded-lg bg-purple-100/50 dark:bg-purple-900/20">
                 <span className="text-2xl">📄</span>
                 <p className="font-medium">
-                  <T>You get 10% on your invoice</T>
+                  <T>You get</T> {percent}% <T>on your invoice</T>
                 </p>
                 <p className="text-xs">
                   <T>
@@ -302,14 +328,16 @@ export default function SellerReferralsPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold">{earnings.accrued.toFixed(2)}</p>
+                <p className="text-2xl font-bold">
+                  {formatWallet(earnings.accrued)}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   <T>Wallet (not yet applied)</T>
                 </p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-600">
-                  {earnings.applied.toFixed(2)}
+                  {formatWallet(earnings.applied)}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   <T>Applied to invoices</T>
@@ -317,7 +345,7 @@ export default function SellerReferralsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-purple-600">
-                  {earnings.paidOut.toFixed(2)}
+                  {formatWallet(earnings.paidOut)}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   <T>Cashed out</T>
@@ -332,24 +360,31 @@ export default function SellerReferralsPage() {
                 refunding the referred shop.
               </T>
             </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onClick={startConnect}
-                disabled={connectLoading}
-              >
-                {connectLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                ) : null}
-                {payoutProfile?.payoutsEnabled ? (
-                  <T>Connect payouts ready</T>
-                ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              {!payoutProfile?.payoutsEnabled && (
+                <Button
+                  variant="outline"
+                  onClick={startConnect}
+                  disabled={connectLoading}
+                >
+                  {connectLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : null}
                   <T>Set up leftover cash-out</T>
-                )}
-              </Button>
+                </Button>
+              )}
+              {payoutProfile?.payoutsEnabled && (
+                <span className="text-xs text-green-600 self-center">
+                  <T>Connect payouts ready</T>
+                </span>
+              )}
               <Button
                 onClick={cashOut}
-                disabled={cashOutLoading || earnings.accrued <= 0}
+                disabled={
+                  cashOutLoading ||
+                  earnings.accrued <= 0 ||
+                  earnings.accrued < minCashout
+                }
                 className="bg-purple-600 hover:bg-purple-700"
               >
                 {cashOutLoading ? (
@@ -357,6 +392,11 @@ export default function SellerReferralsPage() {
                 ) : null}
                 <T>Cash out leftover</T>
               </Button>
+              {minCashout > 0 && (
+                <span className="text-xs text-muted-foreground self-center">
+                  <T>Minimum cash-out</T> {formatWallet(minCashout)}
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>

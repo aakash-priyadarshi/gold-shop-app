@@ -256,7 +256,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "seller_referral_programme",
     content:
-      "Orivraa seller referrals pay the referring shop 10% of the referred shop's gross paid subscription invoice, on every paid invoice while that shop stays subscribed. The commission is applied to the referrer's own next Orivraa Pro invoice first (Stripe customer balance, no extra Stripe fee). Leftover wallet balance can be cashed out through Stripe Connect Express; Connect charges a payout fee on cash-outs. Referral cash is never paid by refunding the referred shop. Rewards are not AI credits and not a Pro+ upgrade. Share https://www.orivraa.com/auth/register?ref=CODE or send an email invite from Dashboard → Referrals. Review & Earn (1 month of Pro after admin verifies a platform review) is a separate programme.",
+      "Orivraa seller referrals pay the referring shop a configured percent of the referred shop's gross paid subscription invoice (default 10%, admin-adjustable), on every paid invoice while that shop stays subscribed. The commission is applied to the referrer's own next Orivraa Pro invoice first (Stripe customer balance, no extra Stripe fee). Leftover wallet balance can be cashed out through Stripe Connect Express; Connect charges a payout fee on cash-outs. Referral cash is never paid by refunding the referred shop. Rewards are not AI credits and not a Pro+ upgrade. Share https://www.orivraa.com/auth/register?ref=CODE or send an email invite from Dashboard → Referrals. Review & Earn (1 month of Pro after admin verifies a platform review) is a separate programme.",
   },
   {
     topic: "review_and_earn",

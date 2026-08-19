@@ -91,4 +91,17 @@ describe('OAuth State HMAC Signing', () => {
     expect(verified?.desktop_port).toBe('3001');
     expect(verified?.rememberMe).toBe('true');
   });
+
+  it('should preserve referralCode through signing', () => {
+    const data = {
+      role: 'SHOPKEEPER',
+      mode: 'register',
+      ts: '1234567890',
+      referralCode: 'A1B2C3D4E5F6',
+    };
+    const state = signState(data);
+    const verified = verifyState(state);
+    expect(verified).toEqual(data);
+    expect(verified?.referralCode).toBe('A1B2C3D4E5F6');
+  });
 });

@@ -8,11 +8,15 @@ ALTER TABLE "ReferralSettings" ADD COLUMN IF NOT EXISTS "commissionPercent" DOUB
 ADD COLUMN IF NOT EXISTS "applyToInvoiceFirst" BOOLEAN NOT NULL DEFAULT true,
 ADD COLUMN IF NOT EXISTS "minCashoutAmount" DOUBLE PRECISION NOT NULL DEFAULT 10;
 
--- Legacy month/credit rewards are unused; keep columns, zero the singleton.
+-- Legacy month/credit rewards are unused; keep columns, zero the singleton
+-- and align column defaults with schema.prisma (CI migrate-diff checks defaults).
 UPDATE "ReferralSettings"
 SET "freeMonths" = 0,
     "aiCreditsReward" = 0
 WHERE "id" = 'singleton';
+
+ALTER TABLE "ReferralSettings" ALTER COLUMN "freeMonths" SET DEFAULT 0;
+ALTER TABLE "ReferralSettings" ALTER COLUMN "aiCreditsReward" SET DEFAULT 0;
 
 -- CreateEnum
 DO $$ BEGIN
