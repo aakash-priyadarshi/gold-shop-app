@@ -13,6 +13,11 @@ import * as bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 import { RedisService } from "../../common/redis";
 import {
+  normalizeReferralCode,
+  pendingReferralKey,
+  PENDING_REFERRAL_TTL_SECONDS,
+} from "../../common/utils/referral-code";
+import {
   getDefaultCurrencyForMarket,
   isCurrencySupportedForMarket,
   normalizeMarketRegion,
@@ -87,21 +92,16 @@ export class AuthService {
     return "UNKNOWN";
   }
 
-  private normalizeReferralCode(referralCode?: string): string | undefined {
-    if (!referralCode) return undefined;
-    return referralCode.trim().toUpperCase();
-  }
-
   private async rememberPendingReferral(
     userId: string,
     referralCode?: string,
   ) {
-    const code = this.normalizeReferralCode(referralCode);
+    const code = normalizeReferralCode(referralCode);
     if (!userId || !code) return;
     await this.redisService.set(
-      `pending-referral:${userId}`,
+      pendingReferralKey(userId),
       code,
-      60 * 60 * 24 * 7,
+      PENDING_REFERRAL_TTL_SECONDS,
     );
   }
 
@@ -111,7 +111,7 @@ export class AuthService {
     email: string,
     referralCode?: string,
   ) {
-    const normalizedCode = this.normalizeReferralCode(referralCode);
+    const normalizedCode = normalizeReferralCode(referralCode);
     const run = () =>
       this.sellerEngagementService.processReferralSignup(
         email,

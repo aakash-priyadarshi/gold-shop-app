@@ -9,6 +9,11 @@ import {
 import { Prisma, UserRole, InventoryStatus, JewelleryType } from "@prisma/client";
 import { RedisService } from "../../common";
 import {
+  normalizeReferralCode,
+  pendingReferralKey,
+  PENDING_REFERRAL_TTL_SECONDS,
+} from "../../common/utils/referral-code";
+import {
   getDefaultCurrencyForMarket,
   isCurrencySupportedForMarket,
   normalizeMarketRegion,
@@ -265,19 +270,27 @@ export class ShopsService {
       newValue: { shopName: shop.shopName, method: "oauth_setup" },
     });
 
-    // Auto-activate FREE subscription plan
-    try {
-      await this.sellerSubscriptionsService.autoActivateFreePlan(
-        shop.id,
-        marketCountry,
-      );
+    // Auto-activate FREE subscription plan — do not swallow failures here.
+    await this.sellerSubscriptionsService.autoActivateFreePlan(
+      shop.id,
+      marketCountry,
+    );
 
-      // Fetch pending referral code from Redis inside try block (best effort)
-      const normalizedDtoCode = dto.referralCode?.trim().toUpperCase();
+    const pendingKey = pendingReferralKey(userId);
+    try {
+      let redisCode: string | undefined;
+      try {
+        redisCode =
+          (await this.redisService.get(pendingKey)) || undefined;
+      } catch (redisError) {
+        this.logger.warn(
+          `Pending referral lookup failed for user ${userId}: ${(redisError as { name?: string })?.name || "UNKNOWN"}`,
+        );
+      }
+
       const pendingCode =
-        normalizedDtoCode ||
-        (await this.redisService.get(`pending-referral:${userId}`)) ||
-        undefined;
+        normalizeReferralCode(dto.referralCode) ||
+        normalizeReferralCode(redisCode);
 
       if (pendingCode) {
         try {
@@ -286,30 +299,27 @@ export class ShopsService {
             shop.id,
             pendingCode,
           );
-          await this.redisService.del(`pending-referral:${userId}`);
+          await this.redisService.del(pendingKey);
         } catch (error) {
           this.logger.warn(
             `Referral signup linking failed for user ${userId} shop ${shop.id}: ${(error as { name?: string })?.name || "UNKNOWN"}`,
           );
-          // Persist as pending attempt if dto.referralCode was provided
-          if (normalizedDtoCode) {
-            try {
-              await this.redisService.set(
-                `pending-referral:${userId}`,
-                normalizedDtoCode,
-                60 * 60 * 24 * 7,
-              );
-            } catch (redisError) {
-              this.logger.warn(
-                `Failed to persist pending referral for user ${userId}: ${(redisError as { name?: string })?.name || "UNKNOWN"}`,
-              );
-            }
+          try {
+            await this.redisService.set(
+              pendingKey,
+              pendingCode,
+              PENDING_REFERRAL_TTL_SECONDS,
+            );
+          } catch (redisError) {
+            this.logger.warn(
+              `Failed to persist pending referral for user ${userId}: ${(redisError as { name?: string })?.name || "UNKNOWN"}`,
+            );
           }
         }
       }
-    } catch (outerError) {
+    } catch (error) {
       this.logger.warn(
-        `Post-shop-creation tasks failed for shop ${shop.id}: ${(outerError as { name?: string })?.name || "UNKNOWN"}`,
+        `Referral linking after shop setup failed for shop ${shop.id}: ${(error as { name?: string })?.name || "UNKNOWN"}`,
       );
     }
 
