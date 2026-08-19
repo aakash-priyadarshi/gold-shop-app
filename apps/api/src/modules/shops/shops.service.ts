@@ -266,28 +266,51 @@ export class ShopsService {
     });
 
     // Auto-activate FREE subscription plan
-    await this.sellerSubscriptionsService.autoActivateFreePlan(
-      shop.id,
-      marketCountry,
-    );
+    try {
+      await this.sellerSubscriptionsService.autoActivateFreePlan(
+        shop.id,
+        marketCountry,
+      );
 
-    const pendingCode =
-      dto.referralCode?.trim() ||
-      (await this.redisService.get(`pending-referral:${userId}`)) ||
-      undefined;
-    if (pendingCode) {
-      try {
-        await this.sellerEngagementService.processReferralSignup(
-          user.email,
-          shop.id,
-          pendingCode,
-        );
-        await this.redisService.del(`pending-referral:${userId}`);
-      } catch (error) {
-        this.logger.warn(
-          `Referral signup linking failed for user ${userId} shop ${shop.id}: ${(error as { name?: string })?.name || "UNKNOWN"}`,
-        );
+      // Fetch pending referral code from Redis inside try block (best effort)
+      const normalizedDtoCode = dto.referralCode?.trim().toUpperCase();
+      const pendingCode =
+        normalizedDtoCode ||
+        (await this.redisService.get(`pending-referral:${userId}`)) ||
+        undefined;
+
+      if (pendingCode) {
+        try {
+          await this.sellerEngagementService.processReferralSignup(
+            user.email,
+            shop.id,
+            pendingCode,
+          );
+          await this.redisService.del(`pending-referral:${userId}`);
+        } catch (error) {
+          this.logger.warn(
+            `Referral signup linking failed for user ${userId} shop ${shop.id}: ${(error as { name?: string })?.name || "UNKNOWN"}`,
+          );
+          // Persist as pending attempt if dto.referralCode was provided
+          if (normalizedDtoCode) {
+            try {
+              await this.redisService.set(
+                `pending-referral:${userId}`,
+                normalizedDtoCode,
+                60 * 60 * 24 * 7,
+              );
+            } catch (redisError) {
+              this.logger.warn(
+                `Failed to persist pending referral for user ${userId}: ${(redisError as { name?: string })?.name || "UNKNOWN"}`,
+              );
+            }
+          }
+        }
       }
+    } catch (outerError) {
+      this.logger.warn(
+        `Post-shop-creation tasks failed for shop ${shop.id}: ${(outerError as { name?: string })?.name || "UNKNOWN"}`,
+      );
     }
 
     return shop;

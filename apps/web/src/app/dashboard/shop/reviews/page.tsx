@@ -106,6 +106,25 @@ export default function SellerReviewsPage() {
       });
       return;
     }
+
+    // Validate URL format and protocol
+    try {
+      const parsedUrl = new URL(reviewUrl);
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        toast({
+          variant: "destructive",
+          title: t("Invalid URL protocol. Only http:// and https:// are allowed."),
+        });
+        return;
+      }
+    } catch {
+      toast({
+        variant: "destructive",
+        title: t("Invalid URL format"),
+      });
+      return;
+    }
+
     if (!file) {
       toast({
         variant: "destructive",
@@ -311,7 +330,7 @@ export default function SellerReviewsPage() {
                             <Input
                               id={`${entry.platform}-rejected-review-screenshot`}
                               type="file"
-                              accept="image/*"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
                               onChange={(e) =>
                                 setReviewFiles((prev) => ({
                                   ...prev,
@@ -373,7 +392,7 @@ export default function SellerReviewsPage() {
                             <Input
                               id={`${entry.platform}-review-screenshot`}
                               type="file"
-                              accept="image/*"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
                               onChange={(e) =>
                                 setReviewFiles((prev) => ({
                                   ...prev,

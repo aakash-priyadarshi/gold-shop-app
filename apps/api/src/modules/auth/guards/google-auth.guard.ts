@@ -34,9 +34,7 @@ export class GoogleAuthGuard extends AuthGuard("google") {
       if (request.query.referralCode) {
         const referralCode = String(request.query.referralCode)
           .trim()
-          .toUpperCase()
-          .replace(/[^A-Z0-9]/g, "")
-          .slice(0, 32);
+          .toUpperCase();
         if (referralCode) stateData.referralCode = referralCode;
       }
       // Sign the state with HMAC to prevent tampering

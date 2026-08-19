@@ -930,6 +930,25 @@ export default function ShopEngagementPage() {
       });
       return;
     }
+
+    // Validate URL format and protocol
+    try {
+      const parsedUrl = new URL(reviewUrl);
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        toast({
+          variant: "destructive",
+          title: t("Invalid URL protocol. Only http:// and https:// are allowed."),
+        });
+        return;
+      }
+    } catch {
+      toast({
+        variant: "destructive",
+        title: t("Invalid URL format"),
+      });
+      return;
+    }
+
     setReviewSubmitting(platform);
     try {
       // Prompt user to upload proof screenshot

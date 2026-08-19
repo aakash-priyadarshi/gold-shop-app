@@ -87,11 +87,16 @@ export class AuthService {
     return "UNKNOWN";
   }
 
+  private normalizeReferralCode(referralCode?: string): string | undefined {
+    if (!referralCode) return undefined;
+    return referralCode.trim().toUpperCase();
+  }
+
   private async rememberPendingReferral(
     userId: string,
     referralCode?: string,
   ) {
-    const code = referralCode?.trim().toUpperCase();
+    const code = this.normalizeReferralCode(referralCode);
     if (!userId || !code) return;
     await this.redisService.set(
       `pending-referral:${userId}`,
@@ -106,11 +111,12 @@ export class AuthService {
     email: string,
     referralCode?: string,
   ) {
+    const normalizedCode = this.normalizeReferralCode(referralCode);
     const run = () =>
       this.sellerEngagementService.processReferralSignup(
         email,
         shopId,
-        referralCode,
+        normalizedCode,
       );
     try {
       await run();
