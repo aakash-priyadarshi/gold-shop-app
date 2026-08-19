@@ -104,6 +104,7 @@ export interface RegisterData {
   role: UserRole;
   preferredLanguage?: string;
   turnstileToken?: string;
+  referralCode?: string;
   shop?: {
     shopName: string;
     country: string;

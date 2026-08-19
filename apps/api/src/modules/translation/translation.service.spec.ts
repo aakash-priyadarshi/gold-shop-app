@@ -54,7 +54,9 @@ function createService(apiKey = "test-gemini-key") {
 
 describe("TranslationService locale and persistence safeguards", () => {
   it("accepts Hebrew and keeps Sinhala aligned with the frontend registry", () => {
-    expect(SUPPORTED_LOCALES).toEqual(expect.arrayContaining(["he", "si", "hi"]));
+    expect(SUPPORTED_LOCALES).toEqual(
+      expect.arrayContaining(["he", "yi", "si", "hi"]),
+    );
   });
 
   it("upserts corrected translations instead of preserving stale fallbacks", async () => {

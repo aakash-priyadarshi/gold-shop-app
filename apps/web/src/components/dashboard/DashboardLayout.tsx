@@ -1108,8 +1108,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     if (!customerFlowEnabled && user.role === "SHOPKEEPER") {
       const marketplaceLinks = [
         "/dashboard/shop/engagement",
-        "/dashboard/shop/reviews",
-        "/dashboard/shop/referrals",
         "/dashboard/shop/commissions",
       ];
       if (marketplaceLinks.includes(item.href)) {

@@ -1557,7 +1557,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Platform Reviews",
         description:
-          "Leaving a review on SaaSHub, G2, or Crunchbase helps more jewellers discover Orivraa. Click the platform, leave your review, then submit a screenshot as proof to earn rewards.",
+          "Leaving a review on SaaSHub, G2, or Crunchbase helps more jewellers discover Orivraa. Submit the public review URL and a screenshot together. After admin verification you earn 1 month of Pro.",
         side: "top",
         align: "center",
       },
@@ -1569,7 +1569,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Invite Other Jewellers",
         description:
-          "Enter a colleague's email and click Send Invite. When they sign up using your link, both of you get 1 month free plus 50 AI credits automatically.",
+          "Enter a colleague's email or copy your register link. You earn 10% of every paid subscription invoice while they stay subscribed — applied to your next Orivraa invoice first.",
         side: "bottom",
         align: "start",
       },

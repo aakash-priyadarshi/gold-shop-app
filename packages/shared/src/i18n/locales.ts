@@ -13,6 +13,7 @@ export const UI_LOCALE_CODES = [
   "es",
   "ar",
   "he",
+  "yi",
 ] as const;
 
 export type UiLocale = (typeof UI_LOCALE_CODES)[number];
@@ -111,6 +112,12 @@ export const LOCALE_REGISTRY: Record<UiLocale, LocaleDefinition> = {
     direction: "rtl",
     intlLocale: "he-IL",
   },
+  yi: {
+    name: "Yiddish",
+    nativeName: "ייִדיש",
+    direction: "rtl",
+    intlLocale: "yi",
+  },
 };
 
 export const DEFAULT_UI_LOCALE: UiLocale = "en";
@@ -130,7 +137,7 @@ export const LOCALE_GROUPS: readonly LocaleGroup[] = [
     locales: ["hi", "ne", "gu", "mr", "ta", "te", "kn", "si"],
   },
   { id: "europe", label: "Europe", locales: ["fr", "de", "es"] },
-  { id: "middle-east", label: "Middle East", locales: ["ar", "he"] },
+  { id: "middle-east", label: "Middle East", locales: ["ar", "he", "yi"] },
 ];
 
 export function isUiLocale(value: unknown): value is UiLocale {
@@ -164,4 +171,50 @@ export function filterLocaleGroups(query: string): LocaleGroup[] {
       );
     }),
   })).filter((group) => group.locales.length > 0);
+}
+
+const collatorCache = new Map<string, Intl.Collator>();
+
+/** Resolve a BCP-47 tag for `Intl.Collator` from a UI locale or raw locale string. */
+export function getIntlLocale(locale: string | null | undefined): string {
+  if (isUiLocale(locale)) {
+    return LOCALE_REGISTRY[locale].intlLocale;
+  }
+  return typeof locale === "string" && locale.trim() ? locale : "en";
+}
+
+function getCollator(locale: string | null | undefined): Intl.Collator {
+  const tag = getIntlLocale(locale);
+  let collator = collatorCache.get(tag);
+  if (!collator) {
+    collator = new Intl.Collator(tag, { sensitivity: "base", numeric: true });
+    collatorCache.set(tag, collator);
+  }
+  return collator;
+}
+
+/**
+ * Locale-aware string compare (Alef-Bet for Hebrew/Yiddish, dictionary order
+ * elsewhere). Use for names on the current result page; do not rely on
+ * Postgres byte order for Hebrew or Yiddish.
+ */
+export function compareByLocale(
+  a: string | null | undefined,
+  b: string | null | undefined,
+  locale: string | null | undefined,
+  order: "asc" | "desc" = "asc",
+): number {
+  const result = getCollator(locale).compare(a ?? "", b ?? "");
+  return order === "desc" ? -result : result;
+}
+
+export function sortByLocale<T>(
+  items: readonly T[],
+  getName: (item: T) => string | null | undefined,
+  locale: string | null | undefined,
+  order: "asc" | "desc" = "asc",
+): T[] {
+  return [...items].sort((left, right) =>
+    compareByLocale(getName(left), getName(right), locale, order),
+  );
 }

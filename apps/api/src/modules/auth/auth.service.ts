@@ -22,6 +22,7 @@ import { AuditService } from "../audit/audit.service";
 import { MailService } from "../mail/mail.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
+import { SellerEngagementService } from "../core/seller-performance/seller-engagement.service";
 import { LoginDto } from "./dto/login.dto";
 import { CreateShopDto, RegisterDto } from "./dto/register.dto";
 import { OtpService } from "./otp.service";
@@ -74,6 +75,7 @@ export class AuthService {
     private otpService: OtpService,
     private redisService: RedisService,
     private sellerSubscriptionsService: SellerSubscriptionsService,
+    private sellerEngagementService: SellerEngagementService,
     private platformConfigService: PlatformConfigService,
   ) {}
 
@@ -267,6 +269,17 @@ export class AuthService {
         result.shop.id,
         dto.shop?.country || "NP",
       );
+      await this.sellerEngagementService
+        .processReferralSignup(
+          dto.email,
+          result.shop.id,
+          dto.referralCode,
+        )
+        .catch((error: { message?: string }) =>
+          this.logger.warn(
+            `Referral signup linking failed for ${dto.email}: ${error?.message}`,
+          ),
+        );
     }
 
     this.logger.log(`New ${dto.role} registered: ${dto.email}`);
@@ -356,6 +369,17 @@ export class AuthService {
       result.shop.id,
       marketCountry,
     );
+    await this.sellerEngagementService
+      .processReferralSignup(
+        result.user.email,
+        result.shop.id,
+        shopDto.referralCode,
+      )
+      .catch((error: { message?: string }) =>
+        this.logger.warn(
+          `Referral signup linking failed on convert for ${result.user.email}: ${error?.message}`,
+        ),
+      );
 
     // Audit log
     await this.auditService.log({

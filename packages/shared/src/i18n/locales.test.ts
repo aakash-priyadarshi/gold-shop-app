@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { TRANSLATION_TEXT_MAX_LENGTH } from "./translation";
 import {
+  compareByLocale,
   filterLocaleGroups,
   getLocaleDirection,
   isUiLocale,
   LOCALE_GROUPS,
   LOCALE_REGISTRY,
+  sortByLocale,
   UI_LOCALE_CODES,
 } from "./locales";
 
@@ -17,6 +19,32 @@ describe("UI locale registry", () => {
       intlLocale: "he-IL",
     });
     expect(getLocaleDirection("he")).toBe("rtl");
+  });
+
+  it("defines Yiddish as an RTL locale grouped with Hebrew", () => {
+    expect(LOCALE_REGISTRY.yi).toMatchObject({
+      nativeName: "ייִדיש",
+      direction: "rtl",
+      intlLocale: "yi",
+    });
+    expect(getLocaleDirection("yi")).toBe("rtl");
+    expect(LOCALE_GROUPS.find((group) => group.id === "middle-east")?.locales).toEqual(
+      ["ar", "he", "yi"],
+    );
+  });
+
+  it("sorts Hebrew and Yiddish names in Alef-Bet order", () => {
+    const hebrew = sortByLocale(["שרה", "אברהם", "יצחק"], (name) => name, "he");
+    expect(hebrew).toEqual(["אברהם", "יצחק", "שרה"]);
+    expect(compareByLocale("אברהם", "שרה", "he")).toBeLessThan(0);
+
+    const yiddish = sortByLocale(
+      ["שׂרה", "אַבֿרהם", "יצחק"],
+      (name) => name,
+      "yi",
+    );
+    expect(yiddish[0].startsWith("אַ") || yiddish[0].startsWith("א")).toBe(true);
+    expect(compareByLocale("אַבֿרהם", "שׂרה", "yi")).toBeLessThan(0);
   });
 
   it("keeps API and frontend locale validation on the same code list", () => {

@@ -14,12 +14,15 @@ async function validateBatch(body: unknown) {
 }
 
 describe("TranslateBatchDto", () => {
-  it("accepts Hindi and Hebrew locales", async () => {
+  it("accepts Hindi, Hebrew, and Yiddish locales", async () => {
     expect(
       await validateBatch({ texts: ["Welcome home"], locale: "hi" }),
     ).toHaveLength(0);
     expect(
       await validateBatch({ texts: ["Welcome home"], locale: "he" }),
+    ).toHaveLength(0);
+    expect(
+      await validateBatch({ texts: ["Welcome home"], locale: "yi" }),
     ).toHaveLength(0);
   });
 

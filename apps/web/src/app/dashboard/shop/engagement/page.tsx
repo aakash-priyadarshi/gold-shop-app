@@ -142,8 +142,7 @@ interface ReferralEntry {
 }
 
 interface ReferralSettings {
-  freeMonths: number;
-  aiCreditsReward: number;
+  commissionPercent: number;
   maxReferrals: number;
   isActive: boolean;
 }
@@ -908,7 +907,9 @@ export default function ShopEngagementPage() {
   };
 
   const copyReferralCode = (code: string) => {
-    navigator.clipboard.writeText(`https://orivraa.com/register?ref=${code}`);
+    navigator.clipboard.writeText(
+      `${window.location.origin}/auth/register?ref=${code}`,
+    );
     toast({ title: t("Referral link copied!") });
   };
 
@@ -2073,22 +2074,20 @@ export default function ShopEngagementPage() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-purple-800 dark:text-purple-200 mb-1">
-                        <T>Refer a Seller — Both Earn Rewards!</T>
+                        <T>Refer a Seller</T>
                       </h3>
                       <p className="text-sm text-purple-700 dark:text-purple-300 mb-2">
                         <T>
-                          Invite another jeweller to Orivraa. When they sign up,
-                          verify, and buy any plan — you both get 1 extra month
-                          free + 50 AI credits!
+                          Invite another jeweller to Orivraa. You earn 10% of
+                          every paid subscription invoice while they stay
+                          subscribed — applied to your next Pro invoice first.
                         </T>
                       </p>
                       {referralSettings && (
                         <div className="text-xs text-purple-600 dark:text-purple-400">
                           <p>
-                            🎁 {referralSettings.freeMonths}{" "}
-                            <T>extra month(s) on your current plan</T> +{" "}
-                            {referralSettings.aiCreditsReward}{" "}
-                            <T>AI credits each</T>
+                            🎁 {referralSettings.commissionPercent}%{" "}
+                            <T>of each paid invoice for as long as they keep paying</T>
                           </p>
                         </div>
                       )}

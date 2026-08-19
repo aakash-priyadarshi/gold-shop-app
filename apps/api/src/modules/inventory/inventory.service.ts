@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InventoryStatus, JewelleryType, Prisma } from "@prisma/client";
-import { calculateGrossWeightGrams } from "@gold-shop/shared";
+import { calculateGrossWeightGrams, compareByLocale } from "@gold-shop/shared";
 import { PrismaService } from "../../prisma/prisma.service";
 import { MarketRatesService } from "../core/market-rates/market-rates.service";
 import {
@@ -534,6 +534,7 @@ export class InventoryService {
     // Verify shop ownership
     const shop = await this.prisma.shop.findFirst({
       where: { id: shopId, userId },
+      include: { user: { select: { preferredLanguage: true } } },
     });
 
     if (!shop) {
@@ -625,6 +626,17 @@ export class InventoryService {
       }),
       this.prisma.inventoryItem.count({ where }),
     ]);
+
+    if (sortBy === "nameEn") {
+      items.sort((left, right) =>
+        compareByLocale(
+          left.nameEn,
+          right.nameEn,
+          shop.user.preferredLanguage,
+          sortOrder === "desc" ? "desc" : "asc",
+        ),
+      );
+    }
 
     return {
       items,

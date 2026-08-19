@@ -30,8 +30,8 @@ describe("public About language routes", () => {
       de: `${count} Sprachen`,
       hi: `${count} भाषाओं`,
       es: `${count} idiomas`,
-      ar: "14 لغة",
-      ne: "१४ भाषाहरूमा",
+      ar: "15 لغة",
+      ne: "१५ भाषाहरूमा",
     };
 
     for (const [locale, content] of Object.entries(ABOUT_CONTENT)) {
@@ -44,14 +44,16 @@ describe("public About language routes", () => {
   it("does not advertise tutorial pages for locales without video assets", () => {
     expect(PUBLIC_LANGUAGE_PAGES.si.tutorial).toBeUndefined();
     expect(PUBLIC_LANGUAGE_PAGES.he.tutorial).toBeUndefined();
+    expect(PUBLIC_LANGUAGE_PAGES.yi.tutorial).toBeUndefined();
     expect(PUBLIC_LANGUAGE_PAGES.hi.tutorial).toBe("/tutorial/hi");
   });
 
   it("includes every summary page in static generation", () => {
     expect(SUPPORTED_ABOUT_LANGS).toEqual(
-      expect.arrayContaining(["gu", "mr", "ta", "te", "kn", "si", "he"]),
+      expect.arrayContaining(["gu", "mr", "ta", "te", "kn", "si", "he", "yi"]),
     );
     expect(ABOUT_SUMMARY_CONTENT.mr.metaTitle).toContain("Orivraa");
     expect(ABOUT_SUMMARY_CONTENT.he.metaTitle).toContain("Orivraa");
+    expect(ABOUT_SUMMARY_CONTENT.yi.metaTitle).toContain("Orivraa");
   });
 });

@@ -21,6 +21,7 @@ const locales: Record<SupportedLocale, any> = {
   te: en,
   kn: en,
   he: en,
+  yi: en,
 };
 
 @Injectable()
