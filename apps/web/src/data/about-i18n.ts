@@ -35,6 +35,7 @@ export const SUPPORTED_ABOUT_LANGS: PublicAboutLanguage[] = [
   "kn",
   "si",
   "he",
+  "yi",
 ];
 
 export const LANG_META: Record<
@@ -55,6 +56,7 @@ export const LANG_META: Record<
   ar: { name: "Arabic", nativeName: "العربية", flag: "🇦🇪" },
   ne: { name: "Nepali", nativeName: "नेपाली", flag: "🇳🇵" },
   he: { name: "Hebrew", nativeName: "עברית", flag: "🇮🇱" },
+  yi: { name: "Yiddish", nativeName: "ייִדיש", flag: "🇮🇱" },
 };
 
 /**
@@ -80,6 +82,7 @@ export const PUBLIC_LANGUAGE_PAGES: Record<
   kn: { about: "/about/kn", tutorial: "/tutorial/kn" },
   si: { about: "/about/si" },
   he: { about: "/about/he" },
+  yi: { about: "/about/yi" },
 };
 
 /** Footer and About language navigation must always remain on About pages. */
@@ -303,7 +306,7 @@ export const ABOUT_CONTENT: Record<AboutContentLanguage, AboutContent> = {
     allRightsReserved: "All rights reserved.",
     languageGuideTitle: "Available in Your Language",
     languageGuideDesc:
-      "Orivraa is available in 14 languages. Here's how to switch to your preferred language:",
+      "Orivraa is available in 15 languages. Here's how to switch to your preferred language:",
     languageGuideSteps: [
       "Click the language selector (globe icon) in the top navigation bar",
       "Choose your preferred language from the dropdown",
@@ -390,7 +393,7 @@ export const ABOUT_CONTENT: Record<AboutContentLanguage, AboutContent> = {
     allRightsReserved: "Tous droits réservés.",
     languageGuideTitle: "Disponible dans votre langue",
     languageGuideDesc:
-      "Orivraa est disponible en 14 langues. Voici comment changer de langue :",
+      "Orivraa est disponible en 15 langues. Voici comment changer de langue :",
     languageGuideSteps: [
       "Cliquez sur le sélecteur de langue (icône globe) dans la barre de navigation",
       "Choisissez votre langue préférée dans le menu déroulant",
@@ -477,7 +480,7 @@ export const ABOUT_CONTENT: Record<AboutContentLanguage, AboutContent> = {
     allRightsReserved: "Alle Rechte vorbehalten.",
     languageGuideTitle: "In Ihrer Sprache verfügbar",
     languageGuideDesc:
-      "Orivraa ist in 14 Sprachen verfügbar. So wechseln Sie die Sprache:",
+      "Orivraa ist in 15 Sprachen verfügbar. So wechseln Sie die Sprache:",
     languageGuideSteps: [
       "Klicken Sie auf den Sprachwahlschalter (Globus-Symbol) in der Navigationsleiste",
       "Wählen Sie Ihre bevorzugte Sprache aus dem Dropdown-Menü",
@@ -563,7 +566,7 @@ export const ABOUT_CONTENT: Record<AboutContentLanguage, AboutContent> = {
     allRightsReserved: "सर्वाधिकार सुरक्षित।",
     languageGuideTitle: "आपकी भाषा में उपलब्ध",
     languageGuideDesc:
-      "Orivraa 14 भाषाओं में उपलब्ध है। अपनी पसंदीदा भाषा में बदलने का तरीका:",
+      "Orivraa 15 भाषाओं में उपलब्ध है। अपनी पसंदीदा भाषा में बदलने का तरीका:",
     languageGuideSteps: [
       "नेविगेशन बार में भाषा चयनकर्ता (ग्लोब आइकन) पर क्लिक करें",
       "ड्रॉपडाउन से अपनी पसंदीदा भाषा चुनें",
@@ -649,7 +652,7 @@ export const ABOUT_CONTENT: Record<AboutContentLanguage, AboutContent> = {
     allRightsReserved: "Todos los derechos reservados.",
     languageGuideTitle: "Disponible en tu idioma",
     languageGuideDesc:
-      "Orivraa está disponible en 14 idiomas. Así es como cambiar de idioma:",
+      "Orivraa está disponible en 15 idiomas. Así es como cambiar de idioma:",
     languageGuideSteps: [
       "Haz clic en el selector de idioma (icono de globo) en la barra de navegación",
       "Elige tu idioma preferido del menú desplegable",
@@ -733,7 +736,7 @@ export const ABOUT_CONTENT: Record<AboutContentLanguage, AboutContent> = {
     forSellers: "للبائعين",
     allRightsReserved: "جميع الحقوق محفوظة.",
     languageGuideTitle: "متاح بلغتك",
-    languageGuideDesc: "Orivraa متاح بـ 14 لغة. إليك كيفية تبديل اللغة:",
+    languageGuideDesc: "Orivraa متاح بـ 15 لغة. إليك كيفية تبديل اللغة:",
     languageGuideSteps: [
       "انقر على محدد اللغة (أيقونة الكرة الأرضية) في شريط التنقل",
       "اختر لغتك المفضلة من القائمة المنسدلة",
@@ -819,7 +822,7 @@ export const ABOUT_CONTENT: Record<AboutContentLanguage, AboutContent> = {
     allRightsReserved: "सर्वाधिकार सुरक्षित।",
     languageGuideTitle: "तपाईंको भाषामा उपलब्ध",
     languageGuideDesc:
-      "Orivraa १४ भाषाहरूमा उपलब्ध छ। आफ्नो मनपर्ने भाषामा स्विच गर्ने तरिका:",
+      "Orivraa १५ भाषाहरूमा उपलब्ध छ। आफ्नो मनपर्ने भाषामा स्विच गर्ने तरिका:",
     languageGuideSteps: [
       "नेभिगेसन बारमा भाषा चयनकर्ता (ग्लोब आइकन) मा क्लिक गर्नुहोस्",
       "ड्रपडाउनबाट आफ्नो मनपर्ने भाषा छान्नुहोस्",

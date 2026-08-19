@@ -279,6 +279,7 @@ export const authApi = {
     email: string;
     password: string;
     phone?: string;
+    referralCode?: string;
   }) => api.post("/auth/register", data),
   login: (data: { email: string; password: string }) =>
     api.post("/auth/login", data),
@@ -1197,6 +1198,16 @@ export const sellerPerformanceApi = {
   getMyReferrals: () => api.get("/seller-performance/referrals"),
   createReferral: (data: { refereeEmail: string }) =>
     api.post("/seller-performance/referrals", data),
+  startReferralConnect: () =>
+    api.post("/seller-performance/referrals/connect/onboarding"),
+  refreshReferralConnect: () =>
+    api.post("/seller-performance/referrals/connect/refresh"),
+  cashOutReferralWallet: () =>
+    api.post("/seller-performance/referrals/cash-out"),
+  getAdminReferralCommissions: (status?: string) =>
+    api.get(
+      `/seller-performance/admin/referral-commissions${status ? `?status=${status}` : ""}`,
+    ),
   // Admin: referrals
   getAdminReferrals: (status?: string) =>
     api.get(
@@ -1212,6 +1223,9 @@ export const sellerPerformanceApi = {
     expirationDays?: number;
     maxReferralsPerShop?: number;
     isActive?: boolean;
+    commissionPercent?: number;
+    applyToInvoiceFirst?: boolean;
+    minCashoutAmount?: number;
   }) => api.post("/seller-performance/admin/referral-settings", data),
   expireOldReferrals: () =>
     api.post("/seller-performance/admin/referrals/expire-old"),

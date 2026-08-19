@@ -11,7 +11,14 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { sellerPerformanceApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
-import { Copy, Gift, Loader2, Send, Users } from "lucide-react";
+import {
+  Copy,
+  Gift,
+  Loader2,
+  Send,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface ReferralEntry {
@@ -22,15 +29,29 @@ interface ReferralEntry {
   invitedAt: string;
   signedUpAt: string | null;
   completedAt: string | null;
-  referrerRewarded: boolean;
   refereeShop: { shopName: string; isVerified: boolean } | null;
 }
 
 interface ReferralSettings {
-  freeMonths: number;
-  aiCreditsReward: number;
+  commissionPercent: number;
+  applyToInvoiceFirst: boolean;
+  minCashoutAmount: number;
   maxReferrals: number;
   isActive: boolean;
+}
+
+interface CommissionRow {
+  id: string;
+  commissionAmount: number;
+  currency: string;
+  status: "ACCRUED" | "APPLIED" | "PAID_OUT" | "VOID";
+  createdAt: string;
+}
+
+interface PayoutProfile {
+  detailsSubmitted: boolean;
+  payoutsEnabled: boolean;
+  hasConnectAccount: boolean;
 }
 
 export default function SellerReferralsPage() {
@@ -38,11 +59,35 @@ export default function SellerReferralsPage() {
   const [referrals, setReferrals] = useState<ReferralEntry[]>([]);
   const [referralSettings, setReferralSettings] =
     useState<ReferralSettings | null>(null);
+  const [shareLink, setShareLink] = useState("");
+  const [earnings, setEarnings] = useState({
+    accrued: 0,
+    applied: 0,
+    paidOut: 0,
+    currency: "USD",
+    commissions: [] as CommissionRow[],
+  });
+  const [payoutProfile, setPayoutProfile] = useState<PayoutProfile | null>(
+    null,
+  );
   const [referralEmail, setReferralEmail] = useState("");
   const [referralSending, setReferralSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [connectLoading, setConnectLoading] = useState(false);
+  const [cashOutLoading, setCashOutLoading] = useState(false);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const returning =
+      params.get("connect") === "return" ||
+      params.get("connect") === "refresh";
+    if (returning) {
+      sellerPerformanceApi
+        .refreshReferralConnect()
+        .catch(() => undefined)
+        .finally(() => loadReferrals());
+      return;
+    }
     loadReferrals();
   }, []);
 
@@ -53,6 +98,17 @@ export default function SellerReferralsPage() {
       if (res?.data) {
         setReferrals(res.data.referrals || []);
         setReferralSettings(res.data.settings || null);
+        setShareLink(res.data.shareLink || "");
+        setEarnings(
+          res.data.earnings || {
+            accrued: 0,
+            applied: 0,
+            paidOut: 0,
+            currency: "USD",
+            commissions: [],
+          },
+        );
+        setPayoutProfile(res.data.payoutProfile || null);
       }
     } catch (error) {
       console.warn("Failed to load referrals:", error);
@@ -70,7 +126,7 @@ export default function SellerReferralsPage() {
       });
       toast({
         title: t("Referral sent!"),
-        description: t("We'll notify you when they sign up."),
+        description: t("We'll email them an invite link."),
       });
       setReferralEmail("");
       loadReferrals();
@@ -86,11 +142,83 @@ export default function SellerReferralsPage() {
     }
   };
 
-  const copyReferralCode = (code: string) => {
-    navigator.clipboard.writeText(`https://orivraa.com/register?ref=${code}`);
-    toast({ title: t("Referral link copied!") });
+  const copyText = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast({ title: t(label) });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: t("Could not copy to clipboard"),
+      });
+    }
   };
 
+  const startConnect = async () => {
+    setConnectLoading(true);
+    try {
+      const res = await sellerPerformanceApi.startReferralConnect();
+      const url = res?.data?.url;
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+      toast({
+        variant: "destructive",
+        title: t("Could not start Stripe Connect"),
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: t("Stripe Connect unavailable"),
+        description:
+          error?.response?.data?.message ||
+          t("Commission still applies to your next Orivraa invoice."),
+      });
+    } finally {
+      setConnectLoading(false);
+    }
+  };
+
+  const cashOut = async () => {
+    setCashOutLoading(true);
+    try {
+      const res = await sellerPerformanceApi.cashOutReferralWallet();
+      toast({
+        title: t("Cash-out requested"),
+        description:
+          res?.data?.stripeFeeNote ||
+          t("Stripe Connect charges a payout fee on cash-outs."),
+      });
+      loadReferrals();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: t("Cash-out failed"),
+        description:
+          error?.response?.data?.message || t("Something went wrong."),
+      });
+    } finally {
+      setCashOutLoading(false);
+    }
+  };
+
+  const percent = referralSettings?.commissionPercent ?? 10;
+  const minCashout = referralSettings?.minCashoutAmount ?? 0;
+  const walletCurrency =
+    earnings.currency ||
+    earnings.commissions.find((row) => row.currency)?.currency ||
+    "USD";
+  const formatWallet = (amount: number) => {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: walletCurrency,
+      }).format(amount);
+    } catch {
+      return `${amount.toFixed(2)} ${walletCurrency}`;
+    }
+  };
   const completedCount = referrals.filter(
     (r) => r.status === "COMPLETED",
   ).length;
@@ -102,21 +230,21 @@ export default function SellerReferralsPage() {
     <ShopGuard>
       <DashboardLayout>
         <div className="space-y-6 max-w-4xl">
-        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Gift className="h-6 w-6 text-purple-500" />
             <T>Referral Programme</T>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
+            <T>Invite jewellery shops to Orivraa. You earn</T> {percent}%{" "}
             <T>
-              Invite sellers to Orivraa. When they sign up, verify, and buy any
-              plan — you both get 1 extra month free + 50 AI credits!
+              of every paid subscription invoice while they stay subscribed —
+              applied to your next Pro invoice first, leftover via Stripe
+              Connect.
             </T>
           </p>
         </div>
 
-        {/* How it works */}
         <Card className="border-purple-200 bg-purple-50 dark:border-purple-800/50 dark:bg-purple-950/30">
           <CardContent className="p-6">
             <h3 className="font-bold text-purple-800 dark:text-purple-200 mb-3">
@@ -124,30 +252,34 @@ export default function SellerReferralsPage() {
             </h3>
             <div className="grid sm:grid-cols-3 gap-4 text-sm text-purple-700 dark:text-purple-300">
               <div className="flex flex-col items-center text-center gap-2 p-4 rounded-lg bg-purple-100/50 dark:bg-purple-900/20">
-                <span className="text-2xl">📧</span>
+                <span className="text-2xl">🔗</span>
                 <p className="font-medium">
-                  <T>Send an invitation</T>
+                  <T>Share your link</T>
                 </p>
                 <p className="text-xs">
-                  <T>Enter the seller's email below</T>
+                  <T>Email an invite or copy your personal register link</T>
                 </p>
               </div>
               <div className="flex flex-col items-center text-center gap-2 p-4 rounded-lg bg-purple-100/50 dark:bg-purple-900/20">
-                <span className="text-2xl">✅</span>
+                <span className="text-2xl">💳</span>
                 <p className="font-medium">
-                  <T>They sign up & verify</T>
+                  <T>They pay for a plan</T>
                 </p>
                 <p className="text-xs">
-                  <T>When your referral creates a shop, verifies, and buys any plan</T>
+                  <T>Every paid invoice while they stay subscribed counts</T>
                 </p>
               </div>
               <div className="flex flex-col items-center text-center gap-2 p-4 rounded-lg bg-purple-100/50 dark:bg-purple-900/20">
-                <span className="text-2xl">🎁</span>
+                <span className="text-2xl">📄</span>
                 <p className="font-medium">
-                  <T>Both earn rewards!</T>
+                  <T>You get</T> {percent}% <T>on your invoice</T>
                 </p>
                 <p className="text-xs">
-                  <T>Both get 1 extra month on your plan + 50 AI credits!</T>
+                  <T>
+                    Applied to your next Orivraa Pro invoice first (no extra
+                    Stripe fee). Leftover cash-out uses Connect and Connect
+                    fees apply.
+                  </T>
                 </p>
               </div>
             </div>
@@ -155,16 +287,120 @@ export default function SellerReferralsPage() {
             {referralSettings && (
               <div className="mt-4 p-3 rounded-lg bg-white/60 dark:bg-gray-900/40 text-sm text-center">
                 <span className="font-medium text-purple-700 dark:text-purple-300">
-                  🎁 <T>Reward:</T> {referralSettings.freeMonths}{" "}
-                  <T>extra month(s) on your current plan</T> +{" "}
-                  {referralSettings.aiCreditsReward} <T>AI credits each</T>
+                  <T>Reward:</T> {percent}%{" "}
+                  <T>
+                    of each paid subscription invoice, for as long as they keep
+                    paying. Not AI credits and not a Pro+ upgrade.
+                  </T>
                 </span>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Send Referral Form */}
+        {shareLink && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                <T>Your referral link</T>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row gap-3">
+              <Input readOnly value={shareLink} className="font-mono text-xs" />
+              <Button
+                variant="outline"
+                onClick={() => copyText(shareLink, "Referral link copied!")}
+              >
+                <Copy className="h-4 w-4 mr-1" />
+                <T>Copy</T>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              <T>Earnings wallet</T>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold">
+                  {formatWallet(earnings.accrued)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <T>Wallet (not yet applied)</T>
+                </p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatWallet(earnings.applied)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <T>Applied to invoices</T>
+                </p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-purple-600">
+                  {formatWallet(earnings.paidOut)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <T>Cashed out</T>
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              <T>
+                Invoice credit is applied first so you are not charged twice.
+                Stripe Connect cash-out is only for leftover wallet balance and
+                includes Connect payout fees. Referral cash is never paid by
+                refunding the referred shop.
+              </T>
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {!payoutProfile?.payoutsEnabled && (
+                <Button
+                  variant="outline"
+                  onClick={startConnect}
+                  disabled={connectLoading}
+                >
+                  {connectLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : null}
+                  <T>Set up leftover cash-out</T>
+                </Button>
+              )}
+              {payoutProfile?.payoutsEnabled && (
+                <span className="text-xs text-green-600 self-center">
+                  <T>Connect payouts ready</T>
+                </span>
+              )}
+              <Button
+                onClick={cashOut}
+                disabled={
+                  cashOutLoading ||
+                  earnings.accrued <= 0 ||
+                  earnings.accrued < minCashout
+                }
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {cashOutLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : null}
+                <T>Cash out leftover</T>
+              </Button>
+              {minCashout > 0 && (
+                <span className="text-xs text-muted-foreground self-center">
+                  <T>Minimum cash-out</T> {formatWallet(minCashout)}
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {referralSettings?.isActive && (
           <Card data-tour="referrals-invite">
             <CardHeader>
@@ -207,7 +443,6 @@ export default function SellerReferralsPage() {
           </Card>
         )}
 
-        {/* My Referrals */}
         <Card data-tour="referrals-list">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -228,7 +463,7 @@ export default function SellerReferralsPage() {
               <div className="text-center py-12">
                 <Gift className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">
-                  <T>No referrals yet. Send your first invitation above!</T>
+                  <T>No referrals yet. Share your link or send an invitation.</T>
                 </p>
               </div>
             ) : (
@@ -262,7 +497,7 @@ export default function SellerReferralsPage() {
                               : ref.status === "PLAN_PURCHASED"
                                 ? "Plan Purchased"
                                 : ref.status === "COMPLETED"
-                                  ? "Rewarded ✓"
+                                  ? "Earning"
                                   : "Expired"}
                         </Badge>
                         {ref.refereeShop && (
@@ -280,7 +515,12 @@ export default function SellerReferralsPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => copyReferralCode(ref.referralCode)}
+                        onClick={() =>
+                          copyText(
+                            `${window.location.origin}/auth/register?ref=${ref.referralCode}`,
+                            "Referral link copied!",
+                          )
+                        }
                         title="Copy referral link"
                       >
                         <Copy className="h-3.5 w-3.5" />
@@ -293,7 +533,6 @@ export default function SellerReferralsPage() {
           </CardContent>
         </Card>
 
-        {/* Summary */}
         <Card>
           <CardContent className="p-6">
             <div className="grid grid-cols-3 gap-6 text-center">
@@ -316,13 +555,13 @@ export default function SellerReferralsPage() {
                   {completedCount}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  <T>Completed & Rewarded</T>
+                  <T>Active (earning)</T>
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
+        </div>
       </DashboardLayout>
     </ShopGuard>
   );

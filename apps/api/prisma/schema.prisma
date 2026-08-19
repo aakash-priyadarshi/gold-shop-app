@@ -437,6 +437,10 @@ model Shop {
   platformReviews      PlatformReview[]
   referralsMade        Referral[]            @relation("ShopReferralsMade")
   referralsReceived    Referral[]            @relation("ShopReferralsReceived")
+  referralCode         String?               @unique
+  referralCommissionsEarned    ReferralCommission[] @relation("ReferralCommissionsEarned")
+  referralCommissionsGenerated ReferralCommission[] @relation("ReferralCommissionsGenerated")
+  referralPayoutProfile        ReferralPayoutProfile?
   // Enterprise features
   branches             ShopBranch[]
   staffAccounts        StaffAccount[]
@@ -4337,6 +4341,7 @@ model Referral {
 
   referrerShop Shop  @relation("ShopReferralsMade", fields: [referrerShopId], references: [id])
   refereeShop  Shop? @relation("ShopReferralsReceived", fields: [refereeShopId], references: [id])
+  commissions  ReferralCommission[]
 
   @@unique([referrerShopId, refereeEmail])
   @@index([referralCode])
@@ -4354,13 +4359,60 @@ enum ReferralStatus {
 }
 
 model ReferralSettings {
-  id                  String   @id @default("singleton")
-  freeMonths          Float    @default(1) // extra months added to current plan for both parties
-  aiCreditsReward     Int      @default(50) // AI credits granted to both parties
-  expirationDays      Int      @default(90) // referral link validity
-  maxReferralsPerShop Int      @default(50) // anti-abuse cap
-  isActive            Boolean  @default(true) // master switch
-  updatedAt           DateTime @updatedAt
+  id                   String   @id @default("singleton")
+  freeMonths           Float    @default(0) // unused legacy field (kept for existing rows)
+  aiCreditsReward      Int      @default(0) // unused legacy field (kept for existing rows)
+  expirationDays       Int      @default(90) // referral link validity
+  maxReferralsPerShop  Int      @default(50) // anti-abuse cap
+  isActive             Boolean  @default(true) // master switch
+  commissionPercent    Float    @default(10) // % of each paid subscription invoice
+  applyToInvoiceFirst  Boolean  @default(true) // credit referrer's next Orivraa invoice before cash-out
+  minCashoutAmount     Float    @default(10) // leftover cash-out threshold in invoice currency units
+  updatedAt            DateTime @updatedAt
+}
+
+enum ReferralCommissionStatus {
+  ACCRUED
+  APPLIED
+  PAID_OUT
+  VOID
+}
+
+model ReferralCommission {
+  id               String                    @id @default(uuid())
+  referrerShopId   String
+  refereeShopId    String
+  referralId       String
+  stripeInvoiceId  String                    @unique
+  grossAmount      Float
+  commissionAmount Float
+  currency         String
+  status           ReferralCommissionStatus  @default(ACCRUED)
+  appliedAt        DateTime?
+  paidOutAt        DateTime?
+  payoutId         String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  referrerShop Shop     @relation("ReferralCommissionsEarned", fields: [referrerShopId], references: [id])
+  refereeShop  Shop     @relation("ReferralCommissionsGenerated", fields: [refereeShopId], references: [id])
+  referral     Referral @relation(fields: [referralId], references: [id])
+
+  @@index([referrerShopId, status])
+  @@index([refereeShopId])
+  @@index([referralId])
+}
+
+model ReferralPayoutProfile {
+  id                     String   @id @default(uuid())
+  shopId                 String   @unique
+  stripeConnectAccountId String?  @unique
+  detailsSubmitted       Boolean  @default(false)
+  payoutsEnabled         Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id])
 }
 
 // ── Blog Posts ─────────────────────────────────────────────────

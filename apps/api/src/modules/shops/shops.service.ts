@@ -18,6 +18,7 @@ import { AuditService } from "../audit/audit.service";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
+import { SellerEngagementService } from "../core/seller-performance/seller-engagement.service";
 import { ContentModerationService } from "./content-moderation.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
@@ -121,6 +122,7 @@ export class ShopsService {
     private configService: PlatformConfigService,
     private moderationService: ContentModerationService,
     private sellerSubscriptionsService: SellerSubscriptionsService,
+    private sellerEngagementService: SellerEngagementService,
     private planLimitsService: PlanLimitsService,
     private priceRebase: ShopPriceRebaseService,
   ) {}
@@ -264,10 +266,52 @@ export class ShopsService {
     });
 
     // Auto-activate FREE subscription plan
-    await this.sellerSubscriptionsService.autoActivateFreePlan(
-      shop.id,
-      marketCountry,
-    );
+    try {
+      await this.sellerSubscriptionsService.autoActivateFreePlan(
+        shop.id,
+        marketCountry,
+      );
+
+      // Fetch pending referral code from Redis inside try block (best effort)
+      const normalizedDtoCode = dto.referralCode?.trim().toUpperCase();
+      const pendingCode =
+        normalizedDtoCode ||
+        (await this.redisService.get(`pending-referral:${userId}`)) ||
+        undefined;
+
+      if (pendingCode) {
+        try {
+          await this.sellerEngagementService.processReferralSignup(
+            user.email,
+            shop.id,
+            pendingCode,
+          );
+          await this.redisService.del(`pending-referral:${userId}`);
+        } catch (error) {
+          this.logger.warn(
+            `Referral signup linking failed for user ${userId} shop ${shop.id}: ${(error as { name?: string })?.name || "UNKNOWN"}`,
+          );
+          // Persist as pending attempt if dto.referralCode was provided
+          if (normalizedDtoCode) {
+            try {
+              await this.redisService.set(
+                `pending-referral:${userId}`,
+                normalizedDtoCode,
+                60 * 60 * 24 * 7,
+              );
+            } catch (redisError) {
+              this.logger.warn(
+                `Failed to persist pending referral for user ${userId}: ${(redisError as { name?: string })?.name || "UNKNOWN"}`,
+              );
+            }
+          }
+        }
+      }
+    } catch (outerError) {
+      this.logger.warn(
+        `Post-shop-creation tasks failed for shop ${shop.id}: ${(outerError as { name?: string })?.name || "UNKNOWN"}`,
+      );
+    }
 
     return shop;
   }

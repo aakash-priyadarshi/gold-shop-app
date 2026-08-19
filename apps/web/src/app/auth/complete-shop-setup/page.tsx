@@ -226,6 +226,10 @@ export default function CompleteShopSetupPage() {
         address: data.address,
         shopPhone: data.shopPhone,
         contactEmail: user?.email,
+        referralCode:
+          typeof window !== "undefined"
+            ? sessionStorage.getItem("orivraa_referral_code") || undefined
+            : undefined,
       });
 
       setIsSuccess(true);

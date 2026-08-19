@@ -15,8 +15,10 @@ describe("parseShopLanguage", () => {
     expect(parseShopLanguage("en-US")).toBe("en");
   });
 
-  it("recognizes Hebrew as a right-to-left app locale", () => {
+  it("recognizes Hebrew and Yiddish as right-to-left app locales", () => {
     expect(parseShopLanguage("he")).toBe("he");
+    expect(parseShopLanguage("yi")).toBe("yi");
     expect(LANGUAGES.he.direction).toBe("rtl");
+    expect(LANGUAGES.yi.direction).toBe("rtl");
   });
 });

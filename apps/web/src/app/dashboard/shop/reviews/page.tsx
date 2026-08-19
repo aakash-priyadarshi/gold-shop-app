@@ -5,6 +5,8 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -62,6 +64,10 @@ export default function SellerReviewsPage() {
   );
   const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewUrls, setReviewUrls] = useState<Record<string, string>>({});
+  const [reviewFiles, setReviewFiles] = useState<Record<string, File | null>>(
+    {},
+  );
 
   const { upload: uploadReviewProof } = useImageUpload({
     type: "review-proof",
@@ -90,23 +96,45 @@ export default function SellerReviewsPage() {
     }
   };
 
-  const handleReviewSubmit = async (platform: string, reviewUrl: string) => {
-    setReviewSubmitting(platform);
-    try {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      const file = await new Promise<File | null>((resolve) => {
-        input.onchange = (e) =>
-          resolve((e.target as HTMLInputElement).files?.[0] || null);
-        input.click();
-        setTimeout(() => resolve(null), 120000);
+  const handleReviewSubmit = async (platform: string, fallbackUrl: string) => {
+    const reviewUrl = (reviewUrls[platform] || fallbackUrl).trim();
+    const file = reviewFiles[platform];
+    if (!reviewUrl) {
+      toast({
+        variant: "destructive",
+        title: t("Add the public review URL"),
       });
-      if (!file) {
-        setReviewSubmitting(null);
+      return;
+    }
+
+    // Validate URL format and protocol
+    try {
+      const parsedUrl = new URL(reviewUrl);
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        toast({
+          variant: "destructive",
+          title: t("Invalid URL protocol. Only http:// and https:// are allowed."),
+        });
         return;
       }
+    } catch {
+      toast({
+        variant: "destructive",
+        title: t("Invalid URL format"),
+      });
+      return;
+    }
 
+    if (!file) {
+      toast({
+        variant: "destructive",
+        title: t("Choose a screenshot of the published review"),
+      });
+      return;
+    }
+
+    setReviewSubmitting(platform);
+    try {
       const uploadResult = await uploadReviewProof(file);
       if (!uploadResult?.url) throw new Error("Upload failed");
 
@@ -116,6 +144,7 @@ export default function SellerReviewsPage() {
         reviewUrl,
       });
       toast({ title: t("Review submitted! We'll verify it shortly.") });
+      setReviewFiles((prev) => ({ ...prev, [platform]: null }));
       loadPlatformReviews();
     } catch (error: any) {
       toast({
@@ -273,39 +302,121 @@ export default function SellerReviewsPage() {
                               {review.adminNotes}
                             </p>
                           )}
+                          <div className="w-full space-y-2">
+                            <Label
+                              htmlFor={`${entry.platform}-rejected-review-url`}
+                              className="text-xs"
+                            >
+                              <T>Review URL</T>
+                            </Label>
+                            <Input
+                              id={`${entry.platform}-rejected-review-url`}
+                              type="url"
+                              placeholder={info.url}
+                              value={reviewUrls[entry.platform] ?? review.reviewUrl ?? ""}
+                              onChange={(e) =>
+                                setReviewUrls((prev) => ({
+                                  ...prev,
+                                  [entry.platform]: e.target.value,
+                                }))
+                              }
+                            />
+                            <Label
+                              htmlFor={`${entry.platform}-rejected-review-screenshot`}
+                              className="text-xs"
+                            >
+                              <T>Screenshot</T>
+                            </Label>
+                            <Input
+                              id={`${entry.platform}-rejected-review-screenshot`}
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              onChange={(e) =>
+                                setReviewFiles((prev) => ({
+                                  ...prev,
+                                  [entry.platform]: e.target.files?.[0] || null,
+                                }))
+                              }
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                handleReviewSubmit(
+                                  entry.platform,
+                                  review.reviewUrl || "",
+                                )
+                              }
+                              disabled={reviewSubmitting === entry.platform}
+                            >
+                              {reviewSubmitting === entry.platform ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                              ) : (
+                                <Upload className="h-4 w-4 mr-1" />
+                              )}
+                              <T>Re-submit URL & screenshot</T>
+                            </Button>
+                          </div>
+                        </>
+                      )}
+
+                      {!review && (
+                        <div className="w-full space-y-3">
+                          <div className="text-left">
+                            <Label
+                              htmlFor={`${entry.platform}-review-url`}
+                              className="text-xs"
+                            >
+                              <T>Review URL</T>
+                            </Label>
+                            <Input
+                              id={`${entry.platform}-review-url`}
+                              type="url"
+                              placeholder={info.url}
+                              value={reviewUrls[entry.platform] ?? ""}
+                              onChange={(e) =>
+                                setReviewUrls((prev) => ({
+                                  ...prev,
+                                  [entry.platform]: e.target.value,
+                                }))
+                              }
+                            />
+                          </div>
+                          <div className="text-left">
+                            <Label
+                              htmlFor={`${entry.platform}-review-screenshot`}
+                              className="text-xs"
+                            >
+                              <T>Screenshot</T>
+                            </Label>
+                            <Input
+                              id={`${entry.platform}-review-screenshot`}
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              onChange={(e) =>
+                                setReviewFiles((prev) => ({
+                                  ...prev,
+                                  [entry.platform]:
+                                    e.target.files?.[0] || null,
+                                }))
+                              }
+                            />
+                          </div>
                           <Button
-                            size="sm"
-                            variant="outline"
                             onClick={() =>
-                              handleReviewSubmit(entry.platform, info.url)
+                              handleReviewSubmit(entry.platform, "")
                             }
                             disabled={reviewSubmitting === entry.platform}
+                            className="w-full"
                           >
                             {reviewSubmitting === entry.platform ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-1" />
                             ) : (
                               <Upload className="h-4 w-4 mr-1" />
                             )}
-                            <T>Re-submit Proof</T>
+                            <T>Submit URL & screenshot</T>
                           </Button>
-                        </>
-                      )}
-
-                      {!review && (
-                        <Button
-                          onClick={() =>
-                            handleReviewSubmit(entry.platform, info.url)
-                          }
-                          disabled={reviewSubmitting === entry.platform}
-                          className="w-full"
-                        >
-                          {reviewSubmitting === entry.platform ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                          ) : (
-                            <Upload className="h-4 w-4 mr-1" />
-                          )}
-                          <T>Upload Review Screenshot</T>
-                        </Button>
+                        </div>
                       )}
                     </div>
                   </div>

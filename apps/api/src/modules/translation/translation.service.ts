@@ -405,7 +405,7 @@ Rules:
 - Keep HTML tags (<strong>, <a>, etc.) intact if present.
 - Keep numbers, currency symbols, and emoji unchanged.
 - Use natural, fluent ${langName} — not machine-sounding translation.
-- For ${locale === "ar" ? "Arabic, use Modern Standard Arabic (فصحى)" : locale === "he" ? "Hebrew, use modern standard Hebrew and preserve natural right-to-left wording" : `${langName}, use the most common standard dialect`}.
+- For ${locale === "ar" ? "Arabic, use Modern Standard Arabic (فصحى)" : locale === "he" ? "Hebrew, use modern standard Hebrew and preserve natural right-to-left wording" : locale === "yi" ? "Yiddish, use standard Yiddish (ייִדיש) in Hebrew script and preserve natural right-to-left wording" : `${langName}, use the most common standard dialect`}.
 
 Texts:
 ${numbered}

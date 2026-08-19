@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { UI_LOCALE_CODES } from "@gold-shop/shared";
 import { CurrencyCode } from "@prisma/client";
 import { Type } from "class-transformer";
 import {
@@ -57,6 +58,13 @@ export class CreateShopDto {
   @IsOptional()
   @IsEmail()
   contactEmail?: string;
+
+  @ApiPropertyOptional({
+    description: "Referral code when converting a customer account to a shop",
+  })
+  @IsOptional()
+  @IsString()
+  referralCode?: string;
 }
 
 export class RegisterDto {
@@ -86,10 +94,18 @@ export class RegisterDto {
   @IsEnum(["CUSTOMER", "SHOPKEEPER"])
   role: "CUSTOMER" | "SHOPKEEPER";
 
-  @ApiPropertyOptional({ enum: ["en", "ne", "hi"], default: "en" })
+  @ApiPropertyOptional({ enum: UI_LOCALE_CODES, default: "en" })
   @IsOptional()
-  @IsEnum(["en", "ne", "hi"])
+  @IsIn([...UI_LOCALE_CODES])
   preferredLanguage?: string;
+
+  @ApiPropertyOptional({
+    description: "Referral code from ?ref= on /auth/register",
+    example: "A1B2C3D4E5F6",
+  })
+  @IsOptional()
+  @IsString()
+  referralCode?: string;
 
   @ApiPropertyOptional({ description: "Cloudflare Turnstile CAPTCHA token" })
   @IsOptional()

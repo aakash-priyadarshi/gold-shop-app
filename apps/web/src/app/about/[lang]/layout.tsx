@@ -103,6 +103,7 @@ function generateJsonLd(lang: Language) {
           "Kannada",
           "Sinhala",
           "Hebrew",
+          "Yiddish",
           "French",
           "German",
           "Spanish",

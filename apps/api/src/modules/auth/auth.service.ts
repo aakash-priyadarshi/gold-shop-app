@@ -22,6 +22,7 @@ import { AuditService } from "../audit/audit.service";
 import { MailService } from "../mail/mail.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
+import { SellerEngagementService } from "../core/seller-performance/seller-engagement.service";
 import { LoginDto } from "./dto/login.dto";
 import { CreateShopDto, RegisterDto } from "./dto/register.dto";
 import { OtpService } from "./otp.service";
@@ -74,8 +75,64 @@ export class AuthService {
     private otpService: OtpService,
     private redisService: RedisService,
     private sellerSubscriptionsService: SellerSubscriptionsService,
+    private sellerEngagementService: SellerEngagementService,
     private platformConfigService: PlatformConfigService,
   ) {}
+
+  private referralErrorName(error: unknown): string {
+    if (error && typeof error === "object" && "name" in error) {
+      const name = (error as { name?: string }).name;
+      if (name && name !== "Error") return name;
+    }
+    return "UNKNOWN";
+  }
+
+  private normalizeReferralCode(referralCode?: string): string | undefined {
+    if (!referralCode) return undefined;
+    return referralCode.trim().toUpperCase();
+  }
+
+  private async rememberPendingReferral(
+    userId: string,
+    referralCode?: string,
+  ) {
+    const code = this.normalizeReferralCode(referralCode);
+    if (!userId || !code) return;
+    await this.redisService.set(
+      `pending-referral:${userId}`,
+      code,
+      60 * 60 * 24 * 7,
+    );
+  }
+
+  private async linkReferralSignup(
+    userId: string,
+    shopId: string,
+    email: string,
+    referralCode?: string,
+  ) {
+    const normalizedCode = this.normalizeReferralCode(referralCode);
+    const run = () =>
+      this.sellerEngagementService.processReferralSignup(
+        email,
+        shopId,
+        normalizedCode,
+      );
+    try {
+      await run();
+    } catch (error) {
+      this.logger.warn(
+        `Referral signup linking failed for user ${userId} shop ${shopId}: ${this.referralErrorName(error)}`,
+      );
+      try {
+        await run();
+      } catch (retryError) {
+        this.logger.warn(
+          `Referral signup linking retry failed for user ${userId} shop ${shopId}: ${this.referralErrorName(retryError)}`,
+        );
+      }
+    }
+  }
 
   /**
    * Check if email exists (with Redis caching)
@@ -267,6 +324,12 @@ export class AuthService {
         result.shop.id,
         dto.shop?.country || "NP",
       );
+      await this.linkReferralSignup(
+        result.user.id,
+        result.shop.id,
+        dto.email,
+        dto.referralCode,
+      );
     }
 
     this.logger.log(`New ${dto.role} registered: ${dto.email}`);
@@ -355,6 +418,12 @@ export class AuthService {
     await this.sellerSubscriptionsService.autoActivateFreePlan(
       result.shop.id,
       marketCountry,
+    );
+    await this.linkReferralSignup(
+      result.user.id,
+      result.shop.id,
+      result.user.email,
+      shopDto.referralCode,
     );
 
     // Audit log
@@ -650,6 +719,7 @@ export class AuthService {
       requestedRole?: string;
       mode?: string;
       rememberMe?: boolean;
+      referralCode?: string;
       // Google People API enriched fields
       googleBirthday?: string;
       googleGender?: string;
@@ -747,6 +817,7 @@ export class AuthService {
 
       // If user is SHOPKEEPER but has no shop, they need to complete setup
       if (user.role === UserRole.SHOPKEEPER && !user.shops?.length) {
+        await this.rememberPendingReferral(user.id, googleUser.referralCode);
         return { ...tokens, needsShopSetup: true };
       }
 
@@ -854,6 +925,7 @@ export class AuthService {
 
     // If SHOPKEEPER, they need to complete shop setup
     if (requestedRole === UserRole.SHOPKEEPER) {
+      await this.rememberPendingReferral(newUser.id, googleUser.referralCode);
       return { ...tokens, needsShopSetup: true };
     }
 

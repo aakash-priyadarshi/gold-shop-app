@@ -8,6 +8,7 @@ import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscri
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { ContentModerationService } from "./content-moderation.service";
 import { ShopPriceRebaseService } from "./shop-price-rebase.service";
+import { SellerEngagementService } from "../core/seller-performance/seller-engagement.service";
 import { ShopsService } from "./shops.service";
 
 describe("ShopsService workshop mode gating", () => {
@@ -55,6 +56,10 @@ describe("ShopsService workshop mode gating", () => {
         { provide: SellerSubscriptionsService, useValue: {} },
         { provide: PlanLimitsService, useValue: planLimits },
         { provide: ShopPriceRebaseService, useValue: priceRebase },
+        {
+          provide: SellerEngagementService,
+          useValue: { processReferralSignup: jest.fn() },
+        },
       ],
     }).compile();
     service = module.get(ShopsService);

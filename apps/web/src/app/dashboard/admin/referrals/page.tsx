@@ -33,6 +33,7 @@ import {
   Settings,
   Trash2,
   Users,
+  Wallet,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -46,7 +47,7 @@ interface ReferralData {
   completedAt: string | null;
   referrerRewarded: boolean;
   refereeRewarded: boolean;
-  shop: {
+  referrerShop: {
     shopName: string;
     user: { firstName: string; lastName: string; email: string };
   };
@@ -56,10 +57,22 @@ interface ReferralData {
 interface ReferralSettingsData {
   id: string;
   isActive: boolean;
-  freeMonths: number;
-  aiCreditsReward: number;
+  commissionPercent: number;
+  applyToInvoiceFirst: boolean;
+  minCashoutAmount: number;
   maxReferralsPerShop: number;
-  expiryDays: number;
+  expirationDays: number;
+}
+
+interface CommissionRow {
+  id: string;
+  commissionAmount: number;
+  currency: string;
+  status: string;
+  stripeInvoiceId: string;
+  createdAt: string;
+  referrerShop: { shopName: string };
+  refereeShop: { shopName: string };
 }
 
 export default function AdminReferralsPage() {
@@ -73,6 +86,8 @@ export default function AdminReferralsPage() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [expiringOld, setExpiringOld] = useState(false);
+  const [commissions, setCommissions] = useState<CommissionRow[]>([]);
+  const [commissionsLoading, setCommissionsLoading] = useState(false);
 
   const loadReferrals = useCallback(async () => {
     setLoading(true);
@@ -100,6 +115,18 @@ export default function AdminReferralsPage() {
     }
   }, []);
 
+  const loadCommissions = useCallback(async () => {
+    setCommissionsLoading(true);
+    try {
+      const res = await sellerPerformanceApi.getAdminReferralCommissions();
+      setCommissions(res?.data || []);
+    } catch {
+      console.warn("Failed to load referral commissions");
+    } finally {
+      setCommissionsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadReferrals();
   }, [loadReferrals]);
@@ -108,11 +135,15 @@ export default function AdminReferralsPage() {
     void loadSettings();
   }, [loadSettings]);
 
+  useEffect(() => {
+    void loadCommissions();
+  }, [loadCommissions]);
+
   const handleComplete = async (referralId: string) => {
     setActionLoading(referralId);
     try {
       await sellerPerformanceApi.completeReferral(referralId);
-      toast({ title: "Referral completed — rewards granted to both parties!" });
+      toast({ title: "Referral marked complete. Commission accrues on paid invoices." });
       loadReferrals();
     } catch (error: any) {
       toast({
@@ -131,10 +162,11 @@ export default function AdminReferralsPage() {
     try {
       await sellerPerformanceApi.updateReferralSettings({
         isActive: settings.isActive,
-        freeMonths: settings.freeMonths,
-        aiCreditsReward: settings.aiCreditsReward,
+        commissionPercent: settings.commissionPercent,
+        applyToInvoiceFirst: settings.applyToInvoiceFirst,
+        minCashoutAmount: settings.minCashoutAmount,
         maxReferralsPerShop: settings.maxReferralsPerShop,
-        expirationDays: settings.expiryDays,
+        expirationDays: settings.expirationDays,
       });
       toast({ title: "Referral settings saved!" });
       loadSettings();
@@ -188,8 +220,8 @@ export default function AdminReferralsPage() {
                 Referral Programme — Admin
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Manage referral invitations, complete rewards, and configure
-                settings
+                Manage invitations, commission ledger, and{" "}
+                {settings?.commissionPercent ?? 10}% invoice-share settings
               </p>
             </div>
           </div>
@@ -203,6 +235,9 @@ export default function AdminReferralsPage() {
                     {stats.signedUp}
                   </Badge>
                 )}
+              </TabsTrigger>
+              <TabsTrigger value="commissions" className="gap-1.5">
+                <Wallet className="h-4 w-4" /> Commissions
               </TabsTrigger>
               <TabsTrigger value="settings" className="gap-1.5">
                 <Settings className="h-4 w-4" /> Settings
@@ -306,11 +341,11 @@ export default function AdminReferralsPage() {
                             <TableCell>
                               <div>
                                 <p className="font-medium text-sm">
-                                  {ref.shop.shopName}
+                                  {ref.referrerShop?.shopName}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {ref.shop.user.firstName}{" "}
-                                  {ref.shop.user.lastName}
+                                  {ref.referrerShop?.user.firstName}{" "}
+                                  {ref.referrerShop?.user.lastName}
                                 </p>
                               </div>
                             </TableCell>
@@ -376,14 +411,66 @@ export default function AdminReferralsPage() {
                                   ) : (
                                     <CheckCircle className="h-4 w-4 mr-1" />
                                   )}
-                                  Complete & Reward
+                                  Mark complete
                                 </Button>
                               )}
                               {ref.status === "COMPLETED" && (
                                 <span className="text-xs text-green-600 font-medium">
-                                  Both rewarded ✓
+                                  Earning on paid invoices
                                 </span>
                               )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="commissions" className="space-y-4 mt-4">
+              <Card>
+                <CardContent className="p-0">
+                  {commissionsLoading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : commissions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-12">
+                      No commissions accrued yet.
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Referrer</TableHead>
+                          <TableHead>Referee</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Invoice</TableHead>
+                          <TableHead>Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {commissions.map((row) => (
+                          <TableRow key={row.id}>
+                            <TableCell>{row.referrerShop?.shopName}</TableCell>
+                            <TableCell>{row.refereeShop?.shopName}</TableCell>
+                            <TableCell>
+                              {new Intl.NumberFormat(undefined, {
+                                style: "currency",
+                                currency: row.currency || "USD",
+                              }).format(row.commissionAmount)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{row.status}</Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {row.stripeInvoiceId}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {new Date(row.createdAt).toLocaleDateString()}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -428,48 +515,64 @@ export default function AdminReferralsPage() {
                     </div>
 
                     <div className="grid sm:grid-cols-2 gap-6">
-                      {/* Free months */}
                       <div>
-                        <Label htmlFor="freeMonths">
-                          Extra Free Months
+                        <Label htmlFor="commissionPercent">
+                          Commission percent
                         </Label>
                         <p className="text-xs text-muted-foreground mb-1">
-                          Months added to current plan for both parties
+                          Share of each paid subscription invoice for the referrer
                         </p>
                         <Input
-                          id="freeMonths"
+                          id="commissionPercent"
                           type="number"
                           min={1}
-                          max={12}
-                          value={settings.freeMonths}
+                          max={50}
+                          value={settings.commissionPercent}
                           onChange={(e) =>
                             setSettings({
                               ...settings,
-                              freeMonths: Number(e.target.value) || 1,
+                              commissionPercent: Number(e.target.value) || 10,
                             })
                           }
                         />
                       </div>
 
-                      {/* AI credits */}
                       <div>
-                        <Label htmlFor="aiCreditsReward">
-                          AI Credits Reward
+                        <Label htmlFor="minCashoutAmount">
+                          Minimum cash-out
                         </Label>
                         <p className="text-xs text-muted-foreground mb-1">
-                          AI credits granted to both parties
+                          Leftover Connect cash-out threshold (invoice currency)
                         </p>
                         <Input
-                          id="aiCreditsReward"
+                          id="minCashoutAmount"
                           type="number"
                           min={0}
-                          max={500}
-                          step={10}
-                          value={settings.aiCreditsReward}
+                          value={settings.minCashoutAmount}
                           onChange={(e) =>
                             setSettings({
                               ...settings,
-                              aiCreditsReward: Number(e.target.value) || 50,
+                              minCashoutAmount: Number(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between sm:col-span-2">
+                        <div>
+                          <Label className="text-sm font-medium">
+                            Apply to referrer invoice first
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Credit their next Orivraa invoice (no extra Stripe fee) before Connect cash-out
+                          </p>
+                        </div>
+                        <Switch
+                          checked={settings.applyToInvoiceFirst}
+                          onCheckedChange={(checked) =>
+                            setSettings({
+                              ...settings,
+                              applyToInvoiceFirst: checked,
                             })
                           }
                         />
@@ -511,11 +614,11 @@ export default function AdminReferralsPage() {
                           type="number"
                           min={7}
                           max={365}
-                          value={settings.expiryDays}
+                          value={settings.expirationDays}
                           onChange={(e) =>
                             setSettings({
                               ...settings,
-                              expiryDays: Number(e.target.value) || 30,
+                              expirationDays: Number(e.target.value) || 30,
                             })
                           }
                         />

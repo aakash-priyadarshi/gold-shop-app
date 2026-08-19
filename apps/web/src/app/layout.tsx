@@ -214,6 +214,7 @@ export default function RootLayout({
                     "kn",
                     "si",
                     "he",
+                    "yi",
                   ],
                   availableLanguage: [
                     {
@@ -282,6 +283,11 @@ export default function RootLayout({
                       name: "Hebrew",
                       alternateName: "he",
                     },
+                    {
+                      "@type": "Language",
+                      name: "Yiddish",
+                      alternateName: "yi",
+                    },
                   ],
                   sameAs: [
                     BRAND.social?.instagram,
@@ -324,6 +330,7 @@ export default function RootLayout({
                     "kn",
                     "si",
                     "he",
+                    "yi",
                   ],
                   potentialAction: {
                     "@type": "SearchAction",

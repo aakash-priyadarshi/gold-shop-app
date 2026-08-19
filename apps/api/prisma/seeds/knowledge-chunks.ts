@@ -86,7 +86,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "ui-languages",
     content:
-      "The header and dashboard globe opens a language mega menu grouped into International (English), South Asia (Hindi, Nepali, Gujarati, Marathi, Tamil, Telugu, Kannada, Sinhala), Europe (French, German, Spanish), and Middle East (Arabic, Hebrew). Arabic and Hebrew switch the layout to right-to-left. UI strings are translated on demand via the translation API and cached; English is shown until a confirmed translation arrives.",
+      "The header and dashboard globe opens a language mega menu grouped into International (English), South Asia (Hindi, Nepali, Gujarati, Marathi, Tamil, Telugu, Kannada, Sinhala), Europe (French, German, Spanish), and Middle East (Arabic, Hebrew, Yiddish). Arabic, Hebrew, and Yiddish switch the layout to right-to-left. Product and customer names on the current inventory page are sorted with Alef-Bet (or the locale's dictionary order) instead of raw computer byte order. UI strings are translated on demand via the translation API and cached; English is shown until a confirmed translation arrives.",
   },
   {
     topic: "live_rates_autofill",
@@ -253,6 +253,16 @@ const CHUNKS: { topic: string; content: string }[] = [
     content:
       "Product metal weight is the net metal-only weight used for metal pricing. Gemstones are entered in carats; 1 carat is exactly 0.2 grams. Gross weight is read-only and equals metal weight plus the converted weight of every gemstone line. Gross weight appears in Products, catalogues, desktop product details, and mobile customer-facing product details. From a Products detail popup, Add to POS basket uses the active POS session or starts one if needed. POS can search existing customers by phone, save a new walk-in customer in the same CRM store used by quotes and invoices, and attach or change that customer during a session. Both camera QR/barcode scanning and USB/Bluetooth RFID or barcode scanners use the same POS lookup. Advanced and Easy POS modes can browse the product catalogue.",
   },
+  {
+    topic: "seller_referral_programme",
+    content:
+      "Orivraa seller referrals pay the referring shop a configured percent of the referred shop's gross paid subscription invoice (default 10%, admin-adjustable), on every paid invoice while that shop stays subscribed. The commission is applied to the referrer's own next Orivraa Pro invoice first (Stripe customer balance, no extra Stripe fee). Leftover wallet balance can be cashed out through Stripe Connect Express; Connect charges a payout fee on cash-outs. Referral cash is never paid by refunding the referred shop. Rewards are not AI credits and not a Pro+ upgrade. Share https://www.orivraa.com/auth/register?ref=CODE or send an email invite from Dashboard → Referrals. Review & Earn (1 month of Pro after admin verifies a platform review) is a separate programme.",
+  },
+  {
+    topic: "review_and_earn",
+    content:
+      "Review & Earn: a shopkeeper leaves a review on SaaSHub, G2, or Crunchbase, then submits both the public review URL and a screenshot from Dashboard → Reviews. After an admin verifies the review, Orivraa grants 1 month of Pro (not Pro+). One review per platform per shop. This is separate from the seller referral programme.",
+  },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -319,6 +329,9 @@ async function main() {
     "supply_chain_workspace_views",
     "karigar_gold_loss_ledger",
     "product_gross_weight_and_pos_customer",
+    "seller_referral_programme",
+    "review_and_earn",
+    "ui-languages",
   ]);
 
   for (const chunk of CHUNKS) {

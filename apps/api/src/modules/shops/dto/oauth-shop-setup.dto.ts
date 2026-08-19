@@ -63,4 +63,11 @@ export class OAuthShopSetupDto {
   @IsOptional()
   @IsString()
   contactEmail?: string;
+
+  @ApiPropertyOptional({
+    description: "Referral code from ?ref= when registering via Google OAuth",
+  })
+  @IsOptional()
+  @IsString()
+  referralCode?: string;
 }

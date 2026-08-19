@@ -291,6 +291,13 @@ function RegisterForm() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const ref = searchParams.get("ref")?.trim();
+    if (ref) {
+      sessionStorage.setItem("orivraa_referral_code", ref);
+    }
+  }, [searchParams]);
+
   // Check if user has visited before (skip intro for returning users)
   useEffect(() => {
     const visited = sessionStorage.getItem("orivraa_visited");
@@ -473,6 +480,10 @@ function RegisterForm() {
         phone: data.phone,
         role: "SHOPKEEPER" as UserRole,
         turnstileToken,
+        referralCode:
+          searchParams.get("ref")?.trim() ||
+          sessionStorage.getItem("orivraa_referral_code") ||
+          undefined,
         shop: {
           shopName: data.shopName,
           country: data.country,
