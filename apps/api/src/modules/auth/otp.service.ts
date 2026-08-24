@@ -193,9 +193,13 @@ export class OtpService {
       // Existing accounts are rate limited by sendOtp below. Keep the same
       // protection for unknown addresses without charging existing password
       // reset requests twice.
-      await this.checkRateLimit(`otp:email:${normalizedEmail}`, this.rateLimitConfig.maxPerEmail);
-      if (ipAddress) {
-        await this.checkRateLimit(`otp:ip:${ipAddress}`, this.rateLimitConfig.maxPerIp);
+      try {
+        await this.checkRateLimit(`otp:email:${normalizedEmail}`, this.rateLimitConfig.maxPerEmail);
+        if (ipAddress) {
+          await this.checkRateLimit(`otp:ip:${ipAddress}`, this.rateLimitConfig.maxPerIp);
+        }
+      } catch {
+        // Password-reset requests must not reveal whether an account exists.
       }
       this.logger.log(`Password reset requested for non-existent email: ${normalizedEmail}`);
       return { success: true, message: 'If an account exists with this email, a reset code has been sent.' };

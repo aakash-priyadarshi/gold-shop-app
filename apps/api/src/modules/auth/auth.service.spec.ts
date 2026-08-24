@@ -1,3 +1,4 @@
+import { HttpException, HttpStatus } from '@nestjs/common';
 import { OtpType, UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
@@ -134,5 +135,54 @@ describe('password-reset verification', () => {
         }),
       }),
     );
+  });
+
+  it('returns the generic response when a known email is over the rate limit', async () => {
+    const prisma = {
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'user-1',
+          firstName: 'Seller',
+        }),
+      },
+    };
+    const service = new OtpService(
+      prisma as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'sendOtp').mockRejectedValue(
+      new HttpException('Too many OTP requests', HttpStatus.TOO_MANY_REQUESTS),
+    );
+
+    await expect(
+      service.sendPasswordResetOtp('seller@example.com', '203.0.113.10'),
+    ).resolves.toEqual({
+      success: true,
+      message: 'If an account exists with this email, a reset code has been sent.',
+    });
+  });
+
+  it('returns the same generic response when an unknown email is over the rate limit', async () => {
+    const prisma = {
+      user: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
+    const service = new OtpService(
+      prisma as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service as any, 'checkRateLimit').mockRejectedValue(
+      new HttpException('Too many OTP requests', HttpStatus.TOO_MANY_REQUESTS),
+    );
+
+    await expect(
+      service.sendPasswordResetOtp('unknown@example.com', '203.0.113.10'),
+    ).resolves.toEqual({
+      success: true,
+      message: 'If an account exists with this email, a reset code has been sent.',
+    });
   });
 });
