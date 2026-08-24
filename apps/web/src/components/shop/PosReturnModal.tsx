@@ -22,9 +22,10 @@ import {
 import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { invoicesApi, posApi } from "@/lib/api";
+import { invoicesApi, posApi, shopsApi } from "@/lib/api";
+import { ManagerPinDialog } from "@/components/shop/ManagerPinDialog";
 import { useT } from "@/providers/translation-provider";
-import { Check, CheckCircle2, DollarSign, Loader2, RotateCcw, Search } from "lucide-react";
+import { Check, CheckCircle2, DollarSign, Loader2, RotateCcw, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 interface PosReturnModalProps {
@@ -47,6 +48,7 @@ export function PosReturnModal({
   const [selectedLines, setSelectedLines] = useState<
     Array<{
       inventoryItemId: string;
+      variantId?: string;
       label: string;
       qty: number;
       maxQty: number;
@@ -58,21 +60,25 @@ export function PosReturnModal({
   const [refundMethod, setRefundMethod] = useState("CASH");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [returnIdempotencyKey, setReturnIdempotencyKey] = useState("");
+  const [managerPinOpen, setManagerPinOpen] = useState(false);
 
   const handleLookup = async () => {
     if (!invoiceLookup.trim()) return;
     setLoadingInvoice(true);
     setInvoice(null);
     setSelectedLines([]);
+    setReturnIdempotencyKey("");
     try {
       // Find invoice by number or ID
       const res = await invoicesApi.getAll({ search: invoiceLookup.trim(), limit: 5 });
       const items = res.data?.items || res.data || [];
+      const lookup = invoiceLookup.trim().toLowerCase();
       const found = items.find(
         (i: any) =>
-          i.invoiceNumber.toLowerCase() === invoiceLookup.trim().toLowerCase() ||
+          (typeof i.invoiceNumber === "string" && i.invoiceNumber.toLowerCase() === lookup) ||
           i.id === invoiceLookup.trim(),
-      ) || items[0];
+      );
 
       if (!found) {
         toast({
@@ -92,17 +98,42 @@ export function PosReturnModal({
       const rawLines = Array.isArray(invoiceData.lineItems)
         ? invoiceData.lineItems
         : [];
+      const priorReturns = Array.isArray(invoiceData.returns) ? invoiceData.returns : [];
+      const previouslyReturnedQty = (inventoryItemId: string, variantId?: string) =>
+        priorReturns.reduce((total: number, posReturn: any) =>
+          total + (Array.isArray(posReturn.lines) ? posReturn.lines : []).reduce(
+            (lineTotal: number, returnedLine: any) =>
+              lineTotal + (
+                returnedLine.inventoryItemId === inventoryItemId &&
+                ((returnedLine.variantId || variantId)
+                  ? returnedLine.variantId === variantId
+                  : true)
+                  ? Number(returnedLine.qty) || 0
+                  : 0
+              ),
+            0,
+          ),
+        0,
+      );
       const candidates = rawLines
         .filter((l: any) => l.inventoryItemId)
-        .map((l: any) => ({
-          inventoryItemId: l.inventoryItemId,
-          label: l.label || "Jewellery piece",
-          qty: 1,
-          maxQty: l.quantity || 1,
-          unitPrice: l.unitPrice || l.amount || 0,
-          reason: "Customer return / exchange",
-          disposition: "RESTOCK" as const,
-        }));
+        .map((l: any) => {
+          const maxQty = Math.max(
+            0,
+            (Number(l.quantity) || 1) - previouslyReturnedQty(l.inventoryItemId, l.variantId),
+          );
+          return {
+            inventoryItemId: l.inventoryItemId,
+            variantId: l.variantId || undefined,
+            label: l.label || "Jewellery piece",
+            qty: 1,
+            maxQty,
+            unitPrice: l.unitPrice || l.amount || 0,
+            reason: "Customer return / exchange",
+            disposition: "RESTOCK" as const,
+          };
+        })
+        .filter((line: { maxQty: number }) => line.maxQty > 0);
       setSelectedLines(candidates);
     } catch (err: any) {
       toast({
@@ -120,7 +151,7 @@ export function PosReturnModal({
     0,
   );
 
-  const handleProcessReturn = async () => {
+  const submitReturn = async (managerPin?: string) => {
     if (selectedLines.length === 0) {
       toast({
         variant: "destructive",
@@ -132,15 +163,20 @@ export function PosReturnModal({
 
     setSubmitting(true);
     try {
+      const idempotencyKey = returnIdempotencyKey || crypto.randomUUID();
+      setReturnIdempotencyKey(idempotencyKey);
       const res = await posApi.processReturn({
         invoiceNumber: invoice.invoiceNumber,
         lines: selectedLines.map((l) => ({
           inventoryItemId: l.inventoryItemId,
+          variantId: l.variantId,
           qty: l.qty,
           reason: l.reason,
           disposition: l.disposition,
         })),
         refundMethod,
+        idempotencyKey,
+        managerPin,
         notes: notes.trim() || undefined,
       });
 
@@ -158,6 +194,32 @@ export function PosReturnModal({
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleProcessReturn = async () => {
+    if (selectedLines.length === 0) {
+      toast({
+        variant: "destructive",
+        title: t("No items selected"),
+        description: t("Please select at least one item to return."),
+      });
+      return;
+    }
+    try {
+      const statusResponse = await shopsApi.getManagerPinStatus();
+      const status = statusResponse.data?.data ?? statusResponse.data;
+      if (status?.hasPin) {
+        setManagerPinOpen(true);
+        return;
+      }
+      await submitReturn();
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: t("Return authorization failed"),
+        description: err?.response?.data?.message || t("Unable to authorize the return"),
+      });
     }
   };
 
@@ -210,10 +272,44 @@ export function PosReturnModal({
                   <div key={idx} className="rounded-xl border p-3 space-y-2 bg-card text-sm">
                     <div className="flex justify-between items-center">
                       <span className="font-medium">{line.label}</span>
-                      <span className="font-bold">{currencySymbol} {line.unitPrice * line.qty}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="font-bold">{currencySymbol} {line.unitPrice * line.qty}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive"
+                          onClick={() => setSelectedLines((lines) => lines.filter((_, lineIndex) => lineIndex !== idx))}
+                          title={t("Remove return line")}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground"><T>Quantity</T></Label>
+                        <Input
+                          className="h-8 text-xs"
+                          type="number"
+                          min={1}
+                          max={line.maxQty}
+                          value={line.qty}
+                          onChange={(event) => {
+                            const requested = Number.parseInt(event.target.value, 10);
+                            const qty = Number.isFinite(requested)
+                              ? Math.min(line.maxQty, Math.max(1, requested))
+                              : 1;
+                            setSelectedLines((lines) =>
+                              lines.map((current, lineIndex) =>
+                                lineIndex === idx ? { ...current, qty } : current,
+                              ),
+                            );
+                          }}
+                        />
+                        <p className="text-[10px] text-muted-foreground"><T>Up to</T> {line.maxQty}</p>
+                      </div>
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground"><T>Disposition</T></Label>
                         <Select
@@ -296,6 +392,16 @@ export function PosReturnModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <ManagerPinDialog
+        open={managerPinOpen}
+        onOpenChange={setManagerPinOpen}
+        title={t("Authorize return")}
+        description="A manager PIN is required before this return can be processed."
+        onVerified={async (managerPin) => {
+          setManagerPinOpen(false);
+          await submitReturn(managerPin);
+        }}
+      />
     </Dialog>
   );
 }

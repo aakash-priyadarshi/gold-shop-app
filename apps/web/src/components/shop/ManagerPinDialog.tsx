@@ -23,7 +23,7 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   title?: string;
   description?: string;
-  onVerified: () => void | Promise<void>;
+  onVerified: (pin: string) => void | Promise<void>;
 };
 
 /**
@@ -53,8 +53,8 @@ export function ManagerPinDialog({
     setLoading(true);
     try {
       await shopsApi.verifyManagerPin(pin);
+      await onVerified(pin);
       setPin("");
-      await onVerified();
     } catch (e: any) {
       toast({
         title: t("PIN rejected"),

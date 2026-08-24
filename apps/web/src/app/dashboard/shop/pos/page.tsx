@@ -64,6 +64,7 @@ import {
 } from "@/components/shop/SellerProductDetailDialog";
 import { printAuthoritativeBill, printBill, type BillSettings } from "@/lib/billPrint";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
+import { roundMoney2 } from "@/lib/invoice/calculateLineTotals";
 import { kickCashDrawer, loadHardwareConfig } from "@/lib/posHardware";
 import {
   getCounterPaymentMethods,
@@ -217,6 +218,7 @@ function PosPageInner() {
   const [taxRate, setTaxRate] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [pinOpen, setPinOpen] = useState(false);
+  const [drawerPinOpen, setDrawerPinOpen] = useState(false);
   const [discountThreshold, setDiscountThreshold] = useState(0);
   const [hasManagerPin, setHasManagerPin] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -271,13 +273,13 @@ function PosPageInner() {
       const res = await posApi.getRegisters();
       const list = res.data || [];
       setRegisters(list);
-      if (list.length > 0 && !selectedRegisterId) {
-        setSelectedRegisterId(list[0].id);
+      if (list.length > 0) {
+        setSelectedRegisterId((current) => current || list[0].id);
       }
     } catch {
       // ignore
     }
-  }, [selectedRegisterId]);
+  }, []);
 
   const loadCurrentShift = useCallback(async (regId?: string) => {
     try {
@@ -699,8 +701,10 @@ function PosPageInner() {
       const inv = res.data?.invoice;
       const payments = Array.isArray(inv?.payments) ? inv.payments : [];
       const pendingPayments = payments.filter((p: any) => p.status === "PENDING");
-      const isCash = (splitMode ? "SPLIT" : paymentMethod) === "CASH";
-      if (isCash && loadHardwareConfig().printer.kickCashDrawer) {
+      const hasReceivedCash = payments.some(
+        (payment: any) => payment.method === "CASH" && payment.status === "RECEIVED",
+      );
+      if (hasReceivedCash && loadHardwareConfig().printer.kickCashDrawer) {
         kickCashDrawer().catch(() => {});
       }
 
@@ -730,8 +734,12 @@ function PosPageInner() {
           method: p.method,
         })),
       });
+      const isPaymentComplete =
+        inv?.paymentStatus === "PAID" && Number(inv?.balanceDue || 0) <= 0.01;
       toast({
-        title: t("Checkout complete!"),
+        title: isPaymentComplete
+          ? t("Checkout complete")
+          : t("Sale created — payment pending"),
         description: t("Invoice") + ` ${inv?.invoiceNumber} ` + t("created"),
       });
     } catch (err: any) {
@@ -745,15 +753,52 @@ function PosPageInner() {
     }
   };
 
-  const handleKickDrawer = async () => {
+  const handleKickDrawer = async (managerPin?: string) => {
     try {
+      await posApi.authorizeDrawerOpen({
+        reason: "Cashier manual drawer open",
+        registerId: selectedRegisterId || undefined,
+        managerPin,
+      });
       await kickCashDrawer();
-      await posApi.auditDrawerOpen("Cashier manual drawer open", selectedRegisterId);
+      await posApi.auditDrawerOpen({
+        reason: "Cashier manual drawer open",
+        registerId: selectedRegisterId || undefined,
+        success: true,
+      });
       toast({ title: t("Drawer opened") });
     } catch (err: any) {
+      // Authorization happens before the hardware action. A hardware failure
+      // is still recorded, but never alters a completed sale.
+      if (err?.response == null) {
+        void posApi.auditDrawerOpen({
+          reason: "Cashier manual drawer open",
+          registerId: selectedRegisterId || undefined,
+          success: false,
+          error: err?.message || "Hardware kick failed",
+        });
+      }
       toast({
         title: t("Drawer kick failed"),
         description: err?.message || t("Check receipt printer connection"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const requestDrawerOpen = async () => {
+    try {
+      const res = await shopsApi.getManagerPinStatus();
+      const status = res.data?.data ?? res.data;
+      if (status?.hasPin) {
+        setDrawerPinOpen(true);
+        return;
+      }
+      await handleKickDrawer();
+    } catch (err: any) {
+      toast({
+        title: t("Drawer authorization failed"),
+        description: err?.response?.data?.message || t("Unable to authorize the cash drawer"),
         variant: "destructive",
       });
     }
@@ -805,9 +850,9 @@ function PosPageInner() {
 
   const localSubtotal =
     session?.items?.reduce((sum, i) => sum + i.lineTotal, 0) || 0;
-  const localMaking = makingChargeRate > 0 ? Math.round(localSubtotal * (makingChargeRate / 100)) : 0;
-  const localTax = (localSubtotal + localMaking) * (taxRate || 0);
-  const localTotal = localSubtotal + localMaking + localTax - (discountAmount || 0);
+  const localMaking = makingChargeRate > 0 ? roundMoney2(localSubtotal * (makingChargeRate / 100)) : 0;
+  const localTax = roundMoney2((localSubtotal + localMaking) * (taxRate || 0));
+  const localTotal = roundMoney2(localSubtotal + localMaking + localTax - (discountAmount || 0));
 
   const basketSubtotal = serverPreview?.subtotal ?? localSubtotal;
   const basketMaking = serverPreview?.makingChargeAmount ?? localMaking;
@@ -922,7 +967,7 @@ function PosPageInner() {
                 size="sm"
                 variant="outline"
                 className="h-8 text-xs"
-                onClick={handleKickDrawer}
+                onClick={requestDrawerOpen}
                 title={t("Open Cash Drawer")}
               >
                 <Coins className="h-3.5 w-3.5 mr-1" /> <T>Drawer</T>
@@ -1987,6 +2032,11 @@ function PosPageInner() {
                               setConfirmingPaymentId(p.id);
                               try {
                                 await invoicesApi.confirmPayment(checkoutSuccess.invoiceId, p.id, {});
+                                const refreshed = await invoicesApi.getById(checkoutSuccess.invoiceId);
+                                const canonical = refreshed.data;
+                                const canonicalPayments = Array.isArray(canonical?.payments)
+                                  ? canonical.payments
+                                  : [];
                                 toast({
                                   title: t("Payment Confirmed!"),
                                   description: t("Payment has been verified and invoice balance updated."),
@@ -1995,11 +2045,18 @@ function PosPageInner() {
                                   prev
                                     ? {
                                         ...prev,
-                                        status: "PAID",
-                                        paymentStatus: "PAID",
-                                        paidAmount: prev.total,
-                                        balanceDue: 0,
-                                        pendingPayments: prev.pendingPayments?.filter((pp) => pp.id !== p.id),
+                                        status: canonical.status,
+                                        paymentStatus: canonical.paymentStatus,
+                                        paidAmount: Number(canonical.paidAmount),
+                                        balanceDue: Number(canonical.balanceDue),
+                                        paymentMethod: canonical.paymentMethod || prev.paymentMethod,
+                                        pendingPayments: canonicalPayments
+                                          .filter((payment: any) => payment.status === "PENDING")
+                                          .map((payment: any) => ({
+                                            id: payment.id,
+                                            amount: Number(payment.amount),
+                                            method: payment.method,
+                                          })),
                                       }
                                     : null,
                                 );
@@ -2032,6 +2089,10 @@ function PosPageInner() {
               <div className="flex gap-2 justify-center">
                 <Button
                   variant="outline"
+                  disabled={
+                    checkoutSuccess?.paymentStatus !== "PAID" ||
+                    Number(checkoutSuccess?.balanceDue || 0) > 0.01
+                  }
                   onClick={async () => {
                     if (!checkoutSuccess) return;
                     const ok = await printAuthoritativeBill({
@@ -2120,6 +2181,17 @@ function PosPageInner() {
           onVerified={async () => {
             setPinOpen(false);
             await runCheckout();
+          }}
+        />
+
+        <ManagerPinDialog
+          open={drawerPinOpen}
+          onOpenChange={setDrawerPinOpen}
+          title={t("Authorize cash drawer")}
+          description="A manager PIN is required before the cash drawer can be opened."
+          onVerified={async (managerPin) => {
+            setDrawerPinOpen(false);
+            await handleKickDrawer(managerPin);
           }}
         />
 

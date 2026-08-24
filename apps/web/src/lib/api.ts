@@ -1780,8 +1780,10 @@ export const posApi = {
   closeShift: (id: string, data: { closingCash: number; notes?: string }) =>
     api.post(`/pos/shifts/${id}/close`, data),
   getZReport: (id: string) => api.get(`/pos/shifts/${id}/z-report`),
-  auditDrawerOpen: (reason?: string, registerId?: string) =>
-    api.post("/pos/drawer/open", { reason, registerId }),
+  authorizeDrawerOpen: (data: { reason?: string; registerId?: string; managerPin?: string }) =>
+    api.post("/pos/drawer/authorize", data),
+  auditDrawerOpen: (data: { reason?: string; registerId?: string; success?: boolean; error?: string }) =>
+    api.post("/pos/drawer/open", data),
 
   // Pricing Preview
   previewPricing: (data: {
@@ -1805,6 +1807,7 @@ export const posApi = {
     invoiceNumber: string;
     lines: Array<{
       inventoryItemId: string;
+      variantId?: string;
       qty: number;
       reason: string;
       condition?: string;
@@ -1812,6 +1815,7 @@ export const posApi = {
       customRefundAmount?: number;
     }>;
     refundMethod?: string;
+    idempotencyKey: string;
     notes?: string;
     managerPin?: string;
   }) => api.post("/pos/returns", data),
@@ -1833,6 +1837,7 @@ export const posApi = {
     }>;
     paymentMethod?: string;
     paymentSplits?: Array<{ method: string; amount: number; reference?: string }>;
+    idempotencyKey: string;
     notes?: string;
     managerPin?: string;
   }) => api.post("/pos/exchanges", data),

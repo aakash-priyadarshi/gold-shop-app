@@ -134,4 +134,25 @@ describe("CustomerCrmService", () => {
       expect(result.id).toBe("cust-2");
     });
   });
+
+  it("only searches walk-in customers owned by the requesting shop", async () => {
+    prisma.invoice = { groupBy: jest.fn().mockResolvedValue([]) };
+    prisma.user = {
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    };
+    prisma.walkInCustomer.findMany = jest.fn().mockResolvedValue([]);
+    prisma.walkInCustomer.count = jest.fn().mockResolvedValue(0);
+
+    await service.searchCustomers("shop-1", "Aakash");
+
+    expect(prisma.walkInCustomer.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ createdByShopId: "shop-1" }),
+      }),
+    );
+    expect(prisma.walkInCustomer.findMany.mock.calls[0][0].where).not.toHaveProperty(
+      "invoices",
+    );
+  });
 });

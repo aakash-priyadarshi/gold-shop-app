@@ -20,6 +20,15 @@ import { useT } from "@/providers/translation-provider";
 import { CheckCircle2, DollarSign, FileText, Loader2, Printer } from "lucide-react";
 import { useState } from "react";
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 interface PosShiftModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -113,11 +122,19 @@ export function PosShiftModal({
     if (!printWindow) return;
     const summary = zReportData?.summary || currentShift?.summary || currentShift?.liveSummary;
     const shift = zReportData || currentShift;
+    const displayDate = (value: unknown, fallback = "") => {
+      const date = value ? new Date(String(value)) : null;
+      return date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : fallback;
+    };
+    const amount = (value: unknown) => escapeHtml(Number(value || 0).toFixed(2));
+    const safeCurrency = escapeHtml(currencySymbol);
+    const safeRegisterName = escapeHtml(registerName);
+    const variance = Number(shift?.variance || 0);
     const html = `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Z-Report - ${registerName}</title>
+  <title>Z-Report - ${safeRegisterName}</title>
   <style>
     body { font-family: monospace; font-size: 12px; padding: 16px; max-width: 320px; margin: 0 auto; }
     h2 { text-align: center; margin: 4px 0; font-size: 16px; }
@@ -130,23 +147,23 @@ export function PosShiftModal({
 </head>
 <body>
   <h2>Z-REPORT (DAILY SHIFT CLOSE)</h2>
-  <p style="text-align:center">${registerName}</p>
+  <p style="text-align:center">${safeRegisterName}</p>
   <div class="divider"></div>
-  <p><strong>Shift ID:</strong> ${shift?.id?.slice(0, 8)}...</p>
-  <p><strong>Opened:</strong> ${new Date(shift?.openedAt).toLocaleString()}</p>
-  <p><strong>Closed:</strong> ${shift?.closedAt ? new Date(shift.closedAt).toLocaleString() : "ACTIVE"}</p>
+  <p><strong>Shift ID:</strong> ${escapeHtml(shift?.id ? `${String(shift.id).slice(0, 8)}...` : "")}</p>
+  <p><strong>Opened:</strong> ${escapeHtml(displayDate(shift?.openedAt))}</p>
+  <p><strong>Closed:</strong> ${escapeHtml(displayDate(shift?.closedAt, "ACTIVE"))}</p>
   <div class="divider"></div>
-  <div class="row"><span>Opening Cash:</span><span>${currencySymbol} ${summary?.openingCash || 0}</span></div>
-  <div class="row"><span>Cash Sales:</span><span>${currencySymbol} ${summary?.cashSales || 0}</span></div>
-  <div class="row"><span>Card Sales:</span><span>${currencySymbol} ${summary?.cardSales || 0}</span></div>
-  <div class="row"><span>UPI / Wallet Sales:</span><span>${currencySymbol} ${summary?.upiWalletSales || 0}</span></div>
-  <div class="row"><span>Bank Transfer:</span><span>${currencySymbol} ${summary?.bankTransferSales || 0}</span></div>
-  <div class="row"><span>Cash Refunds:</span><span>-${currencySymbol} ${summary?.cashRefunds || 0}</span></div>
+  <div class="row"><span>Opening Cash:</span><span>${safeCurrency} ${amount(summary?.openingCash)}</span></div>
+  <div class="row"><span>Cash Sales:</span><span>${safeCurrency} ${amount(summary?.cashSales)}</span></div>
+  <div class="row"><span>Card Sales:</span><span>${safeCurrency} ${amount(summary?.cardSales)}</span></div>
+  <div class="row"><span>UPI / Wallet Sales:</span><span>${safeCurrency} ${amount(summary?.upiWalletSales)}</span></div>
+  <div class="row"><span>Bank Transfer:</span><span>${safeCurrency} ${amount(summary?.bankTransferSales)}</span></div>
+  <div class="row"><span>Cash Refunds:</span><span>-${safeCurrency} ${amount(summary?.cashRefunds)}</span></div>
   <div class="divider"></div>
-  <div class="row bold"><span>Total Revenue:</span><span>${currencySymbol} ${summary?.totalSales || 0}</span></div>
-  <div class="row bold"><span>Expected Cash in Drawer:</span><span>${currencySymbol} ${summary?.expectedCash || 0}</span></div>
-  ${shift?.closingCash != null ? `<div class="row bold"><span>Counted Closing Cash:</span><span>${currencySymbol} ${shift.closingCash}</span></div>` : ""}
-  ${shift?.variance != null ? `<div class="row bold" style="color:${Number(shift.variance) < 0 ? 'red' : 'green'}"><span>Variance (Short/Over):</span><span>${currencySymbol} ${shift.variance}</span></div>` : ""}
+  <div class="row bold"><span>Total Revenue:</span><span>${safeCurrency} ${amount(summary?.totalSales)}</span></div>
+  <div class="row bold"><span>Expected Cash in Drawer:</span><span>${safeCurrency} ${amount(summary?.expectedCash)}</span></div>
+  ${shift?.closingCash != null ? `<div class="row bold"><span>Counted Closing Cash:</span><span>${safeCurrency} ${amount(shift.closingCash)}</span></div>` : ""}
+  ${shift?.variance != null ? `<div class="row bold" style="color:${variance < 0 ? "red" : "green"}"><span>Variance (Short/Over):</span><span>${safeCurrency} ${amount(shift.variance)}</span></div>` : ""}
   <div class="divider"></div>
   <p style="text-align:center;font-size:10px">End of Z-Report · Orivraa POS</p>
   <script>setTimeout(function(){ window.print(); }, 250);</script>
@@ -156,7 +173,9 @@ export function PosShiftModal({
     printWindow.document.close();
   };
 
-  const summary = currentShift?.liveSummary || currentShift?.summary;
+  const reportShift = zReportData || currentShift;
+  const showZReport = mode === "Z_REPORT" || Boolean(zReportData);
+  const summary = reportShift?.liveSummary || reportShift?.summary;
   const countedNum = parseFloat(closingCash) || 0;
   const expectedNum = summary?.expectedCash ?? 0;
   const liveVariance = countedNum - expectedNum;
@@ -217,7 +236,7 @@ export function PosShiftModal({
           </>
         )}
 
-        {mode === "CLOSE" && (
+        {mode === "CLOSE" && !showZReport && (
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -300,7 +319,7 @@ export function PosShiftModal({
           </>
         )}
 
-        {mode === "Z_REPORT" && (
+        {showZReport && (
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -333,16 +352,16 @@ export function PosShiftModal({
                 <span><T>EXPECTED DRAWER CASH</T>:</span>
                 <span>{currencySymbol} {summary?.expectedCash ?? 0}</span>
               </div>
-              {currentShift?.closingCash != null && (
+              {reportShift?.closingCash != null && (
                 <div className="flex justify-between font-bold">
                   <span><T>COUNTED CASH</T>:</span>
-                  <span>{currencySymbol} {currentShift.closingCash}</span>
+                    <span>{currencySymbol} {reportShift.closingCash}</span>
                 </div>
               )}
-              {currentShift?.variance != null && (
+              {reportShift?.variance != null && (
                 <div className="flex justify-between font-bold">
                   <span><T>VARIANCE</T>:</span>
-                  <span>{currencySymbol} {currentShift.variance}</span>
+                    <span>{currencySymbol} {reportShift.variance}</span>
                 </div>
               )}
             </div>

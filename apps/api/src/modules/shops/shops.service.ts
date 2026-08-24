@@ -35,6 +35,17 @@ import { UpdateShopDto } from "./dto/update-shop.dto";
 import { UpdateVatRegistrationDto } from "./dto/update-vat-registration.dto";
 import { ShopPriceRebaseService } from "./shop-price-rebase.service";
 
+const COUNTRY_TO_PHONE_CODE: Record<string, string> = {
+  NP: "+977",
+  IN: "+91",
+  AE: "+971",
+  US: "+1",
+  GB: "+44",
+  UK: "+44",
+  EU: "+49",
+  LK: "+94",
+};
+
 @Injectable()
 export class ShopsService {
   private readonly logger = new Logger(ShopsService.name);
@@ -1058,17 +1069,17 @@ export class ShopsService {
     ]);
 
     // Create demo customers
-    const demoPhone1 = `+9198${Math.floor(10000000 + Math.random() * 90000000)}`;
-    const demoPhone2 = `+9198${Math.floor(10000000 + Math.random() * 90000000)}`;
     try {
       const country = shop.country || "NP";
-      const phoneCountryCode = country === "IN" ? "+91" : country === "NP" ? "+977" : "+1";
+      const phoneCountryCode = COUNTRY_TO_PHONE_CODE[country] || "+1";
+      const demoPhone1 = `${phoneCountryCode}${Math.floor(10000000 + Math.random() * 90000000)}`;
+      const demoPhone2 = `${phoneCountryCode}${Math.floor(10000000 + Math.random() * 90000000)}`;
       await this.prisma.walkInCustomer.createMany({
         data: [
           {
             phone: demoPhone1,
             phoneCountryCode,
-            country: country === "IN" ? "India" : country === "NP" ? "Nepal" : country,
+            country,
             name: "John Doe (Demo)",
             email: "john.demo@example.com",
             address: "123 Demo Street",
@@ -1078,7 +1089,7 @@ export class ShopsService {
           {
             phone: demoPhone2,
             phoneCountryCode,
-            country: country === "IN" ? "India" : country === "NP" ? "Nepal" : country,
+            country,
             name: "Jane Smith (Demo)",
             address: "456 Main Ave",
             city: "Delhi",

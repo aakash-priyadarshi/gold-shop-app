@@ -193,24 +193,17 @@ export class CustomerCrmService {
     ]);
 
     // Also search walk-in customers for this shop
-    const walkInWhere: any = {
-      AND: [
-        {
-          OR: [
-            { createdByShopId: shopId },
-            { invoices: { some: { shopId } } },
-          ],
-        },
-      ],
-    };
+    // Walk-ins are owned by their creating shop. Keep search aligned with
+    // profile/orders/stats, all of which enforce the same tenant boundary.
+    const walkInWhere: any = { createdByShopId: shopId };
     if (query) {
-      walkInWhere.AND.push({
+      walkInWhere.AND = [{
         OR: [
           { name: { contains: query, mode: "insensitive" } },
           { phone: { contains: query, mode: "insensitive" } },
           { email: { contains: query, mode: "insensitive" } },
         ],
-      });
+      }];
     }
 
     const [walkInCustomers, walkInTotal] = await Promise.all([

@@ -891,8 +891,8 @@ model WalkInCustomer {
   phoneCountryCode String
   name             String
   email            String?
-  address          String   @default("")
-  city             String   @default("")
+  address          String
+  city             String
   country          String
   createdByShopId  String // Shop that owns this walk-in customer record
   notes            String? // Any notes about the customer
@@ -1887,6 +1887,8 @@ enum JournalEntryStatus {
 enum JournalReferenceType {
   INVOICE_ISSUED
   INVOICE_PAYMENT
+  INVOICE_REFUND
+  INVOICE_CREDIT_APPLIED
   ORDER_PAYMENT
   ORDER_ADVANCE_APPLIED
   ORDER_REFUND
@@ -2691,16 +2693,20 @@ model InvoicePayment {
   receivedAt            DateTime             @default(now())
   voidedAt              DateTime?
   voidReason            String?
-  reversalOfId          String?              @unique
+  reversalOfId          String?
+  posReturnId           String?
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 
-  invoice    Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  reversalOf InvoicePayment? @relation("InvoicePaymentReversal", fields: [reversalOfId], references: [id])
-  reversedBy InvoicePayment? @relation("InvoicePaymentReversal")
+  invoice    Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  posReturn  PosReturn?       @relation("PosReturnRefundPayments", fields: [posReturnId], references: [id], onDelete: Restrict)
+  reversalOf InvoicePayment?  @relation("InvoicePaymentReversal", fields: [reversalOfId], references: [id])
+  reversedBy InvoicePayment[] @relation("InvoicePaymentReversal")
 
   @@index([invoiceId, receivedAt])
   @@index([status])
+  @@index([posReturnId])
+  @@index([reversalOfId])
 }
 
 model InvoiceSequence {
@@ -3220,17 +3226,19 @@ model PosReturn {
   taxAmount             Decimal  @default(0) @db.Decimal(18, 2)
   refundAmount          Decimal  @db.Decimal(18, 2)
   refundMethod          String   @default("CASH")
+  refundStatus          String   @default("SETTLED") // SETTLED, PENDING, CREDIT_ISSUED
   disposition           String   @default("RESTOCK") // RESTOCK, QUARANTINE, REPAIR, SCRAP
   approvedByUserId      String?
   notes                 String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
-  shop        Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  invoice     Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  register    PosRegister? @relation(fields: [registerId], references: [id], onDelete: SetNull)
-  shift       PosShift?    @relation(fields: [shiftId], references: [id], onDelete: SetNull)
-  cashierUser User?        @relation("PosReturnCashier", fields: [cashierUserId], references: [id], onDelete: SetNull)
+  shop           Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  invoice        Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  register       PosRegister?     @relation(fields: [registerId], references: [id], onDelete: SetNull)
+  shift          PosShift?        @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  cashierUser    User?            @relation("PosReturnCashier", fields: [cashierUserId], references: [id], onDelete: SetNull)
+  refundPayments InvoicePayment[] @relation("PosReturnRefundPayments")
 
   @@index([shopId, createdAt])
   @@index([invoiceId])

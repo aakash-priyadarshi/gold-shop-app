@@ -141,3 +141,153 @@ ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_posSessionId_fkey" FOREIGN KEY ("p
 ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_posRegisterId_fkey" FOREIGN KEY ("posRegisterId") REFERENCES "PosRegister"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_posShiftId_fkey" FOREIGN KEY ("posShiftId") REFERENCES "PosShift"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_posCashierUserId_fkey" FOREIGN KEY ("posCashierUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- The POS tables are new in this migration, so their regular indexes are
+-- created while empty. CREATE INDEX CONCURRENTLY cannot run inside Prisma's
+-- migration transaction and would make this migration fail.
+--
+-- A normal FK only verifies that each referenced row exists; it cannot prove
+-- that every POS reference belongs to the same Shop. Keep those tenant
+-- invariants in one small database trigger so SQL/non-Prisma writes get the
+-- same protection as the application transaction validation.
+CREATE OR REPLACE FUNCTION "enforce_pos_tenant_consistency"()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_TABLE_NAME = 'PosShift' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM "PosRegister"
+      WHERE "id" = NEW."registerId" AND "shopId" = NEW."shopId"
+    ) THEN
+      RAISE EXCEPTION 'POS shift register must belong to the same shop'
+        USING ERRCODE = '23514';
+    END IF;
+  ELSIF TG_TABLE_NAME = 'PosSession' THEN
+    IF NEW."registerId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosRegister"
+      WHERE "id" = NEW."registerId" AND "shopId" = NEW."shopId"
+    ) THEN
+      RAISE EXCEPTION 'POS session register must belong to the same shop'
+        USING ERRCODE = '23514';
+    END IF;
+    IF NEW."shiftId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosShift"
+      WHERE "id" = NEW."shiftId" AND "shopId" = NEW."shopId"
+    ) THEN
+      RAISE EXCEPTION 'POS session shift must belong to the same shop'
+        USING ERRCODE = '23514';
+    END IF;
+    IF NEW."registerId" IS NOT NULL AND NEW."shiftId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosShift"
+      WHERE "id" = NEW."shiftId" AND "registerId" = NEW."registerId"
+    ) THEN
+      RAISE EXCEPTION 'POS session shift must belong to its register'
+        USING ERRCODE = '23514';
+    END IF;
+  ELSIF TG_TABLE_NAME = 'Invoice' THEN
+    IF NEW."posSessionId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosSession"
+      WHERE "id" = NEW."posSessionId" AND "shopId" = NEW."shopId"
+    ) THEN
+      RAISE EXCEPTION 'Invoice POS session must belong to the same shop'
+        USING ERRCODE = '23514';
+    END IF;
+    IF NEW."posRegisterId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosRegister"
+      WHERE "id" = NEW."posRegisterId" AND "shopId" = NEW."shopId"
+    ) THEN
+      RAISE EXCEPTION 'Invoice POS register must belong to the same shop'
+        USING ERRCODE = '23514';
+    END IF;
+    IF NEW."posShiftId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosShift"
+      WHERE "id" = NEW."posShiftId" AND "shopId" = NEW."shopId"
+    ) THEN
+      RAISE EXCEPTION 'Invoice POS shift must belong to the same shop'
+        USING ERRCODE = '23514';
+    END IF;
+    IF NEW."posRegisterId" IS NOT NULL AND NEW."posShiftId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosShift"
+      WHERE "id" = NEW."posShiftId" AND "registerId" = NEW."posRegisterId"
+    ) THEN
+      RAISE EXCEPTION 'Invoice POS shift must belong to its register'
+        USING ERRCODE = '23514';
+    END IF;
+    IF NEW."posSessionId" IS NOT NULL AND NEW."posRegisterId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosSession"
+      WHERE "id" = NEW."posSessionId" AND "registerId" = NEW."posRegisterId"
+    ) THEN
+      RAISE EXCEPTION 'Invoice POS session must belong to its register'
+        USING ERRCODE = '23514';
+    END IF;
+    IF NEW."posSessionId" IS NOT NULL AND NEW."posShiftId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosSession"
+      WHERE "id" = NEW."posSessionId" AND "shiftId" = NEW."posShiftId"
+    ) THEN
+      RAISE EXCEPTION 'Invoice POS session must belong to its shift'
+        USING ERRCODE = '23514';
+    END IF;
+  ELSIF TG_TABLE_NAME = 'PosReturn' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM "Invoice"
+      WHERE "id" = NEW."invoiceId" AND "shopId" = NEW."shopId"
+    ) THEN
+      RAISE EXCEPTION 'POS return invoice must belong to the same shop'
+        USING ERRCODE = '23514';
+    END IF;
+    IF NEW."registerId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosRegister"
+      WHERE "id" = NEW."registerId" AND "shopId" = NEW."shopId"
+    ) THEN
+      RAISE EXCEPTION 'POS return register must belong to the same shop'
+        USING ERRCODE = '23514';
+    END IF;
+    IF NEW."shiftId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosShift"
+      WHERE "id" = NEW."shiftId" AND "shopId" = NEW."shopId"
+    ) THEN
+      RAISE EXCEPTION 'POS return shift must belong to the same shop'
+        USING ERRCODE = '23514';
+    END IF;
+    IF NEW."registerId" IS NOT NULL AND NEW."shiftId" IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM "PosShift"
+      WHERE "id" = NEW."shiftId" AND "registerId" = NEW."registerId"
+    ) THEN
+      RAISE EXCEPTION 'POS return shift must belong to its register'
+        USING ERRCODE = '23514';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "PosShift_tenant_consistency"
+  BEFORE INSERT OR UPDATE OF "shopId", "registerId" ON "PosShift"
+  FOR EACH ROW EXECUTE FUNCTION "enforce_pos_tenant_consistency"();
+CREATE TRIGGER "PosSession_tenant_consistency"
+  BEFORE INSERT OR UPDATE OF "shopId", "registerId", "shiftId" ON "PosSession"
+  FOR EACH ROW EXECUTE FUNCTION "enforce_pos_tenant_consistency"();
+CREATE TRIGGER "Invoice_pos_tenant_consistency"
+  BEFORE INSERT OR UPDATE OF "shopId", "posSessionId", "posRegisterId", "posShiftId" ON "Invoice"
+  FOR EACH ROW EXECUTE FUNCTION "enforce_pos_tenant_consistency"();
+CREATE TRIGGER "PosReturn_tenant_consistency"
+  BEFORE INSERT OR UPDATE OF "shopId", "invoiceId", "registerId", "shiftId" ON "PosReturn"
+  FOR EACH ROW EXECUTE FUNCTION "enforce_pos_tenant_consistency"();
+
+-- Persist a real, auditable refund/reversal event for every POS return. A
+-- source payment can be refunded in several partial returns, so reversalOfId
+-- is an indexed foreign key rather than a one-to-one unique key.
+ALTER TYPE "JournalReferenceType" ADD VALUE IF NOT EXISTS 'INVOICE_REFUND';
+ALTER TYPE "JournalReferenceType" ADD VALUE IF NOT EXISTS 'INVOICE_CREDIT_APPLIED';
+
+ALTER TABLE "PosReturn"
+  ADD COLUMN IF NOT EXISTS "refundStatus" TEXT NOT NULL DEFAULT 'SETTLED';
+
+ALTER TABLE "InvoicePayment"
+  ADD COLUMN IF NOT EXISTS "posReturnId" TEXT;
+DROP INDEX IF EXISTS "InvoicePayment_reversalOfId_key";
+CREATE INDEX IF NOT EXISTS "InvoicePayment_reversalOfId_idx" ON "InvoicePayment"("reversalOfId");
+CREATE INDEX IF NOT EXISTS "InvoicePayment_posReturnId_idx" ON "InvoicePayment"("posReturnId");
+ALTER TABLE "InvoicePayment"
+  ADD CONSTRAINT "InvoicePayment_posReturnId_fkey"
+  FOREIGN KEY ("posReturnId") REFERENCES "PosReturn"("id")
+  ON DELETE RESTRICT ON UPDATE CASCADE;

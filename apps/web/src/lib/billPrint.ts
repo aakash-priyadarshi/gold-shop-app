@@ -401,13 +401,16 @@ ${
   payload.verificationToken
     ? (() => {
         const verifyUrl = `https://www.orivraa.com/verify-bill/${payload.verificationToken}`;
-        const qrSrc =
-          payload.verificationQrDataUrl ||
-          `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f3f4f6"/><text x="50" y="55" font-size="10" text-anchor="middle" fill="%23374151">QR Code</text></svg>`;
-        return `<div style="text-align:center;margin-top:14px;padding-top:10px;border-top:1px dashed #e5e7eb">
-        <img src="${qrSrc}" alt="Verify bill" style="width:88px;height:88px;margin:0 auto" />
-        <p class="tiny" style="margin-top:4px">Scan to verify this bill: ${safe(payload.verificationToken.slice(0, 8))}...</p>
-      </div>`;
+        const qr = payload.verificationQrDataUrl;
+        return qr
+          ? `<div style="text-align:center;margin-top:14px;padding-top:10px;border-top:1px dashed #e5e7eb">
+              <img src="${safe(qr)}" alt="Verify bill" style="width:88px;height:88px;margin:0 auto" />
+              <p class="tiny" style="margin-top:4px">Scan to verify this bill.</p>
+            </div>`
+          : `<div style="text-align:center;margin-top:14px;padding-top:10px;border-top:1px dashed #e5e7eb">
+              <p class="tiny" style="margin-top:4px">Verify this bill:</p>
+              <p class="tiny" style="word-break:break-all">${safe(verifyUrl)}</p>
+            </div>`;
       })()
     : ""
 }
@@ -434,10 +437,13 @@ export async function generateVerificationQrDataUrl(token: string): Promise<stri
 }
 
 export async function printAuthoritativeBill(payload: BillPrintPayload): Promise<boolean> {
-  if (payload.verificationToken && !payload.verificationQrDataUrl) {
-    payload.verificationQrDataUrl = await generateVerificationQrDataUrl(payload.verificationToken);
+  const payloadToPrint = { ...payload };
+  if (payloadToPrint.verificationToken && !payloadToPrint.verificationQrDataUrl) {
+    payloadToPrint.verificationQrDataUrl = await generateVerificationQrDataUrl(
+      payloadToPrint.verificationToken,
+    );
   }
-  return printBill(payload);
+  return printBill(payloadToPrint);
 }
 
 export function printBill(payload: BillPrintPayload): boolean {

@@ -728,7 +728,7 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
       expect(mockAccounting.postInvoicePayment).toHaveBeenCalled();
     });
 
-    it("should allow confirming a pending payment and transition invoice to PAID", async () => {
+    it("persists terminal references and returns the confirmed payment after notes are appended", async () => {
       mockPrisma.invoicePayment.findFirst.mockResolvedValueOnce({
         id: "pay-pending-1",
         invoiceId: "inv-conf-test",
@@ -757,6 +757,20 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
         verificationMode: "MANUAL",
         terminalReference: "POS-TERM-8899",
         amount: 1000,
+        method: "CARD",
+        receivedAt: new Date("2026-08-24T00:00:00.000Z"),
+        notes: "Counter payment",
+      });
+      mockPrisma.invoicePayment.update.mockResolvedValueOnce({
+        id: "pay-pending-1",
+        status: "RECEIVED",
+        confirmedByUserId: "staff-1",
+        verificationMode: "MANUAL",
+        terminalReference: "POS-TERM-8899",
+        amount: 1000,
+        method: "CARD",
+        receivedAt: new Date("2026-08-24T00:00:00.000Z"),
+        notes: "Counter payment | Confirmed against terminal batch",
       });
       mockPrisma.invoice.updateMany.mockResolvedValueOnce({ count: 1 });
       mockPrisma.invoicePayment.findMany.mockResolvedValueOnce([{ method: "CARD" }]);
@@ -777,12 +791,27 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
         "pay-pending-1",
         "shop-np",
         "staff-1",
-        { terminalReference: "POS-TERM-8899" },
+        {
+          terminalReference: "POS-TERM-8899",
+          notes: "Confirmed against terminal batch",
+        },
       );
 
       expect(result.status).toBe("PAID");
       expect(result.confirmedPayment.status).toBe("RECEIVED");
       expect(result.confirmedPayment.terminalReference).toBe("POS-TERM-8899");
+      expect(result.confirmedPayment.notes).toBe(
+        "Counter payment | Confirmed against terminal batch",
+      );
+      expect(mockPrisma.invoicePayment.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ terminalReference: "POS-TERM-8899" }),
+        }),
+      );
+      expect(mockPrisma.invoicePayment.update).toHaveBeenCalledWith({
+        where: { id: "pay-pending-1" },
+        data: { notes: "Counter payment | Confirmed against terminal batch" },
+      });
       expect(mockAccounting.postInvoicePayment).toHaveBeenCalled();
     });
   });

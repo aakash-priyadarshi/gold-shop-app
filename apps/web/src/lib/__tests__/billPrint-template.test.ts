@@ -21,4 +21,15 @@ describe("buildBillHtml templates", () => {
     });
     expect(html).toContain('class="bill-tpl-classic"');
   });
+
+  it("prints the complete verification URL when QR generation is unavailable", () => {
+    const html = buildBillHtml({
+      invoiceNumber: "INV-1",
+      totalAmount: 100,
+      verificationToken: "complete-token",
+    });
+
+    expect(html).toContain("https://www.orivraa.com/verify-bill/complete-token");
+    expect(html).not.toContain("QR Code</text>");
+  });
 });
