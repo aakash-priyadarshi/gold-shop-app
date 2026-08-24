@@ -323,6 +323,7 @@ export function extractPurityFromComposition(composition: unknown): number {
       PLATINUM_950: 0.95,
       PLATINUM_900: 0.9,
       PALLADIUM_950: 0.95,
+      PALLADIUM_500: 0.5,
       PALLADIUM_PD950: 0.95,
       PALLADIUM_PD500: 0.5,
     };

@@ -10,6 +10,8 @@ import {
   compareByLocale,
   extractMetalTypeFromComposition,
   extractPurityFromComposition,
+  normalizeMetalCode,
+  normalizeMetalMarketKey,
 } from "@gold-shop/shared";
 import { PrismaService } from "../../prisma/prisma.service";
 import { MarketRatesService } from "../core/market-rates/market-rates.service";
@@ -33,6 +35,36 @@ import {
 } from "./inventory-scan";
 
 export { parseInventoryTagCode, normalizeInventoryScanCode } from "./inventory-scan";
+
+type RepriceMetalRate = {
+  rate: number;
+  isSpecific: boolean;
+};
+
+/**
+ * Resolve a canonical inventory metal code against either a shop override or
+ * the production MarketRatesService key. A base-metal fallback is deliberately
+ * the final option so PALLADIUM_500 never borrows the PD950 rate.
+ */
+function resolveRepriceMetalRate(
+  rateByMetal: Record<string, number>,
+  metalType?: string,
+): RepriceMetalRate | undefined {
+  if (!metalType) return undefined;
+
+  const canonicalCode = normalizeMetalCode(metalType);
+  const marketKey = normalizeMetalMarketKey(canonicalCode);
+  for (const key of new Set([metalType, canonicalCode, marketKey])) {
+    const rate = rateByMetal[key];
+    if (rate !== undefined) return { rate, isSpecific: true };
+  }
+
+  const baseKey = canonicalCode.split("_")[0];
+  const baseRate = rateByMetal[baseKey];
+  return baseRate === undefined
+    ? undefined
+    : { rate: baseRate, isSpecific: false };
+}
 
 @Injectable()
 export class InventoryService {
@@ -843,12 +875,12 @@ export class InventoryService {
           let compNewMaking = comp.makingChargeNpr || 0;
 
           if (compWeight > 0) {
-            const compSpecificRate = compMetalType ? rateByMetal[compMetalType] : undefined;
-            const compBaseKey = compMetalType ? compMetalType.split("_")[0] : undefined;
-            const compBaseRate = compBaseKey ? rateByMetal[compBaseKey] : undefined;
-            const compRate = compSpecificRate ?? compBaseRate;
+            const resolvedRate = resolveRepriceMetalRate(
+              rateByMetal,
+              compMetalType,
+            );
 
-            if (compRate == null) {
+            if (!resolvedRate) {
               skipped.push({
                 id: item.id,
                 name: item.nameEn,
@@ -860,8 +892,12 @@ export class InventoryService {
               break;
             }
 
-            const compPurity = compSpecificRate != null ? 1 : extractPurityFromComposition(comp.composition);
-            compNewMetal = Math.round(compWeight * compRate * compPurity);
+            const compPurity = resolvedRate.isSpecific
+              ? 1
+              : extractPurityFromComposition(comp.composition);
+            compNewMetal = Math.round(
+              compWeight * resolvedRate.rate * compPurity,
+            );
             if (makingMode === "RECALC_PERCENT") {
               compNewMaking = Math.round(compNewMetal * (makingPct / 100));
             }
@@ -928,12 +964,9 @@ export class InventoryService {
         continue;
       }
 
-      const specificRate = metalType ? rateByMetal[metalType] : undefined;
-      const baseKey = metalType ? metalType.split("_")[0] : undefined;
-      const baseRate = baseKey ? rateByMetal[baseKey] : undefined;
-      const rate = specificRate ?? baseRate;
+      const resolvedRate = resolveRepriceMetalRate(rateByMetal, metalType);
 
-      if (rate == null) {
+      if (!resolvedRate) {
         skipped.push({
           id: item.id,
           name: item.nameEn,
@@ -944,9 +977,11 @@ export class InventoryService {
         continue;
       }
 
-      const purityMultiplier = specificRate != null ? 1 : extractPurityFromComposition(item.composition);
+      const purityMultiplier = resolvedRate.isSpecific
+        ? 1
+        : extractPurityFromComposition(item.composition);
       const newMetal = Math.round(
-        item.totalWeightGrams * rate * purityMultiplier,
+        item.totalWeightGrams * resolvedRate.rate * purityMultiplier,
       );
       const newMaking =
         makingMode === "RECALC_PERCENT"
@@ -962,7 +997,7 @@ export class InventoryService {
         sku: item.sku,
         metalType: metalType || "UNKNOWN",
         weightG: item.totalWeightGrams,
-        ratePerGram: rate,
+        ratePerGram: resolvedRate.rate,
         old: {
           metalValueNpr: item.metalValueNpr,
           makingChargeNpr: item.makingChargeNpr,

@@ -90,6 +90,7 @@ describe("composition-helpers", () => {
       expect(extractPurityFromComposition({ baseAlloy: { metal: "PLATINUM", purity: 18 } })).toBeCloseTo(0.18, 2);
       expect(extractPurityFromComposition({ metal: "SILVER", purity: 92.5 })).toBeCloseTo(0.925, 3);
       expect(extractPurityFromComposition({ purity: 22 })).toBeCloseTo(0.22, 2);
+      expect(extractPurityFromComposition({ metalType: "PALLADIUM_500" })).toBeCloseTo(0.5, 3);
     });
   });
 

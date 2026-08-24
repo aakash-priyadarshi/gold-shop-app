@@ -336,6 +336,7 @@ export class UpdateInventoryItemDto {
     enum: ['PERCENT', 'FIXED'],
   })
   @IsString()
+  @IsIn(['PERCENT', 'FIXED'])
   @IsOptional()
   setDiscountType?: 'PERCENT' | 'FIXED' | null;
 
@@ -343,6 +344,7 @@ export class UpdateInventoryItemDto {
     description: 'Discount value for jewellery sets (% or fixed amount)',
   })
   @IsNumber()
+  @Min(0)
   @IsOptional()
   setDiscountValue?: number | null;
 }
