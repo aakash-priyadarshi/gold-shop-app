@@ -172,9 +172,14 @@ export class AuthController {
   @ApiOperation({ summary: "Resend email verification OTP" })
   @ApiResponse({
     status: 200,
-    description: "Verification OTP sent if email exists",
+    description:
+      "Always returns a generic response. A verification OTP is sent only for an existing, unverified account.",
   })
-  @ApiResponse({ status: 429, description: "Too many requests" })
+  @ApiResponse({
+    status: 429,
+    description:
+      "An existing, unverified account exceeded the OTP email or IP rate limit.",
+  })
   async resendVerification(
     @Body() dto: ResendVerificationDto,
     @Request() req: any,
@@ -208,9 +213,9 @@ export class AuthController {
   @ApiOperation({ summary: "Request password reset OTP" })
   @ApiResponse({
     status: 200,
-    description: "Password reset OTP sent if email exists",
+    description:
+      "Always returns a generic response, including when internal OTP rate limiting prevents an email from being sent.",
   })
-  @ApiResponse({ status: 429, description: "Too many requests" })
   async forgotPassword(@Body() dto: ForgotPasswordDto, @Request() req: any) {
     const ipAddress = req.ip || req.connection?.remoteAddress;
     return this.authService.forgotPassword(dto.email, ipAddress);

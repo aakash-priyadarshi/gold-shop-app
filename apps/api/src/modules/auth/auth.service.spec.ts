@@ -1,10 +1,135 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
+import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 import { OtpType, UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { OtpService } from './otp.service';
 
 describe('password-reset verification', () => {
+  const genericVerificationResponse = {
+    success: true,
+    message:
+      'If the email exists and requires verification, a verification code has been sent.',
+  };
+
+  function createResendVerificationService(
+    user: { id: string; email: string; firstName: string; emailVerified: boolean } | null,
+  ) {
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue(user) },
+    };
+    const otpService = {
+      sendVerificationOtpByEmail: jest.fn().mockResolvedValue({ success: true }),
+    };
+    const service = new AuthService(
+      prisma as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      otpService as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    return { service, otpService };
+  }
+
+  describe('resend verification privacy', () => {
+    it('returns the generic response for an unknown email', async () => {
+      const { service, otpService } = createResendVerificationService(null);
+
+      await expect(
+        service.resendVerificationOtp('unknown@example.com', '203.0.113.10'),
+      ).resolves.toEqual(genericVerificationResponse);
+      expect(otpService.sendVerificationOtpByEmail).not.toHaveBeenCalled();
+    });
+
+    it('returns the same generic response for an already-verified email', async () => {
+      const { service, otpService } = createResendVerificationService({
+        id: 'user-1',
+        email: 'verified@example.com',
+        firstName: 'Verified',
+        emailVerified: true,
+      });
+
+      await expect(
+        service.resendVerificationOtp('verified@example.com', '203.0.113.10'),
+      ).resolves.toEqual(genericVerificationResponse);
+      expect(otpService.sendVerificationOtpByEmail).not.toHaveBeenCalled();
+    });
+
+    it('sends an OTP for an existing unverified email and returns the generic response', async () => {
+      const { service, otpService } = createResendVerificationService({
+        id: 'user-1',
+        email: 'unverified@example.com',
+        firstName: 'Unverified',
+        emailVerified: false,
+      });
+
+      await expect(
+        service.resendVerificationOtp('unverified@example.com', '203.0.113.10'),
+      ).resolves.toEqual(genericVerificationResponse);
+      expect(otpService.sendVerificationOtpByEmail).toHaveBeenCalledWith(
+        'unverified@example.com',
+        'user-1',
+        'Unverified',
+        '203.0.113.10',
+      );
+    });
+
+    it('preserves the rate-limit response for an existing unverified email', async () => {
+      const { service, otpService } = createResendVerificationService({
+        id: 'user-1',
+        email: 'unverified@example.com',
+        firstName: 'Unverified',
+        emailVerified: false,
+      });
+      otpService.sendVerificationOtpByEmail.mockRejectedValue(
+        new HttpException('Too many OTP requests', HttpStatus.TOO_MANY_REQUESTS),
+      );
+
+      await expect(
+        service.resendVerificationOtp('unverified@example.com', '203.0.113.10'),
+      ).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
+    });
+
+    it('does not disclose verification state in a successful 200 public response', async () => {
+      const unknown = createResendVerificationService(null).service;
+      const verified = createResendVerificationService({
+        id: 'user-1',
+        email: 'verified@example.com',
+        firstName: 'Verified',
+        emailVerified: true,
+      }).service;
+      const unverified = createResendVerificationService({
+        id: 'user-2',
+        email: 'unverified@example.com',
+        firstName: 'Unverified',
+        emailVerified: false,
+      }).service;
+
+      await expect(
+        Promise.all([
+          unknown.resendVerificationOtp('unknown@example.com'),
+          verified.resendVerificationOtp('verified@example.com'),
+          unverified.resendVerificationOtp('unverified@example.com'),
+        ]),
+      ).resolves.toEqual([
+        genericVerificationResponse,
+        genericVerificationResponse,
+        genericVerificationResponse,
+      ]);
+      expect(
+        Reflect.getMetadata(
+          HTTP_CODE_METADATA,
+          AuthController.prototype.resendVerification,
+        ),
+      ).toBe(HttpStatus.OK);
+    });
+  });
+
   it('returns the verified-login context needed to request an email OTP', async () => {
     const prisma = {
       user: {
