@@ -1,4 +1,9 @@
-import { calculateLineWastage } from "@gold-shop/shared";
+import {
+  calculateLineWastage,
+  extractGemstonesFromItem,
+  extractMetalTypeFromComposition,
+  normalizeMetalCode,
+} from "@gold-shop/shared";
 import {
   emptyGemstone,
   emptyLineItem,
@@ -7,70 +12,7 @@ import {
 } from "./lineItemTypes";
 import { isBlankLine, roundMoney2 } from "./calculateLineTotals";
 
-/** Normalize catalog metal+purity (GOLD + 22K) into invoice codes (GOLD_22K). */
-export function normalizeMetalCode(metal: string, purity?: string): string {
-  const m = String(metal || "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "_");
-  if (!m) return "";
-  if (/^(GOLD|SILVER|PLATINUM|PALLADIUM)_\w+/.test(m)) return m;
-
-  const p = String(purity || "")
-    .toUpperCase()
-    .replace(/\s+/g, "");
-  if (m === "GOLD" || m.startsWith("GOLD")) {
-    if (p.includes("24") || p === "999") return "GOLD_24K";
-    if (p.includes("22") || p === "916") return "GOLD_22K";
-    if (p.includes("18") || p === "750") return "GOLD_18K";
-    if (p.includes("14") || p === "585") return "GOLD_14K";
-    if (p.includes("10")) return "GOLD_10K";
-    return "GOLD_22K";
-  }
-  if (m === "SILVER" || m.startsWith("SILVER")) {
-    if (p.includes("999")) return "SILVER_999";
-    return "SILVER_925";
-  }
-  if (m === "PLATINUM" || m.startsWith("PLATINUM")) {
-    if (p.includes("900")) return "PLATINUM_900";
-    return "PLATINUM_950";
-  }
-  return m;
-}
-
-export function extractMetalTypeFromComposition(composition: unknown): string {
-  if (!composition || typeof composition !== "object") return "";
-  const c = composition as Record<string, unknown>;
-
-  for (const key of [
-    "preciousMetal",
-    "metal",
-    "primaryMetal",
-    "alloy",
-    "coreMetal",
-    "standardAlloy",
-  ]) {
-    if (typeof c[key] === "string" && c[key]) {
-      return normalizeMetalCode(
-        c[key] as string,
-        typeof c.purity === "string" ? (c.purity as string) : undefined,
-      );
-    }
-  }
-
-  const baseAlloy = c.baseAlloy;
-  if (baseAlloy && typeof baseAlloy === "object") {
-    const ba = baseAlloy as Record<string, unknown>;
-    if (typeof ba.metal === "string" && ba.metal) {
-      return normalizeMetalCode(
-        ba.metal,
-        typeof ba.purity === "string" ? ba.purity : undefined,
-      );
-    }
-  }
-
-  return "";
-}
+export { normalizeMetalCode, extractMetalTypeFromComposition };
 
 export function buildMetalPartsFromCatalogItem(item: any): MetalPart[] {
   const links = Array.isArray(item?.setComponents) ? item.setComponents : [];
@@ -82,7 +24,7 @@ export function buildMetalPartsFromCatalogItem(item: any): MetalPart[] {
       .map((link: any) => {
         const comp = link.componentItem || link;
         return {
-          metalType: extractMetalTypeFromComposition(comp.composition),
+          metalType: extractMetalTypeFromComposition(comp.composition) || "",
           weightG: Number(comp.totalWeightGrams) || 0,
           label: comp.nameEn || comp.sku || "Component",
         };
@@ -90,7 +32,7 @@ export function buildMetalPartsFromCatalogItem(item: any): MetalPart[] {
       .filter((p: MetalPart) => p.weightG > 0);
   }
 
-  const metalType = extractMetalTypeFromComposition(item?.composition);
+  const metalType = extractMetalTypeFromComposition(item?.composition) || "";
   const weightG = Number(item?.totalWeightGrams) || 0;
   if (weightG > 0) {
     return [{ metalType, weightG, label: item?.nameEn || item?.sku }];
@@ -171,29 +113,15 @@ export interface CatalogImportResult {
 }
 
 function gemstonesFromCatalogItem(item: any): RichLineItem["gemstones"] {
-  const gemCost = Number(item.gemstoneValueNpr) || 0;
-  const compositionGems = Array.isArray(item?.composition?.gemstones)
-    ? item.composition.gemstones
-    : [];
-
-  if (compositionGems.length > 0) {
-    return compositionGems.map((gem: any) => ({
+  const extracted = extractGemstonesFromItem(item);
+  if (extracted.length > 0) {
+    return extracted.map((g) => ({
       ...emptyGemstone(),
-      type: String(gem.type || gem.stoneType || "GEMSTONE"),
-      cut: String(gem.cut || ""),
-      clarity: String(gem.clarity || ""),
-      caratWeight:
-        gem.caratWeight != null ? String(gem.caratWeight) : "",
-      color: String(gem.color || ""),
-      cost:
-        gem.cost != null
-          ? String(gem.cost)
-          : gem.valueNpr != null
-            ? String(gem.valueNpr)
-            : "",
+      ...g,
     }));
   }
 
+  const gemCost = Number(item.gemstoneValueNpr) || 0;
   if (gemCost > 0) {
     return [
       {
@@ -223,6 +151,9 @@ export function importCatalogItem(opts: {
   ) {
     return { error: "This catalog piece is already on the invoice." };
   }
+
+  const isSet =
+    item.jewelleryType === "SET" || item.composition?.kind === "SET";
 
   const metalParts = buildMetalPartsFromCatalogItem(item);
   const metalType =
@@ -294,6 +225,19 @@ export function importCatalogItem(opts: {
     );
   }
 
+  const gemstones = gemstonesFromCatalogItem(item);
+  const gemTotal = gemstones.reduce((s, g) => s + (parseFloat(g.cost) || 0), 0);
+
+  let setDiscountAmount: number | undefined;
+  if (isSet && item.setDiscountType && item.setDiscountValue != null) {
+    const rawSum = (parseFloat(metalCost) || 0) + (parseFloat(makingCost) || 0) + gemTotal;
+    if (item.setDiscountType === "PERCENT") {
+      setDiscountAmount = roundMoney2((rawSum * Number(item.setDiscountValue)) / 100);
+    } else if (item.setDiscountType === "FIXED") {
+      setDiscountAmount = roundMoney2(Number(item.setDiscountValue));
+    }
+  }
+
   const detailBits = [
     item.sku ? `SKU ${item.sku}` : null,
     liveRateNote || opts.liveDetail || null,
@@ -307,7 +251,7 @@ export function importCatalogItem(opts: {
     metalType: String(metalType || ""),
     metalWeightG: totalWeightG > 0 ? String(totalWeightG) : "",
     metalCost,
-    gemstones: gemstonesFromCatalogItem(item),
+    gemstones,
     makingCost,
     baseMakingCost: makingRaw > 0 ? String(makingRaw) : undefined,
     metalParts: metalParts.length > 0 ? metalParts : undefined,
@@ -316,6 +260,10 @@ export function importCatalogItem(opts: {
     baseWastagePercent: String(basePct),
     wastagePercent: String(basePct),
     wastageCost,
+    isSet: isSet || undefined,
+    setDiscountType: isSet ? item.setDiscountType : undefined,
+    setDiscountValue: isSet && item.setDiscountValue != null ? Number(item.setDiscountValue) : undefined,
+    setDiscountAmount,
   };
 
   const kept = existingLines.filter((li) => !isBlankLine(li));

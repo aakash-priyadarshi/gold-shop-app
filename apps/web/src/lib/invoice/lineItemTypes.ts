@@ -36,6 +36,10 @@ export interface RichLineItem {
   wastagePercent?: string;
   wastageCost?: string;
   baseWastagePercent?: string;
+  isSet?: boolean;
+  setDiscountType?: "PERCENT" | "FIXED";
+  setDiscountValue?: number;
+  setDiscountAmount?: number;
 }
 
 export type TaxCategoryKey =
@@ -69,6 +73,17 @@ export const METAL_TYPES = [
   { value: "PLATINUM_950", label: "Platinum 950" },
   { value: "PLATINUM_900", label: "Platinum 900" },
 ] as const;
+
+export {
+  CANONICAL_GEMSTONE_TYPES,
+  CANONICAL_GEMSTONE_CUTS,
+  CANONICAL_GEMSTONE_CLARITIES,
+  CANONICAL_GEMSTONE_COLORS,
+  CANONICAL_GEMSTONE_CUT_GRADES,
+  CANONICAL_GEMSTONE_LABS,
+  getGemstoneDisplayLabel,
+  normalizeGemstoneType,
+} from "@gold-shop/shared";
 
 export const GEMSTONE_TYPES = [
   "Diamond",

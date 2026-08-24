@@ -1202,8 +1202,34 @@ export const sellerPerformanceApi = {
     api.post("/seller-performance/referrals/connect/onboarding"),
   refreshReferralConnect: () =>
     api.post("/seller-performance/referrals/connect/refresh"),
+  saveReferralPayoutBank: (data: {
+    bankHolderName: string;
+    bankName: string;
+    bankAccountNumber: string;
+    bankRoutingCode?: string;
+    bankCountry?: string;
+  }) => api.post("/seller-performance/referrals/payout-profile", data),
   cashOutReferralWallet: () =>
     api.post("/seller-performance/referrals/cash-out"),
+  redeemReferralAsPro: () =>
+    api.post("/seller-performance/referrals/redeem-subscription"),
+  getAdminReferralPayouts: (status?: string) =>
+    api.get(
+      `/seller-performance/admin/referral-payouts${status ? `?status=${status}` : ""}`,
+    ),
+  resolveReferralPayout: (
+    id: string,
+    data: {
+      action: "paid" | "rejected" | "grant_sub";
+      payoutReference?: string;
+      adminNote?: string;
+      months?: number;
+    },
+  ) => api.post(`/seller-performance/admin/referral-payouts/${id}/resolve`, data),
+  adminGrantReferralPro: (
+    shopId: string,
+    data: { months?: number; adminNote?: string },
+  ) => api.post(`/seller-performance/admin/shops/${shopId}/grant-pro`, data),
   getAdminReferralCommissions: (status?: string) =>
     api.get(
       `/seller-performance/admin/referral-commissions${status ? `?status=${status}` : ""}`,

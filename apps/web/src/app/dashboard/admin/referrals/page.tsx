@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { sellerPerformanceApi } from "@/lib/api";
 import {
+  Banknote,
   CheckCircle,
   Gift,
   Loader2,
@@ -48,6 +49,7 @@ interface ReferralData {
   referrerRewarded: boolean;
   refereeRewarded: boolean;
   referrerShop: {
+    id: string;
     shopName: string;
     user: { firstName: string; lastName: string; email: string };
   };
@@ -62,6 +64,28 @@ interface ReferralSettingsData {
   minCashoutAmount: number;
   maxReferralsPerShop: number;
   expirationDays: number;
+}
+
+interface PayoutRequestRow {
+  id: string;
+  shopId: string;
+  amount: number;
+  currency: string;
+  status: string;
+  bankHolderName: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankRoutingCode: string | null;
+  bankCountry: string | null;
+  monthsGranted: number | null;
+  payoutReference: string | null;
+  adminNote: string | null;
+  createdAt: string;
+  shop: {
+    shopName: string;
+    country: string;
+    user: { firstName: string; lastName: string; email: string };
+  };
 }
 
 interface CommissionRow {
@@ -88,6 +112,9 @@ export default function AdminReferralsPage() {
   const [expiringOld, setExpiringOld] = useState(false);
   const [commissions, setCommissions] = useState<CommissionRow[]>([]);
   const [commissionsLoading, setCommissionsLoading] = useState(false);
+  const [payouts, setPayouts] = useState<PayoutRequestRow[]>([]);
+  const [payoutsLoading, setPayoutsLoading] = useState(false);
+  const [payoutRef, setPayoutRef] = useState("");
 
   const loadReferrals = useCallback(async () => {
     setLoading(true);
@@ -115,6 +142,18 @@ export default function AdminReferralsPage() {
     }
   }, []);
 
+  const loadPayouts = useCallback(async () => {
+    setPayoutsLoading(true);
+    try {
+      const res = await sellerPerformanceApi.getAdminReferralPayouts();
+      setPayouts(res?.data || []);
+    } catch {
+      console.warn("Failed to load referral payouts");
+    } finally {
+      setPayoutsLoading(false);
+    }
+  }, []);
+
   const loadCommissions = useCallback(async () => {
     setCommissionsLoading(true);
     try {
@@ -139,6 +178,10 @@ export default function AdminReferralsPage() {
     void loadCommissions();
   }, [loadCommissions]);
 
+  useEffect(() => {
+    void loadPayouts();
+  }, [loadPayouts]);
+
   const handleComplete = async (referralId: string) => {
     setActionLoading(referralId);
     try {
@@ -149,6 +192,54 @@ export default function AdminReferralsPage() {
       toast({
         variant: "destructive",
         title: "Failed to complete referral",
+        description: error?.response?.data?.message || "Something went wrong",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleGrantPro = async (shopId: string) => {
+    setActionLoading(`pro-${shopId}`);
+    try {
+      await sellerPerformanceApi.adminGrantReferralPro(shopId, { months: 1 });
+      toast({ title: "Granted 1 month of Pro" });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to grant Pro",
+        description: error?.response?.data?.message || "Something went wrong",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResolvePayout = async (
+    id: string,
+    action: "paid" | "rejected" | "grant_sub",
+  ) => {
+    setActionLoading(`${action}-${id}`);
+    try {
+      await sellerPerformanceApi.resolveReferralPayout(id, {
+        action,
+        payoutReference: payoutRef || undefined,
+      });
+      toast({
+        title:
+          action === "paid"
+            ? "Marked as paid"
+            : action === "rejected"
+              ? "Returned to wallet"
+              : "Converted to Pro months",
+      });
+      setPayoutRef("");
+      loadPayouts();
+      loadCommissions();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Could not update payout",
         description: error?.response?.data?.message || "Something went wrong",
       });
     } finally {
@@ -238,6 +329,14 @@ export default function AdminReferralsPage() {
               </TabsTrigger>
               <TabsTrigger value="commissions" className="gap-1.5">
                 <Wallet className="h-4 w-4" /> Commissions
+              </TabsTrigger>
+              <TabsTrigger value="payouts" className="gap-1.5">
+                <Banknote className="h-4 w-4" /> Payouts
+                {payouts.filter((p) => p.status === "PENDING").length > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {payouts.filter((p) => p.status === "PENDING").length}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="settings" className="gap-1.5">
                 <Settings className="h-4 w-4" /> Settings
@@ -415,9 +514,30 @@ export default function AdminReferralsPage() {
                                 </Button>
                               )}
                               {ref.status === "COMPLETED" && (
-                                <span className="text-xs text-green-600 font-medium">
-                                  Earning on paid invoices
-                                </span>
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs text-green-600 font-medium">
+                                    Earning on paid invoices
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      handleGrantPro(ref.referrerShop.id)
+                                    }
+                                    disabled={
+                                      actionLoading ===
+                                      `pro-${ref.referrerShop.id}`
+                                    }
+                                  >
+                                    {actionLoading ===
+                                    `pro-${ref.referrerShop.id}` ? (
+                                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                    ) : (
+                                      <Gift className="h-4 w-4 mr-1" />
+                                    )}
+                                    Gift 1 mo Pro
+                                  </Button>
+                                </div>
                               )}
                             </TableCell>
                           </TableRow>
@@ -471,6 +591,150 @@ export default function AdminReferralsPage() {
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
                               {new Date(row.createdAt).toLocaleDateString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="payouts" className="space-y-4 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    Leftover bank payouts
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Shops in countries Stripe Connect does not support save bank
+                    details here. Send the transfer from your bank, then mark
+                    paid — or convert the leftover to Pro months instead.
+                  </p>
+                  <div className="max-w-sm">
+                    <Label className="text-xs">
+                      Bank / Wise reference (optional)
+                    </Label>
+                    <Input
+                      value={payoutRef}
+                      onChange={(e) => setPayoutRef(e.target.value)}
+                      placeholder="e.g. Wise-12345"
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {payoutsLoading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : payouts.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-12">
+                      No leftover payout requests yet.
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Shop</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Bank</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {payouts.map((row) => (
+                          <TableRow key={row.id}>
+                            <TableCell>
+                              <p className="font-medium">{row.shop.shopName}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {row.shop.user.email} · {row.shop.country}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              {row.amount} {row.currency}
+                              {row.monthsGranted ? (
+                                <p className="text-xs text-muted-foreground">
+                                  {row.monthsGranted} mo Pro
+                                </p>
+                              ) : null}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {row.bankHolderName ? (
+                                <div>
+                                  <p>{row.bankHolderName}</p>
+                                  <p>{row.bankName}</p>
+                                  <p className="font-mono">
+                                    {row.bankAccountNumber}
+                                  </p>
+                                  {row.bankRoutingCode && (
+                                    <p>{row.bankRoutingCode}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  row.status === "PENDING"
+                                    ? "secondary"
+                                    : row.status === "PAID" ||
+                                        row.status === "CONVERTED_TO_SUB"
+                                      ? "default"
+                                      : "destructive"
+                                }
+                              >
+                                {row.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {new Date(row.createdAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              {row.status === "PENDING" && (
+                                <div className="flex flex-col gap-1">
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700"
+                                    onClick={() =>
+                                      handleResolvePayout(row.id, "paid")
+                                    }
+                                    disabled={
+                                      actionLoading === `paid-${row.id}`
+                                    }
+                                  >
+                                    Mark paid
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      handleResolvePayout(row.id, "grant_sub")
+                                    }
+                                    disabled={
+                                      actionLoading === `grant_sub-${row.id}`
+                                    }
+                                  >
+                                    Grant Pro instead
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() =>
+                                      handleResolvePayout(row.id, "rejected")
+                                    }
+                                    disabled={
+                                      actionLoading === `rejected-${row.id}`
+                                    }
+                                  >
+                                    Return to wallet
+                                  </Button>
+                                </div>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -542,7 +806,7 @@ export default function AdminReferralsPage() {
                           Minimum cash-out
                         </Label>
                         <p className="text-xs text-muted-foreground mb-1">
-                          Leftover Connect cash-out threshold (invoice currency)
+                          Leftover bank cash-out threshold (invoice currency)
                         </p>
                         <Input
                           id="minCashoutAmount"
@@ -564,7 +828,7 @@ export default function AdminReferralsPage() {
                             Apply to referrer invoice first
                           </Label>
                           <p className="text-xs text-muted-foreground">
-                            Credit their next Orivraa invoice (no extra Stripe fee) before Connect cash-out
+                            Credit their next Orivraa invoice (no extra Stripe fee) before bank cash-out
                           </p>
                         </div>
                         <Switch

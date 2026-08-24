@@ -21,7 +21,9 @@ export function lineItemTotal(item: RichLineItem): number {
   const mc = parseFloat(item.metalCost) || 0;
   const gc = gemstoneTotal(item);
   const mk = parseFloat(item.makingCost) || 0;
-  return (mc + gc + mk) * item.quantity;
+  const rawTotal = (mc + gc + mk) * item.quantity;
+  const discount = (item.setDiscountAmount || 0) * item.quantity;
+  return Math.max(0, roundMoney2(rawTotal - discount));
 }
 
 export function isBlankLine(li: RichLineItem): boolean {

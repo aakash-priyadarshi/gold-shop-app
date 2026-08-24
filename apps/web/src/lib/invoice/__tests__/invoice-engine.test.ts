@@ -175,7 +175,7 @@ describe("invoice shared engine", () => {
     expect(result.line.metalCost).toBe("120000");
     expect(result.line.makingCost).toBe("15000");
     expect(result.line.gemstones).toHaveLength(1);
-    expect(result.line.gemstones[0].type).toBe("Ruby");
+    expect(result.line.gemstones[0].type).toBe("RUBY");
     expect(parseFloat(result.line.wastageCost || "0")).toBeGreaterThan(0);
   });
 
@@ -211,4 +211,90 @@ describe("invoice shared engine", () => {
       }),
     ).toBe(120);
   });
+
+  it("imports SET catalog item with multi-piece gemstones and set discount", () => {
+    const setCatalogItem = {
+      id: "set-1",
+      nameEn: "Royal Bridal Set",
+      jewelleryType: "SET",
+      metalValueNpr: 200000,
+      makingChargeNpr: 30000,
+      setDiscountType: "PERCENT",
+      setDiscountValue: 10,
+      setComponents: [
+        {
+          componentItem: {
+            id: "comp-1",
+            nameEn: "Necklace",
+            sku: "NECK-01",
+            totalWeightGrams: 20,
+            composition: {
+              baseAlloy: { metal: "GOLD", purity: "22K" },
+              gemstones: [
+                {
+                  type: "DIAMOND",
+                  cut: "Round Brilliant",
+                  clarity: "VVS1",
+                  caratWeight: 1.2,
+                  color: "E",
+                  valueNpr: 120000,
+                },
+              ],
+            },
+          },
+        },
+        {
+          componentItem: {
+            id: "comp-2",
+            nameEn: "Earrings",
+            sku: "EAR-01",
+            totalWeightGrams: 10,
+            composition: {
+              baseAlloy: { metal: "GOLD", purity: "22K" },
+              gemstones: [
+                {
+                  type: "EMERALD",
+                  cut: "Emerald",
+                  clarity: "VS1",
+                  caratWeight: 0.8,
+                  valueNpr: 40000,
+                },
+              ],
+            },
+          },
+        },
+      ],
+    };
+
+    const result = importCatalogItem({
+      item: setCatalogItem,
+      existingLines: [],
+    });
+
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+
+    expect(result.line.isSet).toBe(true);
+    expect(result.line.setDiscountType).toBe("PERCENT");
+    expect(result.line.setDiscountValue).toBe(10);
+    // Extracted 2 gemstones from components with full configuration
+    expect(result.line.gemstones).toHaveLength(2);
+    expect(result.line.gemstones[0].type).toBe("DIAMOND");
+    expect(result.line.gemstones[0].cut).toBe("Round Brilliant");
+    expect(result.line.gemstones[0].clarity).toBe("VVS1");
+    expect(result.line.gemstones[0].caratWeight).toBe("1.2");
+    expect(result.line.gemstones[0].cost).toBe("120000");
+
+    expect(result.line.gemstones[1].type).toBe("EMERALD");
+    expect(result.line.gemstones[1].cut).toBe("Emerald");
+    expect(result.line.gemstones[1].cost).toBe("40000");
+
+    // Metal: 200,000 + Making: 30,000 + Gems: 160,000 = 390,000 raw total
+    // 10% discount = 39,000
+    expect(result.line.setDiscountAmount).toBe(39000);
+
+    // lineItemTotal should deduct the 39,000 discount: 390,000 - 39,000 = 351,000
+    expect(lineItemTotal(result.line)).toBe(351000);
+  });
 });
+
