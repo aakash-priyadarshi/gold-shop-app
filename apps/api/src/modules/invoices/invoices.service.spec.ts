@@ -509,7 +509,7 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
     expect(result.totalAmount).toBe(145000 + 4710);
   });
 
-  it("satisfies quantity > 1 monetary invariant (amount === unitPrice * quantity) and preserves discountAmount / setDiscountAmount", async () => {
+  it("satisfies quantity > 1 monetary invariant (rounded amount === rounded unitPrice × quantity) and preserves discountAmount / setDiscountAmount", async () => {
     mockPrisma.shop.findUnique.mockResolvedValue({
       id: "shop-np",
       country: "NP",
@@ -592,4 +592,50 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
     }
     expect(sumQty3).toBe(135000);
   });
+
+  it.each([100, 0.01, 100.01])(
+    "persists an indivisible %.2f residual for quantity 3 using a high-precision unit price",
+    async (targetResidual) => {
+      mockPrisma.shop.findUnique.mockResolvedValue({
+        id: "shop-np",
+        country: "NP",
+        currency: "NPR",
+        vatNumber: null,
+        vatRegistrationStatus: "NOT_REGISTERED",
+        panNumber: null,
+        invoiceSettings: {},
+      });
+      mockPrisma.taxRuleConfig.findMany.mockResolvedValue([]);
+
+      const result = await service.create("shop-np", {
+        customerName: "Fractional allocation customer",
+        invoiceCountry: "NP",
+        currency: "NPR",
+        lineItems: [
+          {
+            label: "Discounted metal allocation",
+            category: "SET",
+            quantity: 3,
+            unitPrice: targetResidual / 3,
+            amount: targetResidual,
+            metalCost: 100,
+          },
+        ],
+      } as any);
+
+      // Invoice.lineItems is the persisted JSON financial representation.
+      const [persistedLine] = result.lineItems as Array<{
+        quantity: number;
+        unitPrice: number;
+        amount: number;
+      }>;
+      expect(persistedLine.quantity).toBe(3);
+      expect(persistedLine.amount).toBe(targetResidual);
+      expect(persistedLine.unitPrice).toBeCloseTo(targetResidual / 3, 10);
+      expect(
+        Math.round(persistedLine.unitPrice * persistedLine.quantity * 100) /
+          100,
+      ).toBe(persistedLine.amount);
+    },
+  );
 });

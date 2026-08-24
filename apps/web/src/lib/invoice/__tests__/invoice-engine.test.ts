@@ -4,6 +4,8 @@ import {
   computeGrandTotal,
   computeSubtotal,
   computeTaxBreakdown,
+  buildMetalPartsFromCatalogItem,
+  calcMetalCostFromParts,
   emptyLineItem,
   FALLBACK_CATEGORY_TAX_RATES,
   importCatalogItem,
@@ -297,62 +299,44 @@ describe("invoice shared engine", () => {
     expect(lineItemTotal(result.line)).toBe(351000);
   });
 
-  it("resolves platinum and palladium live market rates via normalized market keys", () => {
-    const marketRates = {
-      metals: {
-        PLATINUM_PT950: 8000,
-        PLATINUM_PT900: 7500,
-        PALLADIUM_PD950: 6000,
-      },
-    };
+  it.each([
+    ["PALLADIUM", "950", "PALLADIUM_950", "PALLADIUM_PD950", 6000],
+    ["PALLADIUM", "500", "PALLADIUM_500", "PALLADIUM_PD500", 4000],
+    ["PLATINUM", "950", "PLATINUM_950", "PLATINUM_PT950", 8000],
+    ["PLATINUM", "900", "PLATINUM_900", "PLATINUM_PT900", 7500],
+  ])(
+    "uses the same normalized live rate for catalog import and manual repricing: %s_%s",
+    (metal, purity, code, marketKey, rate) => {
+      const item = {
+        id: `${metal}-${purity}`,
+        nameEn: `${metal} ${purity} Band`,
+        jewelleryType: "RING",
+        totalWeightGrams: 4,
+        composition: { baseAlloy: { metal, purity } },
+      };
+      const marketRates = { metals: { [marketKey]: rate } };
 
-    const ptItem = {
-      id: "pt-ring",
-      nameEn: "Platinum 950 Band",
-      jewelleryType: "RING",
-      totalWeightGrams: 5,
-      composition: {
-        baseAlloy: { metal: "PLATINUM", purity: "950" },
-      },
-      makingChargeNpr: 4000,
-    };
+      const catalog = importCatalogItem({
+        item,
+        existingLines: [],
+        marketRates,
+      });
+      expect("error" in catalog).toBe(false);
+      if ("error" in catalog) return;
 
-    const ptResult = importCatalogItem({
-      item: ptItem,
-      existingLines: [],
-      marketRates,
-    });
-
-    expect("error" in ptResult).toBe(false);
-    if ("error" in ptResult) return;
-    // 5g × 8000/g = 40000 metalCost
-    expect(ptResult.line.metalCost).toBe("40000");
-    expect(ptResult.line.metalType).toBe("PLATINUM_950");
-    expect(ptResult.line.makingCost).toBe("4000");
-
-    const pdItem = {
-      id: "pd-band",
-      nameEn: "Palladium Band",
-      jewelleryType: "RING",
-      totalWeightGrams: 4,
-      composition: {
-        baseAlloy: { metal: "PALLADIUM", purity: "950" },
-      },
-      makingChargeNpr: 3000,
-    };
-
-    const pdResult = importCatalogItem({
-      item: pdItem,
-      existingLines: [],
-      marketRates,
-    });
-
-    expect("error" in pdResult).toBe(false);
-    if ("error" in pdResult) return;
-    // 4g × 6000/g = 24000 metalCost
-    expect(pdResult.line.metalCost).toBe("24000");
-    expect(pdResult.line.metalType).toBe("PALLADIUM_950");
-  });
+      // The dashboard's manual/live-reprice path now calls these same helpers.
+      const manual = calcMetalCostFromParts(
+        buildMetalPartsFromCatalogItem(item),
+        null,
+        marketRates,
+      );
+      expect(catalog.line.metalType).toBe(code);
+      expect(catalog.line.metalCost).toBe(String(rate * 4));
+      expect(manual.missing).toEqual([]);
+      expect(manual.cost).toBe(rate * 4);
+      expect(Number(catalog.line.metalCost)).toBe(manual.cost);
+    },
+  );
 
   it("preserves rich gemstone metadata fields on catalog item import", () => {
     const itemWithGems = {
@@ -402,7 +386,7 @@ describe("invoice shared engine", () => {
     expect(gem.cost).toBe("150000");
   });
 
-  it("calculates frontend tax breakdown with SET discount applied to eligible components while leaving wastage unscaled", () => {
+  it("matches the dashboard SET tax preview: discounts eligible components but not wastage", () => {
     const setLine = emptyLineItem();
     setLine.label = "Bridal Set";
     setLine.category = "SET";
@@ -430,7 +414,7 @@ describe("invoice shared engine", () => {
       rates: {
         PRECIOUS_METAL: 0.03, // 3% on metal & wastage
         MAKING_CHARGE: 0.05,  // 5% on making
-        GEMSTONE: 0.03,       // 3% on gemstones
+        GEMSTONE: 0.07,       // 7% on gemstones
         OTHER: 0.03,
       },
     };
@@ -446,14 +430,13 @@ describe("invoice shared engine", () => {
     // Eligible base: 150,000. Target: 135,000. Scale: 0.9.
     // Metal base: 100,000 × 0.9 = 90,000 => 3% tax = 2,700
     // Making base: 20,000 × 0.9 = 18,000 => 5% tax = 900
-    // Gemstone base: 30,000 × 0.9 = 27,000 => 3% tax = 810
+    // Gemstone base: 30,000 × 0.9 = 27,000 => 7% tax = 1,890
     // Wastage base: 10,000 (undiscounted) => 3% tax = 300
-    // Total tax: 2,700 + 900 + 810 + 300 = 4,710
+    // Total tax: 2,700 + 900 + 1,890 + 300 = 5,790
     expect(breakdown.metalTax).toBe(2700);
     expect(breakdown.makingTax).toBe(900);
-    expect(breakdown.gemstoneTax).toBe(810);
+    expect(breakdown.gemstoneTax).toBe(1890);
     expect(breakdown.wastageTax).toBe(300);
-    expect(breakdown.totalTax).toBe(4710);
+    expect(breakdown.totalTax).toBe(5790);
   });
 });
-

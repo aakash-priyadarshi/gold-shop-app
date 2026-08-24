@@ -431,13 +431,15 @@ export class SaleBuilderService {
                 0,
                 Math.round((targetEligibleAmount - runningEligible) * 100) / 100,
               );
-              eligibleLines[i].unitPrice =
-                Math.round((remainingAmount / qty) * 100) / 100;
+              // Amounts are persisted at currency precision, but a final
+              // allocation can be indivisible by quantity (e.g. 100.00 / 3).
+              // Keep a high-precision unit price in the JSON line item and
+              // make the persisted invariant explicit:
+              // round(unitPrice * quantity, 2) === amount.
+              // Rounding unitPrice to cents here would make that impossible.
+              eligibleLines[i].unitPrice = remainingAmount / qty;
               eligibleLines[i].amount =
                 Math.round(eligibleLines[i].unitPrice * qty * 100) / 100;
-              if (eligibleLines[i].amount !== remainingAmount && qty > 0) {
-                eligibleLines[i].amount = remainingAmount;
-              }
             } else {
               eligibleLines[i].unitPrice =
                 Math.round(rawUnit * scale * 100) / 100;

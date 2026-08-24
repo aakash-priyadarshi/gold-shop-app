@@ -69,7 +69,12 @@ import {
   CANONICAL_GEMSTONE_TYPES,
   type ResolvedWastageRule,
 } from "@gold-shop/shared";
-import { importCatalogItem } from "@/lib/invoice/importHelpers";
+import {
+  calcMetalCostFromParts,
+  importCatalogItem,
+} from "@/lib/invoice/importHelpers";
+import { computeTaxBreakdown } from "@/lib/invoice/calculateLineTotals";
+import type { MetalPart } from "@/lib/invoice/lineItemTypes";
 import { mapLineItemsToApi } from "@/lib/invoice/mapToCreateDto";
 import {
     ArrowLeft,
@@ -328,169 +333,6 @@ const METAL_TYPES = [
   { value: "PLATINUM_950", label: "Platinum 950" },
   { value: "PLATINUM_900", label: "Platinum 900" },
 ];
-
-/** Normalize catalog metal+purity (GOLD + 22K) into invoice codes (GOLD_22K). */
-function normalizeMetalCode(metal: string, purity?: string): string {
-  const m = String(metal || "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "_");
-  if (!m) return "";
-  if (/^(GOLD|SILVER|PLATINUM|PALLADIUM)_\w+/.test(m)) return m;
-
-  const p = String(purity || "")
-    .toUpperCase()
-    .replace(/\s+/g, "");
-  if (m === "GOLD" || m.startsWith("GOLD")) {
-    if (p.includes("24") || p === "999") return "GOLD_24K";
-    if (p.includes("22") || p === "916") return "GOLD_22K";
-    if (p.includes("18") || p === "750") return "GOLD_18K";
-    if (p.includes("14") || p === "585") return "GOLD_14K";
-    if (p.includes("10")) return "GOLD_10K";
-    return "GOLD_22K";
-  }
-  if (m === "SILVER" || m.startsWith("SILVER")) {
-    if (p.includes("999")) return "SILVER_999";
-    return "SILVER_925";
-  }
-  if (m === "PLATINUM" || m.startsWith("PLATINUM")) {
-    if (p.includes("900")) return "PLATINUM_900";
-    return "PLATINUM_950";
-  }
-  return m;
-}
-
-/** Read metal type from inventory composition (product form, RFQ, Method A–D). */
-function extractMetalTypeFromComposition(composition: unknown): string {
-  if (!composition || typeof composition !== "object") return "";
-  const c = composition as Record<string, unknown>;
-
-  for (const key of [
-    "preciousMetal",
-    "metal",
-    "primaryMetal",
-    "alloy",
-    "coreMetal",
-    "standardAlloy",
-  ]) {
-    if (typeof c[key] === "string" && c[key]) {
-      return normalizeMetalCode(
-        c[key] as string,
-        typeof c.purity === "string" ? (c.purity as string) : undefined,
-      );
-    }
-  }
-
-  const baseAlloy = c.baseAlloy;
-  if (baseAlloy && typeof baseAlloy === "object") {
-    const ba = baseAlloy as Record<string, unknown>;
-    if (typeof ba.metal === "string" && ba.metal) {
-      return normalizeMetalCode(
-        ba.metal,
-        typeof ba.purity === "string" ? ba.purity : undefined,
-      );
-    }
-  }
-
-  return "";
-}
-
-type MetalPart = { metalType: string; weightG: number; label?: string };
-
-/** Build per-metal weight parts for a catalog item (expands sets). */
-function buildMetalPartsFromCatalogItem(item: any): MetalPart[] {
-  const links = Array.isArray(item?.setComponents) ? item.setComponents : [];
-  if (
-    (item?.jewelleryType === "SET" || item?.composition?.kind === "SET") &&
-    links.length > 0
-  ) {
-    return links
-      .map((link: any) => {
-        const comp = link.componentItem || link;
-        return {
-          metalType: extractMetalTypeFromComposition(comp.composition),
-          weightG: Number(comp.totalWeightGrams) || 0,
-          label: comp.nameEn || comp.sku || "Component",
-        };
-      })
-      .filter((p: MetalPart) => p.weightG > 0);
-  }
-
-  const metalType = extractMetalTypeFromComposition(item?.composition);
-  const weightG = Number(item?.totalWeightGrams) || 0;
-  if (weightG > 0) {
-    return [{ metalType, weightG, label: item?.nameEn || item?.sku }];
-  }
-  return [];
-}
-
-function metalRateBaseKey(metalType: string): string | null {
-  const m = String(metalType || "").toUpperCase();
-  if (m.startsWith("GOLD")) return "GOLD";
-  if (m.startsWith("SILVER")) return "SILVER";
-  if (m.startsWith("PLATINUM")) return "PLATINUM";
-  return null;
-}
-
-function resolveMetalRatePerGram(
-  metalType: string,
-  shopPrices: { baseMetalPrices?: Record<string, number> } | null,
-  marketRates: LiveRateData | null,
-): number | null {
-  if (!metalType) return null;
-  const baseKey = metalRateBaseKey(metalType);
-  const shopRate =
-    shopPrices?.baseMetalPrices?.[metalType] ??
-    (baseKey ? shopPrices?.baseMetalPrices?.[baseKey] : undefined);
-  if (shopRate && shopRate > 0) return Number(shopRate);
-
-  let live =
-    marketRates?.metals?.[metalType] ||
-    marketRates?.metals?.[metalType.toLowerCase()];
-  if (!live && baseKey && marketRates?.metals) {
-    live =
-      marketRates.metals[baseKey] ||
-      marketRates.metals[baseKey.toLowerCase()];
-  }
-  return live && Number(live) > 0 ? Number(live) : null;
-}
-
-function calcMetalCostFromParts(
-  parts: MetalPart[],
-  shopPrices: { baseMetalPrices?: Record<string, number> } | null,
-  marketRates: LiveRateData | null,
-): { cost: number; missing: string[]; detailLines: string[] } {
-  let cost = 0;
-  const missing: string[] = [];
-  const detailLines: string[] = [];
-  for (const part of parts) {
-    if (!part.metalType) {
-      missing.push(part.label || "unknown metal");
-      detailLines.push(
-        `${part.label || "Piece"}: ${part.weightG.toFixed(3)}g — metal type missing`,
-      );
-      continue;
-    }
-    const rate = resolveMetalRatePerGram(
-      part.metalType,
-      shopPrices,
-      marketRates,
-    );
-    if (!rate) {
-      missing.push(part.metalType);
-      detailLines.push(
-        `${part.label || part.metalType}: ${part.weightG.toFixed(3)}g — no rate for ${part.metalType}`,
-      );
-      continue;
-    }
-    const lineCost = part.weightG * rate;
-    cost += lineCost;
-    detailLines.push(
-      `${part.label || part.metalType}: ${part.weightG.toFixed(3)}g × ${rate.toFixed(2)}/g (${part.metalType}) = ${lineCost.toFixed(2)}`,
-    );
-  }
-  return { cost: Math.round(cost * 100) / 100, missing, detailLines };
-}
 
 const GEMSTONE_TYPES = CANONICAL_GEMSTONE_TYPES;
 const GEMSTONE_CUTS = [
@@ -2172,58 +2014,16 @@ export default function CreateInvoicePage() {
         totalTax: 0,
       };
     }
-    const rates = countryTax.rates;
     const pct = resolveInvoiceWastagePct();
     const mode =
       wastageRule.mode === "DISABLED" ? "WEIGHT_PERCENT" : wastageRule.mode;
-    let metalTax = 0;
-    let gemstoneTax = 0;
-    let makingTax = 0;
-    let wastageTax = 0;
-
-    for (const item of lineItems) {
-      const mc = parseFloat(item.metalCost) || 0;
-      let wc = parseFloat(item.wastageCost || "") || 0;
-      if (mc > 0 && pct > 0 && wc <= 0) {
-        wc = calculateLineWastage(
-          {
-            metalCost: mc,
-            metalWeightG: parseFloat(item.metalWeightG) || 0,
-            wastagePercent: pct,
-          },
-          { mode, percent: pct, label: wastageRule.label },
-        ).wastageCost;
-      }
-      const gc = gemstoneTotal(item);
-      const mk = parseFloat(item.makingCost) || 0;
-
-      metalTax += mc * item.quantity * rates.PRECIOUS_METAL;
-      wastageTax += wc * item.quantity * rates.PRECIOUS_METAL;
-      gemstoneTax += gc * item.quantity * rates.GEMSTONE;
-      makingTax += mk * item.quantity * rates.MAKING_CHARGE;
-    }
-
-    makingTax += makingChargeAmount * rates.MAKING_CHARGE;
-
-    // Items without breakdown → default rate
-    for (const item of lineItems) {
-      const mc = parseFloat(item.metalCost) || 0;
-      const wc = parseFloat(item.wastageCost || "") || 0;
-      const gc = gemstoneTotal(item);
-      const mk = parseFloat(item.makingCost) || 0;
-      const tot = lineItemTotal(item);
-      if (mc === 0 && wc === 0 && gc === 0 && mk === 0 && tot > 0) {
-        metalTax += tot * countryTax.defaultRate;
-      }
-    }
-
-    return {
-      metalTax,
-      gemstoneTax,
-      makingTax,
-      wastageTax,
-      totalTax: metalTax + gemstoneTax + makingTax + wastageTax,
-    };
+    return computeTaxBreakdown({
+      lineItems,
+      countryTax,
+      makingChargeAmount,
+      invoiceWastagePct: pct,
+      wastageRule: { mode, label: wastageRule.label },
+    });
   }, [
     lineItems,
     countryTax,

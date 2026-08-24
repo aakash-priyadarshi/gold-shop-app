@@ -390,7 +390,10 @@ export class InvoicesService {
       label: item.label,
       category: item.category,
       quantity: item.quantity,
-      unitPrice: roundMoney(item.unitPrice),
+      // Invoice line items are JSON. Preserve the high-precision unit price
+      // needed when a currency-precision amount is indivisible by quantity;
+      // amount remains rounded to the currency minor unit.
+      unitPrice: item.unitPrice,
       amount: roundMoney(item.amount),
       details: item.details,
       inventoryItemId: item.inventoryItemId,
