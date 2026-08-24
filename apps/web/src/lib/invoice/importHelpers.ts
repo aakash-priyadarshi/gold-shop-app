@@ -60,18 +60,24 @@ export function resolveMetalRatePerGram(
   marketRates: { metals?: Record<string, number> } | null,
 ): number | null {
   if (!metalType) return null;
-  const marketKey = normalizeMetalMarketKey(metalType);
-  const baseKey = metalRateBaseKey(metalType);
+  const normalizedCode = normalizeMetalCode(metalType);
+  const marketKey = normalizeMetalMarketKey(normalizedCode || metalType);
+  const baseKey = metalRateBaseKey(normalizedCode || metalType);
   const shopRate =
     shopPrices?.baseMetalPrices?.[metalType] ??
+    (normalizedCode ? shopPrices?.baseMetalPrices?.[normalizedCode] : undefined) ??
     (marketKey ? shopPrices?.baseMetalPrices?.[marketKey] : undefined) ??
     (baseKey ? shopPrices?.baseMetalPrices?.[baseKey] : undefined);
   if (shopRate && shopRate > 0) return Number(shopRate);
 
   let live =
     (marketKey ? marketRates?.metals?.[marketKey] : undefined) ||
+    (normalizedCode ? marketRates?.metals?.[normalizedCode] : undefined) ||
     marketRates?.metals?.[metalType] ||
     marketRates?.metals?.[metalType.toLowerCase()];
+  if (!live && marketKey && marketRates?.metals) {
+    live = marketRates.metals[marketKey.toLowerCase()];
+  }
   if (!live && baseKey && marketRates?.metals) {
     live =
       marketRates.metals[baseKey] ||

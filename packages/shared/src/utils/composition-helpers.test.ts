@@ -36,6 +36,9 @@ describe("composition-helpers", () => {
       expect(normalizeMetalCode("PLATINUM_PT900")).toBe("PLATINUM_900");
       expect(normalizeMetalCode("PALLADIUM", "950")).toBe("PALLADIUM_950");
       expect(normalizeMetalCode("PALLADIUM_PD950")).toBe("PALLADIUM_950");
+      expect(normalizeMetalCode("PALLADIUM", 500)).toBe("PALLADIUM_500");
+      expect(normalizeMetalCode("PALLADIUM", "PD500")).toBe("PALLADIUM_500");
+      expect(normalizeMetalCode("PALLADIUM_PD500")).toBe("PALLADIUM_500");
     });
   });
 
@@ -46,6 +49,8 @@ describe("composition-helpers", () => {
       expect(normalizeMetalMarketKey("PLATINUM_900")).toBe("PLATINUM_PT900");
       expect(normalizeMetalMarketKey("PALLADIUM_950")).toBe("PALLADIUM_PD950");
       expect(normalizeMetalMarketKey("PALLADIUM_PD950")).toBe("PALLADIUM_PD950");
+      expect(normalizeMetalMarketKey("PALLADIUM_500")).toBe("PALLADIUM_PD500");
+      expect(normalizeMetalMarketKey("PALLADIUM_PD500")).toBe("PALLADIUM_PD500");
       expect(normalizeMetalMarketKey("GOLD_22K")).toBe("GOLD_22K");
       expect(normalizeMetalMarketKey("SILVER_925")).toBe("SILVER_925");
     });

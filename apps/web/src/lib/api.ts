@@ -1217,6 +1217,8 @@ export const sellerPerformanceApi = {
     api.get(
       `/seller-performance/admin/referral-payouts${status ? `?status=${status}` : ""}`,
     ),
+  getAdminReferralPayoutBankDetails: (id: string) =>
+    api.get(`/seller-performance/admin/referral-payouts/${id}/bank-details`),
   resolveReferralPayout: (
     id: string,
     data: {

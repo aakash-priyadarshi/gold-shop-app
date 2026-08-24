@@ -135,6 +135,7 @@ export function normalizeMetalCode(metal?: string | null, purity?: string | numb
     if (m === "PLATINUM_PT950") return "PLATINUM_950";
     if (m === "PLATINUM_PT900") return "PLATINUM_900";
     if (m === "PALLADIUM_PD950") return "PALLADIUM_950";
+    if (m === "PALLADIUM_PD500") return "PALLADIUM_500";
     return m;
   }
 
@@ -162,6 +163,7 @@ export function normalizeMetalCode(metal?: string | null, purity?: string | numb
   }
 
   if (m === "PALLADIUM" || m.startsWith("PALLADIUM")) {
+    if (p.includes("500") || p === "PD500" || p === "0.5" || p === "50") return "PALLADIUM_500";
     return "PALLADIUM_950";
   }
 

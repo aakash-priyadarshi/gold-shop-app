@@ -70,6 +70,7 @@ import {
   type ResolvedWastageRule,
 } from "@gold-shop/shared";
 import { importCatalogItem } from "@/lib/invoice/importHelpers";
+import { mapLineItemsToApi } from "@/lib/invoice/mapToCreateDto";
 import {
     ArrowLeft,
     Check,
@@ -2477,76 +2478,11 @@ export default function CreateInvoicePage() {
 
     setLoading(true);
     try {
-      const apiLineItems = lineItems
-        .filter((li) => li.label && lineItemTotal(li) > 0)
-        .map((li) => {
-          const detailParts = [
-            li.details,
-            li.metalType ? `Metal: ${li.metalType}` : null,
-            li.metalWeightG ? `Weight: ${li.metalWeightG}g` : null,
-            li.gemstones.length > 0
-              ? `Gemstones: ${li.gemstones
-                  .map((g) =>
-                    [g.type, g.cut, g.caratWeight ? `${g.caratWeight}ct` : null]
-                      .filter(Boolean)
-                      .join(" "),
-                  )
-                  .join("; ")}`
-              : null,
-          ].filter(Boolean);
-
-          const metalCost = parseFloat(li.metalCost) || 0;
-          const makingCost = parseFloat(li.makingCost) || 0;
-          const gemstoneCost = gemstoneTotal(li);
-          const pct = resolveInvoiceWastagePct();
-          const mode =
-            wastageRule.mode === "DISABLED"
-              ? "WEIGHT_PERCENT"
-              : wastageRule.mode;
-          let wastageCost = parseFloat(li.wastageCost || "") || 0;
-          if (metalCost > 0 && pct > 0 && wastageCost <= 0) {
-            wastageCost = calculateLineWastage(
-              {
-                metalCost,
-                metalWeightG: parseFloat(li.metalWeightG) || 0,
-                wastagePercent: pct,
-              },
-              { mode, percent: pct, label: wastageRule.label },
-            ).wastageCost;
-          }
-          const hasBreakdown =
-            metalCost > 0 ||
-            makingCost > 0 ||
-            gemstoneCost > 0 ||
-            wastageCost > 0;
-          const lineAmount = lineItemTotal(li) + wastageCost * li.quantity;
-
-          // Send breakdown so InvoicesService.normalizeInvoiceLines expands
-          // into METAL / MAKING / GEMSTONE for tax reports + accounting.
-          return {
-            label: li.label,
-            category: li.category,
-            quantity: li.quantity,
-            unitPrice: lineAmount / li.quantity,
-            amount: lineAmount,
-            details: detailParts.length ? detailParts.join(" · ") : undefined,
-            inventoryItemId: li.inventoryItemId || undefined,
-            variantId: li.variantId || undefined,
-            ...(hasBreakdown
-              ? {
-                  metalCost: metalCost || undefined,
-                  makingCost: makingCost || undefined,
-                  gemstoneCost: gemstoneCost || undefined,
-                  wastageCost: wastageCost || undefined,
-                  wastagePercent: pct > 0 ? pct : undefined,
-                  metalType: li.metalType || undefined,
-                  metalWeightG: li.metalWeightG
-                    ? parseFloat(li.metalWeightG) || undefined
-                    : undefined,
-                }
-              : {}),
-          };
-        });
+      const apiLineItems = mapLineItemsToApi(
+        lineItems,
+        resolveInvoiceWastagePct(),
+        wastageRule,
+      );
 
       // Reject duplicate catalog refs client-side
       const catalogIds = apiLineItems

@@ -22,6 +22,8 @@ export interface ApiInvoiceLineItem {
   wastagePercent?: number;
   metalType?: string;
   metalWeightG?: number;
+  setDiscountAmount?: number;
+  discountAmount?: number;
 }
 
 export interface MapToCreateDtoInput {

@@ -12,6 +12,7 @@ import {
   computeWastageTotal,
   gemstoneTotal,
   recalcLineWastage,
+  roundMoney2,
 } from "./calculateLineTotals";
 import {
   emptyLineItem,
@@ -455,6 +456,25 @@ export function useInvoicePricing(opts: UseInvoicePricingOptions) {
           }
           if (gems.length > 0) {
             line = { ...line, gemstones: gems };
+            if (line.isSet && line.setDiscountType && line.setDiscountValue != null) {
+              const mc = parseFloat(line.metalCost) || 0;
+              const mk = parseFloat(line.makingCost) || 0;
+              const newGemTotal = gems.reduce(
+                (s, g) => s + (parseFloat(g.cost) || 0),
+                0,
+              );
+              const eligibleSum = mc + mk + newGemTotal;
+              let discount = 0;
+              if (line.setDiscountType === "PERCENT") {
+                discount = (eligibleSum * Number(line.setDiscountValue)) / 100;
+              } else if (line.setDiscountType === "FIXED") {
+                discount = Math.min(Number(line.setDiscountValue), eligibleSum);
+              }
+              line = {
+                ...line,
+                setDiscountAmount: roundMoney2(Math.max(0, discount)),
+              };
+            }
           }
           if (gemTotal > 0 && parseFloat(line.makingCost || "") > 0) {
             const mc = parseFloat(line.metalCost) || 0;

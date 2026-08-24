@@ -26,9 +26,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { sellerPerformanceApi } from "@/lib/api";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   Banknote,
   CheckCircle,
+  Eye,
   Gift,
   Loader2,
   Settings,
@@ -100,6 +103,7 @@ interface CommissionRow {
 }
 
 export default function AdminReferralsPage() {
+  const t = useT();
   const [referrals, setReferrals] = useState<ReferralData[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -115,6 +119,26 @@ export default function AdminReferralsPage() {
   const [payouts, setPayouts] = useState<PayoutRequestRow[]>([]);
   const [payoutsLoading, setPayoutsLoading] = useState(false);
   const [payoutRefs, setPayoutRefs] = useState<Record<string, string>>({});
+  const [revealedBankDetails, setRevealedBankDetails] = useState<
+    Record<string, any>
+  >({});
+  const [revealingBankId, setRevealingBankId] = useState<string | null>(null);
+
+  const handleRevealBankDetails = async (id: string) => {
+    setRevealingBankId(id);
+    try {
+      const res =
+        await sellerPerformanceApi.getAdminReferralPayoutBankDetails(id);
+      setRevealedBankDetails((prev) => ({ ...prev, [id]: res.data }));
+    } catch {
+      toast({
+        variant: "destructive",
+        title: t("Failed to fetch full bank details"),
+      });
+    } finally {
+      setRevealingBankId(null);
+    }
+  };
 
   const loadReferrals = useCallback(async () => {
     setLoading(true);
@@ -625,12 +649,14 @@ export default function AdminReferralsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    Leftover bank payouts
+                    <T>Leftover bank payouts</T>
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Shops in countries Stripe Connect does not support save bank
-                    details here. Send the transfer from your bank, then mark
-                    paid — or convert the leftover to Pro months instead.
+                    <T>
+                      Shops in countries Stripe Connect does not support save
+                      bank details here. Send the transfer from your bank, then
+                      mark paid — or convert the leftover to Pro months instead.
+                    </T>
                   </p>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -640,17 +666,27 @@ export default function AdminReferralsPage() {
                     </div>
                   ) : payouts.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-12">
-                      No leftover payout requests yet.
+                      <T>No leftover payout requests yet.</T>
                     </p>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Shop</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Bank</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Date</TableHead>
+                          <TableHead>
+                            <T>Shop</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Amount</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Bank</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Status</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Date</T>
+                          </TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -672,20 +708,53 @@ export default function AdminReferralsPage() {
                               </p>
                               {row.monthsGranted ? (
                                 <p className="text-xs text-muted-foreground">
-                                  {row.monthsGranted} mo Pro
+                                  {row.monthsGranted} <T>mo Pro</T>
                                 </p>
                               ) : null}
                             </TableCell>
                             <TableCell className="text-xs">
                               {row.bankHolderName ? (
-                                <div>
-                                  <p>{row.bankHolderName}</p>
+                                <div className="space-y-1">
+                                  <p className="font-medium">
+                                    {row.bankHolderName}
+                                  </p>
                                   <p>{row.bankName}</p>
                                   <p className="font-mono">
-                                    {row.bankAccountNumber}
+                                    {revealedBankDetails[row.id]
+                                      ?.bankAccountNumber ||
+                                      row.bankAccountNumber}
                                   </p>
-                                  {row.bankRoutingCode && (
-                                    <p>{row.bankRoutingCode}</p>
+                                  {(revealedBankDetails[row.id]
+                                    ?.bankRoutingCode ||
+                                    row.bankRoutingCode) && (
+                                    <p className="font-mono text-muted-foreground">
+                                      <T>Routing</T>:{" "}
+                                      {revealedBankDetails[row.id]
+                                        ?.bankRoutingCode ||
+                                        row.bankRoutingCode}
+                                    </p>
+                                  )}
+                                  <p className="text-muted-foreground">
+                                    <T>Bank Country</T>:{" "}
+                                    {row.bankCountry || row.shop.country}
+                                  </p>
+                                  {!revealedBankDetails[row.id] && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-6 text-[10px] px-2 mt-1"
+                                      onClick={() =>
+                                        handleRevealBankDetails(row.id)
+                                      }
+                                      disabled={revealingBankId === row.id}
+                                    >
+                                      {revealingBankId === row.id ? (
+                                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                      ) : (
+                                        <Eye className="h-3 w-3 mr-1" />
+                                      )}
+                                      <T>View full details (audited)</T>
+                                    </Button>
                                   )}
                                 </div>
                               ) : (
@@ -714,7 +783,7 @@ export default function AdminReferralsPage() {
                                 <div className="flex flex-col gap-1 min-w-[140px]">
                                   <Input
                                     className="h-7 text-xs"
-                                    placeholder="Ref / Wise ID (opt)"
+                                    placeholder={t("Ref / Wise ID (opt)")}
                                     value={payoutRefs[row.id] || ""}
                                     onChange={(e) =>
                                       setPayoutRefs((prev) => ({
@@ -734,7 +803,7 @@ export default function AdminReferralsPage() {
                                     {actionLoading === row.id ? (
                                       <Loader2 className="h-3 w-3 animate-spin mr-1" />
                                     ) : null}
-                                    Mark paid
+                                    <T>Mark paid</T>
                                   </Button>
                                   <Button
                                     size="sm"
@@ -745,7 +814,7 @@ export default function AdminReferralsPage() {
                                     }
                                     disabled={actionLoading === row.id}
                                   >
-                                    Grant Pro instead
+                                    <T>Grant Pro instead</T>
                                   </Button>
                                   <Button
                                     size="sm"
@@ -756,7 +825,7 @@ export default function AdminReferralsPage() {
                                     }
                                     disabled={actionLoading === row.id}
                                   >
-                                    Return to wallet
+                                    <T>Return to wallet</T>
                                   </Button>
                                 </div>
                               )}

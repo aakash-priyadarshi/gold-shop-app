@@ -228,13 +228,24 @@ export class InventoryService {
       );
     }
 
-    // Recalculate total if any price component changed
-    if (
+    if (dto.setDiscountType !== undefined) {
+      updateData.setDiscountType = dto.setDiscountType;
+    }
+    if (dto.setDiscountValue !== undefined) {
+      updateData.setDiscountValue = dto.setDiscountValue;
+    }
+
+    // Recalculate total if any price component changed OR if set discount changed
+    const hasPriceComponentChange =
       dto.metalValueNpr !== undefined ||
       dto.makingChargeNpr !== undefined ||
       dto.gemstoneValueNpr !== undefined ||
-      dto.taxNpr !== undefined
-    ) {
+      dto.taxNpr !== undefined;
+    const hasDiscountChange =
+      dto.setDiscountType !== undefined ||
+      dto.setDiscountValue !== undefined;
+
+    if (hasPriceComponentChange || hasDiscountChange) {
       const metalValue = dto.metalValueNpr ?? item.metalValueNpr;
       const makingCharge = dto.makingChargeNpr ?? item.makingChargeNpr;
       const gemstoneValue = dto.gemstoneValueNpr ?? item.gemstoneValueNpr;
@@ -247,9 +258,13 @@ export class InventoryService {
 
       if (isSet) {
         const discountType =
-          (dto as any).setDiscountType ?? item.setDiscountType;
+          dto.setDiscountType !== undefined
+            ? dto.setDiscountType
+            : item.setDiscountType;
         const discountVal =
-          (dto as any).setDiscountValue ?? item.setDiscountValue;
+          dto.setDiscountValue !== undefined
+            ? dto.setDiscountValue
+            : item.setDiscountValue;
         let discount = 0;
         if (
           discountType === "PERCENT" &&

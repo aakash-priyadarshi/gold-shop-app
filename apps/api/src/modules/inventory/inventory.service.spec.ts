@@ -101,4 +101,145 @@ describe("InventoryService - SET price update regression tests", () => {
     );
     expect(result.totalPriceNpr).toBe(160000);
   });
+
+  it("updates totalPriceNpr on discountValue-only update for SET", async () => {
+    mockPrisma.inventoryItem.findUnique.mockResolvedValue({
+      id: "item-set-3",
+      shopId: "shop-1",
+      jewelleryType: "SET",
+      metalValueNpr: 100000,
+      makingChargeNpr: 20000,
+      gemstoneValueNpr: 30000,
+      taxNpr: 0,
+      totalPriceNpr: 135000,
+      setDiscountType: "PERCENT",
+      setDiscountValue: 10,
+    });
+    mockPrisma.shop.findFirst.mockResolvedValue({ id: "shop-1", userId: "user-1" });
+    mockPrisma.inventoryItem.update.mockImplementation(({ data }: any) =>
+      Promise.resolve({ id: "item-set-3", ...data }),
+    );
+
+    // Update discount from 10% to 20% on 150000 => totalPriceNpr = 120000
+    const result = await service.update("item-set-3", "user-1", {
+      setDiscountValue: 20,
+    } as any);
+
+    expect(mockPrisma.inventoryItem.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          setDiscountValue: 20,
+          totalPriceNpr: 120000,
+        }),
+      }),
+    );
+    expect(result.totalPriceNpr).toBe(120000);
+  });
+
+  it("updates totalPriceNpr on discountType-only update for SET", async () => {
+    mockPrisma.inventoryItem.findUnique.mockResolvedValue({
+      id: "item-set-4",
+      shopId: "shop-1",
+      jewelleryType: "SET",
+      metalValueNpr: 100000,
+      makingChargeNpr: 20000,
+      gemstoneValueNpr: 30000,
+      taxNpr: 0,
+      totalPriceNpr: 135000,
+      setDiscountType: "PERCENT",
+      setDiscountValue: 10,
+    });
+    mockPrisma.shop.findFirst.mockResolvedValue({ id: "shop-1", userId: "user-1" });
+    mockPrisma.inventoryItem.update.mockImplementation(({ data }: any) =>
+      Promise.resolve({ id: "item-set-4", ...data }),
+    );
+
+    // Switch discountType to FIXED (value 10 becomes 10 fixed discount on 150000 => 149990)
+    const result = await service.update("item-set-4", "user-1", {
+      setDiscountType: "FIXED",
+    } as any);
+
+    expect(mockPrisma.inventoryItem.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          setDiscountType: "FIXED",
+          totalPriceNpr: 149990,
+        }),
+      }),
+    );
+    expect(result.totalPriceNpr).toBe(149990);
+  });
+
+  it("honors explicit clear of discount (setting to null or 0)", async () => {
+    mockPrisma.inventoryItem.findUnique.mockResolvedValue({
+      id: "item-set-5",
+      shopId: "shop-1",
+      jewelleryType: "SET",
+      metalValueNpr: 100000,
+      makingChargeNpr: 20000,
+      gemstoneValueNpr: 30000,
+      taxNpr: 0,
+      totalPriceNpr: 135000,
+      setDiscountType: "PERCENT",
+      setDiscountValue: 10,
+    });
+    mockPrisma.shop.findFirst.mockResolvedValue({ id: "shop-1", userId: "user-1" });
+    mockPrisma.inventoryItem.update.mockImplementation(({ data }: any) =>
+      Promise.resolve({ id: "item-set-5", ...data }),
+    );
+
+    // Explicitly clear discount
+    const result = await service.update("item-set-5", "user-1", {
+      setDiscountType: null,
+      setDiscountValue: null,
+    } as any);
+
+    expect(mockPrisma.inventoryItem.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          setDiscountType: null,
+          setDiscountValue: null,
+          totalPriceNpr: 150000,
+        }),
+      }),
+    );
+    expect(result.totalPriceNpr).toBe(150000);
+  });
+
+  it("updates price components and discount simultaneously", async () => {
+    mockPrisma.inventoryItem.findUnique.mockResolvedValue({
+      id: "item-set-6",
+      shopId: "shop-1",
+      jewelleryType: "SET",
+      metalValueNpr: 100000,
+      makingChargeNpr: 20000,
+      gemstoneValueNpr: 30000,
+      taxNpr: 0,
+      totalPriceNpr: 135000,
+      setDiscountType: "PERCENT",
+      setDiscountValue: 10,
+    });
+    mockPrisma.shop.findFirst.mockResolvedValue({ id: "shop-1", userId: "user-1" });
+    mockPrisma.inventoryItem.update.mockImplementation(({ data }: any) =>
+      Promise.resolve({ id: "item-set-6", ...data }),
+    );
+
+    // Update metal to 150000 (base sum: 150000 + 20000 + 30000 = 200000) and discount to 15%
+    // 15% of 200000 = 30000 => totalPriceNpr = 170000
+    const result = await service.update("item-set-6", "user-1", {
+      metalValueNpr: 150000,
+      setDiscountValue: 15,
+    } as any);
+
+    expect(mockPrisma.inventoryItem.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metalValueNpr: 150000,
+          setDiscountValue: 15,
+          totalPriceNpr: 170000,
+        }),
+      }),
+    );
+    expect(result.totalPriceNpr).toBe(170000);
+  });
 });

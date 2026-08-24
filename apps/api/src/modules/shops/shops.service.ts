@@ -571,6 +571,40 @@ export class ShopsService {
       throw new NotFoundException("Shop not found for this user");
     }
 
+    // Recover pending referral signup in background if present
+    const pendingKey = pendingReferralKey(userId);
+    this.redisService
+      .get(pendingKey)
+      .then(async (code) => {
+        if (code && shop) {
+          const pendingCode = normalizeReferralCode(code);
+          if (pendingCode) {
+            const userRecord = await this.prisma.user.findUnique({
+              where: { id: userId },
+              select: { email: true },
+            });
+            if (userRecord?.email) {
+              try {
+                await this.sellerEngagementService.processReferralSignup(
+                  userRecord.email,
+                  shop.id,
+                  pendingCode,
+                );
+                await this.redisService.del(pendingKey);
+                this.logger.log(
+                  `Recovered pending referral ${pendingCode} for user ${userId} and shop ${shop.id}`,
+                );
+              } catch (err: any) {
+                this.logger.warn(
+                  `Pending referral recovery retry failed for user ${userId}: ${err?.message}`,
+                );
+              }
+            }
+          }
+        }
+      })
+      .catch(() => {});
+
     return shop;
   }
 

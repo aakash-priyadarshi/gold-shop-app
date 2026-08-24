@@ -402,6 +402,8 @@ export class InvoicesService {
       makingCost: item.makingCost,
       gemstoneCost: item.gemstoneCost,
       wastageCost: item.wastageCost,
+      discountAmount: item.discountAmount,
+      setDiscountAmount: item.setDiscountAmount,
     }));
 
     const subtotal = sumMoney(lineItems.map((item) => item.amount));

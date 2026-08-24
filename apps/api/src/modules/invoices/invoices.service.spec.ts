@@ -117,6 +117,13 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
         taxName: "VAT",
       },
     ]);
+    mockTaxEngine.calculateTax.mockResolvedValue({
+      taxTotal: 0,
+      effectiveRate: 0,
+      taxes: [],
+      components: { subtotalBeforeTax: 100 },
+      meta: { source: "test" },
+    });
     invoiceSequenceUpsert.mockResolvedValue({ lastNumber: 7 });
     invoiceCreate.mockImplementation(({ data }: any) =>
       Promise.resolve({ id: "invoice-1", ...data }),
@@ -500,5 +507,89 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
     // Expected tax = 2,700 + 900 + 810 + 300 = 4,710
     expect(result.taxAmount).toBe(4710);
     expect(result.totalAmount).toBe(145000 + 4710);
+  });
+
+  it("satisfies quantity > 1 monetary invariant (amount === unitPrice * quantity) and preserves discountAmount / setDiscountAmount", async () => {
+    mockPrisma.shop.findUnique.mockResolvedValue({
+      id: "shop-np",
+      country: "NP",
+      currency: "NPR",
+      vatNumber: null,
+      vatRegistrationStatus: "NOT_REGISTERED",
+      panNumber: null,
+      invoiceSettings: {},
+    });
+    mockPrisma.taxRuleConfig.findMany.mockResolvedValue([]);
+
+    // Raw components per unit: metal 100000, making 20000, gemstone 30000, wastage 5000 (raw sum = 155000)
+    // 10% SET discount on eligible (150000) = 15000 discount => per unit price = 140000.
+    // Quantity = 2 => amount = 280000.
+    const resultQty2 = await service.create("shop-np", {
+      customerName: "Customer 2",
+      invoiceCountry: "NP",
+      currency: "NPR",
+      lineItems: [
+        {
+          label: "Gold Set Double",
+          category: "SET",
+          quantity: 2,
+          unitPrice: 140000,
+          amount: 280000,
+          metalCost: 100000,
+          makingCost: 20000,
+          gemstoneCost: 30000,
+          wastageCost: 5000,
+          setDiscountAmount: 15000,
+          discountAmount: 15000,
+        },
+      ],
+    } as any);
+
+    expect(resultQty2.subtotal).toBe(280000);
+    const linesQty2 = resultQty2.lineItems as Array<any>;
+    expect(linesQty2.length).toBe(4); // Metal, Wastage, Making, Gemstone
+    let sumQty2 = 0;
+    for (const li of linesQty2) {
+      expect(li.quantity).toBe(2);
+      expect(li.amount).toBe(Math.round(li.unitPrice * li.quantity * 100) / 100);
+      expect(li.setDiscountAmount).toBe(15000);
+      expect(li.discountAmount).toBe(15000);
+      sumQty2 += li.amount;
+    }
+    expect(sumQty2).toBe(280000);
+
+    // Quantity = 3 with fractional numbers
+    // Raw components per unit: metal 33333.33, making 11111.11, gem 5555.56 (eligible = 50000)
+    // 10% discount => per unit price = 45000.
+    // Quantity = 3 => amount = 135000.
+    const resultQty3 = await service.create("shop-np", {
+      customerName: "Customer 3",
+      invoiceCountry: "NP",
+      currency: "NPR",
+      lineItems: [
+        {
+          label: "Gold Set Triple",
+          category: "SET",
+          quantity: 3,
+          unitPrice: 45000,
+          amount: 135000,
+          metalCost: 33333.33,
+          makingCost: 11111.11,
+          gemstoneCost: 5555.56,
+          setDiscountAmount: 5000,
+        },
+      ],
+    } as any);
+
+    expect(resultQty3.subtotal).toBe(135000);
+    const linesQty3 = resultQty3.lineItems as Array<any>;
+    let sumQty3 = 0;
+    for (const li of linesQty3) {
+      expect(li.quantity).toBe(3);
+      expect(li.amount).toBe(Math.round(li.unitPrice * li.quantity * 100) / 100);
+      expect(li.setDiscountAmount).toBe(5000);
+      sumQty3 += li.amount;
+    }
+    expect(sumQty3).toBe(135000);
   });
 });
