@@ -275,12 +275,13 @@ function LoginForm() {
             title: t("Verification required"),
             description: t("A verification code has been sent to your email."),
           });
-        } catch {
+        } catch (resendError: any) {
           toast({
             variant: "destructive",
             title: t("Error"),
             description: t(
-              "Failed to send verification code. Please try again.",
+              resendError.message ||
+                "Failed to send verification code. Please try again.",
             ),
           });
         }
