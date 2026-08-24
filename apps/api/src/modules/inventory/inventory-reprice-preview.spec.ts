@@ -186,4 +186,70 @@ describe("InventoryService.repricePreview market-rate normalization", () => {
 
     expect(updated.totalPriceNpr).toBe(preview.items[0].new.totalPriceNpr);
   });
+
+  it("retains cents for SET components and regular items when repricing from fractional rates", async () => {
+    const pricedItem = (id: string) => ({
+      id,
+      nameEn: id,
+      sku: id,
+      composition: { baseAlloy: { metal: "PLATINUM", purity: "950" } },
+      totalWeightGrams: 1,
+      metalValueNpr: 0,
+      makingChargeNpr: 0,
+      gemstoneValueNpr: 0.1,
+      taxNpr: 0.2,
+      totalPriceNpr: 0,
+    });
+    prisma.shop.findFirst.mockResolvedValue({
+      id: "shop-1",
+      userId: "user-1",
+      country: "NP",
+      currency: "NPR",
+      makingChargePercent: 12.5,
+    });
+    prisma.shopPriceOverride.findMany.mockResolvedValue([]);
+    prisma.inventoryItem.findMany.mockResolvedValue([
+      {
+        ...pricedItem("set-1"),
+        jewelleryType: "SET",
+        composition: { kind: "SET" },
+        setDiscountType: null,
+        setDiscountValue: null,
+        setComponents: [{ componentItem: pricedItem("set-component-1") }],
+      },
+      {
+        ...pricedItem("regular-1"),
+        jewelleryType: "RING",
+        setDiscountType: null,
+        setDiscountValue: null,
+        setComponents: [],
+      },
+    ]);
+    marketRates.getMarketRates.mockResolvedValue({
+      metals: { PLATINUM_PT950: 101.25 },
+    });
+
+    const preview = await service.repricePreview("shop-1", "user-1", {
+      mode: "FROM_MARKET_RATES",
+      makingChargeMode: "RECALC_PERCENT",
+      makingChargePercent: 12.5,
+    });
+
+    expect(preview.items.map((item) => item.new)).toEqual([
+      {
+        metalValueNpr: 101.25,
+        makingChargeNpr: 12.66,
+        gemstoneValueNpr: 0.1,
+        taxNpr: 0.2,
+        totalPriceNpr: 114.21,
+      },
+      {
+        metalValueNpr: 101.25,
+        makingChargeNpr: 12.66,
+        gemstoneValueNpr: 0.1,
+        taxNpr: 0.2,
+        totalPriceNpr: 114.21,
+      },
+    ]);
+  });
 });

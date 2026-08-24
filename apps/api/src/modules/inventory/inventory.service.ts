@@ -873,7 +873,7 @@ export class InventoryService {
           setWeight += compWeight;
 
           let compNewMetal = 0;
-          let compNewMaking = comp.makingChargeNpr || 0;
+          let compNewMaking = roundMoney(comp.makingChargeNpr || 0);
 
           if (compWeight > 0) {
             const resolvedRate = resolveRepriceMetalRate(
@@ -896,11 +896,11 @@ export class InventoryService {
             const compPurity = resolvedRate.isSpecific
               ? 1
               : extractPurityFromComposition(comp.composition);
-            compNewMetal = Math.round(
+            compNewMetal = roundMoney(
               compWeight * resolvedRate.rate * compPurity,
             );
             if (makingMode === "RECALC_PERCENT") {
-              compNewMaking = Math.round(compNewMetal * (makingPct / 100));
+              compNewMaking = roundMoney(compNewMetal * (makingPct / 100));
             }
           }
 
@@ -912,7 +912,9 @@ export class InventoryService {
 
         if (setSkipped) continue;
 
-        const setSum = roundMoney(setMetal + setMaking + setGem + setTax);
+        const newSetMetal = roundMoney(setMetal);
+        const newSetMaking = roundMoney(setMaking);
+        const setSum = roundMoney(newSetMetal + newSetMaking + setGem + setTax);
         let setDiscount = 0;
         if (item.setDiscountType === "PERCENT" && item.setDiscountValue != null) {
           setDiscount = (setSum * Number(item.setDiscountValue)) / 100;
@@ -937,8 +939,8 @@ export class InventoryService {
             totalPriceNpr: item.totalPriceNpr,
           },
           new: {
-            metalValueNpr: setMetal,
-            makingChargeNpr: setMaking,
+            metalValueNpr: newSetMetal,
+            makingChargeNpr: newSetMaking,
             gemstoneValueNpr: setGem,
             taxNpr: setTax,
             totalPriceNpr: newTotal,
@@ -981,16 +983,17 @@ export class InventoryService {
       const purityMultiplier = resolvedRate.isSpecific
         ? 1
         : extractPurityFromComposition(item.composition);
-      const newMetal = Math.round(
+      const newMetal = roundMoney(
         item.totalWeightGrams * resolvedRate.rate * purityMultiplier,
       );
-      const newMaking =
+      const newMaking = roundMoney(
         makingMode === "RECALC_PERCENT"
-          ? Math.round(newMetal * (makingPct / 100))
-          : item.makingChargeNpr;
+          ? newMetal * (makingPct / 100)
+          : item.makingChargeNpr,
+      );
       const gemstone = item.gemstoneValueNpr || 0;
       const tax = item.taxNpr || 0;
-      const newTotal = newMetal + newMaking + gemstone + tax;
+      const newTotal = roundMoney(newMetal + newMaking + gemstone + tax);
 
       preview.push({
         id: item.id,

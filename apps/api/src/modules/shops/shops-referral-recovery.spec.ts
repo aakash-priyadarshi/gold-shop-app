@@ -2,6 +2,7 @@ import { UserRole } from "@prisma/client";
 import {
   encodePendingReferral,
   pendingReferralKey,
+  PENDING_REFERRAL_TTL_SECONDS,
 } from "../../common/utils/referral-code";
 import { ShopsService } from "./shops.service";
 
@@ -123,7 +124,7 @@ describe("ShopsService pending referral recovery", () => {
     expect(redis.setKeepTtl).not.toHaveBeenCalled();
   });
 
-  it("stores the failed OAuth referral with its new shop while preserving the existing TTL", async () => {
+  it("updates a legacy OAuth referral without changing its existing TTL", async () => {
     const pendingKey = pendingReferralKey("user-1");
     prisma.user.findUnique.mockResolvedValue({
       id: "user-1",
@@ -139,7 +140,8 @@ describe("ShopsService pending referral recovery", () => {
     redis.get.mockImplementation((key: string) =>
       key === pendingKey ? "invite-123" : undefined,
     );
-    sellerEngagement.processReferralSignup.mockRejectedValue(new Error("retry"));
+    redis.setKeepTtl.mockResolvedValue(true);
+    sellerEngagement.processReferralSignup.mockResolvedValue(null);
 
     await service.setupShopForOAuthUser("user-1", {
       shopName: "Origin",
@@ -151,6 +153,50 @@ describe("ShopsService pending referral recovery", () => {
     expect(redis.setKeepTtl).toHaveBeenCalledWith(
       pendingKey,
       encodePendingReferral({ code: "invite-123", shopId: "origin-shop" }),
+    );
+    expect(redis.set).not.toHaveBeenCalledWith(
+      pendingKey,
+      encodePendingReferral({ code: "invite-123", shopId: "origin-shop" }),
+      PENDING_REFERRAL_TTL_SECONDS,
+    );
+    expect(redis.del).not.toHaveBeenCalledWith(pendingKey);
+  });
+
+  it("recreates an expired structured OAuth referral with the standard TTL", async () => {
+    const pendingKey = pendingReferralKey("user-1");
+    const pending = encodePendingReferral({
+      code: "invite-123",
+      shopId: "origin-shop",
+    });
+    prisma.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      email: "referee@example.com",
+      role: UserRole.SHOPKEEPER,
+      shops: [],
+    });
+    prisma.shop.create.mockResolvedValue({ id: "origin-shop", shopName: "Origin" });
+    prisma.user.update.mockResolvedValue({});
+    prisma.$transaction.mockImplementation((operations: Promise<unknown>[]) =>
+      Promise.all(operations),
+    );
+    redis.get.mockImplementation((key: string) =>
+      key === pendingKey ? pending : undefined,
+    );
+    redis.setKeepTtl.mockResolvedValue(false);
+    sellerEngagement.processReferralSignup.mockRejectedValue(new Error("retry"));
+
+    await service.setupShopForOAuthUser("user-1", {
+      shopName: "Origin",
+      userPhone: "+9779812345678",
+      country: "NP",
+      city: "Kathmandu",
+    });
+
+    expect(redis.setKeepTtl).toHaveBeenCalledWith(pendingKey, pending);
+    expect(redis.set).toHaveBeenCalledWith(
+      pendingKey,
+      pending,
+      PENDING_REFERRAL_TTL_SECONDS,
     );
     expect(redis.del).not.toHaveBeenCalledWith(pendingKey);
   });

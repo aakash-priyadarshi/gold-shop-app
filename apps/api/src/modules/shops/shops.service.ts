@@ -12,6 +12,7 @@ import {
   decodePendingReferral,
   encodePendingReferral,
   normalizeReferralCode,
+  type PendingReferral,
   pendingReferralKey,
   PENDING_REFERRAL_TTL_SECONDS,
 } from "../../common/utils/referral-code";
@@ -133,6 +134,28 @@ export class ShopsService {
     private planLimitsService: PlanLimitsService,
     private priceRebase: ShopPriceRebaseService,
   ) {}
+
+  private async persistPendingReferral(
+    key: string,
+    existingValue: string | undefined,
+    referral: PendingReferral,
+  ): Promise<void> {
+    const encoded = encodePendingReferral(referral);
+    if (!encoded) return;
+
+    if (
+      existingValue &&
+      (await this.redisService.setKeepTtl(key, encoded))
+    ) {
+      return;
+    }
+
+    await this.redisService.set(
+      key,
+      encoded,
+      PENDING_REFERRAL_TTL_SECONDS,
+    );
+  }
 
   /**
    * Check if a phone number is already registered (using Redis cache first)
@@ -314,41 +337,21 @@ export class ShopsService {
           if (linked && !storedForDifferentShop) {
             await this.redisService.del(pendingKey);
           } else if (!linked && !storedForDifferentShop) {
-            const encoded = encodePendingReferral({
+            await this.persistPendingReferral(pendingKey, pendingValue, {
               code: pendingCode,
               shopId: shop.id,
             });
-            if (encoded) {
-              if (pendingValue) {
-                await this.redisService.setKeepTtl(pendingKey, encoded);
-              } else {
-                await this.redisService.set(
-                  pendingKey,
-                  encoded,
-                  PENDING_REFERRAL_TTL_SECONDS,
-                );
-              }
-            }
           }
         } catch (error) {
           this.logger.warn(
             `Referral signup linking failed for user ${userId} shop ${shop.id}: ${(error as { name?: string })?.name || "UNKNOWN"}`,
           );
           try {
-            const encoded = encodePendingReferral({
-              code: pendingCode,
-              shopId: shop.id,
-            });
-            if (encoded && !storedForDifferentShop) {
-              if (pendingValue) {
-                await this.redisService.setKeepTtl(pendingKey, encoded);
-              } else {
-                await this.redisService.set(
-                  pendingKey,
-                  encoded,
-                  PENDING_REFERRAL_TTL_SECONDS,
-                );
-              }
+            if (!storedForDifferentShop) {
+              await this.persistPendingReferral(pendingKey, pendingValue, {
+                code: pendingCode,
+                shopId: shop.id,
+              });
             }
           } catch (redisError) {
             this.logger.warn(

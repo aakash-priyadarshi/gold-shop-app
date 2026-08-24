@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { CountryTaxConfig } from "../index";
 import {
   applyMakingToLine,
   computeGrandTotal,
@@ -417,14 +418,14 @@ describe("invoice shared engine", () => {
     setLine.setDiscountAmount = 15000;
 
     const countryTax: CountryTaxConfig = {
-      country: "IN",
-      regime: "IN_GST_2024",
+      taxType: "GST",
+      taxName: "IN_GST_2024",
       defaultRate: 0.03,
       rates: {
         PRECIOUS_METAL: 0.03, // 3% on metal & wastage
-        MAKING_CHARGE: 0.05,  // 5% on making
-        GEMSTONE: 0.07,       // 7% on gemstones
-        OTHER: 0.03,
+        MAKING_CHARGE: 0.05, // 5% on making
+        GEMSTONE: 0.07, // 7% on gemstones
+        FINISH: 0.03,
       },
     };
 

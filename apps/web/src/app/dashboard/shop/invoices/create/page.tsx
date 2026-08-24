@@ -3398,7 +3398,7 @@ export default function CreateInvoicePage() {
                                     <option value="">— Select —</option>
                                     {GEMSTONE_TYPES.map((g) => (
                                       <option key={g.value} value={g.value}>
-                                        {g.label}
+                                        <T>{g.label}</T>
                                       </option>
                                     ))}
                                   </select>
