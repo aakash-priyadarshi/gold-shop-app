@@ -528,29 +528,39 @@ export class AuthService {
     email: string,
     ipAddress?: string,
   ): Promise<{ success: boolean; message: string }> {
+    const genericResponse = {
+      success: true,
+      message:
+        "If the email exists and requires verification, a verification code has been sent.",
+    };
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
 
-    if (!user) {
-      // Don't reveal if email exists
-      return {
-        success: true,
-        message: "If the email exists, a verification code has been sent.",
-      };
+    // Do not expose whether the email belongs to an account that is already
+    // verified. The guard intentionally prevents a second verification send.
+    if (!user || user.emailVerified) {
+      return genericResponse;
     }
 
-    if (user.emailVerified) {
-      throw new BadRequestException("Email already verified");
+    try {
+      await this.otpService.sendVerificationOtpByEmail(
+        user.email,
+        user.id,
+        user.firstName,
+        ipAddress,
+      );
+    } catch (error) {
+      // This endpoint is public, so neither rate-limit nor delivery failures
+      // may reveal that an email belongs to an unverified account.
+      this.logger.warn(
+        `Verification OTP resend was not completed for user ${user.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
 
-    await this.otpService.sendVerificationOtpByEmail(
-      user.email,
-      user.id,
-      user.firstName,
-      ipAddress,
-    );
-    return { success: true, message: "Verification code sent to your email." };
+    return genericResponse;
   }
 
   /**
