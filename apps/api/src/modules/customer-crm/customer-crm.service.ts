@@ -13,21 +13,25 @@ export class CustomerCrmService {
     const localPhone = dto.phone.replace(/\D/g, "");
     const fullPhone = `${dto.phoneCountryCode}${localPhone}`;
     const existing = await this.prisma.walkInCustomer.findUnique({
-      where: { phone: fullPhone },
+      where: {
+        createdByShopId_phone: {
+          createdByShopId: shopId,
+          phone: fullPhone,
+        },
+      },
     });
 
-    const isCreator = existing?.createdByShopId === shopId;
     const customer = existing
       ? await this.prisma.walkInCustomer.update({
           where: { id: existing.id },
           data: {
-            name: isCreator ? dto.name.trim() : (existing.name || dto.name.trim()),
-            phoneCountryCode: isCreator ? dto.phoneCountryCode : existing.phoneCountryCode,
+            name: dto.name.trim(),
+            phoneCountryCode: dto.phoneCountryCode,
             email: dto.email?.trim() || existing.email,
-            address: isCreator ? (dto.address?.trim() ?? existing.address) : (existing.address || dto.address?.trim() || ""),
-            city: isCreator ? (dto.city?.trim() ?? existing.city) : (existing.city || dto.city?.trim() || ""),
-            country: isCreator ? (dto.country?.trim() || existing.country) : (existing.country || dto.country?.trim() || ""),
-            ...(isCreator && dto.notes !== undefined ? { notes: dto.notes.trim() || null } : {}),
+            address: dto.address?.trim() ?? existing.address,
+            city: dto.city?.trim() ?? existing.city,
+            country: dto.country?.trim() || existing.country,
+            ...(dto.notes !== undefined ? { notes: dto.notes.trim() || null } : {}),
           },
         })
       : await this.prisma.walkInCustomer.create({
@@ -322,9 +326,9 @@ export class CustomerCrmService {
       };
     }
 
-    // Try walk-in customer
-    const walkIn = await this.prisma.walkInCustomer.findUnique({
-      where: { id: customerId },
+    // Try walk-in customer (strictly scoped to this shop)
+    const walkIn = await this.prisma.walkInCustomer.findFirst({
+      where: { id: customerId, createdByShopId: shopId },
       include: {
         _count: { select: { shopQuotes: true } },
       },
@@ -383,10 +387,7 @@ export class CustomerCrmService {
     const walkInCustomer = await this.prisma.walkInCustomer.findFirst({
       where: {
         id: customerId,
-        OR: [
-          { createdByShopId: shopId },
-          { invoices: { some: { shopId } } },
-        ],
+        createdByShopId: shopId,
       },
       select: { id: true },
     });
@@ -522,10 +523,7 @@ export class CustomerCrmService {
     const walkInCustomer = await this.prisma.walkInCustomer.findFirst({
       where: {
         id: customerId,
-        OR: [
-          { createdByShopId: shopId },
-          { invoices: { some: { shopId } } },
-        ],
+        createdByShopId: shopId,
       },
       select: { id: true },
     });

@@ -44,6 +44,15 @@ import {
   shopsApi,
 } from "@/lib/api";
 import { ManagerPinDialog } from "@/components/shop/ManagerPinDialog";
+import { PosShiftModal } from "@/components/shop/PosShiftModal";
+import { PosReturnModal } from "@/components/shop/PosReturnModal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   defaultPhoneCountryCode,
   PosCustomerPicker,
@@ -53,8 +62,9 @@ import {
   SellerProductDetailDialog,
   type SellerProductDetail,
 } from "@/components/shop/SellerProductDetailDialog";
-import { printBill, type BillSettings } from "@/lib/billPrint";
+import { printAuthoritativeBill, printBill, type BillSettings } from "@/lib/billPrint";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
+import { loadHardwareConfig } from "@/lib/posHardware";
 import {
   getCounterPaymentMethods,
   buildQrImageUrl,
@@ -74,16 +84,21 @@ import { usePreferencesStore } from "@/store/preferences";
 import Image from "next/image";
 import { useT } from "@/providers/translation-provider";
 import {
+    Coins,
+    DollarSign,
+    FileText,
     Heart,
     Loader2,
     Maximize2,
     Minus,
     Package,
     Plus,
+    RotateCcw,
     ScanLine,
     Search,
     ShoppingCart,
     Split,
+    Store,
     Trash2,
     UserRound,
     X,
@@ -224,6 +239,16 @@ function PosPageInner() {
     Array<{ id: string; method: CounterPaymentMethod; amount: string }>
   >([]);
 
+  // Multi-counter register and shift state
+  const [registers, setRegisters] = useState<Array<{ id: string; name: string; terminalCode: string }>>([]);
+  const [selectedRegisterId, setSelectedRegisterId] = useState<string>("");
+  const [currentShift, setCurrentShift] = useState<any | null>(null);
+  const [shiftModalOpen, setShiftModalOpen] = useState(false);
+  const [shiftModalMode, setShiftModalMode] = useState<"OPEN" | "CLOSE" | "Z_REPORT">("OPEN");
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [serverPreview, setServerPreview] = useState<any | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   const shopCountry = user?.shop?.country || "NP";
   const PAYMENT_METHODS = getCounterPaymentMethods(shopCountry);
   const TAX_PRESETS = shopCountry === "IN"
@@ -233,22 +258,82 @@ function PosPageInner() {
       : [{ label: "VAT 5%", value: 0.05 }, { label: "Exempt", value: 0 }];
   const MAKING_PRESETS = [0, 8, 12, 14, 18];
 
-  // Load active session on mount
-  const loadActiveSession = useCallback(async () => {
+  const loadRegisters = useCallback(async () => {
     try {
-      const res = await posApi.getActiveSession();
+      const res = await posApi.getRegisters();
+      const list = res.data || [];
+      setRegisters(list);
+      if (list.length > 0 && !selectedRegisterId) {
+        setSelectedRegisterId(list[0].id);
+      }
+    } catch {
+      // ignore
+    }
+  }, [selectedRegisterId]);
+
+  const loadCurrentShift = useCallback(async (regId?: string) => {
+    try {
+      const res = await posApi.getCurrentShift(regId || selectedRegisterId || undefined);
+      setCurrentShift(res.data || null);
+    } catch {
+      setCurrentShift(null);
+    }
+  }, [selectedRegisterId]);
+
+  // Load active session on mount
+  const loadActiveSession = useCallback(async (regId?: string) => {
+    try {
+      const res = await posApi.getActiveSession(regId || selectedRegisterId || undefined);
       if (res.data) {
         setSession(res.data);
         setSelectedCustomer(res.data.customer || null);
+      } else {
+        setSession(null);
       }
     } catch {
-      // No active session - that's ok
+      setSession(null);
     }
-  }, []);
+  }, [selectedRegisterId]);
 
   useEffect(() => {
-    loadActiveSession();
-  }, [loadActiveSession]);
+    loadRegisters();
+  }, [loadRegisters]);
+
+  useEffect(() => {
+    if (selectedRegisterId) {
+      loadCurrentShift(selectedRegisterId);
+      loadActiveSession(selectedRegisterId);
+    }
+  }, [selectedRegisterId, loadCurrentShift, loadActiveSession]);
+
+  // Authoritative server pricing preview effect
+  useEffect(() => {
+    if (!session?.id || session.items.length === 0) {
+      setServerPreview(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setPreviewLoading(true);
+      try {
+        const res = await posApi.previewSession(session.id, {
+          makingChargeRate: makingChargeRate || undefined,
+          discountAmount: discountAmount || undefined,
+          taxRate: taxRate || undefined,
+          invoiceCountry: shopCountry || undefined,
+        });
+        if (!cancelled) setServerPreview(res.data);
+      } catch {
+        if (!cancelled) setServerPreview(null);
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [session?.id, session?.items, makingChargeRate, discountAmount, taxRate, shopCountry]);
 
   useEffect(() => {
     invoicesApi
@@ -329,6 +414,7 @@ function PosPageInner() {
         customerId:
           cId || selectedCustomer?.id || customerId || undefined,
         conversationId: convId || urlConversationId || undefined,
+        registerId: selectedRegisterId || undefined,
       });
       setSession(res.data);
       setSelectedCustomer(res.data.customer || selectedCustomer || null);
@@ -676,13 +762,27 @@ function PosPageInner() {
     }
   };
 
-  // ─── Compute Basket Totals ───
+  // ─── Compute Basket Totals (Authoritative Server Preview Preferred) ───
 
-  const basketSubtotal =
+  const localSubtotal =
     session?.items?.reduce((sum, i) => sum + i.lineTotal, 0) || 0;
-  const basketMaking = makingChargeRate > 0 ? Math.round(basketSubtotal * (makingChargeRate / 100)) : 0;
-  const basketTax = (basketSubtotal + basketMaking) * (taxRate || 0);
-  const basketTotal = basketSubtotal + basketMaking + basketTax - (discountAmount || 0);
+  const localMaking = makingChargeRate > 0 ? Math.round(localSubtotal * (makingChargeRate / 100)) : 0;
+  const localTax = (localSubtotal + localMaking) * (taxRate || 0);
+  const localTotal = localSubtotal + localMaking + localTax - (discountAmount || 0);
+
+  const basketSubtotal = serverPreview?.subtotal ?? localSubtotal;
+  const basketMaking = serverPreview?.makingChargeAmount ?? localMaking;
+  const basketTax = serverPreview?.taxAmount ?? localTax;
+  const basketTotal = serverPreview?.grandTotal ?? localTotal;
+
+  const handleKickDrawer = async () => {
+    try {
+      await posApi.auditDrawerOpen("Manual cashier request");
+      toast({ title: t("Cash drawer kicked"), description: t("Manual action audited.") });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: t("Drawer error"), description: err?.message });
+    }
+  };
 
   const upiOverLimit =
     !splitMode &&
@@ -734,8 +834,78 @@ function PosPageInner() {
                 <T>{isCounterMode ? "Fast counter checkout mode" : "Advanced ERP mode with stock locking"}</T>
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              {/* Mode Toggle removed: now lives globally in DashboardLayout header */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Register / Counter Selector */}
+              {registers.length > 0 && (
+                <div className="flex items-center gap-1.5 bg-muted/40 rounded-lg p-1 border">
+                  <Store className="h-4 w-4 text-muted-foreground ml-1.5" />
+                  <Select value={selectedRegisterId} onValueChange={setSelectedRegisterId}>
+                    <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none w-36">
+                      <SelectValue placeholder="Select Counter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {registers.map((r) => (
+                        <SelectItem key={r.id} value={r.id} className="text-xs">
+                          {r.name} ({r.terminalCode})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Shift Status & Controls */}
+              {currentShift ? (
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 border-emerald-300 text-xs">
+                    Shift Open
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    onClick={() => {
+                      setShiftModalMode("CLOSE");
+                      setShiftModalOpen(true);
+                    }}
+                  >
+                    <FileText className="h-3.5 w-3.5 mr-1" /> Close Shift
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 border-amber-300"
+                  onClick={() => {
+                    setShiftModalMode("OPEN");
+                    setShiftModalOpen(true);
+                  }}
+                >
+                  <DollarSign className="h-3.5 w-3.5 mr-1" /> Open Shift
+                </Button>
+              )}
+
+              {/* Drawer Kick */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={handleKickDrawer}
+                title="Open Cash Drawer"
+              >
+                <Coins className="h-3.5 w-3.5 mr-1" /> Drawer
+              </Button>
+
+              {/* Return & Exchange */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => setReturnModalOpen(true)}
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1" /> Return / Exchange
+              </Button>
             </div>
             {session && (
               <div className="flex items-center gap-2">
@@ -1752,15 +1922,12 @@ function PosPageInner() {
               <div className="text-3xl font-bold">
                 {currencySymbol} {checkoutSuccess?.total?.toLocaleString()}
               </div>
-              <p className="text-sm text-muted-foreground">
-                <T>Invoice</T> #{checkoutSuccess?.invoiceNumber}
-              </p>
               <div className="flex gap-2 justify-center">
                 <Button
                   variant="outline"
-                  onClick={() => {
+                  onClick={async () => {
                     if (!checkoutSuccess) return;
-                    const ok = printBill({
+                    const ok = await printAuthoritativeBill({
                       fallbackShopName: user?.shop?.shopName,
                       settings: billSettings,
                       invoiceNumber: checkoutSuccess.invoiceNumber,
@@ -1808,6 +1975,31 @@ function PosPageInner() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Cashier Shift Modal */}
+        <PosShiftModal
+          open={shiftModalOpen}
+          onOpenChange={setShiftModalOpen}
+          mode={shiftModalMode}
+          registerId={selectedRegisterId}
+          registerName={registers.find((r) => r.id === selectedRegisterId)?.name || "Main Register"}
+          currentShift={currentShift}
+          currencySymbol={currencySymbol}
+          onShiftUpdated={() => {
+            loadCurrentShift(selectedRegisterId);
+            loadRegisters();
+          }}
+        />
+
+        {/* POS Return & Exchange Modal */}
+        <PosReturnModal
+          open={returnModalOpen}
+          onOpenChange={setReturnModalOpen}
+          currencySymbol={currencySymbol}
+          onReturnCompleted={() => {
+            loadCurrentShift(selectedRegisterId);
+          }}
+        />
 
         <ManagerPinDialog
           open={pinOpen}

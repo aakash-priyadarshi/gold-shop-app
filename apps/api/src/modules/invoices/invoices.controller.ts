@@ -22,7 +22,11 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { FeatureGateGuard } from "../core/subscriptions/feature-gate.guard";
 import { RequireFeature } from "../core/subscriptions/require-feature.decorator";
-import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
+import {
+  ConfirmPaymentDto,
+  CreateInvoiceDto,
+  UpdatePaymentDto,
+} from "./dto/invoice.dto";
 import {
   ShareInvoiceEmailDto,
   ShareInvoiceSmsDto,
@@ -221,6 +225,20 @@ export class InvoicesController {
       throw new Error("No shop associated with this user");
     }
     return this.invoicesService.recordPayment(id, shopId, dto);
+  }
+
+  @Post(":id/payments/:paymentId/confirm")
+  async confirmPayment(
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Param("id") id: string,
+    @Param("paymentId") paymentId: string,
+    @Body() dto: ConfirmPaymentDto,
+  ) {
+    if (!shopId) {
+      throw new Error("No shop associated with this user");
+    }
+    return this.invoicesService.confirmPayment(id, paymentId, shopId, userId, dto);
   }
 
   @Post(":id/void")

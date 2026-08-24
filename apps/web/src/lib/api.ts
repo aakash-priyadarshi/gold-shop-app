@@ -1757,11 +1757,92 @@ export const variantsApi = {
 
 // ─── POS API ───
 export const posApi = {
+  // Registers / Counters
+  getRegisters: () => api.get("/pos/registers"),
+  createRegister: (data: {
+    name: string;
+    terminalCode?: string;
+    active?: boolean;
+    hardwareConfig?: Record<string, any>;
+  }) => api.post("/pos/registers", data),
+  updateRegister: (id: string, data: Record<string, any>) =>
+    api.patch(`/pos/registers/${id}`, data),
+
+  // Shifts & Z-Report
+  openShift: (data: { registerId: string; openingCash?: number; notes?: string }) =>
+    api.post("/pos/shifts/open", data),
+  getCurrentShift: (registerId?: string) =>
+    api.get("/pos/shifts/current", { params: registerId ? { registerId } : {} }),
+  closeShift: (id: string, data: { closingCash: number; notes?: string }) =>
+    api.post(`/pos/shifts/${id}/close`, data),
+  getZReport: (id: string) => api.get(`/pos/shifts/${id}/z-report`),
+  auditDrawerOpen: (reason?: string) =>
+    api.post("/pos/drawer/open", { reason }),
+
+  // Pricing Preview
+  previewPricing: (data: {
+    items: Array<{
+      inventoryItemId: string;
+      variantId?: string;
+      qty: number;
+      unitPrice?: number;
+    }>;
+    makingChargeRate?: number;
+    makingChargesNpr?: number;
+    discountAmount?: number;
+    invoiceCountry?: string;
+    currency?: string;
+  }) => api.post("/pos/preview", data),
+  previewSession: (sessionId: string, overrides?: Record<string, any>) =>
+    api.post(`/pos/session/${sessionId}/preview`, overrides || {}),
+
+  // Returns & Exchanges
+  processReturn: (data: {
+    invoiceNumber: string;
+    lines: Array<{
+      inventoryItemId: string;
+      qty: number;
+      reason: string;
+      condition?: string;
+      disposition?: string;
+      customRefundAmount?: number;
+    }>;
+    refundMethod?: string;
+    notes?: string;
+    managerPin?: string;
+  }) => api.post("/pos/returns", data),
+  processExchange: (data: {
+    invoiceNumber: string;
+    returnLines: Array<{
+      inventoryItemId: string;
+      qty: number;
+      reason: string;
+      condition?: string;
+      disposition?: string;
+      customRefundAmount?: number;
+    }>;
+    newItems: Array<{
+      inventoryItemId: string;
+      variantId?: string;
+      qty: number;
+      unitPrice?: number;
+    }>;
+    paymentMethod?: string;
+    paymentSplits?: Array<{ method: string; amount: number; reference?: string }>;
+    notes?: string;
+    managerPin?: string;
+  }) => api.post("/pos/exchanges", data),
+
+  // Customer Picks
   getCustomerPicks: (customerId: string) =>
     api.get(`/pos/customer-picks/${customerId}`),
-  getActiveSession: () => api.get("/pos/session/active"),
-  createSession: (data: { customerId?: string; conversationId?: string }) =>
-    api.post("/pos/session", data),
+  getActiveSession: (registerId?: string) =>
+    api.get("/pos/session/active", { params: registerId ? { registerId } : {} }),
+  createSession: (data: {
+    customerId?: string;
+    conversationId?: string;
+    registerId?: string;
+  }) => api.post("/pos/session", data),
   updateCustomer: (sessionId: string, customerId?: string) =>
     api.patch(`/pos/session/${sessionId}/customer`, { customerId }),
   addItems: (
@@ -1783,7 +1864,16 @@ export const posApi = {
       taxRate?: number;
       discountAmount?: number;
       paymentMethod?: string;
-      paymentSplits?: Array<{ method: string; amount: number }>;
+      paymentSplits?: Array<{
+        method: string;
+        amount: number;
+        reference?: string;
+        provider?: string;
+        providerTransactionId?: string;
+        terminalReference?: string;
+        bankReference?: string;
+        notes?: string;
+      }>;
       makingChargeRate?: number;
       makingChargesNpr?: number;
       invoiceCountry?: string;
@@ -1813,6 +1903,16 @@ export interface PosSalePayload {
   taxRate?: number;
   discountAmount?: number;
   paymentMethod?: string;
+  paymentSplits?: Array<{
+    method: string;
+    amount: number;
+    reference?: string;
+    provider?: string;
+    providerTransactionId?: string;
+    terminalReference?: string;
+    bankReference?: string;
+    notes?: string;
+  }>;
   makingChargeRate?: number;
   makingChargesNpr?: number;
   /** Tax regime country for this sale (defaults to shop.country on server). */

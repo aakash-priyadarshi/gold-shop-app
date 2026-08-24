@@ -77,6 +77,9 @@ model User {
   desktopSessions      DesktopSession[]
   // Web app sessions
   webSessions          WebSession[]
+  // POS Shifts
+  shiftsOpened         PosShift[]              @relation("ShiftOpenedBy")
+  shiftsClosed         PosShift[]              @relation("ShiftClosedBy")
 
   // Custom Profile Enrivhment fields
   dateOfBirth DateTime?
@@ -471,6 +474,11 @@ model Shop {
   karigarMetalMovements KarigarMetalMovement[]
   karigarJobStages      KarigarJobStage[]
   karigarCastingTrees   KarigarCastingTree[]
+
+  // POS Registers & Shifts & Returns
+  posRegisters         PosRegister[]
+  posShifts            PosShift[]
+  posReturns           PosReturn[]
 
   // AI Credit Auto-Recharge
   autoRechargeEnabled   Boolean @default(false)
@@ -874,26 +882,27 @@ model RfqOffer {
 }
 
 // Walk-in customer model - for customers who visit the shop in person
-// Phone number is the unique identifier for returning customers
+// Scoped uniquely to the creating shop so different shops can have customers with the same phone
 model WalkInCustomer {
   id               String   @id @default(uuid())
-  phone            String   @unique // Unique identifier - phone is used for lookup
-  phoneCountryCode String   @default("+91")
+  phone            String   // Phone identifier scoped to shop
+  phoneCountryCode String   @default("+977")
   name             String
   email            String?
-  address          String
-  city             String
-  country          String   @default("India")
-  createdByShopId  String // First shop that created this customer
+  address          String   @default("")
+  city             String   @default("")
+  country          String   @default("Nepal")
+  createdByShopId  String // Shop that owns this walk-in customer record
   notes            String? // Any notes about the customer
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  createdByShop Shop        @relation(fields: [createdByShopId], references: [id])
+  createdByShop Shop        @relation(fields: [createdByShopId], references: [id], onDelete: Cascade)
   shopQuotes    ShopQuote[]
   invoices      Invoice[]
   karigarJobs   KarigarJob[]
 
+  @@unique([createdByShopId, phone])
   @@index([phone])
   @@index([createdByShopId])
 }
@@ -2619,6 +2628,7 @@ model Invoice {
   shop           Shop            @relation(fields: [shopId], references: [id])
   walkInCustomer WalkInCustomer? @relation(fields: [walkInCustomerId], references: [id])
   payments       InvoicePayment[]
+  returns        PosReturn[]
 
   @@index([shopId])
   @@index([orderId])
@@ -2631,31 +2641,45 @@ model Invoice {
 }
 
 enum InvoicePaymentStatus {
+  PENDING
+  CONFIRMED
   RECEIVED
+  FAILED
+  CANCELLED
+  REFUNDED
   VOIDED
   REVERSED
 }
 
 model InvoicePayment {
-  id                 String               @id @default(uuid())
-  invoiceId          String
-  amount             Decimal              @db.Decimal(18, 2)
-  currency           CurrencyCode
-  canonicalAmountNpr Decimal?             @db.Decimal(24, 4)
-  fxRate             Decimal?             @db.Decimal(24, 10)
-  fxSource           String?
-  fxQuotedAt         DateTime?
-  method             String
-  reference          String?
-  idempotencyKey     String               @unique
-  status             InvoicePaymentStatus @default(RECEIVED)
-  notes              String?
-  receivedAt         DateTime             @default(now())
-  voidedAt           DateTime?
-  voidReason         String?
-  reversalOfId       String?              @unique
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  id                    String               @id @default(uuid())
+  invoiceId             String
+  amount                Decimal              @db.Decimal(18, 2)
+  currency              CurrencyCode
+  canonicalAmountNpr    Decimal?             @db.Decimal(24, 4)
+  fxRate                Decimal?             @db.Decimal(24, 10)
+  fxSource              String?
+  fxQuotedAt            DateTime?
+  method                String
+  provider              String?
+  providerTransactionId String?
+  merchantReference     String?
+  terminalReference     String?
+  bankReference         String?
+  confirmedByUserId     String?
+  verifiedAt            DateTime?
+  verificationMode      String?
+  metadata              Json?
+  reference             String?
+  idempotencyKey        String               @unique
+  status                InvoicePaymentStatus @default(RECEIVED)
+  notes                 String?
+  receivedAt            DateTime             @default(now())
+  voidedAt              DateTime?
+  voidReason            String?
+  reversalOfId          String?              @unique
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
   invoice    Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   reversalOf InvoicePayment? @relation("InvoicePaymentReversal", fields: [reversalOfId], references: [id])
@@ -3116,9 +3140,83 @@ model WishlistItem {
   @@index([inventoryItemId])
 }
 
+model PosRegister {
+  id             String       @id @default(uuid())
+  shopId         String
+  name           String
+  terminalCode   String?
+  active         Boolean      @default(true)
+  hardwareConfig Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  shop     Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shifts   PosShift[]
+  sessions PosSession[]
+
+  @@unique([shopId, terminalCode])
+  @@index([shopId, active])
+}
+
+model PosShift {
+  id             String       @id @default(uuid())
+  shopId         String
+  registerId     String
+  openedByUserId String
+  closedByUserId String?
+  openedAt       DateTime     @default(now())
+  closedAt       DateTime?
+  openingCash    Decimal      @default(0) @db.Decimal(18, 2)
+  closingCash    Decimal?     @db.Decimal(18, 2)
+  expectedCash   Decimal?     @db.Decimal(18, 2)
+  variance       Decimal?     @db.Decimal(18, 2)
+  notes          String?
+  status         String       @default("OPEN")
+  summary        Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  shop         Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  register     PosRegister  @relation(fields: [registerId], references: [id], onDelete: Cascade)
+  openedByUser User         @relation("ShiftOpenedBy", fields: [openedByUserId], references: [id])
+  closedByUser User?        @relation("ShiftClosedBy", fields: [closedByUserId], references: [id])
+  sessions     PosSession[]
+
+  @@index([shopId, status])
+  @@index([registerId, status])
+}
+
+model PosReturn {
+  id                    String   @id @default(uuid())
+  shopId                String
+  invoiceId             String
+  originalInvoiceNumber String
+  returnType            String   @default("RETURN") // RETURN, EXCHANGE
+  exchangeInvoiceId     String?
+  lines                 Json
+  subtotal              Decimal  @db.Decimal(18, 2)
+  taxAmount             Decimal  @default(0) @db.Decimal(18, 2)
+  refundAmount          Decimal  @db.Decimal(18, 2)
+  refundMethod          String   @default("CASH")
+  disposition           String   @default("RESTOCK") // RESTOCK, QUARANTINE, REPAIR, SCRAP
+  approvedByUserId      String?
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  shop    Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@index([shopId, createdAt])
+  @@index([invoiceId])
+}
+
 model PosSession {
   id             String           @id @default(cuid())
   shopId         String
+  registerId     String?
+  cashierUserId  String?
+  shiftId        String?
   customerId     String?
   conversationId String?
   status         PosSessionStatus @default(ACTIVE)
@@ -3127,10 +3225,13 @@ model PosSession {
   updatedAt      DateTime         @updatedAt
 
   shop              Shop               @relation(fields: [shopId], references: [id])
+  register          PosRegister?       @relation(fields: [registerId], references: [id], onDelete: SetNull)
+  shift             PosShift?          @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   items             PosSessionItem[]
   stockReservations StockReservation[]
 
   @@index([shopId, status])
+  @@index([registerId, status])
   @@index([expiresAt])
 }
 

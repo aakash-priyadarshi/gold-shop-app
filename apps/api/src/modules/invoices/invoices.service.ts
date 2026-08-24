@@ -25,7 +25,11 @@ import {
   BackendTaxEngineService,
   TaxableComponent,
 } from "../core/pricing/services/backend-tax-engine.service";
-import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
+import {
+  ConfirmPaymentDto,
+  CreateInvoiceDto,
+  UpdatePaymentDto,
+} from "./dto/invoice.dto";
 import {
   ShareInvoiceEmailDto,
   ShareInvoiceSmsDto,
@@ -41,6 +45,7 @@ import { InvoicePdfService } from "./invoice-pdf.service";
 export interface CreateInvoiceOptions {
   /** When true, caller commits stock itself (POS checkout path). */
   skipStockCommit?: boolean;
+  posClientId?: string;
 }
 
 // Map a shop's registered country to its default display/billing currency.
@@ -89,8 +94,8 @@ export class InvoicesService {
     return `INV-${dateStr}-${shopCode}-${String(sequence).padStart(4, "0")}`;
   }
 
-  private mapTaxCategory(category: string): TaxableComponent["category"] {
-    const value = category.trim().toUpperCase();
+  public mapTaxCategory(category: string): TaxableComponent["category"] {
+    const value = (category || "").toUpperCase();
     if (value.includes("DIAMOND")) return "DIAMOND";
     if (value.includes("GEM") || value.includes("STONE")) return "GEMSTONE";
     if (value.includes("PLAT")) return "PLATING";
@@ -102,7 +107,7 @@ export class InvoicesService {
     return "OTHER";
   }
 
-  private async calculateServerTax(
+  public async calculateServerTax(
     region: MarketRegion,
     components: TaxableComponent[],
   ) {
@@ -572,6 +577,7 @@ export class InvoicesService {
       shopId,
       orderId: dto.orderId || null,
       shopQuoteId: dto.shopQuoteId || null,
+      posClientId: dto.posClientId || options.posClientId || null,
       walkInCustomerId: dto.walkInCustomerId || null,
       registeredCustomerId: dto.registeredCustomerId || null,
       customerName: dto.customerName,
@@ -943,30 +949,68 @@ export class InvoicesService {
           "Cannot record payment on a voided/cancelled invoice",
         );
       }
-      if (amount > roundMoney(invoice.balanceDue)) {
-        throw new BadRequestException("Payment amount exceeds invoice balance");
+
+      const methodUpper = (dto.paymentMethod || "UNSPECIFIED").toUpperCase();
+      const isCash = methodUpper === "CASH";
+      const hasExplicitConfirmedStatus = dto.status === "RECEIVED" || dto.status === "CONFIRMED";
+      const hasExplicitPendingStatus = dto.status === "PENDING";
+      const hasVerificationRef = !!(
+        dto.terminalReference ||
+        dto.bankReference ||
+        dto.providerTransactionId ||
+        dto.reference
+      );
+
+      // Cash is confirmed automatically in register drawer.
+      // Non-cash is confirmed ONLY if explicitly confirmed or confirmedByUserId + verification reference provided.
+      // If non-cash has no reference and not explicitly marked RECEIVED, it is PENDING.
+      const isConfirmed =
+        !hasExplicitPendingStatus &&
+        (isCash ||
+          hasExplicitConfirmedStatus ||
+          (!!dto.confirmedByUserId && hasVerificationRef));
+
+      const paymentStatus: "PENDING" | "RECEIVED" = isConfirmed ? "RECEIVED" : "PENDING";
+
+      if (isConfirmed) {
+        if (amount > roundMoney(invoice.balanceDue)) {
+          throw new BadRequestException("Payment amount exceeds invoice balance");
+        }
+
+        const balanceUpdate = await tx.invoice.updateMany({
+          where: {
+            id,
+            shopId,
+            status: { notIn: ["VOID", "CANCELLED"] },
+            balanceDue: { gte: amount },
+          },
+          data: {
+            paidAmount: { increment: amount },
+            balanceDue: { decrement: amount },
+            ...(dto.paymentMethod
+              ? { paymentMethod: methodUpper }
+              : {}),
+          },
+        });
+        if (balanceUpdate.count !== 1) {
+          throw new BadRequestException(
+            "Invoice balance changed; reload before recording this payment",
+          );
+        }
       }
 
-      const balanceUpdate = await tx.invoice.updateMany({
-        where: {
-          id,
-          shopId,
-          status: { notIn: ["VOID", "CANCELLED"] },
-          balanceDue: { gte: amount },
-        },
-        data: {
-          paidAmount: { increment: amount },
-          balanceDue: { decrement: amount },
-          ...(dto.paymentMethod
-            ? { paymentMethod: dto.paymentMethod.toUpperCase() }
-            : {}),
-        },
-      });
-      if (balanceUpdate.count !== 1) {
-        throw new BadRequestException(
-          "Invoice balance changed; reload before recording this payment",
-        );
-      }
+      const verificationMode =
+        dto.verificationMode ||
+        (isCash
+          ? "CASH_AUTO"
+          : isConfirmed
+            ? "MANUALLY_CONFIRMED"
+            : "UNVERIFIED");
+      const verifiedAt = isConfirmed
+        ? dto.receivedAt
+          ? new Date(dto.receivedAt)
+          : new Date()
+        : null;
 
       const payment = await tx.invoicePayment.create({
         data: {
@@ -977,13 +1021,29 @@ export class InvoicesService {
           fxRate: accountingContext.fxRate,
           fxSource: accountingContext.fxSource,
           fxQuotedAt: accountingContext.fxQuotedAt,
-          method: (dto.paymentMethod || "UNSPECIFIED").toUpperCase(),
-          reference: dto.reference || null,
+          method: methodUpper,
+          provider: dto.provider || null,
+          providerTransactionId: dto.providerTransactionId || null,
+          terminalReference: dto.terminalReference || null,
+          bankReference: dto.bankReference || null,
+          confirmedByUserId: dto.confirmedByUserId || null,
+          verifiedAt,
+          verificationMode,
+          reference:
+            dto.reference ||
+            dto.terminalReference ||
+            dto.bankReference ||
+            null,
           idempotencyKey,
+          status: paymentStatus,
           notes: dto.notes || null,
           receivedAt: dto.receivedAt ? new Date(dto.receivedAt) : new Date(),
         },
       });
+
+      if (!isConfirmed) {
+        return { ...invoice, recordedPayment: payment };
+      }
 
       const receivedPayments = await tx.invoicePayment.findMany({
         where: { invoiceId: id, status: "RECEIVED" },
@@ -1001,7 +1061,7 @@ export class InvoicesService {
           ? "SPLIT"
           : distinctMethods[0] ||
             (dto.paymentMethod
-              ? dto.paymentMethod.toUpperCase()
+              ? methodUpper
               : invoice.paymentMethod);
 
       const updated = await tx.invoice.findUniqueOrThrow({ where: { id } });
@@ -1028,6 +1088,119 @@ export class InvoicesService {
       });
 
       return { ...finalInvoice, recordedPayment: payment };
+    });
+  }
+
+  async confirmPayment(
+    id: string,
+    paymentId: string,
+    shopId: string,
+    userId: string,
+    dto: ConfirmPaymentDto = {},
+  ) {
+    const existingPayment = await this.prisma.invoicePayment.findFirst({
+      where: { id: paymentId, invoiceId: id, status: "PENDING" },
+      include: { invoice: true },
+    });
+    if (!existingPayment) {
+      throw new NotFoundException("Pending payment not found");
+    }
+    if (existingPayment.invoice.shopId !== shopId) {
+      throw new ForbiddenException("Not your invoice");
+    }
+
+    const amount = Number(existingPayment.amount);
+    const accountingContext = await this.accounting.prepareMonetaryContext(
+      amount,
+      existingPayment.invoice.currency,
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const payment = await tx.invoicePayment.findUnique({
+        where: { id: paymentId },
+      });
+      if (!payment || payment.status !== "PENDING") {
+        throw new BadRequestException("Payment is not in PENDING status");
+      }
+
+      const invoice = await tx.invoice.findFirst({ where: { id, shopId } });
+      if (!invoice) throw new NotFoundException("Invoice not found");
+      if (invoice.status === "VOID" || invoice.status === "CANCELLED") {
+        throw new BadRequestException("Cannot confirm payment on a voided/cancelled invoice");
+      }
+      if (amount > roundMoney(invoice.balanceDue)) {
+        throw new BadRequestException("Confirmed payment amount exceeds invoice balance");
+      }
+
+      const balanceUpdate = await tx.invoice.updateMany({
+        where: {
+          id,
+          shopId,
+          status: { notIn: ["VOID", "CANCELLED"] },
+          balanceDue: { gte: amount },
+        },
+        data: {
+          paidAmount: { increment: amount },
+          balanceDue: { decrement: amount },
+        },
+      });
+      if (balanceUpdate.count !== 1) {
+        throw new BadRequestException("Invoice balance changed; reload before confirming payment");
+      }
+
+      const updatedPayment = await tx.invoicePayment.update({
+        where: { id: paymentId },
+        data: {
+          status: "RECEIVED",
+          confirmedByUserId: userId,
+          verifiedAt: new Date(),
+          verificationMode: "MANUAL",
+          terminalReference: dto.terminalReference || payment.terminalReference,
+          bankReference: dto.bankReference || payment.bankReference,
+          providerTransactionId: dto.providerTransactionId || payment.providerTransactionId,
+          reference: dto.reference || dto.terminalReference || dto.bankReference || payment.reference,
+          notes: dto.notes ? (payment.notes ? `${payment.notes} | ${dto.notes}` : dto.notes) : payment.notes,
+        },
+      });
+
+      const receivedPayments = await tx.invoicePayment.findMany({
+        where: { invoiceId: id, status: "RECEIVED" },
+        select: { method: true },
+      });
+      const distinctMethods = [
+        ...new Set(
+          receivedPayments
+            .map((p) => (p.method || "").toUpperCase())
+            .filter((m) => m && m !== "UNSPECIFIED"),
+        ),
+      ];
+      const paymentMethodLabel =
+        distinctMethods.length > 1
+          ? "SPLIT"
+          : distinctMethods[0] || invoice.paymentMethod;
+
+      const updatedInvoice = await tx.invoice.findUniqueOrThrow({ where: { id } });
+      const isPaid = roundMoney(updatedInvoice.balanceDue) <= 0;
+      const finalInvoice = await tx.invoice.update({
+        where: { id },
+        data: {
+          status: isPaid ? "PAID" : "PARTIALLY_PAID",
+          paymentStatus: isPaid ? "PAID" : "PARTIALLY_PAID",
+          paidAt: isPaid ? new Date() : null,
+          ...(paymentMethodLabel ? { paymentMethod: paymentMethodLabel } : {}),
+        },
+      });
+
+      await this.accounting.postInvoicePayment(tx, {
+        ...accountingContext,
+        shopId,
+        invoicePaymentId: updatedPayment.id,
+        invoiceNumber: invoice.invoiceNumber,
+        method: updatedPayment.method,
+        transactionDate: updatedPayment.verifiedAt || new Date(),
+      });
+
+      return { ...finalInvoice, confirmedPayment: updatedPayment };
     });
   }
 

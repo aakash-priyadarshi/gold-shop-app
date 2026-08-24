@@ -253,7 +253,14 @@ async function main() {
   let customersCreated = 0;
   const customerRecords: { id: string; phone: string; name: string }[] = [];
   for (const c of customers) {
-    const existing = await prisma.walkInCustomer.findUnique({ where: { phone: c.phone } });
+    const existing = await prisma.walkInCustomer.findUnique({
+      where: {
+        createdByShopId_phone: {
+          createdByShopId: shop.id,
+          phone: c.phone,
+        },
+      },
+    });
     if (existing) {
       customerRecords.push({ id: existing.id, phone: existing.phone, name: existing.name });
       continue;

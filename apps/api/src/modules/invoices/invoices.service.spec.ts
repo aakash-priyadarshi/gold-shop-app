@@ -12,15 +12,23 @@ const mockPrisma: any = {
   invoice: {
     findFirst: jest.fn(),
     findUnique: jest.fn(),
+    findUniqueOrThrow: jest.fn(),
     create: invoiceCreate,
     update: jest.fn(),
+    updateMany: jest.fn(),
   },
-  invoicePayment: { findUnique: jest.fn(), create: jest.fn() },
+  invoicePayment: {
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
   order: { findFirst: jest.fn() },
   journalEntry: { findMany: jest.fn() },
-    invoiceSequence: { upsert: invoiceSequenceUpsert },
-    taxRuleConfig: { findMany: jest.fn() },
-    inventoryItem: { findMany: jest.fn() },
+  invoiceSequence: { upsert: invoiceSequenceUpsert },
+  taxRuleConfig: { findMany: jest.fn() },
+  inventoryItem: { findMany: jest.fn() },
   $transaction: jest.fn(async (callback: (tx: any) => unknown) =>
     callback(mockPrisma),
   ),
@@ -638,4 +646,140 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
       ).toBe(persistedLine.amount);
     },
   );
+
+  describe("Payment State and Confirmation", () => {
+    it("should keep invoice UNPAID and record payment as PENDING when non-cash CARD is unconfirmed", async () => {
+      mockPrisma.invoicePayment.findUnique.mockResolvedValue(null);
+      mockPrisma.invoice.findFirst.mockResolvedValue({
+        id: "inv-card-test",
+        shopId: "shop-np",
+        currency: "NPR",
+        totalAmount: 1000,
+        paidAmount: 0,
+        balanceDue: 1000,
+        status: "UNPAID",
+        paymentStatus: "UNPAID",
+      });
+
+      mockPrisma.invoicePayment.create.mockResolvedValueOnce({
+        id: "pay-1",
+        invoiceId: "inv-card-test",
+        amount: new Prisma.Decimal(1000),
+        method: "CARD",
+        status: "PENDING",
+        verificationMode: "UNVERIFIED",
+        verifiedAt: null,
+      });
+
+      const result = await service.recordPayment("inv-card-test", "shop-np", {
+        amount: 1000,
+        paymentMethod: "CARD",
+      });
+
+      expect(result.status).toBe("UNPAID");
+      expect(result.recordedPayment.status).toBe("PENDING");
+      expect(mockAccounting.postInvoicePayment).not.toHaveBeenCalled();
+    });
+
+    it("should mark invoice PAID and record payment as RECEIVED when CASH is received", async () => {
+      mockPrisma.invoicePayment.findUnique.mockResolvedValue(null);
+      mockPrisma.invoice.findFirst.mockResolvedValue({
+        id: "inv-cash-test",
+        shopId: "shop-np",
+        currency: "NPR",
+        totalAmount: 1000,
+        paidAmount: 0,
+        balanceDue: 1000,
+        status: "UNPAID",
+        paymentStatus: "UNPAID",
+      });
+      mockPrisma.invoice.updateMany.mockResolvedValueOnce({ count: 1 });
+      mockPrisma.invoicePayment.create.mockResolvedValueOnce({
+        id: "pay-cash-1",
+        invoiceId: "inv-cash-test",
+        amount: new Prisma.Decimal(1000),
+        method: "CASH",
+        status: "RECEIVED",
+        verificationMode: "CASH_AUTO",
+        verifiedAt: new Date(),
+      });
+      mockPrisma.invoicePayment.findMany.mockResolvedValueOnce([{ method: "CASH" }]);
+      mockPrisma.invoice.findUniqueOrThrow.mockResolvedValueOnce({
+        id: "inv-cash-test",
+        balanceDue: 0,
+      });
+      mockPrisma.invoice.update.mockResolvedValueOnce({
+        id: "inv-cash-test",
+        status: "PAID",
+        paymentStatus: "PAID",
+        paidAmount: 1000,
+        balanceDue: 0,
+      });
+
+      const result = await service.recordPayment("inv-cash-test", "shop-np", {
+        amount: 1000,
+        paymentMethod: "CASH",
+      });
+
+      expect(result.status).toBe("PAID");
+      expect(result.recordedPayment.status).toBe("RECEIVED");
+      expect(mockAccounting.postInvoicePayment).toHaveBeenCalled();
+    });
+
+    it("should allow confirming a pending payment and transition invoice to PAID", async () => {
+      mockPrisma.invoicePayment.findFirst.mockResolvedValueOnce({
+        id: "pay-pending-1",
+        invoiceId: "inv-conf-test",
+        amount: new Prisma.Decimal(1000),
+        status: "PENDING",
+        invoice: { id: "inv-conf-test", shopId: "shop-np", currency: "NPR" },
+      });
+      mockPrisma.invoicePayment.findUnique.mockResolvedValueOnce({
+        id: "pay-pending-1",
+        status: "PENDING",
+      });
+      mockPrisma.invoice.findFirst.mockResolvedValue({
+        id: "inv-conf-test",
+        shopId: "shop-np",
+        currency: "NPR",
+        totalAmount: 1000,
+        paidAmount: 0,
+        balanceDue: 1000,
+        status: "UNPAID",
+      });
+      mockPrisma.invoice.updateMany.mockResolvedValueOnce({ count: 1 });
+      mockPrisma.invoicePayment.update.mockResolvedValueOnce({
+        id: "pay-pending-1",
+        status: "RECEIVED",
+        confirmedByUserId: "staff-1",
+        verificationMode: "MANUAL",
+        terminalReference: "POS-TERM-8899",
+      });
+      mockPrisma.invoicePayment.findMany.mockResolvedValueOnce([{ method: "CARD" }]);
+      mockPrisma.invoice.findUniqueOrThrow.mockResolvedValueOnce({
+        id: "inv-conf-test",
+        balanceDue: 0,
+      });
+      mockPrisma.invoice.update.mockResolvedValueOnce({
+        id: "inv-conf-test",
+        status: "PAID",
+        paymentStatus: "PAID",
+        paidAmount: 1000,
+        balanceDue: 0,
+      });
+
+      const result = await service.confirmPayment(
+        "inv-conf-test",
+        "pay-pending-1",
+        "shop-np",
+        "staff-1",
+        { terminalReference: "POS-TERM-8899" },
+      );
+
+      expect(result.status).toBe("PAID");
+      expect(result.confirmedPayment.status).toBe("RECEIVED");
+      expect(result.confirmedPayment.terminalReference).toBe("POS-TERM-8899");
+      expect(mockAccounting.postInvoicePayment).toHaveBeenCalled();
+    });
+  });
 });
