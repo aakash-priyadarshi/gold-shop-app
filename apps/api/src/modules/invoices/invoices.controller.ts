@@ -92,7 +92,19 @@ export class InvoicesController {
     if (!shopId) {
       throw new Error("No shop associated with this user");
     }
-    return this.invoicesService.create(shopId, dto);
+    // POS audit links are assigned only by authenticated POS flows, which
+    // derive their cashier/session/register/shift server-side. A regular
+    // invoice request must not be able to impersonate another POS cashier.
+    const manualInvoiceDto = { ...dto };
+    for (const field of [
+      "posSessionId",
+      "posRegisterId",
+      "posShiftId",
+      "posCashierUserId",
+    ] as const) {
+      delete manualInvoiceDto[field];
+    }
+    return this.invoicesService.create(shopId, manualInvoiceDto);
   }
 
   @Get()

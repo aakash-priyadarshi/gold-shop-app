@@ -54,8 +54,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  defaultPhoneCountryCode,
   PosCustomerPicker,
+  resolvePhoneCountryCode,
   type PosCustomer,
 } from "@/components/shop/PosCustomerPicker";
 import {
@@ -65,6 +65,7 @@ import {
 import { printAuthoritativeBill, printBill, type BillSettings } from "@/lib/billPrint";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
 import { roundMoney2 } from "@/lib/invoice/calculateLineTotals";
+import { getPosWhatsAppPaymentStatus } from "@/lib/posMessages";
 import { kickCashDrawer, loadHardwareConfig } from "@/lib/posHardware";
 import {
   getCounterPaymentMethods,
@@ -259,13 +260,19 @@ function PosPageInner() {
   const [serverPreview, setServerPreview] = useState<any | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  const shopCountry = user?.shop?.country || "NP";
-  const PAYMENT_METHODS = getCounterPaymentMethods(shopCountry);
+  const shopCountry = String(user?.shop?.country || "").trim().toUpperCase();
+  const hasShopCountry = Boolean(shopCountry);
+  const PAYMENT_METHODS = useMemo(
+    () => (hasShopCountry ? getCounterPaymentMethods(shopCountry) : []),
+    [hasShopCountry, shopCountry],
+  );
   const TAX_PRESETS = shopCountry === "IN"
     ? [{ label: "GST 3%", value: 0.03 }, { label: "GST 5%", value: 0.05 }, { label: "Exempt", value: 0 }]
     : shopCountry === "NP"
       ? [{ label: "VAT 13%", value: 0.13 }, { label: "Exempt", value: 0 }]
-      : [{ label: "VAT 5%", value: 0.05 }, { label: "Exempt", value: 0 }];
+      : hasShopCountry
+        ? [{ label: "VAT 5%", value: 0.05 }, { label: "Exempt", value: 0 }]
+        : [];
   const MAKING_PRESETS = [0, 8, 12, 14, 18];
 
   const loadRegisters = useCallback(async () => {
@@ -318,7 +325,7 @@ function PosPageInner() {
 
   // Authoritative server pricing preview effect
   useEffect(() => {
-    if (!session?.id || session.items.length === 0) {
+    if (!shopCountry || !session?.id || session.items.length === 0) {
       setServerPreview(null);
       return;
     }
@@ -330,7 +337,6 @@ function PosPageInner() {
           makingChargeRate: makingChargeRate || undefined,
           discountAmount: discountAmount || undefined,
           taxRate: taxRate || undefined,
-          invoiceCountry: shopCountry || undefined,
         });
         if (!cancelled) setServerPreview(res.data);
       } catch {
@@ -587,6 +593,14 @@ function PosPageInner() {
 
   const runCheckout = async () => {
     if (!session) return;
+    if (!shopCountry) {
+      toast({
+        variant: "destructive",
+        title: t("Shop country is not configured"),
+        description: t("Configure the shop country before completing a POS sale."),
+      });
+      return;
+    }
 
     let paymentSplits:
       | Array<{ method: string; amount: number }>
@@ -644,7 +658,15 @@ function PosPageInner() {
 
     let checkoutCustomerId = session.customerId;
     if (!checkoutCustomerId && customerName.trim() && customerPhone.trim()) {
-      const phoneCountryCode = defaultPhoneCountryCode(shopCountry);
+      const phoneCountryCode = resolvePhoneCountryCode(customerPhone, shopCountry);
+      if (!phoneCountryCode) {
+        toast({
+          variant: "destructive",
+          title: t("Phone country code is required"),
+          description: t("Use an international phone number with a supported country calling code."),
+        });
+        return;
+      }
       const countryDigits = phoneCountryCode.replace(/\D/g, "");
       let localPhone = customerPhone.replace(/\D/g, "");
       if (
@@ -696,7 +718,6 @@ function PosPageInner() {
           : paymentMethod,
         paymentSplits,
         makingChargeRate: makingChargeRate || undefined,
-        invoiceCountry: shopCountry || undefined,
       });
       const inv = res.data?.invoice;
       const payments = Array.isArray(inv?.payments) ? inv.payments : [];
@@ -806,6 +827,14 @@ function PosPageInner() {
 
   const handleCheckout = async () => {
     if (!session) return;
+    if (!shopCountry) {
+      toast({
+        variant: "destructive",
+        title: t("Shop country is not configured"),
+        description: t("Configure the shop country before completing a POS sale."),
+      });
+      return;
+    }
     try {
       const res = await shopsApi.getManagerPinStatus();
       const data = res.data?.data ?? res.data;
@@ -1973,7 +2002,7 @@ function PosPageInner() {
               <Button
                 onClick={handleCheckout}
                 disabled={
-                  checkoutLoading || !customerName.trim() || upiOverLimit
+                  checkoutLoading || !customerName.trim() || upiOverLimit || !hasShopCountry
                 }
                 className="min-w-[140px]"
               >
@@ -2128,7 +2157,12 @@ function PosPageInner() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: ${currencySymbol} ${checkoutSuccess?.total?.toLocaleString()}\nStatus: ${checkoutSuccess?.paymentStatus === "PENDING" ? "Payment Pending" : "Paid"}\nThank you for your purchase!`;
+                    const paymentStatus = getPosWhatsAppPaymentStatus(
+                      checkoutSuccess?.paymentStatus,
+                      checkoutSuccess?.balanceDue,
+                      currencySymbol,
+                    );
+                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: ${currencySymbol} ${checkoutSuccess?.total?.toLocaleString()}\nStatus: ${paymentStatus}\nThank you for your purchase!`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
                   }}
                 >

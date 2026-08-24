@@ -1796,8 +1796,6 @@ export const posApi = {
     makingChargeRate?: number;
     makingChargesNpr?: number;
     discountAmount?: number;
-    invoiceCountry?: string;
-    currency?: string;
   }) => api.post("/pos/preview", data),
   previewSession: (sessionId: string, overrides?: Record<string, any>) =>
     api.post(`/pos/session/${sessionId}/preview`, overrides || {}),
@@ -1819,6 +1817,17 @@ export const posApi = {
     notes?: string;
     managerPin?: string;
   }) => api.post("/pos/returns", data),
+  confirmRefund: (
+    returnId: string,
+    refundPaymentId: string,
+    data: {
+      reference?: string;
+      terminalReference?: string;
+      bankReference?: string;
+      providerTransactionId?: string;
+      notes?: string;
+    } = {},
+  ) => api.post(`/pos/returns/${returnId}/refunds/${refundPaymentId}/confirm`, data),
   processExchange: (data: {
     invoiceNumber: string;
     returnLines: Array<{
@@ -1885,7 +1894,6 @@ export const posApi = {
       }>;
       makingChargeRate?: number;
       makingChargesNpr?: number;
-      invoiceCountry?: string;
     },
   ) => api.post(`/pos/session/${sessionId}/checkout`, data),
   cancelSession: (sessionId: string) => api.delete(`/pos/session/${sessionId}`),
@@ -1924,8 +1932,6 @@ export interface PosSalePayload {
   }>;
   makingChargeRate?: number;
   makingChargesNpr?: number;
-  /** Tax regime country for this sale (defaults to shop.country on server). */
-  invoiceCountry?: string;
   notes?: string;
   occurredOffline?: boolean;
   soldAt?: string;

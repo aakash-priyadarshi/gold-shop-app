@@ -23,9 +23,10 @@ import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { invoicesApi, posApi, shopsApi } from "@/lib/api";
+import { getPosReturnCompletionMessage } from "@/lib/posMessages";
 import { ManagerPinDialog } from "@/components/shop/ManagerPinDialog";
 import { useT } from "@/providers/translation-provider";
-import { Check, CheckCircle2, DollarSign, Loader2, RotateCcw, Search, Trash2 } from "lucide-react";
+import { Check, Loader2, RotateCcw, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 interface PosReturnModalProps {
@@ -180,9 +181,14 @@ export function PosReturnModal({
         notes: notes.trim() || undefined,
       });
 
+      const completion = getPosReturnCompletionMessage(
+        res.data?.refundStatus,
+        Number(res.data?.refundAmount || 0),
+        currencySymbol,
+      );
       toast({
-        title: t("Return processed successfully"),
-        description: `Refund of ${currencySymbol} ${totalRefundAmount} issued via ${refundMethod}.`,
+        title: t(completion.title),
+        description: t(completion.description),
       });
       onReturnCompleted(res.data);
       onOpenChange(false);

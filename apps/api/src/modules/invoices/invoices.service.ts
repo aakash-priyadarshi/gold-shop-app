@@ -1169,6 +1169,11 @@ export class InvoicesService {
     if (existingPayment.invoice.shopId !== shopId) {
       throw new ForbiddenException("Not your invoice");
     }
+    if (existingPayment.posReturnId || existingPayment.reversalOfId) {
+      throw new BadRequestException(
+        "This payment is a refund/reversal and must use the refund settlement flow",
+      );
+    }
 
     const amount = Number(existingPayment.amount);
     const accountingContext = await this.accounting.prepareMonetaryContext(

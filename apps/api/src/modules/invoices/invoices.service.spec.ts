@@ -728,6 +728,39 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
       expect(mockAccounting.postInvoicePayment).toHaveBeenCalled();
     });
 
+    it("rejects a pending return reversal before it can be claimed as incoming money", async () => {
+      mockPrisma.invoicePayment.findFirst.mockResolvedValueOnce({
+        id: "refund-payment-1",
+        invoiceId: "inv-refund-test",
+        posReturnId: "pos-return-1",
+        reversalOfId: "source-payment-1",
+        amount: new Prisma.Decimal(200),
+        status: "PENDING",
+        invoice: {
+          id: "inv-refund-test",
+          shopId: "shop-np",
+          currency: "NPR",
+          paidAmount: 1000,
+          balanceDue: 0,
+        },
+      });
+
+      await expect(
+        service.confirmPayment(
+          "inv-refund-test",
+          "refund-payment-1",
+          "shop-np",
+          "staff-1",
+        ),
+      ).rejects.toThrow(
+        "This payment is a refund/reversal and must use the refund settlement flow",
+      );
+
+      expect(mockPrisma.invoicePayment.updateMany).not.toHaveBeenCalled();
+      expect(mockPrisma.invoice.updateMany).not.toHaveBeenCalled();
+      expect(mockAccounting.postInvoicePayment).not.toHaveBeenCalled();
+    });
+
     it("persists terminal references and returns the confirmed payment after notes are appended", async () => {
       mockPrisma.invoicePayment.findFirst.mockResolvedValueOnce({
         id: "pay-pending-1",

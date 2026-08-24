@@ -1070,34 +1070,38 @@ export class ShopsService {
 
     // Create demo customers
     try {
-      const country = shop.country || "NP";
-      const phoneCountryCode = COUNTRY_TO_PHONE_CODE[country] || "+1";
-      const demoPhone1 = `${phoneCountryCode}${Math.floor(10000000 + Math.random() * 90000000)}`;
-      const demoPhone2 = `${phoneCountryCode}${Math.floor(10000000 + Math.random() * 90000000)}`;
-      await this.prisma.walkInCustomer.createMany({
-        data: [
-          {
-            phone: demoPhone1,
-            phoneCountryCode,
-            country,
-            name: "John Doe (Demo)",
-            email: "john.demo@example.com",
-            address: "123 Demo Street",
-            city: "Kathmandu",
-            createdByShopId: shopId,
-          },
-          {
-            phone: demoPhone2,
-            phoneCountryCode,
-            country,
-            name: "Jane Smith (Demo)",
-            address: "456 Main Ave",
-            city: "Delhi",
-            createdByShopId: shopId,
-          }
-        ],
-        skipDuplicates: true
-      });
+      const country = (shop.country || "").trim().toUpperCase();
+      const phoneCountryCode = COUNTRY_TO_PHONE_CODE[country];
+      // Do not fabricate a phone number in an unrelated country for a shop
+      // whose market has no configured calling code.
+      if (phoneCountryCode) {
+        const demoPhone1 = `${phoneCountryCode}${Math.floor(10000000 + Math.random() * 90000000)}`;
+        const demoPhone2 = `${phoneCountryCode}${Math.floor(10000000 + Math.random() * 90000000)}`;
+        await this.prisma.walkInCustomer.createMany({
+          data: [
+            {
+              phone: demoPhone1,
+              phoneCountryCode,
+              country,
+              name: "John Doe (Demo)",
+              email: "john.demo@example.com",
+              address: "123 Demo Street",
+              city: "Kathmandu",
+              createdByShopId: shopId,
+            },
+            {
+              phone: demoPhone2,
+              phoneCountryCode,
+              country,
+              name: "Jane Smith (Demo)",
+              address: "456 Main Ave",
+              city: "Delhi",
+              createdByShopId: shopId,
+            }
+          ],
+          skipDuplicates: true
+        });
+      }
     } catch (e) {
       // Ignore if fails
     }

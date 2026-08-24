@@ -1220,6 +1220,15 @@ export default function MobilePOSPage() {
     },
   ) => {
     if (!cart.length) return;
+    const shopCountry = String(user?.shop?.country || "").trim().toUpperCase();
+    if (!shopCountry) {
+      toast({
+        title: t("Shop country is not configured"),
+        description: t("Configure the shop country before completing a POS sale."),
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       // Single-shot, offline-capable sale. The whole cart + customer + payment
       // goes out as ONE idempotent request (POST /pos/sale) queued through the
@@ -1234,7 +1243,6 @@ export default function MobilePOSPage() {
       const taxAmount = extras?.taxAmount ?? Math.round((cartTotal + makingCharges) * (taxRate / 100));
       const total = cartTotal + makingCharges + taxAmount;
 
-      const shopCountry = user?.shop?.country || undefined;
       const { clientId, queuedOffline, invoice } = await createOfflineSale({
         items: cart.map((c) => ({
           inventoryItemId: c.item.id,
@@ -1251,7 +1259,6 @@ export default function MobilePOSPage() {
         taxRate,
         paymentMethod: method,
         makingChargeRate: makingPct || undefined,
-        invoiceCountry: shopCountry,
       });
 
       if (!queuedOffline && !invoice?.id) {
