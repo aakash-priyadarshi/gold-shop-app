@@ -230,7 +230,7 @@ export function KarigarJobGoldCard({
             <T>Edit</T>
           </button>
           <button type="button" className="text-xs text-rose-600 underline" onClick={onDelete}>
-            <T>Delete</T>
+            <T>Cancel / archive</T>
           </button>
         </div>
       </div>

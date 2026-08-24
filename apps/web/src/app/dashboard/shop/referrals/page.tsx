@@ -215,7 +215,7 @@ export default function SellerReferralsPage() {
         title: t("Payout requested"),
         description:
           res?.data?.stripeFeeNote ||
-          t("We will send leftover commission to your saved bank account."),
+          t("Your bank payout request is pending. Track its status here."),
       });
       loadReferrals();
     } catch (error: any) {
@@ -290,8 +290,9 @@ export default function SellerReferralsPage() {
             <T>Invite jewellery shops to Orivraa. You earn</T> {percent}%{" "}
             <T>
               of every paid subscription invoice while they stay subscribed —
-              applied to your next Pro invoice first. Leftover can go to your
-              bank or convert to Pro months.
+              applied to your next Orivraa subscription invoice first. Eligible
+              leftover can be requested as a bank payout or converted to Pro
+              months.
             </T>
           </p>
         </div>
@@ -327,9 +328,9 @@ export default function SellerReferralsPage() {
                 </p>
                 <p className="text-xs">
                   <T>
-                    Applied to your next Orivraa Pro invoice first (no extra
-                    Stripe fee). Leftover can be paid to your bank or converted
-                    to Pro months.
+                    Applied to your next Orivraa subscription invoice first.
+                    Eligible leftover can be requested as a bank payout or
+                    converted to Pro months.
                   </T>
                 </p>
               </div>
@@ -341,7 +342,7 @@ export default function SellerReferralsPage() {
                   <T>Reward:</T> {percent}%{" "}
                   <T>
                     of each paid subscription invoice, for as long as they keep
-                    paying. Not AI credits and not a Pro+ upgrade.
+                    paying. Not AI credits, and separate from Review & Earn.
                   </T>
                 </span>
               </div>
@@ -405,16 +406,16 @@ export default function SellerReferralsPage() {
             </div>
             <p className="text-xs text-muted-foreground">
               <T>
-                Invoice credit is applied first so you are not charged twice.
-                Leftover wallet balance can be paid to your bank (we send it
-                after you request it) or converted to Pro months. Referral cash
-                is never paid by refunding the referred shop.
+                Invoice credit is applied first. Eligible leftover can be
+                requested as a bank payout and remains pending until processed,
+                or converted to Pro months. Referral cash is never paid by
+                refunding the referred shop.
               </T>
             </p>
             {pendingPayout && (
               <p className="text-sm text-amber-700 dark:text-amber-300">
                 <T>Payout pending:</T> {formatWallet(pendingPayout.amount)}{" "}
-                <T>will be sent to your saved bank account.</T>
+                <T>is awaiting processing for your saved bank account.</T>
               </p>
             )}
             <div

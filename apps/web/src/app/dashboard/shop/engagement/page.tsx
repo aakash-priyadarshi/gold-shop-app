@@ -2181,7 +2181,8 @@ export default function ShopEngagementPage() {
                         {referralSettings?.commissionPercent ?? 10}%{" "}
                         <T>
                           of every paid subscription invoice while they stay
-                          subscribed — applied to your next Pro invoice first.
+                          subscribed — applied to your next Orivraa subscription
+                          invoice first. Review & Earn is a separate programme.
                         </T>
                       </p>
                       {referralSettings && (

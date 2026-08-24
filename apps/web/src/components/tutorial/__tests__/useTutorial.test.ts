@@ -99,6 +99,22 @@ describe("Tutorial TOUR_STEPS — Structure", () => {
     );
     expect(sourceFile).toContain("does not replace the Karigar book");
   });
+
+  test("POS tour explains the register, pending payment, drawer, and return rules", () => {
+    expect(sourceFile).toContain("pos-register-shift");
+    expect(sourceFile).toContain("Confirm Payment Received");
+    expect(sourceFile).toContain("PARTIALLY_PAID");
+    expect(sourceFile).toContain("pos-drawer");
+    expect(sourceFile).toContain("pos-return-exchange");
+    expect(sourceFile).toContain("Z-report");
+  });
+
+  test("Supply Chain tours distinguish normal Karigar work from Workshop mode", () => {
+    expect(sourceFile).toContain("normal small-artisan ledger");
+    expect(sourceFile).toContain("Factory tabs are a separate Workshop-mode workflow");
+    expect(sourceFile).toContain("Cancel/archive a job");
+    expect(sourceFile).toContain("Approve is the required next step");
+  });
 });
 
 describe("Tutorial — Invoice Create Page Content", () => {

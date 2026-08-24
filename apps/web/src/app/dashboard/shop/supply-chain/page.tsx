@@ -459,7 +459,7 @@ function KarigarSupplyChainLedger() {
   const [editJobModalOpen, setEditJobModalOpen] = useState(false);
   const [editJobForm, setEditJobForm] = useState<Job | null>(null);
 
-  // ── Delete Job Confirm ──
+  // ── Cancel / archive Job Confirm ──
   const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
 
   // ── All available metals (built-in + custom) ──
@@ -847,11 +847,11 @@ function KarigarSupplyChainLedger() {
     try {
       await karigarApi.deleteJob(id);
       setDeleteJobId(null);
-      showToast(t("Job removed from pipeline."));
+      showToast(t("Job cancelled and kept in job history."));
       await loadDatabaseConfig();
     } catch (err: any) {
       showToast(
-        t(err?.response?.data?.message || "Could not delete job"),
+        t(err?.response?.data?.message || "Could not cancel job"),
         "error",
       );
     }
@@ -982,6 +982,7 @@ function KarigarSupplyChainLedger() {
             </div>
           )}
           <Button
+            data-tour="supply-procure"
             variant="outline"
             className="border-amber-500/30 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 bg-white dark:bg-gray-900"
             onClick={() => setProcureModalOpen(true)}
@@ -1024,19 +1025,19 @@ function KarigarSupplyChainLedger() {
             onClick={async () => {
               try {
                 await karigarApi.loadSampleJob();
-                showToast(t("Sample 1 kg casting job loaded."));
+                showToast(t("Demo 1 kg casting job added."));
                 await loadDatabaseConfig();
               } catch (err: any) {
                 showToast(
                   t(
-                    err?.response?.data?.message || "Could not load sample job",
+                    err?.response?.data?.message || "Could not load demo job",
                   ),
                   "error",
                 );
               }
             }}
           >
-            <T>Load sample 1 kg job</T>
+            <T>Load demo 1 kg job</T>
           </Button>
           <Button
             data-tour="supply-issue-metal"
@@ -1142,8 +1143,8 @@ function KarigarSupplyChainLedger() {
                 <CardContent>
                   <p className="text-xs text-muted-foreground">
                     <T>
-                      Labor charges pending clearance upon receipt of hallmarked
-                      finished stock.
+                      Accrued when finished metal is returned at the configured
+                      labor rate. Paying a wage is a separate settlement.
                     </T>
                   </p>
                 </CardContent>
@@ -1489,8 +1490,9 @@ function KarigarSupplyChainLedger() {
                         </p>
                         <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
                           <T>
-                            Create a job or load the sample 1 kg casting tree to
-                            record issued gold, scrap, and unexplained loss.
+                            Create a real job to record issued gold, scrap, and
+                            unexplained loss. The demo job adds sample data for
+                            learning only.
                           </T>
                         </p>
                       </div>
@@ -1673,6 +1675,9 @@ function KarigarSupplyChainLedger() {
                 <X className="h-5 w-5" />
               </button>
             </div>
+            <p className="text-sm text-muted-foreground">
+              <T>Record the physical bullion entering this vault. This does not create a supplier bill, supplier payment, or customer invoice.</T>
+            </p>
             <p className="text-xs text-muted-foreground">
               <T>
                 Log wholesale bullion grains purchase, adding raw materials
@@ -2381,7 +2386,7 @@ function KarigarSupplyChainLedger() {
         </div>
       )}
 
-      {/* 9. Delete Job Confirmation */}
+      {/* 9. Cancel / archive Job Confirmation */}
       {deleteJobId && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl text-center">
@@ -2389,12 +2394,13 @@ function KarigarSupplyChainLedger() {
               <Trash2 className="h-6 w-6 text-rose-500" />
             </div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-              <T>Delete Fabrication Job?</T>
+              <T>Cancel and archive fabrication job?</T>
             </h3>
             <p className="text-sm text-muted-foreground">
               <T>
-                This will permanently remove this job from the fabrication
-                pipeline. This action cannot be undone.
+                This stops the job and keeps its work history visible for
+                reference. Use this for a cancelled job, not to correct issued
+                metal or finished-goods records.
               </T>
             </p>
             <div className="flex justify-center gap-3 pt-2">
@@ -2411,7 +2417,7 @@ function KarigarSupplyChainLedger() {
                 className="bg-rose-500 text-white hover:bg-rose-600"
                 onClick={() => handleDeleteJob(deleteJobId)}
               >
-                <T>Delete Job</T>
+                <T>Cancel and archive job</T>
               </Button>
             </div>
           </div>

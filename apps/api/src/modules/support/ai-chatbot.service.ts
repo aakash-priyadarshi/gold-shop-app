@@ -30,12 +30,18 @@ import { SupportService } from "./support.service";
 import { TicketsService } from "./tickets.service";
 import { formatTutorialVideoPromptLines } from "./tutorial-videos";
 import {
+  formatSellerPosWorkflowReply,
+  isSellerPosWorkflowQuestion,
+} from "./seller-workflow-chat-context";
+import {
   formatLiveWorkshopAccess,
   formatSellerWorkshopReply,
   formatWorkshopPlanCatalog,
   formatWorkshopMetalOperationReply,
+  formatWorkshopOperationalReply,
   isWorkshopAccessQuestion,
   isWorkshopMetalOperationQuestion,
+  isWorkshopOperationalQuestion,
   selectPlansWithFeature,
   type LiveWorkshopAccess,
   type LiveWorkshopPlan,
@@ -992,6 +998,13 @@ KEY FEATURES:
 17. Billing wastage / jarti — on Create Invoice, Calculate wastage after metal weight + cost; hover “How is this calculated?” for the formula tooltip (weight % or metal value %). Country defaults (LK/IN/NP on; US/UK/EU/AE off). Permanent mode/% under Shop Settings → Preferences → Billing Wastage. Separate from karigar workshop wastage.
 18. Unified invoice Print & POS hardware — one Print button on the invoice (desktop /dashboard/shop/invoices/:id and mobile /m/invoices/:id). Thermal 58/80mm roll (SEZNIK MiniX / Josh, Epson TM) prints a short ESC/POS receipt; otherwise A4 / office printers already installed on the computer open the full bill dialog. Chevron picks either type. Setup: /dashboard/shop/settings/hardware (PC) or /m/settings/hardware (phone). Orivraa Desktop lists real Windows/macOS printers and labels each as thermal vs office. Phones also get Share PDF + WhatsApp (on-demand PDF, free). On PC use Download PDF, Email, SMS (SMS is Pro+/Enterprise).
 
+CURRENT SELLER WORKFLOW RULES:
+- POS: Cash is received at the counter. Manual non-cash payment legs stay PENDING until actual receipt is recorded with Confirm Payment Received; a split invoice stays PARTIALLY_PAID until every required leg is received. PAID means fully received. Creating or printing a bill, opening a cash drawer, and beginning checkout do not themselves mark it paid. Use payment methods offered for the shop's country. Printed bills have a verification QR. Returns use no more than the remaining returnable quantity and the original line value; cash refunds settle immediately, while a manual non-cash reversal stays pending until completed. Store credit is for a later purchase.
+- Pricing and products: Live market pricing is the authoritative starting point for supported gold, silver, platinum, and palladium items. Review a set's component metal, making, gemstone, tax, and discount values before saving or repricing. Gemstones remain a separate component; currency amounts retain two-decimal precision.
+- Account recovery: A password reset code proves control of the email address before a new password is chosen. If sign-in reports EMAIL_NOT_VERIFIED, use the verification screen or Resend verification; its public confirmation is intentionally generic, so never say that an email exists, is verified, or definitely received a message.
+- Referrals: A referring shop earns the configured share (currently default 10%) of a referred shop's paid subscription invoices while it remains subscribed. Credit is used against the referring shop's next Orivraa subscription invoice first. Eligible leftover can be requested as a bank payout or converted to Pro months; Review & Earn is a separate programme.
+- Karigar and Workshop: Karigar book is the normal small-artisan ledger for physical vault metal, issue/return, outstanding balance, jobs, and wage due. Workshop adds factory Tower, Jobs, Floor, Metal, QC, and Reports only when this shop's live plan allows workshopManufacturing and the shop enables Workshop mode. Workshop gold loss is not invoice jarti. QC approval is required before receiving finished goods; receiving adds or updates inventory but does not create a customer sale or price. Cancel/archive a job rather than deleting its record, and settle accrued wages separately from physical-metal return. Procure Bullion records physical metal only, not a supplier bill, payment, or customer invoice.
+
 GST DETAILS (INDIA):
 - 3 % GST on gold value + 5 % GST on making charges
 - HSN code: 7113 (articles of jewellery and parts thereof)
@@ -1756,9 +1769,26 @@ SELLER RESPONSE RULES:
       };
     }
 
-    if (
-      isWorkshopMetalOperationQuestion(message)
-    ) {
+    if (isSellerPosWorkflowQuestion(message)) {
+      return {
+        reply: formatSellerPosWorkflowReply(message),
+        shouldEscalate: false,
+        confidence: 0.96,
+      };
+    }
+
+    if (isWorkshopOperationalQuestion(message)) {
+      return {
+        reply: formatWorkshopOperationalReply(
+          this.workshopAccessFromSnapshot(snapshot),
+          message,
+        ),
+        shouldEscalate: false,
+        confidence: 0.95,
+      };
+    }
+
+    if (isWorkshopMetalOperationQuestion(message)) {
       return {
         reply: formatWorkshopMetalOperationReply(
           this.workshopAccessFromSnapshot(snapshot),

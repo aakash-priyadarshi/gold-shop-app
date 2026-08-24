@@ -19,7 +19,7 @@ export function GoldLossReport({
   if (!report) {
     return (
       <p className="text-xs text-muted-foreground" data-tour="supply-gold-loss">
-        <T>No gold-loss data yet. Create a job or load the sample 1 kg job.</T>
+        <T>No gold-loss data yet. Create a job, or load the demo 1 kg job to learn the report.</T>
       </p>
     );
   }
@@ -32,7 +32,7 @@ export function GoldLossReport({
       </p>
       {empty && (
         <p className="text-xs text-muted-foreground">
-          <T>No casting trees yet. Load the sample 1 kg job to walk through a 1000g issue.</T>
+          <T>No casting trees yet. Load the demo 1 kg job to walk through a 1000g issue without using it as a shop record.</T>
         </p>
       )}
       <div className="overflow-x-auto">

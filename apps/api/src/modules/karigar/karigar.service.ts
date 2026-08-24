@@ -315,8 +315,11 @@ export class KarigarService {
 
   async deleteJob(shopId: string, jobId: string) {
     await this.requireJob(shopId, jobId);
-    await this.prisma.karigarJob.delete({ where: { id: jobId } });
-    return { ok: true };
+    await this.prisma.karigarJob.update({
+      where: { id: jobId },
+      data: { status: "CANCELLED" },
+    });
+    return { ok: true, status: "CANCELLED" };
   }
 
   async deleteWorkshop(shopId: string, workshopId: string) {
@@ -989,6 +992,12 @@ export class KarigarService {
       include: { stages: true, trees: true },
     });
     if (!job) throw new NotFoundException("Job not found");
+    const qc = job.stages.find((stage) => stage.stage === KarigarStage.QC);
+    if (qc?.status !== "DONE") {
+      throw new BadRequestException(
+        "Approve this job in Workshop QC before receiving finished goods",
+      );
+    }
     const weight = finishedGramsForReceive(job);
     if (weight <= 0) {
       throw new BadRequestException(
