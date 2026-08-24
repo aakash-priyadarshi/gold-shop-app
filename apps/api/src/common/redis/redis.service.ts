@@ -98,6 +98,27 @@ export class RedisService implements OnModuleDestroy {
   }
 
   /**
+   * Update an existing value without extending (or removing) its TTL.
+   * Returns false if the key expired before the conditional write.
+   */
+  async setKeepTtl(key: string, value: string): Promise<boolean> {
+    if (!this.isAvailable()) return false;
+    try {
+      const result = await this.client!.call(
+        "SET",
+        key,
+        value,
+        "XX",
+        "KEEPTTL",
+      );
+      return result === "OK";
+    } catch (error) {
+      this.logger.error(`Redis SET KEEPTTL error for key ${key}: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
    * Delete a key from Redis
    */
   async del(key: string): Promise<void> {

@@ -12,6 +12,7 @@ import {
   computeWastageTotal,
   gemstoneTotal,
   recalcLineWastage,
+  roundMoney2,
 } from "./calculateLineTotals";
 import {
   emptyLineItem,
@@ -436,17 +437,44 @@ export function useInvoicePricing(opts: UseInvoicePricingOptions) {
             const cost = Number(res.data?.totalCost ?? res.data?.cost ?? 0);
             gemTotal += cost;
             gems.push({
-              type: String(gem.type || "GEMSTONE"),
+              type: String(gem.type || "OTHER"),
               cut: String(gem.cut || ""),
               clarity: String(gem.clarity || ""),
               caratWeight:
                 gem.caratWeight != null ? String(gem.caratWeight) : "",
               color: String(gem.color || ""),
               cost: cost > 0 ? String(cost) : String(gem.cost ?? ""),
+              quality: gem.quality,
+              origin: gem.origin,
+              sizeMm: gem.sizeMm,
+              count: gem.count,
+              cutGrade: gem.cutGrade,
+              lab: gem.lab,
+              certNumber: gem.certNumber,
+              reportUrl: gem.reportUrl,
             });
           }
           if (gems.length > 0) {
             line = { ...line, gemstones: gems };
+            if (line.isSet && line.setDiscountType && line.setDiscountValue != null) {
+              const mc = parseFloat(line.metalCost) || 0;
+              const mk = parseFloat(line.makingCost) || 0;
+              const newGemTotal = gems.reduce(
+                (s, g) => s + (parseFloat(g.cost) || 0),
+                0,
+              );
+              const eligibleSum = mc + mk + newGemTotal;
+              let discount = 0;
+              if (line.setDiscountType === "PERCENT") {
+                discount = (eligibleSum * Number(line.setDiscountValue)) / 100;
+              } else if (line.setDiscountType === "FIXED") {
+                discount = Math.min(Number(line.setDiscountValue), eligibleSum);
+              }
+              line = {
+                ...line,
+                setDiscountAmount: roundMoney2(Math.max(0, discount)),
+              };
+            }
           }
           if (gemTotal > 0 && parseFloat(line.makingCost || "") > 0) {
             const mc = parseFloat(line.metalCost) || 0;

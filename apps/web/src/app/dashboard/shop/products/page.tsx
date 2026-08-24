@@ -602,16 +602,22 @@ export default function ShopProductsPage() {
     }
   };
 
-  // Fetch live prices for visible catalog items
+  // Fetch live prices for visible catalog items (in chunks of 50)
   const fetchLivePrices = async (itemIds: string[]) => {
     if (!user?.shop?.id || itemIds.length === 0) return;
     setLivePricingLoading(true);
     try {
       const { pricingApi } = await import("@/lib/api");
-      const res = await pricingApi.resolveBulk(user.shop.id, itemIds);
-      if (res.data?.items) {
-        setLivePrices(res.data.items);
+      const chunkSize = 50;
+      const merged: Record<string, any> = {};
+      for (let i = 0; i < itemIds.length; i += chunkSize) {
+        const chunk = itemIds.slice(i, i + chunkSize);
+        const res = await pricingApi.resolveBulk(user.shop.id, chunk);
+        if (res.data?.items) {
+          Object.assign(merged, res.data.items);
+        }
       }
+      setLivePrices(merged);
     } catch {
       // Silently fail — stored prices remain visible
     } finally {
@@ -641,11 +647,14 @@ export default function ShopProductsPage() {
       setLivePrices({});
       return;
     }
-    const ids = filteredProducts
-      .filter((p) => p.status === "AVAILABLE" && p.jewelleryType !== "SET")
-      .slice(0, 50)
+    const ids = products
+      .filter((p) => p.status === "AVAILABLE")
       .map((p) => p.id);
-    if (ids.length > 0) fetchLivePrices(ids);
+    if (ids.length > 0) {
+      fetchLivePrices(ids);
+    } else {
+      setLivePrices({});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [livePricing, products, user?.shop?.id]);
 

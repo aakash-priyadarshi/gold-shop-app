@@ -441,6 +441,7 @@ model Shop {
   referralCommissionsEarned    ReferralCommission[] @relation("ReferralCommissionsEarned")
   referralCommissionsGenerated ReferralCommission[] @relation("ReferralCommissionsGenerated")
   referralPayoutProfile        ReferralPayoutProfile?
+  referralPayoutRequests       ReferralPayoutRequest[]
   // Enterprise features
   branches             ShopBranch[]
   staffAccounts        StaffAccount[]
@@ -4373,6 +4374,7 @@ model ReferralSettings {
 
 enum ReferralCommissionStatus {
   ACCRUED
+  REQUESTED
   APPLIED
   PAID_OUT
   VOID
@@ -4409,10 +4411,46 @@ model ReferralPayoutProfile {
   stripeConnectAccountId String?  @unique
   detailsSubmitted       Boolean  @default(false)
   payoutsEnabled         Boolean  @default(false)
+  bankHolderName         String?
+  bankName               String?
+  bankAccountNumber      String?
+  bankRoutingCode        String?
+  bankCountry            String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
   shop Shop @relation(fields: [shopId], references: [id])
+}
+
+enum ReferralPayoutRequestStatus {
+  PENDING
+  PAID
+  REJECTED
+  CONVERTED_TO_SUB
+}
+
+model ReferralPayoutRequest {
+  id                String                      @id @default(uuid())
+  shopId            String
+  amount            Float
+  currency          String
+  status            ReferralPayoutRequestStatus @default(PENDING)
+  bankHolderName    String?
+  bankName          String?
+  bankAccountNumber String?
+  bankRoutingCode   String?
+  bankCountry       String?
+  monthsGranted     Float?
+  payoutReference   String?
+  adminNote         String?
+  paidAt            DateTime?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([shopId])
 }
 
 // ── Blog Posts ─────────────────────────────────────────────────

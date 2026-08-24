@@ -954,7 +954,7 @@ export default function ShopEngagementPage() {
       // Prompt user to upload proof screenshot
       const input = document.createElement("input");
       input.type = "file";
-      input.accept = "image/*";
+      input.accept = "image/jpeg,image/png,image/webp,image/gif";
       const file = await new Promise<File | null>((resolve) => {
         input.onchange = (e) =>
           resolve((e.target as HTMLInputElement).files?.[0] || null);

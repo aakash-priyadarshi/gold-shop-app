@@ -57,7 +57,29 @@ import {
     validateTaxId,
 } from "@/lib/tax/validators";
 import { useT } from "@/providers/translation-provider";
-import { toGrams, fromGrams, getSupportedWeightUnits, getDefaultWeightUnit, calculateLineWastage, getWastageFormulaText, resolveWastageRule, type ResolvedWastageRule } from "@gold-shop/shared";
+import {
+  toGrams,
+  fromGrams,
+  getSupportedWeightUnits,
+  getDefaultWeightUnit,
+  calculateLineWastage,
+  getWastageFormulaText,
+  resolveWastageRule,
+  normalizeGemstoneType,
+  CANONICAL_GEMSTONE_TYPES,
+  type ResolvedWastageRule,
+} from "@gold-shop/shared";
+import {
+  calcMetalCostFromParts,
+  importCatalogItem,
+} from "@/lib/invoice/importHelpers";
+import {
+  computeDiscountAmount,
+  computeTaxBreakdown,
+  roundMoney2,
+} from "@/lib/invoice/calculateLineTotals";
+import type { MetalPart } from "@/lib/invoice/lineItemTypes";
+import { mapLineItemsToApi } from "@/lib/invoice/mapToCreateDto";
 import {
     ArrowLeft,
     Check,
@@ -316,182 +338,7 @@ const METAL_TYPES = [
   { value: "PLATINUM_900", label: "Platinum 900" },
 ];
 
-/** Normalize catalog metal+purity (GOLD + 22K) into invoice codes (GOLD_22K). */
-function normalizeMetalCode(metal: string, purity?: string): string {
-  const m = String(metal || "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "_");
-  if (!m) return "";
-  if (/^(GOLD|SILVER|PLATINUM|PALLADIUM)_\w+/.test(m)) return m;
-
-  const p = String(purity || "")
-    .toUpperCase()
-    .replace(/\s+/g, "");
-  if (m === "GOLD" || m.startsWith("GOLD")) {
-    if (p.includes("24") || p === "999") return "GOLD_24K";
-    if (p.includes("22") || p === "916") return "GOLD_22K";
-    if (p.includes("18") || p === "750") return "GOLD_18K";
-    if (p.includes("14") || p === "585") return "GOLD_14K";
-    if (p.includes("10")) return "GOLD_10K";
-    return "GOLD_22K";
-  }
-  if (m === "SILVER" || m.startsWith("SILVER")) {
-    if (p.includes("999")) return "SILVER_999";
-    return "SILVER_925";
-  }
-  if (m === "PLATINUM" || m.startsWith("PLATINUM")) {
-    if (p.includes("900")) return "PLATINUM_900";
-    return "PLATINUM_950";
-  }
-  return m;
-}
-
-/** Read metal type from inventory composition (product form, RFQ, Method A–D). */
-function extractMetalTypeFromComposition(composition: unknown): string {
-  if (!composition || typeof composition !== "object") return "";
-  const c = composition as Record<string, unknown>;
-
-  for (const key of [
-    "preciousMetal",
-    "metal",
-    "primaryMetal",
-    "alloy",
-    "coreMetal",
-    "standardAlloy",
-  ]) {
-    if (typeof c[key] === "string" && c[key]) {
-      return normalizeMetalCode(
-        c[key] as string,
-        typeof c.purity === "string" ? (c.purity as string) : undefined,
-      );
-    }
-  }
-
-  const baseAlloy = c.baseAlloy;
-  if (baseAlloy && typeof baseAlloy === "object") {
-    const ba = baseAlloy as Record<string, unknown>;
-    if (typeof ba.metal === "string" && ba.metal) {
-      return normalizeMetalCode(
-        ba.metal,
-        typeof ba.purity === "string" ? ba.purity : undefined,
-      );
-    }
-  }
-
-  return "";
-}
-
-type MetalPart = { metalType: string; weightG: number; label?: string };
-
-/** Build per-metal weight parts for a catalog item (expands sets). */
-function buildMetalPartsFromCatalogItem(item: any): MetalPart[] {
-  const links = Array.isArray(item?.setComponents) ? item.setComponents : [];
-  if (
-    (item?.jewelleryType === "SET" || item?.composition?.kind === "SET") &&
-    links.length > 0
-  ) {
-    return links
-      .map((link: any) => {
-        const comp = link.componentItem || link;
-        return {
-          metalType: extractMetalTypeFromComposition(comp.composition),
-          weightG: Number(comp.totalWeightGrams) || 0,
-          label: comp.nameEn || comp.sku || "Component",
-        };
-      })
-      .filter((p: MetalPart) => p.weightG > 0);
-  }
-
-  const metalType = extractMetalTypeFromComposition(item?.composition);
-  const weightG = Number(item?.totalWeightGrams) || 0;
-  if (weightG > 0) {
-    return [{ metalType, weightG, label: item?.nameEn || item?.sku }];
-  }
-  return [];
-}
-
-function metalRateBaseKey(metalType: string): string | null {
-  const m = String(metalType || "").toUpperCase();
-  if (m.startsWith("GOLD")) return "GOLD";
-  if (m.startsWith("SILVER")) return "SILVER";
-  if (m.startsWith("PLATINUM")) return "PLATINUM";
-  return null;
-}
-
-function resolveMetalRatePerGram(
-  metalType: string,
-  shopPrices: { baseMetalPrices?: Record<string, number> } | null,
-  marketRates: LiveRateData | null,
-): number | null {
-  if (!metalType) return null;
-  const baseKey = metalRateBaseKey(metalType);
-  const shopRate =
-    shopPrices?.baseMetalPrices?.[metalType] ??
-    (baseKey ? shopPrices?.baseMetalPrices?.[baseKey] : undefined);
-  if (shopRate && shopRate > 0) return Number(shopRate);
-
-  let live =
-    marketRates?.metals?.[metalType] ||
-    marketRates?.metals?.[metalType.toLowerCase()];
-  if (!live && baseKey && marketRates?.metals) {
-    live =
-      marketRates.metals[baseKey] ||
-      marketRates.metals[baseKey.toLowerCase()];
-  }
-  return live && Number(live) > 0 ? Number(live) : null;
-}
-
-function calcMetalCostFromParts(
-  parts: MetalPart[],
-  shopPrices: { baseMetalPrices?: Record<string, number> } | null,
-  marketRates: LiveRateData | null,
-): { cost: number; missing: string[]; detailLines: string[] } {
-  let cost = 0;
-  const missing: string[] = [];
-  const detailLines: string[] = [];
-  for (const part of parts) {
-    if (!part.metalType) {
-      missing.push(part.label || "unknown metal");
-      detailLines.push(
-        `${part.label || "Piece"}: ${part.weightG.toFixed(3)}g — metal type missing`,
-      );
-      continue;
-    }
-    const rate = resolveMetalRatePerGram(
-      part.metalType,
-      shopPrices,
-      marketRates,
-    );
-    if (!rate) {
-      missing.push(part.metalType);
-      detailLines.push(
-        `${part.label || part.metalType}: ${part.weightG.toFixed(3)}g — no rate for ${part.metalType}`,
-      );
-      continue;
-    }
-    const lineCost = part.weightG * rate;
-    cost += lineCost;
-    detailLines.push(
-      `${part.label || part.metalType}: ${part.weightG.toFixed(3)}g × ${rate.toFixed(2)}/g (${part.metalType}) = ${lineCost.toFixed(2)}`,
-    );
-  }
-  return { cost: Math.round(cost * 100) / 100, missing, detailLines };
-}
-
-const GEMSTONE_TYPES = [
-  "Diamond",
-  "Ruby",
-  "Emerald",
-  "Sapphire",
-  "Pearl",
-  "Opal",
-  "Topaz",
-  "Amethyst",
-  "Garnet",
-  "Tourmaline",
-  "Other",
-];
+const GEMSTONE_TYPES = CANONICAL_GEMSTONE_TYPES;
 const GEMSTONE_CUTS = [
   "Round Brilliant",
   "Princess",
@@ -575,6 +422,10 @@ interface RichLineItem {
   wastageCost?: string;
   /** Original % from catalog / walk-in ready (can be "0") — for caption + delta */
   baseWastagePercent?: string;
+  isSet?: boolean;
+  setDiscountType?: "PERCENT" | "FIXED";
+  setDiscountValue?: number;
+  setDiscountAmount?: number;
 }
 
 const emptyLineItem = (): RichLineItem => ({
@@ -598,7 +449,9 @@ function lineItemTotal(item: RichLineItem): number {
   const mc = parseFloat(item.metalCost) || 0;
   const gc = item.gemstones.reduce((s, g) => s + (parseFloat(g.cost) || 0), 0);
   const mk = parseFloat(item.makingCost) || 0;
-  return (mc + gc + mk) * item.quantity;
+  const rawTotal = (mc + gc + mk) * item.quantity;
+  const discount = (item.setDiscountAmount || 0) * item.quantity;
+  return Math.max(0, rawTotal - discount);
 }
 
 /** True when a row is unused starter / leftover blank (safe to strip on catalog/quote add). */
@@ -640,10 +493,6 @@ function isMakingManagedLine(li: RichLineItem): boolean {
     li.source === "QUOTE" ||
     (parseFloat(li.baseMakingCost || "") || 0) > 0
   );
-}
-
-function roundMoney2(n: number): number {
-  return Math.round(n * 100) / 100;
 }
 
 /**
@@ -1460,237 +1309,95 @@ export default function CreateInvoicePage() {
   }, [catalogOpen, catalogSearch, searchCatalog]);
 
   const addFromCatalog = (item: any) => {
-    if (lineItems.some((li) => li.inventoryItemId === item.id)) {
+    const importRes = importCatalogItem({
+      item,
+      existingLines: lineItems,
+      shopPrices: shopPrices ?? null,
+      marketRates: marketRates ?? null,
+      useLiveRate: catalogUseLiveRate,
+      shopWastagePercent: 0,
+    });
+
+    if ("error" in importRes) {
       toast({
-        title: t("Already added"),
-        description: t("This catalog piece is already on the invoice."),
+        title: t("Cannot add item"),
+        description: t(importRes.error),
         variant: "destructive",
       });
       return;
     }
 
-    const metalParts = buildMetalPartsFromCatalogItem(item);
-    const uniqueMetals = Array.from(
-      new Set(metalParts.map((p) => p.metalType).filter(Boolean)),
-    );
-    // Primary metal for the form select: sole metal, or heaviest part if mixed
-    let metalType = "";
-    if (uniqueMetals.length === 1) {
-      metalType = uniqueMetals[0];
-    } else if (metalParts.length > 0) {
-      const heaviest = [...metalParts].sort(
-        (a, b) => b.weightG - a.weightG,
-      )[0];
-      metalType = heaviest?.metalType || "";
-    } else {
-      metalType = extractMetalTypeFromComposition(item.composition);
-    }
+    const { line: next, nextLines: newItems, liveRateNote, missingRates } = importRes;
 
-    const totalWeightG =
-      metalParts.reduce((s, p) => s + p.weightG, 0) ||
-      Number(item.totalWeightGrams) ||
-      0;
+    // Optional: resolve gemstones via live rates asynchronously while preserving full stone configuration
+    if (catalogUseLiveRate && next.gemstones.length > 0) {
+      (async () => {
+        try {
+          const { pricingApi } = await import("@/lib/api");
+          let hasLivePricing = false;
+          const updatedGemstones = await Promise.all(
+            next.gemstones.map(async (gem) => {
+              try {
+                const res = await pricingApi.resolveGemstone({
+                  shopId: user?.shop?.id || "",
+                  stoneType: gem.type || "OTHER",
+                  caratWeight: parseFloat(gem.caratWeight) || undefined,
+                  quality: (gem.quality as any) || "STANDARD",
+                  origin: (gem.origin as any) || "NATURAL",
+                  sizeMm: gem.sizeMm ? parseFloat(String(gem.sizeMm)) : undefined,
+                  count: gem.count ? parseInt(String(gem.count), 10) : 1,
+                });
+                if (res.data?.effectiveTotal != null && res.data.effectiveTotal > 0) {
+                  hasLivePricing = true;
+                  return {
+                    ...gem,
+                    cost: String(roundMoney2(res.data.effectiveTotal)),
+                  };
+                }
+              } catch {}
+              return gem;
+            }),
+          );
 
-    let metalCost = String(item.metalValueNpr ?? "");
-    const makingCost = String(item.makingChargeNpr ?? "");
-    const gemCost = item.gemstoneValueNpr || 0;
-
-    // Optional: recalculate metal from today's shop/live rate (per-metal for sets)
-    let liveRateNote = "";
-    if (catalogUseLiveRate) {
-      if (metalParts.length === 0 || !metalParts.some((p) => p.metalType)) {
-        toast({
-          variant: "destructive",
-          title: t("Cannot recalculate metal"),
-          description: t(
-            "This catalog piece has no metal type stored. Edit the product composition (metal + purity), then try again.",
-          ),
-        });
-      } else {
-        const { cost, missing, detailLines } = calcMetalCostFromParts(
-          metalParts,
-          shopPrices,
-          marketRates,
-        );
-        if (cost > 0) {
-          metalCost = String(cost);
-          liveRateNote = detailLines.join(" · ");
-        }
-        if (missing.length > 0) {
-          toast({
-            title: t("Some metal rates missing"),
-            description: `${t("Could not price")}: ${missing.join(", ")}. ${t("Set rates in Pricing Setup or wait for live market rates.")}`,
-          });
-        } else if (cost > 0) {
-          toast({
-            title: t("Metal recalculated from today's rate"),
-            description: liveRateNote.slice(0, 180),
-          });
-        }
-      }
-
-      // Also resolve gemstones from live rates when toggle is on
-      if (item.composition?.gemstones?.length > 0) {
-        // Resolve each gemstone via the pricing API
-        (async () => {
-          try {
-            const { pricingApi } = await import("@/lib/api");
-            let gemTotal = 0;
-            let gemSource = "";
-            for (const gem of item.composition.gemstones) {
-              const res = await pricingApi.resolveGemstone({
-                shopId: user?.shop?.id || "",
-                stoneType: gem.type || "OTHER",
-                caratWeight: gem.caratWeight || undefined,
-                sizeMm: gem.sizeMm || undefined,
-                quality: gem.quality || "STANDARD",
-                origin: gem.origin || "NATURAL",
-                count: gem.count || 1,
-              });
-              if (res.data?.effectiveTotal != null) {
-                gemTotal += res.data.effectiveTotal;
-                if (res.data.source === "SHOP") gemSource = "SHOP";
-              }
-            }
-            if (gemTotal > 0) {
-              // Update the gemstone line if it exists
-              setLineItems((prev) =>
-                prev.map((li) =>
-                  li.inventoryItemId === item.id
-                    ? {
-                        ...li,
-                        gemstones: [
-                          {
-                            type: "GEMSTONE",
-                            cut: "",
-                            clarity: "",
-                            caratWeight: "",
-                            color: "",
-                            cost: String(Math.round(gemTotal)),
-                          },
-                        ],
-                      }
-                    : li,
-                ),
-              );
-              toast({
-                title: t("Gemstones priced from live rates"),
-                description: gemSource === "SHOP" ? t("Using your shop rates") : t("Using Orivraa reference"),
-              });
-            }
-          } catch {
-            // Keep stored gemstone value as fallback
+          if (hasLivePricing) {
+            setLineItems((prev) =>
+              prev.map((li) => {
+                if (li.inventoryItemId !== item.id) return li;
+                let setDiscountAmount = li.setDiscountAmount;
+                if (li.isSet && li.setDiscountType && li.setDiscountValue != null) {
+                  const mCost = parseFloat(li.metalCost || "0") || 0;
+                  const mkCost = parseFloat(li.makingCost || "0") || 0;
+                  const gCost = updatedGemstones.reduce(
+                    (sum, g) => sum + (parseFloat(g.cost || "0") || 0),
+                    0,
+                  );
+                  const rawSum = roundMoney2(mCost + mkCost + gCost);
+                  setDiscountAmount = computeDiscountAmount(
+                    rawSum,
+                    li.setDiscountType,
+                    Number(li.setDiscountValue),
+                  );
+                }
+                return { ...li, gemstones: updatedGemstones, setDiscountAmount };
+              }),
+            );
+            toast({
+              title: t("Gemstones priced from live rates"),
+              description: t("Stone rates updated while preserving stone configuration."),
+            });
           }
-        })();
-      }
+        } catch {}
+      })();
     }
 
-    const gemstones =
-      gemCost > 0
-        ? [
-            {
-              type: "GEMSTONE",
-              cut: "",
-              clarity: "",
-              caratWeight: "",
-              color: "",
-              cost: String(gemCost),
-            },
-          ]
-        : [];
-
-    // If only total is set without breakdown, put total into metalCost
-    if (
-      !(parseFloat(metalCost) || 0) &&
-      !(parseFloat(makingCost) || 0) &&
-      gemCost === 0 &&
-      item.totalPriceNpr
-    ) {
-      metalCost = String(item.totalPriceNpr);
-    }
-
-    const setMetalSummary =
-      uniqueMetals.length > 1
-        ? metalParts
-            .map(
-              (p) =>
-                `${p.label || "Piece"}: ${p.metalType || "?"} ${p.weightG.toFixed(3)}g`,
-            )
-            .join(" · ")
-        : null;
-
-    const detailBits = [
-      item.sku || null,
-      item.hallmarkNumber ? `Hallmark: ${item.hallmarkNumber}` : null,
-      (item as any).assayOffice
-        ? `Assay: ${(item as any).assayOffice}`
-        : null,
-      setMetalSummary ? `Metals: ${setMetalSummary}` : null,
-      uniqueMetals.length > 1 ? "Mixed-metal set" : null,
-    ].filter(Boolean);
-
-    const makingNum = parseFloat(makingCost) || 0;
-    // Always take catalog wastage (including 0) — do not fall back to shop default
-    const catalogWastagePct = Number(item.wastagePercent);
-    const basePct = Number.isFinite(catalogWastagePct)
-      ? Math.max(0, catalogWastagePct)
-      : 0;
-    let wastageCost = "";
-    const metalCostNum = parseFloat(metalCost) || 0;
-    if (basePct > 0 && metalCostNum > 0) {
-      const result = calculateLineWastage(
-        {
-          metalCost: metalCostNum,
-          metalWeightG: totalWeightG,
-          wastagePercent: basePct,
-        },
-        {
-          mode:
-            wastageRule.mode === "DISABLED"
-              ? "WEIGHT_PERCENT"
-              : wastageRule.mode,
-          percent: basePct,
-          label: wastageRule.label,
-        },
-      );
-      if (result.wastageCost > 0) {
-        wastageCost = result.wastageCost.toFixed(2);
-        setWastageApplied(true);
-      }
-    } else {
-      setWastageApplied(true);
-    }
-
-    const next: RichLineItem = {
-      label: item.nameEn || item.sku || "Catalog item",
-      category: item.jewelleryType || "RING",
-      quantity: 1,
-      details: detailBits.join(" · ") || "",
-      metalType: String(metalType || ""),
-      metalWeightG: totalWeightG > 0 ? String(totalWeightG) : "",
-      metalCost,
-      gemstones,
-      makingCost,
-      baseMakingCost: makingNum > 0 ? String(makingNum) : undefined,
-      metalParts: metalParts.length > 0 ? metalParts : undefined,
-      inventoryItemId: item.id,
-      source: "CATALOG",
-      baseWastagePercent: String(basePct),
-      wastagePercent: String(basePct),
-      wastageCost,
-    };
-
-    // Strip leftover blank rows, then append
-    const kept = lineItems.filter((li) => !isBlankLine(li));
-    const newItems = [...kept, next];
     setLineItems(newItems);
     setExpandedItems(new Set([newItems.length - 1]));
 
-    // Seed totals wastage control from catalog (source %, not shop default)
+    const basePct = parseFloat(next.wastagePercent || "0") || 0;
     wastagePercentTouched.current = true;
     setInvoiceWastagePercent(String(basePct));
 
-    // Seed totals making control from catalog making (merge, don't stack)
+    const makingNum = parseFloat(next.makingCost) || 0;
     if (makingNum > 0) {
       const snap = makingControlSnapshot(newItems);
       setMakingChargeMode("left");
@@ -1700,7 +1407,18 @@ export default function CreateInvoicePage() {
     }
 
     setCatalogOpen(false);
-    if (!catalogUseLiveRate || !liveRateNote) {
+
+    if (missingRates && missingRates.length > 0) {
+      toast({
+        title: t("Some metal rates missing"),
+        description: `${t("Could not price")}: ${missingRates.join(", ")}. ${t("Set rates in Pricing Setup or wait for live market rates.")}`,
+      });
+    } else if (catalogUseLiveRate && liveRateNote) {
+      toast({
+        title: t("Metal recalculated from today's rate"),
+        description: liveRateNote.slice(0, 180),
+      });
+    } else {
       toast({
         title: t("Added from catalog"),
         description: `${next.label} · ${basePct}% ${wastageRule.label}`,
@@ -2296,58 +2014,16 @@ export default function CreateInvoicePage() {
         totalTax: 0,
       };
     }
-    const rates = countryTax.rates;
     const pct = resolveInvoiceWastagePct();
     const mode =
       wastageRule.mode === "DISABLED" ? "WEIGHT_PERCENT" : wastageRule.mode;
-    let metalTax = 0;
-    let gemstoneTax = 0;
-    let makingTax = 0;
-    let wastageTax = 0;
-
-    for (const item of lineItems) {
-      const mc = parseFloat(item.metalCost) || 0;
-      let wc = parseFloat(item.wastageCost || "") || 0;
-      if (mc > 0 && pct > 0 && wc <= 0) {
-        wc = calculateLineWastage(
-          {
-            metalCost: mc,
-            metalWeightG: parseFloat(item.metalWeightG) || 0,
-            wastagePercent: pct,
-          },
-          { mode, percent: pct, label: wastageRule.label },
-        ).wastageCost;
-      }
-      const gc = gemstoneTotal(item);
-      const mk = parseFloat(item.makingCost) || 0;
-
-      metalTax += mc * item.quantity * rates.PRECIOUS_METAL;
-      wastageTax += wc * item.quantity * rates.PRECIOUS_METAL;
-      gemstoneTax += gc * item.quantity * rates.GEMSTONE;
-      makingTax += mk * item.quantity * rates.MAKING_CHARGE;
-    }
-
-    makingTax += makingChargeAmount * rates.MAKING_CHARGE;
-
-    // Items without breakdown → default rate
-    for (const item of lineItems) {
-      const mc = parseFloat(item.metalCost) || 0;
-      const wc = parseFloat(item.wastageCost || "") || 0;
-      const gc = gemstoneTotal(item);
-      const mk = parseFloat(item.makingCost) || 0;
-      const tot = lineItemTotal(item);
-      if (mc === 0 && wc === 0 && gc === 0 && mk === 0 && tot > 0) {
-        metalTax += tot * countryTax.defaultRate;
-      }
-    }
-
-    return {
-      metalTax,
-      gemstoneTax,
-      makingTax,
-      wastageTax,
-      totalTax: metalTax + gemstoneTax + makingTax + wastageTax,
-    };
+    return computeTaxBreakdown({
+      lineItems,
+      countryTax,
+      makingChargeAmount,
+      invoiceWastagePct: pct,
+      wastageRule: { mode, label: wastageRule.label },
+    });
   }, [
     lineItems,
     countryTax,
@@ -2602,76 +2278,11 @@ export default function CreateInvoicePage() {
 
     setLoading(true);
     try {
-      const apiLineItems = lineItems
-        .filter((li) => li.label && lineItemTotal(li) > 0)
-        .map((li) => {
-          const detailParts = [
-            li.details,
-            li.metalType ? `Metal: ${li.metalType}` : null,
-            li.metalWeightG ? `Weight: ${li.metalWeightG}g` : null,
-            li.gemstones.length > 0
-              ? `Gemstones: ${li.gemstones
-                  .map((g) =>
-                    [g.type, g.cut, g.caratWeight ? `${g.caratWeight}ct` : null]
-                      .filter(Boolean)
-                      .join(" "),
-                  )
-                  .join("; ")}`
-              : null,
-          ].filter(Boolean);
-
-          const metalCost = parseFloat(li.metalCost) || 0;
-          const makingCost = parseFloat(li.makingCost) || 0;
-          const gemstoneCost = gemstoneTotal(li);
-          const pct = resolveInvoiceWastagePct();
-          const mode =
-            wastageRule.mode === "DISABLED"
-              ? "WEIGHT_PERCENT"
-              : wastageRule.mode;
-          let wastageCost = parseFloat(li.wastageCost || "") || 0;
-          if (metalCost > 0 && pct > 0 && wastageCost <= 0) {
-            wastageCost = calculateLineWastage(
-              {
-                metalCost,
-                metalWeightG: parseFloat(li.metalWeightG) || 0,
-                wastagePercent: pct,
-              },
-              { mode, percent: pct, label: wastageRule.label },
-            ).wastageCost;
-          }
-          const hasBreakdown =
-            metalCost > 0 ||
-            makingCost > 0 ||
-            gemstoneCost > 0 ||
-            wastageCost > 0;
-          const lineAmount = lineItemTotal(li) + wastageCost * li.quantity;
-
-          // Send breakdown so InvoicesService.normalizeInvoiceLines expands
-          // into METAL / MAKING / GEMSTONE for tax reports + accounting.
-          return {
-            label: li.label,
-            category: li.category,
-            quantity: li.quantity,
-            unitPrice: lineAmount / li.quantity,
-            amount: lineAmount,
-            details: detailParts.length ? detailParts.join(" · ") : undefined,
-            inventoryItemId: li.inventoryItemId || undefined,
-            variantId: li.variantId || undefined,
-            ...(hasBreakdown
-              ? {
-                  metalCost: metalCost || undefined,
-                  makingCost: makingCost || undefined,
-                  gemstoneCost: gemstoneCost || undefined,
-                  wastageCost: wastageCost || undefined,
-                  wastagePercent: pct > 0 ? pct : undefined,
-                  metalType: li.metalType || undefined,
-                  metalWeightG: li.metalWeightG
-                    ? parseFloat(li.metalWeightG) || undefined
-                    : undefined,
-                }
-              : {}),
-          };
-        });
+      const apiLineItems = mapLineItemsToApi(
+        lineItems,
+        resolveInvoiceWastagePct(),
+        wastageRule,
+      );
 
       // Reject duplicate catalog refs client-side
       const catalogIds = apiLineItems
@@ -3773,7 +3384,7 @@ export default function CreateInvoicePage() {
                                 <div>
                                   <Label className="text-xs">Type</Label>
                                   <select
-                                    value={gem.type}
+                                    value={normalizeGemstoneType(gem.type)}
                                     onChange={(e) =>
                                       updateGemstone(
                                         idx,
@@ -3786,8 +3397,8 @@ export default function CreateInvoicePage() {
                                   >
                                     <option value="">— Select —</option>
                                     {GEMSTONE_TYPES.map((g) => (
-                                      <option key={g} value={g}>
-                                        {g}
+                                      <option key={g.value} value={g.value}>
+                                        <T>{g.label}</T>
                                       </option>
                                     ))}
                                   </select>
@@ -3897,7 +3508,7 @@ export default function CreateInvoicePage() {
                         {/* Cost summary */}
                         {itemAmount > 0 && (
                           <div className="pt-1 border-t space-y-1">
-                            <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
+                            <div className="flex gap-4 text-xs text-muted-foreground flex-wrap items-center">
                               <span>
                                 Metal: {currencySymbol}{" "}
                                 {(
@@ -3914,6 +3525,12 @@ export default function CreateInvoicePage() {
                                   parseFloat(item.makingCost) || 0
                                 ).toLocaleString()}
                               </span>
+                              {item.setDiscountAmount != null && item.setDiscountAmount > 0 && (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                  <T>Set Discount</T> ({item.setDiscountType === "PERCENT" ? `${item.setDiscountValue}%` : <T>Fixed</T>}): -{currencySymbol}{" "}
+                                  {(item.setDiscountAmount * item.quantity).toLocaleString()}
+                                </span>
+                              )}
                               {item.quantity > 1 && (
                                 <span>× {item.quantity}</span>
                               )}

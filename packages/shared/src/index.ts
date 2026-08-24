@@ -28,3 +28,4 @@ export * from "./utils/jewellery-weight";
 
 // Pricing
 export * from "./pricing/price-resolver.types";
+export * from "./utils/composition-helpers";

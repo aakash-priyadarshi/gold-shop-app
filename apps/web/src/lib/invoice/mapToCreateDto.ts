@@ -22,6 +22,8 @@ export interface ApiInvoiceLineItem {
   wastagePercent?: number;
   metalType?: string;
   metalWeightG?: number;
+  setDiscountAmount?: number;
+  discountAmount?: number;
 }
 
 export interface MapToCreateDtoInput {
@@ -117,6 +119,12 @@ export function mapLineItemsToApi(
               metalType: li.metalType || undefined,
               metalWeightG: li.metalWeightG
                 ? parseFloat(li.metalWeightG) || undefined
+                : undefined,
+              setDiscountAmount: li.setDiscountAmount
+                ? Number(li.setDiscountAmount)
+                : undefined,
+              discountAmount: li.setDiscountAmount
+                ? Number(li.setDiscountAmount)
                 : undefined,
             }
           : {}),

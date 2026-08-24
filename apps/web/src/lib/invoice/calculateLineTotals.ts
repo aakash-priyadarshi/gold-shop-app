@@ -21,7 +21,9 @@ export function lineItemTotal(item: RichLineItem): number {
   const mc = parseFloat(item.metalCost) || 0;
   const gc = gemstoneTotal(item);
   const mk = parseFloat(item.makingCost) || 0;
-  return (mc + gc + mk) * item.quantity;
+  const rawTotal = (mc + gc + mk) * item.quantity;
+  const discount = (item.setDiscountAmount || 0) * item.quantity;
+  return Math.max(0, roundMoney2(rawTotal - discount));
 }
 
 export function isBlankLine(li: RichLineItem): boolean {
@@ -169,10 +171,15 @@ export function computeTaxBreakdown(opts: {
     const gc = gemstoneTotal(item);
     const mk = parseFloat(item.makingCost) || 0;
 
-    metalTax += mc * item.quantity * rates.PRECIOUS_METAL;
+    const eligibleBase = (mc + gc + mk) * item.quantity;
+    const discount = (item.setDiscountAmount || 0) * item.quantity;
+    const targetEligible = Math.max(0, eligibleBase - discount);
+    const scale = eligibleBase > 0 ? targetEligible / eligibleBase : 1;
+
+    metalTax += mc * item.quantity * scale * rates.PRECIOUS_METAL;
+    makingTax += mk * item.quantity * scale * rates.MAKING_CHARGE;
+    gemstoneTax += gc * item.quantity * scale * rates.GEMSTONE;
     wastageTax += wc * item.quantity * rates.PRECIOUS_METAL;
-    gemstoneTax += gc * item.quantity * rates.GEMSTONE;
-    makingTax += mk * item.quantity * rates.MAKING_CHARGE;
   }
 
   makingTax += opts.makingChargeAmount * rates.MAKING_CHARGE;

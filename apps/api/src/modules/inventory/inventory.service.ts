@@ -5,7 +5,15 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InventoryStatus, JewelleryType, Prisma } from "@prisma/client";
-import { calculateGrossWeightGrams, compareByLocale } from "@gold-shop/shared";
+import {
+  calculateGrossWeightGrams,
+  compareByLocale,
+  extractMetalTypeFromComposition,
+  extractPurityFromComposition,
+  normalizeMetalCode,
+  normalizeMetalMarketKey,
+} from "@gold-shop/shared";
+import { roundMoney } from "../../common/utils/money";
 import { PrismaService } from "../../prisma/prisma.service";
 import { MarketRatesService } from "../core/market-rates/market-rates.service";
 import {
@@ -28,6 +36,36 @@ import {
 } from "./inventory-scan";
 
 export { parseInventoryTagCode, normalizeInventoryScanCode } from "./inventory-scan";
+
+type RepriceMetalRate = {
+  rate: number;
+  isSpecific: boolean;
+};
+
+/**
+ * Resolve a canonical inventory metal code against either a shop override or
+ * the production MarketRatesService key. A base-metal fallback is deliberately
+ * the final option so PALLADIUM_500 never borrows the PD950 rate.
+ */
+function resolveRepriceMetalRate(
+  rateByMetal: Record<string, number>,
+  metalType?: string,
+): RepriceMetalRate | undefined {
+  if (!metalType) return undefined;
+
+  const canonicalCode = normalizeMetalCode(metalType);
+  const marketKey = normalizeMetalMarketKey(canonicalCode);
+  for (const key of new Set([metalType, canonicalCode, marketKey])) {
+    const rate = rateByMetal[key];
+    if (rate !== undefined) return { rate, isSpecific: true };
+  }
+
+  const baseKey = canonicalCode.split("_")[0];
+  const baseRate = rateByMetal[baseKey];
+  return baseRate === undefined
+    ? undefined
+    : { rate: baseRate, isSpecific: false };
+}
 
 @Injectable()
 export class InventoryService {
@@ -223,19 +261,65 @@ export class InventoryService {
       );
     }
 
-    // Recalculate total if any price component changed
-    if (
+    if (dto.setDiscountType !== undefined) {
+      updateData.setDiscountType = dto.setDiscountType;
+    }
+    if (dto.setDiscountValue !== undefined) {
+      updateData.setDiscountValue = dto.setDiscountValue;
+    }
+
+    // Recalculate total if any price component changed OR if set discount changed
+    const hasPriceComponentChange =
       dto.metalValueNpr !== undefined ||
       dto.makingChargeNpr !== undefined ||
       dto.gemstoneValueNpr !== undefined ||
-      dto.taxNpr !== undefined
-    ) {
+      dto.taxNpr !== undefined;
+    const hasDiscountChange =
+      dto.setDiscountType !== undefined ||
+      dto.setDiscountValue !== undefined;
+
+    if (hasPriceComponentChange || hasDiscountChange) {
       const metalValue = dto.metalValueNpr ?? item.metalValueNpr;
       const makingCharge = dto.makingChargeNpr ?? item.makingChargeNpr;
       const gemstoneValue = dto.gemstoneValueNpr ?? item.gemstoneValueNpr;
       const tax = dto.taxNpr ?? item.taxNpr;
-      updateData.totalPriceNpr =
-        metalValue + makingCharge + gemstoneValue + tax;
+      const baseSum = metalValue + makingCharge + gemstoneValue + tax;
+
+      const isSet =
+        dto.jewelleryType === "SET" ||
+        (!dto.jewelleryType && item.jewelleryType === "SET");
+
+      if (isSet) {
+        const discountType =
+          dto.setDiscountType !== undefined
+            ? dto.setDiscountType
+            : item.setDiscountType;
+        const discountVal =
+          dto.setDiscountValue !== undefined
+            ? dto.setDiscountValue
+            : item.setDiscountValue;
+        let discount = 0;
+        if (
+          discountType === "PERCENT" &&
+          discountVal != null &&
+          Number(discountVal) > 0
+        ) {
+          discount = (baseSum * Number(discountVal)) / 100;
+        } else if (
+          discountType === "FIXED" &&
+          discountVal != null &&
+          Number(discountVal) > 0
+        ) {
+          discount = Number(discountVal);
+        }
+        discount = Math.min(Math.max(0, discount), baseSum);
+        updateData.totalPriceNpr = Math.max(
+          0,
+          Math.round((baseSum - discount) * 100) / 100,
+        );
+      } else {
+        updateData.totalPriceNpr = Math.round(baseSum * 100) / 100;
+      }
     }
 
     const updatedItem = await this.prisma.inventoryItem.update({
@@ -680,7 +764,6 @@ export class InventoryService {
     const where: any = {
       shopId,
       status: InventoryStatus.AVAILABLE,
-      jewelleryType: { not: JewelleryType.SET },
     };
     if (opts.itemIds?.length) where.id = { in: opts.itemIds };
 
@@ -699,6 +782,27 @@ export class InventoryService {
         gemstoneValueNpr: true,
         taxNpr: true,
         totalPriceNpr: true,
+        setDiscountType: true,
+        setDiscountValue: true,
+        setComponents: {
+          orderBy: { sortOrder: "asc" },
+          include: {
+            componentItem: {
+              select: {
+                id: true,
+                nameEn: true,
+                sku: true,
+                composition: true,
+                totalWeightGrams: true,
+                metalValueNpr: true,
+                makingChargeNpr: true,
+                gemstoneValueNpr: true,
+                taxNpr: true,
+                totalPriceNpr: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -740,7 +844,117 @@ export class InventoryService {
     const skipped: Array<{ id: string; name: string; reason: string }> = [];
 
     for (const item of items) {
-      const metalType = this.extractMetalType(item.composition);
+      // 1. Handle SET items
+      if (
+        item.jewelleryType === JewelleryType.SET ||
+        (item.composition as any)?.kind === "SET"
+      ) {
+        const components = item.setComponents || [];
+        if (components.length === 0) {
+          skipped.push({
+            id: item.id,
+            name: item.nameEn,
+            reason: "SET has no components",
+          });
+          continue;
+        }
+
+        let setMetal = 0;
+        let setMaking = 0;
+        let setGem = 0;
+        let setTax = 0;
+        let setWeight = 0;
+        let setSkipped = false;
+
+        for (const link of components) {
+          const comp = link.componentItem || link;
+          const compMetalType = extractMetalTypeFromComposition(comp.composition);
+          const compWeight = comp.totalWeightGrams || 0;
+          setWeight += compWeight;
+
+          let compNewMetal = 0;
+          let compNewMaking = roundMoney(comp.makingChargeNpr || 0);
+
+          if (compWeight > 0) {
+            const resolvedRate = resolveRepriceMetalRate(
+              rateByMetal,
+              compMetalType,
+            );
+
+            if (!resolvedRate) {
+              skipped.push({
+                id: item.id,
+                name: item.nameEn,
+                reason: compMetalType
+                  ? `No rate for component metal ${compMetalType}`
+                  : "Unknown component metal type",
+              });
+              setSkipped = true;
+              break;
+            }
+
+            const compPurity = resolvedRate.isSpecific
+              ? 1
+              : extractPurityFromComposition(comp.composition);
+            compNewMetal = roundMoney(
+              compWeight * resolvedRate.rate * compPurity,
+            );
+            if (makingMode === "RECALC_PERCENT") {
+              compNewMaking = roundMoney(compNewMetal * (makingPct / 100));
+            }
+          }
+
+          setMetal += compNewMetal;
+          setMaking += compNewMaking;
+          setGem += comp.gemstoneValueNpr || 0;
+          setTax += comp.taxNpr || 0;
+        }
+
+        if (setSkipped) continue;
+
+        const newSetMetal = roundMoney(setMetal);
+        const newSetMaking = roundMoney(setMaking);
+        const setSum = roundMoney(newSetMetal + newSetMaking + setGem + setTax);
+        let setDiscount = 0;
+        if (item.setDiscountType === "PERCENT" && item.setDiscountValue != null) {
+          setDiscount = (setSum * Number(item.setDiscountValue)) / 100;
+        } else if (item.setDiscountType === "FIXED" && item.setDiscountValue != null) {
+          setDiscount = Number(item.setDiscountValue);
+        }
+        setDiscount = roundMoney(Math.min(Math.max(0, setDiscount), setSum));
+        const newTotal = roundMoney(Math.max(0, setSum - setDiscount));
+
+        preview.push({
+          id: item.id,
+          name: item.nameEn,
+          sku: item.sku,
+          metalType: "SET",
+          weightG: setWeight || item.totalWeightGrams,
+          ratePerGram: 0,
+          old: {
+            metalValueNpr: item.metalValueNpr,
+            makingChargeNpr: item.makingChargeNpr,
+            gemstoneValueNpr: item.gemstoneValueNpr || 0,
+            taxNpr: item.taxNpr || 0,
+            totalPriceNpr: item.totalPriceNpr,
+          },
+          new: {
+            metalValueNpr: newSetMetal,
+            makingChargeNpr: newSetMaking,
+            gemstoneValueNpr: setGem,
+            taxNpr: setTax,
+            totalPriceNpr: newTotal,
+          },
+          deltaPct:
+            item.totalPriceNpr > 0
+              ? +(((newTotal - item.totalPriceNpr) / item.totalPriceNpr) * 100).toFixed(2)
+              : 0,
+        });
+        continue;
+      }
+
+      // 2. Handle Regular Single item
+      const metalType = extractMetalTypeFromComposition(item.composition);
       if (opts.metalTypes?.length && metalType && !opts.metalTypes.includes(metalType)) {
         continue;
       }
@@ -752,7 +966,10 @@ export class InventoryService {
         });
         continue;
       }
-      if (!metalType || rateByMetal[metalType] == null) {
+
+      const resolvedRate = resolveRepriceMetalRate(rateByMetal, metalType);
+
+      if (!resolvedRate) {
         skipped.push({
           id: item.id,
           name: item.nameEn,
@@ -763,26 +980,28 @@ export class InventoryService {
         continue;
       }
 
-      const rate = rateByMetal[metalType];
-      const purity = this.extractPurity(item.composition);
-      const newMetal = Math.round(
-        item.totalWeightGrams * rate * (purity > 0 ? purity : 1),
+      const purityMultiplier = resolvedRate.isSpecific
+        ? 1
+        : extractPurityFromComposition(item.composition);
+      const newMetal = roundMoney(
+        item.totalWeightGrams * resolvedRate.rate * purityMultiplier,
       );
-      const newMaking =
+      const newMaking = roundMoney(
         makingMode === "RECALC_PERCENT"
-          ? Math.round(newMetal * (makingPct / 100))
-          : item.makingChargeNpr;
+          ? newMetal * (makingPct / 100)
+          : item.makingChargeNpr,
+      );
       const gemstone = item.gemstoneValueNpr || 0;
       const tax = item.taxNpr || 0;
-      const newTotal = newMetal + newMaking + gemstone + tax;
+      const newTotal = roundMoney(newMetal + newMaking + gemstone + tax);
 
       preview.push({
         id: item.id,
         name: item.nameEn,
         sku: item.sku,
-        metalType,
+        metalType: metalType || "UNKNOWN",
         weightG: item.totalWeightGrams,
-        ratePerGram: rate,
+        ratePerGram: resolvedRate.rate,
         old: {
           metalValueNpr: item.metalValueNpr,
           makingChargeNpr: item.makingChargeNpr,
@@ -911,57 +1130,7 @@ export class InventoryService {
     return { updated: updates.length };
   }
 
-  private extractMetalType(composition: unknown): string | undefined {
-    if (!composition || typeof composition !== "object") return undefined;
-    const c = composition as Record<string, unknown>;
-    if (typeof c.preciousMetal === "string") return c.preciousMetal;
-    if (typeof c.metal === "string") return c.metal;
-    if (typeof c.primaryMetal === "string") return c.primaryMetal;
-    if (typeof c.alloy === "string") return c.alloy;
-    if (typeof c.coreMetal === "string") return c.coreMetal;
-    // Product catalog shape: { baseAlloy: { metal: "GOLD", purity: "22K" } }
-    const baseAlloy = c.baseAlloy;
-    if (baseAlloy && typeof baseAlloy === "object") {
-      const ba = baseAlloy as Record<string, unknown>;
-      if (typeof ba.metal === "string" && ba.metal) {
-        const purity = typeof ba.purity === "string" ? ba.purity : undefined;
-        const metal = ba.metal.toUpperCase();
-        // Already coded (GOLD_22K)
-        if (/^(GOLD|SILVER|PLATINUM|PALLADIUM)_\w+/.test(metal)) return metal;
-        const p = (purity || "").toUpperCase().replace(/\s+/g, "");
-        if (metal === "GOLD" || metal.startsWith("GOLD")) {
-          if (p.includes("24") || p === "999") return "GOLD_24K";
-          if (p.includes("22") || p === "916") return "GOLD_22K";
-          if (p.includes("18") || p === "750") return "GOLD_18K";
-          if (p.includes("14") || p === "585") return "GOLD_14K";
-          if (p.includes("10")) return "GOLD_10K";
-          return "GOLD_22K";
-        }
-        if (metal === "SILVER" || metal.startsWith("SILVER")) {
-          if (p.includes("999")) return "SILVER_999";
-          return "SILVER_925";
-        }
-        if (metal === "PLATINUM" || metal.startsWith("PLATINUM")) {
-          if (p.includes("900")) return "PLATINUM_900";
-          return "PLATINUM_950";
-        }
-        return metal;
-      }
-    }
-    return undefined;
-  }
 
-  /** Purity as fraction (0–1). Composition may store 22, 0.916, or 916. */
-  private extractPurity(composition: unknown): number {
-    if (!composition || typeof composition !== "object") return 1;
-    const c = composition as Record<string, unknown>;
-    const raw = c.purity;
-    if (typeof raw !== "number" || !Number.isFinite(raw)) return 1;
-    if (raw > 10 && raw <= 100) return raw / 100; // 22 → unlikely; 91.6
-    if (raw > 100) return raw / 1000; // 916 → 0.916
-    if (raw > 1 && raw <= 24) return raw / 24; // karat
-    return raw; // already 0–1
-  }
 
   // Bulk update prices
   async bulkUpdatePrices(

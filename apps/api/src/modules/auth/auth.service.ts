@@ -13,6 +13,11 @@ import * as bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 import { RedisService } from "../../common/redis";
 import {
+  normalizeReferralCode,
+  pendingReferralKey,
+  PENDING_REFERRAL_TTL_SECONDS,
+} from "../../common/utils/referral-code";
+import {
   getDefaultCurrencyForMarket,
   isCurrencySupportedForMarket,
   normalizeMarketRegion,
@@ -87,21 +92,16 @@ export class AuthService {
     return "UNKNOWN";
   }
 
-  private normalizeReferralCode(referralCode?: string): string | undefined {
-    if (!referralCode) return undefined;
-    return referralCode.trim().toUpperCase();
-  }
-
   private async rememberPendingReferral(
     userId: string,
     referralCode?: string,
   ) {
-    const code = this.normalizeReferralCode(referralCode);
+    const code = normalizeReferralCode(referralCode);
     if (!userId || !code) return;
     await this.redisService.set(
-      `pending-referral:${userId}`,
+      pendingReferralKey(userId),
       code,
-      60 * 60 * 24 * 7,
+      PENDING_REFERRAL_TTL_SECONDS,
     );
   }
 
@@ -111,7 +111,7 @@ export class AuthService {
     email: string,
     referralCode?: string,
   ) {
-    const normalizedCode = this.normalizeReferralCode(referralCode);
+    const normalizedCode = normalizeReferralCode(referralCode);
     const run = () =>
       this.sellerEngagementService.processReferralSignup(
         email,
@@ -318,12 +318,18 @@ export class AuthService {
       await this.redisService.invalidatePhoneCache(dto.phone);
     }
 
-    // Auto-activate FREE subscription plan for new shopkeeper shops
+    // Auto-activate FREE subscription plan for new shopkeeper shops — recoverable if fails
     if (result.shop) {
-      await this.sellerSubscriptionsService.autoActivateFreePlan(
-        result.shop.id,
-        dto.shop?.country || "NP",
-      );
+      try {
+        await this.sellerSubscriptionsService.autoActivateFreePlan(
+          result.shop.id,
+          dto.shop?.country || "NP",
+        );
+      } catch (err: any) {
+        this.logger.warn(
+          `Failed to auto-activate free plan for shop ${result.shop.id}: ${err?.message}`,
+        );
+      }
       await this.linkReferralSignup(
         result.user.id,
         result.shop.id,
@@ -414,11 +420,17 @@ export class AuthService {
       return { user: updatedUser, shop };
     });
 
-    // Auto-activate FREE subscription plan for the new shop
-    await this.sellerSubscriptionsService.autoActivateFreePlan(
-      result.shop.id,
-      marketCountry,
-    );
+    // Auto-activate FREE subscription plan for the new shop — recoverable if fails
+    try {
+      await this.sellerSubscriptionsService.autoActivateFreePlan(
+        result.shop.id,
+        marketCountry,
+      );
+    } catch (err: any) {
+      this.logger.warn(
+        `Failed to auto-activate free plan for shop ${result.shop.id}: ${err?.message}`,
+      );
+    }
     await this.linkReferralSignup(
       result.user.id,
       result.shop.id,

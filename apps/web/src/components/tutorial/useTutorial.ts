@@ -1569,7 +1569,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Invite Other Jewellers",
         description:
-          "Enter a colleague's email or copy your register link. You earn 10% of every paid subscription invoice while they stay subscribed — applied to your next Orivraa invoice first.",
+          "Enter a colleague's email or copy your register link. You earn a share of every paid subscription invoice while they stay subscribed — applied to your next Orivraa invoice first. Leftover can go to your bank or convert to Pro months.",
         side: "bottom",
         align: "start",
       },
@@ -1582,6 +1582,16 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
           "Track every jeweller you've invited — see whether they've signed up, your reward status, and your unique referral code to share manually.",
         side: "top",
         align: "center",
+      },
+    },
+    {
+      element: "[data-tour='referrals-bank']",
+      popover: {
+        title: "Leftover cash-out",
+        description:
+          "Commission first reduces your next Orivraa invoice. Save bank details to request leftover as a bank transfer, or convert leftover to Pro months. No Stripe Connect account is needed.",
+        side: "top",
+        align: "start",
       },
     },
   ],

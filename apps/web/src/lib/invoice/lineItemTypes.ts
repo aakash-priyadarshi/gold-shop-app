@@ -15,6 +15,15 @@ export interface GemstoneEntry {
   caratWeight: string;
   color: string;
   cost: string;
+  quality?: string;
+  origin?: string;
+  sizeMm?: number | string;
+  count?: number | string;
+  cutGrade?: string;
+  lab?: string;
+  certNumber?: string;
+  reportUrl?: string;
+  sourceItemLabel?: string;
 }
 
 export interface RichLineItem {
@@ -36,6 +45,10 @@ export interface RichLineItem {
   wastagePercent?: string;
   wastageCost?: string;
   baseWastagePercent?: string;
+  isSet?: boolean;
+  setDiscountType?: "PERCENT" | "FIXED";
+  setDiscountValue?: number;
+  setDiscountAmount?: number;
 }
 
 export type TaxCategoryKey =
@@ -70,19 +83,29 @@ export const METAL_TYPES = [
   { value: "PLATINUM_900", label: "Platinum 900" },
 ] as const;
 
-export const GEMSTONE_TYPES = [
-  "Diamond",
-  "Ruby",
-  "Emerald",
-  "Sapphire",
-  "Pearl",
-  "Opal",
-  "Topaz",
-  "Amethyst",
-  "Garnet",
-  "Tourmaline",
-  "Other",
-] as const;
+import {
+  CANONICAL_GEMSTONE_TYPES,
+  CANONICAL_GEMSTONE_CUTS,
+  CANONICAL_GEMSTONE_CLARITIES,
+  CANONICAL_GEMSTONE_COLORS,
+  CANONICAL_GEMSTONE_CUT_GRADES,
+  CANONICAL_GEMSTONE_LABS,
+  getGemstoneDisplayLabel,
+  normalizeGemstoneType,
+} from "@gold-shop/shared";
+
+export {
+  CANONICAL_GEMSTONE_TYPES,
+  CANONICAL_GEMSTONE_CUTS,
+  CANONICAL_GEMSTONE_CLARITIES,
+  CANONICAL_GEMSTONE_COLORS,
+  CANONICAL_GEMSTONE_CUT_GRADES,
+  CANONICAL_GEMSTONE_LABS,
+  getGemstoneDisplayLabel,
+  normalizeGemstoneType,
+};
+
+export const GEMSTONE_TYPES = CANONICAL_GEMSTONE_TYPES;
 
 export const FALLBACK_CATEGORY_TAX_RATES: Record<
   string,

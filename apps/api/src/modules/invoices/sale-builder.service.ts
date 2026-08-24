@@ -29,6 +29,8 @@ export interface BuiltSaleLine {
   makingCost?: number;
   gemstoneCost?: number;
   wastageCost?: number;
+  discountAmount?: number;
+  setDiscountAmount?: number;
 }
 
 type InventoryLike = Pick<
@@ -282,6 +284,8 @@ export class SaleBuilderService {
     metalWeightG?: number;
     source?: SaleLineSource;
     taxTreatment?: "TAXABLE" | "EXEMPT";
+    discountAmount?: number;
+    setDiscountAmount?: number;
   }): Array<
     BuiltSaleLine & { taxTreatment?: "TAXABLE" | "EXEMPT" }
   > {
@@ -309,6 +313,8 @@ export class SaleBuilderService {
           gemstoneCost: input.gemstoneCost,
           wastageCost: input.wastageCost,
           taxTreatment: input.taxTreatment,
+          discountAmount: input.discountAmount,
+          setDiscountAmount: input.setDiscountAmount,
         },
       ];
     }
@@ -336,7 +342,7 @@ export class SaleBuilderService {
           category: "METAL",
           quantity: qty,
           unitPrice: metalCost,
-          amount: metalCost * qty,
+          amount: Math.round(metalCost * qty * 100) / 100,
           details: input.details,
           inventoryItemId: attachStock(),
           variantId: input.variantId,
@@ -345,6 +351,8 @@ export class SaleBuilderService {
           metalWeightG: input.metalWeightG,
           metalCost,
           taxTreatment: input.taxTreatment,
+          discountAmount: input.discountAmount,
+          setDiscountAmount: input.setDiscountAmount,
         });
       }
       // Wastage is taxed like precious metal in South Asian jewellery billing.
@@ -354,13 +362,15 @@ export class SaleBuilderService {
           category: "METAL",
           quantity: qty,
           unitPrice: wastageCost,
-          amount: wastageCost * qty,
+          amount: Math.round(wastageCost * qty * 100) / 100,
           details: input.details,
           inventoryItemId: attachStock(),
           variantId: input.variantId,
           source,
           wastageCost,
           taxTreatment: input.taxTreatment,
+          discountAmount: input.discountAmount,
+          setDiscountAmount: input.setDiscountAmount,
         });
       }
       if (makingCost > 0) {
@@ -369,13 +379,15 @@ export class SaleBuilderService {
           category: "MAKING",
           quantity: qty,
           unitPrice: makingCost,
-          amount: makingCost * qty,
+          amount: Math.round(makingCost * qty * 100) / 100,
           details: input.details,
           inventoryItemId: attachStock(),
           variantId: input.variantId,
           source,
           makingCost,
           taxTreatment: input.taxTreatment,
+          discountAmount: input.discountAmount,
+          setDiscountAmount: input.setDiscountAmount,
         });
       }
       if (gemstoneCost > 0) {
@@ -384,16 +396,70 @@ export class SaleBuilderService {
           category: "GEMSTONE",
           quantity: qty,
           unitPrice: gemstoneCost,
-          amount: gemstoneCost * qty,
+          amount: Math.round(gemstoneCost * qty * 100) / 100,
           details: input.details,
           inventoryItemId: attachStock(),
           variantId: input.variantId,
           source,
           gemstoneCost,
           taxTreatment: input.taxTreatment,
+          discountAmount: input.discountAmount,
+          setDiscountAmount: input.setDiscountAmount,
         });
       }
-      if (lines.length > 0) return lines;
+      if (lines.length > 0) {
+        const eligibleBase = (metalCost + makingCost + gemstoneCost) * qty;
+        const totalWastage = Math.round(wastageCost * qty * 100) / 100;
+        const targetEligibleAmount = Math.max(
+          0,
+          Math.round((input.amount - totalWastage) * 100) / 100,
+        );
+
+        if (
+          eligibleBase > 0 &&
+          Math.abs(eligibleBase - targetEligibleAmount) > 0.001
+        ) {
+          const scale = targetEligibleAmount / eligibleBase;
+          const eligibleLines = lines.filter(
+            (l) => l.wastageCost === undefined || l.wastageCost === 0,
+          );
+          let runningEligible = 0;
+          for (let i = 0; i < eligibleLines.length; i++) {
+            const rawUnit = eligibleLines[i].unitPrice;
+            if (i === eligibleLines.length - 1) {
+              const remainingAmount = Math.max(
+                0,
+                Math.round((targetEligibleAmount - runningEligible) * 100) / 100,
+              );
+              // Amounts are persisted at currency precision, but a final
+              // allocation can be indivisible by quantity (e.g. 100.00 / 3).
+              // Keep a high-precision unit price in the JSON line item and
+              // make the persisted invariant explicit:
+              // round(unitPrice * quantity, 2) === amount.
+              // Rounding unitPrice to cents here would make that impossible.
+              eligibleLines[i].unitPrice = remainingAmount / qty;
+              eligibleLines[i].amount =
+                Math.round(eligibleLines[i].unitPrice * qty * 100) / 100;
+            } else {
+              eligibleLines[i].unitPrice =
+                Math.round(rawUnit * scale * 100) / 100;
+              eligibleLines[i].amount =
+                Math.round(eligibleLines[i].unitPrice * qty * 100) / 100;
+              runningEligible += eligibleLines[i].amount;
+            }
+            if (eligibleLines[i].metalCost != null) {
+              eligibleLines[i].metalCost = eligibleLines[i].unitPrice;
+            }
+            if (eligibleLines[i].makingCost != null) {
+              eligibleLines[i].makingCost = eligibleLines[i].unitPrice;
+            }
+            if (eligibleLines[i].gemstoneCost != null) {
+              eligibleLines[i].gemstoneCost = eligibleLines[i].unitPrice;
+            }
+          }
+        }
+        return lines;
+      }
     }
 
     // No breakdown: treat full jewellery amount as METAL for tax engines
@@ -412,6 +478,8 @@ export class SaleBuilderService {
         metalType: input.metalType,
         metalWeightG: input.metalWeightG,
         taxTreatment: input.taxTreatment,
+        discountAmount: input.discountAmount,
+        setDiscountAmount: input.setDiscountAmount,
       },
     ];
   }
@@ -437,6 +505,8 @@ export class SaleBuilderService {
       metalType?: string;
       metalWeightG?: number;
       taxTreatment?: "TAXABLE" | "EXEMPT";
+      discountAmount?: number;
+      setDiscountAmount?: number;
     }>,
     opts: {
       makingChargesAmt?: number;

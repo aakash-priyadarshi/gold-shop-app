@@ -9,6 +9,14 @@ import {
 import { Prisma, UserRole, InventoryStatus, JewelleryType } from "@prisma/client";
 import { RedisService } from "../../common";
 import {
+  decodePendingReferral,
+  encodePendingReferral,
+  normalizeReferralCode,
+  type PendingReferral,
+  pendingReferralKey,
+  PENDING_REFERRAL_TTL_SECONDS,
+} from "../../common/utils/referral-code";
+import {
   getDefaultCurrencyForMarket,
   isCurrencySupportedForMarket,
   normalizeMarketRegion,
@@ -126,6 +134,28 @@ export class ShopsService {
     private planLimitsService: PlanLimitsService,
     private priceRebase: ShopPriceRebaseService,
   ) {}
+
+  private async persistPendingReferral(
+    key: string,
+    existingValue: string | undefined,
+    referral: PendingReferral,
+  ): Promise<void> {
+    const encoded = encodePendingReferral(referral);
+    if (!encoded) return;
+
+    if (
+      existingValue &&
+      (await this.redisService.setKeepTtl(key, encoded))
+    ) {
+      return;
+    }
+
+    await this.redisService.set(
+      key,
+      encoded,
+      PENDING_REFERRAL_TTL_SECONDS,
+    );
+  }
 
   /**
    * Check if a phone number is already registered (using Redis cache first)
@@ -265,51 +295,74 @@ export class ShopsService {
       newValue: { shopName: shop.shopName, method: "oauth_setup" },
     });
 
-    // Auto-activate FREE subscription plan
+    // Auto-activate FREE subscription plan — recoverable if plan activation fails
     try {
       await this.sellerSubscriptionsService.autoActivateFreePlan(
         shop.id,
         marketCountry,
       );
+    } catch (err: any) {
+      this.logger.warn(
+        `Failed to auto-activate free plan for shop ${shop.id}: ${err?.message}`,
+      );
+    }
 
-      // Fetch pending referral code from Redis inside try block (best effort)
-      const normalizedDtoCode = dto.referralCode?.trim().toUpperCase();
+    const pendingKey = pendingReferralKey(userId);
+    try {
+      let pendingValue: string | undefined;
+      try {
+        pendingValue =
+          (await this.redisService.get(pendingKey)) || undefined;
+      } catch (redisError) {
+        this.logger.warn(
+          `Pending referral lookup failed for user ${userId}: ${(redisError as { name?: string })?.name || "UNKNOWN"}`,
+        );
+      }
+
+      const storedPending = decodePendingReferral(pendingValue);
+      const directCode = normalizeReferralCode(dto.referralCode);
+      const storedForDifferentShop = Boolean(
+        storedPending?.shopId && storedPending.shopId !== shop.id,
+      );
       const pendingCode =
-        normalizedDtoCode ||
-        (await this.redisService.get(`pending-referral:${userId}`)) ||
-        undefined;
+        directCode || (storedForDifferentShop ? undefined : storedPending?.code);
 
       if (pendingCode) {
         try {
-          await this.sellerEngagementService.processReferralSignup(
+          const linked = await this.sellerEngagementService.processReferralSignup(
             user.email,
             shop.id,
             pendingCode,
           );
-          await this.redisService.del(`pending-referral:${userId}`);
+          if (linked && !storedForDifferentShop) {
+            await this.redisService.del(pendingKey);
+          } else if (!linked && !storedForDifferentShop) {
+            await this.persistPendingReferral(pendingKey, pendingValue, {
+              code: pendingCode,
+              shopId: shop.id,
+            });
+          }
         } catch (error) {
           this.logger.warn(
             `Referral signup linking failed for user ${userId} shop ${shop.id}: ${(error as { name?: string })?.name || "UNKNOWN"}`,
           );
-          // Persist as pending attempt if dto.referralCode was provided
-          if (normalizedDtoCode) {
-            try {
-              await this.redisService.set(
-                `pending-referral:${userId}`,
-                normalizedDtoCode,
-                60 * 60 * 24 * 7,
-              );
-            } catch (redisError) {
-              this.logger.warn(
-                `Failed to persist pending referral for user ${userId}: ${(redisError as { name?: string })?.name || "UNKNOWN"}`,
-              );
+          try {
+            if (!storedForDifferentShop) {
+              await this.persistPendingReferral(pendingKey, pendingValue, {
+                code: pendingCode,
+                shopId: shop.id,
+              });
             }
+          } catch (redisError) {
+            this.logger.warn(
+              `Failed to persist pending referral for user ${userId}: ${(redisError as { name?: string })?.name || "UNKNOWN"}`,
+            );
           }
         }
       }
-    } catch (outerError) {
+    } catch (error) {
       this.logger.warn(
-        `Post-shop-creation tasks failed for shop ${shop.id}: ${(outerError as { name?: string })?.name || "UNKNOWN"}`,
+        `Referral linking after shop setup failed for shop ${shop.id}: ${(error as { name?: string })?.name || "UNKNOWN"}`,
       );
     }
 
@@ -365,11 +418,17 @@ export class ShopsService {
       newValue: { shopName: shop.shopName },
     });
 
-    // Auto-activate FREE subscription plan
-    await this.sellerSubscriptionsService.autoActivateFreePlan(
-      shop.id,
-      marketCountry,
-    );
+    // Auto-activate FREE subscription plan — recoverable if fails
+    try {
+      await this.sellerSubscriptionsService.autoActivateFreePlan(
+        shop.id,
+        marketCountry,
+      );
+    } catch (err: any) {
+      this.logger.warn(
+        `Failed to auto-activate free plan for shop ${shop.id}: ${err?.message}`,
+      );
+    }
 
     return shop;
   }
@@ -548,6 +607,55 @@ export class ShopsService {
     if (!shop) {
       throw new NotFoundException("Shop not found for this user");
     }
+
+    // Recover pending referral signup in background if present
+    const pendingKey = pendingReferralKey(userId);
+    this.redisService
+      .get(pendingKey)
+      .then(async (value) => {
+        const pending = decodePendingReferral(value);
+        if (pending && shop) {
+          let referralShop: { id: string } | null = shop;
+          if (pending.shopId) {
+            referralShop = await this.prisma.shop.findFirst({
+              where: { id: pending.shopId, userId },
+              select: { id: true },
+            });
+            if (!referralShop) {
+              this.logger.warn(
+                `Pending referral origin shop ${pending.shopId} no longer belongs to user ${userId}`,
+              );
+              return;
+            }
+          }
+          if (referralShop) {
+            const userRecord = await this.prisma.user.findUnique({
+              where: { id: userId },
+              select: { email: true },
+            });
+            if (userRecord?.email) {
+              try {
+                const linked = await this.sellerEngagementService.processReferralSignup(
+                  userRecord.email,
+                  referralShop.id,
+                  pending.code,
+                );
+                if (linked) {
+                  await this.redisService.del(pendingKey);
+                  this.logger.log(
+                    `Recovered pending referral ${pending.code} for user ${userId} and shop ${referralShop.id}`,
+                  );
+                }
+              } catch (err: any) {
+                this.logger.warn(
+                  `Pending referral recovery retry failed for user ${userId}: ${err?.message}`,
+                );
+              }
+            }
+          }
+        }
+      })
+      .catch(() => {});
 
     return shop;
   }

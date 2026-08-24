@@ -1034,7 +1034,7 @@ function MobileInvoiceCreateInner() {
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
             />
           </div>
-        </section>
+      </section>
       )}
 
       {/* Catalog picker */}

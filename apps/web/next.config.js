@@ -2,6 +2,11 @@
 
 const withPWA = require('@ducanh2912/next-pwa').default;
 
+// Dependency chain: @ducanh2912/next-pwa@10.2.9 -> workbox-webpack-plugin@7.1.0
+// -> workbox-core@7.1.0. Workbox 7.1.0 intentionally retains `7.0.0` in its
+// generated `workbox:*` diagnostic markers, so public/workbox-*.js must only
+// be refreshed by this build and never hand-edited to change that marker.
+
 // When building for Tauri desktop, export static HTML (no Node server)
 const isTauriBuild = process.env.TAURI_BUILD === '1';
 

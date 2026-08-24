@@ -44,7 +44,7 @@ interface CommissionRow {
   id: string;
   commissionAmount: number;
   currency: string;
-  status: "ACCRUED" | "APPLIED" | "PAID_OUT" | "VOID";
+  status: "ACCRUED" | "REQUESTED" | "APPLIED" | "PAID_OUT" | "VOID";
   createdAt: string;
 }
 
@@ -52,6 +52,27 @@ interface PayoutProfile {
   detailsSubmitted: boolean;
   payoutsEnabled: boolean;
   hasConnectAccount: boolean;
+  hasBankDetails: boolean;
+  bankHolderName: string;
+  bankName: string;
+  bankAccountNumber: string;
+  bankRoutingCode: string;
+  bankCountry: string;
+}
+
+interface PendingPayout {
+  id: string;
+  amount: number;
+  currency: string;
+  createdAt: string;
+  status: string;
+}
+
+interface ProRedeem {
+  monthlyPrice: number;
+  currency: string;
+  planName: string;
+  months: number;
 }
 
 export default function SellerReferralsPage() {
@@ -62,6 +83,7 @@ export default function SellerReferralsPage() {
   const [shareLink, setShareLink] = useState("");
   const [earnings, setEarnings] = useState({
     accrued: 0,
+    requested: 0,
     applied: 0,
     paidOut: 0,
     currency: "USD",
@@ -70,24 +92,25 @@ export default function SellerReferralsPage() {
   const [payoutProfile, setPayoutProfile] = useState<PayoutProfile | null>(
     null,
   );
+  const [pendingPayout, setPendingPayout] = useState<PendingPayout | null>(
+    null,
+  );
+  const [proRedeem, setProRedeem] = useState<ProRedeem | null>(null);
+  const [bankForm, setBankForm] = useState({
+    bankHolderName: "",
+    bankName: "",
+    bankAccountNumber: "",
+    bankRoutingCode: "",
+    bankCountry: "",
+  });
   const [referralEmail, setReferralEmail] = useState("");
   const [referralSending, setReferralSending] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [connectLoading, setConnectLoading] = useState(false);
+  const [bankSaving, setBankSaving] = useState(false);
   const [cashOutLoading, setCashOutLoading] = useState(false);
+  const [redeemLoading, setRedeemLoading] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const returning =
-      params.get("connect") === "return" ||
-      params.get("connect") === "refresh";
-    if (returning) {
-      sellerPerformanceApi
-        .refreshReferralConnect()
-        .catch(() => undefined)
-        .finally(() => loadReferrals());
-      return;
-    }
     loadReferrals();
   }, []);
 
@@ -102,6 +125,7 @@ export default function SellerReferralsPage() {
         setEarnings(
           res.data.earnings || {
             accrued: 0,
+            requested: 0,
             applied: 0,
             paidOut: 0,
             currency: "USD",
@@ -109,6 +133,17 @@ export default function SellerReferralsPage() {
           },
         );
         setPayoutProfile(res.data.payoutProfile || null);
+        setPendingPayout(res.data.pendingPayout || null);
+        setProRedeem(res.data.proRedeem || null);
+        if (res.data.payoutProfile) {
+          setBankForm({
+            bankHolderName: res.data.payoutProfile.bankHolderName || "",
+            bankName: res.data.payoutProfile.bankName || "",
+            bankAccountNumber: res.data.payoutProfile.bankAccountNumber || "",
+            bankRoutingCode: res.data.payoutProfile.bankRoutingCode || "",
+            bankCountry: res.data.payoutProfile.bankCountry || "",
+          });
+        }
       }
     } catch (error) {
       console.warn("Failed to load referrals:", error);
@@ -154,29 +189,21 @@ export default function SellerReferralsPage() {
     }
   };
 
-  const startConnect = async () => {
-    setConnectLoading(true);
+  const saveBankDetails = async () => {
+    setBankSaving(true);
     try {
-      const res = await sellerPerformanceApi.startReferralConnect();
-      const url = res?.data?.url;
-      if (url) {
-        window.location.href = url;
-        return;
-      }
-      toast({
-        variant: "destructive",
-        title: t("Could not start Stripe Connect"),
-      });
+      await sellerPerformanceApi.saveReferralPayoutBank(bankForm);
+      toast({ title: t("Bank details saved") });
+      loadReferrals();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: t("Stripe Connect unavailable"),
+        title: t("Could not save bank details"),
         description:
-          error?.response?.data?.message ||
-          t("Commission still applies to your next Orivraa invoice."),
+          error?.response?.data?.message || t("Something went wrong."),
       });
     } finally {
-      setConnectLoading(false);
+      setBankSaving(false);
     }
   };
 
@@ -185,10 +212,10 @@ export default function SellerReferralsPage() {
     try {
       const res = await sellerPerformanceApi.cashOutReferralWallet();
       toast({
-        title: t("Cash-out requested"),
+        title: t("Payout requested"),
         description:
           res?.data?.stripeFeeNote ||
-          t("Stripe Connect charges a payout fee on cash-outs."),
+          t("We will send leftover commission to your saved bank account."),
       });
       loadReferrals();
     } catch (error: any) {
@@ -200,6 +227,30 @@ export default function SellerReferralsPage() {
       });
     } finally {
       setCashOutLoading(false);
+    }
+  };
+
+  const redeemAsPro = async () => {
+    setRedeemLoading(true);
+    try {
+      const res = await sellerPerformanceApi.redeemReferralAsPro();
+      const months = res?.data?.monthsGranted;
+      toast({
+        title: t("Pro months added"),
+        description: months
+          ? `${months} ${t("month(s) of Pro added from leftover commission.")}`
+          : t("Leftover commission was converted to Pro time."),
+      });
+      loadReferrals();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: t("Could not convert to Pro"),
+        description:
+          error?.response?.data?.message || t("Something went wrong."),
+      });
+    } finally {
+      setRedeemLoading(false);
     }
   };
 
@@ -239,8 +290,8 @@ export default function SellerReferralsPage() {
             <T>Invite jewellery shops to Orivraa. You earn</T> {percent}%{" "}
             <T>
               of every paid subscription invoice while they stay subscribed —
-              applied to your next Pro invoice first, leftover via Stripe
-              Connect.
+              applied to your next Pro invoice first. Leftover can go to your
+              bank or convert to Pro months.
             </T>
           </p>
         </div>
@@ -277,8 +328,8 @@ export default function SellerReferralsPage() {
                 <p className="text-xs">
                   <T>
                     Applied to your next Orivraa Pro invoice first (no extra
-                    Stripe fee). Leftover cash-out uses Connect and Connect
-                    fees apply.
+                    Stripe fee). Leftover can be paid to your bank or converted
+                    to Pro months.
                   </T>
                 </p>
               </div>
@@ -355,33 +406,120 @@ export default function SellerReferralsPage() {
             <p className="text-xs text-muted-foreground">
               <T>
                 Invoice credit is applied first so you are not charged twice.
-                Stripe Connect cash-out is only for leftover wallet balance and
-                includes Connect payout fees. Referral cash is never paid by
-                refunding the referred shop.
+                Leftover wallet balance can be paid to your bank (we send it
+                after you request it) or converted to Pro months. Referral cash
+                is never paid by refunding the referred shop.
               </T>
             </p>
-            <div className="flex flex-wrap items-center gap-2">
-              {!payoutProfile?.payoutsEnabled && (
-                <Button
-                  variant="outline"
-                  onClick={startConnect}
-                  disabled={connectLoading}
-                >
-                  {connectLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                  ) : null}
-                  <T>Set up leftover cash-out</T>
-                </Button>
-              )}
-              {payoutProfile?.payoutsEnabled && (
-                <span className="text-xs text-green-600 self-center">
-                  <T>Connect payouts ready</T>
+            {pendingPayout && (
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                <T>Payout pending:</T> {formatWallet(pendingPayout.amount)}{" "}
+                <T>will be sent to your saved bank account.</T>
+              </p>
+            )}
+            <div
+              className="space-y-3 rounded-lg border p-4"
+              data-tour="referrals-bank"
+            >
+              <p className="text-sm font-medium">
+                <T>Bank details for leftover cash-out</T>
+              </p>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs mb-1 block">
+                    <T>Account holder name</T>
+                  </Label>
+                  <Input
+                    value={bankForm.bankHolderName}
+                    onChange={(e) =>
+                      setBankForm({ ...bankForm, bankHolderName: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">
+                    <T>Bank name</T>
+                  </Label>
+                  <Input
+                    value={bankForm.bankName}
+                    onChange={(e) =>
+                      setBankForm({ ...bankForm, bankName: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">
+                    <T>Account number / IBAN</T>
+                  </Label>
+                  <Input
+                    value={bankForm.bankAccountNumber}
+                    onChange={(e) =>
+                      setBankForm({
+                        ...bankForm,
+                        bankAccountNumber: e.target.value,
+                      })
+                    }
+                    autoComplete="off"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">
+                    <T>SWIFT / IFSC / branch code</T>
+                  </Label>
+                  <Input
+                    value={bankForm.bankRoutingCode}
+                    onChange={(e) =>
+                      setBankForm({
+                        ...bankForm,
+                        bankRoutingCode: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">
+                    <T>Bank Country</T>
+                  </Label>
+                  <Input
+                    value={bankForm.bankCountry}
+                    onChange={(e) =>
+                      setBankForm({
+                        ...bankForm,
+                        bankCountry: e.target.value,
+                      })
+                    }
+                    placeholder={t("e.g. NP, IN, AE, US")}
+                  />
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={saveBankDetails}
+                disabled={
+                  bankSaving ||
+                  !bankForm.bankHolderName.trim() ||
+                  !bankForm.bankName.trim() ||
+                  !bankForm.bankAccountNumber.trim()
+                }
+              >
+                {bankSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : null}
+                <T>Save bank details</T>
+              </Button>
+              {payoutProfile?.hasBankDetails && (
+                <span className="text-xs text-green-600 ml-2">
+                  <T>Bank details saved</T>
                 </span>
               )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 onClick={cashOut}
                 disabled={
                   cashOutLoading ||
+                  !!pendingPayout ||
+                  !payoutProfile?.hasBankDetails ||
                   earnings.accrued <= 0 ||
                   earnings.accrued < minCashout
                 }
@@ -390,11 +528,32 @@ export default function SellerReferralsPage() {
                 {cashOutLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-1" />
                 ) : null}
-                <T>Cash out leftover</T>
+                <T>Request bank payout</T>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={redeemAsPro}
+                disabled={
+                  redeemLoading ||
+                  !!pendingPayout ||
+                  earnings.accrued <= 0 ||
+                  (proRedeem?.months || 0) < 0.25
+                }
+              >
+                {redeemLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : null}
+                <T>Convert leftover to Pro</T>
               </Button>
               {minCashout > 0 && (
                 <span className="text-xs text-muted-foreground self-center">
                   <T>Minimum cash-out</T> {formatWallet(minCashout)}
+                </span>
+              )}
+              {proRedeem && proRedeem.monthlyPrice > 0 && (
+                <span className="text-xs text-muted-foreground self-center">
+                  <T>About</T> {proRedeem.months} <T>month(s) of</T>{" "}
+                  {proRedeem.planName}
                 </span>
               )}
             </div>

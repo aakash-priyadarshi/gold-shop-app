@@ -1,6 +1,7 @@
 import { ExecutionContext, Injectable } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import * as crypto from "crypto";
+import { normalizeReferralCode } from "../../../common/utils/referral-code";
 
 @Injectable()
 export class GoogleAuthGuard extends AuthGuard("google") {
@@ -32,9 +33,9 @@ export class GoogleAuthGuard extends AuthGuard("google") {
         stateData.rememberMe = String(request.query.rememberMe);
       }
       if (request.query.referralCode) {
-        const referralCode = String(request.query.referralCode)
-          .trim()
-          .toUpperCase();
+        const referralCode = normalizeReferralCode(
+          String(request.query.referralCode),
+        );
         if (referralCode) stateData.referralCode = referralCode;
       }
       // Sign the state with HMAC to prevent tampering

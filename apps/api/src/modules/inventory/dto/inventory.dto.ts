@@ -330,6 +330,23 @@ export class UpdateInventoryItemDto {
   @IsString()
   @IsOptional()
   locationId?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Discount type for jewellery sets (PERCENT | FIXED)',
+    enum: ['PERCENT', 'FIXED'],
+  })
+  @IsString()
+  @IsIn(['PERCENT', 'FIXED'])
+  @IsOptional()
+  setDiscountType?: 'PERCENT' | 'FIXED' | null;
+
+  @ApiPropertyOptional({
+    description: 'Discount value for jewellery sets (% or fixed amount)',
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  setDiscountValue?: number | null;
 }
 
 export class InventoryFilterDto {
