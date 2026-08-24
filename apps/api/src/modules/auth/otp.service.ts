@@ -181,12 +181,6 @@ export class OtpService {
     // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
     
-    // Rate limit first
-    await this.checkRateLimit(`otp:email:${normalizedEmail}`, this.rateLimitConfig.maxPerEmail);
-    if (ipAddress) {
-      await this.checkRateLimit(`otp:ip:${ipAddress}`, this.rateLimitConfig.maxPerIp);
-    }
-
     // Look for user with case-insensitive email match
     const user = await this.prisma.user.findFirst({
       where: { 
@@ -196,6 +190,13 @@ export class OtpService {
 
     // For privacy, always return success
     if (!user) {
+      // Existing accounts are rate limited by sendOtp below. Keep the same
+      // protection for unknown addresses without charging existing password
+      // reset requests twice.
+      await this.checkRateLimit(`otp:email:${normalizedEmail}`, this.rateLimitConfig.maxPerEmail);
+      if (ipAddress) {
+        await this.checkRateLimit(`otp:ip:${ipAddress}`, this.rateLimitConfig.maxPerIp);
+      }
       this.logger.log(`Password reset requested for non-existent email: ${normalizedEmail}`);
       return { success: true, message: 'If an account exists with this email, a reset code has been sent.' };
     }

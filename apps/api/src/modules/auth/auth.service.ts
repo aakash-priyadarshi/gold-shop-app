@@ -585,6 +585,10 @@ export class AuthService {
         message:
           "Email not verified. Please check your inbox for the verification link.",
         code: "EMAIL_NOT_VERIFIED",
+        // The frontend has already proven the password at this point and needs
+        // these values to request and submit the verification OTP.
+        userId: user.id,
+        email: user.email,
       });
     }
 
@@ -681,10 +685,17 @@ export class AuthService {
     // Hash new password
     const passwordHash = await bcrypt.hash(newPassword, 12);
 
-    // Update password
+    // A valid reset code was delivered to and entered from this email address,
+    // so it also establishes email ownership. Without this, an account that
+    // reset its password before completing signup is immediately blocked by a
+    // second verification-code request at login.
     await this.prisma.user.update({
       where: { id: result.userId },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+      },
     });
 
     // Revoke all refresh tokens for security
