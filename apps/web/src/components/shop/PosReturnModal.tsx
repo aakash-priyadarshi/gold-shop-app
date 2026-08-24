@@ -402,7 +402,9 @@ export function PosReturnModal({
         open={managerPinOpen}
         onOpenChange={setManagerPinOpen}
         title={t("Authorize return")}
-        description="A manager PIN is required before this return can be processed."
+        description={t(
+          "A manager PIN is required before this return can be processed.",
+        )}
         onVerified={async (managerPin) => {
           setManagerPinOpen(false);
           await submitReturn(managerPin);

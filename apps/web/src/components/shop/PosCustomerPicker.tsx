@@ -213,7 +213,7 @@ export function PosCustomerPicker({
         <Label><T>Search by phone number</T></Label>
         <div className="flex gap-2">
           <Select value={phoneCountryCode} onValueChange={setPhoneCountryCode}>
-            <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-28"><SelectValue placeholder={t("Code")} /></SelectTrigger>
             <SelectContent>
               {PHONE_CODES.map((code) => (
                 <SelectItem key={code} value={code}>{code}</SelectItem>

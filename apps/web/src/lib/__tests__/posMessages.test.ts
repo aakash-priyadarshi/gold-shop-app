@@ -1,4 +1,5 @@
 import {
+  applyPosPaymentConfirmation,
   getPosReturnCompletionMessage,
   getPosWhatsAppPaymentStatus,
 } from "../posMessages";
@@ -28,5 +29,38 @@ describe("POS customer-facing status messages", () => {
     expect(getPosWhatsAppPaymentStatus("PENDING", 100, "INR")).toBe(
       "Payment pending",
     );
+  });
+
+  it("keeps the confirmed payment removed and invoice state updated when a refresh is unavailable", () => {
+    expect(
+      applyPosPaymentConfirmation(
+        {
+          status: "PARTIALLY_PAID",
+          paymentStatus: "PARTIALLY_PAID",
+          paidAmount: 100,
+          balanceDue: 200,
+          paymentMethod: "SPLIT",
+          pendingPayments: [
+            { id: "confirmed", amount: 100, method: "CARD" },
+            { id: "still-pending", amount: 100, method: "UPI" },
+          ],
+        },
+        "confirmed",
+        {
+          status: "PAID",
+          paymentStatus: "PAID",
+          paidAmount: 300,
+          balanceDue: 0,
+          paymentMethod: "SPLIT",
+        },
+      ),
+    ).toEqual({
+      status: "PAID",
+      paymentStatus: "PAID",
+      paidAmount: 300,
+      balanceDue: 0,
+      paymentMethod: "SPLIT",
+      pendingPayments: [{ id: "still-pending", amount: 100, method: "UPI" }],
+    });
   });
 });

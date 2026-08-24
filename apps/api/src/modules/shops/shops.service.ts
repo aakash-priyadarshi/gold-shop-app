@@ -20,6 +20,7 @@ import {
   getDefaultCurrencyForMarket,
   isCurrencySupportedForMarket,
   normalizeMarketRegion,
+  resolveMarketRegion,
 } from "../../common/market/country-currency";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
@@ -44,6 +45,16 @@ const COUNTRY_TO_PHONE_CODE: Record<string, string> = {
   UK: "+44",
   EU: "+49",
   LK: "+94",
+};
+
+const DEMO_CITY_BY_MARKET: Record<string, string> = {
+  NP: "Kathmandu",
+  IN: "New Delhi",
+  AE: "Dubai",
+  US: "New York",
+  UK: "London",
+  EU: "Berlin",
+  LK: "Colombo",
 };
 
 @Injectable()
@@ -1070,11 +1081,18 @@ export class ShopsService {
 
     // Create demo customers
     try {
-      const country = (shop.country || "").trim().toUpperCase();
-      const phoneCountryCode = COUNTRY_TO_PHONE_CODE[country];
+      const rawCountry = shop.country || "";
+      const resolvedMarket = resolveMarketRegion(rawCountry);
+      const country = resolvedMarket
+        ? normalizeMarketRegion(rawCountry)
+        : null;
+      const phoneCountryCode = country
+        ? COUNTRY_TO_PHONE_CODE[country]
+        : undefined;
+      const demoCity = country ? DEMO_CITY_BY_MARKET[country] : undefined;
       // Do not fabricate a phone number in an unrelated country for a shop
       // whose market has no configured calling code.
-      if (phoneCountryCode) {
+      if (country && phoneCountryCode && demoCity) {
         const demoPhone1 = `${phoneCountryCode}${Math.floor(10000000 + Math.random() * 90000000)}`;
         const demoPhone2 = `${phoneCountryCode}${Math.floor(10000000 + Math.random() * 90000000)}`;
         await this.prisma.walkInCustomer.createMany({
@@ -1086,7 +1104,7 @@ export class ShopsService {
               name: "John Doe (Demo)",
               email: "john.demo@example.com",
               address: "123 Demo Street",
-              city: "Kathmandu",
+              city: demoCity,
               createdByShopId: shopId,
             },
             {
@@ -1095,7 +1113,7 @@ export class ShopsService {
               country,
               name: "Jane Smith (Demo)",
               address: "456 Main Ave",
-              city: "Delhi",
+              city: demoCity,
               createdByShopId: shopId,
             }
           ],

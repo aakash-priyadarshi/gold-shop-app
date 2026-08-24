@@ -204,6 +204,26 @@ export class InvoicesService {
     return number;
   }
 
+  private deriveReceivedPaymentMethod(
+    payments: Array<{ method: string | null }>,
+    fallback?: string | null,
+  ): string | undefined {
+    const distinctMethods = [
+      ...new Set(
+        payments
+          .map((payment) => (payment.method || "").trim().toUpperCase())
+          .filter((method) => method && method !== "UNSPECIFIED"),
+      ),
+    ];
+    if (distinctMethods.length > 1) return "SPLIT";
+    if (distinctMethods.length === 1) return distinctMethods[0];
+
+    const normalizedFallback = (fallback || "").trim().toUpperCase();
+    return normalizedFallback && normalizedFallback !== "UNSPECIFIED"
+      ? normalizedFallback
+      : undefined;
+  }
+
   /**
    * POS references are tenant-owned separately from Invoice.shopId. Validate
    * their common shop and register/shift relationships in the same transaction
@@ -256,6 +276,15 @@ export class InvoicesService {
     }
     if (session?.shiftId && dto.posShiftId && session.shiftId !== dto.posShiftId) {
       throw new BadRequestException("POS session and shift must match");
+    }
+    if (
+      session?.registerId &&
+      shift?.registerId &&
+      session.registerId !== shift.registerId
+    ) {
+      throw new BadRequestException(
+        "POS session and shift must use the same register",
+      );
     }
     if (
       shift?.registerId &&
@@ -1110,20 +1139,10 @@ export class InvoicesService {
         where: { invoiceId: id, status: "RECEIVED" },
         select: { method: true },
       });
-      const distinctMethods = [
-        ...new Set(
-          receivedPayments
-            .map((p) => (p.method || "").toUpperCase())
-            .filter((m) => m && m !== "UNSPECIFIED"),
-        ),
-      ];
-      const paymentMethodLabel =
-        distinctMethods.length > 1
-          ? "SPLIT"
-          : distinctMethods[0] ||
-            (dto.paymentMethod
-              ? methodUpper
-              : invoice.paymentMethod);
+      const paymentMethodLabel = this.deriveReceivedPaymentMethod(
+        receivedPayments,
+        dto.paymentMethod ? methodUpper : invoice.paymentMethod,
+      );
 
       const updated = await tx.invoice.findUniqueOrThrow({ where: { id } });
       const isPaid = roundMoney(updated.balanceDue) <= 0;
@@ -1254,17 +1273,10 @@ export class InvoicesService {
         where: { invoiceId: id, status: "RECEIVED" },
         select: { method: true },
       });
-      const distinctMethods = [
-        ...new Set(
-          receivedPayments
-            .map((p) => (p.method || "").toUpperCase())
-            .filter((m) => m && m !== "UNSPECIFIED"),
-        ),
-      ];
-      const paymentMethodLabel =
-        distinctMethods.length > 1
-          ? "SPLIT"
-          : distinctMethods[0] || invoice.paymentMethod;
+      const paymentMethodLabel = this.deriveReceivedPaymentMethod(
+        receivedPayments,
+        invoice.paymentMethod,
+      );
 
       const updatedInvoice = await tx.invoice.findUniqueOrThrow({ where: { id } });
       const isPaid = roundMoney(updatedInvoice.balanceDue) <= 0;
@@ -1390,6 +1402,14 @@ export class InvoicesService {
           metadata: { posReturnId: input.posReturnId },
         },
       });
+      const receivedPayments = await tx.invoicePayment.findMany({
+        where: { invoiceId: id, status: "RECEIVED" },
+        select: { method: true },
+      });
+      const paymentMethodLabel = this.deriveReceivedPaymentMethod(
+        receivedPayments,
+        "STORE_CREDIT",
+      );
       const updated = await tx.invoice.findUniqueOrThrow({ where: { id } });
       const isPaid = roundMoney(updated.balanceDue) <= 0;
       const finalInvoice = await tx.invoice.update({
@@ -1398,7 +1418,7 @@ export class InvoicesService {
           status: isPaid ? "PAID" : "PARTIALLY_PAID",
           paymentStatus: isPaid ? "PAID" : "PARTIALLY_PAID",
           paidAt: isPaid ? new Date() : null,
-          paymentMethod: "STORE_CREDIT",
+          ...(paymentMethodLabel ? { paymentMethod: paymentMethodLabel } : {}),
         },
       });
       await this.accounting.postInvoiceCreditApplied(tx, {

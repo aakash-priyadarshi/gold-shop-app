@@ -65,8 +65,15 @@ import {
 import { printAuthoritativeBill, printBill, type BillSettings } from "@/lib/billPrint";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
 import { roundMoney2 } from "@/lib/invoice/calculateLineTotals";
-import { getPosWhatsAppPaymentStatus } from "@/lib/posMessages";
-import { kickCashDrawer, loadHardwareConfig } from "@/lib/posHardware";
+import {
+  applyPosPaymentConfirmation,
+  getPosWhatsAppPaymentStatus,
+} from "@/lib/posMessages";
+import {
+  kickCashDrawer,
+  loadHardwareConfig,
+  runCashDrawerOpenFlow,
+} from "@/lib/posHardware";
 import {
   getCounterPaymentMethods,
   buildQrImageUrl,
@@ -775,36 +782,45 @@ function PosPageInner() {
   };
 
   const handleKickDrawer = async (managerPin?: string) => {
-    try {
-      await posApi.authorizeDrawerOpen({
-        reason: "Cashier manual drawer open",
-        registerId: selectedRegisterId || undefined,
-        managerPin,
-      });
-      await kickCashDrawer();
-      await posApi.auditDrawerOpen({
-        reason: "Cashier manual drawer open",
-        registerId: selectedRegisterId || undefined,
-        success: true,
-      });
-      toast({ title: t("Drawer opened") });
-    } catch (err: any) {
-      // Authorization happens before the hardware action. A hardware failure
-      // is still recorded, but never alters a completed sale.
-      if (err?.response == null) {
-        void posApi.auditDrawerOpen({
+    const result = await runCashDrawerOpenFlow({
+      authorize: () =>
+        posApi.authorizeDrawerOpen({
           reason: "Cashier manual drawer open",
           registerId: selectedRegisterId || undefined,
-          success: false,
-          error: err?.message || "Hardware kick failed",
-        });
-      }
+          managerPin,
+        }),
+      kick: kickCashDrawer,
+      audit: (success, error) =>
+        posApi.auditDrawerOpen({
+          reason: "Cashier manual drawer open",
+          registerId: selectedRegisterId || undefined,
+          success,
+          error,
+        }),
+      onAuditFailure: (error) =>
+        console.warn("Cash drawer audit logging failed", error),
+    });
+
+    if (result.outcome === "opened") {
+      toast({ title: t("Drawer opened") });
+      return;
+    }
+
+    const message = (result.error as any)?.message;
+    if (result.outcome === "authorization_failed") {
       toast({
-        title: t("Drawer kick failed"),
-        description: err?.message || t("Check receipt printer connection"),
+        title: t("Drawer authorization failed"),
+        description: message || t("Unable to authorize the cash drawer"),
         variant: "destructive",
       });
+      return;
     }
+
+    toast({
+      title: t("Drawer kick failed"),
+      description: message || t("Check receipt printer connection"),
+      variant: "destructive",
+    });
   };
 
   const requestDrawerOpen = async () => {
@@ -2060,36 +2076,63 @@ function PosPageInner() {
                               if (!checkoutSuccess?.invoiceId) return;
                               setConfirmingPaymentId(p.id);
                               try {
-                                await invoicesApi.confirmPayment(checkoutSuccess.invoiceId, p.id, {});
-                                const refreshed = await invoicesApi.getById(checkoutSuccess.invoiceId);
-                                const canonical = refreshed.data;
-                                const canonicalPayments = Array.isArray(canonical?.payments)
-                                  ? canonical.payments
-                                  : [];
+                                const confirmation = await invoicesApi.confirmPayment(
+                                  checkoutSuccess.invoiceId,
+                                  p.id,
+                                  {},
+                                );
+                                const confirmed = confirmation.data;
                                 toast({
                                   title: t("Payment Confirmed!"),
                                   description: t("Payment has been verified and invoice balance updated."),
                                 });
                                 setCheckoutSuccess((prev) =>
                                   prev
-                                    ? {
-                                        ...prev,
-                                        status: canonical.status,
-                                        paymentStatus: canonical.paymentStatus,
-                                        paidAmount: Number(canonical.paidAmount),
-                                        balanceDue: Number(canonical.balanceDue),
-                                        paymentMethod: canonical.paymentMethod || prev.paymentMethod,
-                                        pendingPayments: canonicalPayments
-                                          .filter((payment: any) => payment.status === "PENDING")
-                                          .map((payment: any) => ({
-                                            id: payment.id,
-                                            amount: Number(payment.amount),
-                                            method: payment.method,
-                                          })),
-                                      }
+                                    ? applyPosPaymentConfirmation(
+                                        prev,
+                                        p.id,
+                                        confirmed,
+                                      )
                                     : null,
                                 );
-                                loadCurrentShift(selectedRegisterId);
+                                void loadCurrentShift(selectedRegisterId);
+
+                                try {
+                                  const refreshed = await invoicesApi.getById(
+                                    checkoutSuccess.invoiceId,
+                                  );
+                                  const canonical = refreshed.data;
+                                  const canonicalPayments = Array.isArray(canonical?.payments)
+                                    ? canonical.payments
+                                    : [];
+                                  setCheckoutSuccess((prev) =>
+                                    prev
+                                      ? {
+                                          ...prev,
+                                          status: canonical.status,
+                                          paymentStatus: canonical.paymentStatus,
+                                          paidAmount: Number(canonical.paidAmount),
+                                          balanceDue: Number(canonical.balanceDue),
+                                          paymentMethod:
+                                            canonical.paymentMethod || prev.paymentMethod,
+                                          pendingPayments: canonicalPayments
+                                            .filter((payment: any) => payment.status === "PENDING")
+                                            .map((payment: any) => ({
+                                              id: payment.id,
+                                              amount: Number(payment.amount),
+                                              method: payment.method,
+                                            })),
+                                        }
+                                      : null,
+                                  );
+                                } catch {
+                                  toast({
+                                    title: t("Payment confirmed"),
+                                    description: t(
+                                      "Payment confirmed; refresh failed. The latest invoice data will load next time.",
+                                    ),
+                                  });
+                                }
                               } catch (err: any) {
                                 toast({
                                   variant: "destructive",
@@ -2222,7 +2265,9 @@ function PosPageInner() {
           open={drawerPinOpen}
           onOpenChange={setDrawerPinOpen}
           title={t("Authorize cash drawer")}
-          description="A manager PIN is required before the cash drawer can be opened."
+          description={t(
+            "A manager PIN is required before the cash drawer can be opened.",
+          )}
           onVerified={async (managerPin) => {
             setDrawerPinOpen(false);
             await handleKickDrawer(managerPin);

@@ -1,5 +1,53 @@
 export type PosRefundStatus = "SETTLED" | "CREDIT_ISSUED" | "PENDING" | string | null | undefined;
 
+export type PosPendingPayment = {
+  id: string;
+  amount: number;
+  method: string;
+};
+
+type PosPaymentConfirmationFields = {
+  status?: string;
+  paymentStatus?: string;
+  paidAmount?: number | string | null;
+  balanceDue?: number | string | null;
+  paymentMethod?: string | null;
+};
+
+/** Apply the primary payment-confirmation result before any best-effort refresh. */
+export function applyPosPaymentConfirmation<
+  T extends {
+    status?: string;
+    paymentStatus?: string;
+    paidAmount?: number;
+    balanceDue?: number;
+    paymentMethod?: string;
+    pendingPayments?: PosPendingPayment[];
+  },
+>(
+  state: T,
+  paymentId: string,
+  confirmation: PosPaymentConfirmationFields | null | undefined,
+): T {
+  return {
+    ...state,
+    status: confirmation?.status ?? state.status,
+    paymentStatus: confirmation?.paymentStatus ?? state.paymentStatus,
+    paidAmount:
+      confirmation?.paidAmount != null
+        ? Number(confirmation.paidAmount)
+        : state.paidAmount,
+    balanceDue:
+      confirmation?.balanceDue != null
+        ? Number(confirmation.balanceDue)
+        : state.balanceDue,
+    paymentMethod: confirmation?.paymentMethod || state.paymentMethod,
+    pendingPayments: state.pendingPayments?.filter(
+      (payment) => payment.id !== paymentId,
+    ),
+  } as T;
+}
+
 const formatAmount = (amount: number, currency: string) =>
   `${currency} ${Number(amount || 0).toLocaleString(undefined, {
     maximumFractionDigits: 2,

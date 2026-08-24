@@ -290,4 +290,5 @@ CREATE INDEX IF NOT EXISTS "InvoicePayment_posReturnId_idx" ON "InvoicePayment"(
 ALTER TABLE "InvoicePayment"
   ADD CONSTRAINT "InvoicePayment_posReturnId_fkey"
   FOREIGN KEY ("posReturnId") REFERENCES "PosReturn"("id")
-  ON DELETE RESTRICT ON UPDATE CASCADE;
+  ON DELETE RESTRICT ON UPDATE CASCADE
+  NOT VALID;

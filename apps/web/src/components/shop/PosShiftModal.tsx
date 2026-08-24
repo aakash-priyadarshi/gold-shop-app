@@ -58,11 +58,20 @@ export function PosShiftModal({
   const [zReportData, setZReportData] = useState<any>(null);
 
   const handleOpenShift = async () => {
+    const opening = Number(openingCash);
+    if (!Number.isFinite(opening) || opening < 0) {
+      toast({
+        variant: "destructive",
+        title: t("Invalid opening cash"),
+        description: t("Enter a zero or positive opening cash amount."),
+      });
+      return;
+    }
     setLoading(true);
     try {
       await posApi.openShift({
         registerId,
-        openingCash: parseFloat(openingCash) || 0,
+        openingCash: opening,
         notes: notes.trim() || undefined,
       });
       toast({
