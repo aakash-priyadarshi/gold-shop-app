@@ -173,12 +173,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description:
-      "Always returns a generic response. A verification OTP is sent only for an existing, unverified account.",
-  })
-  @ApiResponse({
-    status: 429,
-    description:
-      "An existing, unverified account exceeded the OTP email or IP rate limit.",
+      "Always returns a generic response. A verification OTP is sent only for an existing, unverified account; internal rate limits and delivery failures are not exposed.",
   })
   async resendVerification(
     @Body() dto: ResendVerificationDto,

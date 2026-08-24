@@ -543,12 +543,23 @@ export class AuthService {
       return genericResponse;
     }
 
-    await this.otpService.sendVerificationOtpByEmail(
-      user.email,
-      user.id,
-      user.firstName,
-      ipAddress,
-    );
+    try {
+      await this.otpService.sendVerificationOtpByEmail(
+        user.email,
+        user.id,
+        user.firstName,
+        ipAddress,
+      );
+    } catch (error) {
+      // This endpoint is public, so neither rate-limit nor delivery failures
+      // may reveal that an email belongs to an unverified account.
+      this.logger.warn(
+        `Verification OTP resend was not completed for user ${user.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+
     return genericResponse;
   }
 

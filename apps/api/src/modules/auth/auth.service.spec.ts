@@ -79,7 +79,7 @@ describe('password-reset verification', () => {
       );
     });
 
-    it('preserves the rate-limit response for an existing unverified email', async () => {
+    it('returns the generic response when an existing unverified email is rate limited', async () => {
       const { service, otpService } = createResendVerificationService({
         id: 'user-1',
         email: 'unverified@example.com',
@@ -92,10 +92,11 @@ describe('password-reset verification', () => {
 
       await expect(
         service.resendVerificationOtp('unverified@example.com', '203.0.113.10'),
-      ).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
+      ).resolves.toEqual(genericVerificationResponse);
+      expect(otpService.sendVerificationOtpByEmail).toHaveBeenCalledTimes(1);
     });
 
-    it('does not disclose verification state in a successful 200 public response', async () => {
+    it('does not disclose verification state or OTP rate limiting in a successful 200 public response', async () => {
       const unknown = createResendVerificationService(null).service;
       const verified = createResendVerificationService({
         id: 'user-1',
@@ -109,14 +110,25 @@ describe('password-reset verification', () => {
         firstName: 'Unverified',
         emailVerified: false,
       }).service;
+      const rateLimited = createResendVerificationService({
+        id: 'user-3',
+        email: 'rate-limited@example.com',
+        firstName: 'Rate Limited',
+        emailVerified: false,
+      });
+      rateLimited.otpService.sendVerificationOtpByEmail.mockRejectedValue(
+        new HttpException('Too many OTP requests', HttpStatus.TOO_MANY_REQUESTS),
+      );
 
       await expect(
         Promise.all([
           unknown.resendVerificationOtp('unknown@example.com'),
           verified.resendVerificationOtp('verified@example.com'),
           unverified.resendVerificationOtp('unverified@example.com'),
+          rateLimited.service.resendVerificationOtp('rate-limited@example.com'),
         ]),
       ).resolves.toEqual([
+        genericVerificationResponse,
         genericVerificationResponse,
         genericVerificationResponse,
         genericVerificationResponse,
