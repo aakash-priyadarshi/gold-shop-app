@@ -313,3 +313,30 @@ export function mapCountryToMarket(countryCode: string): MarketRegion {
   // Default fallback
   return getFallbackMarket();
 }
+
+/**
+ * POS retail counter allowed payment methods by country
+ */
+export const POS_ALLOWED_PAYMENT_METHODS_BY_COUNTRY: Record<string, string[]> = {
+  IN: ['CASH', 'UPI', 'PHONEPE', 'CARD', 'BANK_TRANSFER'],
+  NP: ['CASH', 'ESEWA', 'KHALTI', 'CARD', 'BANK_TRANSFER'],
+  US: ['CASH', 'CARD', 'BANK_TRANSFER'],
+  UK: ['CASH', 'CARD', 'BANK_TRANSFER'],
+  GB: ['CASH', 'CARD', 'BANK_TRANSFER'],
+  AE: ['CASH', 'CARD', 'BANK_TRANSFER'],
+  EU: ['CASH', 'CARD', 'BANK_TRANSFER'],
+  LK: ['CASH', 'CARD', 'BANK_TRANSFER'],
+};
+
+export const DEFAULT_POS_PAYMENT_METHODS = ['CASH', 'CARD', 'BANK_TRANSFER'];
+
+export function getSupportedPosPaymentMethods(countryCode?: string): string[] {
+  const code = (countryCode || '').toUpperCase().trim();
+  return POS_ALLOWED_PAYMENT_METHODS_BY_COUNTRY[code] || DEFAULT_POS_PAYMENT_METHODS;
+}
+
+export function isPosPaymentMethodAllowed(countryCode: string | undefined, method: string): boolean {
+  if (!method) return false;
+  const allowed = getSupportedPosPaymentMethods(countryCode);
+  return allowed.includes(method.toUpperCase().trim());
+}

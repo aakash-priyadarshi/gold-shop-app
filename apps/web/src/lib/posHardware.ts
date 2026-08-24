@@ -782,6 +782,45 @@ export async function kickCashDrawer(): Promise<void> {
   await sendRawToConfiguredPrinter(bytes);
 }
 
+export type CashDrawerOpenResult =
+  | { outcome: "opened" }
+  | { outcome: "authorization_failed"; error: unknown }
+  | { outcome: "hardware_failed"; error: unknown };
+
+/**
+ * Keep drawer authorization, physical hardware, and audit logging independent:
+ * an audit outage must never make a successfully opened drawer look failed.
+ */
+export async function runCashDrawerOpenFlow({
+  authorize,
+  kick,
+  audit,
+  onAuditFailure,
+}: {
+  authorize: () => Promise<unknown>;
+  kick: () => Promise<unknown>;
+  audit: (success: boolean, error?: string) => Promise<unknown>;
+  onAuditFailure?: (error: unknown) => void;
+}): Promise<CashDrawerOpenResult> {
+  try {
+    await authorize();
+  } catch (error) {
+    return { outcome: "authorization_failed", error };
+  }
+
+  try {
+    await kick();
+  } catch (error: any) {
+    void audit(false, error?.message || "Hardware kick failed").catch(
+      onAuditFailure,
+    );
+    return { outcome: "hardware_failed", error };
+  }
+
+  void audit(true).catch(onAuditFailure);
+  return { outcome: "opened" };
+}
+
 /**
  * Zebra / ZPL jewellery label printing (~50×25mm tag).
  * Uses Web Serial (Chrome/Edge) when configured; otherwise downloads a .zpl file
@@ -1077,4 +1116,3 @@ export async function printZplJewelleryLabel(
   downloadZplFile(zpl, payload.sku);
   return { method: "download" };
 }
-

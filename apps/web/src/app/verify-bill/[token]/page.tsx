@@ -143,18 +143,32 @@ export default function VerifyBillPage() {
 
           {!loading && bill?.verified && (
             <>
-              <div className="flex items-center gap-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-3">
-                <ShieldCheck className="h-8 w-8 text-emerald-600 shrink-0" />
-                <div>
-                  <p className="font-semibold text-emerald-800 dark:text-emerald-200 flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <T>Genuine Orivraa bill</T>
-                  </p>
-                  <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
-                    <T>This invoice was issued through Orivraa and matches our records.</T>
-                  </p>
+              {["VOIDED", "CANCELLED"].includes(String(bill.status).toUpperCase()) ? (
+                <div className="flex items-center gap-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-3">
+                  <FileWarning className="h-8 w-8 text-red-600 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-red-800 dark:text-red-200 flex items-center gap-1.5">
+                      <T>Bill voided / cancelled</T>
+                    </p>
+                    <p className="text-xs text-red-700/80 dark:text-red-300/80">
+                      <T>This invoice was originally issued through Orivraa but has since been voided or cancelled by the seller.</T>
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center gap-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-3">
+                  <ShieldCheck className="h-8 w-8 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-emerald-800 dark:text-emerald-200 flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <T>Genuine Orivraa bill</T>
+                    </p>
+                    <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                      <T>This invoice was issued through Orivraa and matches our records.</T>
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="text-center space-y-1">
                 {showLogo && branding?.shopLogoUrl && (
@@ -201,34 +215,6 @@ export default function VerifyBillPage() {
                   </p>
                 )}
               </div>
-
-              {bill.customerName && (
-                <p className="text-sm">
-                  <span className="text-muted-foreground">
-                    <T>Customer</T>:
-                  </span>{" "}
-                  {bill.customerName}
-                </p>
-              )}
-
-              {bill.lineItems && bill.lineItems.length > 0 && (
-                <div className="space-y-1 border-t pt-3">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    <T>Items</T>
-                  </p>
-                  {bill.lineItems.slice(0, 12).map((li, i) => (
-                    <div
-                      key={i}
-                      className="flex justify-between text-sm gap-4"
-                    >
-                      <span className="truncate">{li.label || "Item"}</span>
-                      <span className="shrink-0 font-medium">
-                        {formatMoney(li.amount, bill.currency)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               <div className="border-t pt-3 space-y-1">
                 <div className="flex justify-between font-semibold text-lg">

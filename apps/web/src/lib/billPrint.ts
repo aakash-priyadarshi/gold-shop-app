@@ -1,3 +1,4 @@
+import QRCode from "qrcode";
 import {
   billTemplateOrnamentHtml,
   billTemplatePrintCss,
@@ -400,13 +401,16 @@ ${
   payload.verificationToken
     ? (() => {
         const verifyUrl = `https://www.orivraa.com/verify-bill/${payload.verificationToken}`;
-        const qrSrc =
-          payload.verificationQrDataUrl ||
-          `https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=4&data=${encodeURIComponent(verifyUrl)}`;
-        return `<div style="text-align:center;margin-top:14px;padding-top:10px;border-top:1px dashed #e5e7eb">
-        <img src="${qrSrc}" alt="Verify bill" style="width:88px;height:88px;margin:0 auto" />
-        <p class="tiny" style="margin-top:4px">Scan to verify this bill is genuine</p>
-      </div>`;
+        const qr = payload.verificationQrDataUrl;
+        return qr
+          ? `<div style="text-align:center;margin-top:14px;padding-top:10px;border-top:1px dashed #e5e7eb">
+              <img src="${safe(qr)}" alt="Verify bill" style="width:88px;height:88px;margin:0 auto" />
+              <p class="tiny" style="margin-top:4px">Scan to verify this bill.</p>
+            </div>`
+          : `<div style="text-align:center;margin-top:14px;padding-top:10px;border-top:1px dashed #e5e7eb">
+              <p class="tiny" style="margin-top:4px">Verify this bill:</p>
+              <p class="tiny" style="word-break:break-all">${safe(verifyUrl)}</p>
+            </div>`;
       })()
     : ""
 }
@@ -414,6 +418,32 @@ ${bottomBrand || '<p class="footer">Thank you for your business!</p>'}
 ${ornaments.bottom}
 </div>
 <script>setTimeout(function(){window.print();},350);</script></body></html>`;
+}
+
+export async function generateVerificationQrDataUrl(token: string): Promise<string> {
+  const verifyUrl = `https://www.orivraa.com/verify-bill/${token}`;
+  try {
+    return await QRCode.toDataURL(verifyUrl, {
+      width: 140,
+      margin: 1,
+      color: {
+        dark: "#111827",
+        light: "#ffffff",
+      },
+    });
+  } catch {
+    return "";
+  }
+}
+
+export async function printAuthoritativeBill(payload: BillPrintPayload): Promise<boolean> {
+  const payloadToPrint = { ...payload };
+  if (payloadToPrint.verificationToken && !payloadToPrint.verificationQrDataUrl) {
+    payloadToPrint.verificationQrDataUrl = await generateVerificationQrDataUrl(
+      payloadToPrint.verificationToken,
+    );
+  }
+  return printBill(payloadToPrint);
 }
 
 export function printBill(payload: BillPrintPayload): boolean {

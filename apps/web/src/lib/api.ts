@@ -1312,6 +1312,10 @@ export const invoicesApi = {
   getByOrder: (orderId: string) => api.get(`/invoices/order/${orderId}`),
   updatePaymentStatus: (id: string, data: any) =>
     api.patch(`/invoices/${id}/payment`, data),
+  recordPayment: (id: string, data: any) =>
+    api.patch(`/invoices/${id}/payment`, data),
+  confirmPayment: (id: string, paymentId: string, data?: any) =>
+    api.post(`/invoices/${id}/payments/${paymentId}/confirm`, data || {}),
   void: (id: string) => api.post(`/invoices/${id}/void`),
   getStats: () => api.get("/invoices/stats"),
   getSettings: () => api.get("/invoices/settings"),
@@ -1757,11 +1761,106 @@ export const variantsApi = {
 
 // ─── POS API ───
 export const posApi = {
+  // Registers / Counters
+  getRegisters: () => api.get("/pos/registers"),
+  createRegister: (data: {
+    name: string;
+    terminalCode?: string;
+    active?: boolean;
+    hardwareConfig?: Record<string, any>;
+  }) => api.post("/pos/registers", data),
+  updateRegister: (id: string, data: Record<string, any>) =>
+    api.patch(`/pos/registers/${id}`, data),
+
+  // Shifts & Z-Report
+  openShift: (data: { registerId: string; openingCash?: number; notes?: string }) =>
+    api.post("/pos/shifts/open", data),
+  getCurrentShift: (registerId?: string) =>
+    api.get("/pos/shifts/current", { params: registerId ? { registerId } : {} }),
+  closeShift: (id: string, data: { closingCash: number; notes?: string }) =>
+    api.post(`/pos/shifts/${id}/close`, data),
+  getZReport: (id: string) => api.get(`/pos/shifts/${id}/z-report`),
+  authorizeDrawerOpen: (data: { reason?: string; registerId?: string; managerPin?: string }) =>
+    api.post("/pos/drawer/authorize", data),
+  auditDrawerOpen: (data: { reason?: string; registerId?: string; success?: boolean; error?: string }) =>
+    api.post("/pos/drawer/open", data),
+
+  // Pricing Preview
+  previewPricing: (data: {
+    items: Array<{
+      inventoryItemId: string;
+      variantId?: string;
+      qty: number;
+      unitPrice?: number;
+    }>;
+    makingChargeRate?: number;
+    makingChargesNpr?: number;
+    discountAmount?: number;
+  }) => api.post("/pos/preview", data),
+  previewSession: (sessionId: string, overrides?: Record<string, any>) =>
+    api.post(`/pos/session/${sessionId}/preview`, overrides || {}),
+
+  // Returns & Exchanges
+  processReturn: (data: {
+    invoiceNumber: string;
+    lines: Array<{
+      inventoryItemId: string;
+      variantId?: string;
+      qty: number;
+      reason: string;
+      condition?: string;
+      disposition?: string;
+      customRefundAmount?: number;
+    }>;
+    refundMethod?: string;
+    idempotencyKey: string;
+    notes?: string;
+    managerPin?: string;
+  }) => api.post("/pos/returns", data),
+  confirmRefund: (
+    returnId: string,
+    refundPaymentId: string,
+    data: {
+      reference?: string;
+      terminalReference?: string;
+      bankReference?: string;
+      providerTransactionId?: string;
+      notes?: string;
+    } = {},
+  ) => api.post(`/pos/returns/${returnId}/refunds/${refundPaymentId}/confirm`, data),
+  processExchange: (data: {
+    invoiceNumber: string;
+    returnLines: Array<{
+      inventoryItemId: string;
+      qty: number;
+      reason: string;
+      condition?: string;
+      disposition?: string;
+      customRefundAmount?: number;
+    }>;
+    newItems: Array<{
+      inventoryItemId: string;
+      variantId?: string;
+      qty: number;
+      unitPrice?: number;
+    }>;
+    paymentMethod?: string;
+    paymentSplits?: Array<{ method: string; amount: number; reference?: string }>;
+    idempotencyKey: string;
+    notes?: string;
+    managerPin?: string;
+  }) => api.post("/pos/exchanges", data),
+
+  // Customer Picks
   getCustomerPicks: (customerId: string) =>
     api.get(`/pos/customer-picks/${customerId}`),
-  getActiveSession: () => api.get("/pos/session/active"),
-  createSession: (data: { customerId?: string; conversationId?: string }) =>
-    api.post("/pos/session", data),
+  getActiveSession: (registerId?: string) =>
+    api.get("/pos/session/active", { params: registerId ? { registerId } : {} }),
+  createSession: (data: {
+    customerId?: string;
+    conversationId?: string;
+    registerId?: string;
+  }) => api.post("/pos/session", data),
   updateCustomer: (sessionId: string, customerId?: string) =>
     api.patch(`/pos/session/${sessionId}/customer`, { customerId }),
   addItems: (
@@ -1783,10 +1882,18 @@ export const posApi = {
       taxRate?: number;
       discountAmount?: number;
       paymentMethod?: string;
-      paymentSplits?: Array<{ method: string; amount: number }>;
+      paymentSplits?: Array<{
+        method: string;
+        amount: number;
+        reference?: string;
+        provider?: string;
+        providerTransactionId?: string;
+        terminalReference?: string;
+        bankReference?: string;
+        notes?: string;
+      }>;
       makingChargeRate?: number;
       makingChargesNpr?: number;
-      invoiceCountry?: string;
     },
   ) => api.post(`/pos/session/${sessionId}/checkout`, data),
   cancelSession: (sessionId: string) => api.delete(`/pos/session/${sessionId}`),
@@ -1813,10 +1920,18 @@ export interface PosSalePayload {
   taxRate?: number;
   discountAmount?: number;
   paymentMethod?: string;
+  paymentSplits?: Array<{
+    method: string;
+    amount: number;
+    reference?: string;
+    provider?: string;
+    providerTransactionId?: string;
+    terminalReference?: string;
+    bankReference?: string;
+    notes?: string;
+  }>;
   makingChargeRate?: number;
   makingChargesNpr?: number;
-  /** Tax regime country for this sale (defaults to shop.country on server). */
-  invoiceCountry?: string;
   notes?: string;
   occurredOffline?: boolean;
   soldAt?: string;

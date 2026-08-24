@@ -19,13 +19,17 @@ import {
   isCurrencySupportedForMarket,
   resolveMarketRegion,
 } from "../../common/market/country-currency";
-import { resolveBillTemplateId } from "@gold-shop/shared";
+import { isPosPaymentMethodAllowed, resolveBillTemplateId } from "@gold-shop/shared";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import {
   BackendTaxEngineService,
   TaxableComponent,
 } from "../core/pricing/services/backend-tax-engine.service";
-import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
+import {
+  ConfirmPaymentDto,
+  CreateInvoiceDto,
+  UpdatePaymentDto,
+} from "./dto/invoice.dto";
 import {
   ShareInvoiceEmailDto,
   ShareInvoiceSmsDto,
@@ -41,6 +45,7 @@ import { InvoicePdfService } from "./invoice-pdf.service";
 export interface CreateInvoiceOptions {
   /** When true, caller commits stock itself (POS checkout path). */
   skipStockCommit?: boolean;
+  posClientId?: string;
 }
 
 // Map a shop's registered country to its default display/billing currency.
@@ -89,8 +94,8 @@ export class InvoicesService {
     return `INV-${dateStr}-${shopCode}-${String(sequence).padStart(4, "0")}`;
   }
 
-  private mapTaxCategory(category: string): TaxableComponent["category"] {
-    const value = category.trim().toUpperCase();
+  public mapTaxCategory(category: string): TaxableComponent["category"] {
+    const value = (category || "").toUpperCase();
     if (value.includes("DIAMOND")) return "DIAMOND";
     if (value.includes("GEM") || value.includes("STONE")) return "GEMSTONE";
     if (value.includes("PLAT")) return "PLATING";
@@ -102,7 +107,7 @@ export class InvoicesService {
     return "OTHER";
   }
 
-  private async calculateServerTax(
+  public async calculateServerTax(
     region: MarketRegion,
     components: TaxableComponent[],
   ) {
@@ -197,6 +202,97 @@ export class InvoicesService {
       );
     }
     return number;
+  }
+
+  private deriveReceivedPaymentMethod(
+    payments: Array<{ method: string | null }>,
+    fallback?: string | null,
+  ): string | undefined {
+    const distinctMethods = [
+      ...new Set(
+        payments
+          .map((payment) => (payment.method || "").trim().toUpperCase())
+          .filter((method) => method && method !== "UNSPECIFIED"),
+      ),
+    ];
+    if (distinctMethods.length > 1) return "SPLIT";
+    if (distinctMethods.length === 1) return distinctMethods[0];
+
+    const normalizedFallback = (fallback || "").trim().toUpperCase();
+    return normalizedFallback && normalizedFallback !== "UNSPECIFIED"
+      ? normalizedFallback
+      : undefined;
+  }
+
+  /**
+   * POS references are tenant-owned separately from Invoice.shopId. Validate
+   * their common shop and register/shift relationships in the same transaction
+   * that persists the invoice; database triggers in the POS migration provide
+   * the matching last line of defence for non-Prisma writes.
+   */
+  private async assertPosTenantLinks(
+    tx: Prisma.TransactionClient,
+    shopId: string,
+    dto: CreateInvoiceDto,
+  ) {
+    if (!dto.posSessionId && !dto.posRegisterId && !dto.posShiftId) return;
+
+    const [session, register, shift] = await Promise.all([
+      dto.posSessionId
+        ? tx.posSession.findFirst({
+            where: { id: dto.posSessionId, shopId },
+            select: { id: true, registerId: true, shiftId: true },
+          })
+        : null,
+      dto.posRegisterId
+        ? tx.posRegister.findFirst({
+            where: { id: dto.posRegisterId, shopId },
+            select: { id: true },
+          })
+        : null,
+      dto.posShiftId
+        ? tx.posShift.findFirst({
+            where: { id: dto.posShiftId, shopId },
+            select: { id: true, registerId: true },
+          })
+        : null,
+    ]);
+
+    if (dto.posSessionId && !session) {
+      throw new BadRequestException("POS session does not belong to this shop");
+    }
+    if (dto.posRegisterId && !register) {
+      throw new BadRequestException("POS register does not belong to this shop");
+    }
+    if (dto.posShiftId && !shift) {
+      throw new BadRequestException("POS shift does not belong to this shop");
+    }
+    if (
+      session?.registerId &&
+      dto.posRegisterId &&
+      session.registerId !== dto.posRegisterId
+    ) {
+      throw new BadRequestException("POS session and register must match");
+    }
+    if (session?.shiftId && dto.posShiftId && session.shiftId !== dto.posShiftId) {
+      throw new BadRequestException("POS session and shift must match");
+    }
+    if (
+      session?.registerId &&
+      shift?.registerId &&
+      session.registerId !== shift.registerId
+    ) {
+      throw new BadRequestException(
+        "POS session and shift must use the same register",
+      );
+    }
+    if (
+      shift?.registerId &&
+      dto.posRegisterId &&
+      shift.registerId !== dto.posRegisterId
+    ) {
+      throw new BadRequestException("POS shift and register must match");
+    }
   }
 
   async create(
@@ -572,6 +668,11 @@ export class InvoicesService {
       shopId,
       orderId: dto.orderId || null,
       shopQuoteId: dto.shopQuoteId || null,
+      posClientId: dto.posClientId || options.posClientId || null,
+      posSessionId: dto.posSessionId || null,
+      posRegisterId: dto.posRegisterId || null,
+      posShiftId: dto.posShiftId || null,
+      posCashierUserId: dto.posCashierUserId || null,
       walkInCustomerId: dto.walkInCustomerId || null,
       registeredCustomerId: dto.registeredCustomerId || null,
       customerName: dto.customerName,
@@ -623,6 +724,7 @@ export class InvoicesService {
     };
 
     const invoice = await this.prisma.$transaction(async (tx) => {
+      await this.assertPosTenantLinks(tx, shopId, dto);
       let invoiceNumber: string;
       const sequence = await tx.invoiceSequence.upsert({
         where: { shopId_marketRegion: { shopId, marketRegion: region } },
@@ -846,7 +948,6 @@ export class InvoicesService {
       where: { id },
       include: {
         payments: {
-          where: { status: "RECEIVED" },
           orderBy: { receivedAt: "asc" },
           select: {
             id: true,
@@ -855,9 +956,13 @@ export class InvoicesService {
             method: true,
             reference: true,
             notes: true,
+            status: true,
             receivedAt: true,
             createdAt: true,
           },
+        },
+        returns: {
+          select: { lines: true },
         },
       },
     });
@@ -943,30 +1048,59 @@ export class InvoicesService {
           "Cannot record payment on a voided/cancelled invoice",
         );
       }
-      if (amount > roundMoney(invoice.balanceDue)) {
-        throw new BadRequestException("Payment amount exceeds invoice balance");
+
+      const methodUpper = (dto.paymentMethod || "UNSPECIFIED").toUpperCase();
+      const isCash = methodUpper === "CASH";
+
+      // Validate payment method against country configuration
+      if (methodUpper !== "UNSPECIFIED") {
+        const country = invoice.invoiceCountry || undefined;
+        if (!isPosPaymentMethodAllowed(country, methodUpper)) {
+          throw new BadRequestException(
+            `Payment method "${methodUpper}" is not supported for country "${country || "DEFAULT"}"`,
+          );
+        }
       }
 
-      const balanceUpdate = await tx.invoice.updateMany({
-        where: {
-          id,
-          shopId,
-          status: { notIn: ["VOID", "CANCELLED"] },
-          balanceDue: { gte: amount },
-        },
-        data: {
-          paidAmount: { increment: amount },
-          balanceDue: { decrement: amount },
-          ...(dto.paymentMethod
-            ? { paymentMethod: dto.paymentMethod.toUpperCase() }
-            : {}),
-        },
-      });
-      if (balanceUpdate.count !== 1) {
-        throw new BadRequestException(
-          "Invoice balance changed; reload before recording this payment",
-        );
+      // Cash is confirmed automatically upon drawer receipt.
+      // ALL non-cash methods (CARD, UPI, ESEWA, KHALTI, BANK_TRANSFER) start as PENDING
+      // and require cashier confirmation via POST /invoices/:id/payments/:paymentId/confirm.
+      const isConfirmed = isCash;
+      const paymentStatus: "PENDING" | "RECEIVED" = isConfirmed ? "RECEIVED" : "PENDING";
+
+      if (isConfirmed) {
+        if (amount > roundMoney(invoice.balanceDue)) {
+          throw new BadRequestException("Payment amount exceeds invoice balance");
+        }
+
+        const balanceUpdate = await tx.invoice.updateMany({
+          where: {
+            id,
+            shopId,
+            status: { notIn: ["VOID", "CANCELLED"] },
+            balanceDue: { gte: amount },
+          },
+          data: {
+            paidAmount: { increment: amount },
+            balanceDue: { decrement: amount },
+            ...(dto.paymentMethod
+              ? { paymentMethod: methodUpper }
+              : {}),
+          },
+        });
+        if (balanceUpdate.count !== 1) {
+          throw new BadRequestException(
+            "Invoice balance changed; reload before recording this payment",
+          );
+        }
       }
+
+      const verificationMode = isCash ? "CASH_AUTO" : "UNVERIFIED";
+      const verifiedAt = isConfirmed
+        ? dto.receivedAt
+          ? new Date(dto.receivedAt)
+          : new Date()
+        : null;
 
       const payment = await tx.invoicePayment.create({
         data: {
@@ -977,32 +1111,38 @@ export class InvoicesService {
           fxRate: accountingContext.fxRate,
           fxSource: accountingContext.fxSource,
           fxQuotedAt: accountingContext.fxQuotedAt,
-          method: (dto.paymentMethod || "UNSPECIFIED").toUpperCase(),
-          reference: dto.reference || null,
+          method: methodUpper,
+          provider: dto.provider || null,
+          providerTransactionId: dto.providerTransactionId || null,
+          terminalReference: dto.terminalReference || null,
+          bankReference: dto.bankReference || null,
+          confirmedByUserId: null,
+          verifiedAt,
+          verificationMode,
+          reference:
+            dto.reference ||
+            dto.terminalReference ||
+            dto.bankReference ||
+            null,
           idempotencyKey,
+          status: paymentStatus,
           notes: dto.notes || null,
           receivedAt: dto.receivedAt ? new Date(dto.receivedAt) : new Date(),
         },
       });
 
+      if (!isConfirmed) {
+        return { ...invoice, recordedPayment: payment };
+      }
+
       const receivedPayments = await tx.invoicePayment.findMany({
         where: { invoiceId: id, status: "RECEIVED" },
         select: { method: true },
       });
-      const distinctMethods = [
-        ...new Set(
-          receivedPayments
-            .map((p) => (p.method || "").toUpperCase())
-            .filter((m) => m && m !== "UNSPECIFIED"),
-        ),
-      ];
-      const paymentMethodLabel =
-        distinctMethods.length > 1
-          ? "SPLIT"
-          : distinctMethods[0] ||
-            (dto.paymentMethod
-              ? dto.paymentMethod.toUpperCase()
-              : invoice.paymentMethod);
+      const paymentMethodLabel = this.deriveReceivedPaymentMethod(
+        receivedPayments,
+        dto.paymentMethod ? methodUpper : invoice.paymentMethod,
+      );
 
       const updated = await tx.invoice.findUniqueOrThrow({ where: { id } });
       const isPaid = roundMoney(updated.balanceDue) <= 0;
@@ -1031,9 +1171,273 @@ export class InvoicesService {
     });
   }
 
+  async confirmPayment(
+    id: string,
+    paymentId: string,
+    shopId: string,
+    userId: string,
+    dto: ConfirmPaymentDto = {},
+  ) {
+    const existingPayment = await this.prisma.invoicePayment.findFirst({
+      where: { id: paymentId, invoiceId: id },
+      include: { invoice: true },
+    });
+    if (!existingPayment) {
+      throw new NotFoundException("Payment not found on this invoice");
+    }
+    if (existingPayment.invoice.shopId !== shopId) {
+      throw new ForbiddenException("Not your invoice");
+    }
+    if (existingPayment.posReturnId || existingPayment.reversalOfId) {
+      throw new BadRequestException(
+        "This payment is a refund/reversal and must use the refund settlement flow",
+      );
+    }
+
+    const amount = Number(existingPayment.amount);
+    const accountingContext = await this.accounting.prepareMonetaryContext(
+      amount,
+      existingPayment.invoice.currency,
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      // Atomic claim: only one concurrent request can transition status from PENDING to RECEIVED
+      const claimed = await tx.invoicePayment.updateMany({
+        where: {
+          id: paymentId,
+          invoiceId: id,
+          status: "PENDING",
+        },
+        data: {
+          status: "RECEIVED",
+          confirmedByUserId: userId,
+          verifiedAt: new Date(),
+          verificationMode: "MANUAL",
+          terminalReference: dto.terminalReference || undefined,
+          bankReference: dto.bankReference || undefined,
+          providerTransactionId: dto.providerTransactionId || undefined,
+          reference: dto.reference || dto.terminalReference || dto.bankReference || undefined,
+        },
+      });
+
+      if (claimed.count === 0) {
+        // Check if already confirmed (idempotent replay)
+        const alreadyReceived = await tx.invoicePayment.findFirst({
+          where: { id: paymentId, invoiceId: id, status: "RECEIVED" },
+        });
+        if (alreadyReceived) {
+          const currentInvoice = await tx.invoice.findUniqueOrThrow({ where: { id } });
+          return { ...currentInvoice, confirmedPayment: alreadyReceived, idempotentReplay: true };
+        }
+        throw new BadRequestException("Payment is not in PENDING status or was already processed");
+      }
+
+      let confirmedPayment = await tx.invoicePayment.findUniqueOrThrow({ where: { id: paymentId } });
+      const invoice = await tx.invoice.findFirst({ where: { id, shopId } });
+      if (!invoice) throw new NotFoundException("Invoice not found");
+      if (invoice.status === "VOID" || invoice.status === "CANCELLED") {
+        throw new BadRequestException("Cannot confirm payment on a voided/cancelled invoice");
+      }
+      if (amount > roundMoney(invoice.balanceDue)) {
+        throw new BadRequestException("Confirmed payment amount exceeds invoice balance");
+      }
+
+      const balanceUpdate = await tx.invoice.updateMany({
+        where: {
+          id,
+          shopId,
+          status: { notIn: ["VOID", "CANCELLED"] },
+          balanceDue: { gte: amount },
+        },
+        data: {
+          paidAmount: { increment: amount },
+          balanceDue: { decrement: amount },
+        },
+      });
+      if (balanceUpdate.count !== 1) {
+        throw new BadRequestException("Invoice balance changed; reload before confirming payment");
+      }
+
+      if (dto.notes) {
+        confirmedPayment = await tx.invoicePayment.update({
+          where: { id: paymentId },
+          data: {
+            notes: confirmedPayment.notes
+              ? `${confirmedPayment.notes} | ${dto.notes}`
+              : dto.notes,
+          },
+        });
+      }
+
+      const receivedPayments = await tx.invoicePayment.findMany({
+        where: { invoiceId: id, status: "RECEIVED" },
+        select: { method: true },
+      });
+      const paymentMethodLabel = this.deriveReceivedPaymentMethod(
+        receivedPayments,
+        invoice.paymentMethod,
+      );
+
+      const updatedInvoice = await tx.invoice.findUniqueOrThrow({ where: { id } });
+      const isPaid = roundMoney(updatedInvoice.balanceDue) <= 0;
+      const finalInvoice = await tx.invoice.update({
+        where: { id },
+        data: {
+          status: isPaid ? "PAID" : "PARTIALLY_PAID",
+          paymentStatus: isPaid ? "PAID" : "PARTIALLY_PAID",
+          paidAt: isPaid ? new Date() : null,
+          ...(paymentMethodLabel ? { paymentMethod: paymentMethodLabel } : {}),
+        },
+      });
+
+      await this.accounting.postInvoicePayment(tx, {
+        ...accountingContext,
+        shopId,
+        invoicePaymentId: confirmedPayment.id,
+        invoiceNumber: invoice.invoiceNumber,
+        method: confirmedPayment.method,
+        transactionDate: confirmedPayment.receivedAt,
+      });
+
+      return { ...finalInvoice, confirmedPayment };
+    });
+  }
+
   /**
-   * Public bill verification by QR token. Returns only safe display fields so
-   * anyone scanning the printed QR can confirm the bill is genuine.
+   * Apply durable credit issued by a POS return. This is intentionally an
+   * internal service operation: public payment endpoints must not accept an
+   * arbitrary STORE_CREDIT rail.
+   */
+  async applyStoreCredit(
+    id: string,
+    shopId: string,
+    input: { amount: number; posReturnId: string; idempotencyKey: string; userId?: string },
+  ) {
+    const amount = roundMoney(input.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException("Store credit amount must be greater than zero");
+    }
+
+    const replay = await this.prisma.invoicePayment.findUnique({
+      where: { idempotencyKey: input.idempotencyKey },
+    });
+    if (replay) {
+      if (replay.invoiceId !== id || replay.posReturnId !== input.posReturnId) {
+        throw new BadRequestException("Store credit idempotency key is already in use");
+      }
+      const invoice = await this.prisma.invoice.findFirst({ where: { id, shopId } });
+      if (!invoice) throw new NotFoundException("Invoice not found");
+      return { ...invoice, recordedPayment: replay, idempotentReplay: true };
+    }
+
+    const invoiceForContext = await this.prisma.invoice.findFirst({
+      where: { id, shopId },
+      select: { currency: true },
+    });
+    if (!invoiceForContext) throw new NotFoundException("Invoice not found");
+    const accountingContext = await this.accounting.prepareMonetaryContext(
+      amount,
+      invoiceForContext.currency,
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.invoicePayment.findUnique({
+        where: { idempotencyKey: input.idempotencyKey },
+      });
+      if (existing) {
+        if (existing.invoiceId !== id || existing.posReturnId !== input.posReturnId) {
+          throw new BadRequestException("Store credit idempotency key is already in use");
+        }
+        const invoice = await tx.invoice.findUniqueOrThrow({ where: { id } });
+        return { ...invoice, recordedPayment: existing, idempotentReplay: true };
+      }
+
+      const invoice = await tx.invoice.findFirst({ where: { id, shopId } });
+      if (!invoice) throw new NotFoundException("Invoice not found");
+      if (invoice.status === "VOID" || invoice.status === "CANCELLED") {
+        throw new BadRequestException("Cannot apply store credit to a voided/cancelled invoice");
+      }
+      const balanceDue = roundMoney(invoice.balanceDue);
+      if (balanceDue <= 0) {
+        throw new BadRequestException("Invoice has no outstanding balance for store credit");
+      }
+      if (amount > balanceDue) {
+        throw new BadRequestException("Store credit exceeds the invoice balance");
+      }
+      const appliedAmount = amount;
+      const update = await tx.invoice.updateMany({
+        where: {
+          id,
+          shopId,
+          status: { notIn: ["VOID", "CANCELLED"] },
+          balanceDue: { gte: appliedAmount },
+        },
+        data: {
+          paidAmount: { increment: appliedAmount },
+          balanceDue: { decrement: appliedAmount },
+        },
+      });
+      if (update.count !== 1) {
+        throw new BadRequestException("Invoice balance changed; reload before applying store credit");
+      }
+
+      const payment = await tx.invoicePayment.create({
+        data: {
+          invoiceId: id,
+          posReturnId: input.posReturnId,
+          amount: new Prisma.Decimal(appliedAmount),
+          currency: invoice.currency,
+          canonicalAmountNpr: accountingContext.canonicalAmountNpr,
+          fxRate: accountingContext.fxRate,
+          fxSource: accountingContext.fxSource,
+          fxQuotedAt: accountingContext.fxQuotedAt,
+          method: "STORE_CREDIT",
+          reference: input.posReturnId,
+          idempotencyKey: input.idempotencyKey,
+          status: "RECEIVED",
+          verificationMode: "EXCHANGE_STORE_CREDIT",
+          verifiedAt: new Date(),
+          confirmedByUserId: input.userId || null,
+          receivedAt: new Date(),
+          metadata: { posReturnId: input.posReturnId },
+        },
+      });
+      const receivedPayments = await tx.invoicePayment.findMany({
+        where: { invoiceId: id, status: "RECEIVED" },
+        select: { method: true },
+      });
+      const paymentMethodLabel = this.deriveReceivedPaymentMethod(
+        receivedPayments,
+        "STORE_CREDIT",
+      );
+      const updated = await tx.invoice.findUniqueOrThrow({ where: { id } });
+      const isPaid = roundMoney(updated.balanceDue) <= 0;
+      const finalInvoice = await tx.invoice.update({
+        where: { id },
+        data: {
+          status: isPaid ? "PAID" : "PARTIALLY_PAID",
+          paymentStatus: isPaid ? "PAID" : "PARTIALLY_PAID",
+          paidAt: isPaid ? new Date() : null,
+          ...(paymentMethodLabel ? { paymentMethod: paymentMethodLabel } : {}),
+        },
+      });
+      await this.accounting.postInvoiceCreditApplied(tx, {
+        ...accountingContext,
+        shopId,
+        invoiceId: id,
+        invoiceNumber: invoice.invoiceNumber,
+        invoicePaymentId: payment.id,
+        posReturnId: input.posReturnId,
+        transactionDate: payment.receivedAt,
+        actorUserId: input.userId,
+      });
+      return { ...finalInvoice, recordedPayment: payment };
+    });
+  }
+
+  /**
+   * Public QR code verification endpoint.
+   * Returns minimal safe verification fields to prevent leaking customer PII.
    */
   async verifyByToken(token: string) {
     const invoice = await this.prisma.invoice.findUnique({
@@ -1050,9 +1454,6 @@ export class InvoicesService {
     const billSettings = await this.prisma.invoiceSettings.findUnique({
       where: { shopId: invoice.shopId },
     });
-    const lineItems = Array.isArray(invoice.lineItems)
-      ? (invoice.lineItems as Array<Record<string, any>>)
-      : [];
     return {
       verified: true,
       invoiceNumber: invoice.invoiceNumber,
@@ -1069,13 +1470,6 @@ export class InvoicesService {
       supplierPhone:
         billSettings?.shopPhone?.trim() || invoice.supplierPhone,
       supplierTaxId: billSettings?.gstin?.trim() || invoice.supplierTaxId,
-      customerName: invoice.customerName,
-      lineItems: lineItems.slice(0, 50).map((li) => ({
-        label: li.label,
-        category: li.category,
-        amount: li.amount,
-        details: li.details,
-      })),
       billSettings: billSettings
         ? {
             shopNameOnBill: billSettings.shopNameOnBill,

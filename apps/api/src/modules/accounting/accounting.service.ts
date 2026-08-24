@@ -442,6 +442,109 @@ export class AccountingService {
     });
   }
 
+  /**
+   * A completed POS return reverses the original invoice economics from the
+   * immutable invoice amount. Non-cash/manual reversals are not posted until
+   * their payment event reaches REFUNDED.
+   */
+  async postInvoiceRefund(
+    tx: Prisma.TransactionClient,
+    input: MonetaryContext & {
+      shopId: string;
+      invoiceId: string;
+      invoiceNumber: string;
+      posReturnId: string;
+      method: string;
+      transactionDate: Date;
+      invoicedTaxRatio: Prisma.Decimal.Value;
+      actorUserId?: string;
+    },
+  ) {
+    const taxRatio = new Prisma.Decimal(input.invoicedTaxRatio || 0);
+    if (!taxRatio.isFinite() || taxRatio.lt(0) || taxRatio.gt(1)) {
+      throw new BadRequestException("Refund tax ratio must be between zero and one");
+    }
+    const taxNpr = input.canonicalAmountNpr.mul(taxRatio).toDecimalPlaces(4);
+    const netNpr = input.canonicalAmountNpr.minus(taxNpr);
+    const taxTransaction = input.transactionAmount.mul(taxRatio).toDecimalPlaces(4);
+    const netTransaction = input.transactionAmount.minus(taxTransaction);
+    const lines: PostJournalEntryInput["lines"] = [];
+    if (netNpr.gt(0)) {
+      lines.push({
+        accountKey: LedgerAccountKey.SALES_RETURNS,
+        debitNpr: netNpr,
+        transactionDebit: netTransaction,
+      });
+    }
+    if (taxNpr.gt(0)) {
+      lines.push({
+        accountKey: LedgerAccountKey.TAX_PAYABLE,
+        debitNpr: taxNpr,
+        transactionDebit: taxTransaction,
+      });
+    }
+    lines.push({
+      accountKey:
+        input.method.trim().toUpperCase() === "STORE_CREDIT"
+          ? LedgerAccountKey.CUSTOMER_ADVANCES
+          : this.receiptAccount(input.method),
+      creditNpr: input.canonicalAmountNpr,
+      transactionCredit: input.transactionAmount,
+    });
+    return this.postEntry(tx, {
+      ...input,
+      referenceType: JournalReferenceType.INVOICE_REFUND,
+      referenceId: input.posReturnId,
+      idempotencyKey: `invoice-refund:${input.posReturnId}`,
+      description: `Refund for invoice ${input.invoiceNumber}`,
+      metadata: {
+        invoiceId: input.invoiceId,
+        invoiceNumber: input.invoiceNumber,
+        posReturnId: input.posReturnId,
+      },
+      lines,
+    });
+  }
+
+  /** Apply store credit created by a POS return to a replacement invoice. */
+  async postInvoiceCreditApplied(
+    tx: Prisma.TransactionClient,
+    input: MonetaryContext & {
+      shopId: string;
+      invoiceId: string;
+      invoiceNumber: string;
+      invoicePaymentId: string;
+      posReturnId: string;
+      transactionDate: Date;
+      actorUserId?: string;
+    },
+  ) {
+    return this.postEntry(tx, {
+      ...input,
+      referenceType: JournalReferenceType.INVOICE_CREDIT_APPLIED,
+      referenceId: input.invoicePaymentId,
+      idempotencyKey: `invoice-credit-applied:${input.invoicePaymentId}`,
+      description: `Apply return credit to invoice ${input.invoiceNumber}`,
+      metadata: {
+        invoiceId: input.invoiceId,
+        invoiceNumber: input.invoiceNumber,
+        posReturnId: input.posReturnId,
+      },
+      lines: [
+        {
+          accountKey: LedgerAccountKey.CUSTOMER_ADVANCES,
+          debitNpr: input.canonicalAmountNpr,
+          transactionDebit: input.transactionAmount,
+        },
+        {
+          accountKey: LedgerAccountKey.ACCOUNTS_RECEIVABLE,
+          creditNpr: input.canonicalAmountNpr,
+          transactionCredit: input.transactionAmount,
+        },
+      ],
+    });
+  }
+
   async postOrderPayment(
     tx: Prisma.TransactionClient,
     input: MonetaryContext & {

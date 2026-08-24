@@ -34,17 +34,23 @@ export type PosCustomer = {
 const PHONE_CODES = ["+977", "+91", "+971", "+1", "+44", "+94"];
 
 export function defaultPhoneCountryCode(country?: string) {
-  return (
-    {
-      NP: "+977",
-      IN: "+91",
-      AE: "+971",
-      US: "+1",
-      GB: "+44",
-      UK: "+44",
-      LK: "+94",
-    }[country || ""] || "+91"
-  );
+  return {
+    NP: "+977",
+    IN: "+91",
+    AE: "+971",
+    US: "+1",
+    GB: "+44",
+    UK: "+44",
+    LK: "+94",
+  }[String(country || "").trim().toUpperCase()];
+}
+
+/** Prefer the configured shop country; otherwise only accept an explicit known prefix. */
+export function resolvePhoneCountryCode(phone: string, country?: string) {
+  const configured = defaultPhoneCountryCode(country);
+  if (configured) return configured;
+  const normalized = phone.trim();
+  return PHONE_CODES.find((code) => normalized.startsWith(code));
 }
 
 export function PosCustomerPicker({
@@ -60,7 +66,7 @@ export function PosCustomerPicker({
 }) {
   const t = useT();
   const [phoneCountryCode, setPhoneCountryCode] = useState(
-    defaultPhoneCountryCode(country),
+    () => defaultPhoneCountryCode(country) || "",
   );
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
@@ -72,7 +78,16 @@ export function PosCustomerPicker({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const configuredCode = defaultPhoneCountryCode(country);
+    if (configuredCode) setPhoneCountryCode(configuredCode);
+  }, [country]);
+
+  useEffect(() => {
     if (selected) return;
+    if (!phoneCountryCode) {
+      setSuggestions([]);
+      return;
+    }
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 3) {
       setSuggestions([]);
@@ -132,9 +147,9 @@ export function PosCustomerPicker({
 
   const save = async () => {
     const digits = phone.replace(/\D/g, "");
-    if (!name.trim() || digits.length < 7) {
+    if (!phoneCountryCode || !name.trim() || digits.length < 7) {
       toast({
-        title: t("Enter the customer name and a valid phone number"),
+        title: t("Select a country calling code and enter a valid phone number"),
         variant: "destructive",
       });
       return;
@@ -198,7 +213,7 @@ export function PosCustomerPicker({
         <Label><T>Search by phone number</T></Label>
         <div className="flex gap-2">
           <Select value={phoneCountryCode} onValueChange={setPhoneCountryCode}>
-            <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-28"><SelectValue placeholder={t("Code")} /></SelectTrigger>
             <SelectContent>
               {PHONE_CODES.map((code) => (
                 <SelectItem key={code} value={code}>{code}</SelectItem>

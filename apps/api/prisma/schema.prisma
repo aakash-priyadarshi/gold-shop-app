@@ -77,6 +77,11 @@ model User {
   desktopSessions      DesktopSession[]
   // Web app sessions
   webSessions          WebSession[]
+  // POS Shifts & POS Actions
+  shiftsOpened         PosShift[]              @relation("ShiftOpenedBy")
+  shiftsClosed         PosShift[]              @relation("ShiftClosedBy")
+  posInvoiceCashiers   Invoice[]               @relation("InvoicePosCashier")
+  posReturnCashiers    PosReturn[]             @relation("PosReturnCashier")
 
   // Custom Profile Enrivhment fields
   dateOfBirth DateTime?
@@ -404,73 +409,78 @@ model Shop {
   disputeCount     Int        @default(0)
   firstSaleAt      DateTime?
 
-  commissionLedgers    CommissionLedger[]
-  ledgerAccounts       LedgerAccount[]
-  journalEntries       JournalEntry[]
-  inventoryItems       InventoryItem[]
-  stockMovements       InventoryStockMovement[]
-  priceHistory         InventoryPriceHistory[]
-  storageLocations     StorageLocation[]
-  orders               Order[]
-  rfqOffers            RfqOffer[]
-  shopQuotes           ShopQuote[]
-  walkInCustomers      WalkInCustomer[]
-  user                 User                  @relation(fields: [userId], references: [id])
-  finishPricing        ShopFinishPricing[]
-  gemstoneRates        ShopGemstoneRate[]
-  metalRates           ShopMetalRate[]
-  priceOverrides       ShopPriceOverride[]
-  ratings              ShopRating[]
-  verificationRequests VerificationRequest[] @relation("ShopVerificationRequests")
-  performance          SellerPerformance?
-  badges               SellerBadge[]
-  invoices             Invoice[]
-  invoiceSettings      InvoiceSettings?
-  customerNotes        CustomerNote[]        @relation("ShopCustomerNotes")
-  conversations        Conversation[]        @relation("ShopConversations")
-  catalogues           Catalogue[]
-  walkInRfqs           RfqRequest[]          @relation("ShopWalkInRfqs")
-  showroomSessions     ShowroomSession[]
-  posSessions          PosSession[]
-  stockReservations    StockReservation[]
-  subscriptions        SellerSubscription[]
-  platformReviews      PlatformReview[]
-  referralsMade        Referral[]            @relation("ShopReferralsMade")
-  referralsReceived    Referral[]            @relation("ShopReferralsReceived")
-  referralCode         String?               @unique
-  referralCommissionsEarned    ReferralCommission[] @relation("ReferralCommissionsEarned")
-  referralCommissionsGenerated ReferralCommission[] @relation("ReferralCommissionsGenerated")
+  commissionLedgers            CommissionLedger[]
+  ledgerAccounts               LedgerAccount[]
+  journalEntries               JournalEntry[]
+  inventoryItems               InventoryItem[]
+  stockMovements               InventoryStockMovement[]
+  priceHistory                 InventoryPriceHistory[]
+  storageLocations             StorageLocation[]
+  orders                       Order[]
+  rfqOffers                    RfqOffer[]
+  shopQuotes                   ShopQuote[]
+  walkInCustomers              WalkInCustomer[]
+  user                         User                     @relation(fields: [userId], references: [id])
+  finishPricing                ShopFinishPricing[]
+  gemstoneRates                ShopGemstoneRate[]
+  metalRates                   ShopMetalRate[]
+  priceOverrides               ShopPriceOverride[]
+  ratings                      ShopRating[]
+  verificationRequests         VerificationRequest[]    @relation("ShopVerificationRequests")
+  performance                  SellerPerformance?
+  badges                       SellerBadge[]
+  invoices                     Invoice[]
+  invoiceSettings              InvoiceSettings?
+  customerNotes                CustomerNote[]           @relation("ShopCustomerNotes")
+  conversations                Conversation[]           @relation("ShopConversations")
+  catalogues                   Catalogue[]
+  walkInRfqs                   RfqRequest[]             @relation("ShopWalkInRfqs")
+  showroomSessions             ShowroomSession[]
+  posSessions                  PosSession[]
+  stockReservations            StockReservation[]
+  subscriptions                SellerSubscription[]
+  platformReviews              PlatformReview[]
+  referralsMade                Referral[]               @relation("ShopReferralsMade")
+  referralsReceived            Referral[]               @relation("ShopReferralsReceived")
+  referralCode                 String?                  @unique
+  referralCommissionsEarned    ReferralCommission[]     @relation("ReferralCommissionsEarned")
+  referralCommissionsGenerated ReferralCommission[]     @relation("ReferralCommissionsGenerated")
   referralPayoutProfile        ReferralPayoutProfile?
   referralPayoutRequests       ReferralPayoutRequest[]
   // Enterprise features
-  branches             ShopBranch[]
-  staffAccounts        StaffAccount[]
-  apiKeys              ShopApiKey[]
-  webhookSubscriptions WebhookSubscription[]
-  whiteLabelConfig     WhiteLabelConfig?
-  scheduledReports     ScheduledReport[]
-  bulkImportJobs       BulkImportJob[]
-  demandForecasts      DemandForecast[]
-  repricingRules       RepricingRule[]
-  stockAudits          StockAudit[]
+  branches                     ShopBranch[]
+  staffAccounts                StaffAccount[]
+  apiKeys                      ShopApiKey[]
+  webhookSubscriptions         WebhookSubscription[]
+  whiteLabelConfig             WhiteLabelConfig?
+  scheduledReports             ScheduledReport[]
+  bulkImportJobs               BulkImportJob[]
+  demandForecasts              DemandForecast[]
+  repricingRules               RepricingRule[]
+  stockAudits                  StockAudit[]
 
   /// Manager PIN (bcrypt) — gates discounts, voids, stock adjustments, audit complete
-  managerPinHash       String?
-  managerPinSetAt      DateTime?
+  managerPinHash              String?
+  managerPinSetAt             DateTime?
   /// Discount amount above this requires manager PIN (shop currency units)
-  managerPinDiscountThreshold Float?  @default(0)
+  managerPinDiscountThreshold Float?    @default(0)
 
   // Mobile shopkeeper tools (offline-first capable)
-  repairJobs           RepairJob[]
-  savingsMembers       SavingsMember[]
-  chitGroups           ChitGroup[]
-  goldLoans            GoldLoan[]
-  karigarWorkshops     KarigarWorkshop[]
-  karigarJobs          KarigarJob[]
-  karigarVaultReserves KarigarVaultReserve[]
+  repairJobs            RepairJob[]
+  savingsMembers        SavingsMember[]
+  chitGroups            ChitGroup[]
+  goldLoans             GoldLoan[]
+  karigarWorkshops      KarigarWorkshop[]
+  karigarJobs           KarigarJob[]
+  karigarVaultReserves  KarigarVaultReserve[]
   karigarMetalMovements KarigarMetalMovement[]
   karigarJobStages      KarigarJobStage[]
   karigarCastingTrees   KarigarCastingTree[]
+
+  // POS Registers & Shifts & Returns
+  posRegisters PosRegister[]
+  posShifts    PosShift[]
+  posReturns   PosReturn[]
 
   // AI Credit Auto-Recharge
   autoRechargeEnabled   Boolean @default(false)
@@ -569,9 +579,9 @@ model StorageLocation {
 }
 
 model InventoryItem {
-  id                String              @id @default(uuid())
+  id                String                   @id @default(uuid())
   shopId            String
-  sku               String              @unique
+  sku               String                   @unique
   jewelleryType     JewelleryType
   nameEn            String
   nameNe            String?
@@ -584,15 +594,15 @@ model InventoryItem {
   /// Metal-only weight. Gemstone carats are converted separately for gross weight.
   totalWeightGrams  Float
   /// Read-only derived weight: metal grams + gemstone carats × 0.2g.
-  grossWeightGrams  Float               @default(0)
+  grossWeightGrams  Float                    @default(0)
   dimensions        Json?
   gemstones         Json?
   metalValueNpr     Float
   makingChargeNpr   Float
   /// Customer billing wastage % (jarti) default for this piece — applied on invoice
-  wastagePercent    Float               @default(0)
-  gemstoneValueNpr  Float               @default(0)
-  taxNpr            Float               @default(0)
+  wastagePercent    Float                    @default(0)
+  gemstoneValueNpr  Float                    @default(0)
+  taxNpr            Float                    @default(0)
   totalPriceNpr     Float
   /// Set pricing: PERCENT or FIXED off sum of component prices
   setDiscountType   String?
@@ -604,29 +614,29 @@ model InventoryItem {
   /// Physical RFID / EPC value assigned to this individual piece.
   /// QR labels use the immutable inventory id, so an RFID label can be
   /// replaced without invalidating existing QR tags.
-  rfidCode          String?             @unique
+  rfidCode          String?                  @unique
   hallmarkDate      DateTime?
   /// UK assay office (London / Birmingham / Sheffield / Edinburgh)
   assayOffice       AssayOffice?
   purityCertUrl     String?
   labels            String[]
   locationId        String?
-  status            InventoryStatus     @default(AVAILABLE)
-  stockQuantity     Int                 @default(1)
-  hasSizes          Boolean             @default(false)
-  visibility        InventoryVisibility @default(PUBLIC)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  shop              Shop                @relation(fields: [shopId], references: [id])
-  location          StorageLocation?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  status            InventoryStatus          @default(AVAILABLE)
+  stockQuantity     Int                      @default(1)
+  hasSizes          Boolean                  @default(false)
+  visibility        InventoryVisibility      @default(PUBLIC)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  shop              Shop                     @relation(fields: [shopId], references: [id])
+  location          StorageLocation?         @relation(fields: [locationId], references: [id], onDelete: SetNull)
   variants          ProductVariant[]
   catalogueItems    CatalogueItem[]
   wishlistItems     WishlistItem[]
   posSessionItems   PosSessionItem[]
   stockReservations StockReservation[]
   stockMovements    InventoryStockMovement[]
-  setComponents     InventorySetComponent[] @relation("SetParent")
-  memberOfSet       InventorySetComponent?  @relation("SetComponent")
+  setComponents     InventorySetComponent[]  @relation("SetParent")
+  memberOfSet       InventorySetComponent?   @relation("SetComponent")
   priceHistory      InventoryPriceHistory[]
   stockAuditScans   StockAuditScan[]
   sourceKarigarJob  KarigarJob?
@@ -713,15 +723,15 @@ model StockAuditScan {
 
 /// Audit log when catalog prices are repriced from metal rates
 model InventoryPriceHistory {
-  id            String   @id @default(uuid())
-  shopId        String
+  id              String   @id @default(uuid())
+  shopId          String
   inventoryItemId String
-  oldValues     Json // { metalValueNpr, makingChargeNpr, gemstoneValueNpr, taxNpr, totalPriceNpr }
-  newValues     Json
-  reason        String?
-  rateSnapshot  Json? // rates used for the reprice
-  userId        String?
-  createdAt     DateTime @default(now())
+  oldValues       Json // { metalValueNpr, makingChargeNpr, gemstoneValueNpr, taxNpr, totalPriceNpr }
+  newValues       Json
+  reason          String?
+  rateSnapshot    Json? // rates used for the reprice
+  userId          String?
+  createdAt       DateTime @default(now())
 
   shop          Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
@@ -874,26 +884,27 @@ model RfqOffer {
 }
 
 // Walk-in customer model - for customers who visit the shop in person
-// Phone number is the unique identifier for returning customers
+// Scoped uniquely to the creating shop so different shops can have customers with the same phone
 model WalkInCustomer {
   id               String   @id @default(uuid())
-  phone            String   @unique // Unique identifier - phone is used for lookup
-  phoneCountryCode String   @default("+91")
+  phone            String // Phone identifier scoped to shop
+  phoneCountryCode String
   name             String
   email            String?
   address          String
   city             String
-  country          String   @default("India")
-  createdByShopId  String // First shop that created this customer
+  country          String
+  createdByShopId  String // Shop that owns this walk-in customer record
   notes            String? // Any notes about the customer
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  createdByShop Shop        @relation(fields: [createdByShopId], references: [id])
+  createdByShop Shop         @relation(fields: [createdByShopId], references: [id])
   shopQuotes    ShopQuote[]
   invoices      Invoice[]
   karigarJobs   KarigarJob[]
 
+  @@unique([createdByShopId, phone])
   @@index([phone])
   @@index([createdByShopId])
 }
@@ -947,7 +958,7 @@ model ShopQuote {
   registeredCustomerId String? // Linked to User account if customer is registered
 
   // Payment (always at shop)
-  advancePaidNpr Float     @default(0)
+  advancePaidNpr Float              @default(0)
   balanceDueNpr  Float?
   paidInFullAt   DateTime?
   payments       ShopQuotePayment[]
@@ -1876,6 +1887,8 @@ enum JournalEntryStatus {
 enum JournalReferenceType {
   INVOICE_ISSUED
   INVOICE_PAYMENT
+  INVOICE_REFUND
+  INVOICE_CREDIT_APPLIED
   ORDER_PAYMENT
   ORDER_ADVANCE_APPLIED
   ORDER_REFUND
@@ -2534,19 +2547,19 @@ enum BadgeType {
 // ═══════════════════════════════════════════
 
 model Invoice {
-  id            String  @id @default(uuid())
-  invoiceNumber String  @unique
-  shopId        String
-  orderId       String?
-  shopQuoteId   String?
-  walkInCustomerId String? // walk-in CRM link (via quote/POS/manual)
+  id                   String  @id @default(uuid())
+  invoiceNumber        String  @unique
+  shopId               String
+  orderId              String?
+  shopQuoteId          String?
+  walkInCustomerId     String? // walk-in CRM link (via quote/POS/manual)
   // Registered customer link for counter/POS invoices. This is deliberately a
   // scalar: marketplace User ownership is optional and historic invoices must
   // remain valid if a customer account is removed.
   registeredCustomerId String?
 
   // Public bill verification token for QR on printed invoices
-  verificationToken String @default(dbgenerated("(gen_random_uuid())::text")) @unique
+  verificationToken String @unique @default(dbgenerated("(gen_random_uuid())::text"))
 
   // Idempotency key for offline-replayed POS sales (client-generated UUID).
   // A replayed sale with the same key returns the existing invoice instead of
@@ -2613,12 +2626,23 @@ model Invoice {
   supplyDate        DateTime?
   serialSequence    Int?
 
+  // POS multi-counter origin tracking
+  posSessionId     String?
+  posRegisterId    String?
+  posShiftId       String?
+  posCashierUserId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  shop           Shop            @relation(fields: [shopId], references: [id])
-  walkInCustomer WalkInCustomer? @relation(fields: [walkInCustomerId], references: [id])
+  shop           Shop             @relation(fields: [shopId], references: [id])
+  walkInCustomer WalkInCustomer?  @relation(fields: [walkInCustomerId], references: [id])
+  posSession     PosSession?      @relation(fields: [posSessionId], references: [id], onDelete: SetNull)
+  posRegister    PosRegister?     @relation(fields: [posRegisterId], references: [id], onDelete: SetNull)
+  posShift       PosShift?        @relation(fields: [posShiftId], references: [id], onDelete: SetNull)
+  posCashierUser User?            @relation("InvoicePosCashier", fields: [posCashierUserId], references: [id], onDelete: SetNull)
   payments       InvoicePayment[]
+  returns        PosReturn[]
 
   @@index([shopId])
   @@index([orderId])
@@ -2628,41 +2652,61 @@ model Invoice {
   @@index([invoiceCountry])
   @@index([walkInCustomerId])
   @@index([registeredCustomerId])
+  @@index([posRegisterId])
+  @@index([posShiftId])
 }
 
 enum InvoicePaymentStatus {
+  PENDING
+  CONFIRMED
   RECEIVED
+  FAILED
+  CANCELLED
+  REFUNDED
   VOIDED
   REVERSED
 }
 
 model InvoicePayment {
-  id                 String               @id @default(uuid())
-  invoiceId          String
-  amount             Decimal              @db.Decimal(18, 2)
-  currency           CurrencyCode
-  canonicalAmountNpr Decimal?             @db.Decimal(24, 4)
-  fxRate             Decimal?             @db.Decimal(24, 10)
-  fxSource           String?
-  fxQuotedAt         DateTime?
-  method             String
-  reference          String?
-  idempotencyKey     String               @unique
-  status             InvoicePaymentStatus @default(RECEIVED)
-  notes              String?
-  receivedAt         DateTime             @default(now())
-  voidedAt           DateTime?
-  voidReason         String?
-  reversalOfId       String?              @unique
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  id                    String               @id @default(uuid())
+  invoiceId             String
+  amount                Decimal              @db.Decimal(18, 2)
+  currency              CurrencyCode
+  canonicalAmountNpr    Decimal?             @db.Decimal(24, 4)
+  fxRate                Decimal?             @db.Decimal(24, 10)
+  fxSource              String?
+  fxQuotedAt            DateTime?
+  method                String
+  provider              String?
+  providerTransactionId String?
+  merchantReference     String?
+  terminalReference     String?
+  bankReference         String?
+  confirmedByUserId     String?
+  verifiedAt            DateTime?
+  verificationMode      String?
+  metadata              Json?
+  reference             String?
+  idempotencyKey        String               @unique
+  status                InvoicePaymentStatus @default(RECEIVED)
+  notes                 String?
+  receivedAt            DateTime             @default(now())
+  voidedAt              DateTime?
+  voidReason            String?
+  reversalOfId          String?
+  posReturnId           String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
-  invoice    Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  reversalOf InvoicePayment? @relation("InvoicePaymentReversal", fields: [reversalOfId], references: [id])
-  reversedBy InvoicePayment? @relation("InvoicePaymentReversal")
+  invoice    Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  posReturn  PosReturn?       @relation("PosReturnRefundPayments", fields: [posReturnId], references: [id], onDelete: Restrict)
+  reversalOf InvoicePayment?  @relation("InvoicePaymentReversal", fields: [reversalOfId], references: [id])
+  reversedBy InvoicePayment[] @relation("InvoicePaymentReversal")
 
   @@index([invoiceId, receivedAt])
   @@index([status])
+  @@index([posReturnId])
+  @@index([reversalOfId])
 }
 
 model InvoiceSequence {
@@ -3116,9 +3160,97 @@ model WishlistItem {
   @@index([inventoryItemId])
 }
 
+model PosRegister {
+  id             String   @id @default(uuid())
+  shopId         String
+  name           String
+  terminalCode   String?
+  active         Boolean  @default(true)
+  hardwareConfig Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  shop     Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shifts   PosShift[]
+  sessions PosSession[]
+  invoices Invoice[]
+  returns  PosReturn[]
+
+  @@unique([shopId, terminalCode])
+  @@index([shopId, active])
+}
+
+model PosShift {
+  id             String    @id @default(uuid())
+  shopId         String
+  registerId     String
+  openedByUserId String
+  closedByUserId String?
+  openedAt       DateTime  @default(now())
+  closedAt       DateTime?
+  openingCash    Decimal   @default(0) @db.Decimal(18, 2)
+  closingCash    Decimal?  @db.Decimal(18, 2)
+  expectedCash   Decimal?  @db.Decimal(18, 2)
+  variance       Decimal?  @db.Decimal(18, 2)
+  notes          String?
+  status         String    @default("OPEN")
+  summary        Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  shop         Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  register     PosRegister  @relation(fields: [registerId], references: [id], onDelete: Cascade)
+  openedByUser User         @relation("ShiftOpenedBy", fields: [openedByUserId], references: [id])
+  closedByUser User?        @relation("ShiftClosedBy", fields: [closedByUserId], references: [id])
+  sessions     PosSession[]
+  invoices     Invoice[]
+  returns      PosReturn[]
+
+  @@index([shopId, status])
+  @@index([registerId, status])
+}
+
+model PosReturn {
+  id                    String   @id @default(uuid())
+  shopId                String
+  invoiceId             String
+  originalInvoiceNumber String
+  registerId            String?
+  shiftId               String?
+  cashierUserId         String?
+  returnIdempotencyKey  String?  @unique
+  returnType            String   @default("RETURN") // RETURN, EXCHANGE
+  exchangeInvoiceId     String?
+  lines                 Json
+  subtotal              Decimal  @db.Decimal(18, 2)
+  taxAmount             Decimal  @default(0) @db.Decimal(18, 2)
+  refundAmount          Decimal  @db.Decimal(18, 2)
+  refundMethod          String   @default("CASH")
+  refundStatus          String   @default("SETTLED") // SETTLED, PENDING, CREDIT_ISSUED
+  disposition           String   @default("RESTOCK") // RESTOCK, QUARANTINE, REPAIR, SCRAP
+  approvedByUserId      String?
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  shop           Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  invoice        Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  register       PosRegister?     @relation(fields: [registerId], references: [id], onDelete: SetNull)
+  shift          PosShift?        @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  cashierUser    User?            @relation("PosReturnCashier", fields: [cashierUserId], references: [id], onDelete: SetNull)
+  refundPayments InvoicePayment[] @relation("PosReturnRefundPayments")
+
+  @@index([shopId, createdAt])
+  @@index([invoiceId])
+  @@index([registerId, shiftId])
+}
+
 model PosSession {
   id             String           @id @default(cuid())
   shopId         String
+  registerId     String?
+  cashierUserId  String?
+  shiftId        String?
   customerId     String?
   conversationId String?
   status         PosSessionStatus @default(ACTIVE)
@@ -3127,10 +3259,14 @@ model PosSession {
   updatedAt      DateTime         @updatedAt
 
   shop              Shop               @relation(fields: [shopId], references: [id])
+  register          PosRegister?       @relation(fields: [registerId], references: [id], onDelete: SetNull)
+  shift             PosShift?          @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   items             PosSessionItem[]
   stockReservations StockReservation[]
+  Invoice           Invoice[]
 
   @@index([shopId, status])
+  @@index([registerId, status])
   @@index([expiresAt])
 }
 
@@ -3863,21 +3999,21 @@ enum ChitCycleStatus {
 }
 
 model ChitGroup {
-  id                        String          @id @default(uuid())
-  shopId                    String
-  name                      String
-  chitValue                 Float
-  memberSlots               Int
-  installmentAmount         Float
-  foremanCommissionPercent  Float           @default(0)
-  currency                  CurrencyCode    @default(NPR)
-  startDate                 DateTime
-  status                    ChitGroupStatus @default(ACTIVE)
-  createdAt                 DateTime        @default(now())
-  updatedAt                 DateTime        @updatedAt
-  shop                      Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  members                   ChitMember[]
-  cycles                    ChitCycle[]
+  id                       String          @id @default(uuid())
+  shopId                   String
+  name                     String
+  chitValue                Float
+  memberSlots              Int
+  installmentAmount        Float
+  foremanCommissionPercent Float           @default(0)
+  currency                 CurrencyCode    @default(NPR)
+  startDate                DateTime
+  status                   ChitGroupStatus @default(ACTIVE)
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+  shop                     Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  members                  ChitMember[]
+  cycles                   ChitCycle[]
 
   @@index([shopId])
   @@index([shopId, status])
@@ -3901,19 +4037,19 @@ model ChitMember {
 }
 
 model ChitCycle {
-  id                 String             @id @default(uuid())
-  groupId            String
-  cycleNumber        Int
-  dueDate            DateTime
-  status             ChitCycleStatus    @default(OPEN)
-  winnerMemberId     String?
-  netPrize           Float?
-  foremanCommission  Float?
-  closedAt           DateTime?
-  createdAt          DateTime           @default(now())
-  group              ChitGroup          @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  winner             ChitMember?        @relation("ChitCycleWinner", fields: [winnerMemberId], references: [id], onDelete: SetNull)
-  payments           ChitCyclePayment[]
+  id                String             @id @default(uuid())
+  groupId           String
+  cycleNumber       Int
+  dueDate           DateTime
+  status            ChitCycleStatus    @default(OPEN)
+  winnerMemberId    String?
+  netPrize          Float?
+  foremanCommission Float?
+  closedAt          DateTime?
+  createdAt         DateTime           @default(now())
+  group             ChitGroup          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  winner            ChitMember?        @relation("ChitCycleWinner", fields: [winnerMemberId], references: [id], onDelete: SetNull)
+  payments          ChitCyclePayment[]
 
   @@unique([groupId, cycleNumber])
   @@index([groupId, status])
@@ -3990,24 +4126,24 @@ enum KarigarMovementType {
 }
 
 model KarigarWorkshop {
-  id                 String   @id // client-generated id (e.g. ws-...)
+  id                 String                 @id // client-generated id (e.g. ws-...)
   shopId             String
   name               String
   artisan            String
-  location           String   @default("Local")
+  location           String                 @default("Local")
   phone              String?
   email              String?
-  rating             Float    @default(5)
-  metalIssued        Float    @default(0)
-  metalReturned      Float    @default(0)
-  wastagePercent     Float    @default(0)
-  wastageLimit       Float    @default(1)
-  wageRatePerGram    Float    @default(0)
-  outstandingBalance Float    @default(0)
-  wageDue            Float    @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  shop               Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  rating             Float                  @default(5)
+  metalIssued        Float                  @default(0)
+  metalReturned      Float                  @default(0)
+  wastagePercent     Float                  @default(0)
+  wastageLimit       Float                  @default(1)
+  wageRatePerGram    Float                  @default(0)
+  outstandingBalance Float                  @default(0)
+  wageDue            Float                  @default(0)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  shop               Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
   jobs               KarigarJob[]
   movements          KarigarMetalMovement[]
   stages             KarigarJobStage[]
@@ -4016,39 +4152,39 @@ model KarigarWorkshop {
 }
 
 model KarigarJob {
-  id                     String   @id // client-generated id (e.g. job-...)
-  shopId                 String
-  workshopId             String?
-  product                String
-  artisan                String
-  grossWeight            Float    @default(0)
-  metalKey               String   @default("goldGrains24k")
-  allowedWastagePercent  Float    @default(1)
-  status                 String   @default("PENDING")
-  steps                  Json? // legacy checkboxes; stages table is source of truth
-  walkInCustomerId       String?
-  shopQuoteId            String?
-  inventoryItemId        String?  @unique
-  dueAt                  DateTime?
-  priority               String   @default("NORMAL")
-  qty                    Int      @default(1)
-  sizeLabel              String?
-  purity                 String?
-  metalColor             String?
-  photos                 String[] @default([])
-  notes                  String?
-  bom                    Json?
-  currentStage           KarigarStage?
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-  shop                   Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  workshop               KarigarWorkshop? @relation(fields: [workshopId], references: [id], onDelete: SetNull)
-  walkInCustomer         WalkInCustomer? @relation(fields: [walkInCustomerId], references: [id], onDelete: SetNull)
-  shopQuote              ShopQuote? @relation(fields: [shopQuoteId], references: [id], onDelete: SetNull)
-  inventoryItem          InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
-  stages                 KarigarJobStage[]
-  movements              KarigarMetalMovement[]
-  trees                  KarigarCastingTree[]
+  id                    String                 @id // client-generated id (e.g. job-...)
+  shopId                String
+  workshopId            String?
+  product               String
+  artisan               String
+  grossWeight           Float                  @default(0)
+  metalKey              String                 @default("goldGrains24k")
+  allowedWastagePercent Float                  @default(1)
+  status                String                 @default("PENDING")
+  steps                 Json? // legacy checkboxes; stages table is source of truth
+  walkInCustomerId      String?
+  shopQuoteId           String?
+  inventoryItemId       String?                @unique
+  dueAt                 DateTime?
+  priority              String                 @default("NORMAL")
+  qty                   Int                    @default(1)
+  sizeLabel             String?
+  purity                String?
+  metalColor            String?
+  photos                String[]               @default([])
+  notes                 String?
+  bom                   Json?
+  currentStage          KarigarStage?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  shop                  Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workshop              KarigarWorkshop?       @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  walkInCustomer        WalkInCustomer?        @relation(fields: [walkInCustomerId], references: [id], onDelete: SetNull)
+  shopQuote             ShopQuote?             @relation(fields: [shopQuoteId], references: [id], onDelete: SetNull)
+  inventoryItem         InventoryItem?         @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  stages                KarigarJobStage[]
+  movements             KarigarMetalMovement[]
+  trees                 KarigarCastingTree[]
 
   @@index([shopId])
   @@index([workshopId])
@@ -4058,27 +4194,27 @@ model KarigarJob {
 }
 
 model KarigarJobStage {
-  id                    String       @id @default(uuid())
+  id                    String           @id @default(uuid())
   shopId                String
   jobId                 String
   workshopId            String?
   stage                 KarigarStage
-  goldInGrams           Float        @default(0)
-  goldOutGrams          Float        @default(0)
-  scrapGrams            Float        @default(0)
-  dustGrams             Float        @default(0)
-  allowedWastagePercent Float        @default(1)
-  status                String       @default("PENDING")
+  goldInGrams           Float            @default(0)
+  goldOutGrams          Float            @default(0)
+  scrapGrams            Float            @default(0)
+  dustGrams             Float            @default(0)
+  allowedWastagePercent Float            @default(1)
+  status                String           @default("PENDING")
   notes                 String?
-  photos                String[]     @default([])
-  reworkCount           Int          @default(0)
+  photos                String[]         @default([])
+  reworkCount           Int              @default(0)
   rejectionReason       String?
   startedAt             DateTime?
   completedAt           DateTime?
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
-  shop                  Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  job                   KarigarJob   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  shop                  Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  job                   KarigarJob       @relation(fields: [jobId], references: [id], onDelete: Cascade)
   workshop              KarigarWorkshop? @relation(fields: [workshopId], references: [id], onDelete: SetNull)
 
   @@unique([jobId, stage])
@@ -4086,58 +4222,58 @@ model KarigarJobStage {
 }
 
 model KarigarCastingTree {
-  id                String   @id @default(uuid())
-  shopId            String
-  jobId             String
-  label             String   @default("Tree")
-  metalKey          String   @default("goldGrains24k")
-  purity            String   @default("24K")
-  issuedGrams       Float    @default(0)
-  finishedGrams     Float    @default(0)
-  sprueButtonGrams  Float    @default(0)
-  recoverableGrams  Float    @default(0)
-  allowedWastagePercent Float @default(1)
-  status            String   @default("OPEN")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  shop              Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  job               KarigarJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  lines             KarigarCastingTreeLine[]
-  movements         KarigarMetalMovement[]
+  id                    String                   @id @default(uuid())
+  shopId                String
+  jobId                 String
+  label                 String                   @default("Tree")
+  metalKey              String                   @default("goldGrains24k")
+  purity                String                   @default("24K")
+  issuedGrams           Float                    @default(0)
+  finishedGrams         Float                    @default(0)
+  sprueButtonGrams      Float                    @default(0)
+  recoverableGrams      Float                    @default(0)
+  allowedWastagePercent Float                    @default(1)
+  status                String                   @default("OPEN")
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  shop                  Shop                     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  job                   KarigarJob               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  lines                 KarigarCastingTreeLine[]
+  movements             KarigarMetalMovement[]
 
   @@index([shopId, jobId])
 }
 
 model KarigarCastingTreeLine {
-  id        String             @id @default(uuid())
-  treeId    String
-  label     String
-  weightGrams Float            @default(0)
-  sortOrder Int                @default(0)
-  tree      KarigarCastingTree @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  id          String             @id @default(uuid())
+  treeId      String
+  label       String
+  weightGrams Float              @default(0)
+  sortOrder   Int                @default(0)
+  tree        KarigarCastingTree @relation(fields: [treeId], references: [id], onDelete: Cascade)
 
   @@index([treeId])
 }
 
 model KarigarMetalMovement {
-  id          String               @id @default(uuid())
+  id          String              @id @default(uuid())
   shopId      String
   workshopId  String?
   jobId       String?
   treeId      String?
   stage       KarigarStage?
   type        KarigarMovementType
-  metalKey    String               @default("goldGrains24k")
+  metalKey    String              @default("goldGrains24k")
   weightGrams Float
   purity      String?
   lotId       String?
   note        String?
   createdBy   String?
-  createdAt   DateTime             @default(now())
-  shop        Shop                 @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  workshop    KarigarWorkshop?     @relation(fields: [workshopId], references: [id], onDelete: SetNull)
-  job         KarigarJob?          @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  tree        KarigarCastingTree?  @relation(fields: [treeId], references: [id], onDelete: SetNull)
+  createdAt   DateTime            @default(now())
+  shop        Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workshop    KarigarWorkshop?    @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  job         KarigarJob?         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  tree        KarigarCastingTree? @relation(fields: [treeId], references: [id], onDelete: SetNull)
 
   @@index([shopId, createdAt])
   @@index([jobId])
@@ -4340,8 +4476,8 @@ model Referral {
   planPurchasedAt    DateTime? // when the referee bought a plan
   completedAt        DateTime? // when rewards were granted
 
-  referrerShop Shop  @relation("ShopReferralsMade", fields: [referrerShopId], references: [id])
-  refereeShop  Shop? @relation("ShopReferralsReceived", fields: [refereeShopId], references: [id])
+  referrerShop Shop                 @relation("ShopReferralsMade", fields: [referrerShopId], references: [id])
+  refereeShop  Shop?                @relation("ShopReferralsReceived", fields: [refereeShopId], references: [id])
   commissions  ReferralCommission[]
 
   @@unique([referrerShopId, refereeEmail])
@@ -4360,16 +4496,16 @@ enum ReferralStatus {
 }
 
 model ReferralSettings {
-  id                   String   @id @default("singleton")
-  freeMonths           Float    @default(0) // unused legacy field (kept for existing rows)
-  aiCreditsReward      Int      @default(0) // unused legacy field (kept for existing rows)
-  expirationDays       Int      @default(90) // referral link validity
-  maxReferralsPerShop  Int      @default(50) // anti-abuse cap
-  isActive             Boolean  @default(true) // master switch
-  commissionPercent    Float    @default(10) // % of each paid subscription invoice
-  applyToInvoiceFirst  Boolean  @default(true) // credit referrer's next Orivraa invoice before cash-out
-  minCashoutAmount     Float    @default(10) // leftover cash-out threshold in invoice currency units
-  updatedAt            DateTime @updatedAt
+  id                  String   @id @default("singleton")
+  freeMonths          Float    @default(0) // unused legacy field (kept for existing rows)
+  aiCreditsReward     Int      @default(0) // unused legacy field (kept for existing rows)
+  expirationDays      Int      @default(90) // referral link validity
+  maxReferralsPerShop Int      @default(50) // anti-abuse cap
+  isActive            Boolean  @default(true) // master switch
+  commissionPercent   Float    @default(10) // % of each paid subscription invoice
+  applyToInvoiceFirst Boolean  @default(true) // credit referrer's next Orivraa invoice before cash-out
+  minCashoutAmount    Float    @default(10) // leftover cash-out threshold in invoice currency units
+  updatedAt           DateTime @updatedAt
 }
 
 enum ReferralCommissionStatus {
@@ -4381,20 +4517,20 @@ enum ReferralCommissionStatus {
 }
 
 model ReferralCommission {
-  id               String                    @id @default(uuid())
+  id               String                   @id @default(uuid())
   referrerShopId   String
   refereeShopId    String
   referralId       String
-  stripeInvoiceId  String                    @unique
+  stripeInvoiceId  String                   @unique
   grossAmount      Float
   commissionAmount Float
   currency         String
-  status           ReferralCommissionStatus  @default(ACCRUED)
+  status           ReferralCommissionStatus @default(ACCRUED)
   appliedAt        DateTime?
   paidOutAt        DateTime?
   payoutId         String?
-  createdAt        DateTime                  @default(now())
-  updatedAt        DateTime                  @updatedAt
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
 
   referrerShop Shop     @relation("ReferralCommissionsEarned", fields: [referrerShopId], references: [id])
   refereeShop  Shop     @relation("ReferralCommissionsGenerated", fields: [refereeShopId], references: [id])
@@ -4517,23 +4653,23 @@ enum LeadStatus {
 }
 
 model BotSession {
-  id               String      @id // UUID generated by client (sessionStorage)
-  ipAddress        String?
-  userAgent        String?
-  messageCount     Int         @default(0) // counts user turns only
-  escalated        Boolean     @default(false)
-  leadIntents      String[]      @default([]) // e.g. ["pricing","trial","comparison"]
-  guestName        String? // populated on escalation or lead capture
-  guestEmail       String? // populated on escalation or lead capture
-  guestPhone       String? // populated when visitor shares phone number
-  contactCaptured  Boolean     @default(false) // true once any contact info is saved
-  awaitingContact  Boolean     @default(false) // true after bot asks for email/WhatsApp
-  leadStatus       LeadStatus? // set to NEW on first contact capture
-  leadNotes        String?     @db.Text
-  leadContactedAt  DateTime?
-  startedAt        DateTime    @default(now())
-  lastMessageAt    DateTime    @default(now())
-  expiresAt        DateTime // startedAt + 12 months (retention policy)
+  id              String      @id // UUID generated by client (sessionStorage)
+  ipAddress       String?
+  userAgent       String?
+  messageCount    Int         @default(0) // counts user turns only
+  escalated       Boolean     @default(false)
+  leadIntents     String[]    @default([]) // e.g. ["pricing","trial","comparison"]
+  guestName       String? // populated on escalation or lead capture
+  guestEmail      String? // populated on escalation or lead capture
+  guestPhone      String? // populated when visitor shares phone number
+  contactCaptured Boolean     @default(false) // true once any contact info is saved
+  awaitingContact Boolean     @default(false) // true after bot asks for email/WhatsApp
+  leadStatus      LeadStatus? // set to NEW on first contact capture
+  leadNotes       String?     @db.Text
+  leadContactedAt DateTime?
+  startedAt       DateTime    @default(now())
+  lastMessageAt   DateTime    @default(now())
+  expiresAt       DateTime // startedAt + 12 months (retention policy)
 
   logs AiChatLog[]
 

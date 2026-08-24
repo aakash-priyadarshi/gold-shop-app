@@ -44,17 +44,36 @@ import {
   shopsApi,
 } from "@/lib/api";
 import { ManagerPinDialog } from "@/components/shop/ManagerPinDialog";
+import { PosShiftModal } from "@/components/shop/PosShiftModal";
+import { PosReturnModal } from "@/components/shop/PosReturnModal";
 import {
-  defaultPhoneCountryCode,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   PosCustomerPicker,
+  resolvePhoneCountryCode,
   type PosCustomer,
 } from "@/components/shop/PosCustomerPicker";
 import {
   SellerProductDetailDialog,
   type SellerProductDetail,
 } from "@/components/shop/SellerProductDetailDialog";
-import { printBill, type BillSettings } from "@/lib/billPrint";
+import { printAuthoritativeBill, printBill, type BillSettings } from "@/lib/billPrint";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
+import { roundMoney2 } from "@/lib/invoice/calculateLineTotals";
+import {
+  applyPosPaymentConfirmation,
+  getPosWhatsAppPaymentStatus,
+} from "@/lib/posMessages";
+import {
+  kickCashDrawer,
+  loadHardwareConfig,
+  runCashDrawerOpenFlow,
+} from "@/lib/posHardware";
 import {
   getCounterPaymentMethods,
   buildQrImageUrl,
@@ -74,16 +93,22 @@ import { usePreferencesStore } from "@/store/preferences";
 import Image from "next/image";
 import { useT } from "@/providers/translation-provider";
 import {
+    CheckCircle2,
+    Coins,
+    DollarSign,
+    FileText,
     Heart,
     Loader2,
     Maximize2,
     Minus,
     Package,
     Plus,
+    RotateCcw,
     ScanLine,
     Search,
     ShoppingCart,
     Split,
+    Store,
     Trash2,
     UserRound,
     X,
@@ -201,19 +226,27 @@ function PosPageInner() {
   const [taxRate, setTaxRate] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [pinOpen, setPinOpen] = useState(false);
+  const [drawerPinOpen, setDrawerPinOpen] = useState(false);
   const [discountThreshold, setDiscountThreshold] = useState(0);
   const [hasManagerPin, setHasManagerPin] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [makingChargeRate, setMakingChargeRate] = useState(0);
+  const [confirmingPaymentId, setConfirmingPaymentId] = useState<string | null>(null);
   const [checkoutSuccess, setCheckoutSuccess] = useState<{
+    invoiceId?: string;
     invoiceNumber: string;
     total: number;
+    status?: string;
+    paymentStatus?: string;
+    paidAmount?: number;
+    balanceDue?: number;
     paymentMethod?: string;
     paymentSummary?: string;
     customerName?: string;
     customerPhone?: string;
     verificationToken?: string;
     usedBankTransfer?: boolean;
+    pendingPayments?: Array<{ id: string; amount: number; method: string }>;
   } | null>(null);
   const [billSettings, setBillSettings] = useState<BillSettings | null>(null);
   const [shopUpiId, setShopUpiId] = useState("");
@@ -224,31 +257,106 @@ function PosPageInner() {
     Array<{ id: string; method: CounterPaymentMethod; amount: string }>
   >([]);
 
-  const shopCountry = user?.shop?.country || "NP";
-  const PAYMENT_METHODS = getCounterPaymentMethods(shopCountry);
+  // Multi-counter register and shift state
+  const [registers, setRegisters] = useState<Array<{ id: string; name: string; terminalCode: string }>>([]);
+  const [selectedRegisterId, setSelectedRegisterId] = useState<string>("");
+  const [currentShift, setCurrentShift] = useState<any | null>(null);
+  const [shiftModalOpen, setShiftModalOpen] = useState(false);
+  const [shiftModalMode, setShiftModalMode] = useState<"OPEN" | "CLOSE" | "Z_REPORT">("OPEN");
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [serverPreview, setServerPreview] = useState<any | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const shopCountry = String(user?.shop?.country || "").trim().toUpperCase();
+  const hasShopCountry = Boolean(shopCountry);
+  const PAYMENT_METHODS = useMemo(
+    () => (hasShopCountry ? getCounterPaymentMethods(shopCountry) : []),
+    [hasShopCountry, shopCountry],
+  );
   const TAX_PRESETS = shopCountry === "IN"
     ? [{ label: "GST 3%", value: 0.03 }, { label: "GST 5%", value: 0.05 }, { label: "Exempt", value: 0 }]
     : shopCountry === "NP"
       ? [{ label: "VAT 13%", value: 0.13 }, { label: "Exempt", value: 0 }]
-      : [{ label: "VAT 5%", value: 0.05 }, { label: "Exempt", value: 0 }];
+      : hasShopCountry
+        ? [{ label: "VAT 5%", value: 0.05 }, { label: "Exempt", value: 0 }]
+        : [];
   const MAKING_PRESETS = [0, 8, 12, 14, 18];
 
-  // Load active session on mount
-  const loadActiveSession = useCallback(async () => {
+  const loadRegisters = useCallback(async () => {
     try {
-      const res = await posApi.getActiveSession();
-      if (res.data) {
-        setSession(res.data);
-        setSelectedCustomer(res.data.customer || null);
+      const res = await posApi.getRegisters();
+      const list = res.data || [];
+      setRegisters(list);
+      if (list.length > 0) {
+        setSelectedRegisterId((current) => current || list[0].id);
       }
     } catch {
-      // No active session - that's ok
+      // ignore
     }
   }, []);
 
+  const loadCurrentShift = useCallback(async (regId?: string) => {
+    try {
+      const res = await posApi.getCurrentShift(regId || selectedRegisterId || undefined);
+      setCurrentShift(res.data || null);
+    } catch {
+      setCurrentShift(null);
+    }
+  }, [selectedRegisterId]);
+
+  // Load active session on mount
+  const loadActiveSession = useCallback(async (regId?: string) => {
+    try {
+      const res = await posApi.getActiveSession(regId || selectedRegisterId || undefined);
+      if (res.data) {
+        setSession(res.data);
+        setSelectedCustomer(res.data.customer || null);
+      } else {
+        setSession(null);
+      }
+    } catch {
+      setSession(null);
+    }
+  }, [selectedRegisterId]);
+
   useEffect(() => {
-    loadActiveSession();
-  }, [loadActiveSession]);
+    loadRegisters();
+  }, [loadRegisters]);
+
+  useEffect(() => {
+    if (selectedRegisterId) {
+      loadCurrentShift(selectedRegisterId);
+      loadActiveSession(selectedRegisterId);
+    }
+  }, [selectedRegisterId, loadCurrentShift, loadActiveSession]);
+
+  // Authoritative server pricing preview effect
+  useEffect(() => {
+    if (!shopCountry || !session?.id || session.items.length === 0) {
+      setServerPreview(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setPreviewLoading(true);
+      try {
+        const res = await posApi.previewSession(session.id, {
+          makingChargeRate: makingChargeRate || undefined,
+          discountAmount: discountAmount || undefined,
+          taxRate: taxRate || undefined,
+        });
+        if (!cancelled) setServerPreview(res.data);
+      } catch {
+        if (!cancelled) setServerPreview(null);
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [session?.id, session?.items, makingChargeRate, discountAmount, taxRate, shopCountry]);
 
   useEffect(() => {
     invoicesApi
@@ -329,6 +437,7 @@ function PosPageInner() {
         customerId:
           cId || selectedCustomer?.id || customerId || undefined,
         conversationId: convId || urlConversationId || undefined,
+        registerId: selectedRegisterId || undefined,
       });
       setSession(res.data);
       setSelectedCustomer(res.data.customer || selectedCustomer || null);
@@ -491,6 +600,14 @@ function PosPageInner() {
 
   const runCheckout = async () => {
     if (!session) return;
+    if (!shopCountry) {
+      toast({
+        variant: "destructive",
+        title: t("Shop country is not configured"),
+        description: t("Configure the shop country before completing a POS sale."),
+      });
+      return;
+    }
 
     let paymentSplits:
       | Array<{ method: string; amount: number }>
@@ -548,7 +665,15 @@ function PosPageInner() {
 
     let checkoutCustomerId = session.customerId;
     if (!checkoutCustomerId && customerName.trim() && customerPhone.trim()) {
-      const phoneCountryCode = defaultPhoneCountryCode(shopCountry);
+      const phoneCountryCode = resolvePhoneCountryCode(customerPhone, shopCountry);
+      if (!phoneCountryCode) {
+        toast({
+          variant: "destructive",
+          title: t("Phone country code is required"),
+          description: t("Use an international phone number with a supported country calling code."),
+        });
+        return;
+      }
       const countryDigits = phoneCountryCode.replace(/\D/g, "");
       let localPhone = customerPhone.replace(/\D/g, "");
       if (
@@ -600,9 +725,17 @@ function PosPageInner() {
           : paymentMethod,
         paymentSplits,
         makingChargeRate: makingChargeRate || undefined,
-        invoiceCountry: shopCountry || undefined,
       });
       const inv = res.data?.invoice;
+      const payments = Array.isArray(inv?.payments) ? inv.payments : [];
+      const pendingPayments = payments.filter((p: any) => p.status === "PENDING");
+      const hasReceivedCash = payments.some(
+        (payment: any) => payment.method === "CASH" && payment.status === "RECEIVED",
+      );
+      if (hasReceivedCash && loadHardwareConfig().printer.kickCashDrawer) {
+        kickCashDrawer().catch(() => {});
+      }
+
       setSession(null);
       setCheckoutOpen(false);
       setCustomerPicks([]);
@@ -610,17 +743,31 @@ function PosPageInner() {
       setCustomerId("");
       setSplitMode(false);
       setCheckoutSuccess({
+        invoiceId: inv?.id,
         invoiceNumber: inv?.invoiceNumber || "N/A",
         total: inv?.totalAmount || basketTotal,
+        status: inv?.status,
+        paymentStatus: inv?.paymentStatus,
+        paidAmount: inv?.paidAmount,
+        balanceDue: inv?.balanceDue,
         paymentMethod: splitMode ? "SPLIT" : paymentMethod,
         paymentSummary,
         customerName,
         customerPhone,
         verificationToken: inv?.verificationToken,
         usedBankTransfer,
+        pendingPayments: pendingPayments.map((p: any) => ({
+          id: p.id,
+          amount: Number(p.amount),
+          method: p.method,
+        })),
       });
+      const isPaymentComplete =
+        inv?.paymentStatus === "PAID" && Number(inv?.balanceDue || 0) <= 0.01;
       toast({
-        title: t("Checkout complete!"),
+        title: isPaymentComplete
+          ? t("Checkout complete")
+          : t("Sale created — payment pending"),
         description: t("Invoice") + ` ${inv?.invoiceNumber} ` + t("created"),
       });
     } catch (err: any) {
@@ -634,8 +781,76 @@ function PosPageInner() {
     }
   };
 
+  const handleKickDrawer = async (managerPin?: string) => {
+    const result = await runCashDrawerOpenFlow({
+      authorize: () =>
+        posApi.authorizeDrawerOpen({
+          reason: "Cashier manual drawer open",
+          registerId: selectedRegisterId || undefined,
+          managerPin,
+        }),
+      kick: kickCashDrawer,
+      audit: (success, error) =>
+        posApi.auditDrawerOpen({
+          reason: "Cashier manual drawer open",
+          registerId: selectedRegisterId || undefined,
+          success,
+          error,
+        }),
+      onAuditFailure: (error) =>
+        console.warn("Cash drawer audit logging failed", error),
+    });
+
+    if (result.outcome === "opened") {
+      toast({ title: t("Drawer opened") });
+      return;
+    }
+
+    const message = (result.error as any)?.message;
+    if (result.outcome === "authorization_failed") {
+      toast({
+        title: t("Drawer authorization failed"),
+        description: message || t("Unable to authorize the cash drawer"),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: t("Drawer kick failed"),
+      description: message || t("Check receipt printer connection"),
+      variant: "destructive",
+    });
+  };
+
+  const requestDrawerOpen = async () => {
+    try {
+      const res = await shopsApi.getManagerPinStatus();
+      const status = res.data?.data ?? res.data;
+      if (status?.hasPin) {
+        setDrawerPinOpen(true);
+        return;
+      }
+      await handleKickDrawer();
+    } catch (err: any) {
+      toast({
+        title: t("Drawer authorization failed"),
+        description: err?.response?.data?.message || t("Unable to authorize the cash drawer"),
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCheckout = async () => {
     if (!session) return;
+    if (!shopCountry) {
+      toast({
+        variant: "destructive",
+        title: t("Shop country is not configured"),
+        description: t("Configure the shop country before completing a POS sale."),
+      });
+      return;
+    }
     try {
       const res = await shopsApi.getManagerPinStatus();
       const data = res.data?.data ?? res.data;
@@ -676,13 +891,19 @@ function PosPageInner() {
     }
   };
 
-  // ─── Compute Basket Totals ───
+  // ─── Compute Basket Totals (Authoritative Server Preview Preferred) ───
 
-  const basketSubtotal =
+  const localSubtotal =
     session?.items?.reduce((sum, i) => sum + i.lineTotal, 0) || 0;
-  const basketMaking = makingChargeRate > 0 ? Math.round(basketSubtotal * (makingChargeRate / 100)) : 0;
-  const basketTax = (basketSubtotal + basketMaking) * (taxRate || 0);
-  const basketTotal = basketSubtotal + basketMaking + basketTax - (discountAmount || 0);
+  const localMaking = makingChargeRate > 0 ? roundMoney2(localSubtotal * (makingChargeRate / 100)) : 0;
+  const localTax = roundMoney2((localSubtotal + localMaking) * (taxRate || 0));
+  const localTotal = roundMoney2(localSubtotal + localMaking + localTax - (discountAmount || 0));
+
+  const basketSubtotal = serverPreview?.subtotal ?? localSubtotal;
+  const basketMaking = serverPreview?.makingChargeAmount ?? localMaking;
+  const basketTax = serverPreview?.taxAmount ?? localTax;
+  const basketTotal = serverPreview?.grandTotal ?? localTotal;
+
 
   const upiOverLimit =
     !splitMode &&
@@ -734,8 +955,78 @@ function PosPageInner() {
                 <T>{isCounterMode ? "Fast counter checkout mode" : "Advanced ERP mode with stock locking"}</T>
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              {/* Mode Toggle removed: now lives globally in DashboardLayout header */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Register / Counter Selector */}
+              {registers.length > 0 && (
+                <div className="flex items-center gap-1.5 bg-muted/40 rounded-lg p-1 border">
+                  <Store className="h-4 w-4 text-muted-foreground ml-1.5" />
+                  <Select value={selectedRegisterId} onValueChange={setSelectedRegisterId}>
+                    <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none w-36">
+                      <SelectValue placeholder={t("Select Counter")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {registers.map((r) => (
+                        <SelectItem key={r.id} value={r.id} className="text-xs">
+                          {r.name} ({r.terminalCode})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Shift Status & Controls */}
+              {currentShift ? (
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 border-emerald-300 text-xs">
+                    <T>Shift Open</T>
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    onClick={() => {
+                      setShiftModalMode("CLOSE");
+                      setShiftModalOpen(true);
+                    }}
+                  >
+                    <FileText className="h-3.5 w-3.5 mr-1" /> <T>Close Shift</T>
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 border-amber-300"
+                  onClick={() => {
+                    setShiftModalMode("OPEN");
+                    setShiftModalOpen(true);
+                  }}
+                >
+                  <DollarSign className="h-3.5 w-3.5 mr-1" /> <T>Open Shift</T>
+                </Button>
+              )}
+
+              {/* Drawer Kick */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={requestDrawerOpen}
+                title={t("Open Cash Drawer")}
+              >
+                <Coins className="h-3.5 w-3.5 mr-1" /> <T>Drawer</T>
+              </Button>
+
+              {/* Return & Exchange */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => setReturnModalOpen(true)}
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1" /> <T>Return / Exchange</T>
+              </Button>
             </div>
             {session && (
               <div className="flex items-center gap-2">
@@ -1727,7 +2018,7 @@ function PosPageInner() {
               <Button
                 onClick={handleCheckout}
                 disabled={
-                  checkoutLoading || !customerName.trim() || upiOverLimit
+                  checkoutLoading || !customerName.trim() || upiOverLimit || !hasShopCountry
                 }
                 className="min-w-[140px]"
               >
@@ -1742,33 +2033,149 @@ function PosPageInner() {
 
         {/* Receipt Success Dialog */}
         <Dialog open={!!checkoutSuccess} onOpenChange={(open) => !open && setCheckoutSuccess(null)}>
-          <DialogContent className="sm:max-w-sm text-center">
+          <DialogContent className="sm:max-w-md text-center">
             <DialogHeader>
               <DialogTitle className="text-center text-xl">
-                ✅ <T>Sale Complete!</T>
+                {checkoutSuccess?.paymentStatus === "PENDING" || (checkoutSuccess?.balanceDue != null && checkoutSuccess.balanceDue > 0.01) ? (
+                  <span className="text-amber-600 dark:text-amber-400">⏳ <T>Sale created — Payment Pending</T></span>
+                ) : (
+                  <span>✅ <T>Sale Complete!</T></span>
+                )}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="text-3xl font-bold">
                 {currencySymbol} {checkoutSuccess?.total?.toLocaleString()}
               </div>
-              <p className="text-sm text-muted-foreground">
-                <T>Invoice</T> #{checkoutSuccess?.invoiceNumber}
-              </p>
+
+              {checkoutSuccess && (checkoutSuccess.paymentStatus === "PENDING" || (checkoutSuccess.balanceDue != null && checkoutSuccess.balanceDue > 0.01)) ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 p-3 text-left space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-200 text-xs">
+                      <T>Payment Pending Confirmation</T>
+                    </Badge>
+                    <span className="text-xs font-mono font-semibold text-amber-800 dark:text-amber-200">
+                      <T>Pending amount</T>: {currencySymbol} {(checkoutSuccess.balanceDue ?? checkoutSuccess.total).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    <T>Non-cash counter payments are recorded as pending until explicitly confirmed by the cashier.</T>
+                  </p>
+                  {checkoutSuccess.invoiceId && checkoutSuccess.pendingPayments && checkoutSuccess.pendingPayments.length > 0 ? (
+                    <div className="space-y-1.5 pt-1">
+                      {checkoutSuccess.pendingPayments.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-900 p-2 rounded-lg border">
+                          <span className="text-xs font-medium">
+                            {p.method}: {currencySymbol} {p.amount.toLocaleString()}
+                          </span>
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                            disabled={confirmingPaymentId === p.id}
+                            onClick={async () => {
+                              if (!checkoutSuccess?.invoiceId) return;
+                              setConfirmingPaymentId(p.id);
+                              try {
+                                const confirmation = await invoicesApi.confirmPayment(
+                                  checkoutSuccess.invoiceId,
+                                  p.id,
+                                  {},
+                                );
+                                const confirmed = confirmation.data;
+                                toast({
+                                  title: t("Payment Confirmed!"),
+                                  description: t("Payment has been verified and invoice balance updated."),
+                                });
+                                setCheckoutSuccess((prev) =>
+                                  prev
+                                    ? applyPosPaymentConfirmation(
+                                        prev,
+                                        p.id,
+                                        confirmed,
+                                      )
+                                    : null,
+                                );
+                                void loadCurrentShift(selectedRegisterId);
+
+                                try {
+                                  const refreshed = await invoicesApi.getById(
+                                    checkoutSuccess.invoiceId,
+                                  );
+                                  const canonical = refreshed.data;
+                                  const canonicalPayments = Array.isArray(canonical?.payments)
+                                    ? canonical.payments
+                                    : [];
+                                  setCheckoutSuccess((prev) =>
+                                    prev
+                                      ? {
+                                          ...prev,
+                                          status: canonical.status,
+                                          paymentStatus: canonical.paymentStatus,
+                                          paidAmount: Number(canonical.paidAmount),
+                                          balanceDue: Number(canonical.balanceDue),
+                                          paymentMethod:
+                                            canonical.paymentMethod || prev.paymentMethod,
+                                          pendingPayments: canonicalPayments
+                                            .filter((payment: any) => payment.status === "PENDING")
+                                            .map((payment: any) => ({
+                                              id: payment.id,
+                                              amount: Number(payment.amount),
+                                              method: payment.method,
+                                            })),
+                                        }
+                                      : null,
+                                  );
+                                } catch {
+                                  toast({
+                                    title: t("Payment confirmed"),
+                                    description: t(
+                                      "Payment confirmed; refresh failed. The latest invoice data will load next time.",
+                                    ),
+                                  });
+                                }
+                              } catch (err: any) {
+                                toast({
+                                  variant: "destructive",
+                                  title: t("Failed to confirm payment"),
+                                  description: err?.response?.data?.message || t("Unknown error"),
+                                });
+                              } finally {
+                                setConfirmingPaymentId(null);
+                              }
+                            }}
+                          >
+                            {confirmingPaymentId === p.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                            )}
+                            <T>Confirm Payment Received</T>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               <div className="flex gap-2 justify-center">
                 <Button
                   variant="outline"
-                  onClick={() => {
+                  disabled={
+                    checkoutSuccess?.paymentStatus !== "PAID" ||
+                    Number(checkoutSuccess?.balanceDue || 0) > 0.01
+                  }
+                  onClick={async () => {
                     if (!checkoutSuccess) return;
-                    const ok = printBill({
+                    const ok = await printAuthoritativeBill({
                       fallbackShopName: user?.shop?.shopName,
                       settings: billSettings,
                       invoiceNumber: checkoutSuccess.invoiceNumber,
                       customerName: checkoutSuccess.customerName,
                       customerPhone: checkoutSuccess.customerPhone,
                       totalAmount: checkoutSuccess.total,
-                      paidAmount: checkoutSuccess.total,
-                      balanceDue: 0,
+                      paidAmount: checkoutSuccess.paidAmount ?? checkoutSuccess.total,
+                      balanceDue: checkoutSuccess.balanceDue ?? 0,
                       currency: currencySymbol,
                       paymentMethod: checkoutSuccess.paymentMethod,
                       paymentSummary: checkoutSuccess.paymentSummary,
@@ -1793,7 +2200,12 @@ function PosPageInner() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: ${currencySymbol} ${checkoutSuccess?.total?.toLocaleString()}\nPaid via: ${checkoutSuccess?.paymentSummary || checkoutSuccess?.paymentMethod || "CASH"}\nThank you for your purchase!`;
+                    const paymentStatus = getPosWhatsAppPaymentStatus(
+                      checkoutSuccess?.paymentStatus,
+                      checkoutSuccess?.balanceDue,
+                      currencySymbol,
+                    );
+                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: ${currencySymbol} ${checkoutSuccess?.total?.toLocaleString()}\nStatus: ${paymentStatus}\nThank you for your purchase!`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
                   }}
                 >
@@ -1809,6 +2221,31 @@ function PosPageInner() {
           </DialogContent>
         </Dialog>
 
+        {/* Cashier Shift Modal */}
+        <PosShiftModal
+          open={shiftModalOpen}
+          onOpenChange={setShiftModalOpen}
+          mode={shiftModalMode}
+          registerId={selectedRegisterId}
+          registerName={registers.find((r) => r.id === selectedRegisterId)?.name || "Main Register"}
+          currentShift={currentShift}
+          currencySymbol={currencySymbol}
+          onShiftUpdated={() => {
+            loadCurrentShift(selectedRegisterId);
+            loadRegisters();
+          }}
+        />
+
+        {/* POS Return & Exchange Modal */}
+        <PosReturnModal
+          open={returnModalOpen}
+          onOpenChange={setReturnModalOpen}
+          currencySymbol={currencySymbol}
+          onReturnCompleted={() => {
+            loadCurrentShift(selectedRegisterId);
+          }}
+        />
+
         <ManagerPinDialog
           open={pinOpen}
           onOpenChange={setPinOpen}
@@ -1821,6 +2258,19 @@ function PosPageInner() {
           onVerified={async () => {
             setPinOpen(false);
             await runCheckout();
+          }}
+        />
+
+        <ManagerPinDialog
+          open={drawerPinOpen}
+          onOpenChange={setDrawerPinOpen}
+          title={t("Authorize cash drawer")}
+          description={t(
+            "A manager PIN is required before the cash drawer can be opened.",
+          )}
+          onVerified={async (managerPin) => {
+            setDrawerPinOpen(false);
+            await handleKickDrawer(managerPin);
           }}
         />
 

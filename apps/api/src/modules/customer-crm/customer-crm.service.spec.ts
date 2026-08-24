@@ -103,47 +103,56 @@ describe("CustomerCrmService", () => {
       );
     });
 
-    it("prevents a non-creator shop from overwriting notes and core customer details", async () => {
-      prisma.walkInCustomer.findUnique.mockResolvedValue({
-        id: "cust-1",
+    it("creates an isolated customer record for another shop even if phone exists elsewhere", async () => {
+      prisma.walkInCustomer.findUnique.mockResolvedValue(null);
+      prisma.walkInCustomer.create.mockResolvedValue({
+        id: "cust-2",
+        name: "Shop 2 Customer",
         phone: "+9779800000000",
-        phoneCountryCode: "+977",
-        name: "Original Name",
-        email: null,
-        address: "Original Address",
-        city: "Kathmandu",
-        country: "NP",
-        notes: "Secret shop-1 notes",
-        createdByShopId: "shop-1",
-      });
-      prisma.walkInCustomer.update.mockResolvedValue({
-        id: "cust-1",
-        name: "Original Name",
-        phone: "+9779800000000",
-        createdByShopId: "shop-1",
+        createdByShopId: "shop-2",
       });
 
-      await service.upsertWalkInCustomer("shop-2", {
-        name: "Malicious Overwrite",
+      const result = await service.upsertWalkInCustomer("shop-2", {
+        name: "Shop 2 Customer",
         phoneCountryCode: "+977",
         phone: "9800000000",
         email: "shop2@example.com",
-        address: "Hacked Address",
+        address: "Pokhara Address",
         city: "Pokhara",
-        notes: "Overwritten note",
+        notes: "Shop 2 private note",
       });
 
-      expect(prisma.walkInCustomer.update).toHaveBeenCalledWith({
-        where: { id: "cust-1" },
-        data: {
-          name: "Original Name",
-          phoneCountryCode: "+977",
-          email: "shop2@example.com",
-          address: "Original Address",
-          city: "Kathmandu",
-          country: "NP",
-        },
-      });
+      expect(prisma.walkInCustomer.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            createdByShopId: "shop-2",
+            name: "Shop 2 Customer",
+            notes: "Shop 2 private note",
+          }),
+        }),
+      );
+      expect(result.id).toBe("cust-2");
     });
+  });
+
+  it("only searches walk-in customers owned by the requesting shop", async () => {
+    prisma.invoice = { groupBy: jest.fn().mockResolvedValue([]) };
+    prisma.user = {
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    };
+    prisma.walkInCustomer.findMany = jest.fn().mockResolvedValue([]);
+    prisma.walkInCustomer.count = jest.fn().mockResolvedValue(0);
+
+    await service.searchCustomers("shop-1", "Aakash");
+
+    expect(prisma.walkInCustomer.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ createdByShopId: "shop-1" }),
+      }),
+    );
+    expect(prisma.walkInCustomer.findMany.mock.calls[0][0].where).not.toHaveProperty(
+      "invoices",
+    );
   });
 });

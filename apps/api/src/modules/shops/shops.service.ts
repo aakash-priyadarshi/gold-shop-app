@@ -20,6 +20,7 @@ import {
   getDefaultCurrencyForMarket,
   isCurrencySupportedForMarket,
   normalizeMarketRegion,
+  resolveMarketRegion,
 } from "../../common/market/country-currency";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
@@ -34,6 +35,27 @@ import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
 import { UpdateVatRegistrationDto } from "./dto/update-vat-registration.dto";
 import { ShopPriceRebaseService } from "./shop-price-rebase.service";
+
+const COUNTRY_TO_PHONE_CODE: Record<string, string> = {
+  NP: "+977",
+  IN: "+91",
+  AE: "+971",
+  US: "+1",
+  GB: "+44",
+  UK: "+44",
+  EU: "+49",
+  LK: "+94",
+};
+
+const DEMO_CITY_BY_MARKET: Record<string, string> = {
+  NP: "Kathmandu",
+  IN: "New Delhi",
+  AE: "Dubai",
+  US: "New York",
+  UK: "London",
+  EU: "Berlin",
+  LK: "Colombo",
+};
 
 @Injectable()
 export class ShopsService {
@@ -1058,29 +1080,46 @@ export class ShopsService {
     ]);
 
     // Create demo customers
-    const demoPhone1 = `+9198${Math.floor(10000000 + Math.random() * 90000000)}`;
-    const demoPhone2 = `+9198${Math.floor(10000000 + Math.random() * 90000000)}`;
     try {
-      await this.prisma.walkInCustomer.createMany({
-        data: [
-          {
-            phone: demoPhone1,
-            name: "John Doe (Demo)",
-            email: "john.demo@example.com",
-            address: "123 Demo Street",
-            city: "Kathmandu",
-            createdByShopId: shopId,
-          },
-          {
-            phone: demoPhone2,
-            name: "Jane Smith (Demo)",
-            address: "456 Main Ave",
-            city: "Delhi",
-            createdByShopId: shopId,
-          }
-        ],
-        skipDuplicates: true
-      });
+      const rawCountry = shop.country || "";
+      const resolvedMarket = resolveMarketRegion(rawCountry);
+      const country = resolvedMarket
+        ? normalizeMarketRegion(rawCountry)
+        : null;
+      const phoneCountryCode = country
+        ? COUNTRY_TO_PHONE_CODE[country]
+        : undefined;
+      const demoCity = country ? DEMO_CITY_BY_MARKET[country] : undefined;
+      // Do not fabricate a phone number in an unrelated country for a shop
+      // whose market has no configured calling code.
+      if (country && phoneCountryCode && demoCity) {
+        const demoPhone1 = `${phoneCountryCode}${Math.floor(10000000 + Math.random() * 90000000)}`;
+        const demoPhone2 = `${phoneCountryCode}${Math.floor(10000000 + Math.random() * 90000000)}`;
+        await this.prisma.walkInCustomer.createMany({
+          data: [
+            {
+              phone: demoPhone1,
+              phoneCountryCode,
+              country,
+              name: "John Doe (Demo)",
+              email: "john.demo@example.com",
+              address: "123 Demo Street",
+              city: demoCity,
+              createdByShopId: shopId,
+            },
+            {
+              phone: demoPhone2,
+              phoneCountryCode,
+              country,
+              name: "Jane Smith (Demo)",
+              address: "456 Main Ave",
+              city: demoCity,
+              createdByShopId: shopId,
+            }
+          ],
+          skipDuplicates: true
+        });
+      }
     } catch (e) {
       // Ignore if fails
     }
