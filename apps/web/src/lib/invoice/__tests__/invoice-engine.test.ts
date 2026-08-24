@@ -401,5 +401,59 @@ describe("invoice shared engine", () => {
     expect(gem.certNumber).toBe("GIA-123456");
     expect(gem.cost).toBe("150000");
   });
+
+  it("calculates frontend tax breakdown with SET discount applied to eligible components while leaving wastage unscaled", () => {
+    const setLine = emptyLineItem();
+    setLine.label = "Bridal Set";
+    setLine.category = "SET";
+    setLine.quantity = 1;
+    setLine.metalCost = "100000";
+    setLine.makingCost = "20000";
+    setLine.gemstones = [
+      {
+        type: "DIAMOND",
+        cut: "",
+        clarity: "",
+        caratWeight: "",
+        color: "",
+        cost: "30000",
+      },
+    ];
+    setLine.wastageCost = "10000";
+    // 10% SET discount on (100k + 20k + 30k) = 15,000 discount => eligible total 135,000
+    setLine.setDiscountAmount = 15000;
+
+    const countryTax: CountryTaxConfig = {
+      country: "IN",
+      regime: "IN_GST_2024",
+      defaultRate: 0.03,
+      rates: {
+        PRECIOUS_METAL: 0.03, // 3% on metal & wastage
+        MAKING_CHARGE: 0.05,  // 5% on making
+        GEMSTONE: 0.03,       // 3% on gemstones
+        OTHER: 0.03,
+      },
+    };
+
+    const breakdown = computeTaxBreakdown({
+      lineItems: [setLine],
+      countryTax,
+      makingChargeAmount: 0,
+      invoiceWastagePct: 0,
+      wastageRule: { mode: "DISABLED", label: "Wastage" },
+    });
+
+    // Eligible base: 150,000. Target: 135,000. Scale: 0.9.
+    // Metal base: 100,000 × 0.9 = 90,000 => 3% tax = 2,700
+    // Making base: 20,000 × 0.9 = 18,000 => 5% tax = 900
+    // Gemstone base: 30,000 × 0.9 = 27,000 => 3% tax = 810
+    // Wastage base: 10,000 (undiscounted) => 3% tax = 300
+    // Total tax: 2,700 + 900 + 810 + 300 = 4,710
+    expect(breakdown.metalTax).toBe(2700);
+    expect(breakdown.makingTax).toBe(900);
+    expect(breakdown.gemstoneTax).toBe(810);
+    expect(breakdown.wastageTax).toBe(300);
+    expect(breakdown.totalTax).toBe(4710);
+  });
 });
 

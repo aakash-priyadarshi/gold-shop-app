@@ -436,4 +436,69 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
     );
     expect(lineTotal).toBe(135000);
   });
+
+  it("allocates SET discount proportionally to metal, making, and gemstones while keeping wastage unscaled and calculating category taxes accurately", async () => {
+    mockPrisma.shop.findUnique.mockResolvedValue({
+      id: "shop-in",
+      country: "IN",
+      currency: "INR",
+      vatNumber: null,
+      vatRegistrationStatus: "NOT_REGISTERED",
+      panNumber: null,
+      invoiceSettings: {},
+    });
+    mockPrisma.taxRuleConfig.findMany.mockResolvedValue([
+      {
+        category: "PRECIOUS_METAL",
+        rate: 0.03, // 3% on metal and wastage
+        taxType: "GST",
+        taxName: "GST",
+      },
+      {
+        category: "MAKING_CHARGE",
+        rate: 0.05, // 5% on making
+        taxType: "GST",
+        taxName: "GST",
+      },
+      {
+        category: "GEMSTONE",
+        rate: 0.03, // 3% on gemstones
+        taxType: "GST",
+        taxName: "GST",
+      },
+    ]);
+
+    // Raw components: metal 100k, making 20k, gem 30k, wastage 10k.
+    // Eligible base: 150k. 10% SET discount = 15k discount => discounted line total = 135k + 10k wastage = 145k.
+    const result = await service.create("shop-in", {
+      customerName: "Walk-in Customer",
+      invoiceCountry: "IN",
+      currency: "INR",
+      lineItems: [
+        {
+          label: "Bridal Set",
+          category: "SET",
+          quantity: 1,
+          unitPrice: 145000,
+          amount: 145000,
+          metalCost: 100000,
+          makingCost: 20000,
+          gemstoneCost: 30000,
+          wastageCost: 10000,
+          setDiscountAmount: 15000,
+        },
+      ],
+    } as any);
+
+    expect(result.subtotal).toBe(145000);
+    expect(result.taxableAmount).toBe(145000);
+
+    // Metal scaled base: 90,000 => 3% tax = 2,700
+    // Making scaled base: 18,000 => 5% tax = 900
+    // Gemstone scaled base: 27,000 => 3% tax = 810
+    // Wastage unscaled base: 10,000 => 3% tax = 300
+    // Expected tax = 2,700 + 900 + 810 + 300 = 4,710
+    expect(result.taxAmount).toBe(4710);
+    expect(result.totalAmount).toBe(145000 + 4710);
+  });
 });

@@ -268,6 +268,8 @@ export function extractPurityFromComposition(composition: unknown): number {
     metalName.startsWith("STEEL") ||
     metalName.startsWith("TITANIUM");
 
+  const isExplicitGold = metalName === "GOLD" || metalName.startsWith("GOLD");
+
   // Check direct number
   const raw =
     c.purity ??
@@ -276,8 +278,8 @@ export function extractPurityFromComposition(composition: unknown): number {
       : undefined);
   if (typeof raw === "number" && Number.isFinite(raw)) {
     if (raw <= 1 && raw > 0) return raw;
-    // Map gold karats 8K–24K ONLY when metal is gold (or not explicitly non-gold)
-    if (!isExplicitNonGold) {
+    // Map numeric 8–24 values as karats ONLY when composition is explicitly GOLD
+    if (isExplicitGold) {
       const KARAT_FRACTIONS: Record<number, number> = {
         24: 0.999,
         23: 0.958,

@@ -394,29 +394,43 @@ export class SaleBuilderService {
         });
       }
       if (lines.length > 0) {
-        const rawComponentSum = (metalCost + wastageCost + makingCost + gemstoneCost) * qty;
-        const targetAmount = input.amount;
-        if (rawComponentSum > 0 && Math.abs(rawComponentSum - targetAmount) > 0.001) {
-          const scale = targetAmount / rawComponentSum;
-          let runningAmount = 0;
-          for (let i = 0; i < lines.length; i++) {
-            if (i === lines.length - 1) {
-              lines[i].amount = Math.max(
+        const eligibleBase = (metalCost + makingCost + gemstoneCost) * qty;
+        const totalWastage = wastageCost * qty;
+        const targetEligibleAmount = Math.max(0, input.amount - totalWastage);
+
+        if (eligibleBase > 0 && Math.abs(eligibleBase - targetEligibleAmount) > 0.001) {
+          const scale = targetEligibleAmount / eligibleBase;
+          const eligibleLines = lines.filter(
+            (l) => l.wastageCost === undefined || l.wastageCost === 0,
+          );
+          let runningEligible = 0;
+          for (let i = 0; i < eligibleLines.length; i++) {
+            if (i === eligibleLines.length - 1) {
+              eligibleLines[i].amount = Math.max(
                 0,
-                Math.round((targetAmount - runningAmount) * 100) / 100,
+                Math.round((targetEligibleAmount - runningEligible) * 100) / 100,
               );
             } else {
-              lines[i].amount = Math.max(
+              eligibleLines[i].amount = Math.max(
                 0,
-                Math.round(lines[i].amount * scale * 100) / 100,
+                Math.round(eligibleLines[i].amount * scale * 100) / 100,
               );
-              runningAmount += lines[i].amount;
+              runningEligible += eligibleLines[i].amount;
             }
-            lines[i].unitPrice = Math.round((lines[i].amount / qty) * 100) / 100;
-            if (lines[i].metalCost != null) lines[i].metalCost = Math.round(lines[i].metalCost! * scale * 100) / 100;
-            if (lines[i].makingCost != null) lines[i].makingCost = Math.round(lines[i].makingCost! * scale * 100) / 100;
-            if (lines[i].gemstoneCost != null) lines[i].gemstoneCost = Math.round(lines[i].gemstoneCost! * scale * 100) / 100;
-            if (lines[i].wastageCost != null) lines[i].wastageCost = Math.round(lines[i].wastageCost! * scale * 100) / 100;
+            eligibleLines[i].unitPrice =
+              Math.round((eligibleLines[i].amount / qty) * 100) / 100;
+            if (eligibleLines[i].metalCost != null) {
+              eligibleLines[i].metalCost =
+                Math.round(eligibleLines[i].metalCost! * scale * 100) / 100;
+            }
+            if (eligibleLines[i].makingCost != null) {
+              eligibleLines[i].makingCost =
+                Math.round(eligibleLines[i].makingCost! * scale * 100) / 100;
+            }
+            if (eligibleLines[i].gemstoneCost != null) {
+              eligibleLines[i].gemstoneCost =
+                Math.round(eligibleLines[i].gemstoneCost! * scale * 100) / 100;
+            }
           }
         }
         return lines;
