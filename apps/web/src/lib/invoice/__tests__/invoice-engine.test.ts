@@ -296,5 +296,110 @@ describe("invoice shared engine", () => {
     // lineItemTotal should deduct the 39,000 discount: 390,000 - 39,000 = 351,000
     expect(lineItemTotal(result.line)).toBe(351000);
   });
+
+  it("resolves platinum and palladium live market rates via normalized market keys", () => {
+    const marketRates = {
+      metals: {
+        PLATINUM_PT950: 8000,
+        PLATINUM_PT900: 7500,
+        PALLADIUM_PD950: 6000,
+      },
+    };
+
+    const ptItem = {
+      id: "pt-ring",
+      nameEn: "Platinum 950 Band",
+      jewelleryType: "RING",
+      totalWeightGrams: 5,
+      composition: {
+        baseAlloy: { metal: "PLATINUM", purity: "950" },
+      },
+      makingChargeNpr: 4000,
+    };
+
+    const ptResult = importCatalogItem({
+      item: ptItem,
+      existingLines: [],
+      marketRates,
+    });
+
+    expect("error" in ptResult).toBe(false);
+    if ("error" in ptResult) return;
+    // 5g × 8000/g = 40000 metalCost
+    expect(ptResult.line.metalCost).toBe("40000");
+    expect(ptResult.line.metalType).toBe("PLATINUM_950");
+    expect(ptResult.line.makingCost).toBe("4000");
+
+    const pdItem = {
+      id: "pd-band",
+      nameEn: "Palladium Band",
+      jewelleryType: "RING",
+      totalWeightGrams: 4,
+      composition: {
+        baseAlloy: { metal: "PALLADIUM", purity: "950" },
+      },
+      makingChargeNpr: 3000,
+    };
+
+    const pdResult = importCatalogItem({
+      item: pdItem,
+      existingLines: [],
+      marketRates,
+    });
+
+    expect("error" in pdResult).toBe(false);
+    if ("error" in pdResult) return;
+    // 4g × 6000/g = 24000 metalCost
+    expect(pdResult.line.metalCost).toBe("24000");
+    expect(pdResult.line.metalType).toBe("PALLADIUM_950");
+  });
+
+  it("preserves rich gemstone metadata fields on catalog item import", () => {
+    const itemWithGems = {
+      id: "ruby-ring",
+      nameEn: "Ruby Solitaire",
+      jewelleryType: "RING",
+      totalWeightGrams: 4,
+      composition: {
+        baseAlloy: { metal: "GOLD", purity: "18K" },
+        gemstones: [
+          {
+            type: "RUBY",
+            cut: "Oval",
+            clarity: "VVS",
+            caratWeight: 2.5,
+            quality: "AAA",
+            origin: "BURMA",
+            sizeMm: 8.5,
+            count: 1,
+            cutGrade: "EXCELLENT",
+            lab: "GIA",
+            certNumber: "GIA-123456",
+            reportUrl: "https://gia.edu/cert/123456",
+            valueNpr: 150000,
+          },
+        ],
+      },
+    };
+
+    const result = importCatalogItem({
+      item: itemWithGems,
+      existingLines: [],
+    });
+
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.line.gemstones).toHaveLength(1);
+    const gem = result.line.gemstones[0];
+    expect(gem.type).toBe("RUBY");
+    expect(gem.quality).toBe("AAA");
+    expect(gem.origin).toBe("BURMA");
+    expect(gem.sizeMm).toBe(8.5);
+    expect(gem.count).toBe(1);
+    expect(gem.cutGrade).toBe("EXCELLENT");
+    expect(gem.lab).toBe("GIA");
+    expect(gem.certNumber).toBe("GIA-123456");
+    expect(gem.cost).toBe("150000");
+  });
 });
 

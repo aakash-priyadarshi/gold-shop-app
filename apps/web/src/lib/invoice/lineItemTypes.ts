@@ -15,6 +15,15 @@ export interface GemstoneEntry {
   caratWeight: string;
   color: string;
   cost: string;
+  quality?: string;
+  origin?: string;
+  sizeMm?: number | string;
+  count?: number | string;
+  cutGrade?: string;
+  lab?: string;
+  certNumber?: string;
+  reportUrl?: string;
+  sourceItemLabel?: string;
 }
 
 export interface RichLineItem {

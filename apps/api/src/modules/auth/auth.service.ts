@@ -318,12 +318,18 @@ export class AuthService {
       await this.redisService.invalidatePhoneCache(dto.phone);
     }
 
-    // Auto-activate FREE subscription plan for new shopkeeper shops
+    // Auto-activate FREE subscription plan for new shopkeeper shops — recoverable if fails
     if (result.shop) {
-      await this.sellerSubscriptionsService.autoActivateFreePlan(
-        result.shop.id,
-        dto.shop?.country || "NP",
-      );
+      try {
+        await this.sellerSubscriptionsService.autoActivateFreePlan(
+          result.shop.id,
+          dto.shop?.country || "NP",
+        );
+      } catch (err: any) {
+        this.logger.warn(
+          `Failed to auto-activate free plan for shop ${result.shop.id}: ${err?.message}`,
+        );
+      }
       await this.linkReferralSignup(
         result.user.id,
         result.shop.id,
@@ -414,11 +420,17 @@ export class AuthService {
       return { user: updatedUser, shop };
     });
 
-    // Auto-activate FREE subscription plan for the new shop
-    await this.sellerSubscriptionsService.autoActivateFreePlan(
-      result.shop.id,
-      marketCountry,
-    );
+    // Auto-activate FREE subscription plan for the new shop — recoverable if fails
+    try {
+      await this.sellerSubscriptionsService.autoActivateFreePlan(
+        result.shop.id,
+        marketCountry,
+      );
+    } catch (err: any) {
+      this.logger.warn(
+        `Failed to auto-activate free plan for shop ${result.shop.id}: ${err?.message}`,
+      );
+    }
     await this.linkReferralSignup(
       result.user.id,
       result.shop.id,

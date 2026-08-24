@@ -1499,9 +1499,10 @@ export default function CreateInvoicePage() {
                   shopId: user?.shop?.id || "",
                   stoneType: gem.type || "OTHER",
                   caratWeight: parseFloat(gem.caratWeight) || undefined,
-                  quality: "STANDARD",
-                  origin: "NATURAL",
-                  count: 1,
+                  quality: (gem.quality as any) || "STANDARD",
+                  origin: (gem.origin as any) || "NATURAL",
+                  sizeMm: gem.sizeMm ? parseFloat(String(gem.sizeMm)) : undefined,
+                  count: gem.count ? parseInt(String(gem.count), 10) : 1,
                 });
                 if (res.data?.effectiveTotal != null && res.data.effectiveTotal > 0) {
                   hasLivePricing = true;

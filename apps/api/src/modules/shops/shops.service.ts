@@ -270,11 +270,17 @@ export class ShopsService {
       newValue: { shopName: shop.shopName, method: "oauth_setup" },
     });
 
-    // Auto-activate FREE subscription plan — do not swallow failures here.
-    await this.sellerSubscriptionsService.autoActivateFreePlan(
-      shop.id,
-      marketCountry,
-    );
+    // Auto-activate FREE subscription plan — recoverable if plan activation fails
+    try {
+      await this.sellerSubscriptionsService.autoActivateFreePlan(
+        shop.id,
+        marketCountry,
+      );
+    } catch (err: any) {
+      this.logger.warn(
+        `Failed to auto-activate free plan for shop ${shop.id}: ${err?.message}`,
+      );
+    }
 
     const pendingKey = pendingReferralKey(userId);
     try {
@@ -375,11 +381,17 @@ export class ShopsService {
       newValue: { shopName: shop.shopName },
     });
 
-    // Auto-activate FREE subscription plan
-    await this.sellerSubscriptionsService.autoActivateFreePlan(
-      shop.id,
-      marketCountry,
-    );
+    // Auto-activate FREE subscription plan — recoverable if fails
+    try {
+      await this.sellerSubscriptionsService.autoActivateFreePlan(
+        shop.id,
+        marketCountry,
+      );
+    } catch (err: any) {
+      this.logger.warn(
+        `Failed to auto-activate free plan for shop ${shop.id}: ${err?.message}`,
+      );
+    }
 
     return shop;
   }

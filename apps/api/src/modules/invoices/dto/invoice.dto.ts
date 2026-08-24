@@ -89,6 +89,16 @@ export class InvoiceLineItemDto {
   @IsNumber()
   @Min(0)
   wastagePercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  discountAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  setDiscountAmount?: number;
 }
 
 export class CreateInvoiceDto {

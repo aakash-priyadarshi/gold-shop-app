@@ -368,4 +368,72 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
       } as any),
     ).resolves.toBeDefined();
   });
+
+  it("preserves line/SET discount when expanding breakdown components so persisted taxable subtotal is discounted", async () => {
+    mockPrisma.shop.findUnique.mockResolvedValue({
+      id: "shop-np",
+      shopName: "Kathmandu Gold",
+      country: "NP",
+      currency: "NPR",
+      address: "New Road",
+      city: "Kathmandu",
+      vatNumber: null,
+      vatRegistrationStatus: "NOT_REGISTERED",
+      panNumber: null,
+      invoiceSettings: {},
+    });
+    mockPrisma.taxRuleConfig.findMany.mockResolvedValue([
+      {
+        category: "PRECIOUS_METAL",
+        rate: 0.005,
+        taxType: "SKILL_PROMOTION_FEE",
+        taxName: "Skill Promotion Fee",
+      },
+      {
+        category: "MAKING_CHARGE",
+        rate: 0.005,
+        taxType: "SKILL_PROMOTION_FEE",
+        taxName: "Skill Promotion Fee",
+      },
+      {
+        category: "GEMSTONE",
+        rate: 0.13,
+        taxType: "VAT",
+        taxName: "VAT",
+      },
+    ]);
+
+    // Raw components = 100000 (metal) + 20000 (making) + 30000 (gemstone) = 150000.
+    // 10% SET discount -> line amount is 135000 (unitPrice = 135000).
+    const result = await service.create("shop-np", {
+      customerName: "Walk-in Customer",
+      invoiceCountry: "NP",
+      currency: "NPR",
+      lineItems: [
+        {
+          label: "Bridal Set",
+          category: "SET",
+          quantity: 1,
+          unitPrice: 135000,
+          amount: 135000,
+          metalCost: 100000,
+          makingCost: 20000,
+          gemstoneCost: 30000,
+          setDiscountAmount: 15000,
+        },
+      ],
+    } as any);
+
+    // Subtotal should be the discounted 135000, NOT the raw 150000.
+    expect(result.subtotal).toBe(135000);
+    expect(result.taxableAmount).toBe(135000);
+
+    // Expanded lines sum exactly to 135000
+    const lineItems = result.lineItems as Array<{ amount: number }>;
+    const lineTotal = lineItems.reduce(
+      (s: number, li: any) => s + li.amount,
+      0,
+    );
+    expect(lineTotal).toBe(135000);
+  });
 });

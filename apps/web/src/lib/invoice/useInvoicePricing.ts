@@ -436,13 +436,21 @@ export function useInvoicePricing(opts: UseInvoicePricingOptions) {
             const cost = Number(res.data?.totalCost ?? res.data?.cost ?? 0);
             gemTotal += cost;
             gems.push({
-              type: String(gem.type || "GEMSTONE"),
+              type: String(gem.type || "OTHER"),
               cut: String(gem.cut || ""),
               clarity: String(gem.clarity || ""),
               caratWeight:
                 gem.caratWeight != null ? String(gem.caratWeight) : "",
               color: String(gem.color || ""),
               cost: cost > 0 ? String(cost) : String(gem.cost ?? ""),
+              quality: gem.quality,
+              origin: gem.origin,
+              sizeMm: gem.sizeMm,
+              count: gem.count,
+              cutGrade: gem.cutGrade,
+              lab: gem.lab,
+              certNumber: gem.certNumber,
+              reportUrl: gem.reportUrl,
             });
           }
           if (gems.length > 0) {

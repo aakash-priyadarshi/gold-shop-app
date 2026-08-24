@@ -239,8 +239,39 @@ export class InventoryService {
       const makingCharge = dto.makingChargeNpr ?? item.makingChargeNpr;
       const gemstoneValue = dto.gemstoneValueNpr ?? item.gemstoneValueNpr;
       const tax = dto.taxNpr ?? item.taxNpr;
-      updateData.totalPriceNpr =
-        metalValue + makingCharge + gemstoneValue + tax;
+      const baseSum = metalValue + makingCharge + gemstoneValue + tax;
+
+      const isSet =
+        dto.jewelleryType === "SET" ||
+        (!dto.jewelleryType && item.jewelleryType === "SET");
+
+      if (isSet) {
+        const discountType =
+          (dto as any).setDiscountType ?? item.setDiscountType;
+        const discountVal =
+          (dto as any).setDiscountValue ?? item.setDiscountValue;
+        let discount = 0;
+        if (
+          discountType === "PERCENT" &&
+          discountVal != null &&
+          Number(discountVal) > 0
+        ) {
+          discount = (baseSum * Number(discountVal)) / 100;
+        } else if (
+          discountType === "FIXED" &&
+          discountVal != null &&
+          Number(discountVal) > 0
+        ) {
+          discount = Number(discountVal);
+        }
+        discount = Math.min(Math.max(0, discount), baseSum);
+        updateData.totalPriceNpr = Math.max(
+          0,
+          Math.round((baseSum - discount) * 100) / 100,
+        );
+      } else {
+        updateData.totalPriceNpr = Math.round(baseSum * 100) / 100;
+      }
     }
 
     const updatedItem = await this.prisma.inventoryItem.update({

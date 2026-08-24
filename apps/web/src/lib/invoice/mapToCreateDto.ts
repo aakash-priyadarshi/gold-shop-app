@@ -118,6 +118,12 @@ export function mapLineItemsToApi(
               metalWeightG: li.metalWeightG
                 ? parseFloat(li.metalWeightG) || undefined
                 : undefined,
+              setDiscountAmount: li.setDiscountAmount
+                ? Number(li.setDiscountAmount)
+                : undefined,
+              discountAmount: li.setDiscountAmount
+                ? Number(li.setDiscountAmount)
+                : undefined,
             }
           : {}),
       };

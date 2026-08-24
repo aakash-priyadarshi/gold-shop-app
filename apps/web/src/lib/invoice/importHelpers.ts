@@ -3,6 +3,7 @@ import {
   extractGemstonesFromItem,
   extractMetalTypeFromComposition,
   normalizeMetalCode,
+  normalizeMetalMarketKey,
 } from "@gold-shop/shared";
 import {
   emptyGemstone,
@@ -12,7 +13,11 @@ import {
 } from "./lineItemTypes";
 import { isBlankLine, roundMoney2 } from "./calculateLineTotals";
 
-export { normalizeMetalCode, extractMetalTypeFromComposition };
+export {
+  normalizeMetalCode,
+  normalizeMetalMarketKey,
+  extractMetalTypeFromComposition,
+};
 
 export function buildMetalPartsFromCatalogItem(item: any): MetalPart[] {
   const links = Array.isArray(item?.setComponents) ? item.setComponents : [];
@@ -45,6 +50,7 @@ export function metalRateBaseKey(metalType: string): string | null {
   if (m.startsWith("GOLD")) return "GOLD";
   if (m.startsWith("SILVER")) return "SILVER";
   if (m.startsWith("PLATINUM")) return "PLATINUM";
+  if (m.startsWith("PALLADIUM")) return "PALLADIUM";
   return null;
 }
 
@@ -54,13 +60,16 @@ export function resolveMetalRatePerGram(
   marketRates: { metals?: Record<string, number> } | null,
 ): number | null {
   if (!metalType) return null;
+  const marketKey = normalizeMetalMarketKey(metalType);
   const baseKey = metalRateBaseKey(metalType);
   const shopRate =
     shopPrices?.baseMetalPrices?.[metalType] ??
+    (marketKey ? shopPrices?.baseMetalPrices?.[marketKey] : undefined) ??
     (baseKey ? shopPrices?.baseMetalPrices?.[baseKey] : undefined);
   if (shopRate && shopRate > 0) return Number(shopRate);
 
   let live =
+    (marketKey ? marketRates?.metals?.[marketKey] : undefined) ||
     marketRates?.metals?.[metalType] ||
     marketRates?.metals?.[metalType.toLowerCase()];
   if (!live && baseKey && marketRates?.metals) {
@@ -126,7 +135,7 @@ function gemstonesFromCatalogItem(item: any): RichLineItem["gemstones"] {
     return [
       {
         ...emptyGemstone(),
-        type: "GEMSTONE",
+        type: "OTHER",
         cost: String(gemCost),
       },
     ];

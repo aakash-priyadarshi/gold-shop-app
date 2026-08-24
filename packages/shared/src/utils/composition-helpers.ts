@@ -217,6 +217,28 @@ export function extractMetalTypeFromComposition(composition: unknown): string | 
   return undefined;
 }
 
+export const METAL_TO_MARKET_KEY_MAP: Record<string, string> = {
+  PLATINUM_950: "PLATINUM_PT950",
+  PLATINUM_PT950: "PLATINUM_PT950",
+  PLATINUM_900: "PLATINUM_PT900",
+  PLATINUM_PT900: "PLATINUM_PT900",
+  PALLADIUM_950: "PALLADIUM_PD950",
+  PALLADIUM_PD950: "PALLADIUM_PD950",
+  PALLADIUM_500: "PALLADIUM_PD500",
+  PALLADIUM_PD500: "PALLADIUM_PD500",
+};
+
+export function normalizeMetalMarketKey(metal?: string | null): string {
+  if (!metal) return "";
+  const code = normalizeMetalCode(metal);
+  return (
+    METAL_TO_MARKET_KEY_MAP[code] ||
+    METAL_TO_MARKET_KEY_MAP[metal.toUpperCase()] ||
+    code ||
+    metal
+  );
+}
+
 /**
  * Purity as fraction (0–1). Returns 0.916 for 22K, 0.999 for 24K, etc.
  */
@@ -224,28 +246,56 @@ export function extractPurityFromComposition(composition: unknown): number {
   if (!composition || typeof composition !== "object") return 1;
   const c = composition as Record<string, unknown>;
 
+  const metalName = String(
+    c.preciousMetal ||
+      c.metal ||
+      c.primaryMetal ||
+      c.alloy ||
+      c.coreMetal ||
+      (typeof c.baseAlloy === "object" && c.baseAlloy
+        ? (c.baseAlloy as any).metal
+        : "") ||
+      "",
+  ).toUpperCase();
+
+  const isExplicitNonGold =
+    metalName.startsWith("SILVER") ||
+    metalName.startsWith("PLATINUM") ||
+    metalName.startsWith("PALLADIUM") ||
+    metalName.startsWith("COPPER") ||
+    metalName.startsWith("BRASS") ||
+    metalName.startsWith("BRONZE") ||
+    metalName.startsWith("STEEL") ||
+    metalName.startsWith("TITANIUM");
+
   // Check direct number
-  const raw = c.purity ?? (typeof c.baseAlloy === "object" && c.baseAlloy ? (c.baseAlloy as any).purity : undefined);
+  const raw =
+    c.purity ??
+    (typeof c.baseAlloy === "object" && c.baseAlloy
+      ? (c.baseAlloy as any).purity
+      : undefined);
   if (typeof raw === "number" && Number.isFinite(raw)) {
     if (raw <= 1 && raw > 0) return raw;
-    // Map gold karats 8K–24K
-    const KARAT_FRACTIONS: Record<number, number> = {
-      24: 0.999,
-      23: 0.958,
-      22: 0.916,
-      21: 0.875,
-      20: 0.833,
-      18: 0.75,
-      16: 0.667,
-      14: 0.585,
-      12: 0.5,
-      10: 0.417,
-      9: 0.375,
-      8: 0.333,
-    };
-    const rounded = Math.round(raw);
-    if (KARAT_FRACTIONS[rounded]) {
-      return KARAT_FRACTIONS[rounded];
+    // Map gold karats 8K–24K ONLY when metal is gold (or not explicitly non-gold)
+    if (!isExplicitNonGold) {
+      const KARAT_FRACTIONS: Record<number, number> = {
+        24: 0.999,
+        23: 0.958,
+        22: 0.916,
+        21: 0.875,
+        20: 0.833,
+        18: 0.75,
+        16: 0.667,
+        14: 0.585,
+        12: 0.5,
+        10: 0.417,
+        9: 0.375,
+        8: 0.333,
+      };
+      const rounded = Math.round(raw);
+      if (KARAT_FRACTIONS[rounded]) {
+        return KARAT_FRACTIONS[rounded];
+      }
     }
     if (raw > 1 && raw <= 100) return raw / 100;
     if (raw > 100 && raw <= 1000) return raw / 1000;
@@ -269,6 +319,8 @@ export function extractPurityFromComposition(composition: unknown): number {
       PLATINUM_950: 0.95,
       PLATINUM_900: 0.9,
       PALLADIUM_950: 0.95,
+      PALLADIUM_PD950: 0.95,
+      PALLADIUM_PD500: 0.5,
     };
     if (purityMap[metalCode]) return purityMap[metalCode];
   }
@@ -283,6 +335,10 @@ export interface ExtractedGemstone {
   caratWeight: string;
   color: string;
   cost: string;
+  quality?: string;
+  origin?: string;
+  sizeMm?: number | string;
+  count?: number | string;
   cutGrade?: string;
   lab?: string;
   certNumber?: string;
@@ -298,7 +354,10 @@ export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
 
   // Check if item is a SET with components
   const links = Array.isArray(item.setComponents) ? item.setComponents : [];
-  if ((item.jewelleryType === "SET" || item.composition?.kind === "SET") && links.length > 0) {
+  if (
+    (item.jewelleryType === "SET" || item.composition?.kind === "SET") &&
+    links.length > 0
+  ) {
     const result: ExtractedGemstone[] = [];
     for (const link of links) {
       const comp = link.componentItem || link;
@@ -306,7 +365,8 @@ export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
       for (const g of compGems) {
         result.push({
           ...g,
-          sourceItemLabel: g.sourceItemLabel || comp.nameEn || comp.sku || "Set component",
+          sourceItemLabel:
+            g.sourceItemLabel || comp.nameEn || comp.sku || "Set component",
         });
       }
     }
@@ -325,7 +385,17 @@ export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
       clarity: String(g.clarity || ""),
       caratWeight: g.caratWeight != null ? String(g.caratWeight) : "",
       color: String(g.color || ""),
-      cost: g.valueNpr != null ? String(g.valueNpr) : g.cost != null ? String(g.cost) : "",
+      cost:
+        g.valueNpr != null
+          ? String(g.valueNpr)
+          : g.cost != null
+            ? String(g.cost)
+            : "",
+      quality: g.quality ? String(g.quality) : undefined,
+      origin: g.origin ? String(g.origin) : undefined,
+      sizeMm: g.sizeMm != null ? g.sizeMm : undefined,
+      count:
+        g.count != null ? g.count : g.pieces != null ? g.pieces : undefined,
       cutGrade: g.cutGrade,
       lab: g.lab,
       certNumber: g.certNumber,
@@ -339,7 +409,7 @@ export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
   if (gemValue > 0) {
     return [
       {
-        type: "GEMSTONE",
+        type: "OTHER",
         cut: "",
         clarity: "",
         caratWeight: "",
