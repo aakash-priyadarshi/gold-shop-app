@@ -83,21 +83,22 @@ export const CANONICAL_GEMSTONE_LABS = [
  * Normalize a gemstone type string to canonical uppercase code (e.g. "Diamond" -> "DIAMOND")
  */
 export function normalizeGemstoneType(raw?: string | null): string {
-  if (!raw) return "OTHER";
+  if (!raw) return "";
   const cleaned = String(raw).trim().toUpperCase().replace(/\s+/g, "_");
+  if (!cleaned) return "";
   const found = CANONICAL_GEMSTONE_TYPES.find(
     (g) => g.value === cleaned || g.label.toUpperCase() === cleaned,
   );
   if (found) return found.value;
   if (cleaned === "EMERALD_CUT") return "EMERALD";
-  return cleaned || "OTHER";
+  return cleaned;
 }
 
 /**
  * Get human display label for a gemstone code (e.g. "DIAMOND" -> "Diamond")
  */
 export function getGemstoneDisplayLabel(code?: string | null): string {
-  if (!code) return "Other";
+  if (!code) return "";
   const normalized = normalizeGemstoneType(code);
   const found = CANONICAL_GEMSTONE_TYPES.find((g) => g.value === normalized);
   return found ? found.label : code;
@@ -168,25 +169,29 @@ export function normalizeMetalCode(metal?: string | null, purity?: string | numb
 }
 
 /**
- * Extract normalized metal type from any composition structure
- * Handles { baseAlloy: { metal, purity } }, { preciousMetal }, { metal, purity }, etc.
+ * Extract normalized precious metal code from various composition structures:
+ * - Direct alloyType / metalType / composition string ("GOLD_22K")
+ * - Composition object with preciousMetal + purity: { preciousMetal: "GOLD", purity: "22K" }
+ * - Composition object with nested baseAlloy: { baseAlloy: { metal: "GOLD", purity: "22K" } }
  */
 export function extractMetalTypeFromComposition(composition: unknown): string | undefined {
-  if (!composition || typeof composition !== "object") return undefined;
-  const c = composition as Record<string, unknown>;
+  if (!composition) return undefined;
 
-  // 1. Direct explicit metal code if already valid
-  if (typeof c.metalType === "string" && c.metalType) {
-    return normalizeMetalCode(c.metalType, typeof c.purity === "string" || typeof c.purity === "number" ? c.purity : undefined);
+  // 1. Direct string
+  if (typeof composition === "string") {
+    return normalizeMetalCode(composition);
   }
 
-  // 2. Direct string fields
+  if (typeof composition !== "object") return undefined;
+  const c = composition as Record<string, unknown>;
+
+  // 2. Direct top-level metal key: metalType, metal, alloyType, baseMetal, preciousMetal, etc.
   for (const key of [
+    "metalType",
+    "alloyType",
     "preciousMetal",
     "metal",
-    "primaryMetal",
-    "alloy",
-    "coreMetal",
+    "baseMetal",
     "standardAlloy",
   ]) {
     if (typeof c[key] === "string" && c[key]) {
@@ -223,6 +228,25 @@ export function extractPurityFromComposition(composition: unknown): number {
   const raw = c.purity ?? (typeof c.baseAlloy === "object" && c.baseAlloy ? (c.baseAlloy as any).purity : undefined);
   if (typeof raw === "number" && Number.isFinite(raw)) {
     if (raw <= 1 && raw > 0) return raw;
+    // Map gold karats 8K–24K
+    const KARAT_FRACTIONS: Record<number, number> = {
+      24: 0.999,
+      23: 0.958,
+      22: 0.916,
+      21: 0.875,
+      20: 0.833,
+      18: 0.75,
+      16: 0.667,
+      14: 0.585,
+      12: 0.5,
+      10: 0.417,
+      9: 0.375,
+      8: 0.333,
+    };
+    const rounded = Math.round(raw);
+    if (KARAT_FRACTIONS[rounded]) {
+      return KARAT_FRACTIONS[rounded];
+    }
     if (raw > 1 && raw <= 100) return raw / 100;
     if (raw > 100 && raw <= 1000) return raw / 1000;
   }

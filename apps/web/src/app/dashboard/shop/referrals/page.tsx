@@ -238,7 +238,7 @@ export default function SellerReferralsPage() {
       toast({
         title: t("Pro months added"),
         description: months
-          ? `${months} month(s) of Pro added from leftover commission.`
+          ? `${months} ${t("month(s) of Pro added from leftover commission.")}`
           : t("Leftover commission was converted to Pro time."),
       });
       loadReferrals();
@@ -474,6 +474,21 @@ export default function SellerReferralsPage() {
                         bankRoutingCode: e.target.value,
                       })
                     }
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">
+                    <T>Bank Country</T>
+                  </Label>
+                  <Input
+                    value={bankForm.bankCountry}
+                    onChange={(e) =>
+                      setBankForm({
+                        ...bankForm,
+                        bankCountry: e.target.value,
+                      })
+                    }
+                    placeholder={t("e.g. NP, IN, AE, US")}
                   />
                 </div>
               </div>

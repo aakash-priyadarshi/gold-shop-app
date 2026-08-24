@@ -60,19 +60,25 @@ describe("composition-helpers", () => {
     it("extracts numeric purity or derives from metal code", () => {
       expect(extractPurityFromComposition({ baseAlloy: { metal: "GOLD", purity: "22K" } })).toBeCloseTo(0.916, 3);
       expect(extractPurityFromComposition({ baseAlloy: { metal: "GOLD", purity: "24K" } })).toBeCloseTo(0.999, 3);
-      expect(extractPurityFromComposition({ purity: 22 })).toBeCloseTo(0.22, 2);
+      expect(extractPurityFromComposition({ purity: 22 })).toBeCloseTo(0.916, 3);
+      expect(extractPurityFromComposition({ purity: 18 })).toBeCloseTo(0.75, 2);
+      expect(extractPurityFromComposition({ purity: 14 })).toBeCloseTo(0.585, 3);
+      expect(extractPurityFromComposition({ purity: 24 })).toBeCloseTo(0.999, 3);
       expect(extractPurityFromComposition({ purityPercent: 91.6 })).toBeCloseTo(0.916, 3);
     });
   });
 
   describe("gemstone helpers", () => {
     it("normalizes gemstone types and labels", () => {
+      expect(normalizeGemstoneType("")).toBe("");
+      expect(normalizeGemstoneType(null)).toBe("");
       expect(normalizeGemstoneType("Diamond")).toBe("DIAMOND");
       expect(normalizeGemstoneType("diamond")).toBe("DIAMOND");
       expect(normalizeGemstoneType("DIAMOND")).toBe("DIAMOND");
       expect(normalizeGemstoneType("ruby")).toBe("RUBY");
       expect(getGemstoneDisplayLabel("DIAMOND")).toBe("Diamond");
       expect(getGemstoneDisplayLabel("RUBY")).toBe("Ruby");
+      expect(getGemstoneDisplayLabel("")).toBe("");
     });
 
     it("normalizes gemstone cuts", () => {

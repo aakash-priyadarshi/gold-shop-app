@@ -1517,11 +1517,25 @@ export default function CreateInvoicePage() {
 
           if (hasLivePricing) {
             setLineItems((prev) =>
-              prev.map((li) =>
-                li.inventoryItemId === item.id
-                  ? { ...li, gemstones: updatedGemstones }
-                  : li,
-              ),
+              prev.map((li) => {
+                if (li.inventoryItemId !== item.id) return li;
+                let setDiscountAmount = li.setDiscountAmount;
+                if (li.isSet && li.setDiscountType && li.setDiscountValue != null) {
+                  const mCost = parseFloat(li.metalCost || "0") || 0;
+                  const mkCost = parseFloat(li.makingCost || "0") || 0;
+                  const gCost = updatedGemstones.reduce(
+                    (sum, g) => sum + (parseFloat(g.cost || "0") || 0),
+                    0,
+                  );
+                  const rawSum = mCost + mkCost + gCost;
+                  if (li.setDiscountType === "PERCENT") {
+                    setDiscountAmount = Math.round((rawSum * Number(li.setDiscountValue)) / 100);
+                  } else if (li.setDiscountType === "FIXED") {
+                    setDiscountAmount = Math.min(rawSum, Number(li.setDiscountValue));
+                  }
+                }
+                return { ...li, gemstones: updatedGemstones, setDiscountAmount };
+              }),
             );
             toast({
               title: t("Gemstones priced from live rates"),
@@ -3776,7 +3790,7 @@ export default function CreateInvoicePage() {
                               </span>
                               {item.setDiscountAmount != null && item.setDiscountAmount > 0 && (
                                 <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                                  Set Discount ({item.setDiscountType === "PERCENT" ? `${item.setDiscountValue}%` : "Fixed"}): -{currencySymbol}{" "}
+                                  <T>Set Discount</T> ({item.setDiscountType === "PERCENT" ? `${item.setDiscountValue}%` : <T>Fixed</T>}): -{currencySymbol}{" "}
                                   {(item.setDiscountAmount * item.quantity).toLocaleString()}
                                 </span>
                               )}

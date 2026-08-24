@@ -793,31 +793,33 @@ export class InventoryService {
           const compWeight = comp.totalWeightGrams || 0;
           setWeight += compWeight;
 
-          if (compWeight <= 0) continue;
+          let compNewMetal = 0;
+          let compNewMaking = comp.makingChargeNpr || 0;
 
-          const compSpecificRate = compMetalType ? rateByMetal[compMetalType] : undefined;
-          const compBaseKey = compMetalType ? compMetalType.split("_")[0] : undefined;
-          const compBaseRate = compBaseKey ? rateByMetal[compBaseKey] : undefined;
-          const compRate = compSpecificRate ?? compBaseRate;
+          if (compWeight > 0) {
+            const compSpecificRate = compMetalType ? rateByMetal[compMetalType] : undefined;
+            const compBaseKey = compMetalType ? compMetalType.split("_")[0] : undefined;
+            const compBaseRate = compBaseKey ? rateByMetal[compBaseKey] : undefined;
+            const compRate = compSpecificRate ?? compBaseRate;
 
-          if (compRate == null) {
-            skipped.push({
-              id: item.id,
-              name: item.nameEn,
-              reason: compMetalType
-                ? `No rate for component metal ${compMetalType}`
-                : "Unknown component metal type",
-            });
-            setSkipped = true;
-            break;
+            if (compRate == null) {
+              skipped.push({
+                id: item.id,
+                name: item.nameEn,
+                reason: compMetalType
+                  ? `No rate for component metal ${compMetalType}`
+                  : "Unknown component metal type",
+              });
+              setSkipped = true;
+              break;
+            }
+
+            const compPurity = compSpecificRate != null ? 1 : extractPurityFromComposition(comp.composition);
+            compNewMetal = Math.round(compWeight * compRate * compPurity);
+            if (makingMode === "RECALC_PERCENT") {
+              compNewMaking = Math.round(compNewMetal * (makingPct / 100));
+            }
           }
-
-          const compPurity = compSpecificRate != null ? 1 : extractPurityFromComposition(comp.composition);
-          const compNewMetal = Math.round(compWeight * compRate * compPurity);
-          const compNewMaking =
-            makingMode === "RECALC_PERCENT"
-              ? Math.round(compNewMetal * (makingPct / 100))
-              : (comp.makingChargeNpr || 0);
 
           setMetal += compNewMetal;
           setMaking += compNewMaking;

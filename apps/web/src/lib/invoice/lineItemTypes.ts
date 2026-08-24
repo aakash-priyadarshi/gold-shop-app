@@ -74,7 +74,7 @@ export const METAL_TYPES = [
   { value: "PLATINUM_900", label: "Platinum 900" },
 ] as const;
 
-export {
+import {
   CANONICAL_GEMSTONE_TYPES,
   CANONICAL_GEMSTONE_CUTS,
   CANONICAL_GEMSTONE_CLARITIES,
@@ -85,19 +85,18 @@ export {
   normalizeGemstoneType,
 } from "@gold-shop/shared";
 
-export const GEMSTONE_TYPES = [
-  "Diamond",
-  "Ruby",
-  "Emerald",
-  "Sapphire",
-  "Pearl",
-  "Opal",
-  "Topaz",
-  "Amethyst",
-  "Garnet",
-  "Tourmaline",
-  "Other",
-] as const;
+export {
+  CANONICAL_GEMSTONE_TYPES,
+  CANONICAL_GEMSTONE_CUTS,
+  CANONICAL_GEMSTONE_CLARITIES,
+  CANONICAL_GEMSTONE_COLORS,
+  CANONICAL_GEMSTONE_CUT_GRADES,
+  CANONICAL_GEMSTONE_LABS,
+  getGemstoneDisplayLabel,
+  normalizeGemstoneType,
+};
+
+export const GEMSTONE_TYPES = CANONICAL_GEMSTONE_TYPES;
 
 export const FALLBACK_CATEGORY_TAX_RATES: Record<
   string,

@@ -48,11 +48,11 @@ interface ReferralData {
   completedAt: string | null;
   referrerRewarded: boolean;
   refereeRewarded: boolean;
-  referrerShop: {
+  referrerShop?: {
     id: string;
     shopName: string;
-    user: { firstName: string; lastName: string; email: string };
-  };
+    user?: { firstName?: string; lastName?: string; email?: string };
+  } | null;
   refereeShop: { shopName: string; isVerified: boolean } | null;
 }
 
@@ -114,7 +114,7 @@ export default function AdminReferralsPage() {
   const [commissionsLoading, setCommissionsLoading] = useState(false);
   const [payouts, setPayouts] = useState<PayoutRequestRow[]>([]);
   const [payoutsLoading, setPayoutsLoading] = useState(false);
-  const [payoutRef, setPayoutRef] = useState("");
+  const [payoutRefs, setPayoutRefs] = useState<Record<string, string>>({});
 
   const loadReferrals = useCallback(async () => {
     setLoading(true);
@@ -183,6 +183,7 @@ export default function AdminReferralsPage() {
   }, [loadPayouts]);
 
   const handleComplete = async (referralId: string) => {
+    if (!window.confirm("Mark this referral as completed?")) return;
     setActionLoading(referralId);
     try {
       await sellerPerformanceApi.completeReferral(referralId);
@@ -199,7 +200,9 @@ export default function AdminReferralsPage() {
     }
   };
 
-  const handleGrantPro = async (shopId: string) => {
+  const handleGrantPro = async (shopId?: string) => {
+    if (!shopId) return;
+    if (!window.confirm("Are you sure you want to gift 1 month of Pro to this shop?")) return;
     setActionLoading(`pro-${shopId}`);
     try {
       await sellerPerformanceApi.adminGrantReferralPro(shopId, { months: 1 });
@@ -219,11 +222,20 @@ export default function AdminReferralsPage() {
     id: string,
     action: "paid" | "rejected" | "grant_sub",
   ) => {
-    setActionLoading(`${action}-${id}`);
+    const promptMsg =
+      action === "paid"
+        ? "Are you sure you want to mark this payout as paid?"
+        : action === "rejected"
+          ? "Are you sure you want to return this payout to the referral wallet?"
+          : "Are you sure you want to convert this payout to Pro months?";
+    if (!window.confirm(promptMsg)) return;
+
+    setActionLoading(id);
     try {
+      const refVal = payoutRefs[id]?.trim() || undefined;
       await sellerPerformanceApi.resolveReferralPayout(id, {
         action,
-        payoutReference: payoutRef || undefined,
+        payoutReference: refVal,
       });
       toast({
         title:
@@ -233,7 +245,11 @@ export default function AdminReferralsPage() {
               ? "Returned to wallet"
               : "Converted to Pro months",
       });
-      setPayoutRef("");
+      setPayoutRefs((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
       loadPayouts();
       loadCommissions();
     } catch (error: any) {
@@ -440,11 +456,15 @@ export default function AdminReferralsPage() {
                             <TableCell>
                               <div>
                                 <p className="font-medium text-sm">
-                                  {ref.referrerShop?.shopName}
+                                  {ref.referrerShop?.shopName || "—"}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {ref.referrerShop?.user.firstName}{" "}
-                                  {ref.referrerShop?.user.lastName}
+                                  {[
+                                    ref.referrerShop?.user?.firstName,
+                                    ref.referrerShop?.user?.lastName,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ") || ref.referrerShop?.user?.email || "—"}
                                 </p>
                               </div>
                             </TableCell>
@@ -513,7 +533,7 @@ export default function AdminReferralsPage() {
                                   Mark complete
                                 </Button>
                               )}
-                              {ref.status === "COMPLETED" && (
+                              {ref.status === "COMPLETED" && ref.referrerShop?.id && (
                                 <div className="flex flex-col gap-1">
                                   <span className="text-xs text-green-600 font-medium">
                                     Earning on paid invoices
@@ -522,7 +542,7 @@ export default function AdminReferralsPage() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() =>
-                                      handleGrantPro(ref.referrerShop.id)
+                                      handleGrantPro(ref.referrerShop?.id)
                                     }
                                     disabled={
                                       actionLoading ===
@@ -612,16 +632,6 @@ export default function AdminReferralsPage() {
                     details here. Send the transfer from your bank, then mark
                     paid — or convert the leftover to Pro months instead.
                   </p>
-                  <div className="max-w-sm">
-                    <Label className="text-xs">
-                      Bank / Wise reference (optional)
-                    </Label>
-                    <Input
-                      value={payoutRef}
-                      onChange={(e) => setPayoutRef(e.target.value)}
-                      placeholder="e.g. Wise-12345"
-                    />
-                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   {payoutsLoading ? (
@@ -654,7 +664,12 @@ export default function AdminReferralsPage() {
                               </p>
                             </TableCell>
                             <TableCell>
-                              {row.amount} {row.currency}
+                              <p className="font-medium">
+                                {new Intl.NumberFormat(undefined, {
+                                  style: "currency",
+                                  currency: row.currency || "USD",
+                                }).format(row.amount)}
+                              </p>
                               {row.monthsGranted ? (
                                 <p className="text-xs text-muted-foreground">
                                   {row.monthsGranted} mo Pro
@@ -696,40 +711,50 @@ export default function AdminReferralsPage() {
                             </TableCell>
                             <TableCell>
                               {row.status === "PENDING" && (
-                                <div className="flex flex-col gap-1">
+                                <div className="flex flex-col gap-1 min-w-[140px]">
+                                  <Input
+                                    className="h-7 text-xs"
+                                    placeholder="Ref / Wise ID (opt)"
+                                    value={payoutRefs[row.id] || ""}
+                                    onChange={(e) =>
+                                      setPayoutRefs((prev) => ({
+                                        ...prev,
+                                        [row.id]: e.target.value,
+                                      }))
+                                    }
+                                  />
                                   <Button
                                     size="sm"
-                                    className="bg-green-600 hover:bg-green-700"
+                                    className="bg-green-600 hover:bg-green-700 h-7 text-xs"
                                     onClick={() =>
                                       handleResolvePayout(row.id, "paid")
                                     }
-                                    disabled={
-                                      actionLoading === `paid-${row.id}`
-                                    }
+                                    disabled={actionLoading === row.id}
                                   >
+                                    {actionLoading === row.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                    ) : null}
                                     Mark paid
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="outline"
+                                    className="h-7 text-xs"
                                     onClick={() =>
                                       handleResolvePayout(row.id, "grant_sub")
                                     }
-                                    disabled={
-                                      actionLoading === `grant_sub-${row.id}`
-                                    }
+                                    disabled={actionLoading === row.id}
                                   >
                                     Grant Pro instead
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="ghost"
+                                    className="h-7 text-xs text-red-600 hover:text-red-700"
                                     onClick={() =>
                                       handleResolvePayout(row.id, "rejected")
                                     }
-                                    disabled={
-                                      actionLoading === `rejected-${row.id}`
-                                    }
+                                    disabled={actionLoading === row.id}
                                   >
                                     Return to wallet
                                   </Button>
