@@ -97,6 +97,16 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /** Update a value without extending (or removing) its existing TTL. */
+  async setKeepTtl(key: string, value: string): Promise<void> {
+    if (!this.isAvailable()) return;
+    try {
+      await this.client!.set(key, value, "KEEPTTL");
+    } catch (error) {
+      this.logger.error(`Redis SET KEEPTTL error for key ${key}: ${error.message}`);
+    }
+  }
+
   /**
    * Delete a key from Redis
    */

@@ -79,6 +79,7 @@ describe("composition-helpers", () => {
       expect(extractPurityFromComposition({ baseAlloy: { metal: "GOLD", purity: "22K" } })).toBeCloseTo(0.916, 3);
       expect(extractPurityFromComposition({ baseAlloy: { metal: "GOLD", purity: "24K" } })).toBeCloseTo(0.999, 3);
       expect(extractPurityFromComposition({ metal: "GOLD", purity: 22 })).toBeCloseTo(0.916, 3);
+      expect(extractPurityFromComposition({ metalType: "GOLD", purity: 22 })).toBeCloseTo(0.916, 3);
       expect(extractPurityFromComposition({ preciousMetal: "GOLD", purity: 18 })).toBeCloseTo(0.75, 2);
       expect(extractPurityFromComposition({ metal: "GOLD", purity: 14 })).toBeCloseTo(0.585, 3);
       expect(extractPurityFromComposition({ metal: "GOLD", purity: 24 })).toBeCloseTo(0.999, 3);
@@ -91,6 +92,7 @@ describe("composition-helpers", () => {
       expect(extractPurityFromComposition({ metal: "SILVER", purity: 92.5 })).toBeCloseTo(0.925, 3);
       expect(extractPurityFromComposition({ purity: 22 })).toBeCloseTo(0.22, 2);
       expect(extractPurityFromComposition({ metalType: "PALLADIUM_500" })).toBeCloseTo(0.5, 3);
+      expect(extractPurityFromComposition({ metalType: "PALLADIUM_PD500" })).toBeCloseTo(0.5, 3);
     });
   });
 

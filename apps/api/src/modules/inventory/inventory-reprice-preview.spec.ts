@@ -8,7 +8,7 @@ import { InventoryService } from "./inventory.service";
 describe("InventoryService.repricePreview market-rate normalization", () => {
   const prisma = {
     shop: { findFirst: jest.fn() },
-    inventoryItem: { findMany: jest.fn() },
+    inventoryItem: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     shopPriceOverride: { findMany: jest.fn() },
   } as any;
   const marketRates = { getMarketRates: jest.fn() } as any;
@@ -110,5 +110,80 @@ describe("InventoryService.repricePreview market-rate normalization", () => {
       { metalType: "PALLADIUM_950", ratePerGram: 6000, metalValueNpr: 6000 },
       { metalType: "PALLADIUM_500", ratePerGram: 3000, metalValueNpr: 3000 },
     ]);
+  });
+
+  it("keeps SET preview and saved totals at two-decimal currency precision", async () => {
+    prisma.shop.findFirst.mockResolvedValue({
+      id: "shop-1",
+      userId: "user-1",
+      country: "NP",
+      currency: "NPR",
+      makingChargePercent: 0,
+    });
+    prisma.shopPriceOverride.findMany.mockResolvedValue([]);
+    prisma.inventoryItem.findMany.mockResolvedValue([
+      {
+        id: "set-1",
+        nameEn: "Decimal set",
+        sku: "SET-DECIMAL",
+        jewelleryType: "SET",
+        totalWeightGrams: 1,
+        composition: { kind: "SET" },
+        metalValueNpr: 0,
+        makingChargeNpr: 0,
+        gemstoneValueNpr: 0,
+        taxNpr: 0,
+        totalPriceNpr: 0,
+        setDiscountType: "FIXED",
+        setDiscountValue: 0.5,
+        setComponents: [
+          {
+            componentItem: {
+              id: "component-1",
+              nameEn: "Platinum component",
+              sku: "COMPONENT-1",
+              composition: { baseAlloy: { metal: "PLATINUM", purity: "950" } },
+              totalWeightGrams: 1,
+              metalValueNpr: 0,
+              makingChargeNpr: 0,
+              gemstoneValueNpr: 0,
+              taxNpr: 0,
+              totalPriceNpr: 0,
+            },
+          },
+        ],
+      },
+    ]);
+    marketRates.getMarketRates.mockResolvedValue({
+      metals: { PLATINUM_PT950: 101 },
+    });
+
+    const preview = await service.repricePreview("shop-1", "user-1", {
+      mode: "FROM_MARKET_RATES",
+    });
+
+    expect(preview.items[0].new.totalPriceNpr).toBe(100.5);
+
+    prisma.inventoryItem.findUnique.mockResolvedValue({
+      id: "set-1",
+      shopId: "shop-1",
+      jewelleryType: "SET",
+      metalValueNpr: 101,
+      makingChargeNpr: 0,
+      gemstoneValueNpr: 0,
+      taxNpr: 0,
+      setDiscountType: "FIXED",
+      setDiscountValue: 0.5,
+    });
+    prisma.inventoryItem.update.mockImplementation(async ({ data }: any) => ({
+      id: "set-1",
+      ...data,
+    }));
+
+    const updated = await service.update("set-1", "user-1", {
+      setDiscountValue: 0.5,
+    });
+
+    expect(updated.totalPriceNpr).toBe(preview.items[0].new.totalPriceNpr);
   });
 });

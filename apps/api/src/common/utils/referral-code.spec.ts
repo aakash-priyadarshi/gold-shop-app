@@ -1,4 +1,9 @@
-import { normalizeReferralCode, pendingReferralKey } from "./referral-code";
+import {
+  decodePendingReferral,
+  encodePendingReferral,
+  normalizeReferralCode,
+  pendingReferralKey,
+} from "./referral-code";
 
 describe("normalizeReferralCode", () => {
   it("trims, uppercases, and strips non-alphanumeric characters", () => {
@@ -20,5 +25,17 @@ describe("normalizeReferralCode", () => {
 describe("pendingReferralKey", () => {
   it("scopes Redis keys by user id", () => {
     expect(pendingReferralKey("user-1")).toBe("pending-referral:user-1");
+  });
+});
+
+describe("pending referral encoding", () => {
+  it("round-trips an originating shop id", () => {
+    const encoded = encodePendingReferral({ code: " ref-123 ", shopId: "shop-1" });
+    expect(encoded).toBe('{"code":"REF123","shopId":"shop-1"}');
+    expect(decodePendingReferral(encoded)).toEqual({ code: "REF123", shopId: "shop-1" });
+  });
+
+  it("remains compatible with legacy plain referral-code values", () => {
+    expect(decodePendingReferral(" ref-123 ")).toEqual({ code: "REF123" });
   });
 });

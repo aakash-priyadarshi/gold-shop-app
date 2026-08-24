@@ -13,6 +13,7 @@ import {
   normalizeMetalCode,
   normalizeMetalMarketKey,
 } from "@gold-shop/shared";
+import { roundMoney } from "../../common/utils/money";
 import { PrismaService } from "../../prisma/prisma.service";
 import { MarketRatesService } from "../core/market-rates/market-rates.service";
 import {
@@ -911,15 +912,15 @@ export class InventoryService {
 
         if (setSkipped) continue;
 
-        const setSum = setMetal + setMaking + setGem + setTax;
+        const setSum = roundMoney(setMetal + setMaking + setGem + setTax);
         let setDiscount = 0;
         if (item.setDiscountType === "PERCENT" && item.setDiscountValue != null) {
           setDiscount = (setSum * Number(item.setDiscountValue)) / 100;
         } else if (item.setDiscountType === "FIXED" && item.setDiscountValue != null) {
           setDiscount = Number(item.setDiscountValue);
         }
-        setDiscount = Math.min(Math.max(0, setDiscount), setSum);
-        const newTotal = Math.max(0, Math.round(setSum - setDiscount));
+        setDiscount = roundMoney(Math.min(Math.max(0, setDiscount), setSum));
+        const newTotal = roundMoney(Math.max(0, setSum - setDiscount));
 
         preview.push({
           id: item.id,

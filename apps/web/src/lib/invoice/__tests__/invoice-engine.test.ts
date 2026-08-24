@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyMakingToLine,
   computeGrandTotal,
+  computeDiscountAmount,
   computeSubtotal,
   computeTaxBreakdown,
   buildMetalPartsFromCatalogItem,
@@ -12,10 +13,18 @@ import {
   importShopQuote,
   lineItemTotal,
   mapLineItemsToApi,
+  roundMoney2,
   validateInvoiceDraft,
 } from "../index";
 
 describe("invoice shared engine", () => {
+  it("preserves cents for live gemstone pricing and recomputed SET discounts", () => {
+    expect(roundMoney2(1234.56)).toBe(1234.56);
+    expect(computeDiscountAmount(1234.56, "PERCENT", 10)).toBe(123.46);
+    expect(computeDiscountAmount(1234.56, "FIXED", 0.5)).toBe(0.5);
+    expect(computeDiscountAmount(1234.56, "FIXED", 2000)).toBe(1234.56);
+  });
+
   it("calculates line total with metal + making + gems", () => {
     const line = emptyLineItem();
     line.label = "22K Ring";

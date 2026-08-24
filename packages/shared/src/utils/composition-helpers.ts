@@ -248,29 +248,10 @@ export function extractPurityFromComposition(composition: unknown): number {
   if (!composition || typeof composition !== "object") return 1;
   const c = composition as Record<string, unknown>;
 
-  const metalName = String(
-    c.preciousMetal ||
-      c.metal ||
-      c.primaryMetal ||
-      c.alloy ||
-      c.coreMetal ||
-      (typeof c.baseAlloy === "object" && c.baseAlloy
-        ? (c.baseAlloy as any).metal
-        : "") ||
-      "",
-  ).toUpperCase();
-
-  const isExplicitNonGold =
-    metalName.startsWith("SILVER") ||
-    metalName.startsWith("PLATINUM") ||
-    metalName.startsWith("PALLADIUM") ||
-    metalName.startsWith("COPPER") ||
-    metalName.startsWith("BRASS") ||
-    metalName.startsWith("BRONZE") ||
-    metalName.startsWith("STEEL") ||
-    metalName.startsWith("TITANIUM");
-
-  const isExplicitGold = metalName === "GOLD" || metalName.startsWith("GOLD");
+  const metalCode = extractMetalTypeFromComposition(composition);
+  const isExplicitGold = Boolean(
+    metalCode === "GOLD" || metalCode?.startsWith("GOLD_"),
+  );
 
   // Check direct number
   const raw =
@@ -310,7 +291,6 @@ export function extractPurityFromComposition(composition: unknown): number {
   }
 
   // Derive from normalized metal code
-  const metalCode = extractMetalTypeFromComposition(composition);
   if (metalCode) {
     const purityMap: Record<string, number> = {
       GOLD_24K: 0.999,

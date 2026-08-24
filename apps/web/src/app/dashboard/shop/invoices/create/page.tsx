@@ -73,7 +73,11 @@ import {
   calcMetalCostFromParts,
   importCatalogItem,
 } from "@/lib/invoice/importHelpers";
-import { computeTaxBreakdown } from "@/lib/invoice/calculateLineTotals";
+import {
+  computeDiscountAmount,
+  computeTaxBreakdown,
+  roundMoney2,
+} from "@/lib/invoice/calculateLineTotals";
 import type { MetalPart } from "@/lib/invoice/lineItemTypes";
 import { mapLineItemsToApi } from "@/lib/invoice/mapToCreateDto";
 import {
@@ -489,10 +493,6 @@ function isMakingManagedLine(li: RichLineItem): boolean {
     li.source === "QUOTE" ||
     (parseFloat(li.baseMakingCost || "") || 0) > 0
   );
-}
-
-function roundMoney2(n: number): number {
-  return Math.round(n * 100) / 100;
 }
 
 /**
@@ -1351,7 +1351,7 @@ export default function CreateInvoicePage() {
                   hasLivePricing = true;
                   return {
                     ...gem,
-                    cost: String(Math.round(res.data.effectiveTotal)),
+                    cost: String(roundMoney2(res.data.effectiveTotal)),
                   };
                 }
               } catch {}
@@ -1371,12 +1371,12 @@ export default function CreateInvoicePage() {
                     (sum, g) => sum + (parseFloat(g.cost || "0") || 0),
                     0,
                   );
-                  const rawSum = mCost + mkCost + gCost;
-                  if (li.setDiscountType === "PERCENT") {
-                    setDiscountAmount = Math.round((rawSum * Number(li.setDiscountValue)) / 100);
-                  } else if (li.setDiscountType === "FIXED") {
-                    setDiscountAmount = Math.min(rawSum, Number(li.setDiscountValue));
-                  }
+                  const rawSum = roundMoney2(mCost + mkCost + gCost);
+                  setDiscountAmount = computeDiscountAmount(
+                    rawSum,
+                    li.setDiscountType,
+                    Number(li.setDiscountValue),
+                  );
                 }
                 return { ...li, gemstones: updatedGemstones, setDiscountAmount };
               }),
