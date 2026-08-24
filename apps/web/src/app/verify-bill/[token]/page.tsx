@@ -216,34 +216,6 @@ export default function VerifyBillPage() {
                 )}
               </div>
 
-              {bill.customerName && (
-                <p className="text-sm">
-                  <span className="text-muted-foreground">
-                    <T>Customer</T>:
-                  </span>{" "}
-                  {bill.customerName}
-                </p>
-              )}
-
-              {bill.lineItems && bill.lineItems.length > 0 && (
-                <div className="space-y-1 border-t pt-3">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    <T>Items</T>
-                  </p>
-                  {bill.lineItems.slice(0, 12).map((li, i) => (
-                    <div
-                      key={i}
-                      className="flex justify-between text-sm gap-4"
-                    >
-                      <span className="truncate">{li.label || "Item"}</span>
-                      <span className="shrink-0 font-medium">
-                        {formatMoney(li.amount, bill.currency)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
               <div className="border-t pt-3 space-y-1">
                 <div className="flex justify-between font-semibold text-lg">
                   <span>

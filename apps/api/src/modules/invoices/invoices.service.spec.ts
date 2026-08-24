@@ -19,10 +19,12 @@ const mockPrisma: any = {
   },
   invoicePayment: {
     findUnique: jest.fn(),
+    findUniqueOrThrow: jest.fn(),
     findFirst: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
   },
   order: { findFirst: jest.fn() },
   journalEntry: { findMany: jest.fn() },
@@ -747,14 +749,16 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
         balanceDue: 1000,
         status: "UNPAID",
       });
-      mockPrisma.invoice.updateMany.mockResolvedValueOnce({ count: 1 });
-      mockPrisma.invoicePayment.update.mockResolvedValueOnce({
+      mockPrisma.invoicePayment.updateMany.mockResolvedValueOnce({ count: 1 });
+      mockPrisma.invoicePayment.findUniqueOrThrow.mockResolvedValueOnce({
         id: "pay-pending-1",
         status: "RECEIVED",
         confirmedByUserId: "staff-1",
         verificationMode: "MANUAL",
         terminalReference: "POS-TERM-8899",
+        amount: 1000,
       });
+      mockPrisma.invoice.updateMany.mockResolvedValueOnce({ count: 1 });
       mockPrisma.invoicePayment.findMany.mockResolvedValueOnce([{ method: "CARD" }]);
       mockPrisma.invoice.findUniqueOrThrow.mockResolvedValueOnce({
         id: "inv-conf-test",

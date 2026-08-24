@@ -116,6 +116,22 @@ export class CreateInvoiceDto {
 
   @IsOptional()
   @IsString()
+  posSessionId?: string;
+
+  @IsOptional()
+  @IsString()
+  posRegisterId?: string;
+
+  @IsOptional()
+  @IsString()
+  posShiftId?: string;
+
+  @IsOptional()
+  @IsString()
+  posCashierUserId?: string;
+
+  @IsOptional()
+  @IsString()
   walkInCustomerId?: string;
 
   /** Marketplace customer selected at the counter or in the CRM. */
@@ -267,6 +283,7 @@ export class UpdatePaymentDto {
   providerTransactionId?: string;
 
   @IsOptional()
+  @IsOptional()
   @IsString()
   terminalReference?: string;
 
@@ -275,20 +292,8 @@ export class UpdatePaymentDto {
   bankReference?: string;
 
   @IsOptional()
-  @IsString()
-  confirmedByUserId?: string;
-
-  @IsOptional()
-  @IsString()
-  verificationMode?: string;
-
-  @IsOptional()
   @IsUUID()
   idempotencyKey?: string;
-
-  @IsOptional()
-  @IsString()
-  status?: "PENDING" | "RECEIVED" | "CONFIRMED" | "FAILED" | "CANCELLED";
 
   @IsOptional()
   @IsDateString()

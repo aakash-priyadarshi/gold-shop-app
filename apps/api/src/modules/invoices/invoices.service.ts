@@ -19,7 +19,7 @@ import {
   isCurrencySupportedForMarket,
   resolveMarketRegion,
 } from "../../common/market/country-currency";
-import { resolveBillTemplateId } from "@gold-shop/shared";
+import { isPosPaymentMethodAllowed, resolveBillTemplateId } from "@gold-shop/shared";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import {
   BackendTaxEngineService,
@@ -578,6 +578,10 @@ export class InvoicesService {
       orderId: dto.orderId || null,
       shopQuoteId: dto.shopQuoteId || null,
       posClientId: dto.posClientId || options.posClientId || null,
+      posSessionId: dto.posSessionId || null,
+      posRegisterId: dto.posRegisterId || null,
+      posShiftId: dto.posShiftId || null,
+      posCashierUserId: dto.posCashierUserId || null,
       walkInCustomerId: dto.walkInCustomerId || null,
       registeredCustomerId: dto.registeredCustomerId || null,
       customerName: dto.customerName,
@@ -952,24 +956,21 @@ export class InvoicesService {
 
       const methodUpper = (dto.paymentMethod || "UNSPECIFIED").toUpperCase();
       const isCash = methodUpper === "CASH";
-      const hasExplicitConfirmedStatus = dto.status === "RECEIVED" || dto.status === "CONFIRMED";
-      const hasExplicitPendingStatus = dto.status === "PENDING";
-      const hasVerificationRef = !!(
-        dto.terminalReference ||
-        dto.bankReference ||
-        dto.providerTransactionId ||
-        dto.reference
-      );
 
-      // Cash is confirmed automatically in register drawer.
-      // Non-cash is confirmed ONLY if explicitly confirmed or confirmedByUserId + verification reference provided.
-      // If non-cash has no reference and not explicitly marked RECEIVED, it is PENDING.
-      const isConfirmed =
-        !hasExplicitPendingStatus &&
-        (isCash ||
-          hasExplicitConfirmedStatus ||
-          (!!dto.confirmedByUserId && hasVerificationRef));
+      // Validate payment method against country configuration
+      if (methodUpper !== "UNSPECIFIED") {
+        const country = invoice.invoiceCountry || undefined;
+        if (!isPosPaymentMethodAllowed(country, methodUpper)) {
+          throw new BadRequestException(
+            `Payment method "${methodUpper}" is not supported for country "${country || "DEFAULT"}"`,
+          );
+        }
+      }
 
+      // Cash is confirmed automatically upon drawer receipt.
+      // ALL non-cash methods (CARD, UPI, ESEWA, KHALTI, BANK_TRANSFER) start as PENDING
+      // and require cashier confirmation via POST /invoices/:id/payments/:paymentId/confirm.
+      const isConfirmed = isCash;
       const paymentStatus: "PENDING" | "RECEIVED" = isConfirmed ? "RECEIVED" : "PENDING";
 
       if (isConfirmed) {
@@ -999,13 +1000,7 @@ export class InvoicesService {
         }
       }
 
-      const verificationMode =
-        dto.verificationMode ||
-        (isCash
-          ? "CASH_AUTO"
-          : isConfirmed
-            ? "MANUALLY_CONFIRMED"
-            : "UNVERIFIED");
+      const verificationMode = isCash ? "CASH_AUTO" : "UNVERIFIED";
       const verifiedAt = isConfirmed
         ? dto.receivedAt
           ? new Date(dto.receivedAt)
@@ -1026,7 +1021,7 @@ export class InvoicesService {
           providerTransactionId: dto.providerTransactionId || null,
           terminalReference: dto.terminalReference || null,
           bankReference: dto.bankReference || null,
-          confirmedByUserId: dto.confirmedByUserId || null,
+          confirmedByUserId: null,
           verifiedAt,
           verificationMode,
           reference:
@@ -1099,11 +1094,11 @@ export class InvoicesService {
     dto: ConfirmPaymentDto = {},
   ) {
     const existingPayment = await this.prisma.invoicePayment.findFirst({
-      where: { id: paymentId, invoiceId: id, status: "PENDING" },
+      where: { id: paymentId, invoiceId: id },
       include: { invoice: true },
     });
     if (!existingPayment) {
-      throw new NotFoundException("Pending payment not found");
+      throw new NotFoundException("Payment not found on this invoice");
     }
     if (existingPayment.invoice.shopId !== shopId) {
       throw new ForbiddenException("Not your invoice");
@@ -1116,13 +1111,38 @@ export class InvoicesService {
     );
 
     return this.prisma.$transaction(async (tx) => {
-      const payment = await tx.invoicePayment.findUnique({
-        where: { id: paymentId },
+      // Atomic claim: only one concurrent request can transition status from PENDING to RECEIVED
+      const claimed = await tx.invoicePayment.updateMany({
+        where: {
+          id: paymentId,
+          invoiceId: id,
+          status: "PENDING",
+        },
+        data: {
+          status: "RECEIVED",
+          confirmedByUserId: userId,
+          verifiedAt: new Date(),
+          verificationMode: "MANUAL",
+          terminalReference: dto.terminalReference || undefined,
+          bankReference: dto.bankReference || undefined,
+          providerTransactionId: dto.providerTransactionId || undefined,
+          reference: dto.reference || dto.terminalReference || dto.bankReference || undefined,
+        },
       });
-      if (!payment || payment.status !== "PENDING") {
-        throw new BadRequestException("Payment is not in PENDING status");
+
+      if (claimed.count === 0) {
+        // Check if already confirmed (idempotent replay)
+        const alreadyReceived = await tx.invoicePayment.findFirst({
+          where: { id: paymentId, invoiceId: id, status: "RECEIVED" },
+        });
+        if (alreadyReceived) {
+          const currentInvoice = await tx.invoice.findUniqueOrThrow({ where: { id } });
+          return { ...currentInvoice, confirmedPayment: alreadyReceived, idempotentReplay: true };
+        }
+        throw new BadRequestException("Payment is not in PENDING status or was already processed");
       }
 
+      const payment = await tx.invoicePayment.findUniqueOrThrow({ where: { id: paymentId } });
       const invoice = await tx.invoice.findFirst({ where: { id, shopId } });
       if (!invoice) throw new NotFoundException("Invoice not found");
       if (invoice.status === "VOID" || invoice.status === "CANCELLED") {
@@ -1148,20 +1168,14 @@ export class InvoicesService {
         throw new BadRequestException("Invoice balance changed; reload before confirming payment");
       }
 
-      const updatedPayment = await tx.invoicePayment.update({
-        where: { id: paymentId },
-        data: {
-          status: "RECEIVED",
-          confirmedByUserId: userId,
-          verifiedAt: new Date(),
-          verificationMode: "MANUAL",
-          terminalReference: dto.terminalReference || payment.terminalReference,
-          bankReference: dto.bankReference || payment.bankReference,
-          providerTransactionId: dto.providerTransactionId || payment.providerTransactionId,
-          reference: dto.reference || dto.terminalReference || dto.bankReference || payment.reference,
-          notes: dto.notes ? (payment.notes ? `${payment.notes} | ${dto.notes}` : dto.notes) : payment.notes,
-        },
-      });
+      if (dto.notes) {
+        await tx.invoicePayment.update({
+          where: { id: paymentId },
+          data: {
+            notes: payment.notes ? `${payment.notes} | ${dto.notes}` : dto.notes,
+          },
+        });
+      }
 
       const receivedPayments = await tx.invoicePayment.findMany({
         where: { invoiceId: id, status: "RECEIVED" },
@@ -1194,19 +1208,19 @@ export class InvoicesService {
       await this.accounting.postInvoicePayment(tx, {
         ...accountingContext,
         shopId,
-        invoicePaymentId: updatedPayment.id,
+        invoicePaymentId: payment.id,
         invoiceNumber: invoice.invoiceNumber,
-        method: updatedPayment.method,
-        transactionDate: updatedPayment.verifiedAt || new Date(),
+        method: payment.method,
+        transactionDate: payment.receivedAt,
       });
 
-      return { ...finalInvoice, confirmedPayment: updatedPayment };
+      return { ...finalInvoice, confirmedPayment: payment };
     });
   }
 
   /**
-   * Public bill verification by QR token. Returns only safe display fields so
-   * anyone scanning the printed QR can confirm the bill is genuine.
+   * Public QR code verification endpoint.
+   * Returns minimal safe verification fields to prevent leaking customer PII.
    */
   async verifyByToken(token: string) {
     const invoice = await this.prisma.invoice.findUnique({
@@ -1223,9 +1237,6 @@ export class InvoicesService {
     const billSettings = await this.prisma.invoiceSettings.findUnique({
       where: { shopId: invoice.shopId },
     });
-    const lineItems = Array.isArray(invoice.lineItems)
-      ? (invoice.lineItems as Array<Record<string, any>>)
-      : [];
     return {
       verified: true,
       invoiceNumber: invoice.invoiceNumber,
@@ -1242,13 +1253,6 @@ export class InvoicesService {
       supplierPhone:
         billSettings?.shopPhone?.trim() || invoice.supplierPhone,
       supplierTaxId: billSettings?.gstin?.trim() || invoice.supplierTaxId,
-      customerName: invoice.customerName,
-      lineItems: lineItems.slice(0, 50).map((li) => ({
-        label: li.label,
-        category: li.category,
-        amount: li.amount,
-        details: li.details,
-      })),
       billSettings: billSettings
         ? {
             shopNameOnBill: billSettings.shopNameOnBill,

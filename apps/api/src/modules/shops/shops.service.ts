@@ -1061,10 +1061,14 @@ export class ShopsService {
     const demoPhone1 = `+9198${Math.floor(10000000 + Math.random() * 90000000)}`;
     const demoPhone2 = `+9198${Math.floor(10000000 + Math.random() * 90000000)}`;
     try {
+      const country = shop.country || "NP";
+      const phoneCountryCode = country === "IN" ? "+91" : country === "NP" ? "+977" : "+1";
       await this.prisma.walkInCustomer.createMany({
         data: [
           {
             phone: demoPhone1,
+            phoneCountryCode,
+            country: country === "IN" ? "India" : country === "NP" ? "Nepal" : country,
             name: "John Doe (Demo)",
             email: "john.demo@example.com",
             address: "123 Demo Street",
@@ -1073,6 +1077,8 @@ export class ShopsService {
           },
           {
             phone: demoPhone2,
+            phoneCountryCode,
+            country: country === "IN" ? "India" : country === "NP" ? "Nepal" : country,
             name: "Jane Smith (Demo)",
             address: "456 Main Ave",
             city: "Delhi",

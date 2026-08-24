@@ -4,6 +4,10 @@ DROP INDEX IF EXISTS "WalkInCustomer_phone_key";
 -- Add composite unique index on WalkInCustomer (createdByShopId, phone)
 CREATE UNIQUE INDEX IF NOT EXISTS "WalkInCustomer_createdByShopId_phone_key" ON "WalkInCustomer"("createdByShopId", "phone");
 
+-- Remove generic DB defaults from WalkInCustomer phoneCountryCode and country
+ALTER TABLE "WalkInCustomer" ALTER COLUMN "phoneCountryCode" DROP DEFAULT;
+ALTER TABLE "WalkInCustomer" ALTER COLUMN "country" DROP DEFAULT;
+
 -- Alter enum InvoicePaymentStatus to add new statuses
 ALTER TYPE "InvoicePaymentStatus" ADD VALUE IF NOT EXISTS 'PENDING';
 ALTER TYPE "InvoicePaymentStatus" ADD VALUE IF NOT EXISTS 'CONFIRMED';
@@ -65,6 +69,10 @@ CREATE TABLE IF NOT EXISTS "PosReturn" (
     "shopId" TEXT NOT NULL,
     "invoiceId" TEXT NOT NULL,
     "originalInvoiceNumber" TEXT NOT NULL,
+    "registerId" TEXT,
+    "shiftId" TEXT,
+    "cashierUserId" TEXT,
+    "returnIdempotencyKey" TEXT,
     "returnType" TEXT NOT NULL DEFAULT 'RETURN',
     "exchangeInvoiceId" TEXT,
     "lines" JSONB NOT NULL,
@@ -87,17 +95,30 @@ ALTER TABLE "PosSession"
   ADD COLUMN IF NOT EXISTS "cashierUserId" TEXT,
   ADD COLUMN IF NOT EXISTS "shiftId" TEXT;
 
+-- AlterTable Invoice
+ALTER TABLE "Invoice"
+  ADD COLUMN IF NOT EXISTS "posSessionId" TEXT,
+  ADD COLUMN IF NOT EXISTS "posRegisterId" TEXT,
+  ADD COLUMN IF NOT EXISTS "posShiftId" TEXT,
+  ADD COLUMN IF NOT EXISTS "posCashierUserId" TEXT;
+
 -- CreateIndex
 CREATE UNIQUE INDEX IF NOT EXISTS "PosRegister_shopId_terminalCode_key" ON "PosRegister"("shopId", "terminalCode");
 CREATE INDEX IF NOT EXISTS "PosRegister_shopId_active_idx" ON "PosRegister"("shopId", "active");
 
 CREATE INDEX IF NOT EXISTS "PosShift_shopId_status_idx" ON "PosShift"("shopId", "status");
 CREATE INDEX IF NOT EXISTS "PosShift_registerId_status_idx" ON "PosShift"("registerId", "status");
+CREATE UNIQUE INDEX IF NOT EXISTS "PosShift_register_single_open_idx" ON "PosShift"("registerId") WHERE "status" = 'OPEN';
 
+CREATE UNIQUE INDEX IF NOT EXISTS "PosReturn_returnIdempotencyKey_key" ON "PosReturn"("returnIdempotencyKey");
 CREATE INDEX IF NOT EXISTS "PosReturn_shopId_createdAt_idx" ON "PosReturn"("shopId", "createdAt");
 CREATE INDEX IF NOT EXISTS "PosReturn_invoiceId_idx" ON "PosReturn"("invoiceId");
+CREATE INDEX IF NOT EXISTS "PosReturn_registerId_shiftId_idx" ON "PosReturn"("registerId", "shiftId");
 
 CREATE INDEX IF NOT EXISTS "PosSession_registerId_status_idx" ON "PosSession"("registerId", "status");
+
+CREATE INDEX IF NOT EXISTS "Invoice_posRegisterId_idx" ON "Invoice"("posRegisterId");
+CREATE INDEX IF NOT EXISTS "Invoice_posShiftId_idx" ON "Invoice"("posShiftId");
 
 -- AddForeignKey
 ALTER TABLE "PosRegister" ADD CONSTRAINT "PosRegister_shopId_fkey" FOREIGN KEY ("shopId") REFERENCES "Shop"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -109,6 +130,14 @@ ALTER TABLE "PosShift" ADD CONSTRAINT "PosShift_closedByUserId_fkey" FOREIGN KEY
 
 ALTER TABLE "PosReturn" ADD CONSTRAINT "PosReturn_shopId_fkey" FOREIGN KEY ("shopId") REFERENCES "Shop"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "PosReturn" ADD CONSTRAINT "PosReturn_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "PosReturn" ADD CONSTRAINT "PosReturn_registerId_fkey" FOREIGN KEY ("registerId") REFERENCES "PosRegister"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "PosReturn" ADD CONSTRAINT "PosReturn_shiftId_fkey" FOREIGN KEY ("shiftId") REFERENCES "PosShift"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "PosReturn" ADD CONSTRAINT "PosReturn_cashierUserId_fkey" FOREIGN KEY ("cashierUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE "PosSession" ADD CONSTRAINT "PosSession_registerId_fkey" FOREIGN KEY ("registerId") REFERENCES "PosRegister"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "PosSession" ADD CONSTRAINT "PosSession_shiftId_fkey" FOREIGN KEY ("shiftId") REFERENCES "PosShift"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_posSessionId_fkey" FOREIGN KEY ("posSessionId") REFERENCES "PosSession"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_posRegisterId_fkey" FOREIGN KEY ("posRegisterId") REFERENCES "PosRegister"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_posShiftId_fkey" FOREIGN KEY ("posShiftId") REFERENCES "PosShift"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_posCashierUserId_fkey" FOREIGN KEY ("posCashierUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;

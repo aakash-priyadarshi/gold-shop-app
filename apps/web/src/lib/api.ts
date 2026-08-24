@@ -1312,6 +1312,10 @@ export const invoicesApi = {
   getByOrder: (orderId: string) => api.get(`/invoices/order/${orderId}`),
   updatePaymentStatus: (id: string, data: any) =>
     api.patch(`/invoices/${id}/payment`, data),
+  recordPayment: (id: string, data: any) =>
+    api.patch(`/invoices/${id}/payment`, data),
+  confirmPayment: (id: string, paymentId: string, data?: any) =>
+    api.post(`/invoices/${id}/payments/${paymentId}/confirm`, data || {}),
   void: (id: string) => api.post(`/invoices/${id}/void`),
   getStats: () => api.get("/invoices/stats"),
   getSettings: () => api.get("/invoices/settings"),
@@ -1776,8 +1780,8 @@ export const posApi = {
   closeShift: (id: string, data: { closingCash: number; notes?: string }) =>
     api.post(`/pos/shifts/${id}/close`, data),
   getZReport: (id: string) => api.get(`/pos/shifts/${id}/z-report`),
-  auditDrawerOpen: (reason?: string) =>
-    api.post("/pos/drawer/open", { reason }),
+  auditDrawerOpen: (reason?: string, registerId?: string) =>
+    api.post("/pos/drawer/open", { reason, registerId }),
 
   // Pricing Preview
   previewPricing: (data: {

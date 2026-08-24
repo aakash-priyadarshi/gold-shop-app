@@ -178,7 +178,7 @@ export function PosReturnModal({
           {/* Lookup Bar */}
           <div className="flex gap-2">
             <Input
-              placeholder="e.g. INV-20260824-0001 or scan QR"
+              placeholder={t("e.g. INV-20260824-0001 or scan QR")}
               value={invoiceLookup}
               onChange={(e) => setInvoiceLookup(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLookup()}
@@ -197,8 +197,8 @@ export function PosReturnModal({
                   <span>{new Date(invoice.issuedAt).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Customer: {invoice.customerName || "Walk-in"}</span>
-                  <span>Total: {currencySymbol} {invoice.totalAmount}</span>
+                  <span><T>Customer:</T> {invoice.customerName || <T>Walk-in</T>}</span>
+                  <span><T>Total:</T> {currencySymbol} {invoice.totalAmount}</span>
                 </div>
               </div>
 
@@ -228,10 +228,10 @@ export function PosReturnModal({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="RESTOCK">Restock into Inventory</SelectItem>
-                            <SelectItem value="QUARANTINE">Quarantine for Inspection</SelectItem>
-                            <SelectItem value="REPAIR">Send to Karigar Repair</SelectItem>
-                            <SelectItem value="SCRAP">Scrap / Melt Value</SelectItem>
+                            <SelectItem value="RESTOCK"><T>Restock into Inventory</T></SelectItem>
+                            <SelectItem value="QUARANTINE"><T>Quarantine for Inspection</T></SelectItem>
+                            <SelectItem value="REPAIR"><T>Send to Karigar Repair</T></SelectItem>
+                            <SelectItem value="SCRAP"><T>Scrap / Melt Value</T></SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -262,11 +262,11 @@ export function PosReturnModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="CASH">Cash Refund</SelectItem>
-                      <SelectItem value="CARD">Card Reversal</SelectItem>
-                      <SelectItem value="UPI">UPI / Digital Wallet</SelectItem>
-                      <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                      <SelectItem value="STORE_CREDIT">Store Credit</SelectItem>
+                      <SelectItem value="CASH"><T>Cash Refund</T></SelectItem>
+                      <SelectItem value="CARD"><T>Card Reversal</T></SelectItem>
+                      <SelectItem value="UPI"><T>UPI / Digital Wallet</T></SelectItem>
+                      <SelectItem value="BANK_TRANSFER"><T>Bank Transfer</T></SelectItem>
+                      <SelectItem value="STORE_CREDIT"><T>Store Credit</T></SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -198,7 +198,7 @@ export function PosShiftModal({
                 <Textarea
                   id="shift-notes"
                   rows={2}
-                  placeholder="e.g. Morning counter shift"
+                  placeholder={t("e.g. Morning counter shift")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
@@ -262,7 +262,7 @@ export function PosShiftModal({
                   type="number"
                   min="0"
                   step="any"
-                  placeholder="Enter physical cash counted"
+                  placeholder={t("Enter physical cash counted")}
                   value={closingCash}
                   onChange={(e) => setClosingCash(e.target.value)}
                 />
@@ -270,7 +270,7 @@ export function PosShiftModal({
                   <div className="flex justify-between text-xs pt-1">
                     <span><T>Variance</T>:</span>
                     <span className={`font-bold ${liveVariance === 0 ? "text-emerald-600" : liveVariance < 0 ? "text-red-600" : "text-amber-600"}`}>
-                      {liveVariance === 0 ? "Exact Match" : `${liveVariance > 0 ? "+" : ""}${currencySymbol} ${liveVariance}`}
+                      {liveVariance === 0 ? <T>Exact Match</T> : `${liveVariance > 0 ? "+" : ""}${currencySymbol} ${liveVariance}`}
                     </span>
                   </div>
                 )}
@@ -281,7 +281,7 @@ export function PosShiftModal({
                 <Textarea
                   id="close-notes"
                   rows={2}
-                  placeholder="Reason for any cash difference or handover note"
+                  placeholder={t("Reason for any cash difference or handover note")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
@@ -314,34 +314,34 @@ export function PosShiftModal({
 
             <div className="rounded-xl border p-4 space-y-3 font-mono text-xs bg-muted/20">
               <div className="flex justify-between">
-                <span>TOTAL REVENUE:</span>
+                <span><T>TOTAL REVENUE</T>:</span>
                 <span className="font-bold">{currencySymbol} {summary?.totalSales ?? 0}</span>
               </div>
               <div className="flex justify-between">
-                <span>CASH COLLECTED:</span>
+                <span><T>CASH COLLECTED</T>:</span>
                 <span>{currencySymbol} {summary?.cashSales ?? 0}</span>
               </div>
               <div className="flex justify-between">
-                <span>CARD / WALLET:</span>
+                <span><T>CARD / WALLET</T>:</span>
                 <span>{currencySymbol} {(summary?.cardSales ?? 0) + (summary?.upiWalletSales ?? 0)}</span>
               </div>
               <div className="flex justify-between">
-                <span>BANK TRANSFER:</span>
+                <span><T>BANK TRANSFER</T>:</span>
                 <span>{currencySymbol} {summary?.bankTransferSales ?? 0}</span>
               </div>
               <div className="border-t pt-2 flex justify-between font-bold">
-                <span>EXPECTED DRAWER CASH:</span>
+                <span><T>EXPECTED DRAWER CASH</T>:</span>
                 <span>{currencySymbol} {summary?.expectedCash ?? 0}</span>
               </div>
               {currentShift?.closingCash != null && (
                 <div className="flex justify-between font-bold">
-                  <span>COUNTED CASH:</span>
+                  <span><T>COUNTED CASH</T>:</span>
                   <span>{currencySymbol} {currentShift.closingCash}</span>
                 </div>
               )}
               {currentShift?.variance != null && (
                 <div className="flex justify-between font-bold">
-                  <span>VARIANCE:</span>
+                  <span><T>VARIANCE</T>:</span>
                   <span>{currencySymbol} {currentShift.variance}</span>
                 </div>
               )}

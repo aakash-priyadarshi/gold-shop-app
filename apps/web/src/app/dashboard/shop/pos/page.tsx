@@ -64,7 +64,7 @@ import {
 } from "@/components/shop/SellerProductDetailDialog";
 import { printAuthoritativeBill, printBill, type BillSettings } from "@/lib/billPrint";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
-import { loadHardwareConfig } from "@/lib/posHardware";
+import { kickCashDrawer, loadHardwareConfig } from "@/lib/posHardware";
 import {
   getCounterPaymentMethods,
   buildQrImageUrl,
@@ -84,6 +84,7 @@ import { usePreferencesStore } from "@/store/preferences";
 import Image from "next/image";
 import { useT } from "@/providers/translation-provider";
 import {
+    CheckCircle2,
     Coins,
     DollarSign,
     FileText,
@@ -220,15 +221,22 @@ function PosPageInner() {
   const [hasManagerPin, setHasManagerPin] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [makingChargeRate, setMakingChargeRate] = useState(0);
+  const [confirmingPaymentId, setConfirmingPaymentId] = useState<string | null>(null);
   const [checkoutSuccess, setCheckoutSuccess] = useState<{
+    invoiceId?: string;
     invoiceNumber: string;
     total: number;
+    status?: string;
+    paymentStatus?: string;
+    paidAmount?: number;
+    balanceDue?: number;
     paymentMethod?: string;
     paymentSummary?: string;
     customerName?: string;
     customerPhone?: string;
     verificationToken?: string;
     usedBankTransfer?: boolean;
+    pendingPayments?: Array<{ id: string; amount: number; method: string }>;
   } | null>(null);
   const [billSettings, setBillSettings] = useState<BillSettings | null>(null);
   const [shopUpiId, setShopUpiId] = useState("");
@@ -689,6 +697,13 @@ function PosPageInner() {
         invoiceCountry: shopCountry || undefined,
       });
       const inv = res.data?.invoice;
+      const payments = Array.isArray(inv?.payments) ? inv.payments : [];
+      const pendingPayments = payments.filter((p: any) => p.status === "PENDING");
+      const isCash = (splitMode ? "SPLIT" : paymentMethod) === "CASH";
+      if (isCash && loadHardwareConfig().printer.kickCashDrawer) {
+        kickCashDrawer().catch(() => {});
+      }
+
       setSession(null);
       setCheckoutOpen(false);
       setCustomerPicks([]);
@@ -696,14 +711,24 @@ function PosPageInner() {
       setCustomerId("");
       setSplitMode(false);
       setCheckoutSuccess({
+        invoiceId: inv?.id,
         invoiceNumber: inv?.invoiceNumber || "N/A",
         total: inv?.totalAmount || basketTotal,
+        status: inv?.status,
+        paymentStatus: inv?.paymentStatus,
+        paidAmount: inv?.paidAmount,
+        balanceDue: inv?.balanceDue,
         paymentMethod: splitMode ? "SPLIT" : paymentMethod,
         paymentSummary,
         customerName,
         customerPhone,
         verificationToken: inv?.verificationToken,
         usedBankTransfer,
+        pendingPayments: pendingPayments.map((p: any) => ({
+          id: p.id,
+          amount: Number(p.amount),
+          method: p.method,
+        })),
       });
       toast({
         title: t("Checkout complete!"),
@@ -717,6 +742,20 @@ function PosPageInner() {
       });
     } finally {
       setCheckoutLoading(false);
+    }
+  };
+
+  const handleKickDrawer = async () => {
+    try {
+      await kickCashDrawer();
+      await posApi.auditDrawerOpen("Cashier manual drawer open", selectedRegisterId);
+      toast({ title: t("Drawer opened") });
+    } catch (err: any) {
+      toast({
+        title: t("Drawer kick failed"),
+        description: err?.message || t("Check receipt printer connection"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -775,14 +814,6 @@ function PosPageInner() {
   const basketTax = serverPreview?.taxAmount ?? localTax;
   const basketTotal = serverPreview?.grandTotal ?? localTotal;
 
-  const handleKickDrawer = async () => {
-    try {
-      await posApi.auditDrawerOpen("Manual cashier request");
-      toast({ title: t("Cash drawer kicked"), description: t("Manual action audited.") });
-    } catch (err: any) {
-      toast({ variant: "destructive", title: t("Drawer error"), description: err?.message });
-    }
-  };
 
   const upiOverLimit =
     !splitMode &&
@@ -841,7 +872,7 @@ function PosPageInner() {
                   <Store className="h-4 w-4 text-muted-foreground ml-1.5" />
                   <Select value={selectedRegisterId} onValueChange={setSelectedRegisterId}>
                     <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none w-36">
-                      <SelectValue placeholder="Select Counter" />
+                      <SelectValue placeholder={t("Select Counter")} />
                     </SelectTrigger>
                     <SelectContent>
                       {registers.map((r) => (
@@ -858,7 +889,7 @@ function PosPageInner() {
               {currentShift ? (
                 <div className="flex items-center gap-1.5">
                   <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 border-emerald-300 text-xs">
-                    Shift Open
+                    <T>Shift Open</T>
                   </Badge>
                   <Button
                     size="sm"
@@ -869,7 +900,7 @@ function PosPageInner() {
                       setShiftModalOpen(true);
                     }}
                   >
-                    <FileText className="h-3.5 w-3.5 mr-1" /> Close Shift
+                    <FileText className="h-3.5 w-3.5 mr-1" /> <T>Close Shift</T>
                   </Button>
                 </div>
               ) : (
@@ -882,7 +913,7 @@ function PosPageInner() {
                     setShiftModalOpen(true);
                   }}
                 >
-                  <DollarSign className="h-3.5 w-3.5 mr-1" /> Open Shift
+                  <DollarSign className="h-3.5 w-3.5 mr-1" /> <T>Open Shift</T>
                 </Button>
               )}
 
@@ -892,9 +923,9 @@ function PosPageInner() {
                 variant="outline"
                 className="h-8 text-xs"
                 onClick={handleKickDrawer}
-                title="Open Cash Drawer"
+                title={t("Open Cash Drawer")}
               >
-                <Coins className="h-3.5 w-3.5 mr-1" /> Drawer
+                <Coins className="h-3.5 w-3.5 mr-1" /> <T>Drawer</T>
               </Button>
 
               {/* Return & Exchange */}
@@ -904,7 +935,7 @@ function PosPageInner() {
                 className="h-8 text-xs"
                 onClick={() => setReturnModalOpen(true)}
               >
-                <RotateCcw className="h-3.5 w-3.5 mr-1" /> Return / Exchange
+                <RotateCcw className="h-3.5 w-3.5 mr-1" /> <T>Return / Exchange</T>
               </Button>
             </div>
             {session && (
@@ -1912,16 +1943,92 @@ function PosPageInner() {
 
         {/* Receipt Success Dialog */}
         <Dialog open={!!checkoutSuccess} onOpenChange={(open) => !open && setCheckoutSuccess(null)}>
-          <DialogContent className="sm:max-w-sm text-center">
+          <DialogContent className="sm:max-w-md text-center">
             <DialogHeader>
               <DialogTitle className="text-center text-xl">
-                ✅ <T>Sale Complete!</T>
+                {checkoutSuccess?.paymentStatus === "PENDING" || (checkoutSuccess?.balanceDue != null && checkoutSuccess.balanceDue > 0.01) ? (
+                  <span className="text-amber-600 dark:text-amber-400">⏳ <T>Sale created — Payment Pending</T></span>
+                ) : (
+                  <span>✅ <T>Sale Complete!</T></span>
+                )}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="text-3xl font-bold">
                 {currencySymbol} {checkoutSuccess?.total?.toLocaleString()}
               </div>
+
+              {checkoutSuccess && (checkoutSuccess.paymentStatus === "PENDING" || (checkoutSuccess.balanceDue != null && checkoutSuccess.balanceDue > 0.01)) ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 p-3 text-left space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-200 text-xs">
+                      <T>Payment Pending Confirmation</T>
+                    </Badge>
+                    <span className="text-xs font-mono font-semibold text-amber-800 dark:text-amber-200">
+                      <T>Pending amount</T>: {currencySymbol} {(checkoutSuccess.balanceDue ?? checkoutSuccess.total).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    <T>Non-cash counter payments are recorded as pending until explicitly confirmed by the cashier.</T>
+                  </p>
+                  {checkoutSuccess.invoiceId && checkoutSuccess.pendingPayments && checkoutSuccess.pendingPayments.length > 0 ? (
+                    <div className="space-y-1.5 pt-1">
+                      {checkoutSuccess.pendingPayments.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-900 p-2 rounded-lg border">
+                          <span className="text-xs font-medium">
+                            {p.method}: {currencySymbol} {p.amount.toLocaleString()}
+                          </span>
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                            disabled={confirmingPaymentId === p.id}
+                            onClick={async () => {
+                              if (!checkoutSuccess?.invoiceId) return;
+                              setConfirmingPaymentId(p.id);
+                              try {
+                                await invoicesApi.confirmPayment(checkoutSuccess.invoiceId, p.id, {});
+                                toast({
+                                  title: t("Payment Confirmed!"),
+                                  description: t("Payment has been verified and invoice balance updated."),
+                                });
+                                setCheckoutSuccess((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        status: "PAID",
+                                        paymentStatus: "PAID",
+                                        paidAmount: prev.total,
+                                        balanceDue: 0,
+                                        pendingPayments: prev.pendingPayments?.filter((pp) => pp.id !== p.id),
+                                      }
+                                    : null,
+                                );
+                                loadCurrentShift(selectedRegisterId);
+                              } catch (err: any) {
+                                toast({
+                                  variant: "destructive",
+                                  title: t("Failed to confirm payment"),
+                                  description: err?.response?.data?.message || t("Unknown error"),
+                                });
+                              } finally {
+                                setConfirmingPaymentId(null);
+                              }
+                            }}
+                          >
+                            {confirmingPaymentId === p.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                            )}
+                            <T>Confirm Payment Received</T>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               <div className="flex gap-2 justify-center">
                 <Button
                   variant="outline"
@@ -1934,8 +2041,8 @@ function PosPageInner() {
                       customerName: checkoutSuccess.customerName,
                       customerPhone: checkoutSuccess.customerPhone,
                       totalAmount: checkoutSuccess.total,
-                      paidAmount: checkoutSuccess.total,
-                      balanceDue: 0,
+                      paidAmount: checkoutSuccess.paidAmount ?? checkoutSuccess.total,
+                      balanceDue: checkoutSuccess.balanceDue ?? 0,
                       currency: currencySymbol,
                       paymentMethod: checkoutSuccess.paymentMethod,
                       paymentSummary: checkoutSuccess.paymentSummary,
@@ -1960,7 +2067,7 @@ function PosPageInner() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: ${currencySymbol} ${checkoutSuccess?.total?.toLocaleString()}\nPaid via: ${checkoutSuccess?.paymentSummary || checkoutSuccess?.paymentMethod || "CASH"}\nThank you for your purchase!`;
+                    const text = `Invoice ${checkoutSuccess?.invoiceNumber}\nTotal: ${currencySymbol} ${checkoutSuccess?.total?.toLocaleString()}\nStatus: ${checkoutSuccess?.paymentStatus === "PENDING" ? "Payment Pending" : "Paid"}\nThank you for your purchase!`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
                   }}
                 >
