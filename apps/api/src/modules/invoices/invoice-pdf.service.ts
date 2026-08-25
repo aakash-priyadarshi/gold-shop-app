@@ -2,7 +2,10 @@ import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import PDFDocument from "pdfkit";
 import * as QRCode from "qrcode";
 import { PrismaService } from "../../prisma/prisma.service";
-import type { InvoicePdfContext } from "./pdf/invoice-pdf.types";
+import type {
+  InvoicePdfContext,
+  InvoicePdfGemstone,
+} from "./pdf/invoice-pdf.types";
 import {
   getCachedLogo,
   isWebp,
@@ -129,12 +132,52 @@ export class InvoicePdfService {
       customerEmail: invoice.customerEmail,
       customerAddress: invoice.customerAddress,
       customerTaxId: invoice.customerTaxId,
-      lineItems: lines.map((line) => ({
-        label: String(line.label || "Item"),
-        quantity: line.quantity != null ? Number(line.quantity) : 1,
-        amount: Number(line.amount || 0),
-        details: line.details ? String(line.details) : undefined,
-      })),
+      lineItems: lines.map((line) => {
+        const rawGemstones = Array.isArray(line.gemstones)
+          ? line.gemstones
+          : line.gemstones && typeof line.gemstones === "object"
+            ? (Array.isArray(line.gemstones.gemstones)
+                ? line.gemstones.gemstones
+                : [line.gemstones])
+            : [];
+        const gemstones: InvoicePdfGemstone[] = rawGemstones
+          .map((g: any) => {
+            if (!g || typeof g !== "object" || !g.type) return null;
+            return {
+              type: String(g.type),
+              origin: g.origin ? String(g.origin) : undefined,
+              shape: g.shape ? String(g.shape) : undefined,
+              cut: g.cut ? String(g.cut) : undefined,
+              caratWeight:
+                g.caratWeight != null && !isNaN(Number(g.caratWeight))
+                  ? Number(g.caratWeight)
+                  : undefined,
+              sizeMm:
+                g.sizeMm != null && !isNaN(Number(g.sizeMm))
+                  ? Number(g.sizeMm)
+                  : undefined,
+              color: g.color ? String(g.color) : undefined,
+              clarity: g.clarity ? String(g.clarity) : undefined,
+              qualityTier: g.qualityTier ? String(g.qualityTier) : undefined,
+              cutGrade: g.cutGrade ? String(g.cutGrade) : undefined,
+              gradingLab: g.gradingLab ? String(g.gradingLab) : undefined,
+              certNumber: g.certNumber ? String(g.certNumber) : undefined,
+              count:
+                g.count != null && !isNaN(Number(g.count))
+                  ? Number(g.count)
+                  : undefined,
+            };
+          })
+          .filter(Boolean) as InvoicePdfGemstone[];
+
+        return {
+          label: String(line.label || "Item"),
+          quantity: line.quantity != null ? Number(line.quantity) : 1,
+          amount: Number(line.amount || 0),
+          details: line.details ? String(line.details) : undefined,
+          gemstones: gemstones.length > 0 ? gemstones : undefined,
+        };
+      }),
       subtotal: Number(invoice.subtotal || 0),
       discountAmount: Number(invoice.discountAmount || 0),
       taxAmount: Number(invoice.taxAmount || 0),

@@ -28,11 +28,28 @@ export interface InvoicePdfBranding {
   logoBuffer?: Buffer | null;
 }
 
+export interface InvoicePdfGemstone {
+  type: string;
+  origin?: string;
+  shape?: string;
+  cut?: string;
+  caratWeight?: number;
+  sizeMm?: number;
+  color?: string;
+  clarity?: string;
+  qualityTier?: string;
+  cutGrade?: string;
+  gradingLab?: string;
+  certNumber?: string;
+  count?: number;
+}
+
 export interface InvoicePdfLine {
   label: string;
   quantity?: number;
   amount: number;
   details?: string;
+  gemstones?: InvoicePdfGemstone[];
 }
 
 export interface InvoicePdfContext {
