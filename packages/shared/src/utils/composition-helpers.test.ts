@@ -259,5 +259,86 @@ describe("composition-helpers", () => {
         cost: "75000",
       });
     });
+
+    it("prefers direct single gemstone object over composition.gemstones", () => {
+      const [gem] = extractGemstonesFromItem({
+        gemstones: {
+          type: "EMERALD",
+          origin: "NATURAL",
+          shape: "Octagon",
+          sizeMm: 7,
+          cost: 120000,
+        },
+        composition: {
+          gemstones: [{
+            type: "RUBY",
+            cost: 10000,
+          }],
+        },
+      });
+      expect(gem).toMatchObject({
+        type: "EMERALD",
+        origin: "NATURAL",
+        shape: "Octagon",
+        sizeMm: 7,
+        cost: "120000",
+      });
+    });
+
+    it("prefers direct wrapper { gemstones: [...] } over composition.gemstones", () => {
+      const [gem] = extractGemstonesFromItem({
+        gemstones: {
+          gemstones: [{
+            type: "DIAMOND",
+            origin: "LAB",
+            shape: "Round",
+            caratWeight: 1.0,
+            cost: 50000,
+          }],
+        },
+        composition: {
+          gemstones: [{
+            type: "RUBY",
+            cost: 10000,
+          }],
+        },
+      });
+      expect(gem).toMatchObject({
+        type: "DIAMOND",
+        origin: "LAB",
+        shape: "Round",
+        caratWeight: "1",
+        cost: "50000",
+      });
+    });
+
+    it("falls back to composition.gemstones when direct gemstones is missing or empty array", () => {
+      const fromUndefined = extractGemstonesFromItem({
+        composition: {
+          gemstones: [{
+            type: "SAPPHIRE",
+            cost: 45000,
+          }],
+        },
+      });
+      expect(fromUndefined[0]).toMatchObject({
+        type: "SAPPHIRE",
+        cost: "45000",
+      });
+
+      const fromEmptyArray = extractGemstonesFromItem({
+        gemstones: [],
+        composition: {
+          gemstones: [{
+            type: "SAPPHIRE",
+            cost: 45000,
+          }],
+        },
+      });
+      expect(fromEmptyArray[0]).toMatchObject({
+        type: "SAPPHIRE",
+        cost: "45000",
+      });
+    });
   });
 });

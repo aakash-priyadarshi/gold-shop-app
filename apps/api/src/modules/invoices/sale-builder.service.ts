@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InventoryItem, ProductVariant } from "@prisma/client";
-import { normalizeGemstoneSnapshot } from "@gold-shop/shared";
+import { normalizeGemstoneSnapshot, resolveGemstoneRawList } from "@gold-shop/shared";
 import type { InvoiceGemstoneSnapshotDto } from "./dto/invoice.dto";
 
 export type SaleLineSource = "CATALOG" | "POS" | "MANUAL" | "QUOTE";
@@ -49,9 +49,9 @@ type InventoryLike = Pick<
   | "taxNpr"
   | "totalPriceNpr"
   | "composition"
-  | "hallmarkNumber"
-  | "assayOffice"
 > & {
+  hallmarkNumber?: string | null;
+  assayOffice?: string | null;
   gemstones?: any;
   variants?: Pick<ProductVariant, "id" | "sizeLabel" | "sku" | "priceOverride">[];
 };
@@ -121,29 +121,15 @@ export class SaleBuilderService {
 
     const label =
       item.nameEn + (variant?.sizeLabel ? ` (${variant.sizeLabel})` : "");
-    const rawGemstones =
-      Array.isArray((item as any).gemstones) && (item as any).gemstones.length > 0
-        ? (item as any).gemstones
-        : (item.composition as any)?.gemstones;
+    const rawGemstones = resolveGemstoneRawList(
+      (item as any).gemstones,
+      (item.composition as any)?.gemstones,
+    );
     const gemstones = toGemstoneSnapshots(rawGemstones);
-    const gemstoneDetails = gemstones
-      .slice(0, 3)
-      .map((gem: any) => [
-        gem.origin === "LAB" ? "Lab-grown" : gem.origin === "NATURAL" ? "Natural" : null,
-        gem.type,
-        gem.color ? `Color ${gem.color}` : null,
-        gem.clarity ? `Clarity ${gem.clarity}` : null,
-        gem.cut || gem.shape,
-        gem.caratWeight ? `${gem.caratWeight}ct` : gem.sizeMm ? `${gem.sizeMm}mm` : null,
-        gem.count ? `×${gem.count}` : null,
-      ].filter(Boolean).join(" "))
-      .filter(Boolean)
-      .join("; ");
     const details = [
       variant?.sku || item.sku || null,
       item.hallmarkNumber ? `Hallmark: ${item.hallmarkNumber}` : null,
       item.assayOffice ? `Assay: ${item.assayOffice}` : null,
-      gemstoneDetails ? `Gemstones: ${gemstoneDetails}` : null,
     ]
       .filter(Boolean)
       .join(" · ") || undefined;
@@ -157,7 +143,7 @@ export class SaleBuilderService {
       // Prefer single PRODUCT line when price override differs from sum
       Math.abs(unitPrice - (metalCost + makingCost + gemstoneCost + (item.taxNpr || 0))) < 0.01;
 
-    const metalType = this.extractMetalType(item.composition);
+    const metalType = (item.composition as any)?.metalType ?? (item.composition as any)?.type;
 
     if (hasBreakdown && opts.expandBreakdown === true) {
       const lines: BuiltSaleLine[] = [];
@@ -237,9 +223,6 @@ export class SaleBuilderService {
     ];
   }
 
-  /**
-   * Build lines from POS session items (keeps inventory refs for void restore).
-   */
   fromPosSessionItems(
     items: Array<{
       qty: number;

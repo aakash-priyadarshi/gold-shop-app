@@ -145,9 +145,7 @@ describe("invoice shared engine", () => {
       type: "DIAMOND", origin: "LAB", shape: "Oval", color: "D", clarity: "VVS1",
       gradingLab: "IGI", certNumber: "IGI-123", cost: 50000,
     })]);
-    expect(api.details).toContain("Color D");
-    expect(api.details).toContain("Clarity VVS1");
-    expect(api.details).toContain("Oval");
+    expect(api.details).toBeUndefined();
   });
 
   it("keeps all catalog gemstone metadata when live pricing changes only its cost", () => {

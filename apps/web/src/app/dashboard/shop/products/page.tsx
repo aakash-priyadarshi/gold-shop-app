@@ -1757,7 +1757,7 @@ export default function ShopProductsPage() {
                     <SelectContent>
                       {(METAL_PURITIES[formData.metalType] || METAL_PURITIES.GOLD).map((p) => (
                         <SelectItem key={p.value} value={p.value}>
-                          {p.label}
+                          <T>{p.label}</T>
                         </SelectItem>
                       ))}
                     </SelectContent>

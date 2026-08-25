@@ -448,14 +448,68 @@ export interface ExtractedGemstone {
 }
 
 /**
+ * Resolves the raw gemstone list with direct canonical InventoryItem.gemstones precedence:
+ * 1. direct non-empty array
+ * 2. direct raw gemstone object (e.g. { type: "DIAMOND", ... })
+ * 3. direct wrapper's nested gemstones array
+ * 4. composition.gemstones array
+ * 5. empty-array fallbacks
+ */
+export function resolveGemstoneRawList(
+  direct: unknown,
+  compGemstones: unknown,
+): any[] {
+  // 1. Direct non-empty array
+  if (Array.isArray(direct) && direct.length > 0) {
+    return direct;
+  }
+  // 2 & 3. Direct object (plain gemstone object or wrapper)
+  if (direct && typeof direct === "object" && !Array.isArray(direct)) {
+    const directObj = direct as Record<string, unknown>;
+    // 3. Direct wrapper with non-empty nested gemstones array
+    if (Array.isArray(directObj.gemstones) && directObj.gemstones.length > 0) {
+      return directObj.gemstones;
+    }
+    // 2. Direct raw gemstone object (e.g. { type: "DIAMOND", ... })
+    if (
+      directObj.type ||
+      directObj.stoneType ||
+      directObj.caratWeight != null ||
+      directObj.sizeMm != null ||
+      directObj.cost != null ||
+      directObj.value != null ||
+      directObj.valueNpr != null
+    ) {
+      return [directObj];
+    }
+    // Direct wrapper with empty gemstones array
+    if (Array.isArray(directObj.gemstones)) {
+      return directObj.gemstones;
+    }
+  }
+  // 4. Fallback to composition.gemstones
+  if (Array.isArray(compGemstones) && compGemstones.length > 0) {
+    return compGemstones;
+  }
+  // 5. Empty-array fallbacks
+  if (Array.isArray(direct)) {
+    return direct;
+  }
+  if (Array.isArray(compGemstones)) {
+    return compGemstones;
+  }
+  return [];
+}
+
+/**
  * Recursively extract and normalize all gemstones from a catalog item or SET
  * Prefers direct `item.gemstones` array (canonical), falling back to `item.composition.gemstones`.
  */
 export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
   if (!item) return [];
 
-  // Check if item is a SET with components
-  const links = Array.isArray(item.setComponents) ? item.setComponents : [];
+  // SET items: extract gemstones from all linked components
+  const links = item.setComponents || item.components || [];
   if (
     (item.jewelleryType === "SET" || item.composition?.kind === "SET") &&
     links.length > 0
@@ -475,30 +529,10 @@ export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
     return result;
   }
 
-  function asRecord(value: unknown): Record<string, unknown> | null {
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      return value as Record<string, unknown>;
-    }
-    return null;
-  }
-
-  // Regular item: prefer direct item.gemstones when it is a non-empty array
-  const directGems = item.gemstones;
-  const compGems = item.composition?.gemstones;
-  const nestedGems = (asRecord(directGems) as any)?.gemstones;
-
-  let rawGems: any[] = [];
-  if (Array.isArray(directGems) && directGems.length > 0) {
-    rawGems = directGems;
-  } else if (Array.isArray(compGems) && compGems.length > 0) {
-    rawGems = compGems;
-  } else if (Array.isArray(nestedGems) && nestedGems.length > 0) {
-    rawGems = nestedGems;
-  } else if (Array.isArray(directGems)) {
-    rawGems = directGems;
-  } else if (Array.isArray(compGems)) {
-    rawGems = compGems;
-  }
+  const rawGems = resolveGemstoneRawList(
+    item.gemstones,
+    item.composition?.gemstones,
+  );
 
   if (rawGems.length > 0) {
     return rawGems.flatMap((g: any) => {

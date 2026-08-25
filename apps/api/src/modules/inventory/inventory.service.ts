@@ -151,7 +151,7 @@ export class InventoryService {
         totalWeightGrams: metalWeightGrams,
         grossWeightGrams,
         dimensions: (dto.dimensions as object) || null,
-        gemstones: (dto.gemstones as object) || null,
+        gemstones: (dto.gemstones as any) ?? null,
         metalValueNpr: metalValue,
         makingChargeNpr: makingCharge,
         wastagePercent: dto.wastagePercent ?? 0,
@@ -221,7 +221,8 @@ export class InventoryService {
     if (dto.totalWeightGrams !== undefined)
       updateData.totalWeightGrams = dto.totalWeightGrams;
     if (dto.dimensions !== undefined) updateData.dimensions = dto.dimensions;
-    if (dto.gemstones !== undefined) updateData.gemstones = dto.gemstones;
+    if (dto.gemstones !== undefined)
+      updateData.gemstones = (dto.gemstones as any) ?? null;
     if (dto.stockQuantity !== undefined)
       updateData.stockQuantity = dto.stockQuantity;
     if (dto.status !== undefined)

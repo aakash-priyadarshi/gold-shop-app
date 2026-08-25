@@ -90,23 +90,6 @@ export function mapLineItemsToApi(
         li.details,
         li.metalType ? `Metal: ${li.metalType}` : null,
         li.metalWeightG ? `Weight: ${li.metalWeightG}g` : null,
-        li.gemstones.length > 0
-          ? `Gemstones: ${li.gemstones
-              .map((g) =>
-                [
-                  g.type,
-                  g.origin === "LAB" ? "Lab-grown" : g.origin === "NATURAL" ? "Natural" : null,
-                  g.color ? `Color ${g.color}` : null,
-                  g.clarity ? `Clarity ${g.clarity}` : null,
-                  g.cut,
-                  g.caratWeight ? `${g.caratWeight}ct` : g.sizeMm ? `${g.sizeMm}mm` : null,
-                  g.count ? `×${g.count}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" "),
-              )
-              .join("; ")}`
-          : null,
       ].filter(Boolean);
 
       const metalCost = parseFloat(li.metalCost) || 0;

@@ -13,9 +13,129 @@ import {
   IsObject,
   ValidateNested,
 } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import { HALLMARK_ID_MAX_LENGTH, normalizeHallmarkId } from '@gold-shop/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class InventoryGemstoneDto {
+  @ApiProperty({ description: 'Gemstone type (e.g. DIAMOND, RUBY, EMERALD)' })
+  @IsString()
+  @MaxLength(64)
+  type: string;
+
+  @ApiPropertyOptional({ description: 'Gemstone production origin (NATURAL or LAB)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  origin?: string;
+
+  @ApiPropertyOptional({ description: 'Gemstone shape (e.g. Round, Oval, Princess)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  shape?: string;
+
+  @ApiPropertyOptional({ description: 'Gemstone cut description' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  cut?: string;
+
+  @ApiPropertyOptional({ description: 'Carat weight' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0.001)
+  caratWeight?: number;
+
+  @ApiPropertyOptional({ description: 'Size in millimeters' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0.001)
+  sizeMm?: number;
+
+  @ApiPropertyOptional({ description: 'Color grade' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  color?: string;
+
+  @ApiPropertyOptional({ description: 'Clarity grade' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  clarity?: string;
+
+  @ApiPropertyOptional({ description: 'Quality tier', enum: ['BUDGET', 'STANDARD', 'PREMIUM'] })
+  @IsOptional()
+  @IsIn(['BUDGET', 'STANDARD', 'PREMIUM'])
+  qualityTier?: string;
+
+  @ApiPropertyOptional({ description: 'Cut grade' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  cutGrade?: string;
+
+  @ApiPropertyOptional({ description: 'Grading laboratory (e.g. GIA, IGI)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  gradingLab?: string;
+
+  @ApiPropertyOptional({ description: 'Certificate / report number' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  certNumber?: string;
+
+  @ApiPropertyOptional({ description: 'Digital report / certificate URL' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reportUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Report date (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  reportDate?: string;
+
+  @ApiPropertyOptional({ description: 'Gemstone count / quantity' })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(10000)
+  count?: number;
+
+  @ApiPropertyOptional({ description: 'Gemstone value / cost in shop base currency' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  valueNpr?: number;
+}
+
+export function transformGemstonesInput(value: unknown): unknown {
+  if (value === undefined || value === null) return undefined;
+  let raw: unknown = value;
+  if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
+    const rec = value as Record<string, unknown>;
+    if (Array.isArray(rec.gemstones)) {
+      raw = rec.gemstones;
+    } else {
+      raw = [value];
+    }
+  }
+  if (Array.isArray(raw)) {
+    return raw.map((item) =>
+      item instanceof InventoryGemstoneDto
+        ? item
+        : typeof item === 'object' && item !== null && !Array.isArray(item)
+        ? plainToInstance(InventoryGemstoneDto, item)
+        : item,
+    );
+  }
+  return raw;
+}
 
 export class CreateInventoryItemDto {
   @ApiProperty({ description: 'Item name (English)' })
@@ -49,13 +169,17 @@ export class CreateInventoryItemDto {
 
   @ApiProperty({ description: 'SKU code' })
   @IsString()
+  @MaxLength(50)
   sku: string;
 
-  @ApiProperty({ description: 'Jewellery type' })
+  @ApiProperty({ description: 'Jewellery type', enum: [
+    'RING', 'NECKLACE', 'BRACELET', 'EARRINGS', 'PENDANT', 'CHAIN',
+    'BANGLES', 'MANGALSUTRA', 'NOSE_PIN', 'BROOCH', 'ANKLET', 'COIN', 'BAR', 'OTHER'
+  ] })
   @IsString()
   jewelleryType: string;
 
-  @ApiProperty({ description: 'Build method used (METHOD_A, METHOD_B, METHOD_C, METHOD_D)' })
+  @ApiProperty({ description: 'Build method (METHOD_A, METHOD_B, METHOD_C, CASTING)' })
   @IsString()
   buildMethod: string;
 
@@ -73,9 +197,17 @@ export class CreateInventoryItemDto {
   @IsOptional()
   dimensions?: Record<string, unknown>;
 
-  @ApiPropertyOptional({ description: 'Gemstones details (JSON)' })
+  @ApiPropertyOptional({
+    description: 'Gemstones details (Array of InventoryGemstoneDto)',
+    type: () => [InventoryGemstoneDto],
+  })
+  @Transform(({ value }) => transformGemstonesInput(value))
   @IsOptional()
-  gemstones?: Record<string, unknown> | Record<string, unknown>[];
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => InventoryGemstoneDto)
+  gemstones?: InventoryGemstoneDto[];
 
   @ApiProperty({ description: 'Metal value in NPR' })
   @IsNumber()
@@ -231,9 +363,17 @@ export class UpdateInventoryItemDto {
   @IsOptional()
   dimensions?: Record<string, unknown>;
 
-  @ApiPropertyOptional({ description: 'Gemstones details (JSON)' })
+  @ApiPropertyOptional({
+    description: 'Gemstones details (Array of InventoryGemstoneDto)',
+    type: () => [InventoryGemstoneDto],
+  })
+  @Transform(({ value }) => transformGemstonesInput(value))
   @IsOptional()
-  gemstones?: Record<string, unknown> | Record<string, unknown>[];
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => InventoryGemstoneDto)
+  gemstones?: InventoryGemstoneDto[];
 
   @ApiPropertyOptional()
   @IsNumber()
