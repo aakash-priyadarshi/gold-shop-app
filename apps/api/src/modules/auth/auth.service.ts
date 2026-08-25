@@ -286,9 +286,7 @@ export class AuthService {
             country: marketCountry!,
             currency: preferredCurrency,
             city: dto.shop.city,
-            // Shop addresses are optional during registration; store an empty
-            // value until the seller adds one later in shop settings.
-            address: dto.shop.address?.trim() || "",
+            address: dto.shop.address,
             contactPhone: dto.shop.contactPhone,
             contactEmail: dto.shop.contactEmail,
             isVerified: false, // Requires admin approval
@@ -411,7 +409,7 @@ export class AuthService {
           country: marketCountry,
           currency: preferredCurrency,
           city: shopDto.city,
-          address: shopDto.address?.trim() || "",
+          address: shopDto.address,
           contactPhone: shopDto.contactPhone,
           contactEmail: shopDto.contactEmail,
           isVerified: false,

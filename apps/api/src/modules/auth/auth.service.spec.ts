@@ -1,12 +1,9 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
-import { CurrencyCode, OtpType, UserRole, UserStatus } from '@prisma/client';
+import { OtpType, UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import { plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { CreateShopDto } from './dto/register.dto';
 import { OtpService } from './otp.service';
 
 describe('password-reset verification', () => {
@@ -323,74 +320,6 @@ describe('password-reset verification', () => {
     ).resolves.toEqual({
       success: true,
       message: 'If an account exists with this email, a reset code has been sent.',
-    });
-  });
-});
-
-describe('shopkeeper registration', () => {
-  it('accepts an omitted shop address and stores an empty optional value', async () => {
-    const shopDto = plainToInstance(CreateShopDto, {
-      shopName: 'Address Optional Jewellers',
-      country: 'IN',
-      currency: CurrencyCode.INR,
-      city: 'Patna',
-      contactPhone: '+919876543210',
-    });
-    await expect(validate(shopDto)).resolves.toHaveLength(0);
-
-    const tx = {
-      user: {
-        create: jest.fn().mockResolvedValue({
-          id: 'user-1',
-          email: 'seller@example.com',
-          firstName: 'Seller',
-          role: UserRole.SHOPKEEPER,
-        }),
-      },
-      shop: { create: jest.fn().mockResolvedValue({ id: 'shop-1' }) },
-    };
-    const prisma = {
-      user: { findUnique: jest.fn().mockResolvedValue(null) },
-      $transaction: jest.fn((callback) => callback(tx)),
-    };
-    const redis = {
-      getCachedEmailExists: jest.fn().mockResolvedValue(null),
-      cacheEmailExists: jest.fn().mockResolvedValue(undefined),
-      invalidateEmailCache: jest.fn().mockResolvedValue(undefined),
-    };
-    const audit = { log: jest.fn().mockResolvedValue(undefined) };
-    const otp = { sendVerificationOtpByEmail: jest.fn().mockResolvedValue(undefined) };
-    const subscriptions = { autoActivateFreePlan: jest.fn().mockResolvedValue(undefined) };
-    const engagement = { processReferralSignup: jest.fn().mockResolvedValue(undefined) };
-    const service = new AuthService(
-      prisma as any,
-      {} as any,
-      audit as any,
-      {} as any,
-      otp as any,
-      redis as any,
-      subscriptions as any,
-      engagement as any,
-      {} as any,
-    );
-
-    await service.register({
-      email: 'seller@example.com',
-      password: 'Password1!',
-      firstName: 'Seller',
-      lastName: 'Account',
-      role: UserRole.SHOPKEEPER,
-      shop: {
-        shopName: 'Address Optional Jewellers',
-        country: 'IN',
-        currency: CurrencyCode.INR,
-        city: 'Patna',
-        contactPhone: '+919876543210',
-      },
-    });
-
-    expect(tx.shop.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ address: '' }),
     });
   });
 });

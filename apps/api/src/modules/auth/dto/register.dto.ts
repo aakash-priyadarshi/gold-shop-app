@@ -44,10 +44,10 @@ export class CreateShopDto {
   @IsNotEmpty()
   city: string;
 
-  @ApiPropertyOptional({ example: "Thamel, Kathmandu" })
-  @IsOptional()
+  @ApiProperty({ example: "Thamel, Kathmandu" })
   @IsString()
-  address?: string;
+  @IsNotEmpty()
+  address: string;
 
   @ApiProperty({ example: "+9779812345678" })
   @IsString()

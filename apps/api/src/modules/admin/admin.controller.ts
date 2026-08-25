@@ -2,7 +2,6 @@ import { randomUUID } from "crypto";
 import {
     BadRequestException,
     Body,
-    ConflictException,
     Controller,
     Delete,
     Get,
@@ -217,37 +216,28 @@ export class AdminController {
   ) {
     const passwordHash = await bcrypt.hash(data.password, 10);
 
-    try {
-      const user = await this.prisma.user.create({
-        data: {
-          email: data.email,
-          passwordHash,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          role: data.role,
-          // An empty optional phone must not occupy the unique phone value.
-          phone: data.phone?.trim() || undefined,
-          status: "ACTIVE",
-        },
-      });
+    const user = await this.prisma.user.create({
+      data: {
+        email: data.email,
+        passwordHash,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: data.role,
+        phone: data.phone,
+        status: "ACTIVE",
+      },
+    });
 
-      return {
-        success: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
-        },
-      };
-    } catch (error: any) {
-      if (error.code === "P2002") {
-        const field = error.meta?.target?.[0] || "field";
-        throw new ConflictException(`A user with this ${field} already exists`);
-      }
-      throw error;
-    }
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
+    };
   }
 
   // ═══════════════════════════════════════
