@@ -1,6 +1,7 @@
 # Internal deployment and checklist notes
 deployment-notes.txt
 *.prompt-checklist.txt
+.codex-test-logs/
 
 # SEO indexing state (persisted via CI cache, not committed)
 .seo-submitted-urls.json

@@ -8,6 +8,38 @@ export interface CanonicalGemstone {
   label: string;
 }
 
+/** The production origin of a diamond, independent from its grading laboratory. */
+export type GemstoneOrigin = "NATURAL" | "LAB";
+
+/** Pricing bands are intentionally separate from gemological clarity. */
+export type GemstoneQualityTier = "BUDGET" | "STANDARD" | "PREMIUM";
+
+/**
+ * Immutable product/invoice gemstone metadata.  `type` is the seller-facing
+ * stone identity; `getGemstonePricingStoneType` derives the narrower pricing
+ * category without losing that identity.
+ */
+export interface CanonicalGemstoneSnapshot {
+  type: string;
+  /** Diamond production origin (NATURAL/LAB) or provenance retained for other stones. */
+  origin?: string;
+  cut?: string;
+  shape?: string;
+  caratWeight?: number;
+  sizeMm?: number;
+  color?: string;
+  clarity?: string;
+  qualityTier?: GemstoneQualityTier;
+  cutGrade?: string;
+  gradingLab?: string;
+  certNumber?: string;
+  reportUrl?: string;
+  reportDate?: string;
+  count?: number;
+  value?: number;
+  cost?: number;
+}
+
 export const CANONICAL_GEMSTONE_TYPES: readonly CanonicalGemstone[] = [
   { value: "DIAMOND", label: "Diamond" },
   { value: "RUBY", label: "Ruby" },
@@ -91,7 +123,86 @@ export function normalizeGemstoneType(raw?: string | null): string {
   );
   if (found) return found.value;
   if (cleaned === "EMERALD_CUT") return "EMERALD";
+  if (cleaned === "CZ") return "CUBIC_ZIRCONIA";
+  if (cleaned === "DIAMOND_LAB" || cleaned === "DIAMOND_LAB_GROWN") {
+    return "DIAMOND";
+  }
+  if (cleaned === "DIAMOND_NATURAL") return "DIAMOND";
   return cleaned;
+}
+
+/** Normalize legacy and current diamond-origin values without conflating origin and laboratory. */
+export function normalizeGemstoneOrigin(
+  raw?: string | null,
+  gemstoneType?: string | null,
+): GemstoneOrigin | undefined {
+  const type = String(gemstoneType || "").trim().toUpperCase();
+  const value = String(raw || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+  if (type === "DIAMOND_LAB" || type === "DIAMOND_LAB_GROWN") return "LAB";
+  if (type === "DIAMOND_NATURAL") return "NATURAL";
+  if (value === "LAB" || value === "LAB_GROWN" || value === "LABORATORY_GROWN") return "LAB";
+  if (value === "NATURAL") return "NATURAL";
+  return undefined;
+}
+
+/**
+ * Canonicalize a persisted/read gemstone object while retaining all useful
+ * seller metadata. `lab` is the legacy name for gradingLab, not origin.
+ */
+export function normalizeGemstoneSnapshot(
+  raw: Record<string, unknown> | null | undefined,
+): CanonicalGemstoneSnapshot | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const originalType = String(raw.type ?? raw.stoneType ?? "");
+  const type = normalizeGemstoneType(originalType);
+  if (!type) return null;
+  const toNumber = (value: unknown): number | undefined => {
+    const parsed = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+  const text = (value: unknown): string | undefined =>
+    typeof value === "string" && value.trim() ? value.trim() : undefined;
+  const quality = String(raw.qualityTier ?? raw.pricingQuality ?? raw.quality ?? "")
+    .trim()
+    .toUpperCase();
+
+  return {
+    type,
+    origin:
+      normalizeGemstoneOrigin(String(raw.origin ?? ""), originalType) ??
+      text(raw.origin),
+    cut: normalizeGemstoneCut(text(raw.cut) ?? text(raw.shape)),
+    shape: text(raw.shape),
+    caratWeight: toNumber(raw.caratWeight),
+    sizeMm: toNumber(raw.sizeMm),
+    color: text(raw.color),
+    clarity: text(raw.clarity),
+    qualityTier:
+      quality === "BUDGET" || quality === "STANDARD" || quality === "PREMIUM"
+        ? quality
+        : undefined,
+    cutGrade: text(raw.cutGrade),
+    gradingLab: text(raw.gradingLab) ?? text(raw.lab),
+    certNumber: text(raw.certNumber),
+    reportUrl: text(raw.reportUrl),
+    reportDate: text(raw.reportDate),
+    count: toNumber(raw.count ?? raw.pieces),
+    value: toNumber(raw.value ?? raw.valueNpr),
+    cost: toNumber(raw.cost),
+  };
+}
+
+/** Return the core pricing category without changing the persisted stone type. */
+export function getGemstonePricingStoneType(raw?: string | null): string {
+  const type = normalizeGemstoneType(raw);
+  if (type === "CUBIC_ZIRCONIA") return "CZ";
+  if (
+    ["DIAMOND", "MOISSANITE", "RUBY", "SAPPHIRE", "EMERALD", "PEARL"].includes(type)
+  ) {
+    return type;
+  }
+  return "SEMI_PRECIOUS";
 }
 
 /**
@@ -320,25 +431,87 @@ export interface ExtractedGemstone {
   caratWeight: string;
   color: string;
   cost: string;
+  shape?: string;
   quality?: string;
+  qualityTier?: GemstoneQualityTier;
   origin?: string;
   sizeMm?: number | string;
   count?: number | string;
   cutGrade?: string;
+  /** Legacy alias retained for older consumers; use gradingLab for new data. */
   lab?: string;
+  gradingLab?: string;
   certNumber?: string;
   reportUrl?: string;
+  reportDate?: string;
   sourceItemLabel?: string;
 }
 
 /**
+ * Resolves the raw gemstone list with direct canonical InventoryItem.gemstones precedence:
+ * 1. direct non-empty array
+ * 2. direct raw gemstone object (e.g. { type: "DIAMOND", ... })
+ * 3. direct wrapper's nested gemstones array
+ * 4. composition.gemstones array
+ * 5. empty-array fallbacks
+ */
+export function resolveGemstoneRawList(
+  direct: unknown,
+  compGemstones: unknown,
+): any[] {
+  // 1. Direct non-empty array
+  if (Array.isArray(direct) && direct.length > 0) {
+    return direct;
+  }
+  // 2 & 3. Direct object (plain gemstone object or wrapper with non-empty gemstones array)
+  if (direct && typeof direct === "object" && !Array.isArray(direct)) {
+    const directObj = direct as Record<string, unknown>;
+    // 3. Direct wrapper with non-empty nested gemstones array
+    if (Array.isArray(directObj.gemstones) && directObj.gemstones.length > 0) {
+      return directObj.gemstones;
+    }
+    // 2. Direct raw gemstone object (e.g. { type: "DIAMOND", ... })
+    if (
+      directObj.type ||
+      directObj.stoneType ||
+      directObj.caratWeight != null ||
+      directObj.sizeMm != null ||
+      directObj.cost != null ||
+      directObj.value != null ||
+      directObj.valueNpr != null
+    ) {
+      return [directObj];
+    }
+  }
+  // 4. Fallback to composition.gemstones when populated
+  if (Array.isArray(compGemstones) && compGemstones.length > 0) {
+    return compGemstones;
+  }
+  // 5. Empty-array fallbacks
+  if (Array.isArray(direct)) {
+    return direct;
+  }
+  if (direct && typeof direct === "object" && !Array.isArray(direct)) {
+    const directObj = direct as Record<string, unknown>;
+    if (Array.isArray(directObj.gemstones)) {
+      return directObj.gemstones;
+    }
+  }
+  if (Array.isArray(compGemstones)) {
+    return compGemstones;
+  }
+  return [];
+}
+
+/**
  * Recursively extract and normalize all gemstones from a catalog item or SET
+ * Prefers direct `item.gemstones` array (canonical), falling back to `item.composition.gemstones`.
  */
 export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
   if (!item) return [];
 
-  // Check if item is a SET with components
-  const links = Array.isArray(item.setComponents) ? item.setComponents : [];
+  // SET items: extract gemstones from all linked components
+  const links = item.setComponents || item.components || [];
   if (
     (item.jewelleryType === "SET" || item.composition?.kind === "SET") &&
     links.length > 0
@@ -358,35 +531,42 @@ export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
     return result;
   }
 
-  // Regular item
-  const rawGems = Array.isArray(item.composition?.gemstones)
-    ? item.composition.gemstones
-    : [];
+  const rawGems = resolveGemstoneRawList(
+    item.gemstones,
+    item.composition?.gemstones,
+  );
 
   if (rawGems.length > 0) {
-    return rawGems.map((g: any) => ({
-      type: normalizeGemstoneType(g.type || g.stoneType),
-      cut: normalizeGemstoneCut(g.cut),
-      clarity: String(g.clarity || ""),
-      caratWeight: g.caratWeight != null ? String(g.caratWeight) : "",
-      color: String(g.color || ""),
-      cost:
-        g.valueNpr != null
-          ? String(g.valueNpr)
-          : g.cost != null
-            ? String(g.cost)
-            : "",
-      quality: g.quality ? String(g.quality) : undefined,
-      origin: g.origin ? String(g.origin) : undefined,
-      sizeMm: g.sizeMm != null ? g.sizeMm : undefined,
-      count:
-        g.count != null ? g.count : g.pieces != null ? g.pieces : undefined,
-      cutGrade: g.cutGrade,
-      lab: g.lab,
-      certNumber: g.certNumber,
-      reportUrl: g.reportUrl,
-      sourceItemLabel: item.nameEn || item.sku,
-    }));
+    return rawGems.flatMap((g: any) => {
+      const normalized = normalizeGemstoneSnapshot(g);
+      if (!normalized) return [];
+      return [{
+        type: normalized.type,
+        shape: normalized.shape,
+        cut: normalized.cut || "",
+        clarity: normalized.clarity || "",
+        caratWeight: normalized.caratWeight != null ? String(normalized.caratWeight) : "",
+        color: normalized.color || "",
+        cost:
+          normalized.cost != null
+            ? String(normalized.cost)
+            : normalized.value != null
+              ? String(normalized.value)
+              : "",
+        quality: typeof g.quality === "string" ? g.quality : undefined,
+        qualityTier: normalized.qualityTier,
+        origin: normalized.origin,
+        sizeMm: normalized.sizeMm,
+        count: normalized.count,
+        cutGrade: normalized.cutGrade,
+        lab: normalized.gradingLab,
+        gradingLab: normalized.gradingLab,
+        certNumber: normalized.certNumber,
+        reportUrl: normalized.reportUrl,
+        reportDate: normalized.reportDate,
+        sourceItemLabel: item.nameEn || item.sku,
+      }];
+    });
   }
 
   // Fallback to single gemstone value if gemstoneValueNpr is present

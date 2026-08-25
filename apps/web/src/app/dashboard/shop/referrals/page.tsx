@@ -213,9 +213,12 @@ export default function SellerReferralsPage() {
       const res = await sellerPerformanceApi.cashOutReferralWallet();
       toast({
         title: t("Payout requested"),
-        description:
-          res?.data?.stripeFeeNote ||
-          t("We will send leftover commission to your saved bank account."),
+        description: [
+          t("Your bank payout request is pending. Track its status here."),
+          res?.data?.stripeFeeNote ? t(res.data.stripeFeeNote) : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
       });
       loadReferrals();
     } catch (error: any) {
@@ -255,6 +258,10 @@ export default function SellerReferralsPage() {
   };
 
   const percent = referralSettings?.commissionPercent ?? 10;
+  const applyToInvoiceFirst = referralSettings?.applyToInvoiceFirst ?? true;
+  const referralPolicySummary = applyToInvoiceFirst
+    ? "Referral commission is applied to your next Orivraa subscription invoice first. Eligible leftover can be requested as a bank payout or converted to Pro months."
+    : "Referral commission stays in your wallet under the current policy. Eligible balance can be requested as a bank payout or converted to Pro months.";
   const minCashout = referralSettings?.minCashoutAmount ?? 0;
   const walletCurrency =
     earnings.currency ||
@@ -288,11 +295,8 @@ export default function SellerReferralsPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             <T>Invite jewellery shops to Orivraa. You earn</T> {percent}%{" "}
-            <T>
-              of every paid subscription invoice while they stay subscribed —
-              applied to your next Pro invoice first. Leftover can go to your
-              bank or convert to Pro months.
-            </T>
+            <T>of every paid subscription invoice while they stay subscribed.</T>{" "}
+            {t(referralPolicySummary)}
           </p>
         </div>
 
@@ -323,14 +327,10 @@ export default function SellerReferralsPage() {
               <div className="flex flex-col items-center text-center gap-2 p-4 rounded-lg bg-purple-100/50 dark:bg-purple-900/20">
                 <span className="text-2xl">📄</span>
                 <p className="font-medium">
-                  <T>You get</T> {percent}% <T>on your invoice</T>
+                  <T>You get</T> {percent}% <T>commission</T>
                 </p>
                 <p className="text-xs">
-                  <T>
-                    Applied to your next Orivraa Pro invoice first (no extra
-                    Stripe fee). Leftover can be paid to your bank or converted
-                    to Pro months.
-                  </T>
+                  {t(referralPolicySummary)}
                 </p>
               </div>
             </div>
@@ -341,7 +341,7 @@ export default function SellerReferralsPage() {
                   <T>Reward:</T> {percent}%{" "}
                   <T>
                     of each paid subscription invoice, for as long as they keep
-                    paying. Not AI credits and not a Pro+ upgrade.
+                    paying. Not AI credits, and separate from Review & Earn.
                   </T>
                 </span>
               </div>
@@ -404,17 +404,16 @@ export default function SellerReferralsPage() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
+              {t(referralPolicySummary)}{" "}
               <T>
-                Invoice credit is applied first so you are not charged twice.
-                Leftover wallet balance can be paid to your bank (we send it
-                after you request it) or converted to Pro months. Referral cash
-                is never paid by refunding the referred shop.
+                A requested bank payout remains pending until processed.
+                Referral cash is never paid by refunding the referred shop.
               </T>
             </p>
             {pendingPayout && (
               <p className="text-sm text-amber-700 dark:text-amber-300">
                 <T>Payout pending:</T> {formatWallet(pendingPayout.amount)}{" "}
-                <T>will be sent to your saved bank account.</T>
+                <T>is awaiting processing for your saved bank account.</T>
               </p>
             )}
             <div

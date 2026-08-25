@@ -143,6 +143,7 @@ interface ReferralEntry {
 
 interface ReferralSettings {
   commissionPercent: number;
+  applyToInvoiceFirst: boolean;
   maxReferrals: number;
   isActive: boolean;
 }
@@ -2179,10 +2180,11 @@ export default function ShopEngagementPage() {
                       <p className="text-sm text-purple-700 dark:text-purple-300 mb-2">
                         <T>Invite another jeweller to Orivraa. You earn</T>{" "}
                         {referralSettings?.commissionPercent ?? 10}%{" "}
-                        <T>
-                          of every paid subscription invoice while they stay
-                          subscribed — applied to your next Pro invoice first.
-                        </T>
+                        {t(
+                          referralSettings?.applyToInvoiceFirst ?? true
+                            ? "of every paid subscription invoice while they stay subscribed. Referral commission is applied to your next Orivraa subscription invoice first. Review & Earn is a separate programme."
+                            : "of every paid subscription invoice while they stay subscribed. Referral commission remains in your wallet under the current policy. Review & Earn is a separate programme.",
+                        )}
                       </p>
                       {referralSettings && (
                         <div className="text-xs text-purple-600 dark:text-purple-400">

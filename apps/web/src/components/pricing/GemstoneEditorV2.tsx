@@ -43,6 +43,11 @@ import {
 } from "@/lib/pricing/gemstone-presets";
 import { Gem, HelpCircle, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
+import {
+  getGemstonePricingStoneType,
+  normalizeGemstoneOrigin,
+  normalizeGemstoneType,
+} from "@gold-shop/shared";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -58,6 +63,7 @@ export interface GemstoneEntry {
   sizeValue: string;
   color: string;
   clarity?: string;
+  qualityTier?: "BUDGET" | "STANDARD" | "PREMIUM";
   cut?: string;
   settingStyle: string;
   count: number;
@@ -93,8 +99,8 @@ const createNewGemstone = (): GemstoneEntry => ({
  */
 const applyPreset = (preset: GemstonePreset): Partial<GemstoneEntry> => ({
   presetId: preset.id,
-  stoneType: preset.stoneType,
-  origin: preset.origin,
+  stoneType: normalizeGemstoneType(preset.stoneType),
+  origin: normalizeGemstoneOrigin(preset.origin, preset.stoneType),
   shape: preset.shape,
   sizeUnit: preset.sizeUnit,
   sizeValue: preset.sizeValue,
@@ -146,6 +152,14 @@ export function GemstoneEditorV2({
     const updated = [...gemstones];
     const gem = { ...updated[index], [field]: value };
 
+    // Any edit upgrades legacy diamond values without letting an unrelated
+    // specification edit erase the production origin.
+    const legacyStoneType = gem.stoneType;
+    gem.stoneType = normalizeGemstoneType(legacyStoneType);
+    if (gem.stoneType === "DIAMOND") {
+      gem.origin = normalizeGemstoneOrigin(gem.origin, legacyStoneType) || "NATURAL";
+    }
+
     // Clear preset when manually changing fields
     if (field !== "presetId" && field !== "count" && gem.presetId) {
       gem.presetId = undefined;
@@ -153,16 +167,16 @@ export function GemstoneEditorV2({
 
     // Auto-update size unit when stone type changes
     if (field === "stoneType" && typeof value === "string") {
-      gem.sizeUnit = getDefaultSizeUnit(value);
+      const canonicalType = normalizeGemstoneType(value);
+      gem.stoneType = canonicalType;
+      gem.sizeUnit = getDefaultSizeUnit(canonicalType);
       gem.sizeValue = "";
       gem.color = "";
       gem.clarity = undefined;
       gem.cut = undefined;
 
-      if (value === "DIAMOND_LAB") {
-        gem.origin = "LAB";
-      } else if (value === "DIAMOND_NATURAL") {
-        gem.origin = "NATURAL";
+      if (canonicalType === "DIAMOND") {
+        gem.origin = normalizeGemstoneOrigin(gem.origin, value) || "NATURAL";
       } else {
         gem.origin = undefined;
       }
@@ -470,7 +484,7 @@ function GemstoneCardV2({
             required
           />
           <Select
-            value={gemstone.stoneType}
+            value={normalizeGemstoneType(gemstone.stoneType)}
             onValueChange={(v) => onUpdate("stoneType", v)}
           >
             <SelectTrigger>
@@ -491,7 +505,7 @@ function GemstoneCardV2({
           <div className="space-y-1">
             <FieldLabel label="Origin" tooltip="Natural or lab-grown" />
             <Select
-              value={gemstone.origin || ""}
+              value={normalizeGemstoneOrigin(gemstone.origin, gemstone.stoneType) || "NATURAL"}
               onValueChange={(v) => onUpdate("origin", v as GemstoneOrigin)}
             >
               <SelectTrigger>
@@ -733,16 +747,16 @@ function GemstoneCardV2({
                     : undefined;
                 const res = await pricingApi.resolveGemstone({
                   shopId,
-                  stoneType: gemstone.stoneType,
+                  stoneType: getGemstonePricingStoneType(gemstone.stoneType),
                   caratWeight,
                   sizeMm,
-                  quality: gemstone.clarity || "STANDARD",
-                  origin: gemstone.origin || "NATURAL",
+                  qualityTier: gemstone.qualityTier || "STANDARD",
+                  origin: normalizeGemstoneOrigin(gemstone.origin, gemstone.stoneType),
                   count: gemstone.count,
                 });
                 setShopPriceResult(res.data);
-                if (res.data?.effectivePerStone != null) {
-                  onUpdate("estimatedPrice", res.data.effectivePerStone);
+                if (res.data?.effectiveTotal != null) {
+                  onUpdate("estimatedPrice", res.data.effectiveTotal / gemstone.count);
                 }
               } catch {
                 // Silently fail — heuristic price remains

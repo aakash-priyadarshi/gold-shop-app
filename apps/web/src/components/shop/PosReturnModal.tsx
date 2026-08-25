@@ -238,7 +238,7 @@ export function PosReturnModal({
             <T>Process POS Return &amp; Exchange</T>
           </DialogTitle>
           <DialogDescription>
-            <T>Lookup original invoice by number, inspect items, and select restock/quarantine disposition.</T>
+            <T>Look up the original bill, return only its remaining quantity, and choose where the item goes next. The original bill determines the refund; cash can settle now, while a non-cash reversal stays pending until completed.</T>
           </DialogDescription>
         </DialogHeader>
 
@@ -377,6 +377,9 @@ export function PosReturnModal({
                   <span className="text-xs text-muted-foreground"><T>Total Refund Payable</T></span>
                   <span className="text-lg font-bold text-amber-700">
                     {currencySymbol} {totalRefundAmount}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    <T>Uses the historic amount on the original bill.</T>
                   </span>
                 </div>
               </div>

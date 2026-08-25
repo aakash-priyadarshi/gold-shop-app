@@ -64,6 +64,9 @@ import {
   getDefaultWeightUnit,
   calculateLineWastage,
   getWastageFormulaText,
+  getGemstonePricingStoneType,
+  normalizeGemstoneSnapshot,
+  normalizeGemstoneOrigin,
   resolveWastageRule,
   normalizeGemstoneType,
   CANONICAL_GEMSTONE_TYPES,
@@ -78,7 +81,13 @@ import {
   computeTaxBreakdown,
   roundMoney2,
 } from "@/lib/invoice/calculateLineTotals";
-import type { MetalPart } from "@/lib/invoice/lineItemTypes";
+import {
+  emptyGemstone,
+  emptyLineItem,
+  type GemstoneEntry,
+  type MetalPart,
+  type RichLineItem,
+} from "@/lib/invoice/lineItemTypes";
 import { mapLineItemsToApi } from "@/lib/invoice/mapToCreateDto";
 import {
     ArrowLeft,
@@ -373,76 +382,6 @@ const INVOICE_CATEGORIES = JEWELLERY_TYPES.map((jt) => ({
   value: jt.value,
   label: jt.label,
 }));
-
-// ── Gemstone entry (multiple per line item) ──
-interface GemstoneEntry {
-  type: string;
-  cut: string;
-  clarity: string;
-  caratWeight: string;
-  color: string;
-  cost: string;
-}
-
-const emptyGemstone = (): GemstoneEntry => ({
-  type: "",
-  cut: "",
-  clarity: "",
-  caratWeight: "",
-  color: "",
-  cost: "",
-});
-
-interface RichLineItem {
-  label: string;
-  category: string;
-  quantity: number;
-  details: string;
-  // Metal details
-  metalType: string;
-  metalWeightG: string;
-  metalCost: string;
-  // Multiple gemstones
-  gemstones: GemstoneEntry[];
-  // Making
-  makingCost: string;
-  /** Snapshot of catalog/quote making when imported — used for merge math + “was” display */
-  baseMakingCost?: string;
-  /**
-   * Per-metal weight parts (sets with mixed metals, or single piece).
-   * Used by live-rate recalculation so each metal gets its own rate.
-   */
-  metalParts?: MetalPart[];
-  /** Catalog linkage for stock commit */
-  inventoryItemId?: string;
-  variantId?: string;
-  source?: "MANUAL" | "CATALOG" | "QUOTE" | "POS";
-  /** Customer billing wastage (jarti) — separate from metal cost */
-  wastagePercent?: string;
-  wastageCost?: string;
-  /** Original % from catalog / walk-in ready (can be "0") — for caption + delta */
-  baseWastagePercent?: string;
-  isSet?: boolean;
-  setDiscountType?: "PERCENT" | "FIXED";
-  setDiscountValue?: number;
-  setDiscountAmount?: number;
-}
-
-const emptyLineItem = (): RichLineItem => ({
-  label: "",
-  category: "RING",
-  quantity: 1,
-  details: "",
-  metalType: "",
-  metalWeightG: "",
-  metalCost: "",
-  gemstones: [],
-  makingCost: "",
-  source: "MANUAL",
-  wastagePercent: "",
-  wastageCost: "",
-  baseWastagePercent: "",
-});
 
 // Line total WITHOUT wastage — wastage is a live invoice-level add-on (like making).
 function lineItemTotal(item: RichLineItem): number {
@@ -1338,14 +1277,16 @@ export default function CreateInvoicePage() {
           const updatedGemstones = await Promise.all(
             next.gemstones.map(async (gem) => {
               try {
+                const normalized = normalizeGemstoneSnapshot(gem as any);
+                if (!normalized) return gem;
                 const res = await pricingApi.resolveGemstone({
                   shopId: user?.shop?.id || "",
-                  stoneType: gem.type || "OTHER",
-                  caratWeight: parseFloat(gem.caratWeight) || undefined,
-                  quality: (gem.quality as any) || "STANDARD",
-                  origin: (gem.origin as any) || "NATURAL",
-                  sizeMm: gem.sizeMm ? parseFloat(String(gem.sizeMm)) : undefined,
-                  count: gem.count ? parseInt(String(gem.count), 10) : 1,
+                  stoneType: getGemstonePricingStoneType(normalized.type),
+                  caratWeight: normalized.caratWeight,
+                  qualityTier: normalized.qualityTier || "STANDARD",
+                  origin: normalized.origin,
+                  sizeMm: normalized.sizeMm,
+                  count: normalized.count || 1,
                 });
                 if (res.data?.effectiveTotal != null && res.data.effectiveTotal > 0) {
                   hasLivePricing = true;
@@ -1576,10 +1517,15 @@ export default function CreateInvoicePage() {
   ) => {
     const updated = [...lineItems];
     updated[itemIdx].gemstones = [...updated[itemIdx].gemstones];
-    updated[itemIdx].gemstones[gemIdx] = {
-      ...updated[itemIdx].gemstones[gemIdx],
+    const current = updated[itemIdx].gemstones[gemIdx];
+    const next = {
+      ...current,
       [field]: value,
     };
+    const legacyType = next.type;
+    next.type = normalizeGemstoneType(legacyType);
+    next.origin = normalizeGemstoneOrigin(next.origin, legacyType) || next.origin;
+    updated[itemIdx].gemstones[gemIdx] = next;
     setLineItems(updated);
   };
 
@@ -3501,6 +3447,16 @@ export default function CreateInvoicePage() {
                                   />
                                 </div>
                               </div>
+                              <p className="mt-2 text-[11px] text-muted-foreground">
+                                {[
+                                  gem.origin === "LAB" ? t("Lab-grown") : gem.origin === "NATURAL" ? t("Natural") : gem.origin,
+                                  gem.sizeMm ? `${gem.sizeMm}mm` : null,
+                                  gem.qualityTier ? `${t("Pricing quality")}: ${gem.qualityTier}` : null,
+                                  gem.count ? `×${gem.count}` : null,
+                                  gem.gradingLab || gem.lab ? `${t("Grading laboratory")}: ${gem.gradingLab || gem.lab}` : null,
+                                  gem.certNumber ? `${t("Certificate")}: ${gem.certNumber}` : null,
+                                ].filter(Boolean).join(" · ")}
+                              </p>
                             </div>
                           ))}
                         </div>

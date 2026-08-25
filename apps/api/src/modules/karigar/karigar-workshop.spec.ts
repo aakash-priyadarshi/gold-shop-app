@@ -77,6 +77,7 @@ describe("workshop manufacturing helpers", () => {
               dustGrams: 0,
               allowedWastagePercent: 1,
               reworkCount: 0,
+              qcApprovedAt: new Date("2026-08-12T00:00:00.000Z"),
             },
           ],
           trees: [
@@ -125,6 +126,7 @@ describe("workshop manufacturing helpers", () => {
             {
               stage: "QC",
               status: "DONE",
+              qcApprovedAt: new Date("2026-08-16T00:00:00.000Z"),
               goldInGrams: 40,
               goldOutGrams: 40,
               scrapGrams: 0,
@@ -210,6 +212,40 @@ describe("workshop manufacturing helpers", () => {
 
     // 1 of 2 completed on time
     expect(tower.onTimePercent).toBe(0.5);
+  });
+
+  it("does not offer finished-goods receipt for a QC stage completed without approval", () => {
+    const tower = buildWorkshopTower({
+      vaultGoldGrams: 100,
+      workshops: [],
+      jobs: [
+        {
+          id: "job-unapproved-qc",
+          product: "Ring",
+          artisan: "Ravi",
+          status: "Final Polishing",
+          dueAt: null,
+          currentStage: "QC",
+          inventoryItemId: null,
+          allowedWastagePercent: 1,
+          stages: [
+            {
+              stage: "QC",
+              status: "DONE",
+              goldInGrams: 10,
+              goldOutGrams: 10,
+              scrapGrams: 0,
+              dustGrams: 0,
+              allowedWastagePercent: 1,
+              reworkCount: 0,
+            },
+          ],
+          trees: [],
+        },
+      ],
+    });
+
+    expect(tower.unreceivedFg).toEqual([]);
   });
 
   it("builds tower deptLoad according to custom configured shop departments", () => {

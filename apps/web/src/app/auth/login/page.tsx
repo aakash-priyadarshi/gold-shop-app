@@ -273,7 +273,9 @@ function LoginForm() {
           setResendCooldown(60);
           toast({
             title: t("Verification required"),
-            description: t("A verification code has been sent to your email."),
+            description: t(
+              "If this email still needs verification, a verification code will be sent shortly.",
+            ),
           });
         } catch (resendError: any) {
           toast({
@@ -359,7 +361,7 @@ function LoginForm() {
       toast({
         title: t("Code resent!"),
         description: t(
-          "Please check your email for the new verification code.",
+          "If this email still needs verification, check your email for the code.",
         ),
       });
     } catch (error: any) {
@@ -395,7 +397,7 @@ function LoginForm() {
             <CardDescription className="text-base">
               <T>Your email hasn't been verified yet.</T>
               <br />
-              <T>Enter the 6-digit code sent to</T>
+              <T>Enter the 6-digit code sent to verify that you control</T>
               <br />
               <span className="font-medium text-gray-900 dark:text-gray-100">
                 {verificationEmail}

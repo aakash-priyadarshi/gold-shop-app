@@ -99,6 +99,29 @@ describe("Tutorial TOUR_STEPS — Structure", () => {
     );
     expect(sourceFile).toContain("does not replace the Karigar book");
   });
+
+  test("POS tour explains the register, pending payment, drawer, and return rules", () => {
+    expect(sourceFile).toContain("pos-register-shift");
+    expect(sourceFile).toContain("Confirm Payment Received");
+    expect(sourceFile).toContain("PARTIALLY_PAID");
+    expect(sourceFile).toContain("pos-drawer");
+    expect(sourceFile).toContain("pos-return-exchange");
+    expect(sourceFile).toContain("Z-report");
+  });
+
+  test("Supply Chain tours distinguish normal Karigar work from Workshop mode", () => {
+    expect(sourceFile).toContain("normal small-artisan ledger");
+    expect(sourceFile).toContain("Factory tabs are a separate Workshop-mode workflow");
+    expect(sourceFile).toContain("Cancel/archive a job");
+    expect(sourceFile).toContain("Approve is the required next step");
+  });
+
+  test("referral and demo guidance match the live policy and persistent sample behavior", () => {
+    expect(sourceFile).toContain("Depending on the current referral policy");
+    expect(sourceFile).toContain("Dashboard → Referrals shows the current rule");
+    expect(sourceFile).toContain("Creates persistent sample workshop, job, and metal-ledger records");
+    expect(sourceFile).not.toContain("this button is a demonstration, not a production workflow");
+  });
 });
 
 describe("Tutorial — Invoice Create Page Content", () => {
@@ -146,6 +169,13 @@ describe("Tutorial — Invoice Create Page Content", () => {
     );
     const description = itemsStepMatch?.[1] || "";
     expect(description.toLowerCase()).toContain("weight unit");
+  });
+
+  test("product and invoice guidance explain gemstone origin and sale-time snapshots", () => {
+    expect(sourceFile).toContain("product-gemstones");
+    expect(sourceFile).toContain("product-pricing");
+    expect(sourceFile).toContain("grading laboratory");
+    expect(sourceFile).toContain("immutable sale-time snapshot");
   });
 
   test("all four data-tour anchors exist for invoice create", () => {

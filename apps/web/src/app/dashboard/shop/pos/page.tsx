@@ -955,7 +955,10 @@ function PosPageInner() {
                 <T>{isCounterMode ? "Fast counter checkout mode" : "Advanced ERP mode with stock locking"}</T>
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div
+              className="flex items-center gap-2 flex-wrap"
+              data-tour="pos-register-shift"
+            >
               {/* Register / Counter Selector */}
               {registers.length > 0 && (
                 <div className="flex items-center gap-1.5 bg-muted/40 rounded-lg p-1 border">
@@ -1009,6 +1012,7 @@ function PosPageInner() {
 
               {/* Drawer Kick */}
               <Button
+                data-tour="pos-drawer"
                 size="sm"
                 variant="outline"
                 className="h-8 text-xs"
@@ -1020,6 +1024,7 @@ function PosPageInner() {
 
               {/* Return & Exchange */}
               <Button
+                data-tour="pos-return-exchange"
                 size="sm"
                 variant="outline"
                 className="h-8 text-xs"

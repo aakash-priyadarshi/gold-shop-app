@@ -2,6 +2,7 @@ import { Type } from "class-transformer";
 import { CurrencyCode } from "@prisma/client";
 import {
   IsArray,
+  ArrayMaxSize,
   IsBoolean,
   IsDateString,
   IsIn,
@@ -9,11 +10,38 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
   IsUUID,
   Max,
   Min,
   ValidateNested,
 } from "class-validator";
+
+export class InvoiceGemstoneSnapshotDto {
+  @IsString()
+  @MaxLength(64)
+  type: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  origin?: string;
+
+  @IsOptional() @IsString() @MaxLength(64) shape?: string;
+  @IsOptional() @IsString() @MaxLength(100) cut?: string;
+  @IsOptional() @IsNumber() @Min(0.001) caratWeight?: number;
+  @IsOptional() @IsNumber() @Min(0.001) sizeMm?: number;
+  @IsOptional() @IsString() @MaxLength(64) color?: string;
+  @IsOptional() @IsString() @MaxLength(64) clarity?: string;
+  @IsOptional() @IsIn(["BUDGET", "STANDARD", "PREMIUM"]) qualityTier?: string;
+  @IsOptional() @IsString() @MaxLength(64) cutGrade?: string;
+  @IsOptional() @IsString() @MaxLength(64) gradingLab?: string;
+  @IsOptional() @IsString() @MaxLength(128) certNumber?: string;
+  @IsOptional() @IsString() @MaxLength(500) reportUrl?: string;
+  @IsOptional() @IsDateString() reportDate?: string;
+  @IsOptional() @IsNumber() @Min(1) @Max(10000) count?: number;
+  @IsOptional() @IsNumber() @Min(0) cost?: number;
+}
 
 export class InvoiceLineItemDto {
   @IsString()
@@ -99,6 +127,14 @@ export class InvoiceLineItemDto {
   @IsNumber()
   @Min(0)
   setDiscountAmount?: number;
+
+  /** Immutable descriptive sale snapshot; accounting values remain server-calculated. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => InvoiceGemstoneSnapshotDto)
+  gemstones?: InvoiceGemstoneSnapshotDto[];
 }
 
 export class CreateInvoiceDto {

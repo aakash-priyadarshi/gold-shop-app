@@ -140,6 +140,16 @@ const INVOICE_DETAIL_TOUR_STEPS: DriveStep[] = [
 const TOUR_STEPS: Record<string, DriveStep[]> = {
   "/dashboard/shop/pos": [
     {
+      element: "[data-tour='pos-register-shift']",
+      popover: {
+        title: "Register and shift",
+        description:
+          "Choose the counter you are using, then open its shift with the physical opening cash in that drawer. At close, count the drawer and generate the Z-report to compare the counted cash with that shift's cash sales and refunds.",
+        side: "bottom",
+        align: "end",
+      },
+    },
+    {
       element: "[data-tour='pos-search']",
       popover: {
         title: "Search Products",
@@ -164,8 +174,28 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Checkout",
         description:
-          "Select payment method and generate a GST/VAT-ready bill instantly.",
+          "Review the live bill total, choose only payment methods supported by this shop's country, then complete the sale. Cash is received at the counter; card, UPI, wallet, and bank-transfer legs stay Pending until you use Confirm Payment Received. A split sale stays PARTIALLY_PAID until every required leg is received. Every printed bill includes a QR link for bill verification.",
         side: "top",
+        align: "end",
+      },
+    },
+    {
+      element: "[data-tour='pos-drawer']",
+      popover: {
+        title: "Cash drawer",
+        description:
+          "Open the drawer only for a valid counter need. Your shop's manager-PIN rule may require approval. Opening the drawer does not confirm a payment or change an invoice status.",
+        side: "bottom",
+        align: "end",
+      },
+    },
+    {
+      element: "[data-tour='pos-return-exchange']",
+      popover: {
+        title: "Returns and exchanges",
+        description:
+          "Look up the original bill and return only the remaining quantity shown for each item. The historic bill amount determines the refund. Cash can settle immediately; a non-cash reversal remains pending until it is completed, and store credit is available for a later purchase.",
+        side: "bottom",
         align: "end",
       },
     },
@@ -231,7 +261,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Karigar book",
         description:
-          "This default tab is the shop karigar ledger: vault bullion, artisan float, jobs, and gold loss. Factory tabs (Tower through Reports) stay on this same page when Workshop mode is on.",
+          "This default tab is the normal small-artisan ledger: vault bullion, issue/return, outstanding metal, wages due, jobs, and gold loss. Factory tabs are a separate Workshop-mode workflow on this same page.",
         side: "bottom",
         align: "start",
       },
@@ -244,6 +274,16 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
           "Gold 24K / 22K / 18K and silver rates used to value vault stock on this page.",
         side: "bottom",
         align: "start",
+      },
+    },
+    {
+      element: "[data-tour='supply-procure']",
+      popover: {
+        title: "Procure bullion",
+        description:
+          "Use this to record physical bullion added to the workshop vault. It updates available metal for issue; handle supplier invoices, payments, and purchase accounting in the appropriate purchasing or accounting workflow.",
+        side: "bottom",
+        align: "end",
       },
     },
     {
@@ -269,9 +309,9 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='supply-sample-job']",
       popover: {
-        title: "Sample 1 kg job",
+        title: "Load demo job",
         description:
-          "Loads a demo: 1000 g issued, 920 g finished, 50 g sprue, 20 g recoverable. Actual loss is 10 g at 1% allowed, so unexplained stays 0.",
+          "Creates persistent sample workshop, job, and metal-ledger records in this shop, including a 1000 g issue. Use it only in a test/demo shop or if you intend to keep and reconcile these sample records through the ledger workflow.",
         side: "bottom",
         align: "center",
       },
@@ -311,7 +351,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Artisan balances",
         description:
-          "Each karigar's issued vs returned metal, wastage limit, outstanding float, and wages due. Edit or delete from the row actions.",
+          "Each karigar's issued versus returned metal, wastage limit, outstanding float, and wages due. A finished-metal return adds to wage due; settle the wage separately from the physical-metal return.",
         side: "top",
         align: "center",
       },
@@ -321,7 +361,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Fabrication pipeline",
         description:
-          "Active jobs with gold in and out by stage. Open a job card to enter the casting tree. This is workshop metal, not customer billing wastage (jarti).",
+          "Active jobs with gold in and out by stage. Open a job card to enter the casting tree. Cancel/archive a job rather than using it as a correction for issued metal; this is workshop metal, not customer billing wastage (jarti).",
         side: "top",
         align: "center",
       },
@@ -374,7 +414,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Add Product",
         description:
-          "Click here to add a single jewellery piece with live metal-weight pricing and optional storage location.",
+          "Click here to add a single jewellery piece with live metal-weight pricing and an optional storage location. Gold, silver, platinum, and supported palladium purities can use live rates; review the price components before saving.",
         side: "bottom",
         align: "start",
       },
@@ -400,11 +440,31 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='product-gemstones']",
+      popover: {
+        title: "Gemstone specification & suggestion",
+        description:
+          "For diamonds, choose Natural or Lab-grown origin separately from the grading laboratory (GIA, IGI, etc.). Price suggestions use stone type, origin, carat/size, pricing quality and quantity. Color, clarity, cut and certificate details are preserved on the product and copied to the sale-time invoice snapshot.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='product-pricing']",
+      popover: {
+        title: "Metal price suggestion",
+        description:
+          "Use the sparkle button to review a suggestion from the selected metal, purity and metal-only weight in grams. It uses your shop rate when configured, otherwise the current reference market rate. Applying it is deliberate; it does not replace a manual amount until you click the suggestion.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
       element: "[data-tour='inventory-reprice']",
       popover: {
         title: "Reprice from rates",
         description:
-          "When gold rates move, preview and apply new catalog prices from your Pricing Setup metal rates. Making charges can stay fixed or recalculate. Prices use your shop currency.",
+          "When market rates move, preview the authoritative catalog prices before applying them. Metal, making, gemstone, and tax components stay separate; making can stay fixed or recalculate, and prices keep two-decimal currency precision in your shop currency.",
         side: "bottom",
         align: "start",
       },
@@ -414,7 +474,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Add Set",
         description:
-          "Build a bridal or matching set with its own SKU. Attach earrings, maang tikka, necklace, nathuni, and apply a set discount when buying together.",
+          "Build a bridal or matching set with its own SKU. Its price comes from the linked components, then an optional percent or fixed set discount. Components stay hidden from separate sale until you Break set.",
         side: "bottom",
         align: "start",
       },
@@ -596,7 +656,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Workshop mode",
         description:
-          "Turn this on to add Tower, Jobs, Floor, Metal, QC, and Reports as tabs on Supply Chain. The Karigar book stays the default tab. Your plan must include workshopManufacturing.",
+          "Turn this on to add Tower, Jobs, Floor, Metal, QC, and Reports as tabs on Supply Chain. The normal Karigar book remains available. The switch checks your current plan's live workshopManufacturing feature; do not rely on a fixed plan name.",
         side: "top",
         align: "start",
       },
@@ -812,7 +872,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Receive finished goods",
         description:
-          "Creates an inventory item from this job. It does not write a customer invoice. Optional SKU is stored on that product.",
+          "After QC approves the work, receive the finished goods into inventory. This creates or updates stock and can keep an optional SKU; it does not create a customer invoice or price the item for sale.",
         side: "top",
         align: "start",
       },
@@ -921,7 +981,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "QC inspect",
         description:
-          "Approve passes the job. Rework sends it back to filing. Reject stops it. None of these write customer invoices.",
+          "Approve is the required next step before receiving finished goods. Rework sends the job back to filing; Reject ends the job without creating an invoice. None of these write customer invoices.",
         side: "bottom",
         align: "start",
       },
@@ -1039,7 +1099,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Line Items",
         description:
-          "Add each jewellery item manually, or click Add from catalog to pull an available product (stock is deducted when you create the invoice). Enter metal type, weight, metal cost, gemstones, and making charge. Switch weight units (grams, tola, laal) and use Live metal autofill. Tax is calculated per component for tax reports.",
+          "Add each jewellery item manually, or click Add from catalog to pull an available product (stock is deducted when you create the invoice). Enter metal type, weight, metal cost, gemstones, and making charge. Switch weight units (grams, tola, laal) and use Live metal autofill for supported gold, silver, platinum, or palladium rates. Catalog gemstone specifications—including origin, color, clarity, cut, carat/size and certificate details—are copied as the immutable sale-time snapshot; live repricing changes only the stone price.",
         side: "top",
         align: "start",
       },
@@ -1049,7 +1109,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Add from catalog",
         description:
-          "Search your Product Catalog and add pieces with prices already filled. Optionally recalculate metal from today's rate. Each piece can appear once per invoice.",
+          "Search your Product Catalog and add available pieces with their metal, making, gemstone, certificate, and pricing details. Review an imported set discount and any live-rate recalculation before creating the bill. Each piece can appear once per invoice.",
         side: "top",
         align: "start",
       },
@@ -1569,7 +1629,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Invite Other Jewellers",
         description:
-          "Enter a colleague's email or copy your register link. You earn a share of every paid subscription invoice while they stay subscribed — applied to your next Orivraa invoice first. Leftover can go to your bank or convert to Pro months.",
+          "Enter a colleague's email or copy your register link. Referral commissions are held in your referral wallet. Depending on the current referral policy, eligible commission may be applied to an Orivraa subscription invoice or made available for the supported payout or Pro conversion options. Dashboard → Referrals shows the current rule for your account. Review & Earn is a separate review-reward programme.",
         side: "bottom",
         align: "start",
       },
@@ -1589,7 +1649,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Leftover cash-out",
         description:
-          "Commission first reduces your next Orivraa invoice. Save bank details to request leftover as a bank transfer, or convert leftover to Pro months. No Stripe Connect account is needed.",
+          "Commission first reduces your next Orivraa invoice. Save bank details, then request an eligible leftover balance as a bank payout; it remains pending until processed. You can also convert eligible leftover to Pro months. No Stripe Connect account is needed.",
         side: "top",
         align: "start",
       },

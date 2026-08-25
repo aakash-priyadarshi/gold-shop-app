@@ -2,9 +2,11 @@ import {
   formatLiveWorkshopAccess,
   formatSellerWorkshopReply,
   formatWorkshopMetalOperationReply,
+  formatWorkshopOperationalReply,
   formatWorkshopPlanCatalog,
   isWorkshopAccessQuestion,
   isWorkshopMetalOperationQuestion,
+  isWorkshopOperationalQuestion,
   selectPlansWithFeature,
 } from "./workshop-chat-context";
 
@@ -137,5 +139,51 @@ describe("workshop chat context", () => {
     expect(isWorkshopMetalOperationQuestion("open the gold-loss report")).toBe(
       true,
     );
+  });
+
+  it("explains Karigar book versus Workshop from the shop's live entitlement", () => {
+    expect(
+      isWorkshopAccessQuestion(
+        "What is the difference between Karigar book and Workshop mode?",
+      ),
+    ).toBe(true);
+    expect(
+      formatSellerWorkshopReply({
+        planName: "Workshop Plan",
+        country: "IN",
+        workshopMode: true,
+        workshopManufacturingEnabled: true,
+        workshopPlanNames: ["Workshop Plan"],
+      }),
+    ).toContain("normal small-artisan ledger");
+  });
+
+  it("gives the next safe workshop action without claiming fixed plan names", () => {
+    const enabled = {
+      workshopMode: true,
+      workshopManufacturingEnabled: true,
+    } as const;
+
+    expect(isWorkshopOperationalQuestion("Why can't I receive this workshop item?")).toBe(
+      true,
+    );
+    expect(
+      formatWorkshopOperationalReply(
+        enabled,
+        "Why can't I receive this workshop item?",
+      ),
+    ).toContain("Supply Chain → QC");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Why can't I delete this karigar job?"),
+    ).toContain("Cancel / archive");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Why can't I delete this karigar job?"),
+    ).toContain("terminal for production");
+    expect(
+      formatWorkshopOperationalReply(enabled, "How are wages settled?"),
+    ).toContain("separate from the physical-metal return");
+    expect(
+      formatWorkshopOperationalReply(enabled, "How do I procure bullion?"),
+    ).toContain("does not create a supplier bill");
   });
 });

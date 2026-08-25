@@ -36,6 +36,7 @@ export type TowerStageInput = {
   dustGrams: number;
   allowedWastagePercent: number;
   reworkCount: number;
+  qcApprovedAt?: Date | null;
   completedAt?: Date | null;
 };
 
@@ -135,10 +136,12 @@ export function buildWorkshopTower(input: {
   const unreceivedFg = input.jobs.filter(
     (job) =>
       !job.inventoryItemId &&
-      (job.status === "Completed" ||
-        job.stages.some(
-          (stage) => stage.stage === "QC" && stage.status === "DONE",
-        )),
+      job.stages.some(
+        (stage) =>
+          stage.stage === "QC" &&
+          stage.status === "DONE" &&
+          stage.qcApprovedAt != null,
+      ),
   );
   const qcPending = open.filter((job) => {
     const qc = job.stages.find((stage) => stage.stage === "QC");

@@ -30,12 +30,18 @@ import { SupportService } from "./support.service";
 import { TicketsService } from "./tickets.service";
 import { formatTutorialVideoPromptLines } from "./tutorial-videos";
 import {
+  formatSellerPosWorkflowReply,
+  isSellerPosWorkflowQuestion,
+} from "./seller-workflow-chat-context";
+import {
   formatLiveWorkshopAccess,
   formatSellerWorkshopReply,
   formatWorkshopPlanCatalog,
   formatWorkshopMetalOperationReply,
+  formatWorkshopOperationalReply,
   isWorkshopAccessQuestion,
   isWorkshopMetalOperationQuestion,
+  isWorkshopOperationalQuestion,
   selectPlansWithFeature,
   type LiveWorkshopAccess,
   type LiveWorkshopPlan,
@@ -510,7 +516,7 @@ export class AiChatbotService {
         functionDeclarations.push({
           name: "sendPasswordReset",
           description:
-            "Sends a password reset link only to the signed-in user's own email after they asked for a reset.",
+            "Sends a six-digit password reset code only to the signed-in user's own email after they asked for a reset.",
           parameters: {
             type: "OBJECT",
             properties: {
@@ -707,24 +713,22 @@ export class AiChatbotService {
       if (name === "sendPasswordReset") {
         const requested = String(args?.email ?? "").trim().toLowerCase();
         const own = (ctx?.authenticatedEmail || "").trim().toLowerCase();
-        const typedInMessage = (ctx?.latestUserMessage || "")
-          .toLowerCase()
-          .includes(requested);
         const allowed =
-          requested &&
+          Boolean(requested) &&
+          Boolean(own) &&
           ctx?.audience !== "public" &&
-          ((own && requested === own) || (!own && typedInMessage));
+          requested === own;
         if (!allowed) {
           return {
             reply:
-              "I can only send a reset link to your own account email. Use the Forgot password page, or sign in and ask again.",
+              "For security, password reset requests can only be initiated for your verified account email while logged in. Please visit the Forgot Password page (/auth/forgot-password) to request a reset code.",
             shouldEscalate: false,
             confidence: 1,
           };
         }
         await this.authService.forgotPassword(requested, ipAddress || "");
         const reply =
-          "If an account exists for that email, a password reset link is on its way. Check inbox and spam.";
+          "If an account exists for that email, a six-digit password reset code is on its way. Enter that code and your new password; the server validates the code before changing the password. Check inbox and spam.";
         await this.supportService.logAiChat(
           sessionId ?? null,
           "assistant",
@@ -991,6 +995,13 @@ KEY FEATURES:
 16. Gold loan / girvi lending — record pledged items, principal, interest rate, tenure, auto-calculated interest, repayments and overdue tracking (PRO+ incl. India & Nepal)
 17. Billing wastage / jarti — on Create Invoice, Calculate wastage after metal weight + cost; hover “How is this calculated?” for the formula tooltip (weight % or metal value %). Country defaults (LK/IN/NP on; US/UK/EU/AE off). Permanent mode/% under Shop Settings → Preferences → Billing Wastage. Separate from karigar workshop wastage.
 18. Unified invoice Print & POS hardware — one Print button on the invoice (desktop /dashboard/shop/invoices/:id and mobile /m/invoices/:id). Thermal 58/80mm roll (SEZNIK MiniX / Josh, Epson TM) prints a short ESC/POS receipt; otherwise A4 / office printers already installed on the computer open the full bill dialog. Chevron picks either type. Setup: /dashboard/shop/settings/hardware (PC) or /m/settings/hardware (phone). Orivraa Desktop lists real Windows/macOS printers and labels each as thermal vs office. Phones also get Share PDF + WhatsApp (on-demand PDF, free). On PC use Download PDF, Email, SMS (SMS is Pro+/Enterprise).
+
+CURRENT SELLER WORKFLOW RULES:
+- POS: Cash is received at the counter. Manual non-cash payment legs stay PENDING until actual receipt is recorded with Confirm Payment Received; a split invoice stays PARTIALLY_PAID until every required leg is received. PAID means fully received. Creating or printing a bill, opening a cash drawer, and beginning checkout do not themselves mark it paid. Use payment methods offered for the shop's country. Printed bills have a verification QR. Returns use no more than the remaining returnable quantity and the original line value; cash refunds settle immediately, while a manual non-cash reversal stays pending until completed. Store credit is for a later purchase.
+- Pricing and products: Live market pricing is the authoritative starting point for supported gold, silver, platinum, and palladium items. The metal suggestion uses the seller's selected purity and metal-only grams (convert tola to grams first), then a configured shop rate or reference rate; the seller deliberately applies it. For gemstones, Natural/Lab-grown is diamond origin while GIA/IGI/etc. is the separate grading laboratory. Reference suggestions use type, origin, diamond carat or non-diamond mm size, Pricing quality (Budget/Standard/Premium), and count—not color or clarity. Explain that a non-diamond needs a mm size before suggesting a rate. Catalog gemstone specifications (origin, color, clarity, cut, carat/size, certificate) are copied into the invoice's sale-time snapshot; repricing changes price only, not specifications. Review a set's component metal, making, gemstone, tax, and discount values before saving or repricing. Gemstones remain a separate component; currency amounts retain two-decimal precision.
+- Account recovery: Forgot password sends a six-digit reset code. Enter the code and a new password; the server validates the code before changing the password. If sign-in reports EMAIL_NOT_VERIFIED, use the verification screen or Resend verification; its public confirmation is intentionally generic, so never say that an email exists, is verified, or definitely received a message.
+- Referrals: A referring shop earns the configured share (currently default 10%) of a referred shop's paid subscription invoices while it remains subscribed. Referral commissions are held in the referral wallet. Depending on the current referral policy, eligible commission may be applied to an Orivraa subscription invoice or made available for supported payout or Pro conversion options. Dashboard → Referrals shows the current rule for the account; Review & Earn is a separate programme.
+- Karigar and Workshop: Karigar book is the normal small-artisan ledger for physical vault metal, issue/return, outstanding balance, jobs, and wage due. Workshop adds factory Tower, Jobs, Floor, Metal, QC, and Reports only when this shop's live plan allows workshopManufacturing and the shop enables Workshop mode. Workshop gold loss is not invoice jarti. QC approval is required before receiving finished goods; receiving adds or updates inventory but does not create a customer sale or price. Cancel/archive a job rather than deleting its record, and settle accrued wages separately from physical-metal return. Procure Bullion records physical metal only, not a supplier bill, payment, or customer invoice.
 
 GST DETAILS (INDIA):
 - 3 % GST on gold value + 5 % GST on making charges
@@ -1756,9 +1767,26 @@ SELLER RESPONSE RULES:
       };
     }
 
-    if (
-      isWorkshopMetalOperationQuestion(message)
-    ) {
+    if (isSellerPosWorkflowQuestion(message)) {
+      return {
+        reply: formatSellerPosWorkflowReply(message),
+        shouldEscalate: false,
+        confidence: 0.96,
+      };
+    }
+
+    if (isWorkshopOperationalQuestion(message)) {
+      return {
+        reply: formatWorkshopOperationalReply(
+          this.workshopAccessFromSnapshot(snapshot),
+          message,
+        ),
+        shouldEscalate: false,
+        confidence: 0.95,
+      };
+    }
+
+    if (isWorkshopMetalOperationQuestion(message)) {
       return {
         reply: formatWorkshopMetalOperationReply(
           this.workshopAccessFromSnapshot(snapshot),
@@ -2414,7 +2442,7 @@ SELLER RESPONSE RULES:
             {
               name: "sendPasswordReset",
               description:
-                "Sends a password reset link only to this shopkeeper's own email.",
+                "Sends a six-digit password reset code only to this shopkeeper's own email.",
               parameters: {
                 type: "OBJECT",
                 properties: {

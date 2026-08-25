@@ -10,19 +10,23 @@ export type MetalPart = {
 
 export interface GemstoneEntry {
   type: string;
+  shape?: string;
   cut: string;
   clarity: string;
   caratWeight: string;
   color: string;
   cost: string;
+  qualityTier?: "BUDGET" | "STANDARD" | "PREMIUM";
   quality?: string;
   origin?: string;
   sizeMm?: number | string;
   count?: number | string;
   cutGrade?: string;
   lab?: string;
+  gradingLab?: string;
   certNumber?: string;
   reportUrl?: string;
+  reportDate?: string;
   sourceItemLabel?: string;
 }
 
@@ -81,6 +85,8 @@ export const METAL_TYPES = [
   { value: "SILVER_925", label: "Silver 925 (Sterling)" },
   { value: "PLATINUM_950", label: "Platinum 950" },
   { value: "PLATINUM_900", label: "Platinum 900" },
+  { value: "PALLADIUM_950", label: "Palladium 950" },
+  { value: "PALLADIUM_500", label: "Palladium 500" },
 ] as const;
 
 import {
@@ -91,6 +97,7 @@ import {
   CANONICAL_GEMSTONE_CUT_GRADES,
   CANONICAL_GEMSTONE_LABS,
   getGemstoneDisplayLabel,
+  normalizeGemstoneSnapshot,
   normalizeGemstoneType,
 } from "@gold-shop/shared";
 
@@ -182,11 +189,44 @@ export const FALLBACK_CATEGORY_TAX_RATES: Record<
 export function emptyGemstone(): GemstoneEntry {
   return {
     type: "",
+    shape: "",
     cut: "",
     clarity: "",
     caratWeight: "",
     color: "",
     cost: "",
+  };
+}
+
+/**
+ * Apply a live quote without discarding the descriptive catalog/sale snapshot.
+ * Live pricing is deliberately limited to the cost field.
+ */
+export function withLiveGemstonePrice(
+  raw: Record<string, unknown>,
+  effectiveTotal: number,
+): GemstoneEntry | null {
+  const gemstone = normalizeGemstoneSnapshot(raw);
+  if (!gemstone) return null;
+  return {
+    type: gemstone.type,
+    shape: gemstone.shape || (typeof raw.shape === "string" ? raw.shape : undefined),
+    cut: gemstone.cut || "",
+    clarity: gemstone.clarity || "",
+    caratWeight:
+      gemstone.caratWeight != null ? String(gemstone.caratWeight) : "",
+    color: gemstone.color || "",
+    cost: String(effectiveTotal),
+    qualityTier: gemstone.qualityTier,
+    origin: gemstone.origin,
+    sizeMm: gemstone.sizeMm,
+    count: gemstone.count,
+    cutGrade: gemstone.cutGrade,
+    gradingLab: gemstone.gradingLab,
+    lab: gemstone.gradingLab,
+    certNumber: gemstone.certNumber,
+    reportUrl: gemstone.reportUrl,
+    reportDate: gemstone.reportDate,
   };
 }
 

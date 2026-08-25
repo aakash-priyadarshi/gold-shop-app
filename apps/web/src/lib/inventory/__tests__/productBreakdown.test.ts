@@ -27,34 +27,66 @@ describe("parseMetalFromComposition", () => {
 });
 
 describe("parseProductGemstones", () => {
-  it("prefers composition.gemstones", () => {
+  it("prefers direct gemstones when non-empty", () => {
     const gems = parseProductGemstones({
       composition: {
         gemstones: [
           {
-            type: "Diamond",
-            cut: "Round",
-            caratWeight: 0.5,
-            color: "G",
-            clarity: "VS1",
-            lab: "GIA",
-            certNumber: "2141438171",
-            valueNpr: 25000,
+            type: "Ignored",
+            valueNpr: 1,
           },
         ],
       },
-      gemstones: [{ type: "Ignored", valueNpr: 1 }],
+      gemstones: [
+        {
+          type: "Diamond",
+          shape: "Oval",
+          cut: "Oval",
+          caratWeight: 0.5,
+          color: "G",
+          clarity: "VS1",
+          lab: "GIA",
+          certNumber: "2141438171",
+          valueNpr: 25000,
+        },
+      ],
     });
     expect(gems).toHaveLength(1);
     expect(gems[0]).toMatchObject({
       type: "Diamond",
-      cut: "Round",
+      shape: "Oval",
+      cut: "Oval",
       caratWeight: 0.5,
       color: "G",
       clarity: "VS1",
       lab: "GIA",
       certNumber: "2141438171",
       valueNpr: 25000,
+    });
+  });
+
+  it("falls back to composition.gemstones when direct gemstones is empty or absent", () => {
+    const gems = parseProductGemstones({
+      composition: {
+        gemstones: [
+          {
+            type: "Ruby",
+            shape: "Round",
+            cut: "Round",
+            caratWeight: 1.0,
+            valueNpr: 15000,
+          },
+        ],
+      },
+      gemstones: [],
+    });
+    expect(gems).toHaveLength(1);
+    expect(gems[0]).toMatchObject({
+      type: "Ruby",
+      shape: "Round",
+      cut: "Round",
+      caratWeight: 1.0,
+      valueNpr: 15000,
     });
   });
 

@@ -4,7 +4,10 @@ import {
   extractMetalTypeFromComposition,
   extractPurityFromComposition,
   getGemstoneDisplayLabel,
+  getGemstonePricingStoneType,
   normalizeGemstoneCut,
+  normalizeGemstoneOrigin,
+  normalizeGemstoneSnapshot,
   normalizeGemstoneType,
   normalizeMetalCode,
   normalizeMetalMarketKey,
@@ -97,6 +100,19 @@ describe("composition-helpers", () => {
   });
 
   describe("gemstone helpers", () => {
+    it("normalizes legacy diamond values without losing origin and keeps display identity separate from pricing", () => {
+      expect(normalizeGemstoneSnapshot({ type: "DIAMOND_LAB", lab: "IGI" })).toMatchObject({
+        type: "DIAMOND", origin: "LAB", gradingLab: "IGI",
+      });
+      expect(normalizeGemstoneSnapshot({ type: "DIAMOND_NATURAL" })).toMatchObject({
+        type: "DIAMOND", origin: "NATURAL",
+      });
+      expect(normalizeGemstoneOrigin("LAB_GROWN", "DIAMOND")).toBe("LAB");
+      expect(getGemstonePricingStoneType("CUBIC_ZIRCONIA")).toBe("CZ");
+      expect(getGemstonePricingStoneType("AMETHYST")).toBe("SEMI_PRECIOUS");
+      expect(normalizeGemstoneType("AMETHYST")).toBe("AMETHYST");
+    });
+
     it("normalizes gemstone types and labels", () => {
       expect(normalizeGemstoneType("")).toBe("");
       expect(normalizeGemstoneType(null)).toBe("");
@@ -197,6 +213,166 @@ describe("composition-helpers", () => {
       expect(extracted).toHaveLength(1);
       expect(extracted[0].type).toBe("OTHER");
       expect(extracted[0].cost).toBe("50000");
+    });
+
+    it("preserves origin, grading laboratory, certificate, colour and clarity when extracting catalog gems", () => {
+      const [gem] = extractGemstonesFromItem({
+        composition: {
+          gemstones: [{
+            type: "DIAMOND_LAB", origin: "LAB", shape: "Oval", color: "D", clarity: "VVS1",
+            lab: "IGI", certNumber: "IGI-123", reportUrl: "https://example.com/report",
+            caratWeight: 1, count: 2, valueNpr: 50000,
+          }],
+        },
+      });
+      expect(gem).toMatchObject({
+        type: "DIAMOND", origin: "LAB", shape: "Oval", color: "D", clarity: "VVS1",
+        gradingLab: "IGI", certNumber: "IGI-123", reportUrl: "https://example.com/report",
+      });
+    });
+
+    it("prefers direct item.gemstones canonical array over composition.gemstones", () => {
+      const [gem] = extractGemstonesFromItem({
+        gemstones: [{
+          type: "DIAMOND",
+          origin: "LAB",
+          shape: "Oval",
+          caratWeight: 1.5,
+          color: "E",
+          clarity: "VS1",
+          cost: 75000,
+        }],
+        composition: {
+          gemstones: [{
+            type: "RUBY",
+            cost: 10000,
+          }],
+        },
+      });
+      expect(gem).toMatchObject({
+        type: "DIAMOND",
+        origin: "LAB",
+        shape: "Oval",
+        caratWeight: "1.5",
+        color: "E",
+        clarity: "VS1",
+        cost: "75000",
+      });
+    });
+
+    it("prefers direct single gemstone object over composition.gemstones", () => {
+      const [gem] = extractGemstonesFromItem({
+        gemstones: {
+          type: "EMERALD",
+          origin: "NATURAL",
+          shape: "Octagon",
+          sizeMm: 7,
+          cost: 120000,
+        },
+        composition: {
+          gemstones: [{
+            type: "RUBY",
+            cost: 10000,
+          }],
+        },
+      });
+      expect(gem).toMatchObject({
+        type: "EMERALD",
+        origin: "NATURAL",
+        shape: "Octagon",
+        sizeMm: 7,
+        cost: "120000",
+      });
+    });
+
+    it("prefers direct wrapper { gemstones: [...] } over composition.gemstones", () => {
+      const [gem] = extractGemstonesFromItem({
+        gemstones: {
+          gemstones: [{
+            type: "DIAMOND",
+            origin: "LAB",
+            shape: "Round",
+            caratWeight: 1.0,
+            cost: 50000,
+          }],
+        },
+        composition: {
+          gemstones: [{
+            type: "RUBY",
+            cost: 10000,
+          }],
+        },
+      });
+      expect(gem).toMatchObject({
+        type: "DIAMOND",
+        origin: "LAB",
+        shape: "Round",
+        caratWeight: "1",
+        cost: "50000",
+      });
+    });
+
+    it("falls back to composition.gemstones when direct gemstones is missing, empty array, or empty wrapper", () => {
+      const fromUndefined = extractGemstonesFromItem({
+        composition: {
+          gemstones: [{
+            type: "SAPPHIRE",
+            cost: 45000,
+          }],
+        },
+      });
+      expect(fromUndefined[0]).toMatchObject({
+        type: "SAPPHIRE",
+        cost: "45000",
+      });
+
+      const fromEmptyArray = extractGemstonesFromItem({
+        gemstones: [],
+        composition: {
+          gemstones: [{
+            type: "SAPPHIRE",
+            cost: 45000,
+          }],
+        },
+      });
+      expect(fromEmptyArray[0]).toMatchObject({
+        type: "SAPPHIRE",
+        cost: "45000",
+      });
+
+      // Regression fixture: direct { gemstones: [] } falls back to composition.gemstones
+      const fromEmptyWrapper = extractGemstonesFromItem({
+        gemstones: {
+          gemstones: [],
+        },
+        composition: {
+          gemstones: [
+            {
+              type: "DIAMOND",
+              origin: "LAB",
+              shape: "Oval",
+              color: "D",
+              clarity: "VVS1",
+            },
+          ],
+        },
+      });
+      expect(fromEmptyWrapper).toHaveLength(1);
+      expect(fromEmptyWrapper[0]).toMatchObject({
+        type: "DIAMOND",
+        origin: "LAB",
+        shape: "Oval",
+        color: "D",
+        clarity: "VVS1",
+      });
+    });
+
+    it("returns empty array when every source is empty or missing", () => {
+      expect(extractGemstonesFromItem({})).toEqual([]);
+      expect(extractGemstonesFromItem({ gemstones: [] })).toEqual([]);
+      expect(extractGemstonesFromItem({ gemstones: { gemstones: [] } })).toEqual([]);
+      expect(extractGemstonesFromItem({ gemstones: [], composition: { gemstones: [] } })).toEqual([]);
+      expect(extractGemstonesFromItem({ gemstones: { gemstones: [] }, composition: { gemstones: [] } })).toEqual([]);
     });
   });
 });

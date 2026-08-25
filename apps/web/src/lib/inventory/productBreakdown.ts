@@ -6,6 +6,7 @@ import {
 
 export type ProductGemstone = {
   type: string;
+  shape?: string;
   cut?: string;
   caratWeight?: number;
   color?: string;
@@ -93,6 +94,7 @@ function parseGemstone(raw: unknown): ProductGemstone | null {
   if (!type) return null;
   return {
     type,
+    shape: readString(row.shape) || undefined,
     cut: readString(row.cut) || undefined,
     caratWeight: readNumber(row.caratWeight) || undefined,
     color: readString(row.color) || undefined,
@@ -112,13 +114,16 @@ export function parseProductGemstones(
   const composition = asRecord(source.composition);
   const fromField = source.gemstones;
   const nestedField = asRecord(fromField)?.gemstones;
-  const raw = Array.isArray(composition?.gemstones)
-    ? composition.gemstones
-    : Array.isArray(fromField)
+  const raw =
+    Array.isArray(fromField) && fromField.length > 0
       ? fromField
-      : Array.isArray(nestedField)
+      : Array.isArray(nestedField) && nestedField.length > 0
         ? nestedField
-        : [];
+        : Array.isArray(composition?.gemstones)
+          ? composition.gemstones
+          : Array.isArray(fromField)
+            ? fromField
+            : [];
 
   return raw
     .map(parseGemstone)

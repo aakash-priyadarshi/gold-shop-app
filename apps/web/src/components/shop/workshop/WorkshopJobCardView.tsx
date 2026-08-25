@@ -143,7 +143,7 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
             await karigarApi.deleteJob(job.id);
             window.location.href = supplyChainHref("jobs");
           } catch (err: any) {
-            setError(err?.response?.data?.message || "Could not delete job");
+            setError(err?.response?.data?.message || "Could not cancel job");
           }
         }}
       />

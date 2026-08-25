@@ -98,7 +98,7 @@ export function formatSellerWorkshopReply(access: LiveWorkshopAccess): string {
     return `Supply Chain is at /dashboard/shop/supply-chain (Karigar book plus optional factory tabs). I could not verify your plan's workshop manufacturing entitlement right now — please retry or open Billing. ${livePlans}`;
   }
   if (access.workshopManufacturingEnabled && access.workshopMode) {
-    return `Supply Chain is one page at /dashboard/shop/supply-chain with seven tabs: Karigar book, Tower, Jobs, Floor, Metal, QC, and Reports. Your ${access.planName} plan currently includes workshop manufacturing, and Workshop mode is already on. ${livePlans} Gold loss is workshop metal, not invoice jarti.`;
+    return `Supply Chain is one page at /dashboard/shop/supply-chain. Karigar book is the normal small-artisan ledger; Workshop mode adds the factory Tower, Jobs, Floor, Metal, QC, and Reports tabs. Your ${access.planName} plan currently includes workshop manufacturing, and Workshop mode is already on. ${livePlans} Gold loss is workshop metal, not invoice jarti.`;
   }
   if (access.workshopManufacturingEnabled) {
     return `Supply Chain is at /dashboard/shop/supply-chain. Karigar book is the artisan ledger. Your ${access.planName} plan currently includes workshop manufacturing, but Workshop mode is off. ${how} Then Tower, Jobs, Floor, Metal, QC, and Reports appear as tabs. ${livePlans}`;
@@ -115,9 +115,45 @@ export function isWorkshopMetalOperationQuestion(message: string): boolean {
 
 export function isWorkshopAccessQuestion(message: string): boolean {
   const normalized = message.toLowerCase();
-  return /(workshop mode|factory tab|factory view|workshop manufactur|unlock.*tower|which plan.*workshop|plan.*workshop|enable workshop|turn on workshop|supply chain tab|include workshop|workshop entitlement|workshop access)/.test(
+  return /(workshop mode|factory tab|factory view|workshop manufactur|unlock.*tower|which plan.*workshop|plan.*workshop|enable workshop|turn on workshop|supply chain tab|include workshop|workshop entitlement|workshop access|difference.*karigar.*workshop|karigar.*workshop.*difference)/.test(
     normalized,
   );
+}
+
+export function isWorkshopOperationalQuestion(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return /(receive.*(finished|workshop)|finished.*receive|can't.*receive|cannot.*receive|why.*receive|cancel.*job|archive.*job|delete.*job|job.*delete|wage.*(due|settle|settlement)|settle.*wage|procure.*bullion|procurement.*bullion|supplier.*bullion)/.test(
+    normalized,
+  );
+}
+
+export function formatWorkshopOperationalReply(
+  access: Pick<
+    LiveWorkshopAccess,
+    "workshopMode" | "workshopManufacturingEnabled"
+  >,
+  message: string,
+): string {
+  const normalized = message.toLowerCase();
+  const factoryReady =
+    access.workshopManufacturingEnabled === true && access.workshopMode;
+
+  if (/(receive.*(finished|workshop)|finished.*receive|can't.*receive|cannot.*receive|why.*receive)/.test(normalized)) {
+    if (!factoryReady) {
+      return "Finished-goods receipt is part of Workshop mode. First make sure your plan includes workshopManufacturing and turn on Workshop mode in Shop Settings → Preferences. Then complete the job's QC approval in Supply Chain → QC before receiving finished goods from its job card.";
+    }
+    return "Finished goods can be received only after the job is approved in Supply Chain → QC. Approve it there, then open the Jobs tab or job card and choose Receive finished goods. This adds or updates inventory; it does not create a customer invoice or sale price.";
+  }
+
+  if (/(cancel.*job|archive.*job|delete.*job|job.*delete)/.test(normalized)) {
+    return "Use Cancel / archive on the job instead of deleting its history. Cancellation is terminal for production: it keeps the recorded work visible but does not allow more stage work, metal issue, or finished-goods receipt. Do not use cancellation to correct metal already issued or returned; record the appropriate return or reconciliation movement instead.";
+  }
+
+  if (/(wage.*(due|settle|settlement)|settle.*wage)/.test(normalized)) {
+    return "Wages due are accrued when finished metal is returned at the karigar's configured rate. That amount is separate from the physical-metal return and outstanding balance. Review it in Supply Chain → Karigar book, then record the actual wage settlement in your normal payment/accounting process.";
+  }
+
+  return "Procure Bullion in Supply Chain records physical metal entering the workshop vault so it can be issued to karigars or jobs. It does not create a supplier bill, supplier payment, or customer invoice; handle those in the relevant purchasing or accounting workflow.";
 }
 
 export function formatWorkshopMetalOperationReply(

@@ -271,7 +271,13 @@ export class KarigarService {
   }
 
   async updateJob(shopId: string, jobId: string, dto: UpdateKarigarJobDto) {
-    await this.requireJob(shopId, jobId);
+    const job = await this.requireJob(shopId, jobId);
+    this.assertProductionJobActive(job);
+    if (dto.status != null || dto.currentStage != null) {
+      throw new BadRequestException(
+        "Use the workshop stage flow to change a job's production status or current stage",
+      );
+    }
     await this.prisma.karigarJob.update({
       where: { id: jobId },
       data: {
@@ -285,7 +291,6 @@ export class KarigarService {
         ...(dto.allowedWastagePercent != null
           ? { allowedWastagePercent: dto.allowedWastagePercent }
           : {}),
-        ...(dto.status != null ? { status: dto.status } : {}),
         ...(dto.walkInCustomerId !== undefined
           ? { walkInCustomerId: dto.walkInCustomerId || null }
           : {}),
@@ -305,9 +310,6 @@ export class KarigarService {
         ...(dto.bom !== undefined
           ? { bom: dto.bom ? (dto.bom as Prisma.InputJsonValue) : Prisma.JsonNull }
           : {}),
-        ...(dto.currentStage != null
-          ? { currentStage: dto.currentStage as KarigarStage }
-          : {}),
       },
     });
     return this.getJob(shopId, jobId);
@@ -315,8 +317,11 @@ export class KarigarService {
 
   async deleteJob(shopId: string, jobId: string) {
     await this.requireJob(shopId, jobId);
-    await this.prisma.karigarJob.delete({ where: { id: jobId } });
-    return { ok: true };
+    await this.prisma.karigarJob.update({
+      where: { id: jobId },
+      data: { status: "CANCELLED" },
+    });
+    return { ok: true, status: "CANCELLED" };
   }
 
   async deleteWorkshop(shopId: string, workshopId: string) {
@@ -329,7 +334,7 @@ export class KarigarService {
     });
     if (openJobs > 0) {
       throw new BadRequestException(
-        "Unlink or delete this karigar's jobs before removing them",
+        "Cannot delete workshop with existing job history",
       );
     }
     await this.prisma.karigarWorkshop.delete({ where: { id: workshopId } });
@@ -345,19 +350,25 @@ export class KarigarService {
     const weight = dto.weightGrams;
     const metalKey = dto.metalKey ?? "goldGrains24k";
     const stage = (dto.stage as KarigarStage | undefined) ?? undefined;
+    const type = dto.type as KarigarMovementType;
     let job: Awaited<ReturnType<typeof this.requireJob>> | null = null;
     if (jobId) {
       job = await this.requireJob(shopId, jobId);
-      await this.ensureStages(
-        this.prisma,
-        shopId,
-        job.id,
-        dto.workshopId ?? job.workshopId,
-        job.allowedWastagePercent,
-      );
+      if (job.status === "CANCELLED") {
+        if (type === "ISSUE") {
+          this.assertProductionJobActive(job);
+        }
+      } else {
+        await this.ensureStages(
+          this.prisma,
+          shopId,
+          job.id,
+          dto.workshopId ?? job.workshopId,
+          job.allowedWastagePercent,
+        );
+      }
     }
 
-    const type = dto.type as KarigarMovementType;
     const workshopId = dto.workshopId ?? job?.workshopId ?? null;
 
     if (type === "ISSUE" && !issueRequiresWorkshop(workshopId)) {
@@ -445,8 +456,19 @@ export class KarigarService {
     stage: string,
     dto: UpdateKarigarStageDto,
   ) {
-    await this.requireJob(shopId, jobId);
+    const job = await this.requireJob(shopId, jobId);
+    this.assertProductionJobActive(job);
     const stageEnum = this.parseStage(stage);
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { workshopMode: true, workshopDepartments: true },
+    });
+    const workshopQc = shop?.workshopMode && stageEnum === KarigarStage.QC;
+    if (workshopQc && dto.status != null) {
+      throw new BadRequestException(
+        "Use Workshop QC inspection to approve, rework, or reject QC",
+      );
+    }
     await this.ensureStages(this.prisma, shopId, jobId, dto.workshopId, dto.allowedWastagePercent);
     const existing = await this.prisma.karigarJobStage.findUnique({
       where: { jobId_stage: { jobId, stage: stageEnum } },
@@ -458,7 +480,7 @@ export class KarigarService {
     const scrap = dto.scrapGrams ?? existing.scrapGrams;
     const dust = dto.dustGrams ?? existing.dustGrams;
     const allowed = dto.allowedWastagePercent ?? existing.allowedWastagePercent;
-    const done = goldOut > 0 || dto.status === "DONE";
+    const done = !workshopQc && (goldOut > 0 || dto.status === "DONE");
 
     await this.prisma.karigarJobStage.update({
       where: { id: existing.id },
@@ -469,7 +491,10 @@ export class KarigarService {
         dustGrams: dust,
         allowedWastagePercent: allowed,
         workshopId: dto.workshopId ?? existing.workshopId,
-        status: dto.status ?? (done ? "DONE" : existing.status),
+        status:
+          workshopQc
+            ? existing.status
+            : dto.status ?? (done ? "DONE" : existing.status),
         notes: dto.notes !== undefined ? dto.notes : existing.notes,
         photos: dto.photos ?? existing.photos,
         reworkCount: dto.reworkCount ?? existing.reworkCount,
@@ -482,17 +507,19 @@ export class KarigarService {
       },
     });
 
-    const shop = await this.prisma.shop.findUnique({
-      where: { id: shopId },
-      select: { workshopDepartments: true },
-    });
     const departments = resolveDepartments(shop?.workshopDepartments);
-    await this.syncJobStatus(shopId, jobId, departments);
+    await this.syncJobStatus(
+      shopId,
+      jobId,
+      shop?.workshopMode ? this.workflowDepartments(departments) : departments,
+      !!shop?.workshopMode,
+    );
     return this.getJob(shopId, jobId);
   }
 
   async createTree(shopId: string, jobId: string, dto: CreateCastingTreeDto) {
     const job = await this.requireJob(shopId, jobId);
+    this.assertProductionJobActive(job);
     await this.ensureStages(
       this.prisma,
       shopId,
@@ -531,7 +558,8 @@ export class KarigarService {
     treeId: string,
     dto: UpdateCastingTreeDto,
   ) {
-    await this.requireJob(shopId, jobId);
+    const job = await this.requireJob(shopId, jobId);
+    this.assertProductionJobActive(job);
     const tree = await this.prisma.karigarCastingTree.findFirst({
       where: { id: treeId, jobId, shopId },
     });
@@ -720,7 +748,6 @@ export class KarigarService {
       { stage: "SETTING", goldIn: 910, goldOut: 908, scrap: 0, dust: 1 },
       { stage: "POLISHING", goldIn: 908, goldOut: 905, scrap: 1, dust: 1 },
       { stage: "FINAL_POLISH", goldIn: 905, goldOut: 903, scrap: 0, dust: 1 },
-      { stage: "QC", goldIn: 903, goldOut: 903, scrap: 0, dust: 0 },
     ];
     for (const row of stageWeights) {
       await this.updateStage(shopId, job.id, row.stage, {
@@ -766,7 +793,9 @@ export class KarigarService {
 
   async getTower(shopId: string) {
     const shop = await this.requireWorkshopShop(shopId);
-    const departments = resolveDepartments(shop.workshopDepartments);
+    const departments = this.workflowDepartments(
+      resolveDepartments(shop.workshopDepartments),
+    );
     const [jobs, workshops, vault] = await Promise.all([
       this.prisma.karigarJob.findMany({
         where: { shopId },
@@ -815,7 +844,9 @@ export class KarigarService {
 
   async getFloor(shopId: string, dept?: string) {
     const shop = await this.requireWorkshopShop(shopId);
-    const departments = resolveDepartments(shop.workshopDepartments);
+    const departments = this.workflowDepartments(
+      resolveDepartments(shop.workshopDepartments),
+    );
     const stageFilter = dept ? this.parseStage(dept) : undefined;
     const jobs = await this.prisma.karigarJob.findMany({
       where: {
@@ -842,8 +873,19 @@ export class KarigarService {
     dto: AdvanceKarigarFloorDto,
   ) {
     const shop = await this.requireWorkshopShop(shopId);
-    const departments = resolveDepartments(shop.workshopDepartments);
+    const departments = this.workflowDepartments(
+      resolveDepartments(shop.workshopDepartments),
+    );
     const job = await this.requireJob(shopId, jobId);
+    this.assertProductionJobActive(job);
+    const current = (job.currentStage ??
+      departments[0] ??
+      KarigarStage.CASTING) as KarigarStageCode;
+    if (current === KarigarStage.QC) {
+      throw new BadRequestException(
+        "Use Workshop QC inspection to approve, rework, or reject this job",
+      );
+    }
     await this.ensureStages(
       this.prisma,
       shopId,
@@ -851,9 +893,6 @@ export class KarigarService {
       job.workshopId,
       job.allowedWastagePercent,
     );
-    const current = (job.currentStage ??
-      departments[0] ??
-      KarigarStage.CASTING) as KarigarStageCode;
     const existing = await this.prisma.karigarJobStage.findUnique({
       where: {
         jobId_stage: { jobId, stage: current as KarigarStage },
@@ -886,33 +925,37 @@ export class KarigarService {
       if (updatedStage.count === 0) {
         throw new BadRequestException("Stage transition was already applied");
       }
-      if (next) {
-        await tx.karigarJobStage.update({
-          where: { jobId_stage: { jobId, stage: next as KarigarStage } },
-          data: {
-            goldInGrams: { increment: goldOut },
-            startedAt: now,
-            status: "IN_PROGRESS",
-          },
-        });
-        await tx.karigarJob.update({
-          where: { id: jobId },
-          data: { currentStage: next as KarigarStage },
-        });
-      } else {
-        await tx.karigarJob.update({
-          where: { id: jobId },
-          data: { currentStage: KarigarStage.QC, status: "Completed" },
-        });
+      if (!next) {
+        throw new BadRequestException(
+          "Use Workshop QC inspection to complete this job",
+        );
       }
+      await tx.karigarJobStage.update({
+        where: { jobId_stage: { jobId, stage: next as KarigarStage } },
+        data: {
+          goldInGrams: { increment: goldOut },
+          startedAt: now,
+          status: "IN_PROGRESS",
+        },
+      });
+      await tx.karigarJob.update({
+        where: { id: jobId },
+        data: { currentStage: next as KarigarStage },
+      });
     });
-    await this.syncJobStatus(shopId, jobId, departments);
+    await this.syncJobStatus(shopId, jobId, departments, true);
     return this.getJob(shopId, jobId);
   }
 
   async inspectQc(shopId: string, jobId: string, dto: InspectKarigarQcDto) {
     await this.requireWorkshopShop(shopId);
     const job = await this.requireJob(shopId, jobId);
+    this.assertProductionJobActive(job);
+    if (job.currentStage !== KarigarStage.QC) {
+      throw new BadRequestException(
+        "Advance this job to Workshop QC before recording an inspection",
+      );
+    }
     await this.ensureStages(
       this.prisma,
       shopId,
@@ -936,6 +979,7 @@ export class KarigarService {
             photos: dto.photos ?? qc.photos,
             startedAt: qc.startedAt ?? now,
             completedAt: now,
+            qcApprovedAt: now,
           },
         });
         await tx.karigarJob.update({
@@ -952,6 +996,7 @@ export class KarigarService {
             rejectionReason: dto.rejectionReason ?? qc.rejectionReason,
             notes: dto.notes ?? qc.notes,
             photos: dto.photos ?? qc.photos,
+            qcApprovedAt: null,
           },
         });
         await tx.karigarJobStage.update({
@@ -971,6 +1016,7 @@ export class KarigarService {
             notes: dto.notes ?? qc.notes,
             photos: dto.photos ?? qc.photos,
             completedAt: now,
+            qcApprovedAt: null,
           },
         });
         await tx.karigarJob.update({
@@ -989,6 +1035,13 @@ export class KarigarService {
       include: { stages: true, trees: true },
     });
     if (!job) throw new NotFoundException("Job not found");
+    this.assertProductionJobActive(job);
+    const qc = job.stages.find((stage) => stage.stage === KarigarStage.QC);
+    if (qc?.status !== "DONE" || !qc.qcApprovedAt) {
+      throw new BadRequestException(
+        "Approve this job in Workshop QC before receiving finished goods",
+      );
+    }
     const weight = finishedGramsForReceive(job);
     if (weight <= 0) {
       throw new BadRequestException(
@@ -1098,6 +1151,7 @@ export class KarigarService {
       dustGrams: number;
       allowedWastagePercent: number;
       reworkCount: number;
+      qcApprovedAt?: Date | null;
       completedAt?: Date | null;
     }>;
     trees: Array<{
@@ -1120,6 +1174,7 @@ export class KarigarService {
       stages: job.stages.map((stage) => ({
         ...stage,
         stage: stage.stage as KarigarStageCode,
+        qcApprovedAt: stage.qcApprovedAt ?? null,
         completedAt: stage.completedAt ?? null,
       })),
       trees: job.trees,
@@ -1132,6 +1187,23 @@ export class KarigarService {
     });
     if (!job) throw new NotFoundException("Job not found");
     return job;
+  }
+
+  private assertProductionJobActive(job: { status: string }) {
+    if (job.status === "CANCELLED") {
+      throw new BadRequestException(
+        "Cancelled jobs are archived and cannot resume production",
+      );
+    }
+  }
+
+  private workflowDepartments(
+    departments: KarigarStageCode[],
+  ): KarigarStageCode[] {
+    return [
+      ...departments.filter((stage) => stage !== KarigarStage.QC),
+      KarigarStage.QC,
+    ];
   }
 
   private parseStage(stage: string): KarigarStage {
@@ -1195,12 +1267,26 @@ export class KarigarService {
     shopId: string,
     jobId: string,
     departments: KarigarStageCode[] = [...KARIGAR_STAGES],
+    qcRequiresApproval = false,
   ) {
+    const job = await this.prisma.karigarJob.findFirst({
+      where: { id: jobId, shopId },
+      select: { status: true },
+    });
+    if (!job || job.status === "CANCELLED") return;
     const stages = await this.prisma.karigarJobStage.findMany({
       where: { shopId, jobId },
     });
     const done = new Set(
-      stages.filter((s) => s.status === "DONE").map((s) => s.stage),
+      stages
+        .filter(
+          (s) =>
+            s.status === "DONE" &&
+            (!qcRequiresApproval ||
+              s.stage !== KarigarStage.QC ||
+              s.qcApprovedAt != null),
+        )
+        .map((s) => s.stage),
     );
     let status = "Casting";
     if (done.has(KarigarStage.QC)) status = "Completed";
@@ -1215,8 +1301,12 @@ export class KarigarService {
       polishing: done.has(KarigarStage.POLISHING),
       hallmark: done.has(KarigarStage.QC),
     };
-    let currentStage: KarigarStage = (departments[0] ?? KarigarStage.CASTING) as KarigarStage;
-    for (const stage of departments) {
+    const workflowDepartments = qcRequiresApproval
+      ? this.workflowDepartments(departments)
+      : departments;
+    let currentStage: KarigarStage = (workflowDepartments[0] ??
+      KarigarStage.CASTING) as KarigarStage;
+    for (const stage of workflowDepartments) {
       currentStage = stage as KarigarStage;
       if (!done.has(stage as KarigarStage)) break;
     }
@@ -1264,6 +1354,7 @@ export class KarigarService {
       photos?: string[];
       reworkCount?: number;
       rejectionReason?: string | null;
+      qcApprovedAt?: Date | null;
       startedAt?: Date | null;
       completedAt?: Date | null;
     }>;
@@ -1345,6 +1436,8 @@ export class KarigarService {
       metalKey: job.metalKey,
       allowedWastagePercent: job.allowedWastagePercent,
       status: job.status,
+      archived: job.status === "CANCELLED",
+      readOnly: job.status === "CANCELLED",
       steps,
       updatedAt: job.updatedAt.toISOString(),
       walkInCustomerId: job.walkInCustomerId ?? null,

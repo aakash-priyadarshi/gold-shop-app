@@ -21,7 +21,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "inventory-sets",
     content:
-      "Jewelry Sets on Orivraa: From Product Catalog use Add Set to create a bridal or matching set with its own SKU. Attach existing pieces or create new components (earrings, maang tikka, necklace, nathuni, etc.). Apply a percent or fixed set discount because buying together reduces the overall price. Components are hidden from separate sale while bound to the set. Selling the set at POS marks the set and all components sold. Use Break set to release pieces for individual sale. Vault & Tags manages physical locations as Area → Cabinet → Bin trees you define for your shop.",
+      "Jewelry Sets on Orivraa: From Product Catalog use Add Set to create a bridal or matching set with its own SKU. Attach existing pieces or create new components (earrings, maang tikka, necklace, nathuni, etc.). The set price is built from its linked metal, making, gemstone, and tax components; apply a percent or fixed set discount when buying together. Review the price preview before saving or invoicing. Components are hidden from separate sale while bound to the set. Selling the set at POS marks the set and all components sold. Use Break set to release pieces for individual sale. Vault & Tags manages physical locations as Area → Cabinet → Bin trees you define for your shop.",
   },
   {
     topic: "vault-locations",
@@ -91,7 +91,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "live_rates_autofill",
     content:
-      "On the invoice creation page, Orivraa shows live gold and silver market rates in a collapsible panel. Click the 'Live' button next to any line item's Metal Cost to autofill the cost as weight × live rate per gram. The autofilled cost is fully editable afterwards. Rates are fetched per market (Nepal, India, UAE, etc.) in the local currency. Live rates update every 10 minutes.",
+      "On Create Invoice and POS, Orivraa calculates the bill from the current authoritative pricing preview before the seller completes the sale. On Create Invoice, click Live next to Metal Cost to autofill weight × the current supported market rate per gram; review the returned amount before saving because live rates can change. Gold, silver, platinum, and supported palladium purities use their appropriate live market rate; if a rate is unavailable, keep or enter a shop price instead of substituting a different metal. Gemstones stay a separate amount, and displayed currency values retain two decimals.",
   },
   {
     topic: "hallmark",
@@ -102,6 +102,21 @@ const CHUNKS: { topic: string; content: string }[] = [
     topic: "offline_pos",
     content:
       "The Orivraa desktop POS works fully offline at the billing counter. Invoices are generated, payments recorded, and inventory updated even with no internet. All data auto-syncs to the cloud the moment the connection is restored. Available for Windows and macOS. Download at /download.",
+  },
+  {
+    topic: "product_gemstone_pricing_and_snapshots",
+    content:
+      "Product Catalog → Add/Edit Product has separate product specifications and pricing inputs for gemstones. A diamond is stored as type DIAMOND with Origin Natural or Lab-grown; the grading laboratory (GIA, IGI, SGL, etc.) is a separate certificate field and does not mean Lab-grown. Old catalog values such as DIAMOND_LAB still open as Diamond + Lab-grown. Gemstone price suggestion uses the canonical pricing category, diamond origin where relevant, carat for diamonds, size in millimetres for non-diamond stones, Pricing quality (Budget, Standard, Premium), and quantity. Gemological color, clarity and cut are preserved specifications and are not silently used as Pricing quality. A non-diamond needs a size in mm before a reference suggestion; do not invent a 3 mm size. The selected product metal suggestion uses the selected metal/purity and metal-only weight in grams (one tola is converted to 11.6638g before calculation), then uses a shop rate if configured or the current reference rate. Sellers review and deliberately apply a suggestion; it never silently replaces a manual amount. When catalog products are added to an invoice, gemstone origin, color, clarity, cut, carat/size, quality, certificate and grading-lab details are copied into the immutable sale-time snapshot. A later live gemstone reprice changes the displayed stone cost only, not its certificate/specification. Invoice/PDF details show useful available stone specs such as origin, color, clarity, cut, carat and count.",
+  },
+  {
+    topic: "pos_register_payments_returns",
+    content:
+      "POS cashier workflow: choose the correct register/counter, then open a shift with the actual opening cash in that drawer (zero is valid). Close the same shift by counting physical cash and generate the Z-report, which compares expected and counted cash plus any variance. At checkout, CASH is received at the counter. Manual non-cash legs such as CARD, UPI/wallet, and bank transfer are PENDING until a cashier uses Confirm Payment Received after actual receipt; creating the bill alone does not mean it is paid. A split sale is PARTIALLY_PAID until all required payment legs are received. PAID means the invoice balance is fully received; PENDING means payment is still awaiting receipt; PARTIALLY_PAID means some payment is received and a balance remains. Use only the payment methods offered for the shop's country. Open the cash drawer only for a valid counter need and follow any manager-PIN requirement; opening it never confirms a payment. Use Return / Exchange to find the original bill, select no more than the remaining returnable quantity, and use the historic line value for the refund. Cash refunds settle immediately; non-cash reversals stay pending until actually completed; STORE_CREDIT creates credit for a later purchase. Every printed bill has a QR verification link at /verify-bill.",
+  },
+  {
+    topic: "account_recovery_email_verification",
+    content:
+      "Account recovery and email verification: Forgot password sends a 6-digit reset code to the supplied inbox. Enter the code and a new password; the server validates the code before changing the password. If login returns EMAIL_NOT_VERIFIED, enter the verification code on the login recovery screen, then sign in again. The public resend-verification action always gives the same generic success response: it does not reveal whether an email exists or is already verified. If an address belongs to an unverified account and sending is permitted, a code is sent; if no code arrives, wait for the cooldown, check spam/junk, and retry from the verification screen rather than assuming the account state from the response.",
   },
   {
     topic: "multi_store",
@@ -176,12 +191,12 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "karigar",
     content:
-      "Orivraa has a karigar (goldsmith/artisan) supply-chain module to issue metal to karigars, track work-in-progress orders, record metal given vs returned and wastage, and settle making charges. Keeps your karigar accounts transparent. Available on PRO and higher plans across India, Nepal and other regions.",
+      "Karigar book is Orivraa's normal small-artisan ledger at /dashboard/shop/supply-chain. Use it to register karigars, record physical metal issued and returned, see each artisan's outstanding metal balance, record jobs, and see wages due. A finished-metal return can accrue wages due; physical-metal return and wage settlement are separate business actions. It is distinct from the optional Workshop mode factory workflow.",
   },
   {
     topic: "catalog_currency_reprice",
     content:
-      "Product catalog, walk-in quotes, custom RFQs, shop metal/gem rates, and karigar wage amounts are stored in your shop's base currency (INR for India, NPR for Nepal, USD for the USA, etc.) even if older field names mention NPR. Changing shop country converts those stored amounts at the live exchange rate so a ₹3000 piece becomes about $36, not $3000. Issued invoices keep the currency they were billed in. When gold rates change without a country switch, use Product Catalog → Reprice from rates. Making charge percents are not converted.",
+      "Product catalog, walk-in quotes, custom RFQs, shop metal/gem rates, and karigar wage amounts are stored in your shop's base currency (INR for India, NPR for Nepal, USD for the USA, etc.) even if older field names mention NPR. Changing shop country converts those stored amounts at the live exchange rate so a ₹3000 piece becomes about $36, not $3000. Issued invoices keep the currency they were billed in. When metal rates change without a country switch, use Product Catalog → Reprice from rates: review the server preview, choose whether making stays fixed or recalculates, then apply the selected prices. Repricing preserves the separate gemstone and tax amounts and uses two-decimal money values.",
   },
   {
     topic: "invoice_catalog_and_tax_country",
@@ -231,7 +246,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "karigar_gold_loss_ledger",
     content:
-      "Karigar Gold Loss tracks physical workshop metal, not customer billing wastage (jarti) on invoices. You will find it in two places on /dashboard/shop/supply-chain: the Gold Loss / Wastage Report card at the bottom of Karigar book (the default tab), and the Reports tab (?view=reports) when Workshop mode is on. Issue gold from the vault to a karigar or job. Each job has stages (casting, filing, polishing, stone setting, final polish, QC) with gold in, gold out, scrap, and dust. Casting trees live on the job card: issued grams vs finished pieces, sprue/button, and recoverable scrap. Actual loss = issued − finished − sprue − recoverable. Unexplained loss is anything above the allowed %. Catalogue and RFQ bills never feed this ledger. Use Load sample 1 kg job for a demo: 1000g issued, 920g finished, 50g sprue, 20g recoverable, 10g actual loss at 1% allowed.",
+      "Karigar Gold Loss tracks physical workshop metal, not customer billing wastage (jarti) on invoices. You will find it in two places on /dashboard/shop/supply-chain: the Gold Loss / Wastage Report card at the bottom of Karigar book (the default tab), and the Reports tab (?view=reports) when Workshop mode is on. Issue gold from the vault to a karigar or job; record finished return, sprue, scrap, dust, and outstanding balance through the appropriate metal movement. Casting trees live on the job card: issued grams versus finished pieces, sprue/button, and recoverable scrap. Actual loss = issued − finished − sprue − recoverable; unexplained loss is anything above the allowed percentage. Catalogue and RFQ bills never feed this ledger. The demo job creates persistent workshop, job, vault, and metal-ledger records, so use it only in a test/demo shop or when you intend to reconcile those records through the supported ledger workflow.",
   },
   {
     topic: "old_gold_silver_exchange",
@@ -241,7 +256,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "workshop_manufacturing_mode",
     content:
-      "Workshop manufacturing lives inside /dashboard/shop/supply-chain as seven tabs, not seven sidebar pages. Turn factory tabs on at Shop Settings → Preferences → Workshop mode (desktop /dashboard/shop/settings?tab=preferences) or Store Settings on mobile (/m/settings). The switch is disabled until the shop's current live plan JSON includes workshopManufacturing. That flag is not a fixed Pro+ rule — an admin can include or exclude it on any plan, so the chatbot must read the live catalog, not the marketing price page. 1) Karigar book (default, no ?view=): vault bullion, custom materials, artisan balances, wastage limits, Issue Metal, jobs, pipeline, and Gold Loss. 2) Tower (?view=tower): overdue jobs, waiting on next department, loss-limit breaches, unreceived finished goods, QC pending, vault gold, department load. 3) Jobs (?view=jobs): create work orders with due date, priority, qty; open a row for the job card (?view=job&id=) with casting trees and Receive finished goods (creates inventory, does not write invoices). 4) Floor (?view=floor): department queues; filter with ?dept=CASTING (or FILING, SETTING, POLISH, QC). Advance by entering gold-out grams — that weight becomes the next department's gold-in. Departments are Floor filters, not extra pages. 5) Metal (?view=metal): ISSUE, RETURN_FINISHED, RETURN_SPRUE, SCRAP, DUST, ADJUST. Same vault as Karigar book. Unexplained loss never returns to the vault. 6) QC (?view=qc): Approve, Rework (back to filing), or Reject. Does not create invoices. 7) Reports (?view=reports): gold loss by job, tree, and karigar — workshop metal math, not invoice jarti. Legacy /dashboard/shop/workshop/* URLs redirect here.",
+      "Workshop manufacturing is the optional factory workflow inside /dashboard/shop/supply-chain, not a replacement for the normal Karigar book. Turn its factory tabs on at Shop Settings → Preferences → Workshop mode (desktop /dashboard/shop/settings?tab=preferences) or Store Settings on mobile (/m/settings). It requires BOTH Workshop mode and the current shop plan's live workshopManufacturing feature. That feature is admin-configured per live plan, so never use a hardcoded plan name; if the live check is unavailable, retry or open Billing. 1) Karigar book (default): small-artisan vault, issue/return, outstanding metal, wages due, jobs, and Gold Loss. 2) Tower (?view=tower): overdue jobs, hand-off delays, loss limits, unreceived finished goods, QC, vault, and department load. 3) Jobs (?view=jobs): create work orders with due date, priority, and quantity; open a row for the job card and casting trees. Cancel/archive an unwanted job so its history remains visible; do not use cancellation to correct issued metal. 4) Floor (?view=floor): department queues; enter gold-out grams to send the weight to the next department. 5) Metal (?view=metal): ISSUE, finished return, sprue return, scrap, dust, and adjustment using the same physical vault as Karigar book. 6) QC (?view=qc): Approve, Rework back to filing, or Reject. Approve QC before Receive finished goods. Receiving creates or updates inventory only; it does not create a customer invoice or sale price. 7) Reports (?view=reports): gold loss by job, tree, and karigar, never invoice jarti. Procure records physical bullion entering the vault; it does not create supplier purchasing or payment records. Legacy /dashboard/shop/workshop/* URLs redirect here.",
   },
   {
     topic: "supply_chain_workspace_views",
@@ -256,7 +271,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "seller_referral_programme",
     content:
-      "Orivraa seller referrals pay the referring shop a configured percent of the referred shop's gross paid subscription invoice (default 10%, admin-adjustable), on every paid invoice while that shop stays subscribed. The commission is applied to the referrer's own next Orivraa Pro invoice first (Stripe customer balance, no extra Stripe fee). Leftover wallet balance can be cashed out by saving bank details on Dashboard → Referrals; Orivraa then sends a bank transfer (Stripe Connect is not used, because Connect is unavailable for Nepal, India, and UAE shops from Orivraa's UK Stripe account). The shop can also convert leftover commission into Pro months. An admin can gift Pro months from Admin → Referrals without spending the wallet. Referral cash is never paid by refunding the referred shop. Rewards are not AI credits and not a Pro+ upgrade. Share https://www.orivraa.com/auth/register?ref=CODE or send an email invite from Dashboard → Referrals. Review & Earn (1 month of Pro after admin verifies a platform review) is a separate programme.",
+      "Orivraa seller referrals pay the referring shop a configured share of the referred shop's gross paid subscription invoice (default 10%, admin-adjustable) while that shop remains subscribed. Referral commissions are held in the referral wallet. Depending on the current referral policy, eligible commission may be applied to an Orivraa subscription invoice or made available for the supported payout or Pro conversion options; Dashboard → Referrals shows the current rule for the account. For a bank payout, save bank details in Dashboard → Referrals and submit a request; it remains pending until Orivraa processes it, and a rejected request returns the balance to the referral wallet. Referral rewards are not AI credits or a refund to the referred shop. Share https://www.orivraa.com/auth/register?ref=CODE or send an email invite from Dashboard → Referrals. Review & Earn is separate: after an admin verifies one supported public platform review, it grants one month of Pro.",
   },
   {
     topic: "review_and_earn",
@@ -320,6 +335,12 @@ async function main() {
   let count = 0;
   /** Topics whose content changed — re-embed even if already seeded. */
   const FORCE_REFRESH = new Set([
+    "inventory-sets",
+    "live_rates_autofill",
+    "karigar",
+    "catalog_currency_reprice",
+    "pos_register_payments_returns",
+    "account_recovery_email_verification",
     "invoice_bill_templates",
     "billing_wastage",
     "invoice_share_and_bluetooth",

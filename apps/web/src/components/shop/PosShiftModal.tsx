@@ -200,7 +200,7 @@ export function PosShiftModal({
                 <T>Open Cashier Shift</T>
               </DialogTitle>
               <DialogDescription>
-                <T>Open a new cashier shift on</T> <strong>{registerName}</strong>.
+                <T>Open a new cashier shift on</T> <strong>{registerName}</strong>. <T>Use the cash physically placed in this drawer; zero is valid when no float is needed.</T>
               </DialogDescription>
             </DialogHeader>
 
@@ -253,7 +253,7 @@ export function PosShiftModal({
                 <T>Close Shift &amp; Z-Report Reconciliation</T>
               </DialogTitle>
               <DialogDescription>
-                <T>Reconcile cash drawer and close shift on</T> <strong>{registerName}</strong>.
+                <T>Reconcile cash drawer and close shift on</T> <strong>{registerName}</strong>. <T>Count the physical cash, explain any variance, then keep or print the Z-report snapshot.</T>
               </DialogDescription>
             </DialogHeader>
 
@@ -336,7 +336,7 @@ export function PosShiftModal({
                 <T>Z-Report Snapshot</T>
               </DialogTitle>
               <DialogDescription>
-                <T>Authoritative daily shift reconciliation snapshot for</T> <strong>{registerName}</strong>.
+                <T>Daily shift reconciliation snapshot for</T> <strong>{registerName}</strong>. <T>It records the counted cash, expected cash, and any over/short amount for this closed shift.</T>
               </DialogDescription>
             </DialogHeader>
 

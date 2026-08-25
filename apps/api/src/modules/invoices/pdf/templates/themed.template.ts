@@ -7,6 +7,7 @@ import { BILL_ORNAMENT_GOLD, BILL_ORNAMENT_WINE } from "@gold-shop/shared";
 import type PDFKit from "pdfkit";
 import type {
   InvoicePdfContext,
+  InvoicePdfGemstone,
   InvoicePdfTemplate,
 } from "../invoice-pdf.types";
 
@@ -100,6 +101,66 @@ const LOOKS: Record<BillTemplateId, PdfLook> = {
 
 function money(currency: string, value: number): string {
   return `${currency} ${Number(value || 0).toLocaleString()}`;
+}
+
+export function formatGemstonePdfSpec(
+  gem: InvoicePdfGemstone,
+  totalGemsCount = 1,
+): string {
+  const parts: string[] = [];
+
+  if (gem.type) parts.push(String(gem.type).toUpperCase());
+  if (gem.origin) parts.push(String(gem.origin).toUpperCase());
+  if (gem.shape) parts.push(String(gem.shape));
+  if (
+    gem.cut &&
+    gem.cut.toLowerCase() !== (gem.shape || "").toLowerCase()
+  ) {
+    parts.push(String(gem.cut));
+  }
+  if (
+    gem.cutGrade &&
+    gem.cutGrade.toLowerCase() !== (gem.cut || "").toLowerCase() &&
+    gem.cutGrade.toLowerCase() !== (gem.shape || "").toLowerCase()
+  ) {
+    parts.push(String(gem.cutGrade));
+  }
+  if (gem.color) parts.push(String(gem.color));
+  if (gem.clarity) parts.push(String(gem.clarity));
+  if (gem.caratWeight != null && !isNaN(Number(gem.caratWeight))) {
+    parts.push(`${Number(gem.caratWeight)} ct`);
+  } else if (gem.sizeMm != null && !isNaN(Number(gem.sizeMm))) {
+    parts.push(`${Number(gem.sizeMm)} mm`);
+  }
+  if (
+    gem.count != null &&
+    Number(gem.count) > 0 &&
+    (Number(gem.count) > 1 || totalGemsCount > 1)
+  ) {
+    parts.push(`×${Number(gem.count)}`);
+  }
+  if (gem.gradingLab) parts.push(String(gem.gradingLab));
+  if (gem.certNumber) parts.push(String(gem.certNumber));
+
+  return parts.filter(Boolean).join(" · ");
+}
+
+export function cleanLegacyDetails(
+  details?: string,
+  hasStructuredGemstones?: boolean,
+): string | undefined {
+  if (!details) return undefined;
+  if (!hasStructuredGemstones) return details;
+  const parts = details
+    .split(/\s*·\s*|\s*;\s*/)
+    .map((p) => p.trim())
+    .filter(
+      (p) =>
+        p &&
+        !/^gemstones?\s*:/i.test(p) &&
+        !/^(lab-grown|natural)\s+(diamond|ruby|sapphire|emerald)/i.test(p),
+    );
+  return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
 function drawDiya(
@@ -516,11 +577,27 @@ function renderThemed(
         width: 360,
       });
     doc.text(money(ctx.currency, line.amount), { align: "right" });
-    if (line.details) {
+
+    const details = cleanLegacyDetails(
+      line.details,
+      Boolean(line.gemstones?.length),
+    );
+    if (details) {
       doc
         .fontSize(look.compact ? 7 : 8)
         .fillColor(look.muted)
-        .text(String(line.details));
+        .text(String(details));
+    }
+    if (line.gemstones && line.gemstones.length > 0) {
+      for (const gem of line.gemstones) {
+        const spec = formatGemstonePdfSpec(gem, line.gemstones.length);
+        if (spec) {
+          doc
+            .fontSize(look.compact ? 7 : 8)
+            .fillColor(look.muted)
+            .text(spec);
+        }
+      }
     }
     doc.moveDown(look.compact ? 0.12 : 0.25);
   }

@@ -4209,6 +4209,8 @@ model KarigarJobStage {
   photos                String[]         @default([])
   reworkCount           Int              @default(0)
   rejectionReason       String?
+  /// Set only by the dedicated Workshop QC approval flow.
+  qcApprovedAt          DateTime?
   startedAt             DateTime?
   completedAt           DateTime?
   createdAt             DateTime         @default(now())

@@ -1065,9 +1065,9 @@ export const pricingApi = {
     stoneType: string;
     caratWeight?: number;
     sizeMm?: number;
-    quality?: string;
+    qualityTier: "BUDGET" | "STANDARD" | "PREMIUM";
     origin?: string;
-    count?: number;
+    count: number;
   }) => api.post("/pricing/resolve/gemstone", data),
 };
 

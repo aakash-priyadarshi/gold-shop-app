@@ -240,7 +240,7 @@ function ForgotPasswordForm() {
               </CardTitle>
               <CardDescription className="text-base">
                 <T>
-                  No worries! Enter your email and we'll send you a reset code.
+                  Enter your email and we will send a reset code. You’ll need that code when you submit your new password.
                 </T>
               </CardDescription>
             </CardHeader>
