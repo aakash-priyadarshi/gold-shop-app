@@ -463,7 +463,7 @@ export function resolveGemstoneRawList(
   if (Array.isArray(direct) && direct.length > 0) {
     return direct;
   }
-  // 2 & 3. Direct object (plain gemstone object or wrapper)
+  // 2 & 3. Direct object (plain gemstone object or wrapper with non-empty gemstones array)
   if (direct && typeof direct === "object" && !Array.isArray(direct)) {
     const directObj = direct as Record<string, unknown>;
     // 3. Direct wrapper with non-empty nested gemstones array
@@ -482,18 +482,20 @@ export function resolveGemstoneRawList(
     ) {
       return [directObj];
     }
-    // Direct wrapper with empty gemstones array
-    if (Array.isArray(directObj.gemstones)) {
-      return directObj.gemstones;
-    }
   }
-  // 4. Fallback to composition.gemstones
+  // 4. Fallback to composition.gemstones when populated
   if (Array.isArray(compGemstones) && compGemstones.length > 0) {
     return compGemstones;
   }
   // 5. Empty-array fallbacks
   if (Array.isArray(direct)) {
     return direct;
+  }
+  if (direct && typeof direct === "object" && !Array.isArray(direct)) {
+    const directObj = direct as Record<string, unknown>;
+    if (Array.isArray(directObj.gemstones)) {
+      return directObj.gemstones;
+    }
   }
   if (Array.isArray(compGemstones)) {
     return compGemstones;

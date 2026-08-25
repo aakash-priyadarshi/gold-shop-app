@@ -214,4 +214,100 @@ describe("SaleBuilderService", () => {
       cost: 25000,
     });
   });
+
+  it("empty direct wrapper { gemstones: [] } falls back to composition.gemstones", () => {
+    const lines = service.fromInventoryItem({
+      id: "item-6",
+      nameEn: "Diamond Ring",
+      sku: "DIA-002",
+      jewelleryType: "RING",
+      totalWeightGrams: 3.5,
+      metalValueNpr: 30000,
+      makingChargeNpr: 4000,
+      gemstoneValueNpr: 25000,
+      taxNpr: 0,
+      totalPriceNpr: 59000,
+      gemstones: {
+        gemstones: [],
+      } as any,
+      composition: {
+        gemstones: [
+          {
+            type: "DIAMOND",
+            origin: "LAB",
+            shape: "Oval",
+            color: "D",
+            clarity: "VVS1",
+          },
+        ],
+      },
+    });
+
+    expect(lines).toHaveLength(1);
+    expect(lines[0].gemstones).toHaveLength(1);
+    expect(lines[0].gemstones![0]).toMatchObject({
+      type: "DIAMOND",
+      origin: "LAB",
+      shape: "Oval",
+      color: "D",
+      clarity: "VVS1",
+    });
+  });
+
+  describe("metalType resolution and legacy composition fallback", () => {
+    it("resolves metalType from legacy composition structure (e.g. baseAlloy)", () => {
+      const [metalLine] = service.fromInventoryItem(
+        {
+          id: "item-legacy-metal",
+          nameEn: "Legacy 18K Ring",
+          sku: "LEG-18K",
+          jewelleryType: "RING",
+          totalWeightGrams: 5.0,
+          metalValueNpr: 50000,
+          makingChargeNpr: 5000,
+          gemstoneValueNpr: 0,
+          taxNpr: 0,
+          totalPriceNpr: 55000,
+          composition: {
+            baseAlloy: {
+              metal: "GOLD",
+              purity: "18K",
+            },
+          },
+        },
+        { unitPrice: 55000, expandBreakdown: true },
+      );
+
+      expect(metalLine.category).toBe("METAL");
+      expect(metalLine.metalType).toBe("GOLD_18K");
+    });
+
+    it("preserves direct metalType precedence over helper fallback", () => {
+      const [metalLine] = service.fromInventoryItem(
+        {
+          id: "item-direct-metal",
+          nameEn: "Direct 22K Ring",
+          sku: "DIR-22K",
+          jewelleryType: "RING",
+          totalWeightGrams: 5.0,
+          metalValueNpr: 60000,
+          makingChargeNpr: 5000,
+          gemstoneValueNpr: 0,
+          taxNpr: 0,
+          totalPriceNpr: 65000,
+          composition: {
+            metalType: "GOLD_22K",
+            baseAlloy: {
+              metal: "GOLD",
+              purity: "18K",
+            },
+          },
+        },
+        { unitPrice: 65000, expandBreakdown: true },
+      );
+
+      expect(metalLine.category).toBe("METAL");
+      expect(metalLine.metalType).toBe("GOLD_22K");
+    });
+  });
 });

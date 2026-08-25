@@ -312,7 +312,7 @@ describe("composition-helpers", () => {
       });
     });
 
-    it("falls back to composition.gemstones when direct gemstones is missing or empty array", () => {
+    it("falls back to composition.gemstones when direct gemstones is missing, empty array, or empty wrapper", () => {
       const fromUndefined = extractGemstonesFromItem({
         composition: {
           gemstones: [{
@@ -339,6 +339,40 @@ describe("composition-helpers", () => {
         type: "SAPPHIRE",
         cost: "45000",
       });
+
+      // Regression fixture: direct { gemstones: [] } falls back to composition.gemstones
+      const fromEmptyWrapper = extractGemstonesFromItem({
+        gemstones: {
+          gemstones: [],
+        },
+        composition: {
+          gemstones: [
+            {
+              type: "DIAMOND",
+              origin: "LAB",
+              shape: "Oval",
+              color: "D",
+              clarity: "VVS1",
+            },
+          ],
+        },
+      });
+      expect(fromEmptyWrapper).toHaveLength(1);
+      expect(fromEmptyWrapper[0]).toMatchObject({
+        type: "DIAMOND",
+        origin: "LAB",
+        shape: "Oval",
+        color: "D",
+        clarity: "VVS1",
+      });
+    });
+
+    it("returns empty array when every source is empty or missing", () => {
+      expect(extractGemstonesFromItem({})).toEqual([]);
+      expect(extractGemstonesFromItem({ gemstones: [] })).toEqual([]);
+      expect(extractGemstonesFromItem({ gemstones: { gemstones: [] } })).toEqual([]);
+      expect(extractGemstonesFromItem({ gemstones: [], composition: { gemstones: [] } })).toEqual([]);
+      expect(extractGemstonesFromItem({ gemstones: { gemstones: [] }, composition: { gemstones: [] } })).toEqual([]);
     });
   });
 });

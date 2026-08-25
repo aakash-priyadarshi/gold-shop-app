@@ -143,7 +143,10 @@ export class SaleBuilderService {
       // Prefer single PRODUCT line when price override differs from sum
       Math.abs(unitPrice - (metalCost + makingCost + gemstoneCost + (item.taxNpr || 0))) < 0.01;
 
-    const metalType = (item.composition as any)?.metalType ?? (item.composition as any)?.type;
+    const metalType =
+      (item.composition as any)?.metalType ??
+      (item.composition as any)?.type ??
+      this.extractMetalType(item.composition);
 
     if (hasBreakdown && opts.expandBreakdown === true) {
       const lines: BuiltSaleLine[] = [];
