@@ -954,7 +954,12 @@ function estimateGemstonePrice(gem: GemstoneInput): number {
     CITRINE: 400,
   };
 
-  let price = basePrices[gem.stoneType || ""] || 500;
+  let price =
+    gem.stoneType === "DIAMOND"
+      ? gem.origin === "LAB"
+        ? basePrices.DIAMOND_LAB
+        : basePrices.DIAMOND_NATURAL
+      : basePrices[gem.stoneType || ""] || 500;
 
   // Adjust by size
   if (gem.sizeValue) {
@@ -1165,8 +1170,16 @@ export const SHAPE_MULTIPLIERS: Record<
 export function getGemstonePriceBreakdown(
   gem: GemstoneInput,
 ): GemstonePriceBreakdown {
-  const basePrice = GEMSTONE_BASE_PRICES[gem.stoneType || ""] || 500;
-  const basePriceLabel = gem.stoneType || "Unknown Stone";
+  const basePrice =
+    gem.stoneType === "DIAMOND"
+      ? gem.origin === "LAB"
+        ? GEMSTONE_BASE_PRICES.DIAMOND_LAB
+        : GEMSTONE_BASE_PRICES.DIAMOND_NATURAL
+      : GEMSTONE_BASE_PRICES[gem.stoneType || ""] || 500;
+  const basePriceLabel =
+    gem.stoneType === "DIAMOND"
+      ? `Diamond (${gem.origin === "LAB" ? "Lab-grown" : "Natural"})`
+      : gem.stoneType || "Unknown Stone";
 
   let sizeMultiplier = 1;
   let sizeLabel = "Standard size";

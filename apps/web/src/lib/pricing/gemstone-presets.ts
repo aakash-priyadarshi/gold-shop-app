@@ -38,7 +38,7 @@ export const DIAMOND_PRESETS: GemstonePreset[] = [
   {
     id: 'DIAMOND_LAB_ROUND_05CT',
     name: 'Lab Diamond 0.5ct Round',
-    stoneType: 'DIAMOND_LAB',
+    stoneType: 'DIAMOND',
     origin: 'LAB',
     shape: 'ROUND',
     sizeUnit: 'CARAT',
@@ -55,7 +55,7 @@ export const DIAMOND_PRESETS: GemstonePreset[] = [
   {
     id: 'DIAMOND_LAB_ROUND_1CT',
     name: 'Lab Diamond 1ct Round',
-    stoneType: 'DIAMOND_LAB',
+    stoneType: 'DIAMOND',
     origin: 'LAB',
     shape: 'ROUND',
     sizeUnit: 'CARAT',
@@ -72,7 +72,7 @@ export const DIAMOND_PRESETS: GemstonePreset[] = [
   {
     id: 'DIAMOND_LAB_PRINCESS_05CT',
     name: 'Lab Diamond 0.5ct Princess',
-    stoneType: 'DIAMOND_LAB',
+    stoneType: 'DIAMOND',
     origin: 'LAB',
     shape: 'PRINCESS',
     sizeUnit: 'CARAT',
@@ -88,7 +88,7 @@ export const DIAMOND_PRESETS: GemstonePreset[] = [
   {
     id: 'DIAMOND_LAB_OVAL_075CT',
     name: 'Lab Diamond 0.75ct Oval',
-    stoneType: 'DIAMOND_LAB',
+    stoneType: 'DIAMOND',
     origin: 'LAB',
     shape: 'OVAL',
     sizeUnit: 'CARAT',
@@ -107,7 +107,7 @@ export const DIAMOND_PRESETS: GemstonePreset[] = [
   {
     id: 'DIAMOND_NAT_ROUND_025CT',
     name: 'Natural Diamond 0.25ct Round',
-    stoneType: 'DIAMOND_NATURAL',
+    stoneType: 'DIAMOND',
     origin: 'NATURAL',
     shape: 'ROUND',
     sizeUnit: 'CARAT',
@@ -123,7 +123,7 @@ export const DIAMOND_PRESETS: GemstonePreset[] = [
   {
     id: 'DIAMOND_NAT_ROUND_05CT',
     name: 'Natural Diamond 0.5ct Round',
-    stoneType: 'DIAMOND_NATURAL',
+    stoneType: 'DIAMOND',
     origin: 'NATURAL',
     shape: 'ROUND',
     sizeUnit: 'CARAT',

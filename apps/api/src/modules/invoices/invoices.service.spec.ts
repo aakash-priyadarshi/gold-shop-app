@@ -61,6 +61,41 @@ const mockSmsService = {
 };
 const saleBuilder = new SaleBuilderService();
 
+describe("SaleBuilderService gemstone snapshots", () => {
+  it("keeps gemstone specifications on the logical GEMSTONE line", () => {
+    const [metal, gemstone] = saleBuilder.expandCollapsedLine({
+      label: "Lab diamond ring",
+      category: "RING",
+      quantity: 1,
+      unitPrice: 150000,
+      amount: 150000,
+      metalCost: 100000,
+      gemstoneCost: 50000,
+      gemstones: [{ type: "DIAMOND", origin: "LAB", color: "D", clarity: "VVS1" }],
+    });
+    expect(metal.gemstones).toBeUndefined();
+    expect(gemstone.category).toBe("GEMSTONE");
+    expect(gemstone.gemstones).toEqual([
+      expect.objectContaining({ type: "DIAMOND", origin: "LAB", color: "D", clarity: "VVS1" }),
+    ]);
+  });
+
+  it("keeps gemstone specifications on the stock-bearing line when there is no gemstone amount", () => {
+    const [line] = saleBuilder.expandCollapsedLine({
+      label: "Certified ring",
+      category: "RING",
+      quantity: 1,
+      unitPrice: 100000,
+      amount: 100000,
+      metalCost: 100000,
+      inventoryItemId: "item-1",
+      gemstones: [{ type: "DIAMOND", origin: "NATURAL", color: "G", clarity: "VS1" }],
+    });
+    expect(line.inventoryItemId).toBe("item-1");
+    expect(line.gemstones).toHaveLength(1);
+  });
+});
+
 describe("InvoicesService Sri Lanka invoice compliance", () => {
   let service: InvoicesService;
 
@@ -169,6 +204,57 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
     expect(result.taxRate).toBe(0.18);
     expect(result.supplyDate!.toISOString()).toBe(supplyDate);
     expect(result.invoiceNumber).toMatch(/^\d{2}[A-Z]{3}_[A-Z0-9]+_7$/);
+  });
+
+  it("persists immutable gemstone specifications in invoice line JSON without using them for totals", async () => {
+    await service.create("shop-123456789", {
+      customerName: "Certified diamond buyer",
+      invoiceCountry: "LK",
+      currency: "LKR",
+      lineItems: [
+        {
+          label: "Lab diamond ring",
+          category: "GEMSTONE",
+          quantity: 1,
+          unitPrice: 50000,
+          amount: 50000,
+          gemstones: [
+            {
+              type: "DIAMOND",
+              origin: "LAB",
+              cut: "Round Brilliant",
+              caratWeight: 1,
+              color: "D",
+              clarity: "VVS1",
+              qualityTier: "PREMIUM",
+              gradingLab: "IGI",
+              certNumber: "IGI-123",
+              count: 1,
+              cost: 50000,
+            },
+          ],
+        },
+      ],
+    } as any);
+
+    expect(invoiceCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        lineItems: [
+          expect.objectContaining({
+            amount: 50000,
+            gemstones: [
+              expect.objectContaining({
+                type: "DIAMOND",
+                origin: "LAB",
+                color: "D",
+                clarity: "VVS1",
+                certNumber: "IGI-123",
+              }),
+            ],
+          }),
+        ],
+      }),
+    });
   });
 
   it("does not turn B2B status alone into an LK TAX INVOICE", async () => {

@@ -164,6 +164,13 @@ describe("Tutorial — Invoice Create Page Content", () => {
     expect(description.toLowerCase()).toContain("weight unit");
   });
 
+  test("product and invoice guidance explain gemstone origin and sale-time snapshots", () => {
+    expect(sourceFile).toContain("product-gemstones");
+    expect(sourceFile).toContain("product-pricing");
+    expect(sourceFile).toContain("grading laboratory");
+    expect(sourceFile).toContain("immutable sale-time snapshot");
+  });
+
   test("all four data-tour anchors exist for invoice create", () => {
     expect(sourceFile).toContain("invoice-create-country");
     expect(sourceFile).toContain("invoice-create-customer");

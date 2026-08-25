@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InventoryItem, ProductVariant } from "@prisma/client";
+import { normalizeGemstoneSnapshot } from "@gold-shop/shared";
+import type { InvoiceGemstoneSnapshotDto } from "./dto/invoice.dto";
 
 export type SaleLineSource = "CATALOG" | "POS" | "MANUAL" | "QUOTE";
 
@@ -28,6 +30,7 @@ export interface BuiltSaleLine {
   metalCost?: number;
   makingCost?: number;
   gemstoneCost?: number;
+  gemstones?: InvoiceGemstoneSnapshotDto[];
   wastageCost?: number;
   discountAmount?: number;
   setDiscountAmount?: number;
@@ -65,6 +68,33 @@ export interface FromInventoryOpts {
   expandBreakdown?: boolean;
 }
 
+function toGemstoneSnapshots(raw: unknown): InvoiceGemstoneSnapshotDto[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((gem): InvoiceGemstoneSnapshotDto[] => {
+    const normalized = normalizeGemstoneSnapshot(
+      gem && typeof gem === "object" ? gem as Record<string, unknown> : undefined,
+    );
+    if (!normalized) return [];
+    return [{
+      type: normalized.type,
+      origin: normalized.origin,
+      cut: normalized.cut,
+      caratWeight: normalized.caratWeight,
+      sizeMm: normalized.sizeMm,
+      color: normalized.color,
+      clarity: normalized.clarity,
+      qualityTier: normalized.qualityTier,
+      cutGrade: normalized.cutGrade,
+      gradingLab: normalized.gradingLab,
+      certNumber: normalized.certNumber,
+      reportUrl: normalized.reportUrl,
+      reportDate: normalized.reportDate,
+      count: normalized.count,
+      cost: normalized.cost ?? normalized.value,
+    }];
+  });
+}
+
 @Injectable()
 export class SaleBuilderService {
   /**
@@ -89,10 +119,25 @@ export class SaleBuilderService {
 
     const label =
       item.nameEn + (variant?.sizeLabel ? ` (${variant.sizeLabel})` : "");
+    const gemstones = toGemstoneSnapshots((item.composition as any)?.gemstones);
+    const gemstoneDetails = gemstones
+      .slice(0, 3)
+      .map((gem: any) => [
+        gem.origin === "LAB" ? "Lab-grown" : gem.origin === "NATURAL" ? "Natural" : null,
+        gem.type,
+        gem.color ? `Color ${gem.color}` : null,
+        gem.clarity ? `Clarity ${gem.clarity}` : null,
+        gem.cut || gem.shape,
+        gem.caratWeight ? `${gem.caratWeight}ct` : gem.sizeMm ? `${gem.sizeMm}mm` : null,
+        gem.count ? `×${gem.count}` : null,
+      ].filter(Boolean).join(" "))
+      .filter(Boolean)
+      .join("; ");
     const details = [
       variant?.sku || item.sku || null,
       item.hallmarkNumber ? `Hallmark: ${item.hallmarkNumber}` : null,
       item.assayOffice ? `Assay: ${item.assayOffice}` : null,
+      gemstoneDetails ? `Gemstones: ${gemstoneDetails}` : null,
     ]
       .filter(Boolean)
       .join(" · ") || undefined;
@@ -130,6 +175,7 @@ export class SaleBuilderService {
           metalType,
           metalWeightG: item.totalWeightGrams,
           metalCost,
+          gemstones: gemstoneCost > 0 ? undefined : gemstones,
         });
       }
       if (makingCost > 0) {
@@ -158,6 +204,7 @@ export class SaleBuilderService {
           variantId: variant?.id,
           source,
           gemstoneCost,
+          gemstones,
         });
       }
       if (lines.length > 0) return lines;
@@ -179,6 +226,7 @@ export class SaleBuilderService {
         metalCost: metalCost || undefined,
         makingCost: makingCost || undefined,
         gemstoneCost: gemstoneCost || undefined,
+        gemstones: gemstones.length ? gemstones : undefined,
       },
     ];
   }
@@ -279,6 +327,7 @@ export class SaleBuilderService {
     metalCost?: number;
     makingCost?: number;
     gemstoneCost?: number;
+    gemstones?: InvoiceGemstoneSnapshotDto[];
     wastageCost?: number;
     metalType?: string;
     metalWeightG?: number;
@@ -311,6 +360,7 @@ export class SaleBuilderService {
           metalCost: input.metalCost,
           makingCost: input.makingCost,
           gemstoneCost: input.gemstoneCost,
+          gemstones: input.gemstones,
           wastageCost: input.wastageCost,
           taxTreatment: input.taxTreatment,
           discountAmount: input.discountAmount,
@@ -350,6 +400,7 @@ export class SaleBuilderService {
           metalType: input.metalType,
           metalWeightG: input.metalWeightG,
           metalCost,
+          gemstones: gemstoneCost > 0 ? undefined : input.gemstones,
           taxTreatment: input.taxTreatment,
           discountAmount: input.discountAmount,
           setDiscountAmount: input.setDiscountAmount,
@@ -402,6 +453,7 @@ export class SaleBuilderService {
           variantId: input.variantId,
           source,
           gemstoneCost,
+          gemstones: input.gemstones,
           taxTreatment: input.taxTreatment,
           discountAmount: input.discountAmount,
           setDiscountAmount: input.setDiscountAmount,
@@ -477,6 +529,7 @@ export class SaleBuilderService {
         source,
         metalType: input.metalType,
         metalWeightG: input.metalWeightG,
+        gemstones: input.gemstones,
         taxTreatment: input.taxTreatment,
         discountAmount: input.discountAmount,
         setDiscountAmount: input.setDiscountAmount,
@@ -501,6 +554,7 @@ export class SaleBuilderService {
       metalCost?: number;
       makingCost?: number;
       gemstoneCost?: number;
+      gemstones?: InvoiceGemstoneSnapshotDto[];
       wastageCost?: number;
       metalType?: string;
       metalWeightG?: number;

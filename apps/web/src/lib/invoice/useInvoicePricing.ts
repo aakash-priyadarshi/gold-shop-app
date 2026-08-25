@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { resolveWastageRule, type ResolvedWastageRule } from "@gold-shop/shared";
+import {
+  getGemstonePricingStoneType,
+  normalizeGemstoneSnapshot,
+  resolveWastageRule,
+  type ResolvedWastageRule,
+} from "@gold-shop/shared";
 import { getApiUrl, pricingApi, shopsApi } from "@/lib/api";
 import {
   applyMakingToLine,
@@ -19,6 +24,7 @@ import {
   FALLBACK_CATEGORY_TAX_RATES,
   type CountryTaxConfig,
   type RichLineItem,
+  withLiveGemstonePrice,
 } from "./lineItemTypes";
 import {
   buildMetalPartsFromCatalogItem,
@@ -425,34 +431,24 @@ export function useInvoicePricing(opts: UseInvoicePricingOptions) {
           const gems = [];
           let gemTotal = 0;
           for (const gem of item.composition.gemstones) {
+            const normalized = normalizeGemstoneSnapshot(gem);
+            if (!normalized) continue;
             const res = await pricingApi.resolveGemstone({
               shopId,
-              stoneType: gem.type || "OTHER",
-              caratWeight: gem.caratWeight || undefined,
-              sizeMm: gem.sizeMm || undefined,
-              quality: gem.quality || "STANDARD",
-              origin: gem.origin || "NATURAL",
-              count: gem.count || 1,
+              stoneType: getGemstonePricingStoneType(normalized.type),
+              caratWeight: normalized.caratWeight,
+              sizeMm: normalized.sizeMm,
+              qualityTier: normalized.qualityTier || "STANDARD",
+              origin: normalized.origin,
+              count: normalized.count || 1,
             });
-            const cost = Number(res.data?.totalCost ?? res.data?.cost ?? 0);
+            const cost = Number(res.data?.effectiveTotal ?? 0);
             gemTotal += cost;
-            gems.push({
-              type: String(gem.type || "OTHER"),
-              cut: String(gem.cut || ""),
-              clarity: String(gem.clarity || ""),
-              caratWeight:
-                gem.caratWeight != null ? String(gem.caratWeight) : "",
-              color: String(gem.color || ""),
-              cost: cost > 0 ? String(cost) : String(gem.cost ?? ""),
-              quality: gem.quality,
-              origin: gem.origin,
-              sizeMm: gem.sizeMm,
-              count: gem.count,
-              cutGrade: gem.cutGrade,
-              lab: gem.lab,
-              certNumber: gem.certNumber,
-              reportUrl: gem.reportUrl,
-            });
+            const liveGemstone = withLiveGemstonePrice(
+              gem,
+              cost > 0 ? cost : normalized.cost ?? normalized.value ?? 0,
+            );
+            if (liveGemstone) gems.push(liveGemstone);
           }
           if (gems.length > 0) {
             line = { ...line, gemstones: gems };

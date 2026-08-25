@@ -440,6 +440,26 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='product-gemstones']",
+      popover: {
+        title: "Gemstone specification & suggestion",
+        description:
+          "For diamonds, choose Natural or Lab-grown origin separately from the grading laboratory (GIA, IGI, etc.). Price suggestions use stone type, origin, carat/size, pricing quality and quantity. Color, clarity, cut and certificate details are preserved on the product and copied to the sale-time invoice snapshot.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='product-pricing']",
+      popover: {
+        title: "Metal price suggestion",
+        description:
+          "Use the sparkle button to review a suggestion from the selected metal, purity and metal-only weight in grams. It uses your shop rate when configured, otherwise the current reference market rate. Applying it is deliberate; it does not replace a manual amount until you click the suggestion.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
       element: "[data-tour='inventory-reprice']",
       popover: {
         title: "Reprice from rates",
@@ -1079,7 +1099,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Line Items",
         description:
-          "Add each jewellery item manually, or click Add from catalog to pull an available product (stock is deducted when you create the invoice). Enter metal type, weight, metal cost, gemstones, and making charge. Switch weight units (grams, tola, laal) and use Live metal autofill for supported gold, silver, platinum, or palladium rates. Gemstone details stay separate from metal and making, and tax is calculated per component for tax reports.",
+          "Add each jewellery item manually, or click Add from catalog to pull an available product (stock is deducted when you create the invoice). Enter metal type, weight, metal cost, gemstones, and making charge. Switch weight units (grams, tola, laal) and use Live metal autofill for supported gold, silver, platinum, or palladium rates. Catalog gemstone specifications—including origin, color, clarity, cut, carat/size and certificate details—are copied as the immutable sale-time snapshot; live repricing changes only the stone price.",
         side: "top",
         align: "start",
       },

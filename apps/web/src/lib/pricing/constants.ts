@@ -10,7 +10,7 @@
 // ═══════════════════════════════════════════
 
 export type GemstoneType = 
-  | 'DIAMOND_NATURAL' | 'DIAMOND_LAB' | 'MOISSANITE' | 'CUBIC_ZIRCONIA'
+  | 'DIAMOND' | 'MOISSANITE' | 'CUBIC_ZIRCONIA'
   | 'RUBY' | 'SAPPHIRE' | 'EMERALD' | 'PEARL' | 'AMETHYST' | 'TOPAZ'
   | 'GARNET' | 'OPAL' | 'TURQUOISE' | 'AQUAMARINE' | 'PERIDOT' | 'CITRINE' | 'OTHER';
 
@@ -27,8 +27,7 @@ export type SizeUnit = 'MM' | 'CARAT';
 
 // Gemstone dropdown options with labels
 export const GEMSTONE_TYPES = [
-  { value: 'DIAMOND_NATURAL', label: 'Diamond (Natural)', origin: 'NATURAL', hasOriginOption: false },
-  { value: 'DIAMOND_LAB', label: 'Diamond (Lab-grown)', origin: 'LAB', hasOriginOption: false },
+  { value: 'DIAMOND', label: 'Diamond', origin: 'NATURAL', hasOriginOption: true },
   { value: 'MOISSANITE', label: 'Moissanite', origin: 'LAB', hasOriginOption: false },
   { value: 'CUBIC_ZIRCONIA', label: 'Cubic Zirconia (CZ)', origin: 'LAB', hasOriginOption: false },
   { value: 'RUBY', label: 'Ruby', origin: 'NATURAL', hasOriginOption: true },
@@ -439,5 +438,5 @@ export function getDefaultSizeUnit(stoneType: string): SizeUnit {
  * Check if stone has origin option (natural vs lab)
  */
 export function hasOriginOption(stoneType: string): boolean {
-  return ['RUBY', 'SAPPHIRE', 'EMERALD', 'PEARL'].includes(stoneType);
+  return ['DIAMOND', 'RUBY', 'SAPPHIRE', 'EMERALD', 'PEARL'].includes(stoneType);
 }

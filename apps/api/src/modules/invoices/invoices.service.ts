@@ -500,6 +500,7 @@ export class InvoicesService {
       metalCost: item.metalCost,
       makingCost: item.makingCost,
       gemstoneCost: item.gemstoneCost,
+      gemstones: item.gemstones,
       wastageCost: item.wastageCost,
       discountAmount: item.discountAmount,
       setDiscountAmount: item.setDiscountAmount,

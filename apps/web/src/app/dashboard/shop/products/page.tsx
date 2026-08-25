@@ -47,6 +47,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi } from "@/lib/api";
+import {
+  buildProductGemstonePricingRequest,
+  buildProductMetalPricingComposition,
+} from "@/lib/pricing/product-price-request";
 import { getImageUrl } from "@/lib/image-upload";
 import { SetBuilderDialog } from "@/components/shop/SetBuilderDialog";
 import { ProductDescriptionGenerator } from "@/components/shop/ProductDescriptionGenerator";
@@ -81,6 +85,7 @@ import {
   calculateGrossWeightGrams,
   HALLMARK_ID_MAX_LENGTH,
   classifyHallmarkId,
+  normalizeGemstoneSnapshot,
   normalizeHallmarkId,
 } from "@gold-shop/shared";
 
@@ -218,15 +223,19 @@ const TOLA_TO_GRAM = 11.6638;
 
 interface GemstoneData {
   type: string;
+  origin?: string;
   cut: string;
   caratWeight: number;
+  sizeMm?: number;
   color?: string;
   clarity?: string;
+  qualityTier?: "BUDGET" | "STANDARD" | "PREMIUM";
   cutGrade?: string;
-  lab?: string; // GIA, IGI, AGS, ...
+  gradingLab?: string; // GIA, IGI, AGS, ...
   certNumber?: string; // e.g. "GIA-2141438171"
   reportUrl?: string; // link to the digital report / verification
   reportDate?: string; // YYYY-MM-DD
+  count?: number;
   valueNpr: number;
 }
 
@@ -466,19 +475,28 @@ export default function ShopProductsPage() {
       stockQuantity: product.stockQuantity.toString(),
       images: product.images || [],
       gemstones: Array.isArray(comp.gemstones)
-        ? comp.gemstones.map((g: any) => ({
-            type: g.type || "",
-            cut: g.cut || "",
-            caratWeight: Number(g.caratWeight) || 0,
-            color: g.color || undefined,
-            clarity: g.clarity || undefined,
-            cutGrade: g.cutGrade || undefined,
-            lab: g.lab || undefined,
-            certNumber: g.certNumber || undefined,
-            reportUrl: g.reportUrl || undefined,
-            reportDate: g.reportDate || undefined,
-            valueNpr: Number(g.valueNpr) || 0,
-          }))
+        ? comp.gemstones.flatMap((g: any) => {
+            const normalized = normalizeGemstoneSnapshot(g);
+            return normalized
+              ? [{
+                  type: normalized.type,
+                  origin: normalized.origin,
+                  cut: normalized.cut || "",
+                  caratWeight: normalized.caratWeight || 0,
+                  sizeMm: normalized.sizeMm,
+                  color: normalized.color,
+                  clarity: normalized.clarity,
+                  qualityTier: normalized.qualityTier || "STANDARD",
+                  cutGrade: normalized.cutGrade,
+                  gradingLab: normalized.gradingLab,
+                  certNumber: normalized.certNumber,
+                  reportUrl: normalized.reportUrl,
+                  reportDate: normalized.reportDate,
+                  count: normalized.count || 1,
+                  valueNpr: normalized.value ?? normalized.cost ?? 0,
+                }]
+              : [];
+          })
         : [],
       hallmarkNumber: product.hallmarkNumber || "",
       certificateUrl: product.certificateUrl || "",
@@ -529,14 +547,25 @@ export default function ShopProductsPage() {
       ...formData,
       gemstones: [
         ...formData.gemstones,
-        { type: "", cut: "", caratWeight: 0, valueNpr: 0 },
+        { type: "", cut: "", caratWeight: 0, qualityTier: "STANDARD", count: 1, valueNpr: 0 },
       ],
     });
   };
 
   const updateGemstone = (index: number, field: string, value: any) => {
     const newGemstones = [...formData.gemstones];
-    newGemstones[index] = { ...newGemstones[index], [field]: value };
+    const current = newGemstones[index];
+    const next = { ...current, [field]: value };
+    if (field === "type") {
+      const isDiamond = String(value).toUpperCase() === "DIAMOND";
+      next.origin =
+        isDiamond && (current.origin === "NATURAL" || current.origin === "LAB")
+          ? current.origin
+          : isDiamond
+            ? "NATURAL"
+            : undefined;
+    }
+    newGemstones[index] = next;
     setFormData({ ...formData, gemstones: newGemstones });
 
     // Update total gemstone value
@@ -572,29 +601,24 @@ export default function ShopProductsPage() {
       toast({ title: t("Select gemstone type first"), variant: "destructive" });
       return;
     }
-
     setGemSuggesting(index);
     try {
       const { pricingApi } = await import("@/lib/api");
-      const res = await pricingApi.resolveGemstone({
-        shopId: user.shop.id,
-        stoneType: gem.type,
-        caratWeight: gem.caratWeight || undefined,
-        quality: gem.clarity || "STANDARD",
-        count: 1,
-      });
+      const res = await pricingApi.resolveGemstone(
+        buildProductGemstonePricingRequest(user.shop.id, gem),
+      );
       const data = res.data;
-      if (data?.effectivePerStone != null) {
-        updateGemstone(index, "valueNpr", data.effectivePerStone);
+      if (data?.effectiveTotal != null) {
+        updateGemstone(index, "valueNpr", data.effectiveTotal);
         toast({
           title: t("Price suggested"),
-          description: `${data.source === "SHOP" ? t("Your shop rate") : t("Orivraa reference")}: ${currency.symbol}${data.effectivePerStone.toLocaleString()}`,
+          description: `${data.source === "SHOP" ? t("Your shop rate") : t("Orivraa reference")}: ${currency.symbol}${data.effectiveTotal.toLocaleString()}`,
         });
       }
-    } catch {
+    } catch (error) {
       toast({
         title: t("Suggestion unavailable"),
-        description: t("Enter price manually"),
+        description: error instanceof Error ? t(error.message) : t("Enter price manually"),
         variant: "destructive",
       });
     } finally {
@@ -1747,7 +1771,7 @@ export default function ShopProductsPage() {
               </div>
 
               {/* Gemstones Section */}
-              <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+              <div data-tour="product-gemstones" className="rounded-lg border bg-muted/20 p-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     <T>Gemstones</T>
@@ -1763,7 +1787,7 @@ export default function ShopProductsPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  <T>Gemstones use carats; 1 carat = 0.2 g. Every gemstone is included in gross weight.</T>
+                  <T>Diamonds are priced by carat; other stones need size in mm. Price suggestions use type, origin, size/carat, pricing quality and quantity. Color, clarity and cut remain product and invoice specifications.</T>
                 </p>
                 {formData.gemstones.length === 0 && (
                   <p className="text-xs text-muted-foreground">
@@ -1809,6 +1833,21 @@ export default function ShopProductsPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                          {gem.type === "DIAMOND" && (
+                            <div className="space-y-1">
+                              <Label className="text-[11px] text-muted-foreground"><T>Origin</T></Label>
+                              <Select
+                                value={gem.origin || "NATURAL"}
+                                onValueChange={(v) => updateGemstone(idx, "origin", v)}
+                              >
+                                <SelectTrigger className="h-9"><SelectValue placeholder={t("Origin")} /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="NATURAL"><T>Natural</T></SelectItem>
+                                  <SelectItem value="LAB"><T>Lab-grown</T></SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
                           <Select
                             value={gem.cut || ""}
                             onValueChange={(v) => updateGemstone(idx, "cut", v)}
@@ -1827,13 +1866,13 @@ export default function ShopProductsPage() {
                           <Input
                             type="number"
                             step="0.01"
-                            placeholder={t("Carat weight")}
+                            placeholder={gem.type === "DIAMOND" ? t("Carat weight") : t("Size (mm)")}
                             className="h-9"
-                            value={gem.caratWeight || ""}
+                            value={gem.type === "DIAMOND" ? gem.caratWeight || "" : gem.sizeMm || ""}
                             onChange={(e) =>
                               updateGemstone(
                                 idx,
-                                "caratWeight",
+                                gem.type === "DIAMOND" ? "caratWeight" : "sizeMm",
                                 parseFloat(e.target.value) || 0,
                               )
                             }
@@ -1868,6 +1907,15 @@ export default function ShopProductsPage() {
                               )}
                             </Button>
                           </div>
+                          <Input
+                            type="number"
+                            min={1}
+                            step={1}
+                            placeholder={t("Quantity")}
+                            className="h-9"
+                            value={gem.count || 1}
+                            onChange={(e) => updateGemstone(idx, "count", Math.max(1, parseInt(e.target.value, 10) || 1))}
+                          />
                         </div>
 
                         {/* 4Cs grading + lab certificate */}
@@ -1923,24 +1971,41 @@ export default function ShopProductsPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-muted-foreground"><T>Pricing quality</T></Label>
+                            <Select
+                              value={gem.qualityTier || "STANDARD"}
+                              onValueChange={(v) => updateGemstone(idx, "qualityTier", v)}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue placeholder={t("Pricing quality")} /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="BUDGET"><T>Budget</T></SelectItem>
+                                <SelectItem value="STANDARD"><T>Standard</T></SelectItem>
+                                <SelectItem value="PREMIUM"><T>Premium</T></SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
-                          <Select
-                            value={gem.lab || ""}
-                            onValueChange={(v) => updateGemstone(idx, "lab", v)}
-                          >
-                            <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Lab" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {gemstoneLabs.map((l) => (
-                                <SelectItem key={l} value={l}>
-                                  {l}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-muted-foreground"><T>Grading laboratory</T></Label>
+                            <Select
+                              value={gem.gradingLab || ""}
+                              onValueChange={(v) => updateGemstone(idx, "gradingLab", v)}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder={t("Grading laboratory")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {gemstoneLabs.map((l) => (
+                                  <SelectItem key={l} value={l}>
+                                    {l}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <div className="space-y-1">
                             <Label className="text-[11px] text-muted-foreground">
                               <T>Gemstone certificate no.</T>
@@ -2032,7 +2097,7 @@ export default function ShopProductsPage() {
               </div>
 
               {/* Pricing */}
-              <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
+              <div data-tour="product-pricing" className="rounded-lg border bg-muted/20 p-4 space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <T>Pricing</T>
                 </p>
@@ -2067,11 +2132,12 @@ export default function ShopProductsPage() {
                           const { pricingApi } = await import("@/lib/api");
                           const res = await pricingApi.resolve({
                             shopId: user.shop.id,
-                            composition: {
+                            composition: buildProductMetalPricingComposition({
                               metalType: formData.metalType,
-                              metalWeightG: parseFloat(formData.totalWeightGrams) || 0,
-                              purity: parseFloat(formData.purity) || undefined,
-                            },
+                              purity: formData.purity || undefined,
+                              enteredWeight: parseFloat(formData.totalWeightGrams) || 0,
+                              weightUnit,
+                            }),
                           });
                           const metalComp = res.data?.components?.find(
                             (c: any) => c.component === "METAL",
@@ -2083,7 +2149,7 @@ export default function ShopProductsPage() {
                             }));
                             toast({
                               title: t("Metal value suggested"),
-                              description: `${metalComp.source === "SHOP" ? t("Your shop rate") : t("Live market rate")}: ${currency.symbol}${metalComp.effectiveAmount.toLocaleString()}`,
+                              description: `${metalComp.meta?.metalCode || formData.metalType} · ${formMetalWeightGrams.toFixed(3)}g · ${metalComp.source === "SHOP" ? t("Your shop rate") : t("Live market rate")}: ${currency.symbol}${Number(metalComp.effectiveAmount).toFixed(2)}`,
                             });
                           }
                         } catch {

@@ -16,6 +16,7 @@ import {
   mapLineItemsToApi,
   roundMoney2,
   validateInvoiceDraft,
+  withLiveGemstonePrice,
 } from "../index";
 
 describe("invoice shared engine", () => {
@@ -115,6 +116,63 @@ describe("invoice shared engine", () => {
     expect(api[0].makingCost).toBe(20000);
     expect(api[0].wastageCost).toBe(10000);
     expect(api[0].amount).toBe(230000);
+  });
+
+  it("keeps the full immutable gemstone specification in the invoice payload", () => {
+    const line = emptyLineItem();
+    line.label = "Lab diamond ring";
+    line.metalCost = "100000";
+    line.gemstones = [{
+      type: "DIAMOND",
+      origin: "LAB",
+      cut: "Round Brilliant",
+      caratWeight: "1",
+      sizeMm: 6.5,
+      color: "D",
+      clarity: "VVS1",
+      qualityTier: "PREMIUM",
+      cutGrade: "Excellent",
+      gradingLab: "IGI",
+      certNumber: "IGI-123",
+      reportUrl: "https://example.com/report",
+      count: 1,
+      cost: "50000",
+    }];
+
+    const [api] = mapLineItemsToApi([line], 0, { mode: "DISABLED", label: "None" } as any);
+    expect(api.gemstones).toEqual([expect.objectContaining({
+      type: "DIAMOND", origin: "LAB", color: "D", clarity: "VVS1",
+      gradingLab: "IGI", certNumber: "IGI-123", cost: 50000,
+    })]);
+    expect(api.details).toContain("Color D");
+    expect(api.details).toContain("Clarity VVS1");
+  });
+
+  it("keeps all catalog gemstone metadata when live pricing changes only its cost", () => {
+    const source = {
+      type: "DIAMOND",
+      origin: "LAB",
+      cut: "Round Brilliant",
+      caratWeight: 1,
+      sizeMm: 6.5,
+      color: "D",
+      clarity: "VVS1",
+      qualityTier: "PREMIUM",
+      cutGrade: "Excellent",
+      gradingLab: "IGI",
+      certNumber: "IGI-123",
+      reportUrl: "https://example.com/report",
+      reportDate: "2026-08-25",
+      count: 2,
+      cost: 50000,
+    };
+
+    const repriced = withLiveGemstonePrice(source, 1234.56);
+    expect(repriced).toMatchObject({
+      ...source,
+      caratWeight: "1",
+      cost: "1234.56",
+    });
   });
 
   it("computes NP tax breakdown for metal + making + wastage", () => {

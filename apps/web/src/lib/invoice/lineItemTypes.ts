@@ -15,14 +15,17 @@ export interface GemstoneEntry {
   caratWeight: string;
   color: string;
   cost: string;
+  qualityTier?: "BUDGET" | "STANDARD" | "PREMIUM";
   quality?: string;
   origin?: string;
   sizeMm?: number | string;
   count?: number | string;
   cutGrade?: string;
   lab?: string;
+  gradingLab?: string;
   certNumber?: string;
   reportUrl?: string;
+  reportDate?: string;
   sourceItemLabel?: string;
 }
 
@@ -91,6 +94,7 @@ import {
   CANONICAL_GEMSTONE_CUT_GRADES,
   CANONICAL_GEMSTONE_LABS,
   getGemstoneDisplayLabel,
+  normalizeGemstoneSnapshot,
   normalizeGemstoneType,
 } from "@gold-shop/shared";
 
@@ -187,6 +191,37 @@ export function emptyGemstone(): GemstoneEntry {
     caratWeight: "",
     color: "",
     cost: "",
+  };
+}
+
+/**
+ * Apply a live quote without discarding the descriptive catalog/sale snapshot.
+ * Live pricing is deliberately limited to the cost field.
+ */
+export function withLiveGemstonePrice(
+  raw: Record<string, unknown>,
+  effectiveTotal: number,
+): GemstoneEntry | null {
+  const gemstone = normalizeGemstoneSnapshot(raw);
+  if (!gemstone) return null;
+  return {
+    type: gemstone.type,
+    cut: gemstone.cut || "",
+    clarity: gemstone.clarity || "",
+    caratWeight:
+      gemstone.caratWeight != null ? String(gemstone.caratWeight) : "",
+    color: gemstone.color || "",
+    cost: String(effectiveTotal),
+    qualityTier: gemstone.qualityTier,
+    origin: gemstone.origin,
+    sizeMm: gemstone.sizeMm,
+    count: gemstone.count,
+    cutGrade: gemstone.cutGrade,
+    gradingLab: gemstone.gradingLab,
+    lab: gemstone.gradingLab,
+    certNumber: gemstone.certNumber,
+    reportUrl: gemstone.reportUrl,
+    reportDate: gemstone.reportDate,
   };
 }
 

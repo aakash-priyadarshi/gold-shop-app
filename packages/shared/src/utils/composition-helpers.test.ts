@@ -4,7 +4,10 @@ import {
   extractMetalTypeFromComposition,
   extractPurityFromComposition,
   getGemstoneDisplayLabel,
+  getGemstonePricingStoneType,
   normalizeGemstoneCut,
+  normalizeGemstoneOrigin,
+  normalizeGemstoneSnapshot,
   normalizeGemstoneType,
   normalizeMetalCode,
   normalizeMetalMarketKey,
@@ -97,6 +100,19 @@ describe("composition-helpers", () => {
   });
 
   describe("gemstone helpers", () => {
+    it("normalizes legacy diamond values without losing origin and keeps display identity separate from pricing", () => {
+      expect(normalizeGemstoneSnapshot({ type: "DIAMOND_LAB", lab: "IGI" })).toMatchObject({
+        type: "DIAMOND", origin: "LAB", gradingLab: "IGI",
+      });
+      expect(normalizeGemstoneSnapshot({ type: "DIAMOND_NATURAL" })).toMatchObject({
+        type: "DIAMOND", origin: "NATURAL",
+      });
+      expect(normalizeGemstoneOrigin("LAB_GROWN", "DIAMOND")).toBe("LAB");
+      expect(getGemstonePricingStoneType("CUBIC_ZIRCONIA")).toBe("CZ");
+      expect(getGemstonePricingStoneType("AMETHYST")).toBe("SEMI_PRECIOUS");
+      expect(normalizeGemstoneType("AMETHYST")).toBe("AMETHYST");
+    });
+
     it("normalizes gemstone types and labels", () => {
       expect(normalizeGemstoneType("")).toBe("");
       expect(normalizeGemstoneType(null)).toBe("");
@@ -197,6 +213,22 @@ describe("composition-helpers", () => {
       expect(extracted).toHaveLength(1);
       expect(extracted[0].type).toBe("OTHER");
       expect(extracted[0].cost).toBe("50000");
+    });
+
+    it("preserves origin, grading laboratory, certificate, colour and clarity when extracting catalog gems", () => {
+      const [gem] = extractGemstonesFromItem({
+        composition: {
+          gemstones: [{
+            type: "DIAMOND_LAB", origin: "LAB", color: "D", clarity: "VVS1",
+            lab: "IGI", certNumber: "IGI-123", reportUrl: "https://example.com/report",
+            caratWeight: 1, count: 2, valueNpr: 50000,
+          }],
+        },
+      });
+      expect(gem).toMatchObject({
+        type: "DIAMOND", origin: "LAB", color: "D", clarity: "VVS1",
+        gradingLab: "IGI", certNumber: "IGI-123", reportUrl: "https://example.com/report",
+      });
     });
   });
 });

@@ -18,6 +18,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Trash2, HelpCircle, Plus, Gem } from 'lucide-react';
+import { normalizeGemstoneOrigin, normalizeGemstoneType } from '@gold-shop/shared';
 import {
   GEMSTONE_TYPES,
   GEMSTONE_SHAPES,
@@ -80,21 +81,21 @@ export function GemstoneEditor({ gemstones, onChange, onPriceEstimate }: Gemston
   const updateGemstone = (index: number, field: keyof GemstoneEntry, value: string | number) => {
     const updated = [...gemstones];
     const gem = { ...updated[index], [field]: value };
+    const legacyStoneType = gem.stoneType;
+    gem.stoneType = normalizeGemstoneType(legacyStoneType);
+    if (gem.stoneType === 'DIAMOND') {
+      gem.origin = normalizeGemstoneOrigin(gem.origin, legacyStoneType) || 'NATURAL';
+    }
     
     // Auto-update size unit when stone type changes
     if (field === 'stoneType' && typeof value === 'string') {
-      gem.sizeUnit = getDefaultSizeUnit(value);
+      gem.sizeUnit = getDefaultSizeUnit(gem.stoneType);
       gem.sizeValue = ''; // Reset size
       gem.color = ''; // Reset color
       gem.clarity = undefined;
       gem.cut = undefined;
       
-      // Set origin for lab diamonds
-      if (value === 'DIAMOND_LAB') {
-        gem.origin = 'LAB';
-      } else if (value === 'DIAMOND_NATURAL') {
-        gem.origin = 'NATURAL';
-      } else {
+      if (gem.stoneType !== 'DIAMOND') {
         gem.origin = undefined;
       }
     }
@@ -171,7 +172,7 @@ function GemstoneCard({ index, gemstone, onUpdate, onRemove }: GemstoneCardProps
         {/* Stone Type */}
         <div className="space-y-1">
           <FieldLabel label="Stone Type" tooltip="The type of gemstone or diamond you want" required />
-          <Select value={gemstone.stoneType} onValueChange={(v) => onUpdate('stoneType', v)}>
+          <Select value={normalizeGemstoneType(gemstone.stoneType)} onValueChange={(v) => onUpdate('stoneType', v)}>
             <SelectTrigger>
               <SelectValue placeholder="Select stone..." />
             </SelectTrigger>
