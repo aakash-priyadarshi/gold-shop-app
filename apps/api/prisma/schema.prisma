@@ -470,12 +470,14 @@ model Shop {
   savingsMembers        SavingsMember[]
   chitGroups            ChitGroup[]
   goldLoans             GoldLoan[]
-  karigarWorkshops      KarigarWorkshop[]
-  karigarJobs           KarigarJob[]
-  karigarVaultReserves  KarigarVaultReserve[]
-  karigarMetalMovements KarigarMetalMovement[]
-  karigarJobStages      KarigarJobStage[]
-  karigarCastingTrees   KarigarCastingTree[]
+  karigarWorkshops             KarigarWorkshop[]
+  karigarJobs                  KarigarJob[]
+  karigarVaultReserves         KarigarVaultReserve[]
+  karigarMetalMovements        KarigarMetalMovement[]
+  karigarJobStages             KarigarJobStage[]
+  karigarCastingTrees          KarigarCastingTree[]
+  karigarFinancialEntries      KarigarFinancialEntry[]
+  karigarFinancialAllocations  KarigarFinancialAllocation[]
 
   // POS Registers & Shifts & Returns
   posRegisters PosRegister[]
@@ -4119,10 +4121,20 @@ enum KarigarMovementType {
   ISSUE
   TRANSFER
   RETURN_FINISHED
+  RETURN_UNUSED
   RETURN_SPRUE
   SCRAP
   DUST
   ADJUST
+}
+
+enum KarigarFinancialEntryType {
+  OPENING_BALANCE
+  WAGE_ACCRUAL
+  SETTLEMENT_PAYMENT
+  ADVANCE_PAYMENT
+  ADJUSTMENT_INCREASE
+  ADJUSTMENT_DECREASE
 }
 
 model KarigarWorkshop {
@@ -4147,6 +4159,7 @@ model KarigarWorkshop {
   jobs               KarigarJob[]
   movements          KarigarMetalMovement[]
   stages             KarigarJobStage[]
+  financialEntries   KarigarFinancialEntry[]
 
   @@index([shopId])
 }
@@ -4185,6 +4198,8 @@ model KarigarJob {
   stages                KarigarJobStage[]
   movements             KarigarMetalMovement[]
   trees                 KarigarCastingTree[]
+  financialEntries      KarigarFinancialEntry[]
+  financialAllocations  KarigarFinancialAllocation[]
 
   @@index([shopId])
   @@index([workshopId])
@@ -4272,10 +4287,11 @@ model KarigarMetalMovement {
   note        String?
   createdBy   String?
   createdAt   DateTime            @default(now())
-  shop        Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  workshop    KarigarWorkshop?    @relation(fields: [workshopId], references: [id], onDelete: SetNull)
-  job         KarigarJob?         @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  tree        KarigarCastingTree? @relation(fields: [treeId], references: [id], onDelete: SetNull)
+  shop           Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workshop       KarigarWorkshop?       @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  job            KarigarJob?            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  tree           KarigarCastingTree?    @relation(fields: [treeId], references: [id], onDelete: SetNull)
+  financialEntry KarigarFinancialEntry?
 
   @@index([shopId, createdAt])
   @@index([jobId])
@@ -4295,6 +4311,52 @@ model KarigarVaultReserve {
 
   @@unique([shopId, materialKey])
   @@index([shopId])
+}
+
+model KarigarFinancialEntry {
+  id               String                    @id @default(uuid())
+  shopId           String
+  workshopId       String
+  jobId            String?
+  type             KarigarFinancialEntryType
+  amount           Decimal                   @db.Decimal(18, 2)
+  currency         CurrencyCode              @default(NPR)
+  paymentMethod    String?
+  reference        String?
+  note             String?
+  sourceMovementId String?                   @unique
+  idempotencyKey   String?
+  createdBy        String?
+  createdAt        DateTime                  @default(now())
+
+  shop             Shop                      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workshop         KarigarWorkshop           @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  job              KarigarJob?               @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  sourceMovement   KarigarMetalMovement?     @relation(fields: [sourceMovementId], references: [id], onDelete: SetNull)
+  allocations      KarigarFinancialAllocation[]
+
+  @@unique([shopId, idempotencyKey])
+  @@index([shopId, workshopId, createdAt])
+  @@index([workshopId])
+  @@index([jobId])
+  @@index([sourceMovementId])
+}
+
+model KarigarFinancialAllocation {
+  id               String                @id @default(uuid())
+  shopId           String
+  financialEntryId String
+  jobId            String
+  amount           Decimal               @db.Decimal(18, 2)
+  createdAt        DateTime              @default(now())
+
+  shop             Shop                  @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  financialEntry   KarigarFinancialEntry @relation(fields: [financialEntryId], references: [id], onDelete: Cascade)
+  job              KarigarJob            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([financialEntryId, jobId])
+  @@index([shopId])
+  @@index([jobId])
 }
 
 // ─── Security Shield ───────────────────────────────────────

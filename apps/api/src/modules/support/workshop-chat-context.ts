@@ -122,7 +122,7 @@ export function isWorkshopAccessQuestion(message: string): boolean {
 
 export function isWorkshopOperationalQuestion(message: string): boolean {
   const normalized = message.toLowerCase();
-  return /(receive.*(finished|workshop)|finished.*receive|can't.*receive|cannot.*receive|why.*receive|cancel.*job|archive.*job|delete.*job|job.*delete|wage.*(due|settle|settlement)|settle.*wage|procure.*bullion|procurement.*bullion|supplier.*bullion)/.test(
+  return /(receive.*(finished|workshop)|finished.*receive|can't.*receive|cannot.*receive|why.*receive|cancel.*job|archive.*job|delete.*job|job.*delete|wage.*(due|settle|settlement)|settle.*wage|karigar.*(account|statement|ledger|advance|settlement)|procure.*bullion|procurement.*bullion|supplier.*bullion)/.test(
     normalized,
   );
 }
@@ -149,8 +149,8 @@ export function formatWorkshopOperationalReply(
     return "Use Cancel / archive on the job instead of deleting its history. Cancellation is terminal for production: it keeps the recorded work visible but does not allow more stage work, metal issue, or finished-goods receipt. Do not use cancellation to correct metal already issued or returned; record the appropriate return or reconciliation movement instead.";
   }
 
-  if (/(wage.*(due|settle|settlement)|settle.*wage)/.test(normalized)) {
-    return "Wages due are accrued when finished metal is returned at the karigar's configured rate. That amount is separate from the physical-metal return and outstanding balance. Review it in Supply Chain → Karigar book, then record the actual wage settlement in your normal payment/accounting process.";
+  if (/(wage.*(due|settle|settlement)|settle.*wage|karigar.*(account|statement|ledger|advance|settlement))/.test(normalized)) {
+    return "Wages due are accrued when finished metal is returned at the karigar's configured rate. That amount is separate from the physical-metal return and outstanding balance. Karigar accounts and wage settlements are managed in Supply Chain at /dashboard/shop/supply-chain. Click 'Account' on any karigar to view their unified financial statement, record settlement payments against accrued wages, log advances, perform authorized adjustments with required reason notes, and export or print physical reconciliation statements. Physical metal returns (finished, unused scrap, sprue, dust) update both vault reserves and the karigar's outstanding float.";
   }
 
   return "Procure Bullion in Supply Chain records physical metal entering the workshop vault so it can be issued to karigars or jobs. It does not create a supplier bill, supplier payment, or customer invoice; handle those in the relevant purchasing or accounting workflow.";

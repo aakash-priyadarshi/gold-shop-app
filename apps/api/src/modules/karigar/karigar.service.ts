@@ -14,6 +14,7 @@ import {
   KARIGAR_STAGES,
   computeGoldLoss,
   stageGoldLoss,
+  isReturnMovementType,
   type KarigarStageCode,
 } from "@gold-shop/shared";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -32,8 +33,20 @@ import {
   UpdateKarigarStageDto,
 } from "./dto/karigar.dto";
 import {
+  RecordKarigarPaymentDto,
+  RecordKarigarAdvanceDto,
+  RecordKarigarAdjustmentDto,
+  RecordKarigarMetalReturnDto,
+  KarigarStatementQueryDto,
+} from "./dto/karigar-account.dto";
+import {
   issueRequiresWorkshop,
   wageForFinishedReturn,
+  computeFinancialSummary,
+  computeMetalBalances,
+  validatePaymentAmount,
+  validateMetalReturn,
+  roundMoney,
 } from "./karigar-ledger";
 import {
   buildWorkshopTower,
@@ -63,7 +76,7 @@ export class KarigarService {
     }
     await this.priceRebase.ensureShopPricesMatchCurrency(shopId);
 
-    const [workshops, jobs, reserves, movements] = await Promise.all([
+    const [workshops, jobs, reserves, movements, financialEntries] = await Promise.all([
       this.prisma.karigarWorkshop.findMany({
         where: { shopId },
         orderBy: { createdAt: "asc" },
@@ -81,6 +94,9 @@ export class KarigarService {
         where: { shopId },
         orderBy: { createdAt: "desc" },
         take: 500,
+      }),
+      this.prisma.karigarFinancialEntry.findMany({
+        where: { shopId },
       }),
     ]);
 
@@ -106,6 +122,12 @@ export class KarigarService {
     }
 
     const byWorkshop = this.aggregateWorkshopMovements(movements);
+    const entriesByWorkshop = new Map<string, Array<{ type: string; amount: number }>>();
+    for (const fe of financialEntries) {
+      const list = entriesByWorkshop.get(fe.workshopId) ?? [];
+      list.push({ type: fe.type, amount: Number(fe.amount) });
+      entriesByWorkshop.set(fe.workshopId, list);
+    }
 
     return {
       vaultReserves,
@@ -120,21 +142,30 @@ export class KarigarService {
           recoverableGrams: agg?.recoverable ?? 0,
           allowedPercent: w.wastageLimit,
         });
+        const finSummary = computeFinancialSummary(
+          entriesByWorkshop.get(w.id) ?? [],
+        );
         return {
-        id: w.id,
-        name: w.name,
-        artisan: w.artisan,
-        location: w.location,
-        phone: w.phone ?? undefined,
-        email: w.email ?? undefined,
-        rating: w.rating,
+          id: w.id,
+          name: w.name,
+          artisan: w.artisan,
+          location: w.location,
+          phone: w.phone ?? undefined,
+          email: w.email ?? undefined,
+          rating: w.rating,
           metalIssued: issued,
           metalReturned: returned,
           wastagePercent: issued > 0 ? (loss.actualLoss / issued) * 100 : 0,
-        wastageLimit: w.wastageLimit,
-        wageRatePerGram: w.wageRatePerGram,
-        outstandingBalance: w.outstandingBalance,
-        wageDue: w.wageDue,
+          wastageLimit: w.wastageLimit,
+          wageRatePerGram: w.wageRatePerGram,
+          outstandingBalance: w.outstandingBalance,
+          wageDue: finSummary.amountPayable,
+          amountPayable: finSummary.amountPayable,
+          advanceBalance: finSummary.advanceBalance,
+          netPayable: finSummary.netPayable,
+          totalWagesAccrued: finSummary.totalWagesAccrued,
+          totalSettlementsPaid: finSummary.totalSettlementsPaid,
+          totalAdvances: finSummary.totalAdvances,
           goldLoss: loss,
         };
       }),
@@ -396,52 +427,155 @@ export class KarigarService {
             data: { goldInGrams: { increment: weight } },
           });
         }
+        await tx.karigarMetalMovement.create({
+          data: {
+            shopId,
+            jobId: job?.id ?? null,
+            workshopId,
+            treeId: dto.treeId ?? null,
+            stage: stage ?? null,
+            type,
+            metalKey,
+            weightGrams: weight,
+            purity: dto.purity ?? null,
+            note: dto.note ?? null,
+            lotId: dto.lotId ?? null,
+            createdBy: userId ?? null,
+          },
+        });
       } else if (
         type === "RETURN_FINISHED" ||
+        type === "RETURN_UNUSED" ||
         type === "RETURN_SPRUE" ||
         type === "SCRAP" ||
         type === "DUST"
       ) {
-        await this.adjustVault(tx, shopId, metalKey, weight);
         if (workshopId) {
           const workshop = await tx.karigarWorkshop.findFirst({
             where: { id: workshopId, shopId },
           });
-          if (workshop) {
-            const wage =
-              type === "RETURN_FINISHED"
-                ? wageForFinishedReturn(weight, workshop.wageRatePerGram)
-                : 0;
-            await tx.karigarWorkshop.update({
-              where: { id: workshop.id },
+          if (!workshop) throw new NotFoundException("Karigar not found");
+
+          // Concurrency-safe material outstanding balance check
+          const pastMovements = await tx.karigarMetalMovement.findMany({
+            where: { shopId, workshopId, metalKey },
+            select: { type: true, weightGrams: true },
+          });
+          const issued = pastMovements
+            .filter((m) => m.type === "ISSUE")
+            .reduce((sum, m) => sum + m.weightGrams, 0);
+          const returned = pastMovements
+            .filter((m) => isReturnMovementType(m.type))
+            .reduce((sum, m) => sum + m.weightGrams, 0);
+          const currentOutstanding = Math.max(
+            0,
+            Math.round((issued - returned) * 1000) / 1000,
+          );
+
+          const check = validateMetalReturn(weight, currentOutstanding);
+          if (!check.valid) {
+            throw new BadRequestException(check.reason);
+          }
+
+          await this.adjustVault(tx, shopId, metalKey, weight);
+          const wage =
+            type === "RETURN_FINISHED"
+              ? wageForFinishedReturn(weight, workshop.wageRatePerGram)
+              : 0;
+
+          await tx.karigarWorkshop.update({
+            where: { id: workshop.id },
+            data: {
+              metalReturned: { increment: weight },
+              outstandingBalance: { decrement: weight },
+            },
+          });
+
+          const movement = await tx.karigarMetalMovement.create({
+            data: {
+              shopId,
+              jobId: job?.id ?? null,
+              workshopId,
+              treeId: dto.treeId ?? null,
+              stage: stage ?? null,
+              type,
+              metalKey,
+              weightGrams: weight,
+              purity: dto.purity ?? null,
+              note: dto.note ?? null,
+              lotId: dto.lotId ?? null,
+              createdBy: userId ?? null,
+            },
+          });
+
+          if (wage > 0) {
+            const shop = await tx.shop.findUnique({
+              where: { id: shopId },
+              select: { currency: true },
+            });
+            await tx.karigarFinancialEntry.create({
               data: {
-                metalReturned: { increment: weight },
-                outstandingBalance: { decrement: weight },
-                ...(wage > 0 ? { wageDue: { increment: wage } } : {}),
+                shopId,
+                workshopId: workshop.id,
+                jobId: job?.id ?? null,
+                type: "WAGE_ACCRUAL",
+                amount: new Prisma.Decimal(roundMoney(wage)),
+                currency: shop?.currency ?? "NPR",
+                sourceMovementId: movement.id,
+                note:
+                  dto.note ?? `Wage accrued for finished return of ${weight}g`,
+                createdBy: userId ?? null,
               },
             });
           }
+
+          const allEntries = await tx.karigarFinancialEntry.findMany({
+            where: { shopId, workshopId },
+            select: { type: true, amount: true },
+          });
+          const summary = computeFinancialSummary(allEntries);
+          await tx.karigarWorkshop.update({
+            where: { id: workshop.id },
+            data: { wageDue: summary.amountPayable },
+          });
+        } else {
+          await this.adjustVault(tx, shopId, metalKey, weight);
+          await tx.karigarMetalMovement.create({
+            data: {
+              shopId,
+              jobId: job?.id ?? null,
+              workshopId: null,
+              treeId: dto.treeId ?? null,
+              stage: stage ?? null,
+              type,
+              metalKey,
+              weightGrams: weight,
+              purity: dto.purity ?? null,
+              note: dto.note ?? null,
+              lotId: dto.lotId ?? null,
+              createdBy: userId ?? null,
+            },
+          });
         }
       } else if (type === "ADJUST") {
         await this.adjustVault(tx, shopId, metalKey, weight);
+        await tx.karigarMetalMovement.create({
+          data: {
+            shopId,
+            jobId: job?.id ?? null,
+            workshopId,
+            treeId: dto.treeId ?? null,
+            stage: stage ?? null,
+            type,
+            metalKey,
+            weightGrams: weight,
+            purity: dto.purity ?? null,
+            note: dto.note ?? null,
+            lotId: dto.lotId ?? null,
+            createdBy: userId ?? null,
+          },
+        });
       }
-
-      await tx.karigarMetalMovement.create({
-        data: {
-          shopId,
-          jobId: job?.id ?? null,
-          workshopId,
-          treeId: dto.treeId ?? null,
-          stage: stage ?? null,
-          type,
-          metalKey,
-          weightGrams: weight,
-          purity: dto.purity ?? null,
-          note: dto.note ?? null,
-          lotId: dto.lotId ?? null,
-          createdBy: userId ?? null,
-        },
-      });
     });
 
     if (job) {
@@ -1460,6 +1594,610 @@ export class KarigarService {
     };
   }
 
+  async getWorkshopAccount(shopId: string, workshopId: string) {
+    const workshop = await this.prisma.karigarWorkshop.findFirst({
+      where: { id: workshopId, shopId },
+      include: {
+        shop: { select: { currency: true } },
+      },
+    });
+    if (!workshop) throw new NotFoundException("Karigar not found");
+
+    const [financialEntries, movements, jobs] = await Promise.all([
+      this.prisma.karigarFinancialEntry.findMany({
+        where: { shopId, workshopId },
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.karigarMetalMovement.findMany({
+        where: { shopId, workshopId },
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.karigarJob.findMany({
+        where: { shopId, workshopId },
+        select: { id: true, status: true, dueAt: true },
+      }),
+    ]);
+
+    const financialSummary = computeFinancialSummary(financialEntries);
+    const metalBalances = computeMetalBalances(movements);
+
+    const now = new Date();
+    let openJobs = 0;
+    let overdueJobs = 0;
+    let cancelledJobs = 0;
+
+    for (const j of jobs) {
+      if (j.status === "CANCELLED") {
+        cancelledJobs++;
+      } else if (j.status === "Completed") {
+        // completed
+      } else {
+        openJobs++;
+        if (j.dueAt && new Date(j.dueAt) < now) {
+          overdueJobs++;
+        }
+      }
+    }
+
+    return {
+      workshop: {
+        id: workshop.id,
+        name: workshop.name,
+        artisan: workshop.artisan,
+        location: workshop.location,
+        phone: workshop.phone,
+        email: workshop.email,
+        rating: workshop.rating,
+        wageRatePerGram: workshop.wageRatePerGram,
+        wastageLimit: workshop.wastageLimit,
+        metalIssued: workshop.metalIssued,
+        metalReturned: workshop.metalReturned,
+        outstandingBalance: workshop.outstandingBalance,
+        wageDue: financialSummary.amountPayable,
+      },
+      currency: workshop.shop.currency ?? "NPR",
+      ...financialSummary,
+      metalBalances,
+      openJobs,
+      overdueJobs,
+      cancelledJobs,
+    };
+  }
+
+  async getWorkshopStatement(
+    shopId: string,
+    workshopId: string,
+    query: KarigarStatementQueryDto = {},
+  ) {
+    const workshop = await this.prisma.karigarWorkshop.findFirst({
+      where: { id: workshopId, shopId },
+    });
+    if (!workshop) throw new NotFoundException("Karigar not found");
+
+    const dateFilter =
+      query.from || query.to
+        ? {
+            ...(query.from ? { gte: new Date(query.from) } : {}),
+            ...(query.to ? { lte: new Date(query.to) } : {}),
+          }
+        : undefined;
+
+    const [movements, entries, jobs] = await Promise.all([
+      this.prisma.karigarMetalMovement.findMany({
+        where: {
+          shopId,
+          workshopId,
+          ...(dateFilter ? { createdAt: dateFilter } : {}),
+          ...(query.jobId ? { jobId: query.jobId } : {}),
+        },
+        include: {
+          job: { select: { id: true, product: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.karigarFinancialEntry.findMany({
+        where: {
+          shopId,
+          workshopId,
+          ...(dateFilter ? { createdAt: dateFilter } : {}),
+          ...(query.jobId ? { jobId: query.jobId } : {}),
+        },
+        include: {
+          job: { select: { id: true, product: true } },
+          allocations: {
+            include: { job: { select: { id: true, product: true } } },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.karigarJob.findMany({
+        where: { shopId, workshopId },
+        select: { id: true, product: true },
+      }),
+    ]);
+
+    const jobNameMap = new Map<string, string>();
+    for (const j of jobs) jobNameMap.set(j.id, j.product);
+
+    const metalEvents = movements.map((m) => ({
+      id: m.id,
+      kind: "METAL" as const,
+      eventType: m.type,
+      jobId: m.jobId,
+      jobProduct:
+        m.job?.product ?? (m.jobId ? jobNameMap.get(m.jobId) : null) ?? null,
+      metalKey: m.metalKey,
+      quantity: m.weightGrams,
+      purity: m.purity,
+      createdAt: m.createdAt.toISOString(),
+      note: m.note,
+      createdBy: m.createdBy,
+    }));
+
+    const moneyEvents = entries.map((e) => ({
+      id: e.id,
+      kind: "MONEY" as const,
+      eventType: e.type,
+      jobId: e.jobId,
+      jobProduct:
+        e.job?.product ?? (e.jobId ? jobNameMap.get(e.jobId) : null) ?? null,
+      amount: Number(e.amount),
+      currency: e.currency,
+      paymentMethod: e.paymentMethod,
+      reference: e.reference,
+      createdAt: e.createdAt.toISOString(),
+      note: e.note,
+      createdBy: e.createdBy,
+      allocations: (e.allocations ?? []).map((a) => ({
+        id: a.id,
+        jobId: a.jobId,
+        jobProduct: a.job?.product ?? jobNameMap.get(a.jobId) ?? null,
+        amount: Number(a.amount),
+      })),
+    }));
+
+    let combined = [...metalEvents, ...moneyEvents];
+
+    if (query.type) {
+      const filter = query.type.toUpperCase();
+      if (filter === "METAL") {
+        combined = combined.filter((ev) => ev.kind === "METAL");
+      } else if (filter === "MONEY") {
+        combined = combined.filter((ev) => ev.kind === "MONEY");
+      } else if (filter === "WAGE") {
+        combined = combined.filter((ev) => ev.eventType === "WAGE_ACCRUAL");
+      } else if (filter === "PAYMENT") {
+        combined = combined.filter(
+          (ev) => ev.eventType === "SETTLEMENT_PAYMENT",
+        );
+      } else if (filter === "ADVANCE") {
+        combined = combined.filter((ev) => ev.eventType === "ADVANCE_PAYMENT");
+      } else if (filter === "ADJUSTMENT") {
+        combined = combined.filter(
+          (ev) =>
+            ev.eventType === "ADJUSTMENT_INCREASE" ||
+            ev.eventType === "ADJUSTMENT_DECREASE",
+        );
+      }
+    }
+
+    // Sort chronological descending
+    combined.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    const limit = query.limit ?? 50;
+    const offset = query.cursor ? parseInt(query.cursor, 10) || 0 : 0;
+    const paginated = combined.slice(offset, offset + limit);
+    const nextCursor =
+      offset + limit < combined.length ? String(offset + limit) : null;
+
+    return {
+      items: paginated,
+      totalCount: combined.length,
+      nextCursor,
+    };
+  }
+
+  async recordPayment(
+    shopId: string,
+    workshopId: string,
+    userId: string | undefined,
+    dto: RecordKarigarPaymentDto,
+  ) {
+    if (dto.amount <= 0) {
+      throw new BadRequestException("Payment amount must be greater than zero");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Check idempotency
+      if (dto.idempotencyKey) {
+        const existing = await tx.karigarFinancialEntry.findUnique({
+          where: {
+            shopId_idempotencyKey: {
+              shopId,
+              idempotencyKey: dto.idempotencyKey,
+            },
+          },
+          include: { allocations: true },
+        });
+        if (existing) {
+          const allEntries = await tx.karigarFinancialEntry.findMany({
+            where: { shopId, workshopId },
+            select: { type: true, amount: true },
+          });
+          return {
+            entry: { ...existing, amount: Number(existing.amount) },
+            summary: computeFinancialSummary(allEntries),
+          };
+        }
+      }
+
+      // 2. Workshop ownership check
+      const workshop = await tx.karigarWorkshop.findFirst({
+        where: { id: workshopId, shopId },
+        include: { shop: { select: { currency: true } } },
+      });
+      if (!workshop) throw new NotFoundException("Karigar not found");
+
+      // 3. Check current payable
+      const existingEntries = await tx.karigarFinancialEntry.findMany({
+        where: { shopId, workshopId },
+        select: { type: true, amount: true },
+      });
+      const summary = computeFinancialSummary(existingEntries);
+      const val = validatePaymentAmount(dto.amount, summary.amountPayable);
+      if (!val.valid) {
+        throw new BadRequestException(val.reason);
+      }
+
+      // 4. Validate allocations if provided
+      if (dto.allocations && dto.allocations.length > 0) {
+        const totalAllocated = dto.allocations.reduce(
+          (sum, a) => sum + a.amount,
+          0,
+        );
+        if (roundMoney(totalAllocated) > roundMoney(dto.amount) + 0.0001) {
+          throw new BadRequestException(
+            `Total allocations (${totalAllocated}) cannot exceed payment amount (${dto.amount})`,
+          );
+        }
+
+        for (const alloc of dto.allocations) {
+          if (alloc.amount <= 0) {
+            throw new BadRequestException("Allocation amount must be positive");
+          }
+          const job = await tx.karigarJob.findFirst({
+            where: { id: alloc.jobId, shopId, workshopId },
+          });
+          if (!job) {
+            throw new BadRequestException(
+              `Job ${alloc.jobId} not found for this karigar in this shop`,
+            );
+          }
+
+          // Check job accrued wage vs existing allocations
+          const [jobAccruals, jobAllocations] = await Promise.all([
+            tx.karigarFinancialEntry.findMany({
+              where: { shopId, jobId: alloc.jobId, type: "WAGE_ACCRUAL" },
+              select: { amount: true },
+            }),
+            tx.karigarFinancialAllocation.findMany({
+              where: { shopId, jobId: alloc.jobId },
+              select: { amount: true },
+            }),
+          ]);
+          const totalAccrued = jobAccruals.reduce(
+            (sum, e) => sum + Number(e.amount),
+            0,
+          );
+          const alreadyAllocated = jobAllocations.reduce(
+            (sum, a) => sum + Number(a.amount),
+            0,
+          );
+          const jobOutstanding = Math.max(
+            0,
+            roundMoney(totalAccrued - alreadyAllocated),
+          );
+          if (roundMoney(alloc.amount) > jobOutstanding + 0.0001) {
+            throw new BadRequestException(
+              `Allocation for job ${job.product} (${alloc.amount}) exceeds outstanding wage for that job (${jobOutstanding})`,
+            );
+          }
+        }
+      }
+
+      // 5. Create entry
+      const entry = await tx.karigarFinancialEntry.create({
+        data: {
+          shopId,
+          workshopId,
+          type: "SETTLEMENT_PAYMENT",
+          amount: new Prisma.Decimal(roundMoney(dto.amount)),
+          currency: workshop.shop.currency ?? "NPR",
+          paymentMethod: dto.paymentMethod ?? null,
+          reference: dto.reference?.slice(0, 120) ?? null,
+          note: dto.note?.slice(0, 1000) ?? null,
+          idempotencyKey: dto.idempotencyKey ?? null,
+          createdBy: userId ?? null,
+        },
+      });
+
+      // 6. Create allocations if any
+      if (dto.allocations && dto.allocations.length > 0) {
+        await tx.karigarFinancialAllocation.createMany({
+          data: dto.allocations.map((a) => ({
+            shopId,
+            financialEntryId: entry.id,
+            jobId: a.jobId,
+            amount: new Prisma.Decimal(roundMoney(a.amount)),
+          })),
+        });
+      }
+
+      // 7. Update wageDue compatibility cache
+      const updatedEntries = await tx.karigarFinancialEntry.findMany({
+        where: { shopId, workshopId },
+        select: { type: true, amount: true },
+      });
+      const updatedSummary = computeFinancialSummary(updatedEntries);
+      await tx.karigarWorkshop.update({
+        where: { id: workshopId },
+        data: { wageDue: updatedSummary.amountPayable },
+      });
+
+      return {
+        entry: {
+          ...entry,
+          amount: Number(entry.amount),
+        },
+        summary: updatedSummary,
+      };
+    });
+  }
+
+  async recordAdvance(
+    shopId: string,
+    workshopId: string,
+    userId: string | undefined,
+    dto: RecordKarigarAdvanceDto,
+  ) {
+    if (dto.amount <= 0) {
+      throw new BadRequestException("Advance amount must be greater than zero");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (dto.idempotencyKey) {
+        const existing = await tx.karigarFinancialEntry.findUnique({
+          where: {
+            shopId_idempotencyKey: {
+              shopId,
+              idempotencyKey: dto.idempotencyKey,
+            },
+          },
+        });
+        if (existing) {
+          const allEntries = await tx.karigarFinancialEntry.findMany({
+            where: { shopId, workshopId },
+            select: { type: true, amount: true },
+          });
+          return {
+            entry: { ...existing, amount: Number(existing.amount) },
+            summary: computeFinancialSummary(allEntries),
+          };
+        }
+      }
+
+      const workshop = await tx.karigarWorkshop.findFirst({
+        where: { id: workshopId, shopId },
+        include: { shop: { select: { currency: true } } },
+      });
+      if (!workshop) throw new NotFoundException("Karigar not found");
+
+      const entry = await tx.karigarFinancialEntry.create({
+        data: {
+          shopId,
+          workshopId,
+          type: "ADVANCE_PAYMENT",
+          amount: new Prisma.Decimal(roundMoney(dto.amount)),
+          currency: workshop.shop.currency ?? "NPR",
+          paymentMethod: dto.paymentMethod ?? null,
+          reference: dto.reference?.slice(0, 120) ?? null,
+          note: dto.note?.slice(0, 1000) ?? null,
+          idempotencyKey: dto.idempotencyKey ?? null,
+          createdBy: userId ?? null,
+        },
+      });
+
+      const updatedEntries = await tx.karigarFinancialEntry.findMany({
+        where: { shopId, workshopId },
+        select: { type: true, amount: true },
+      });
+      const updatedSummary = computeFinancialSummary(updatedEntries);
+      await tx.karigarWorkshop.update({
+        where: { id: workshopId },
+        data: { wageDue: updatedSummary.amountPayable },
+      });
+
+      return {
+        entry: {
+          ...entry,
+          amount: Number(entry.amount),
+        },
+        summary: updatedSummary,
+      };
+    });
+  }
+
+  async recordAdjustment(
+    shopId: string,
+    workshopId: string,
+    userId: string | undefined,
+    dto: RecordKarigarAdjustmentDto,
+  ) {
+    if (dto.amount <= 0) {
+      throw new BadRequestException("Adjustment amount must be greater than zero");
+    }
+    if (!dto.note || !dto.note.trim()) {
+      throw new BadRequestException("Adjustment reason note is required");
+    }
+    if (
+      dto.type !== "ADJUSTMENT_INCREASE" &&
+      dto.type !== "ADJUSTMENT_DECREASE"
+    ) {
+      throw new BadRequestException(
+        "Invalid adjustment type. Must be ADJUSTMENT_INCREASE or ADJUSTMENT_DECREASE.",
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (dto.idempotencyKey) {
+        const existing = await tx.karigarFinancialEntry.findUnique({
+          where: {
+            shopId_idempotencyKey: {
+              shopId,
+              idempotencyKey: dto.idempotencyKey,
+            },
+          },
+        });
+        if (existing) {
+          const allEntries = await tx.karigarFinancialEntry.findMany({
+            where: { shopId, workshopId },
+            select: { type: true, amount: true },
+          });
+          return {
+            entry: { ...existing, amount: Number(existing.amount) },
+            summary: computeFinancialSummary(allEntries),
+          };
+        }
+      }
+
+      const workshop = await tx.karigarWorkshop.findFirst({
+        where: { id: workshopId, shopId },
+        include: { shop: { select: { currency: true } } },
+      });
+      if (!workshop) throw new NotFoundException("Karigar not found");
+
+      const entry = await tx.karigarFinancialEntry.create({
+        data: {
+          shopId,
+          workshopId,
+          type: dto.type,
+          amount: new Prisma.Decimal(roundMoney(dto.amount)),
+          currency: workshop.shop.currency ?? "NPR",
+          note: dto.note.slice(0, 1000),
+          idempotencyKey: dto.idempotencyKey ?? null,
+          createdBy: userId ?? null,
+        },
+      });
+
+      const updatedEntries = await tx.karigarFinancialEntry.findMany({
+        where: { shopId, workshopId },
+        select: { type: true, amount: true },
+      });
+      const updatedSummary = computeFinancialSummary(updatedEntries);
+      await tx.karigarWorkshop.update({
+        where: { id: workshopId },
+        data: { wageDue: updatedSummary.amountPayable },
+      });
+
+      return {
+        entry: {
+          ...entry,
+          amount: Number(entry.amount),
+        },
+        summary: updatedSummary,
+      };
+    });
+  }
+
+  async recordMetalReturn(
+    shopId: string,
+    workshopId: string,
+    userId: string | undefined,
+    dto: RecordKarigarMetalReturnDto,
+  ) {
+    return this.addMovement(shopId, dto.jobId ?? null, userId, {
+      type: dto.type as KarigarMovementType,
+      weightGrams: dto.weightGrams,
+      metalKey: dto.metalKey,
+      workshopId,
+      note: dto.note,
+    });
+  }
+
+  async getJobCostSummary(shopId: string, jobId: string) {
+    const job = await this.requireJob(shopId, jobId);
+    const [movements, accruals, allocations] = await Promise.all([
+      this.prisma.karigarMetalMovement.findMany({
+        where: { shopId, jobId },
+        orderBy: { createdAt: "asc" },
+      }),
+      this.prisma.karigarFinancialEntry.findMany({
+        where: { shopId, jobId, type: "WAGE_ACCRUAL" },
+        orderBy: { createdAt: "asc" },
+      }),
+      this.prisma.karigarFinancialAllocation.findMany({
+        where: { shopId, jobId },
+        include: {
+          financialEntry: {
+            select: {
+              id: true,
+              type: true,
+              createdAt: true,
+              paymentMethod: true,
+              reference: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
+
+    const metalBalances = computeMetalBalances(movements);
+    const wageAccrued = accruals.reduce(
+      (sum, e) => sum + Number(e.amount),
+      0,
+    );
+    const settlementAllocated = allocations.reduce(
+      (sum, a) => sum + Number(a.amount),
+      0,
+    );
+    const wageOutstanding = Math.max(
+      0,
+      roundMoney(wageAccrued - settlementAllocated),
+    );
+
+    return {
+      jobId: job.id,
+      product: job.product,
+      artisan: job.artisan,
+      workshopId: job.workshopId,
+      status: job.status,
+      metalBalances,
+      wageAccrued: roundMoney(wageAccrued),
+      settlementAllocated: roundMoney(settlementAllocated),
+      wageOutstanding: roundMoney(wageOutstanding),
+      accruals: accruals.map((e) => ({
+        id: e.id,
+        amount: Number(e.amount),
+        currency: e.currency,
+        note: e.note,
+        createdAt: e.createdAt.toISOString(),
+        sourceMovementId: e.sourceMovementId,
+      })),
+      allocations: allocations.map((a) => ({
+        id: a.id,
+        financialEntryId: a.financialEntryId,
+        amount: Number(a.amount),
+        createdAt: a.createdAt.toISOString(),
+        paymentMethod: a.financialEntry.paymentMethod,
+        reference: a.financialEntry.reference,
+      })),
+    };
+  }
+
   private aggregateWorkshopMovements(
     movements: Array<{
       workshopId: string | null;
@@ -1469,7 +2207,13 @@ export class KarigarService {
   ) {
     const map = new Map<
       string,
-      { issued: number; returned: number; finished: number; sprue: number; recoverable: number }
+      {
+        issued: number;
+        returned: number;
+        finished: number;
+        sprue: number;
+        recoverable: number;
+      }
     >();
     for (const m of movements) {
       if (!m.workshopId) continue;
@@ -1484,6 +2228,9 @@ export class KarigarService {
       if (m.type === "RETURN_FINISHED") {
         row.returned += m.weightGrams;
         row.finished += m.weightGrams;
+      }
+      if (m.type === "RETURN_UNUSED") {
+        row.returned += m.weightGrams;
       }
       if (m.type === "RETURN_SPRUE") {
         row.returned += m.weightGrams;
@@ -1523,7 +2270,12 @@ export class KarigarService {
         allowedWastagePercent: number;
       }>;
     }>,
-    workshops: Array<{ id: string; artisan: string; name: string; wastageLimit: number }>,
+    workshops: Array<{
+      id: string;
+      artisan: string;
+      name: string;
+      wastageLimit: number;
+    }>,
   ) {
     const jobRows = jobs.map((job) => {
       const serialized = this.serializeJob({
@@ -1558,7 +2310,10 @@ export class KarigarService {
       const issued = theirs.reduce((s, j) => s + j.goldLoss.issued, 0);
       const finished = theirs.reduce((s, j) => s + j.goldLoss.finished, 0);
       const sprue = theirs.reduce((s, j) => s + j.goldLoss.sprueButton, 0);
-      const recoverable = theirs.reduce((s, j) => s + j.goldLoss.recoverable, 0);
+      const recoverable = theirs.reduce(
+        (s, j) => s + j.goldLoss.recoverable,
+        0,
+      );
       return {
         workshopId: w.id,
         name: w.name,

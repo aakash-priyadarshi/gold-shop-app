@@ -376,6 +376,7 @@ describe("KarigarService workshop safeguards", () => {
   it("still allows physical metal return reconciliation after cancellation", async () => {
     prisma.karigarJob.findFirst.mockResolvedValue(cancelledJob);
     const tx = {
+      shop: { findUnique: jest.fn().mockResolvedValue({ currency: "NPR" }) },
       karigarVaultReserve: {
         findUnique: jest.fn().mockResolvedValue({ quantity: 0 }),
         upsert: jest.fn(),
@@ -386,7 +387,14 @@ describe("KarigarService workshop safeguards", () => {
           .mockResolvedValue({ id: "ws-1", wageRatePerGram: 2 }),
         update: jest.fn(),
       },
-      karigarMetalMovement: { create: jest.fn() },
+      karigarMetalMovement: {
+        create: jest.fn().mockResolvedValue({ id: "mov-1" }),
+        findMany: jest.fn().mockResolvedValue([{ type: "ISSUE", weightGrams: 10 }]),
+      },
+      karigarFinancialEntry: {
+        create: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
     };
     prisma.$transaction.mockImplementation(async (callback: any) => callback(tx));
     jest.spyOn(service, "getJob").mockResolvedValue({ archived: true } as never);

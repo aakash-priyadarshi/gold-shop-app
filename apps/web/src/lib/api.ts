@@ -621,6 +621,62 @@ export const karigarApi = {
     jobId: string,
     data?: { sku?: string; nameEn?: string; jewelleryType?: string },
   ) => api.post(`/karigar/jobs/${jobId}/receive-fg`, data ?? {}),
+  getAccount: (workshopId: string) =>
+    api.get(`/karigar/workshops/${workshopId}/account`),
+  getStatement: (
+    workshopId: string,
+    params?: {
+      type?: string;
+      from?: string;
+      to?: string;
+      jobId?: string;
+      limit?: number;
+      cursor?: string;
+    },
+  ) =>
+    api.get(`/karigar/workshops/${workshopId}/account/statement`, { params }),
+  recordPayment: (
+    workshopId: string,
+    data: {
+      amount: number;
+      paymentMethod?: string;
+      reference?: string;
+      note?: string;
+      idempotencyKey?: string;
+      allocations?: Array<{ jobId: string; amount: number }>;
+    },
+  ) => api.post(`/karigar/workshops/${workshopId}/account/payment`, data),
+  recordAdvance: (
+    workshopId: string,
+    data: {
+      amount: number;
+      paymentMethod?: string;
+      reference?: string;
+      note?: string;
+      idempotencyKey?: string;
+    },
+  ) => api.post(`/karigar/workshops/${workshopId}/account/advance`, data),
+  recordAdjustment: (
+    workshopId: string,
+    data: {
+      type: "ADJUSTMENT_INCREASE" | "ADJUSTMENT_DECREASE";
+      amount: number;
+      note: string;
+      idempotencyKey?: string;
+    },
+  ) => api.post(`/karigar/workshops/${workshopId}/account/adjustment`, data),
+  recordMetalReturn: (
+    workshopId: string,
+    data: {
+      type: "RETURN_FINISHED" | "RETURN_UNUSED" | "RETURN_SPRUE" | "SCRAP" | "DUST";
+      weightGrams: number;
+      metalKey?: string;
+      jobId?: string;
+      note?: string;
+    },
+  ) => api.post(`/karigar/workshops/${workshopId}/account/metal-return`, data),
+  getJobCostSummary: (jobId: string) =>
+    api.get(`/karigar/jobs/${jobId}/cost-summary`),
 };
 
 // RFQ API
