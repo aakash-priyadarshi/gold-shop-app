@@ -89,6 +89,8 @@ interface Job {
   workshopId?: string | null;
   grossWeight: number;
   status: string;
+  archived?: boolean;
+  readOnly?: boolean;
   allowedWastagePercent?: number;
   goldLoss?: any;
   stages?: any[];
@@ -1023,9 +1025,19 @@ function KarigarSupplyChainLedger() {
             variant="outline"
             className="border-emerald-500/30 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 bg-white dark:bg-gray-900"
             onClick={async () => {
+              const confirmed = window.confirm(
+                t(
+                  "This demo creates persistent sample workshop, job and metal-ledger records in this shop and may add sample vault metal. Use it only in a test/demo shop or if you intend these sample records to remain until corrected through the supported ledger workflow.",
+                ),
+              );
+              if (!confirmed) return;
               try {
                 await karigarApi.loadSampleJob();
-                showToast(t("Demo 1 kg casting job added."));
+                showToast(
+                  t(
+                    "Persistent demo 1 kg job added. Its workshop, job, vault and metal-ledger records remain in this shop until reconciled through the ledger workflow.",
+                  ),
+                );
                 await loadDatabaseConfig();
               } catch (err: any) {
                 showToast(
@@ -1491,8 +1503,9 @@ function KarigarSupplyChainLedger() {
                         <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
                           <T>
                             Create a real job to record issued gold, scrap, and
-                            unexplained loss. The demo job adds sample data for
-                            learning only.
+                            unexplained loss. The demo job creates persistent
+                            sample records, so use it only in a test/demo shop
+                            or when you intend to reconcile its ledger entries.
                           </T>
                         </p>
                       </div>

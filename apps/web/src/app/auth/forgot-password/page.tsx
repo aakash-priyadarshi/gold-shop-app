@@ -240,7 +240,7 @@ function ForgotPasswordForm() {
               </CardTitle>
               <CardDescription className="text-base">
                 <T>
-                  Enter your email and we will send a reset code. The code verifies that you control the mailbox before you choose a new password.
+                  Enter your email and we will send a reset code. You’ll need that code when you submit your new password.
                 </T>
               </CardDescription>
             </CardHeader>

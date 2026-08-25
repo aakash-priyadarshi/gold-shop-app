@@ -115,6 +115,13 @@ describe("Tutorial TOUR_STEPS — Structure", () => {
     expect(sourceFile).toContain("Cancel/archive a job");
     expect(sourceFile).toContain("Approve is the required next step");
   });
+
+  test("referral and demo guidance match the live policy and persistent sample behavior", () => {
+    expect(sourceFile).toContain("Depending on the current referral policy");
+    expect(sourceFile).toContain("Dashboard → Referrals shows the current rule");
+    expect(sourceFile).toContain("Creates persistent sample workshop, job, and metal-ledger records");
+    expect(sourceFile).not.toContain("this button is a demonstration, not a production workflow");
+  });
 });
 
 describe("Tutorial — Invoice Create Page Content", () => {

@@ -74,7 +74,9 @@ export class KarigarController {
   }
 
   @Post("sample-job")
-  @ApiOperation({ summary: "Create a 1kg sample casting job for a live demo" })
+  @ApiOperation({
+    summary: "Create persistent 1kg sample workshop, job, and metal-ledger records",
+  })
   async sampleJob(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,

@@ -18,6 +18,8 @@ export type JobGold = {
   artisan: string;
   workshopId?: string | null;
   status: string;
+  archived?: boolean;
+  readOnly?: boolean;
   allowedWastagePercent?: number;
   goldLoss?: GoldLossResult;
   stages?: Array<{
@@ -80,12 +82,14 @@ function CastingTreeEditor({
   jobId,
   tree,
   defaultAllowed,
+  readOnly = false,
   onChanged,
   onCancelNew,
 }: {
   jobId: string;
   tree?: CastingTree;
   defaultAllowed: number;
+  readOnly?: boolean;
   onChanged: () => void;
   onCancelNew?: () => void;
 }) {
@@ -99,6 +103,7 @@ function CastingTreeEditor({
   const [saving, setSaving] = useState(false);
 
   const saveTree = async () => {
+    if (readOnly) return;
     setSaving(true);
     try {
       const issued = parseFloat(treeForm.issued) || 0;
@@ -146,6 +151,7 @@ function CastingTreeEditor({
             <Input
               className="h-8 text-xs"
               value={treeForm[key]}
+              disabled={readOnly}
               onChange={(e) =>
                 setTreeForm((prev) => ({ ...prev, [key]: e.target.value }))
               }
@@ -164,7 +170,7 @@ function CastingTreeEditor({
         </ul>
       )}
       <div className="flex gap-2">
-        <Button size="sm" disabled={saving} onClick={() => void saveTree()} className="bg-amber-500 text-white">
+        <Button size="sm" disabled={saving || readOnly} onClick={() => void saveTree()} className="bg-amber-500 text-white">
           <T>Save tree</T>
         </Button>
         {onCancelNew && (
@@ -189,11 +195,13 @@ export function KarigarJobGoldCard({
   onDelete: () => void;
 }) {
   const trees = job.trees ?? [];
+  const archived = job.archived || job.readOnly || job.status === "CANCELLED";
   const [addingTree, setAddingTree] = useState(false);
   const [saving, setSaving] = useState(false);
   const [stageDraft, setStageDraft] = useState<Record<string, { in: string; out: string; scrap: string; dust: string }>>({});
 
   const saveStage = async (stage: KarigarStageCode) => {
+    if (archived) return;
     const draft = stageDraft[stage];
     const current = job.stages?.find((s) => s.stage === stage);
     setSaving(true);
@@ -221,17 +229,26 @@ export function KarigarJobGoldCard({
         <div>
           <p className="font-semibold text-sm">{job.product}</p>
           <p className="text-xs text-muted-foreground">{job.artisan}</p>
+          {archived && (
+            <p className="text-xs text-muted-foreground mt-1">
+              <T>Archived job. Production changes are unavailable; use the metal ledger only for any permitted reconciliation.</T>
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700">
             {job.status}
           </span>
-          <button type="button" className="text-xs text-amber-700 underline" onClick={onEdit}>
-            <T>Edit</T>
-          </button>
-          <button type="button" className="text-xs text-rose-600 underline" onClick={onDelete}>
-            <T>Cancel / archive</T>
-          </button>
+          {!archived && (
+            <>
+              <button type="button" className="text-xs text-amber-700 underline" onClick={onEdit}>
+                <T>Edit</T>
+              </button>
+              <button type="button" className="text-xs text-rose-600 underline" onClick={onDelete}>
+                <T>Cancel / archive</T>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -250,6 +267,7 @@ export function KarigarJobGoldCard({
             jobId={job.id}
             tree={tree}
             defaultAllowed={job.allowedWastagePercent ?? 1}
+            readOnly={archived}
             onChanged={onChanged}
           />
         ))}
@@ -257,6 +275,7 @@ export function KarigarJobGoldCard({
           <CastingTreeEditor
             jobId={job.id}
             defaultAllowed={job.allowedWastagePercent ?? 1}
+            readOnly={archived}
             onChanged={() => {
               setAddingTree(false);
               onChanged();
@@ -264,7 +283,7 @@ export function KarigarJobGoldCard({
             onCancelNew={() => setAddingTree(false)}
           />
         )}
-        {!addingTree && (
+        {!addingTree && !archived && (
           <Button
             size="sm"
             variant="outline"
@@ -305,6 +324,7 @@ export function KarigarJobGoldCard({
                     className="h-7 text-[11px]"
                     placeholder={field}
                     value={draft[field]}
+                    disabled={archived}
                     onChange={(e) =>
                       setStageDraft((prev) => ({
                         ...prev,
@@ -321,7 +341,7 @@ export function KarigarJobGoldCard({
                 size="sm"
                 variant="outline"
                 className="h-7 text-[11px]"
-                disabled={saving}
+                disabled={saving || archived}
                 onClick={() => void saveStage(stage)}
               >
                 <T>Save stage</T>

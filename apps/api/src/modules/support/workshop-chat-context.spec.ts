@@ -177,6 +177,9 @@ describe("workshop chat context", () => {
       formatWorkshopOperationalReply(enabled, "Why can't I delete this karigar job?"),
     ).toContain("Cancel / archive");
     expect(
+      formatWorkshopOperationalReply(enabled, "Why can't I delete this karigar job?"),
+    ).toContain("terminal for production");
+    expect(
       formatWorkshopOperationalReply(enabled, "How are wages settled?"),
     ).toContain("separate from the physical-metal return");
     expect(

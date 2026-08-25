@@ -311,7 +311,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Load demo job",
         description:
-          "Adds sample data to help you learn the casting tree: 1000 g issued, 920 g finished, 50 g sprue, and 20 g recoverable. Use a real job for shop records; this button is a demonstration, not a production workflow.",
+          "Creates persistent sample workshop, job, and metal-ledger records in this shop, including a 1000 g issue. Use it only in a test/demo shop or if you intend to keep and reconcile these sample records through the ledger workflow.",
         side: "bottom",
         align: "center",
       },
@@ -1629,7 +1629,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Invite Other Jewellers",
         description:
-          "Enter a colleague's email or copy your register link. You earn the configured share of every paid subscription invoice while they stay subscribed — applied to your next Orivraa invoice first. Eligible leftover can be requested as a bank payout or converted to Pro months. Review & Earn is a separate review-reward programme.",
+          "Enter a colleague's email or copy your register link. Referral commissions are held in your referral wallet. Depending on the current referral policy, eligible commission may be applied to an Orivraa subscription invoice or made available for the supported payout or Pro conversion options. Dashboard → Referrals shows the current rule for your account. Review & Earn is a separate review-reward programme.",
         side: "bottom",
         align: "start",
       },

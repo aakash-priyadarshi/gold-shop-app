@@ -213,9 +213,12 @@ export default function SellerReferralsPage() {
       const res = await sellerPerformanceApi.cashOutReferralWallet();
       toast({
         title: t("Payout requested"),
-        description:
-          res?.data?.stripeFeeNote ||
+        description: [
           t("Your bank payout request is pending. Track its status here."),
+          res?.data?.stripeFeeNote ? t(res.data.stripeFeeNote) : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
       });
       loadReferrals();
     } catch (error: any) {
@@ -255,6 +258,10 @@ export default function SellerReferralsPage() {
   };
 
   const percent = referralSettings?.commissionPercent ?? 10;
+  const applyToInvoiceFirst = referralSettings?.applyToInvoiceFirst ?? true;
+  const referralPolicySummary = applyToInvoiceFirst
+    ? "Referral commission is applied to your next Orivraa subscription invoice first. Eligible leftover can be requested as a bank payout or converted to Pro months."
+    : "Referral commission stays in your wallet under the current policy. Eligible balance can be requested as a bank payout or converted to Pro months.";
   const minCashout = referralSettings?.minCashoutAmount ?? 0;
   const walletCurrency =
     earnings.currency ||
@@ -288,12 +295,11 @@ export default function SellerReferralsPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             <T>Invite jewellery shops to Orivraa. You earn</T> {percent}%{" "}
-            <T>
-              of every paid subscription invoice while they stay subscribed —
-              applied to your next Orivraa subscription invoice first. Eligible
-              leftover can be requested as a bank payout or converted to Pro
-              months.
-            </T>
+            {t(
+              applyToInvoiceFirst
+                ? "of every paid subscription invoice while they stay subscribed. Referral commission is applied to your next Orivraa subscription invoice first. Eligible leftover can be requested as a bank payout or converted to Pro months."
+                : "of every paid subscription invoice while they stay subscribed. Referral commission stays in your wallet under the current policy, and eligible balance can be requested as a bank payout or converted to Pro months.",
+            )}
           </p>
         </div>
 
@@ -324,14 +330,10 @@ export default function SellerReferralsPage() {
               <div className="flex flex-col items-center text-center gap-2 p-4 rounded-lg bg-purple-100/50 dark:bg-purple-900/20">
                 <span className="text-2xl">📄</span>
                 <p className="font-medium">
-                  <T>You get</T> {percent}% <T>on your invoice</T>
+                  <T>You get</T> {percent}% <T>commission</T>
                 </p>
                 <p className="text-xs">
-                  <T>
-                    Applied to your next Orivraa subscription invoice first.
-                    Eligible leftover can be requested as a bank payout or
-                    converted to Pro months.
-                  </T>
+                  {t(referralPolicySummary)}
                 </p>
               </div>
             </div>
@@ -405,12 +407,9 @@ export default function SellerReferralsPage() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              <T>
-                Invoice credit is applied first. Eligible leftover can be
-                requested as a bank payout and remains pending until processed,
-                or converted to Pro months. Referral cash is never paid by
-                refunding the referred shop.
-              </T>
+              {t(
+                `${referralPolicySummary} A requested bank payout remains pending until processed. Referral cash is never paid by refunding the referred shop.`,
+              )}
             </p>
             {pendingPayout && (
               <p className="text-sm text-amber-700 dark:text-amber-300">

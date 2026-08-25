@@ -146,7 +146,7 @@ export function formatWorkshopOperationalReply(
   }
 
   if (/(cancel.*job|archive.*job|delete.*job|job.*delete)/.test(normalized)) {
-    return "Use Cancel / archive on the job instead of deleting its history. It stops the job and keeps its recorded work visible for reference. Do not use cancellation to correct metal already issued or returned; record the appropriate metal movement instead.";
+    return "Use Cancel / archive on the job instead of deleting its history. Cancellation is terminal for production: it keeps the recorded work visible but does not allow more stage work, metal issue, or finished-goods receipt. Do not use cancellation to correct metal already issued or returned; record the appropriate return or reconciliation movement instead.";
   }
 
   if (/(wage.*(due|settle|settlement)|settle.*wage)/.test(normalized)) {
