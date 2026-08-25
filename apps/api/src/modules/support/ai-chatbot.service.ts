@@ -713,17 +713,15 @@ export class AiChatbotService {
       if (name === "sendPasswordReset") {
         const requested = String(args?.email ?? "").trim().toLowerCase();
         const own = (ctx?.authenticatedEmail || "").trim().toLowerCase();
-        const typedInMessage = (ctx?.latestUserMessage || "")
-          .toLowerCase()
-          .includes(requested);
         const allowed =
-          requested &&
+          Boolean(requested) &&
+          Boolean(own) &&
           ctx?.audience !== "public" &&
-          ((own && requested === own) || (!own && typedInMessage));
+          requested === own;
         if (!allowed) {
           return {
             reply:
-              "I can only send a reset code to your own account email. Use the Forgot password page, or sign in and ask again.",
+              "For security, password reset requests can only be initiated for your verified account email while logged in. Please visit the Forgot Password page (/auth/forgot-password) to request a reset code.",
             shouldEscalate: false,
             confidence: 1,
           };

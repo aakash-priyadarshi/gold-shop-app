@@ -219,15 +219,44 @@ describe("composition-helpers", () => {
       const [gem] = extractGemstonesFromItem({
         composition: {
           gemstones: [{
-            type: "DIAMOND_LAB", origin: "LAB", color: "D", clarity: "VVS1",
+            type: "DIAMOND_LAB", origin: "LAB", shape: "Oval", color: "D", clarity: "VVS1",
             lab: "IGI", certNumber: "IGI-123", reportUrl: "https://example.com/report",
             caratWeight: 1, count: 2, valueNpr: 50000,
           }],
         },
       });
       expect(gem).toMatchObject({
-        type: "DIAMOND", origin: "LAB", color: "D", clarity: "VVS1",
+        type: "DIAMOND", origin: "LAB", shape: "Oval", color: "D", clarity: "VVS1",
         gradingLab: "IGI", certNumber: "IGI-123", reportUrl: "https://example.com/report",
+      });
+    });
+
+    it("prefers direct item.gemstones canonical array over composition.gemstones", () => {
+      const [gem] = extractGemstonesFromItem({
+        gemstones: [{
+          type: "DIAMOND",
+          origin: "LAB",
+          shape: "Oval",
+          caratWeight: 1.5,
+          color: "E",
+          clarity: "VS1",
+          cost: 75000,
+        }],
+        composition: {
+          gemstones: [{
+            type: "RUBY",
+            cost: 10000,
+          }],
+        },
+      });
+      expect(gem).toMatchObject({
+        type: "DIAMOND",
+        origin: "LAB",
+        shape: "Oval",
+        caratWeight: "1.5",
+        color: "E",
+        clarity: "VS1",
+        cost: "75000",
       });
     });
   });

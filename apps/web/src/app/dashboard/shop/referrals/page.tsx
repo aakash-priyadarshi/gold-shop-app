@@ -295,11 +295,8 @@ export default function SellerReferralsPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             <T>Invite jewellery shops to Orivraa. You earn</T> {percent}%{" "}
-            {t(
-              applyToInvoiceFirst
-                ? "of every paid subscription invoice while they stay subscribed. Referral commission is applied to your next Orivraa subscription invoice first. Eligible leftover can be requested as a bank payout or converted to Pro months."
-                : "of every paid subscription invoice while they stay subscribed. Referral commission stays in your wallet under the current policy, and eligible balance can be requested as a bank payout or converted to Pro months.",
-            )}
+            <T>of every paid subscription invoice while they stay subscribed.</T>{" "}
+            {t(referralPolicySummary)}
           </p>
         </div>
 
@@ -407,9 +404,11 @@ export default function SellerReferralsPage() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              {t(
-                `${referralPolicySummary} A requested bank payout remains pending until processed. Referral cash is never paid by refunding the referred shop.`,
-              )}
+              {t(referralPolicySummary)}{" "}
+              <T>
+                A requested bank payout remains pending until processed.
+                Referral cash is never paid by refunding the referred shop.
+              </T>
             </p>
             {pendingPayout && (
               <p className="text-sm text-amber-700 dark:text-amber-300">

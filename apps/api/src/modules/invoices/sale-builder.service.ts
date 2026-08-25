@@ -52,6 +52,7 @@ type InventoryLike = Pick<
   | "hallmarkNumber"
   | "assayOffice"
 > & {
+  gemstones?: any;
   variants?: Pick<ProductVariant, "id" | "sizeLabel" | "sku" | "priceOverride">[];
 };
 
@@ -78,6 +79,7 @@ function toGemstoneSnapshots(raw: unknown): InvoiceGemstoneSnapshotDto[] {
     return [{
       type: normalized.type,
       origin: normalized.origin,
+      shape: normalized.shape,
       cut: normalized.cut,
       caratWeight: normalized.caratWeight,
       sizeMm: normalized.sizeMm,
@@ -119,7 +121,11 @@ export class SaleBuilderService {
 
     const label =
       item.nameEn + (variant?.sizeLabel ? ` (${variant.sizeLabel})` : "");
-    const gemstones = toGemstoneSnapshots((item.composition as any)?.gemstones);
+    const rawGemstones =
+      Array.isArray((item as any).gemstones) && (item as any).gemstones.length > 0
+        ? (item as any).gemstones
+        : (item.composition as any)?.gemstones;
+    const gemstones = toGemstoneSnapshots(rawGemstones);
     const gemstoneDetails = gemstones
       .slice(0, 3)
       .map((gem: any) => [

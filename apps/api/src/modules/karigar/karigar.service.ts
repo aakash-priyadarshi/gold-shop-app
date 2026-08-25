@@ -334,7 +334,7 @@ export class KarigarService {
     });
     if (openJobs > 0) {
       throw new BadRequestException(
-        "Unlink or delete this karigar's jobs before removing them",
+        "Cannot delete workshop with existing job history",
       );
     }
     await this.prisma.karigarWorkshop.delete({ where: { id: workshopId } });

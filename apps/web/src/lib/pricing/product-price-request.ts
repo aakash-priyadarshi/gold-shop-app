@@ -23,18 +23,43 @@ export function buildProductMetalPricingComposition(input: {
   };
 }
 
+export type GemstonePricingErrorCode =
+  | "GEMSTONE_TYPE_REQUIRED"
+  | "DIAMOND_CARAT_REQUIRED"
+  | "GEMSTONE_SIZE_MM_REQUIRED";
+
+export class GemstonePricingError extends Error {
+  readonly code: GemstonePricingErrorCode;
+  constructor(code: GemstonePricingErrorCode, message: string) {
+    super(message);
+    this.name = "GemstonePricingError";
+    this.code = code;
+  }
+}
+
 export function buildProductGemstonePricingRequest(
   shopId: string,
   gemstone: object,
 ) {
   const normalized = normalizeGemstoneSnapshot(gemstone as Record<string, unknown>);
-  if (!normalized) throw new Error("Select gemstone type first");
+  if (!normalized) {
+    throw new GemstonePricingError(
+      "GEMSTONE_TYPE_REQUIRED",
+      "Select gemstone type first",
+    );
+  }
   const isDiamond = normalized.type === "DIAMOND";
   if (isDiamond && !(normalized.caratWeight && normalized.caratWeight > 0)) {
-    throw new Error("Carat weight is required for diamond pricing");
+    throw new GemstonePricingError(
+      "DIAMOND_CARAT_REQUIRED",
+      "Carat weight is required for diamond pricing",
+    );
   }
   if (!isDiamond && !(normalized.sizeMm && normalized.sizeMm > 0)) {
-    throw new Error("Size in mm is required for this gemstone pricing");
+    throw new GemstonePricingError(
+      "GEMSTONE_SIZE_MM_REQUIRED",
+      "Size in mm is required for this gemstone pricing",
+    );
   }
   return {
     shopId,

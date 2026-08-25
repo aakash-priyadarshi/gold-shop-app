@@ -431,6 +431,7 @@ export interface ExtractedGemstone {
   caratWeight: string;
   color: string;
   cost: string;
+  shape?: string;
   quality?: string;
   qualityTier?: GemstoneQualityTier;
   origin?: string;
@@ -442,11 +443,13 @@ export interface ExtractedGemstone {
   gradingLab?: string;
   certNumber?: string;
   reportUrl?: string;
+  reportDate?: string;
   sourceItemLabel?: string;
 }
 
 /**
  * Recursively extract and normalize all gemstones from a catalog item or SET
+ * Prefers direct `item.gemstones` array (canonical), falling back to `item.composition.gemstones`.
  */
 export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
   if (!item) return [];
@@ -472,10 +475,30 @@ export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
     return result;
   }
 
-  // Regular item
-  const rawGems = Array.isArray(item.composition?.gemstones)
-    ? item.composition.gemstones
-    : [];
+  function asRecord(value: unknown): Record<string, unknown> | null {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+    return null;
+  }
+
+  // Regular item: prefer direct item.gemstones when it is a non-empty array
+  const directGems = item.gemstones;
+  const compGems = item.composition?.gemstones;
+  const nestedGems = (asRecord(directGems) as any)?.gemstones;
+
+  let rawGems: any[] = [];
+  if (Array.isArray(directGems) && directGems.length > 0) {
+    rawGems = directGems;
+  } else if (Array.isArray(compGems) && compGems.length > 0) {
+    rawGems = compGems;
+  } else if (Array.isArray(nestedGems) && nestedGems.length > 0) {
+    rawGems = nestedGems;
+  } else if (Array.isArray(directGems)) {
+    rawGems = directGems;
+  } else if (Array.isArray(compGems)) {
+    rawGems = compGems;
+  }
 
   if (rawGems.length > 0) {
     return rawGems.flatMap((g: any) => {
@@ -483,6 +506,7 @@ export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
       if (!normalized) return [];
       return [{
         type: normalized.type,
+        shape: normalized.shape,
         cut: normalized.cut || "",
         clarity: normalized.clarity || "",
         caratWeight: normalized.caratWeight != null ? String(normalized.caratWeight) : "",
@@ -503,6 +527,7 @@ export function extractGemstonesFromItem(item: any): ExtractedGemstone[] {
         gradingLab: normalized.gradingLab,
         certNumber: normalized.certNumber,
         reportUrl: normalized.reportUrl,
+        reportDate: normalized.reportDate,
         sourceItemLabel: item.nameEn || item.sku,
       }];
     });

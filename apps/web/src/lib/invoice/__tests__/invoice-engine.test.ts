@@ -125,7 +125,8 @@ describe("invoice shared engine", () => {
     line.gemstones = [{
       type: "DIAMOND",
       origin: "LAB",
-      cut: "Round Brilliant",
+      shape: "Oval",
+      cut: "Oval",
       caratWeight: "1",
       sizeMm: 6.5,
       color: "D",
@@ -141,18 +142,20 @@ describe("invoice shared engine", () => {
 
     const [api] = mapLineItemsToApi([line], 0, { mode: "DISABLED", label: "None" } as any);
     expect(api.gemstones).toEqual([expect.objectContaining({
-      type: "DIAMOND", origin: "LAB", color: "D", clarity: "VVS1",
+      type: "DIAMOND", origin: "LAB", shape: "Oval", color: "D", clarity: "VVS1",
       gradingLab: "IGI", certNumber: "IGI-123", cost: 50000,
     })]);
     expect(api.details).toContain("Color D");
     expect(api.details).toContain("Clarity VVS1");
+    expect(api.details).toContain("Oval");
   });
 
   it("keeps all catalog gemstone metadata when live pricing changes only its cost", () => {
     const source = {
       type: "DIAMOND",
       origin: "LAB",
-      cut: "Round Brilliant",
+      shape: "Oval",
+      cut: "Oval",
       caratWeight: 1,
       sizeMm: 6.5,
       color: "D",

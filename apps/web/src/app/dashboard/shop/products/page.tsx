@@ -50,6 +50,7 @@ import { inventoryApi } from "@/lib/api";
 import {
   buildProductGemstonePricingRequest,
   buildProductMetalPricingComposition,
+  GemstonePricingError,
 } from "@/lib/pricing/product-price-request";
 import { getImageUrl } from "@/lib/image-upload";
 import { SetBuilderDialog } from "@/components/shop/SetBuilderDialog";
@@ -112,6 +113,7 @@ interface InventoryItem {
   purityCertUrl?: string | null;
   rfidCode?: string | null;
   locationId?: string | null;
+  gemstones?: any[];
   setComponents?: any[];
   createdAt: string;
 }
@@ -221,9 +223,38 @@ const gemstoneLabs = ["GIA", "IGI", "AGS", "SGL", "GII", "Other"];
 // Weight unit conversion
 const TOLA_TO_GRAM = 11.6638;
 
+const METAL_PURITIES: Record<string, Array<{ value: string; label: string }>> = {
+  GOLD: [
+    { value: "24K", label: "24K (Pure)" },
+    { value: "22K", label: "22K" },
+    { value: "18K", label: "18K" },
+    { value: "14K", label: "14K" },
+  ],
+  SILVER: [
+    { value: "999", label: "999 Fine" },
+    { value: "925", label: "925 Sterling" },
+  ],
+  PLATINUM: [
+    { value: "950", label: "Platinum 950" },
+    { value: "900", label: "Platinum 900" },
+  ],
+  PALLADIUM: [
+    { value: "950", label: "Palladium 950" },
+    { value: "500", label: "Palladium 500" },
+  ],
+};
+
+const DEFAULT_PURITY_BY_METAL: Record<string, string> = {
+  GOLD: "22K",
+  SILVER: "925",
+  PLATINUM: "950",
+  PALLADIUM: "950",
+};
+
 interface GemstoneData {
   type: string;
   origin?: string;
+  shape?: string;
   cut: string;
   caratWeight: number;
   sizeMm?: number;
@@ -474,30 +505,35 @@ export default function ShopProductsPage() {
       gemstoneValueNpr: product.gemstoneValueNpr.toString(),
       stockQuantity: product.stockQuantity.toString(),
       images: product.images || [],
-      gemstones: Array.isArray(comp.gemstones)
-        ? comp.gemstones.flatMap((g: any) => {
-            const normalized = normalizeGemstoneSnapshot(g);
-            return normalized
-              ? [{
-                  type: normalized.type,
-                  origin: normalized.origin,
-                  cut: normalized.cut || "",
-                  caratWeight: normalized.caratWeight || 0,
-                  sizeMm: normalized.sizeMm,
-                  color: normalized.color,
-                  clarity: normalized.clarity,
-                  qualityTier: normalized.qualityTier || "STANDARD",
-                  cutGrade: normalized.cutGrade,
-                  gradingLab: normalized.gradingLab,
-                  certNumber: normalized.certNumber,
-                  reportUrl: normalized.reportUrl,
-                  reportDate: normalized.reportDate,
-                  count: normalized.count || 1,
-                  valueNpr: normalized.value ?? normalized.cost ?? 0,
-                }]
-              : [];
-          })
-        : [],
+      gemstones: (
+        Array.isArray(product.gemstones) && product.gemstones.length > 0
+          ? product.gemstones
+          : Array.isArray(comp.gemstones)
+            ? comp.gemstones
+            : []
+      ).flatMap((g: any) => {
+        const normalized = normalizeGemstoneSnapshot(g);
+        return normalized
+          ? [{
+              type: normalized.type,
+              origin: normalized.origin,
+              shape: normalized.shape,
+              cut: normalized.cut || "",
+              caratWeight: normalized.caratWeight || 0,
+              sizeMm: normalized.sizeMm,
+              color: normalized.color,
+              clarity: normalized.clarity,
+              qualityTier: normalized.qualityTier || "STANDARD",
+              cutGrade: normalized.cutGrade,
+              gradingLab: normalized.gradingLab,
+              certNumber: normalized.certNumber,
+              reportUrl: normalized.reportUrl,
+              reportDate: normalized.reportDate,
+              count: normalized.count || 1,
+              valueNpr: normalized.value ?? normalized.cost ?? 0,
+            }]
+          : [];
+      }),
       hallmarkNumber: product.hallmarkNumber || "",
       certificateUrl: product.certificateUrl || "",
       purityCertUrl: product.purityCertUrl || "",
@@ -517,8 +553,8 @@ export default function ShopProductsPage() {
     if (formData.images.length >= 3) {
       toast({
         variant: "destructive",
-        title: "Maximum Images Reached",
-        description: "You can upload a maximum of 3 images per product",
+        title: t("Maximum Images Reached"),
+        description: t("You can upload a maximum of 3 images per product"),
       });
       e.target.value = "";
       return;
@@ -528,8 +564,8 @@ export default function ShopProductsPage() {
     if (file.size > 10 * 1024 * 1024) {
       toast({
         variant: "destructive",
-        title: "File Too Large",
-        description: "Please select an image smaller than 10MB",
+        title: t("File Too Large"),
+        description: t("Please select an image smaller than 10MB"),
       });
       return;
     }
@@ -564,6 +600,12 @@ export default function ShopProductsPage() {
           : isDiamond
             ? "NATURAL"
             : undefined;
+    }
+    if (field === "cut" && !next.shape) {
+      next.shape = value;
+    }
+    if (field === "shape" && !next.cut) {
+      next.cut = value;
     }
     newGemstones[index] = next;
     setFormData({ ...formData, gemstones: newGemstones });
@@ -616,9 +658,21 @@ export default function ShopProductsPage() {
         });
       }
     } catch (error) {
+      let description = t("Enter price manually");
+      if (error instanceof GemstonePricingError) {
+        if (error.code === "GEMSTONE_TYPE_REQUIRED") {
+          description = t("Select gemstone type first");
+        } else if (error.code === "DIAMOND_CARAT_REQUIRED") {
+          description = t("Carat weight is required for diamond pricing");
+        } else if (error.code === "GEMSTONE_SIZE_MM_REQUIRED") {
+          description = t("Size in mm is required for this gemstone pricing");
+        }
+      } else if (error instanceof Error) {
+        description = t(error.message);
+      }
       toast({
         title: t("Suggestion unavailable"),
-        description: error instanceof Error ? t(error.message) : t("Enter price manually"),
+        description,
         variant: "destructive",
       });
     } finally {
@@ -708,18 +762,40 @@ export default function ShopProductsPage() {
 
     setIsSubmitting(true);
     try {
+      const normalizedGemstones = formData.gemstones
+        .filter((g) => g.type)
+        .map((g) => ({
+          type: g.type,
+          origin: g.origin,
+          shape: g.shape || undefined,
+          cut: g.cut || undefined,
+          caratWeight: g.caratWeight ? Number(g.caratWeight) : undefined,
+          sizeMm: g.sizeMm != null ? Number(g.sizeMm) : undefined,
+          color: g.color || undefined,
+          clarity: g.clarity || undefined,
+          qualityTier: g.qualityTier || undefined,
+          cutGrade: g.cutGrade || undefined,
+          gradingLab: g.gradingLab || undefined,
+          certNumber: g.certNumber || undefined,
+          reportUrl: g.reportUrl || undefined,
+          reportDate: g.reportDate || undefined,
+          count: g.count != null ? Number(g.count) : undefined,
+          valueNpr: g.valueNpr ? Number(g.valueNpr) : 0,
+        }));
+
       const dto = {
         nameEn: formData.nameEn,
         descriptionEn: formData.descriptionEn || undefined,
         sku: formData.sku,
         jewelleryType: formData.jewelleryType,
         buildMethod: formData.buildMethod,
+        gemstones: normalizedGemstones,
         composition: {
           baseAlloy: {
             metal: formData.metalType,
             purity: formData.purity,
           },
-          gemstones: formData.gemstones.filter((g) => g.type),
+          gemstones: normalizedGemstones,
         },
         totalWeightGrams: weightInGrams,
         metalValueNpr: parseFloat(formData.metalValueNpr) || 0,
@@ -1637,17 +1713,31 @@ export default function ShopProductsPage() {
                   </Label>
                   <Select
                     value={formData.metalType}
-                    onValueChange={(v) =>
-                      setFormData({ ...formData, metalType: v })
-                    }
+                    onValueChange={(newMetal) => {
+                      const validPurities = METAL_PURITIES[newMetal] || [];
+                      const isValid = validPurities.some(
+                        (p) => p.value === formData.purity,
+                      );
+                      const nextPurity = isValid
+                        ? formData.purity
+                        : DEFAULT_PURITY_BY_METAL[newMetal] ||
+                          validPurities[0]?.value ||
+                          "22K";
+                      setFormData({
+                        ...formData,
+                        metalType: newMetal,
+                        purity: nextPurity,
+                      });
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="GOLD">Gold</SelectItem>
-                      <SelectItem value="SILVER">Silver</SelectItem>
-                      <SelectItem value="PLATINUM">Platinum</SelectItem>
+                      <SelectItem value="GOLD"><T>Gold</T></SelectItem>
+                      <SelectItem value="SILVER"><T>Silver</T></SelectItem>
+                      <SelectItem value="PLATINUM"><T>Platinum</T></SelectItem>
+                      <SelectItem value="PALLADIUM"><T>Palladium</T></SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1665,12 +1755,11 @@ export default function ShopProductsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="24K">24K (Pure)</SelectItem>
-                      <SelectItem value="22K">22K</SelectItem>
-                      <SelectItem value="18K">18K</SelectItem>
-                      <SelectItem value="14K">14K</SelectItem>
-                      <SelectItem value="925">925 Sterling</SelectItem>
-                      <SelectItem value="999">999 Fine</SelectItem>
+                      {(METAL_PURITIES[formData.metalType] || METAL_PURITIES.GOLD).map((p) => (
+                        <SelectItem key={p.value} value={p.value}>
+                          {p.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1823,7 +1912,7 @@ export default function ShopProductsPage() {
                             }
                           >
                             <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Type" />
+                              <SelectValue placeholder={t("Type")} />
                             </SelectTrigger>
                             <SelectContent>
                               {gemstoneTypes.map((type) => (

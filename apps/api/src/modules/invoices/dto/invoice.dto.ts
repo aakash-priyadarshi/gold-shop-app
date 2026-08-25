@@ -27,6 +27,7 @@ export class InvoiceGemstoneSnapshotDto {
   @MaxLength(64)
   origin?: string;
 
+  @IsOptional() @IsString() @MaxLength(64) shape?: string;
   @IsOptional() @IsString() @MaxLength(100) cut?: string;
   @IsOptional() @IsNumber() @Min(0.001) caratWeight?: number;
   @IsOptional() @IsNumber() @Min(0.001) sizeMm?: number;

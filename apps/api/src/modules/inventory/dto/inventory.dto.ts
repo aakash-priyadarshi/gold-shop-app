@@ -74,9 +74,8 @@ export class CreateInventoryItemDto {
   dimensions?: Record<string, unknown>;
 
   @ApiPropertyOptional({ description: 'Gemstones details (JSON)' })
-  @IsObject()
   @IsOptional()
-  gemstones?: Record<string, unknown>;
+  gemstones?: Record<string, unknown> | Record<string, unknown>[];
 
   @ApiProperty({ description: 'Metal value in NPR' })
   @IsNumber()
@@ -233,9 +232,8 @@ export class UpdateInventoryItemDto {
   dimensions?: Record<string, unknown>;
 
   @ApiPropertyOptional({ description: 'Gemstones details (JSON)' })
-  @IsObject()
   @IsOptional()
-  gemstones?: Record<string, unknown>;
+  gemstones?: Record<string, unknown> | Record<string, unknown>[];
 
   @ApiPropertyOptional()
   @IsNumber()

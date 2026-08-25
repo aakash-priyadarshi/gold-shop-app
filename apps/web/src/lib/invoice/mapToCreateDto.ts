@@ -25,6 +25,7 @@ export interface ApiInvoiceLineItem {
   gemstones?: Array<{
     type: string;
     origin?: string;
+    shape?: string;
     cut?: string;
     caratWeight?: number;
     sizeMm?: number;
@@ -128,6 +129,7 @@ export function mapLineItemsToApi(
         .map((g) => ({
           type: g.type,
           origin: g.origin,
+          shape: g.shape || undefined,
           cut: g.cut || undefined,
           caratWeight: g.caratWeight ? Number(g.caratWeight) : undefined,
           sizeMm: g.sizeMm != null ? Number(g.sizeMm) : undefined,
