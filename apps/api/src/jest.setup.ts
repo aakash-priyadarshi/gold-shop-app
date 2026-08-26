@@ -1,4 +1,12 @@
+import { webcrypto } from "crypto";
+
 // Jest setup file — runs before any test modules are imported
+// Nest's scheduler accesses the Web Crypto global during app initialization.
+// Node 18 exposes it from `crypto.webcrypto`, but Jest does not install it.
+if (typeof globalThis.crypto === "undefined") {
+  (globalThis as any).crypto = webcrypto;
+}
+
 // Set required environment variables for testing
 process.env.TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY || 'test-encryption-key-for-jest-32ch';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-for-jest';
