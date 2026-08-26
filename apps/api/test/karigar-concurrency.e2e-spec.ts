@@ -1,8 +1,9 @@
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
-import { JournalReferenceType } from "@prisma/client";
+import { CurrencyCode, JournalReferenceType } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { AppModule } from "../src/app.module";
+import { AccountingService } from "../src/modules/accounting/accounting.service";
 import { KarigarService } from "../src/modules/karigar/karigar.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 
@@ -197,12 +198,13 @@ describe("Karigar PostgreSQL Concurrency Integration", () => {
     );
     await app.init();
 
-    prisma = app.get(PrismaService);
+    const prismaService = app.get<PrismaService>(PrismaService);
+    prisma = prismaService;
     karigarService = app.get(KarigarService);
-    await prisma.$queryRaw`SELECT 1`;
+    await prismaService.$queryRaw`SELECT 1`;
 
     const suffix = randomUUID();
-    const user = await prisma.user.create({
+    const user = await prismaService.user.create({
       data: {
         email: `karigar-concurrency-${suffix}@orivraa.test`,
         passwordHash: "test-password-hash",
@@ -218,7 +220,7 @@ describe("Karigar PostgreSQL Concurrency Integration", () => {
     fixtureIds.userId = user.id;
     testUserId = user.id;
 
-    const shop = await prisma.shop.create({
+    const shop = await prismaService.shop.create({
       data: {
         userId: user.id,
         shopName: `Karigar Concurrency ${suffix}`,
@@ -649,6 +651,94 @@ describe("Karigar PostgreSQL Concurrency Integration", () => {
           Number(vaultBefore?.quantity) + 8,
         );
         expect(outstandingAfter).toBe(Number(outstandingBefore) - 8);
+      }),
+    SCENARIO_TIMEOUT_MS + 5_000,
+  );
+
+  it(
+    "rejects a stale monetary preflight after a concurrent currency rebase transaction",
+    async () =>
+      runScenario("currency-rebase-lock", async () => {
+        if (!prisma || !app) throw new Error("Prisma was not initialized");
+        const fixture = await createScenarioFixture("currency-rebase", 0);
+        let rebaseReady!: () => void;
+        let releaseRebase!: () => void;
+        const rebaseIsReady = new Promise<void>((resolve) => {
+          rebaseReady = resolve;
+        });
+        const releaseRebaseCommit = new Promise<void>((resolve) => {
+          releaseRebase = resolve;
+        });
+        const rebaseTransaction = prisma.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`shop-price-rebase:${testShopId}`}))`;
+          await tx.shop.update({
+            where: { id: testShopId },
+            data: { currency: CurrencyCode.INR },
+          });
+          rebaseReady();
+          await releaseRebaseCommit;
+        });
+
+        await rebaseIsReady;
+        const accounting = app.get<AccountingService>(AccountingService);
+        const originalPrepare = accounting.prepareMonetaryContext.bind(accounting);
+        let preflightPrepared!: () => void;
+        const preflightIsPrepared = new Promise<void>((resolve) => {
+          preflightPrepared = resolve;
+        });
+        const prepareSpy = jest
+          .spyOn(accounting, "prepareMonetaryContext")
+          .mockImplementation(async (...args) => {
+            preflightPrepared();
+            return originalPrepare(...args);
+          });
+        const idempotencyKey = `currency-rebase-${randomUUID()}`;
+
+        try {
+          const adjustment = karigarService.recordAdjustment(
+            testShopId,
+            fixture.workshopId,
+            testUserId,
+            {
+              type: "ADJUSTMENT_INCREASE",
+              amount: 1,
+              note: "Currency rebase race fixture",
+              idempotencyKey,
+            },
+          );
+          await preflightIsPrepared;
+
+          await expect(
+            Promise.race([
+              adjustment.then(() => "completed"),
+              delay(150).then(() => "blocked"),
+            ]),
+          ).resolves.toBe("blocked");
+
+          releaseRebase();
+          await rebaseTransaction;
+          await expect(adjustment).rejects.toThrow(
+            "Shop currency changed while the ledger operation was being prepared",
+          );
+          await expect(
+            prisma.karigarFinancialEntry.count({
+              where: { shopId: testShopId, workshopId: fixture.workshopId },
+            }),
+          ).resolves.toBe(0);
+        } finally {
+          releaseRebase();
+          await rebaseTransaction.catch((error) => {
+            console.error("Karigar currency-rebase fixture transaction failed", {
+              error,
+              fixtureIds: fixtureSummary(),
+            });
+          });
+          prepareSpy.mockRestore();
+          await prisma.shop.update({
+            where: { id: testShopId },
+            data: { currency: CurrencyCode.NPR },
+          });
+        }
       }),
     SCENARIO_TIMEOUT_MS + 5_000,
   );

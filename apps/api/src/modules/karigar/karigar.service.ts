@@ -23,6 +23,7 @@ import {
 } from "@gold-shop/shared";
 import { PrismaService } from "../../prisma/prisma.service";
 import { ShopPriceRebaseService } from "../shops/shop-price-rebase.service";
+import { acquireShopPriceRebaseLock } from "../shops/shop-price-rebase-lock";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import { AccountingService } from "../accounting/accounting.service";
 import type { MonetaryContext } from "../accounting/accounting.types";
@@ -739,6 +740,20 @@ export class KarigarService {
         : null;
 
     await this.prisma.$transaction(async (tx) => {
+      let lockedShop: { currency: CurrencyCode | null } | null = null;
+      if (monetaryPreflight) {
+        await acquireShopPriceRebaseLock(tx, shopId);
+        lockedShop = await tx.shop.findUnique({
+          where: { id: shopId },
+          select: { currency: true },
+        });
+        if (!lockedShop) throw new NotFoundException("Shop not found");
+        this.assertPreparedShopCurrency(
+          monetaryPreflight,
+          (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode,
+        );
+      }
+
       // Row lock on workshop to serialize metal float and financial mutation
       if (workshopId) {
         const lockedRows = await tx.$queryRaw<
@@ -747,20 +762,6 @@ export class KarigarService {
         if (!lockedRows || lockedRows.length === 0) {
           throw new NotFoundException("Karigar not found");
         }
-      }
-
-      const lockedShop = monetaryPreflight
-        ? await tx.shop.findUnique({
-            where: { id: shopId },
-            select: { currency: true },
-          })
-        : null;
-      if (monetaryPreflight) {
-        if (!lockedShop) throw new NotFoundException("Shop not found");
-        this.assertPreparedShopCurrency(
-          monetaryPreflight,
-          (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode,
-        );
       }
 
       // Check Idempotency for metal movement
@@ -2111,6 +2112,7 @@ export class KarigarService {
             finishedGrams: finished,
             sprueButtonGrams: sprue,
             recoverableGrams: recoverable,
+            returnedUnusedGrams: jobReturnedUnusedGrams,
             allowedPercent: job.allowedWastagePercent,
           })
         : stageGoldLoss({
@@ -2497,13 +2499,8 @@ export class KarigarService {
     );
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Lock workshop row for strict concurrency serialization
-      const lockedRows = await tx.$queryRaw<
-        { id: string }[]
-      >`SELECT "id" FROM "KarigarWorkshop" WHERE "id" = ${workshopId} AND "shopId" = ${shopId} FOR UPDATE`;
-      if (!lockedRows || lockedRows.length === 0) {
-        throw new NotFoundException("Karigar not found");
-      }
+      // 1. Serialize shop-currency rebases before revalidating the preflight.
+      await acquireShopPriceRebaseLock(tx, shopId);
       const lockedShop = await tx.shop.findUnique({
         where: { id: shopId },
         select: { currency: true },
@@ -2512,6 +2509,13 @@ export class KarigarService {
       const shopCurrency = (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode;
       this.assertPreparedShopCurrency(monetaryPreflight, shopCurrency);
 
+      // 2. Lock workshop row for strict concurrency serialization
+      const lockedRows = await tx.$queryRaw<
+        { id: string }[]
+      >`SELECT "id" FROM "KarigarWorkshop" WHERE "id" = ${workshopId} AND "shopId" = ${shopId} FOR UPDATE`;
+      if (!lockedRows || lockedRows.length === 0) {
+        throw new NotFoundException("Karigar not found");
+      }
       // 2. Compute canonical request intent fingerprint
       const allocationMode =
         dto.allocations && dto.allocations.length > 0
@@ -2803,13 +2807,8 @@ export class KarigarService {
     );
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Lock workshop row
-      const lockedRows = await tx.$queryRaw<
-        { id: string }[]
-      >`SELECT "id" FROM "KarigarWorkshop" WHERE "id" = ${workshopId} AND "shopId" = ${shopId} FOR UPDATE`;
-      if (!lockedRows || lockedRows.length === 0) {
-        throw new NotFoundException("Karigar not found");
-      }
+      // 1. Serialize shop-currency rebases before revalidating the preflight.
+      await acquireShopPriceRebaseLock(tx, shopId);
       const lockedShop = await tx.shop.findUnique({
         where: { id: shopId },
         select: { currency: true },
@@ -2818,6 +2817,13 @@ export class KarigarService {
       const shopCurrency = (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode;
       this.assertPreparedShopCurrency(monetaryPreflight, shopCurrency);
 
+      // 2. Lock workshop row
+      const lockedRows = await tx.$queryRaw<
+        { id: string }[]
+      >`SELECT "id" FROM "KarigarWorkshop" WHERE "id" = ${workshopId} AND "shopId" = ${shopId} FOR UPDATE`;
+      if (!lockedRows || lockedRows.length === 0) {
+        throw new NotFoundException("Karigar not found");
+      }
       // 2. Check Idempotency with fingerprint matching
       const fingerprint = computeSha256({
         workshopId,
@@ -3034,13 +3040,8 @@ export class KarigarService {
     );
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Lock workshop row
-      const lockedRows = await tx.$queryRaw<
-        { id: string }[]
-      >`SELECT "id" FROM "KarigarWorkshop" WHERE "id" = ${workshopId} AND "shopId" = ${shopId} FOR UPDATE`;
-      if (!lockedRows || lockedRows.length === 0) {
-        throw new NotFoundException("Karigar not found");
-      }
+      // 1. Serialize shop-currency rebases before revalidating the preflight.
+      await acquireShopPriceRebaseLock(tx, shopId);
       const lockedShop = await tx.shop.findUnique({
         where: { id: shopId },
         select: { currency: true },
@@ -3049,6 +3050,13 @@ export class KarigarService {
       const shopCurrency = (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode;
       this.assertPreparedShopCurrency(monetaryPreflight, shopCurrency);
 
+      // 2. Lock workshop row
+      const lockedRows = await tx.$queryRaw<
+        { id: string }[]
+      >`SELECT "id" FROM "KarigarWorkshop" WHERE "id" = ${workshopId} AND "shopId" = ${shopId} FOR UPDATE`;
+      if (!lockedRows || lockedRows.length === 0) {
+        throw new NotFoundException("Karigar not found");
+      }
       // 2. Check Idempotency with fingerprint matching
       const fingerprint = computeSha256({
         workshopId,
@@ -3253,6 +3261,7 @@ export class KarigarService {
       allocations: allocations.map((a) => ({
         id: a.id,
         financialEntryId: a.financialEntryId,
+        financialEntryType: a.financialEntry.type,
         amount: Number(a.amount),
         createdAt: a.createdAt.toISOString(),
         paymentMethod: a.financialEntry.paymentMethod,

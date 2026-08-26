@@ -270,9 +270,12 @@ export function JobCostSummaryModal({
                         >
                           <div>
                             <span className="font-semibold text-emerald-900 dark:text-emerald-300 block">
-                              {alloc.paymentMethod || (
+                              {alloc.financialEntryType === "ADVANCE_PAYMENT" ? (
+                                <T>Advance application</T>
+                              ) : (
                                 <T>Settlement payment</T>
-                              )}{" "}
+                              )}
+                              {alloc.paymentMethod ? ` · ${alloc.paymentMethod}` : ""}{" "}
                               {alloc.reference ? `(${alloc.reference})` : ""}
                             </span>
                             <span className="text-slate-400 text-[11px]">

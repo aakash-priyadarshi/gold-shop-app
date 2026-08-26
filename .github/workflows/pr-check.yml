@@ -407,9 +407,16 @@ jobs:
         working-directory: apps/api
         run: npx prisma generate
 
-      - name: Push Schema to Test DB
+      - name: Apply Migration History to Fresh Test DB
         working-directory: apps/api
-        run: npx prisma db push --skip-generate
+        run: pnpm exec prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
+          DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
+
+      - name: Verify Test DB Migration Status
+        working-directory: apps/api
+        run: pnpm exec prisma migrate status
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
           DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test

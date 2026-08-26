@@ -22,6 +22,7 @@ describe("KarigarService workshop safeguards", () => {
       inventoryItem: { update: jest.fn() },
       $transaction: jest.fn(async (cb) => (typeof cb === "function" ? cb(prisma) : cb)),
       $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
+      $executeRaw: jest.fn().mockResolvedValue(undefined),
     };
     const accountingMock = {
       prepareMonetaryContext: jest.fn().mockImplementation((amount, currency) => ({
@@ -566,6 +567,65 @@ describe("KarigarService workshop safeguards", () => {
     });
   });
 
+  it("applies returned-unused grams once to a tree job aggregate and its report", () => {
+    const tree = {
+      id: "tree-casting",
+      label: "Casting tree",
+      metalKey: "goldGrains24k",
+      purity: "24K",
+      issuedGrams: 10,
+      finishedGrams: 7,
+      sprueButtonGrams: 0,
+      recoverableGrams: 0,
+      allowedWastagePercent: 1,
+      status: "DONE",
+      lines: [],
+    };
+    const returnedUnused = [
+      { type: "RETURN_UNUSED" as const, weightGrams: 2, stage: "CASTING" as const },
+    ];
+    const job = {
+      ...activeJob,
+      product: "Tree loss ring",
+      artisan: "Karigar",
+      workshopId: "ws-1",
+      grossWeight: 10,
+      metalKey: "goldGrains24k",
+      allowedWastagePercent: 1,
+      steps: null,
+      updatedAt: new Date(),
+      trees: [tree],
+      stageUnusedReturns: returnedUnused,
+    };
+
+    const serialized = (service as any).serializeJob(job);
+    const report = (service as any).buildGoldLossReport(
+      [job],
+      [
+        {
+          id: "ws-1",
+          name: "Tree Report Workshop",
+          artisan: "Karigar",
+          wastageLimit: 1,
+        },
+      ],
+    );
+
+    expect(serialized.trees[0].goldLoss.actualLoss).toBe(3);
+    expect(serialized.goldLoss).toMatchObject({
+      returnedUnused: 2,
+      actualLoss: 1,
+    });
+    expect(report.jobs[0].goldLoss).toMatchObject({
+      returnedUnused: 2,
+      actualLoss: 1,
+    });
+    expect(report.karigars[0].goldLoss).toMatchObject({
+      returnedUnused: 2,
+      actualLoss: 1,
+    });
+  });
+
   it("still allows physical metal return reconciliation after cancellation", async () => {
     prisma.karigarJob.findFirst.mockResolvedValue(cancelledJob);
     prisma.shop.findUnique.mockResolvedValue({ currency: "NPR" });
@@ -590,6 +650,7 @@ describe("KarigarService workshop safeguards", () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
       $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
+      $executeRaw: jest.fn().mockResolvedValue(undefined),
     };
     prisma.$transaction.mockImplementation(async (callback: any) => callback(tx));
     jest.spyOn(service, "getJob").mockResolvedValue({ archived: true } as never);

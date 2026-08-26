@@ -13,6 +13,7 @@ import {
   rebaseAlreadyApplied,
   type ShopPriceConversion,
 } from "./shop-price-rebase.util";
+import { acquireShopPriceRebaseLock } from "./shop-price-rebase-lock";
 
 type DbClient = Prisma.TransactionClient | PrismaService;
 
@@ -70,7 +71,7 @@ export class ShopPriceRebaseService {
     };
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`shop-price-rebase:${shopId}`}))`;
+      await acquireShopPriceRebaseLock(tx, shopId);
       const last = await tx.auditLog.findFirst({
         where: {
           resourceType: SHOP_PRICE_REBASE_RESOURCE,

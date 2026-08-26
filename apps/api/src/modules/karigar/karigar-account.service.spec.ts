@@ -99,6 +99,7 @@ describe("KarigarService Account & Settlement Ledger", () => {
         return cb;
       }),
       $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
+      $executeRaw: jest.fn().mockResolvedValue(undefined),
     };
 
     service = new KarigarService(
@@ -514,6 +515,14 @@ describe("KarigarService Account & Settlement Ledger", () => {
       );
 
       expect(res.entry.amount).toBe(4500);
+      expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+      expect(prisma.shop.findUnique).toHaveBeenCalledTimes(2);
+      expect(prisma.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        prisma.shop.findUnique.mock.invocationCallOrder[1],
+      );
+      expect(prisma.shop.findUnique.mock.invocationCallOrder[1]).toBeLessThan(
+        prisma.$queryRaw.mock.invocationCallOrder[0],
+      );
     });
 
     it("canonicalizes duplicate explicit allocations before validation and persistence", async () => {
