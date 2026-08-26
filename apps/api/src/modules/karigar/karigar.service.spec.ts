@@ -19,9 +19,24 @@ describe("KarigarService workshop safeguards", () => {
       karigarWorkshop: { findFirst: jest.fn(), update: jest.fn() },
       karigarMetalMovement: { create: jest.fn() },
       inventoryItem: { update: jest.fn() },
-      $transaction: jest.fn(),
+      $transaction: jest.fn(async (cb) => (typeof cb === "function" ? cb(prisma) : cb)),
+      $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
     };
-    service = new KarigarService(prisma, {} as never, {} as never);
+    const accountingMock = {
+      prepareMonetaryContext: jest.fn().mockImplementation((amount, currency) => ({
+        transactionCurrency: currency || "NPR",
+        transactionAmount: amount,
+        canonicalAmountNpr: amount,
+        fxRate: 1,
+        fxSource: "INTERNAL",
+        fxQuotedAt: new Date(),
+      })),
+      postKarigarWageAccrual: jest.fn().mockResolvedValue({ id: "gl-accrual-1" }),
+      postKarigarSettlementPayment: jest.fn().mockResolvedValue({ id: "gl-pay-1" }),
+      postKarigarAdvancePayment: jest.fn().mockResolvedValue({ id: "gl-adv-1" }),
+      postKarigarAdjustment: jest.fn().mockResolvedValue({ id: "gl-adj-1" }),
+    };
+    service = new KarigarService(prisma, {} as never, {} as never, accountingMock as never);
   });
 
   const activeJob = {
@@ -392,9 +407,10 @@ describe("KarigarService workshop safeguards", () => {
         findMany: jest.fn().mockResolvedValue([{ type: "ISSUE", weightGrams: 10 }]),
       },
       karigarFinancialEntry: {
-        create: jest.fn(),
+        create: jest.fn().mockResolvedValue({ id: "fin-entry-1" }),
         findMany: jest.fn().mockResolvedValue([]),
       },
+      $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
     };
     prisma.$transaction.mockImplementation(async (callback: any) => callback(tx));
     jest.spyOn(service, "getJob").mockResolvedValue({ archived: true } as never);

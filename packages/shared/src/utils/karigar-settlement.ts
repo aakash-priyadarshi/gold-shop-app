@@ -41,6 +41,19 @@ export const KARIGAR_PAYMENT_METHODS = [
 export type KarigarPaymentMethodCode =
   (typeof KARIGAR_PAYMENT_METHODS)[number];
 
+export const KARIGAR_STATEMENT_FILTERS = [
+  "ALL",
+  "METAL",
+  "MONEY",
+  "WAGES",
+  "PAYMENTS",
+  "ADVANCES",
+  "ADJUSTMENTS",
+] as const;
+
+export type KarigarStatementFilterCode =
+  (typeof KARIGAR_STATEMENT_FILTERS)[number];
+
 export function roundMoney(amount: number): number {
   if (!Number.isFinite(amount)) return 0;
   return Math.round(amount * 100) / 100;

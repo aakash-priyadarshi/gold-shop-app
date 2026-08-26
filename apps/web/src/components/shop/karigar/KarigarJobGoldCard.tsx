@@ -11,6 +11,7 @@ import {
   type KarigarStageCode,
 } from "@gold-shop/shared";
 import { useState } from "react";
+import { useMarket } from "@/hooks/useMarket";
 import { JobCostSummaryModal } from "./JobCostSummaryModal";
 
 export type JobGold = {
@@ -186,15 +187,19 @@ function CastingTreeEditor({
 
 export function KarigarJobGoldCard({
   job,
+  currency: currencyProp,
   onChanged,
   onEdit,
   onDelete,
 }: {
   job: JobGold;
+  currency?: string;
   onChanged: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { selectedCurrency } = useMarket();
+  const currency = currencyProp || selectedCurrency || "NPR";
   const trees = job.trees ?? [];
   const archived = job.archived || job.readOnly || job.status === "CANCELLED";
   const [addingTree, setAddingTree] = useState(false);
@@ -265,7 +270,7 @@ export function KarigarJobGoldCard({
       {showCostModal && (
         <JobCostSummaryModal
           jobId={job.id}
-          currency="NPR"
+          currency={currency}
           onClose={() => setShowCostModal(false)}
         />
       )}

@@ -2,10 +2,13 @@ import { Type } from "class-transformer";
 import {
   IsArray,
   IsIn,
+  IsInt,
+  IsISO8601,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
   ValidateNested,
@@ -29,7 +32,16 @@ export class RecordKarigarPaymentDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(40)
+  @IsIn([
+    "CASH",
+    "BANK_TRANSFER",
+    "UPI",
+    "ESEWA",
+    "KHALTI",
+    "CONNECTIPS",
+    "CHEQUE",
+    "OTHER",
+  ])
   paymentMethod?: string;
 
   @IsOptional()
@@ -44,7 +56,7 @@ export class RecordKarigarPaymentDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(120)
+  @MaxLength(191)
   idempotencyKey?: string;
 
   @IsOptional()
@@ -61,7 +73,16 @@ export class RecordKarigarAdvanceDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(40)
+  @IsIn([
+    "CASH",
+    "BANK_TRANSFER",
+    "UPI",
+    "ESEWA",
+    "KHALTI",
+    "CONNECTIPS",
+    "CHEQUE",
+    "OTHER",
+  ])
   paymentMethod?: string;
 
   @IsOptional()
@@ -76,7 +97,7 @@ export class RecordKarigarAdvanceDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(120)
+  @MaxLength(191)
   idempotencyKey?: string;
 }
 
@@ -96,7 +117,7 @@ export class RecordKarigarAdjustmentDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(120)
+  @MaxLength(191)
   idempotencyKey?: string;
 }
 
@@ -123,20 +144,37 @@ export class RecordKarigarMetalReturnDto {
   @IsString()
   @MaxLength(400)
   note?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(191)
+  idempotencyKey?: string;
 }
 
 export class KarigarStatementQueryDto {
   @IsOptional()
-  @IsString()
+  @IsISO8601()
   from?: string;
 
   @IsOptional()
-  @IsString()
+  @IsISO8601()
   to?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(40)
+  @IsIn([
+    "ALL",
+    "METAL",
+    "MONEY",
+    "WAGES",
+    "PAYMENTS",
+    "ADVANCES",
+    "ADJUSTMENTS",
+    "WAGE",
+    "PAYMENT",
+    "ADVANCE",
+    "ADJUSTMENT",
+  ])
   type?: string;
 
   @IsOptional()
@@ -146,8 +184,9 @@ export class KarigarStatementQueryDto {
 
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
+  @Max(250)
   limit?: number;
 
   @IsOptional()

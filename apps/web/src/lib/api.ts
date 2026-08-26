@@ -673,6 +673,7 @@ export const karigarApi = {
       metalKey?: string;
       jobId?: string;
       note?: string;
+      idempotencyKey?: string;
     },
   ) => api.post(`/karigar/workshops/${workshopId}/account/metal-return`, data),
   getJobCostSummary: (jobId: string) =>

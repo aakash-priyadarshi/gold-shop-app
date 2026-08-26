@@ -16,13 +16,16 @@ export const DEFAULT_LEDGER_ACCOUNTS: ReadonlyArray<{
   { code: "1010", name: "Bank", type: LedgerAccountType.ASSET, systemKey: LedgerAccountKey.BANK },
   { code: "1020", name: "Payment Gateway Clearing", type: LedgerAccountType.ASSET, systemKey: LedgerAccountKey.GATEWAY_CLEARING },
   { code: "1100", name: "Accounts Receivable", type: LedgerAccountType.ASSET, systemKey: LedgerAccountKey.ACCOUNTS_RECEIVABLE },
+  { code: "1200", name: "Karigar Advances", type: LedgerAccountType.ASSET, systemKey: LedgerAccountKey.KARIGAR_ADVANCES },
   { code: "2000", name: "Customer Advances", type: LedgerAccountType.LIABILITY, systemKey: LedgerAccountKey.CUSTOMER_ADVANCES },
   { code: "2100", name: "Tax Payable", type: LedgerAccountType.LIABILITY, systemKey: LedgerAccountKey.TAX_PAYABLE },
   { code: "2200", name: "Platform Commission Payable", type: LedgerAccountType.LIABILITY, systemKey: LedgerAccountKey.PLATFORM_COMMISSION_PAYABLE },
+  { code: "2300", name: "Karigar Payable", type: LedgerAccountType.LIABILITY, systemKey: LedgerAccountKey.KARIGAR_PAYABLE },
   { code: "3000", name: "Opening Balance Equity", type: LedgerAccountType.EQUITY, systemKey: LedgerAccountKey.OPENING_BALANCE_EQUITY },
   { code: "4000", name: "Sales Revenue", type: LedgerAccountType.REVENUE, systemKey: LedgerAccountKey.SALES_REVENUE },
   { code: "4010", name: "Sales Returns and Allowances", type: LedgerAccountType.REVENUE, systemKey: LedgerAccountKey.SALES_RETURNS },
   { code: "5000", name: "Platform Commission Expense", type: LedgerAccountType.EXPENSE, systemKey: LedgerAccountKey.PLATFORM_COMMISSION_EXPENSE },
+  { code: "5100", name: "Karigar Making Expense", type: LedgerAccountType.EXPENSE, systemKey: LedgerAccountKey.KARIGAR_MAKING_EXPENSE },
 ];
 
 export interface MonetaryContext {

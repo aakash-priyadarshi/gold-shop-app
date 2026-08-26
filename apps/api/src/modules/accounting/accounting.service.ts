@@ -852,15 +852,193 @@ export class AccountingService {
     });
   }
 
-  private receiptAccount(method: string): LedgerAccountKey {
+  receiptAccount(method: string): LedgerAccountKey {
     const normalized = method.trim().toUpperCase();
     if (normalized === "CASH" || normalized === "PAID_AT_SHOP") {
       return LedgerAccountKey.CASH_ON_HAND;
     }
-    if (normalized === "BANK_TRANSFER" || normalized === "BANK") {
+    if (
+      normalized === "BANK_TRANSFER" ||
+      normalized === "BANK" ||
+      normalized === "CHEQUE" ||
+      normalized === "CONNECTIPS"
+    ) {
       return LedgerAccountKey.BANK;
     }
     return LedgerAccountKey.GATEWAY_CLEARING;
+  }
+
+  async postKarigarWageAccrual(
+    tx: Prisma.TransactionClient,
+    input: MonetaryContext & {
+      shopId: string;
+      financialEntryId: string;
+      workshopId: string;
+      artisanName?: string;
+      jobId?: string | null;
+      productName?: string | null;
+      transactionDate: Date;
+      actorUserId?: string;
+    },
+  ) {
+    return this.postEntry(tx, {
+      ...input,
+      referenceType: JournalReferenceType.KARIGAR_WAGE_ACCRUAL,
+      referenceId: input.financialEntryId,
+      idempotencyKey: `karigar-wage-accrual:${input.financialEntryId}`,
+      description: `Karigar making wage accrued for ${input.artisanName || input.workshopId}${input.productName ? ` (${input.productName})` : ""}`,
+      metadata: {
+        workshopId: input.workshopId,
+        artisanName: input.artisanName,
+        jobId: input.jobId,
+      },
+      lines: [
+        {
+          accountKey: LedgerAccountKey.KARIGAR_MAKING_EXPENSE,
+          debitNpr: input.canonicalAmountNpr,
+          transactionDebit: input.transactionAmount,
+        },
+        {
+          accountKey: LedgerAccountKey.KARIGAR_PAYABLE,
+          creditNpr: input.canonicalAmountNpr,
+          transactionCredit: input.transactionAmount,
+        },
+      ],
+    });
+  }
+
+  async postKarigarSettlementPayment(
+    tx: Prisma.TransactionClient,
+    input: MonetaryContext & {
+      shopId: string;
+      financialEntryId: string;
+      workshopId: string;
+      artisanName?: string;
+      method: string;
+      reference?: string | null;
+      transactionDate: Date;
+      actorUserId?: string;
+    },
+  ) {
+    return this.postEntry(tx, {
+      ...input,
+      referenceType: JournalReferenceType.KARIGAR_SETTLEMENT_PAYMENT,
+      referenceId: input.financialEntryId,
+      idempotencyKey: `karigar-settlement:${input.financialEntryId}`,
+      description: `Karigar wage settlement for ${input.artisanName || input.workshopId}${input.reference ? ` (Ref: ${input.reference})` : ""}`,
+      metadata: {
+        workshopId: input.workshopId,
+        artisanName: input.artisanName,
+        method: input.method,
+        reference: input.reference,
+      },
+      lines: [
+        {
+          accountKey: LedgerAccountKey.KARIGAR_PAYABLE,
+          debitNpr: input.canonicalAmountNpr,
+          transactionDebit: input.transactionAmount,
+        },
+        {
+          accountKey: this.receiptAccount(input.method),
+          creditNpr: input.canonicalAmountNpr,
+          transactionCredit: input.transactionAmount,
+        },
+      ],
+    });
+  }
+
+  async postKarigarAdvancePayment(
+    tx: Prisma.TransactionClient,
+    input: MonetaryContext & {
+      shopId: string;
+      financialEntryId: string;
+      workshopId: string;
+      artisanName?: string;
+      method: string;
+      reference?: string | null;
+      transactionDate: Date;
+      actorUserId?: string;
+    },
+  ) {
+    return this.postEntry(tx, {
+      ...input,
+      referenceType: JournalReferenceType.KARIGAR_ADVANCE_PAYMENT,
+      referenceId: input.financialEntryId,
+      idempotencyKey: `karigar-advance:${input.financialEntryId}`,
+      description: `Karigar advance paid to ${input.artisanName || input.workshopId}${input.reference ? ` (Ref: ${input.reference})` : ""}`,
+      metadata: {
+        workshopId: input.workshopId,
+        artisanName: input.artisanName,
+        method: input.method,
+        reference: input.reference,
+      },
+      lines: [
+        {
+          accountKey: LedgerAccountKey.KARIGAR_ADVANCES,
+          debitNpr: input.canonicalAmountNpr,
+          transactionDebit: input.transactionAmount,
+        },
+        {
+          accountKey: this.receiptAccount(input.method),
+          creditNpr: input.canonicalAmountNpr,
+          transactionCredit: input.transactionAmount,
+        },
+      ],
+    });
+  }
+
+  async postKarigarAdjustment(
+    tx: Prisma.TransactionClient,
+    input: MonetaryContext & {
+      shopId: string;
+      financialEntryId: string;
+      workshopId: string;
+      artisanName?: string;
+      type: "ADJUSTMENT_INCREASE" | "ADJUSTMENT_DECREASE";
+      note: string;
+      transactionDate: Date;
+      actorUserId?: string;
+    },
+  ) {
+    const isIncrease = input.type === "ADJUSTMENT_INCREASE";
+    return this.postEntry(tx, {
+      ...input,
+      referenceType: JournalReferenceType.KARIGAR_ADJUSTMENT,
+      referenceId: input.financialEntryId,
+      idempotencyKey: `karigar-adjustment:${input.financialEntryId}`,
+      description: `Karigar ledger adjustment (${isIncrease ? "Credit" : "Debit"}) for ${input.artisanName || input.workshopId}: ${input.note.slice(0, 80)}`,
+      metadata: {
+        workshopId: input.workshopId,
+        artisanName: input.artisanName,
+        adjustmentType: input.type,
+        note: input.note,
+      },
+      lines: isIncrease
+        ? [
+            {
+              accountKey: LedgerAccountKey.KARIGAR_MAKING_EXPENSE,
+              debitNpr: input.canonicalAmountNpr,
+              transactionDebit: input.transactionAmount,
+            },
+            {
+              accountKey: LedgerAccountKey.KARIGAR_PAYABLE,
+              creditNpr: input.canonicalAmountNpr,
+              transactionCredit: input.transactionAmount,
+            },
+          ]
+        : [
+            {
+              accountKey: LedgerAccountKey.KARIGAR_PAYABLE,
+              debitNpr: input.canonicalAmountNpr,
+              transactionDebit: input.transactionAmount,
+            },
+            {
+              accountKey: LedgerAccountKey.KARIGAR_MAKING_EXPENSE,
+              creditNpr: input.canonicalAmountNpr,
+              transactionCredit: input.transactionAmount,
+            },
+          ],
+    });
   }
 
   /**

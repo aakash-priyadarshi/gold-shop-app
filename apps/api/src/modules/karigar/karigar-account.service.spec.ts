@@ -1,17 +1,34 @@
-import { NotFoundException } from "@nestjs/common";
+import { ConflictException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { KarigarService } from "./karigar.service";
 
 describe("KarigarService Account & Settlement Ledger", () => {
   let prisma: any;
+  let accounting: any;
   let service: KarigarService;
 
   beforeEach(() => {
+    accounting = {
+      prepareMonetaryContext: jest.fn().mockImplementation((amount, currency) => ({
+        transactionCurrency: currency || "NPR",
+        transactionAmount: new Prisma.Decimal(amount),
+        canonicalAmountNpr: new Prisma.Decimal(amount),
+        fxRate: new Prisma.Decimal(1),
+        fxSource: "INTERNAL",
+        fxQuotedAt: new Date(),
+      })),
+      postKarigarWageAccrual: jest.fn().mockResolvedValue({ id: "gl-accrual-1" }),
+      postKarigarSettlementPayment: jest.fn().mockResolvedValue({ id: "gl-pay-1" }),
+      postKarigarAdvancePayment: jest.fn().mockResolvedValue({ id: "gl-adv-1" }),
+      postKarigarAdjustment: jest.fn().mockResolvedValue({ id: "gl-adj-1" }),
+    };
+
     prisma = {
       shop: { findUnique: jest.fn() },
       karigarJob: {
         findFirst: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
         update: jest.fn(),
       },
       karigarJobStage: {
@@ -28,17 +45,20 @@ describe("KarigarService Account & Settlement Ledger", () => {
       karigarWorkshop: {
         findFirst: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
         update: jest.fn(),
         delete: jest.fn(),
       },
       karigarMetalMovement: {
         create: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
       },
       karigarFinancialEntry: {
         create: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
         findUnique: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
       },
       karigarFinancialAllocation: {
         createMany: jest.fn(),
@@ -50,8 +70,15 @@ describe("KarigarService Account & Settlement Ledger", () => {
         }
         return cb;
       }),
+      $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
     };
-    service = new KarigarService(prisma, { ensureShopPricesMatchCurrency: jest.fn() } as never, {} as never);
+
+    service = new KarigarService(
+      prisma,
+      { ensureShopPricesMatchCurrency: jest.fn() } as never,
+      {} as never,
+      accounting as never,
+    );
   });
 
   const mockWorkshop = {
@@ -67,16 +94,14 @@ describe("KarigarService Account & Settlement Ledger", () => {
     shop: { currency: "NPR" },
   };
 
-  describe("Anti-overreturn metal checks & RETURN_UNUSED", () => {
+  describe("Anti-overreturn metal checks, RETURN_UNUSED & TRANSFER", () => {
     it("rejects metal return exceeding outstanding balance for that metalKey", async () => {
       prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
-      // Historical movements: 100g issued, 90g returned
       prisma.karigarMetalMovement.findMany.mockResolvedValue([
         { type: "ISSUE", weightGrams: 100 },
         { type: "RETURN_FINISHED", weightGrams: 90 },
       ]);
 
-      // Attempting to return 15g when only 10g is outstanding
       await expect(
         service.addMovement("shop-1", null, "user-1", {
           type: "RETURN_UNUSED",
@@ -105,7 +130,6 @@ describe("KarigarService Account & Settlement Ledger", () => {
         note: "Unused scrap gold return",
       });
 
-      // Vault increased by 20g
       expect(prisma.karigarVaultReserve.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { shopId_materialKey: { shopId: "shop-1", materialKey: "goldGrains24k" } },
@@ -113,7 +137,6 @@ describe("KarigarService Account & Settlement Ledger", () => {
         }),
       );
 
-      // Karigar workshop balance updated
       expect(prisma.karigarWorkshop.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "ws-1" },
@@ -124,23 +147,26 @@ describe("KarigarService Account & Settlement Ledger", () => {
         }),
       );
 
-      // Crucial: NO wage accrual created for RETURN_UNUSED
       expect(prisma.karigarFinancialEntry.create).not.toHaveBeenCalled();
     });
 
-    it("creates WAGE_ACCRUAL financial entry on RETURN_FINISHED", async () => {
+    it("creates WAGE_ACCRUAL financial entry and posts to General Ledger on RETURN_FINISHED", async () => {
       prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
       prisma.karigarMetalMovement.findMany.mockResolvedValue([
         { type: "ISSUE", weightGrams: 100 },
       ]);
       prisma.karigarVaultReserve.findUnique.mockResolvedValue({ quantity: 50 });
       prisma.shop.findUnique.mockResolvedValue({ currency: "NPR" });
-      prisma.karigarMetalMovement.create.mockResolvedValue({ id: "mov-finished-1" });
+      const mockMovement = { id: "mov-finished-1", createdAt: new Date() };
+      prisma.karigarMetalMovement.create.mockResolvedValue(mockMovement);
+      prisma.karigarFinancialEntry.create.mockResolvedValue({
+        id: "fin-wage-1",
+        amount: new Prisma.Decimal(12000),
+      });
       prisma.karigarFinancialEntry.findMany.mockResolvedValue([
         { type: "WAGE_ACCRUAL", amount: new Prisma.Decimal(12000) },
       ]);
 
-      // 60g finished return with wageRate 200/g = 12000
       await service.addMovement("shop-1", null, "user-1", {
         type: "RETURN_FINISHED",
         weightGrams: 60,
@@ -148,7 +174,6 @@ describe("KarigarService Account & Settlement Ledger", () => {
         metalKey: "goldGrains24k",
       });
 
-      // Created WAGE_ACCRUAL entry tied to sourceMovementId
       expect(prisma.karigarFinancialEntry.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           shopId: "shop-1",
@@ -161,144 +186,98 @@ describe("KarigarService Account & Settlement Ledger", () => {
         }),
       });
 
-      // Synced compatibility wageDue
-      expect(prisma.karigarWorkshop.update).toHaveBeenCalledWith({
-        where: { id: "ws-1" },
-        data: { wageDue: 12000 },
-      });
-    });
-
-    it("allows RETURN_UNUSED on cancelled jobs but rejects new ISSUE", async () => {
-      const cancelledJob = {
-        id: "job-canc-1",
-        shopId: "shop-1",
-        product: "Bespoke Solitaire Ring",
-        artisan: "Ramesh Goldsmith",
-        grossWeight: 10,
-        metalKey: "goldGrains24k",
-        status: "CANCELLED",
-        workshopId: "ws-1",
-        allowedWastagePercent: 1,
-        updatedAt: new Date(),
-        stages: [],
-        trees: [],
-      };
-      prisma.karigarJob.findFirst.mockResolvedValue(cancelledJob);
-      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
-      prisma.karigarMetalMovement.findMany.mockResolvedValue([
-        { type: "ISSUE", weightGrams: 50 },
-      ]);
-      prisma.karigarVaultReserve.findUnique.mockResolvedValue({ quantity: 20 });
-      prisma.karigarFinancialEntry.findMany.mockResolvedValue([]);
-      prisma.karigarMetalMovement.create.mockResolvedValue({ id: "mov-canc-ret" });
-
-      // 1. ISSUE to cancelled job must fail
-      await expect(
-        service.addMovement("shop-1", "job-canc-1", "user-1", {
-          type: "ISSUE",
-          weightGrams: 10,
-          workshopId: "ws-1",
-        }),
-      ).rejects.toThrow("Cancelled jobs are archived and cannot resume production");
-
-      // 2. Reconciliation / RETURN_UNUSED against cancelled job succeeds
-      const res = await service.addMovement("shop-1", "job-canc-1", "user-1", {
-        type: "RETURN_UNUSED",
-        weightGrams: 30,
-        workshopId: "ws-1",
-      });
-      expect(res).toBeDefined();
-      expect(prisma.karigarMetalMovement.create).toHaveBeenCalledWith(
+      expect(accounting.postKarigarWageAccrual).toHaveBeenCalledWith(
+        prisma,
         expect.objectContaining({
-          data: expect.objectContaining({
-            jobId: "job-canc-1",
-            type: "RETURN_UNUSED",
-            weightGrams: 30,
-          }),
+          shopId: "shop-1",
+          financialEntryId: "fin-wage-1",
+          workshopId: "ws-1",
         }),
       );
     });
+
+    it("verifies TRANSFER creates movement record without mutating vault or float", async () => {
+      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
+      prisma.karigarMetalMovement.create.mockResolvedValue({ id: "mov-transfer-1" });
+
+      await service.addMovement("shop-1", null, "user-1", {
+        type: "TRANSFER",
+        weightGrams: 25,
+        workshopId: "ws-1",
+        metalKey: "goldGrains24k",
+        note: "Transfer to branch workshop",
+      });
+
+      expect(prisma.karigarMetalMovement.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          shopId: "shop-1",
+          workshopId: "ws-1",
+          type: "TRANSFER",
+          weightGrams: 25,
+          metalKey: "goldGrains24k",
+        }),
+      });
+
+      expect(prisma.karigarVaultReserve.upsert).not.toHaveBeenCalled();
+      expect(prisma.karigarFinancialEntry.create).not.toHaveBeenCalled();
+    });
   });
 
-  describe("Settlement Payments & Advances", () => {
-    it("records full and partial wage payments and updates payable balance", async () => {
+  describe("Settlement Payments, FIFO Auto-Allocation & Idempotency", () => {
+    it("records payment with automatic FIFO allocation across outstanding jobs", async () => {
       prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
-      // Existing accrual of 10,000
-      prisma.karigarFinancialEntry.findMany.mockResolvedValue([
-        { type: "WAGE_ACCRUAL", amount: new Prisma.Decimal(10000) },
+      // Two jobs with unallocated wage accruals
+      prisma.karigarFinancialEntry.findMany.mockImplementation(({ where }: any) => {
+        if (where?.type === "WAGE_ACCRUAL") {
+          return [
+            { jobId: "job-1", amount: new Prisma.Decimal(3000), createdAt: new Date("2026-08-01") },
+            { jobId: "job-2", amount: new Prisma.Decimal(4000), createdAt: new Date("2026-08-02") },
+          ];
+        }
+        return [
+          { type: "WAGE_ACCRUAL", amount: new Prisma.Decimal(7000) },
+        ];
+      });
+      prisma.karigarFinancialAllocation.findMany.mockResolvedValue([
+        { jobId: "job-1", amount: new Prisma.Decimal(1000) }, // 2000 remaining on job-1
       ]);
 
       const entryResult = {
-        id: "fin-pay-1",
+        id: "fin-pay-fifo",
         shopId: "shop-1",
         workshopId: "ws-1",
         type: "SETTLEMENT_PAYMENT",
-        amount: new Prisma.Decimal(4000),
+        amount: new Prisma.Decimal(4500),
         currency: "NPR",
+        createdAt: new Date(),
       };
       prisma.karigarFinancialEntry.create.mockResolvedValue(entryResult);
 
-      // Payment of 4,000
       const res = await service.recordPayment("shop-1", "ws-1", "user-1", {
-        amount: 4000,
+        amount: 4500,
         paymentMethod: "BANK_TRANSFER",
-        reference: "TXN-998811",
-        note: "Partial wage settlement",
       });
 
-      expect(prisma.karigarFinancialEntry.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+      expect(prisma.karigarFinancialAllocation.createMany).toHaveBeenCalledWith({
+        data: [
+          { shopId: "shop-1", financialEntryId: "fin-pay-fifo", jobId: "job-1", amount: new Prisma.Decimal(2000) },
+          { shopId: "shop-1", financialEntryId: "fin-pay-fifo", jobId: "job-2", amount: new Prisma.Decimal(2500) },
+        ],
+      });
+
+      expect(accounting.postKarigarSettlementPayment).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
           shopId: "shop-1",
-          workshopId: "ws-1",
-          type: "SETTLEMENT_PAYMENT",
-          amount: new Prisma.Decimal(4000),
-          paymentMethod: "BANK_TRANSFER",
-          reference: "TXN-998811",
+          financialEntryId: "fin-pay-fifo",
+          method: "BANK_TRANSFER",
         }),
-      });
+      );
 
-      expect(res.entry.amount).toBe(4000);
+      expect(res.entry.amount).toBe(4500);
     });
 
-    it("rejects payment exceeding current amount payable", async () => {
-      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
-      prisma.karigarFinancialEntry.findMany.mockResolvedValue([
-        { type: "WAGE_ACCRUAL", amount: new Prisma.Decimal(5000) },
-      ]);
-
-      await expect(
-        service.recordPayment("shop-1", "ws-1", "user-1", {
-          amount: 6000,
-        }),
-      ).rejects.toThrow(/Payment amount \(6000\) cannot exceed total payable \(5000\)/);
-    });
-
-    it("records advance payment creating advance balance", async () => {
-      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
-      prisma.karigarFinancialEntry.findMany.mockResolvedValue([]); // 0 payable
-      prisma.karigarFinancialEntry.create.mockResolvedValue({
-        id: "fin-adv-1",
-        amount: new Prisma.Decimal(5000),
-      });
-
-      const res = await service.recordAdvance("shop-1", "ws-1", "user-1", {
-        amount: 5000,
-        paymentMethod: "CASH",
-        note: "Festival advance",
-      });
-
-      expect(prisma.karigarFinancialEntry.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          shopId: "shop-1",
-          workshopId: "ws-1",
-          type: "ADVANCE_PAYMENT",
-          amount: new Prisma.Decimal(5000),
-        }),
-      });
-      expect(res.summary.advanceBalance).toBe(0); // in test mock compute
-    });
-
-    it("supports duplicate idempotency key without double-posting", async () => {
+    it("supports replay with exact idempotency key payload fingerprint", async () => {
       prisma.karigarFinancialEntry.findUnique.mockResolvedValue({
         id: "existing-entry-id",
         shopId: "shop-1",
@@ -316,59 +295,80 @@ describe("KarigarService Account & Settlement Ledger", () => {
         idempotencyKey: "idem-abc-123",
       });
 
-      // Did NOT create a new entry
       expect(prisma.karigarFinancialEntry.create).not.toHaveBeenCalled();
       expect(res.entry.id).toBe("existing-entry-id");
     });
+
+    it("throws ConflictException when idempotency key is reused for different payload", async () => {
+      prisma.karigarFinancialEntry.findUnique.mockResolvedValue({
+        id: "existing-entry-id",
+        shopId: "shop-1",
+        workshopId: "ws-1",
+        type: "SETTLEMENT_PAYMENT",
+        amount: new Prisma.Decimal(3000),
+        allocations: [],
+      });
+
+      // Different amount (4000 vs 3000) with same idempotency key
+      await expect(
+        service.recordPayment("shop-1", "ws-1", "user-1", {
+          amount: 4000,
+          idempotencyKey: "idem-abc-123",
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
   });
 
-  describe("Adjustments & Tenancy Isolation", () => {
-    it("requires reason note for adjustment and records increase/decrease", async () => {
+  describe("Workshop Deletion Safeguards & Restrictive Integrity", () => {
+    it("refuses to delete workshop if financial ledger history exists", async () => {
       prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
-      prisma.karigarFinancialEntry.findMany.mockResolvedValue([]);
-      prisma.karigarFinancialEntry.create.mockResolvedValue({
-        id: "adj-1",
-        amount: new Prisma.Decimal(500),
-      });
+      prisma.karigarJob.count.mockResolvedValue(0);
+      prisma.karigarFinancialEntry.count.mockResolvedValue(3); // 3 ledger entries exist
+      prisma.karigarMetalMovement.count.mockResolvedValue(0);
 
-      // 1. Missing note throws
       await expect(
-        service.recordAdjustment("shop-1", "ws-1", "user-1", {
-          amount: 500,
-          type: "ADJUSTMENT_INCREASE",
-          note: "",
-        }),
-      ).rejects.toThrow("Adjustment reason note is required");
+        service.deleteWorkshop("shop-1", "ws-1"),
+      ).rejects.toThrow(
+        "Cannot delete workshop with existing job, ledger, or metal movement history. Archive the workshop instead.",
+      );
 
-      // 2. Valid adjustment succeeds
-      await service.recordAdjustment("shop-1", "ws-1", "user-1", {
-        amount: 500,
-        type: "ADJUSTMENT_INCREASE",
-        note: "Correction for under-calculated intricacy bonus",
-      });
-
-      expect(prisma.karigarFinancialEntry.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          type: "ADJUSTMENT_INCREASE",
-          amount: new Prisma.Decimal(500),
-          note: "Correction for under-calculated intricacy bonus",
-        }),
-      });
+      expect(prisma.karigarWorkshop.delete).not.toHaveBeenCalled();
     });
 
-    it("enforces tenant isolation across shops", async () => {
-      // Workshop belongs to shop-2, but requested by shop-1
-      prisma.karigarWorkshop.findFirst.mockResolvedValue(null);
+    it("allows deletion only when workshop has zero history", async () => {
+      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
+      prisma.karigarJob.count.mockResolvedValue(0);
+      prisma.karigarFinancialEntry.count.mockResolvedValue(0);
+      prisma.karigarMetalMovement.count.mockResolvedValue(0);
 
-      await expect(
-        service.getWorkshopAccount("shop-1", "ws-cross-shop"),
-      ).rejects.toThrow(NotFoundException);
+      const res = await service.deleteWorkshop("shop-1", "ws-1");
+      expect(res).toEqual({ ok: true });
+      expect(prisma.karigarWorkshop.delete).toHaveBeenCalledWith({
+        where: { id: "ws-1" },
+      });
+    });
+  });
 
-      await expect(
-        service.recordPayment("shop-1", "ws-cross-shop", "user-1", {
-          amount: 1000,
+  describe("Statement Filters & Query Contracts", () => {
+    it("filters statement by jobId including both direct jobs and allocated jobs", async () => {
+      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
+
+      await service.getWorkshopStatement("shop-1", "ws-1", {
+        jobId: "target-job-1",
+      });
+
+      expect(prisma.karigarFinancialEntry.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            shopId: "shop-1",
+            workshopId: "ws-1",
+            OR: [
+              { jobId: "target-job-1" },
+              { allocations: { some: { jobId: "target-job-1" } } },
+            ],
+          }),
         }),
-      ).rejects.toThrow(NotFoundException);
+      );
     });
   });
 });

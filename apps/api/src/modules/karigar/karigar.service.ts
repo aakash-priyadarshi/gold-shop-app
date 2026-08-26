@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 import {
+  CurrencyCode,
   KarigarMovementType,
   KarigarStage,
   JewelleryType,
@@ -20,6 +22,7 @@ import {
 import { PrismaService } from "../../prisma/prisma.service";
 import { ShopPriceRebaseService } from "../shops/shop-price-rebase.service";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
+import { AccountingService } from "../accounting/accounting.service";
 import {
   AdvanceKarigarFloorDto,
   CreateCastingTreeDto,
@@ -68,6 +71,7 @@ export class KarigarService {
     private prisma: PrismaService,
     private priceRebase: ShopPriceRebaseService,
     private planLimits: PlanLimitsService,
+    private accounting: AccountingService,
   ) {}
 
   async getSnapshot(shopId: string) {
@@ -309,6 +313,14 @@ export class KarigarService {
         "Use the workshop stage flow to change a job's production status or current stage",
       );
     }
+    if (dto.workshopId) {
+      const targetWorkshop = await this.prisma.karigarWorkshop.findFirst({
+        where: { id: dto.workshopId, shopId },
+      });
+      if (!targetWorkshop) {
+        throw new NotFoundException("Target karigar not found in this shop");
+      }
+    }
     await this.prisma.karigarJob.update({
       where: { id: jobId },
       data: {
@@ -360,12 +372,20 @@ export class KarigarService {
       where: { id: workshopId, shopId },
     });
     if (!ws) throw new NotFoundException("Karigar not found");
-    const openJobs = await this.prisma.karigarJob.count({
-      where: { shopId, workshopId },
-    });
-    if (openJobs > 0) {
+    const [jobCount, financialCount, movementCount] = await Promise.all([
+      this.prisma.karigarJob.count({
+        where: { shopId, workshopId },
+      }),
+      this.prisma.karigarFinancialEntry.count({
+        where: { shopId, workshopId },
+      }),
+      this.prisma.karigarMetalMovement.count({
+        where: { shopId, workshopId },
+      }),
+    ]);
+    if (jobCount > 0 || financialCount > 0 || movementCount > 0) {
       throw new BadRequestException(
-        "Cannot delete workshop with existing job history",
+        "Cannot delete workshop with existing job, ledger, or metal movement history. Archive the workshop instead.",
       );
     }
     await this.prisma.karigarWorkshop.delete({ where: { id: workshopId } });
@@ -407,6 +427,16 @@ export class KarigarService {
     }
 
     await this.prisma.$transaction(async (tx) => {
+      // Row lock on workshop to serialize metal float and financial mutation
+      if (workshopId) {
+        const lockedRows = await tx.$queryRaw<
+          { id: string }[]
+        >`SELECT "id" FROM "KarigarWorkshop" WHERE "id" = ${workshopId} AND "shopId" = ${shopId} FOR UPDATE`;
+        if (!lockedRows || lockedRows.length === 0) {
+          throw new NotFoundException("Karigar not found");
+        }
+      }
+
       if (type === "ISSUE") {
         const workshop = await tx.karigarWorkshop.findFirst({
           where: { id: workshopId as string, shopId },
@@ -456,7 +486,7 @@ export class KarigarService {
           });
           if (!workshop) throw new NotFoundException("Karigar not found");
 
-          // Concurrency-safe material outstanding balance check
+          // Concurrency-safe material outstanding balance check under row lock
           const pastMovements = await tx.karigarMetalMovement.findMany({
             where: { shopId, workshopId, metalKey },
             select: { type: true, weightGrams: true },
@@ -513,7 +543,7 @@ export class KarigarService {
               where: { id: shopId },
               select: { currency: true },
             });
-            await tx.karigarFinancialEntry.create({
+            const entry = await tx.karigarFinancialEntry.create({
               data: {
                 shopId,
                 workshopId: workshop.id,
@@ -526,6 +556,23 @@ export class KarigarService {
                   dto.note ?? `Wage accrued for finished return of ${weight}g`,
                 createdBy: userId ?? null,
               },
+            });
+
+            // Post to General Ledger
+            const monetary = await this.accounting.prepareMonetaryContext(
+              roundMoney(wage),
+              (shop?.currency ?? CurrencyCode.NPR) as CurrencyCode,
+            );
+            await this.accounting.postKarigarWageAccrual(tx, {
+              ...monetary,
+              shopId,
+              financialEntryId: entry.id,
+              workshopId: workshop.id,
+              artisanName: workshop.artisan || workshop.name,
+              jobId: job?.id ?? null,
+              productName: job?.product ?? null,
+              transactionDate: movement.createdAt,
+              actorUserId: userId,
             });
           }
 
@@ -557,6 +604,23 @@ export class KarigarService {
             },
           });
         }
+      } else if (type === "TRANSFER") {
+        await tx.karigarMetalMovement.create({
+          data: {
+            shopId,
+            jobId: job?.id ?? null,
+            workshopId,
+            treeId: dto.treeId ?? null,
+            stage: stage ?? null,
+            type,
+            metalKey,
+            weightGrams: weight,
+            purity: dto.purity ?? null,
+            note: dto.note ?? null,
+            lotId: dto.lotId ?? null,
+            createdBy: userId ?? null,
+          },
+        });
       } else if (type === "ADJUST") {
         await this.adjustVault(tx, shopId, metalKey, weight);
         await tx.karigarMetalMovement.create({
@@ -1671,6 +1735,9 @@ export class KarigarService {
   ) {
     const workshop = await this.prisma.karigarWorkshop.findFirst({
       where: { id: workshopId, shopId },
+      include: {
+        shop: { select: { shopName: true, currency: true } },
+      },
     });
     if (!workshop) throw new NotFoundException("Karigar not found");
 
@@ -1700,7 +1767,14 @@ export class KarigarService {
           shopId,
           workshopId,
           ...(dateFilter ? { createdAt: dateFilter } : {}),
-          ...(query.jobId ? { jobId: query.jobId } : {}),
+          ...(query.jobId
+            ? {
+                OR: [
+                  { jobId: query.jobId },
+                  { allocations: { some: { jobId: query.jobId } } },
+                ],
+              }
+            : {}),
         },
         include: {
           job: { select: { id: true, product: true } },
@@ -1764,15 +1838,15 @@ export class KarigarService {
         combined = combined.filter((ev) => ev.kind === "METAL");
       } else if (filter === "MONEY") {
         combined = combined.filter((ev) => ev.kind === "MONEY");
-      } else if (filter === "WAGE") {
+      } else if (filter === "WAGES" || filter === "WAGE") {
         combined = combined.filter((ev) => ev.eventType === "WAGE_ACCRUAL");
-      } else if (filter === "PAYMENT") {
+      } else if (filter === "PAYMENTS" || filter === "PAYMENT") {
         combined = combined.filter(
           (ev) => ev.eventType === "SETTLEMENT_PAYMENT",
         );
-      } else if (filter === "ADVANCE") {
+      } else if (filter === "ADVANCES" || filter === "ADVANCE") {
         combined = combined.filter((ev) => ev.eventType === "ADVANCE_PAYMENT");
-      } else if (filter === "ADJUSTMENT") {
+      } else if (filter === "ADJUSTMENTS" || filter === "ADJUSTMENT") {
         combined = combined.filter(
           (ev) =>
             ev.eventType === "ADJUSTMENT_INCREASE" ||
@@ -1781,13 +1855,15 @@ export class KarigarService {
       }
     }
 
-    // Sort chronological descending
-    combined.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
+    // Deterministic Sort: chronological descending by createdAt, secondary by id
+    combined.sort((a, b) => {
+      const timeDiff =
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return b.id.localeCompare(a.id);
+    });
 
-    const limit = query.limit ?? 50;
+    const limit = Math.min(250, Math.max(1, query.limit ?? 50));
     const offset = query.cursor ? parseInt(query.cursor, 10) || 0 : 0;
     const paginated = combined.slice(offset, offset + limit);
     const nextCursor =
@@ -1797,6 +1873,8 @@ export class KarigarService {
       items: paginated,
       totalCount: combined.length,
       nextCursor,
+      shopName: workshop.shop?.shopName || workshop.name,
+      currency: workshop.shop?.currency ?? "NPR",
     };
   }
 
@@ -1806,12 +1884,21 @@ export class KarigarService {
     userId: string | undefined,
     dto: RecordKarigarPaymentDto,
   ) {
-    if (dto.amount <= 0) {
+    const paymentAmount = roundMoney(dto.amount);
+    if (paymentAmount <= 0) {
       throw new BadRequestException("Payment amount must be greater than zero");
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Check idempotency
+      // 1. Lock workshop row for strict concurrency serialization
+      const lockedRows = await tx.$queryRaw<
+        { id: string }[]
+      >`SELECT "id" FROM "KarigarWorkshop" WHERE "id" = ${workshopId} AND "shopId" = ${shopId} FOR UPDATE`;
+      if (!lockedRows || lockedRows.length === 0) {
+        throw new NotFoundException("Karigar not found");
+      }
+
+      // 2. Check Idempotency with fingerprint matching
       if (dto.idempotencyKey) {
         const existing = await tx.karigarFinancialEntry.findUnique({
           where: {
@@ -1823,6 +1910,17 @@ export class KarigarService {
           include: { allocations: true },
         });
         if (existing) {
+          const isSameFingerprint =
+            existing.workshopId === workshopId &&
+            existing.type === "SETTLEMENT_PAYMENT" &&
+            Math.abs(Number(existing.amount) - paymentAmount) < 0.001;
+
+          if (!isSameFingerprint) {
+            throw new ConflictException(
+              "Idempotency key reused for a different payment payload",
+            );
+          }
+
           const allEntries = await tx.karigarFinancialEntry.findMany({
             where: { shopId, workshopId },
             select: { type: true, amount: true },
@@ -1834,42 +1932,36 @@ export class KarigarService {
         }
       }
 
-      // 2. Workshop ownership check
+      // 3. Workshop & Shop context
       const workshop = await tx.karigarWorkshop.findFirst({
         where: { id: workshopId, shopId },
         include: { shop: { select: { currency: true } } },
       });
       if (!workshop) throw new NotFoundException("Karigar not found");
 
-      // 3. Check current payable
+      // 4. Check current payable
       const existingEntries = await tx.karigarFinancialEntry.findMany({
         where: { shopId, workshopId },
         select: { type: true, amount: true },
       });
       const summary = computeFinancialSummary(existingEntries);
-      const val = validatePaymentAmount(dto.amount, summary.amountPayable);
+      const val = validatePaymentAmount(paymentAmount, summary.amountPayable);
       if (!val.valid) {
         throw new BadRequestException(val.reason);
       }
 
-      // 4. Validate allocations if provided
-      if (dto.allocations && dto.allocations.length > 0) {
-        const totalAllocated = dto.allocations.reduce(
-          (sum, a) => sum + a.amount,
-          0,
-        );
-        if (roundMoney(totalAllocated) > roundMoney(dto.amount) + 0.0001) {
-          throw new BadRequestException(
-            `Total allocations (${totalAllocated}) cannot exceed payment amount (${dto.amount})`,
-          );
-        }
+      // 5. Build allocations (explicit or automatic FIFO)
+      let finalAllocations: { jobId: string; amount: number }[] = [];
 
+      if (dto.allocations && dto.allocations.length > 0) {
+        let totalAllocated = 0;
         for (const alloc of dto.allocations) {
           if (alloc.amount <= 0) {
             throw new BadRequestException("Allocation amount must be positive");
           }
           const job = await tx.karigarJob.findFirst({
             where: { id: alloc.jobId, shopId, workshopId },
+            select: { id: true, product: true },
           });
           if (!job) {
             throw new BadRequestException(
@@ -1905,18 +1997,83 @@ export class KarigarService {
               `Allocation for job ${job.product} (${alloc.amount}) exceeds outstanding wage for that job (${jobOutstanding})`,
             );
           }
+          totalAllocated = roundMoney(totalAllocated + alloc.amount);
+        }
+        if (totalAllocated > paymentAmount + 0.0001) {
+          throw new BadRequestException(
+            `Total allocations (${totalAllocated}) cannot exceed payment amount (${paymentAmount})`,
+          );
+        }
+        finalAllocations = dto.allocations.map((a) => ({
+          jobId: a.jobId,
+          amount: roundMoney(a.amount),
+        }));
+      } else {
+        // Automatic FIFO allocation against outstanding job wage accruals
+        const [accrualEntries, existingAllocations] = await Promise.all([
+          tx.karigarFinancialEntry.findMany({
+            where: {
+              shopId,
+              workshopId,
+              type: "WAGE_ACCRUAL",
+              jobId: { not: null },
+            },
+            select: { jobId: true, amount: true, createdAt: true },
+            orderBy: { createdAt: "asc" },
+          }),
+          tx.karigarFinancialAllocation.findMany({
+            where: { shopId, job: { workshopId } },
+            select: { jobId: true, amount: true },
+          }),
+        ]);
+
+        const accruedByJob = new Map<string, number>();
+        for (const ae of accrualEntries) {
+          if (!ae.jobId) continue;
+          accruedByJob.set(
+            ae.jobId,
+            roundMoney((accruedByJob.get(ae.jobId) ?? 0) + Number(ae.amount)),
+          );
+        }
+
+        const allocatedByJob = new Map<string, number>();
+        for (const ea of existingAllocations) {
+          allocatedByJob.set(
+            ea.jobId,
+            roundMoney((allocatedByJob.get(ea.jobId) ?? 0) + Number(ea.amount)),
+          );
+        }
+
+        let remainingToAllocate = paymentAmount;
+        const seenJobs = new Set<string>();
+        for (const ae of accrualEntries) {
+          if (!ae.jobId || seenJobs.has(ae.jobId)) continue;
+          seenJobs.add(ae.jobId);
+
+          const accrued = accruedByJob.get(ae.jobId) ?? 0;
+          const allocated = allocatedByJob.get(ae.jobId) ?? 0;
+          const outstanding = roundMoney(Math.max(0, accrued - allocated));
+
+          if (outstanding > 0 && remainingToAllocate > 0) {
+            const allocAmt = roundMoney(Math.min(remainingToAllocate, outstanding));
+            if (allocAmt > 0) {
+              finalAllocations.push({ jobId: ae.jobId, amount: allocAmt });
+              remainingToAllocate = roundMoney(remainingToAllocate - allocAmt);
+            }
+          }
+          if (remainingToAllocate <= 0) break;
         }
       }
 
-      // 5. Create entry
+      // 6. Create Entry
       const entry = await tx.karigarFinancialEntry.create({
         data: {
           shopId,
           workshopId,
           type: "SETTLEMENT_PAYMENT",
-          amount: new Prisma.Decimal(roundMoney(dto.amount)),
+          amount: new Prisma.Decimal(paymentAmount),
           currency: workshop.shop.currency ?? "NPR",
-          paymentMethod: dto.paymentMethod ?? null,
+          paymentMethod: dto.paymentMethod ?? "CASH",
           reference: dto.reference?.slice(0, 120) ?? null,
           note: dto.note?.slice(0, 1000) ?? null,
           idempotencyKey: dto.idempotencyKey ?? null,
@@ -1924,19 +2081,36 @@ export class KarigarService {
         },
       });
 
-      // 6. Create allocations if any
-      if (dto.allocations && dto.allocations.length > 0) {
+      // 7. Create Allocations
+      if (finalAllocations.length > 0) {
         await tx.karigarFinancialAllocation.createMany({
-          data: dto.allocations.map((a) => ({
+          data: finalAllocations.map((a) => ({
             shopId,
             financialEntryId: entry.id,
             jobId: a.jobId,
-            amount: new Prisma.Decimal(roundMoney(a.amount)),
+            amount: new Prisma.Decimal(a.amount),
           })),
         });
       }
 
-      // 7. Update wageDue compatibility cache
+      // 8. Post to General Ledger
+      const monetary = await this.accounting.prepareMonetaryContext(
+        paymentAmount,
+        (workshop.shop.currency ?? CurrencyCode.NPR) as CurrencyCode,
+      );
+      await this.accounting.postKarigarSettlementPayment(tx, {
+        ...monetary,
+        shopId,
+        financialEntryId: entry.id,
+        workshopId: workshop.id,
+        artisanName: workshop.artisan || workshop.name,
+        method: dto.paymentMethod ?? "CASH",
+        reference: dto.reference ?? null,
+        transactionDate: entry.createdAt,
+        actorUserId: userId,
+      });
+
+      // 9. Update workshop wageDue compatibility cache
       const updatedEntries = await tx.karigarFinancialEntry.findMany({
         where: { shopId, workshopId },
         select: { type: true, amount: true },
@@ -1963,11 +2137,21 @@ export class KarigarService {
     userId: string | undefined,
     dto: RecordKarigarAdvanceDto,
   ) {
-    if (dto.amount <= 0) {
+    const advanceAmount = roundMoney(dto.amount);
+    if (advanceAmount <= 0) {
       throw new BadRequestException("Advance amount must be greater than zero");
     }
 
     return this.prisma.$transaction(async (tx) => {
+      // 1. Lock workshop row
+      const lockedRows = await tx.$queryRaw<
+        { id: string }[]
+      >`SELECT "id" FROM "KarigarWorkshop" WHERE "id" = ${workshopId} AND "shopId" = ${shopId} FOR UPDATE`;
+      if (!lockedRows || lockedRows.length === 0) {
+        throw new NotFoundException("Karigar not found");
+      }
+
+      // 2. Check Idempotency with fingerprint matching
       if (dto.idempotencyKey) {
         const existing = await tx.karigarFinancialEntry.findUnique({
           where: {
@@ -1978,6 +2162,17 @@ export class KarigarService {
           },
         });
         if (existing) {
+          const isSameFingerprint =
+            existing.workshopId === workshopId &&
+            existing.type === "ADVANCE_PAYMENT" &&
+            Math.abs(Number(existing.amount) - advanceAmount) < 0.001;
+
+          if (!isSameFingerprint) {
+            throw new ConflictException(
+              "Idempotency key reused for a different advance payload",
+            );
+          }
+
           const allEntries = await tx.karigarFinancialEntry.findMany({
             where: { shopId, workshopId },
             select: { type: true, amount: true },
@@ -2000,14 +2195,31 @@ export class KarigarService {
           shopId,
           workshopId,
           type: "ADVANCE_PAYMENT",
-          amount: new Prisma.Decimal(roundMoney(dto.amount)),
+          amount: new Prisma.Decimal(advanceAmount),
           currency: workshop.shop.currency ?? "NPR",
-          paymentMethod: dto.paymentMethod ?? null,
+          paymentMethod: dto.paymentMethod ?? "CASH",
           reference: dto.reference?.slice(0, 120) ?? null,
           note: dto.note?.slice(0, 1000) ?? null,
           idempotencyKey: dto.idempotencyKey ?? null,
           createdBy: userId ?? null,
         },
+      });
+
+      // Post to General Ledger
+      const monetary = await this.accounting.prepareMonetaryContext(
+        advanceAmount,
+        (workshop.shop.currency ?? CurrencyCode.NPR) as CurrencyCode,
+      );
+      await this.accounting.postKarigarAdvancePayment(tx, {
+        ...monetary,
+        shopId,
+        financialEntryId: entry.id,
+        workshopId: workshop.id,
+        artisanName: workshop.artisan || workshop.name,
+        method: dto.paymentMethod ?? "CASH",
+        reference: dto.reference ?? null,
+        transactionDate: entry.createdAt,
+        actorUserId: userId,
       });
 
       const updatedEntries = await tx.karigarFinancialEntry.findMany({
@@ -2036,7 +2248,8 @@ export class KarigarService {
     userId: string | undefined,
     dto: RecordKarigarAdjustmentDto,
   ) {
-    if (dto.amount <= 0) {
+    const adjAmount = roundMoney(dto.amount);
+    if (adjAmount <= 0) {
       throw new BadRequestException("Adjustment amount must be greater than zero");
     }
     if (!dto.note || !dto.note.trim()) {
@@ -2052,6 +2265,15 @@ export class KarigarService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      // 1. Lock workshop row
+      const lockedRows = await tx.$queryRaw<
+        { id: string }[]
+      >`SELECT "id" FROM "KarigarWorkshop" WHERE "id" = ${workshopId} AND "shopId" = ${shopId} FOR UPDATE`;
+      if (!lockedRows || lockedRows.length === 0) {
+        throw new NotFoundException("Karigar not found");
+      }
+
+      // 2. Check Idempotency with fingerprint matching
       if (dto.idempotencyKey) {
         const existing = await tx.karigarFinancialEntry.findUnique({
           where: {
@@ -2062,6 +2284,17 @@ export class KarigarService {
           },
         });
         if (existing) {
+          const isSameFingerprint =
+            existing.workshopId === workshopId &&
+            existing.type === dto.type &&
+            Math.abs(Number(existing.amount) - adjAmount) < 0.001;
+
+          if (!isSameFingerprint) {
+            throw new ConflictException(
+              "Idempotency key reused for a different adjustment payload",
+            );
+          }
+
           const allEntries = await tx.karigarFinancialEntry.findMany({
             where: { shopId, workshopId },
             select: { type: true, amount: true },
@@ -2084,12 +2317,29 @@ export class KarigarService {
           shopId,
           workshopId,
           type: dto.type,
-          amount: new Prisma.Decimal(roundMoney(dto.amount)),
+          amount: new Prisma.Decimal(adjAmount),
           currency: workshop.shop.currency ?? "NPR",
           note: dto.note.slice(0, 1000),
           idempotencyKey: dto.idempotencyKey ?? null,
           createdBy: userId ?? null,
         },
+      });
+
+      // Post to General Ledger
+      const monetary = await this.accounting.prepareMonetaryContext(
+        adjAmount,
+        (workshop.shop.currency ?? CurrencyCode.NPR) as CurrencyCode,
+      );
+      await this.accounting.postKarigarAdjustment(tx, {
+        ...monetary,
+        shopId,
+        financialEntryId: entry.id,
+        workshopId: workshop.id,
+        artisanName: workshop.artisan || workshop.name,
+        type: dto.type,
+        note: dto.note,
+        transactionDate: entry.createdAt,
+        actorUserId: userId,
       });
 
       const updatedEntries = await tx.karigarFinancialEntry.findMany({
@@ -2118,6 +2368,15 @@ export class KarigarService {
     userId: string | undefined,
     dto: RecordKarigarMetalReturnDto,
   ) {
+    if (dto.jobId) {
+      const job = await this.requireJob(shopId, dto.jobId);
+      if (job.workshopId && job.workshopId !== workshopId) {
+        throw new BadRequestException(
+          "Specified job belongs to a different karigar workshop",
+        );
+      }
+    }
+
     return this.addMovement(shopId, dto.jobId ?? null, userId, {
       type: dto.type as KarigarMovementType,
       weightGrams: dto.weightGrams,

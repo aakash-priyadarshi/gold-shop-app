@@ -13,7 +13,10 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { UserRole } from "@prisma/client";
 import { FeatureGateGuard } from "../core/subscriptions/feature-gate.guard";
 import { RequireFeature } from "../core/subscriptions/require-feature.decorator";
 import {
@@ -39,7 +42,8 @@ import { KarigarService } from "./karigar.service";
 
 @ApiTags("karigar")
 @Controller("karigar")
-@UseGuards(JwtAuthGuard, FeatureGateGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGateGuard)
+@Roles(UserRole.SHOPKEEPER, UserRole.ADMIN)
 @ApiBearerAuth()
 export class KarigarController {
   constructor(private readonly karigarService: KarigarService) {}

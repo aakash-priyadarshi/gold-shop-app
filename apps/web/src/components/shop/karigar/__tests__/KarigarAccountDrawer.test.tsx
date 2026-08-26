@@ -16,8 +16,13 @@ vi.mock("@/lib/api", () => ({
 }));
 
 vi.mock("@/providers/translation-provider", () => ({
-  useT: () => ({
+  useT: () => (s: string) => s,
+  useTranslation: () => ({
     t: (s: string) => s,
+    locale: "en",
+    register: () => {},
+    loading: false,
+    hasTranslation: () => true,
   }),
 }));
 
@@ -34,13 +39,15 @@ describe("KarigarAccountDrawer", () => {
       wastageLimit: 1.5,
     },
     currency: "NPR",
-    amountPayable: 12500,
-    advanceBalance: 0,
-    netPayable: 12500,
-    totalWagesAccrued: 35000,
-    totalSettlementsPaid: 22500,
-    totalAdvances: 0,
-    openJobs: 2,
+    summary: {
+      amountPayable: 12500,
+      advanceBalance: 0,
+      netPayable: 12500,
+      totalWagesAccrued: 35000,
+      totalSettlementsPaid: 22500,
+      totalAdvances: 0,
+    },
+    openJobs: [],
     overdueJobs: 0,
     cancelledJobs: 0,
     metalBalances: [
@@ -96,18 +103,18 @@ describe("KarigarAccountDrawer", () => {
     // Workshop Name & Artisan
     await waitFor(() => {
       expect(screen.getByText("Kathmandu Filigree Works")).toBeInTheDocument();
-      expect(screen.getByText("Bikash Shakya")).toBeInTheDocument();
+      expect(screen.getByText(/Bikash Shakya/)).toBeInTheDocument();
     });
 
     // KPI values
-    expect(screen.getByText(/Amount Payable/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Wages Payable/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/12,500/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/35,000/i)).toBeInTheDocument();
     expect(screen.getByText(/22,500/i)).toBeInTheDocument();
 
     // Metal Float
-    expect(screen.getByText("goldGrains24k")).toBeInTheDocument();
-    expect(screen.getByText(/20.000 g/i)).toBeInTheDocument();
+    expect(screen.getAllByText("goldGrains24k").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/20.000g/i)).toBeInTheDocument();
 
     // Statement item
     expect(screen.getByText("Filigree Bridal Necklace")).toBeInTheDocument();

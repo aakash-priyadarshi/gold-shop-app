@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { Loader2, X, AlertCircle, CheckCircle2, Coins, ArrowDownLeft } from "lucide-react";
+import { Loader2, X, AlertCircle } from "lucide-react";
 import { karigarApi } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { T } from "@/components/ui/T";
 
 interface JobCostSummaryModalProps {
   jobId: string;
@@ -34,7 +35,9 @@ export function JobCostSummaryModal({
         }
       } catch (err: any) {
         if (mounted) {
-          setError(err.response?.data?.message || "Failed to load job cost breakdown");
+          setError(
+            err.response?.data?.message || "Failed to load job cost breakdown",
+          );
         }
       } finally {
         if (mounted) {
@@ -56,7 +59,7 @@ export function JobCostSummaryModal({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                Job Cost & Wage Reconciliation
+                <T>Job Cost & Wage Reconciliation</T>
               </h3>
               {data?.status && (
                 <Badge variant="outline" className="text-xs">
@@ -65,7 +68,8 @@ export function JobCostSummaryModal({
               )}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              {data?.product || "Production Job Details"} • Artisan: {data?.artisan || "—"}
+              {data?.product || <T>Production Job Details</T>} • <T>Artisan</T>:{" "}
+              {data?.artisan || "—"}
             </p>
           </div>
           <button
@@ -81,7 +85,9 @@ export function JobCostSummaryModal({
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400">
               <Loader2 className="w-8 h-8 animate-spin mb-2" />
-              <p className="text-sm">Loading job reconciliation data...</p>
+              <p className="text-sm">
+                <T>Loading job reconciliation data...</T>
+              </p>
             </div>
           ) : error ? (
             <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-rose-700 dark:text-rose-300 text-sm flex items-center gap-3">
@@ -94,26 +100,35 @@ export function JobCostSummaryModal({
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5">
                   <span className="text-[11px] font-semibold uppercase text-slate-500 block">
-                    Accrued Wage
+                    <T>Accrued Wage</T>
                   </span>
                   <p className="text-lg font-bold text-slate-900 dark:text-white mt-1">
-                    {currency} {data.wageAccrued.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {currency}{" "}
+                    {data.wageAccrued.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
                   </p>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5">
                   <span className="text-[11px] font-semibold uppercase text-slate-500 block">
-                    Settlements Allocated
+                    <T>Settlements Allocated</T>
                   </span>
                   <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                    {currency} {data.settlementAllocated.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {currency}{" "}
+                    {data.settlementAllocated.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
                   </p>
                 </div>
                 <div className="bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3.5">
                   <span className="text-[11px] font-semibold uppercase text-amber-800 dark:text-amber-400 block">
-                    Wage Outstanding
+                    <T>Wage Outstanding</T>
                   </span>
                   <p className="text-lg font-bold text-amber-900 dark:text-amber-300 mt-1">
-                    {currency} {data.wageOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {currency}{" "}
+                    {data.wageOutstanding.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
                   </p>
                 </div>
               </div>
@@ -122,16 +137,24 @@ export function JobCostSummaryModal({
               {data.metalBalances?.length > 0 && (
                 <div>
                   <h4 className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-2">
-                    Metal Float on this Job
+                    <T>Metal Float on this Job</T>
                   </h4>
                   <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
                     <table className="w-full text-xs text-left">
                       <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800">
                         <tr>
-                          <th className="p-2.5">Material</th>
-                          <th className="p-2.5 text-right">Issued</th>
-                          <th className="p-2.5 text-right">Returned</th>
-                          <th className="p-2.5 text-right font-bold text-slate-900 dark:text-white">Outstanding</th>
+                          <th className="p-2.5">
+                            <T>Material</T>
+                          </th>
+                          <th className="p-2.5 text-right">
+                            <T>Issued</T>
+                          </th>
+                          <th className="p-2.5 text-right">
+                            <T>Returned</T>
+                          </th>
+                          <th className="p-2.5 text-right font-bold text-slate-900 dark:text-white">
+                            <T>Outstanding</T>
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -161,11 +184,11 @@ export function JobCostSummaryModal({
               <div className="space-y-4">
                 <div>
                   <h4 className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-2">
-                    Wage Accrual Events ({data.accruals?.length || 0})
+                    <T>Wage Accrual Events</T> ({data.accruals?.length || 0})
                   </h4>
                   {data.accruals?.length === 0 ? (
                     <p className="text-xs text-slate-400 italic py-1">
-                      No wage accrual recorded yet for this job.
+                      <T>No wage accrual recorded yet for this job.</T>
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -176,14 +199,20 @@ export function JobCostSummaryModal({
                         >
                           <div>
                             <span className="font-semibold text-slate-900 dark:text-white block">
-                              {acc.note || "Finished return wage accrual"}
+                              {acc.note || <T>Finished return wage accrual</T>}
                             </span>
                             <span className="text-slate-400 text-[11px]">
-                              {format(new Date(acc.createdAt), "dd MMM yyyy, hh:mm a")}
+                              {format(
+                                new Date(acc.createdAt),
+                                "dd MMM yyyy, hh:mm a",
+                              )}
                             </span>
                           </div>
                           <span className="font-bold text-slate-900 dark:text-white">
-                            +{currency} {acc.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            +{currency}{" "}
+                            {acc.amount.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                            })}
                           </span>
                         </div>
                       ))}
@@ -193,11 +222,12 @@ export function JobCostSummaryModal({
 
                 <div>
                   <h4 className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-2">
-                    Settlement Allocations ({data.allocations?.length || 0})
+                    <T>Settlement Allocations</T> (
+                    {data.allocations?.length || 0})
                   </h4>
                   {data.allocations?.length === 0 ? (
                     <p className="text-xs text-slate-400 italic py-1">
-                      No payments allocated to this job yet.
+                      <T>No payments allocated to this job yet.</T>
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -208,14 +238,23 @@ export function JobCostSummaryModal({
                         >
                           <div>
                             <span className="font-semibold text-emerald-900 dark:text-emerald-300 block">
-                              {alloc.paymentMethod || "Settlement payment"} {alloc.reference ? `(${alloc.reference})` : ""}
+                              {alloc.paymentMethod || (
+                                <T>Settlement payment</T>
+                              )}{" "}
+                              {alloc.reference ? `(${alloc.reference})` : ""}
                             </span>
                             <span className="text-slate-400 text-[11px]">
-                              {format(new Date(alloc.createdAt), "dd MMM yyyy, hh:mm a")}
+                              {format(
+                                new Date(alloc.createdAt),
+                                "dd MMM yyyy, hh:mm a",
+                              )}
                             </span>
                           </div>
                           <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                            -{currency} {alloc.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            -{currency}{" "}
+                            {alloc.amount.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                            })}
                           </span>
                         </div>
                       ))}
@@ -230,7 +269,7 @@ export function JobCostSummaryModal({
         {/* Footer */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 flex justify-end">
           <Button variant="outline" size="sm" onClick={onClose}>
-            Close
+            <T>Close</T>
           </Button>
         </div>
       </div>

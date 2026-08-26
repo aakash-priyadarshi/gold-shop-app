@@ -2,6 +2,7 @@
 
 import React from "react";
 import { format } from "date-fns";
+import { T } from "@/components/ui/T";
 
 export interface KarigarStatementPrintProps {
   workshop: {
@@ -52,12 +53,14 @@ export function KarigarStatementPrint({
   summary,
   metalBalances,
   items,
-  shopName = "Orivraa Jewellers",
+  shopName,
   onClose,
 }: KarigarStatementPrintProps) {
   const handlePrint = () => {
     window.print();
   };
+
+  const displayName = shopName || workshop.name || "Jewellery Workshop";
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm p-4 sm:p-6 flex justify-center print:p-0 print:bg-white print:static">
@@ -66,10 +69,10 @@ export function KarigarStatementPrint({
         <div className="flex items-center justify-between pb-6 mb-6 border-b border-slate-200 print:hidden">
           <div>
             <h2 className="text-xl font-bold text-slate-900">
-              Karigar Account Statement Print Preview
+              <T>Karigar Account Statement Print Preview</T>
             </h2>
             <p className="text-sm text-slate-500">
-              Formatted A4 voucher & ledger statement
+              <T>Formatted A4 voucher & ledger statement</T>
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -77,14 +80,14 @@ export function KarigarStatementPrint({
               onClick={handlePrint}
               className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium shadow transition"
             >
-              Print Statement
+              <T>Print Statement</T>
             </button>
             {onClose && (
               <button
                 onClick={onClose}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition"
               >
-                Close
+                <T>Close</T>
               </button>
             )}
           </div>
@@ -96,14 +99,16 @@ export function KarigarStatementPrint({
           <div className="flex justify-between items-start border-b border-slate-300 pb-6 mb-6">
             <div>
               <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
-                {shopName}
+                {displayName}
               </h1>
               <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-0.5">
-                Karigar Reconciliation & Statement of Account
+                <T>Karigar Reconciliation & Statement of Account</T>
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-slate-400 font-medium">Statement Date</p>
+              <p className="text-xs text-slate-400 font-medium">
+                <T>Statement Date</T>
+              </p>
               <p className="text-sm font-bold text-slate-800">
                 {format(new Date(), "dd MMMM yyyy, hh:mm a")}
               </p>
@@ -114,12 +119,16 @@ export function KarigarStatementPrint({
           <div className="grid grid-cols-2 gap-6 bg-slate-50 rounded-xl p-4 mb-6 border border-slate-200 text-sm">
             <div>
               <span className="text-xs font-bold uppercase text-slate-400 block mb-1">
-                Karigar / Workshop Details
+                <T>Karigar / Workshop Details</T>
               </span>
-              <p className="font-bold text-slate-900 text-base">{workshop.name}</p>
+              <p className="font-bold text-slate-900 text-base">
+                {workshop.name}
+              </p>
               <p className="text-slate-700 font-medium">{workshop.artisan}</p>
               {workshop.phone && (
-                <p className="text-slate-600 text-xs mt-0.5">Tel: {workshop.phone}</p>
+                <p className="text-slate-600 text-xs mt-0.5">
+                  <T>Tel</T>: {workshop.phone}
+                </p>
               )}
               {workshop.location && (
                 <p className="text-slate-600 text-xs">{workshop.location}</p>
@@ -127,16 +136,20 @@ export function KarigarStatementPrint({
             </div>
             <div className="space-y-1">
               <span className="text-xs font-bold uppercase text-slate-400 block mb-1">
-                Terms & Rates
+                <T>Terms & Rates</T>
               </span>
               <div className="flex justify-between text-xs">
-                <span className="text-slate-600">Base Wage Rate:</span>
+                <span className="text-slate-600">
+                  <T>Base Wage Rate</T>:
+                </span>
                 <span className="font-bold text-slate-900">
                   {currency} {workshop.wageRatePerGram.toLocaleString()} / g
                 </span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-slate-600">Allowed Wastage Limit:</span>
+                <span className="text-slate-600">
+                  <T>Allowed Wastage Limit</T>:
+                </span>
                 <span className="font-bold text-slate-900">
                   {workshop.wastageLimit}%
                 </span>
@@ -148,23 +161,33 @@ export function KarigarStatementPrint({
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50">
               <span className="text-[11px] font-bold text-slate-500 uppercase block">
-                Total Wages Accrued
+                <T>Total Wages Accrued</T>
               </span>
               <p className="text-lg font-black text-slate-900 mt-1">
-                {currency} {summary.totalWagesAccrued.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                {currency}{" "}
+                {summary.totalWagesAccrued.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
               </p>
             </div>
             <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50">
               <span className="text-[11px] font-bold text-slate-500 uppercase block">
-                Settlements Paid
+                <T>Settlements Paid</T>
               </span>
               <p className="text-lg font-black text-emerald-700 mt-1">
-                {currency} {summary.totalSettlementsPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                {currency}{" "}
+                {summary.totalSettlementsPaid.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
               </p>
             </div>
             <div className="border border-amber-300 rounded-xl p-3 bg-amber-50/60">
               <span className="text-[11px] font-bold text-amber-800 uppercase block">
-                {summary.advanceBalance > 0 ? "Advance in Hand" : "Net Wages Payable"}
+                {summary.advanceBalance > 0 ? (
+                  <T>Advance in Hand</T>
+                ) : (
+                  <T>Net Wages Payable</T>
+                )}
               </span>
               <p className="text-lg font-black text-amber-900 mt-1">
                 {currency}{" "}
@@ -180,15 +203,23 @@ export function KarigarStatementPrint({
           {metalBalances.length > 0 && (
             <div className="mb-6">
               <h3 className="text-xs font-bold uppercase text-slate-600 tracking-wider mb-2">
-                Physical Metal Float with Karigar
+                <T>Physical Metal Float with Karigar</T>
               </h3>
               <table className="w-full text-xs text-left border-collapse border border-slate-200 rounded-lg overflow-hidden">
                 <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
                   <tr>
-                    <th className="p-2 border-r border-slate-200">Material</th>
-                    <th className="p-2 text-right border-r border-slate-200">Total Issued (g)</th>
-                    <th className="p-2 text-right border-r border-slate-200">Total Returned (g)</th>
-                    <th className="p-2 text-right font-bold text-slate-900">Outstanding Float (g)</th>
+                    <th className="p-2 border-r border-slate-200">
+                      <T>Material</T>
+                    </th>
+                    <th className="p-2 text-right border-r border-slate-200">
+                      <T>Total Issued (g)</T>
+                    </th>
+                    <th className="p-2 text-right border-r border-slate-200">
+                      <T>Total Returned (g)</T>
+                    </th>
+                    <th className="p-2 text-right font-bold text-slate-900">
+                      <T>Outstanding Float (g)</T>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -216,24 +247,39 @@ export function KarigarStatementPrint({
           {/* Transactions / Statement Table */}
           <div className="mb-8">
             <h3 className="text-xs font-bold uppercase text-slate-600 tracking-wider mb-2">
-              Transaction History (Timeline)
+              <T>Transaction History (Timeline)</T>
             </h3>
             <table className="w-full text-xs text-left border-collapse border border-slate-200 rounded-lg overflow-hidden">
               <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="p-2">Date</th>
-                  <th className="p-2">Type</th>
-                  <th className="p-2">Details / Job</th>
-                  <th className="p-2">Reference / Notes</th>
-                  <th className="p-2 text-right">Metal (g)</th>
-                  <th className="p-2 text-right">Amount ({currency})</th>
+                  <th className="p-2">
+                    <T>Date</T>
+                  </th>
+                  <th className="p-2">
+                    <T>Type</T>
+                  </th>
+                  <th className="p-2">
+                    <T>Details / Job</T>
+                  </th>
+                  <th className="p-2">
+                    <T>Reference / Notes</T>
+                  </th>
+                  <th className="p-2 text-right">
+                    <T>Metal (g)</T>
+                  </th>
+                  <th className="p-2 text-right">
+                    <T>Amount</T> ({currency})
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-4 text-center text-slate-400 italic">
-                      No transaction records found.
+                    <td
+                      colSpan={6}
+                      className="p-4 text-center text-slate-400 italic"
+                    >
+                      <T>No transaction records found.</T>
                     </td>
                   </tr>
                 ) : (
@@ -261,11 +307,15 @@ export function KarigarStatementPrint({
                         {item.note || "—"}
                       </td>
                       <td className="p-2 text-right font-medium text-slate-800 whitespace-nowrap">
-                        {item.quantity != null ? `${item.quantity.toFixed(3)}g` : "—"}
+                        {item.quantity != null
+                          ? `${item.quantity.toFixed(3)}g`
+                          : "—"}
                       </td>
                       <td className="p-2 text-right font-bold text-slate-900 whitespace-nowrap">
                         {item.amount != null
-                          ? item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })
+                          ? item.amount.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                            })
                           : "—"}
                       </td>
                     </tr>
@@ -282,22 +332,27 @@ export function KarigarStatementPrint({
             <div>
               <div className="border-b border-slate-400 h-12 mb-2"></div>
               <p className="font-bold text-slate-800 text-center">
-                Jeweller / Authorized Signatory
+                <T>Jeweller / Authorized Signatory</T>
               </p>
-              <p className="text-[10px] text-slate-400 text-center">Seal & Signature</p>
+              <p className="text-[10px] text-slate-400 text-center">
+                <T>Seal & Signature</T>
+              </p>
             </div>
             <div>
               <div className="border-b border-slate-400 h-12 mb-2"></div>
               <p className="font-bold text-slate-800 text-center">
-                Karigar / Artisan Signature
+                <T>Karigar / Artisan Signature</T>
               </p>
               <p className="text-[10px] text-slate-400 text-center">
-                Acknowledged & Agreed
+                <T>Acknowledged & Agreed</T>
               </p>
             </div>
           </div>
           <p className="text-[10px] text-slate-400 text-center mt-6">
-            Generated via Orivraa Jewellery OS • Authoritative Karigar Reconciliation Ledger
+            <T>
+              Generated via Orivraa Jewellery OS • Authoritative Karigar
+              Reconciliation Ledger
+            </T>
           </p>
         </div>
       </div>

@@ -1494,7 +1494,7 @@ function KarigarSupplyChainLedger() {
                               <td className="py-3 px-3 font-bold text-end">
                                 {w.advanceBalance && w.advanceBalance > 0 ? (
                                   <span className="text-purple-600 dark:text-purple-400 text-xs font-semibold">
-                                    Adv: {formatCurrency(w.advanceBalance)}
+                                    <T>Adv</T>: {formatCurrency(w.advanceBalance)}
                                   </span>
                                 ) : (
                                   <span className="text-gray-900 dark:text-gray-100">
