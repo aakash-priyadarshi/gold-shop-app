@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { format } from "date-fns";
+import { v4 as uuidv4 } from "uuid";
 import {
   X,
   Loader2,
@@ -43,6 +44,25 @@ export interface KarigarAccountDrawerProps {
   onRefreshParent?: () => void;
 }
 
+export function createIdempotencyKey(): string {
+  const cryptoApi =
+    typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+  if (typeof cryptoApi?.randomUUID === "function") {
+    return cryptoApi.randomUUID();
+  }
+
+  if (typeof cryptoApi?.getRandomValues === "function") {
+    const bytes = cryptoApi.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
+    return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10).join("")}`;
+  }
+
+  // uuid v4 uses the platform CSPRNG and never falls back to Math.random.
+  return uuidv4();
+}
+
 export function KarigarAccountDrawer({
   workshopId,
   shopCurrency = "NPR",
@@ -76,16 +96,16 @@ export function KarigarAccountDrawer({
 
   // Idempotency keys state (stable across retries, rotated on success, modal close, or material form edit)
   const [payIdempotencyKey, setPayIdempotencyKey] = useState<string>(() =>
-    crypto.randomUUID(),
+    createIdempotencyKey(),
   );
   const [advIdempotencyKey, setAdvIdempotencyKey] = useState<string>(() =>
-    crypto.randomUUID(),
+    createIdempotencyKey(),
   );
   const [retIdempotencyKey, setRetIdempotencyKey] = useState<string>(() =>
-    crypto.randomUUID(),
+    createIdempotencyKey(),
   );
   const [adjIdempotencyKey, setAdjIdempotencyKey] = useState<string>(() =>
-    crypto.randomUUID(),
+    createIdempotencyKey(),
   );
 
   // Last attempted payload trackers to detect material form edits after failed attempts
@@ -126,7 +146,7 @@ export function KarigarAccountDrawer({
     setPayRef("");
     setPayNote("");
     setPayMethod("CASH");
-    setPayIdempotencyKey(crypto.randomUUID());
+    setPayIdempotencyKey(createIdempotencyKey());
     lastPayAttemptPayload.current = null;
   };
 
@@ -136,7 +156,7 @@ export function KarigarAccountDrawer({
     setAdvRef("");
     setAdvNote("");
     setAdvMethod("CASH");
-    setAdvIdempotencyKey(crypto.randomUUID());
+    setAdvIdempotencyKey(createIdempotencyKey());
     lastAdvAttemptPayload.current = null;
   };
 
@@ -147,7 +167,7 @@ export function KarigarAccountDrawer({
     setRetNote("");
     setRetType("RETURN_UNUSED");
     setRetMetalKey("goldGrains24k");
-    setRetIdempotencyKey(crypto.randomUUID());
+    setRetIdempotencyKey(createIdempotencyKey());
     lastRetAttemptPayload.current = null;
   };
 
@@ -156,7 +176,7 @@ export function KarigarAccountDrawer({
     setAdjAmount("");
     setAdjNote("");
     setAdjType("ADJUSTMENT_INCREASE");
-    setAdjIdempotencyKey(crypto.randomUUID());
+    setAdjIdempotencyKey(createIdempotencyKey());
     lastAdjAttemptPayload.current = null;
   };
 
@@ -335,7 +355,7 @@ export function KarigarAccountDrawer({
       lastPayAttemptPayload.current !== null &&
       lastPayAttemptPayload.current !== currentPayload
     ) {
-      keyToUse = crypto.randomUUID();
+      keyToUse = createIdempotencyKey();
       setPayIdempotencyKey(keyToUse);
     }
     lastPayAttemptPayload.current = currentPayload;
@@ -389,7 +409,7 @@ export function KarigarAccountDrawer({
       lastAdvAttemptPayload.current !== null &&
       lastAdvAttemptPayload.current !== currentPayload
     ) {
-      keyToUse = crypto.randomUUID();
+      keyToUse = createIdempotencyKey();
       setAdvIdempotencyKey(keyToUse);
     }
     lastAdvAttemptPayload.current = currentPayload;
@@ -438,7 +458,7 @@ export function KarigarAccountDrawer({
       lastRetAttemptPayload.current !== null &&
       lastRetAttemptPayload.current !== currentPayload
     ) {
-      keyToUse = crypto.randomUUID();
+      keyToUse = createIdempotencyKey();
       setRetIdempotencyKey(keyToUse);
     }
     lastRetAttemptPayload.current = currentPayload;
@@ -490,7 +510,7 @@ export function KarigarAccountDrawer({
       lastAdjAttemptPayload.current !== null &&
       lastAdjAttemptPayload.current !== currentPayload
     ) {
-      keyToUse = crypto.randomUUID();
+      keyToUse = createIdempotencyKey();
       setAdjIdempotencyKey(keyToUse);
     }
     lastAdjAttemptPayload.current = currentPayload;

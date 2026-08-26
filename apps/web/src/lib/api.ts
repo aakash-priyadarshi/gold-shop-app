@@ -642,7 +642,7 @@ export const karigarApi = {
       paymentMethod?: string;
       reference?: string;
       note?: string;
-      idempotencyKey?: string;
+      idempotencyKey: string;
       allocations?: Array<{ jobId: string; amount: number }>;
     },
   ) => api.post(`/karigar/workshops/${workshopId}/account/payment`, data),
@@ -653,7 +653,7 @@ export const karigarApi = {
       paymentMethod?: string;
       reference?: string;
       note?: string;
-      idempotencyKey?: string;
+      idempotencyKey: string;
     },
   ) => api.post(`/karigar/workshops/${workshopId}/account/advance`, data),
   recordAdjustment: (
@@ -662,7 +662,7 @@ export const karigarApi = {
       type: "ADJUSTMENT_INCREASE" | "ADJUSTMENT_DECREASE";
       amount: number;
       note: string;
-      idempotencyKey?: string;
+      idempotencyKey: string;
     },
   ) => api.post(`/karigar/workshops/${workshopId}/account/adjustment`, data),
   recordMetalReturn: (
@@ -673,7 +673,7 @@ export const karigarApi = {
       metalKey: string;
       jobId?: string;
       note?: string;
-      idempotencyKey?: string;
+      idempotencyKey: string;
     },
   ) => api.post(`/karigar/workshops/${workshopId}/account/metal-return`, data),
   getJobCostSummary: (jobId: string) =>

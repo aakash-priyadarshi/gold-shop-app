@@ -1,7 +1,10 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { KarigarAccountDrawer } from "../KarigarAccountDrawer";
+import {
+  KarigarAccountDrawer,
+  createIdempotencyKey,
+} from "../KarigarAccountDrawer";
 import { karigarApi } from "@/lib/api";
 
 vi.mock("@/lib/api", () => ({
@@ -91,6 +94,27 @@ describe("KarigarAccountDrawer", () => {
     (karigarApi.getStatement as any).mockResolvedValue({ data: mockStatement });
   });
 
+  it("uses getRandomValues when randomUUID is unavailable", () => {
+    const cryptoApi = globalThis.crypto;
+    const original = Object.getOwnPropertyDescriptor(cryptoApi, "randomUUID");
+    Object.defineProperty(cryptoApi, "randomUUID", {
+      configurable: true,
+      value: undefined,
+    });
+
+    try {
+      expect(createIdempotencyKey()).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+    } finally {
+      if (original) {
+        Object.defineProperty(cryptoApi, "randomUUID", original);
+      } else {
+        delete (cryptoApi as { randomUUID?: () => string }).randomUUID;
+      }
+    }
+  });
+
   it("renders workshop account summary, KPI banner, and statement feed", async () => {
     render(
       <KarigarAccountDrawer
@@ -107,13 +131,17 @@ describe("KarigarAccountDrawer", () => {
     });
 
     // KPI values
-    expect(screen.getAllByText(/Wages Payable/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Wages Payable/i).length).toBeGreaterThanOrEqual(
+      1,
+    );
     expect(screen.getAllByText(/12,500/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/35,000/i)).toBeInTheDocument();
     expect(screen.getByText(/22,500/i)).toBeInTheDocument();
 
     // Metal Float
-    expect(screen.getAllByText("goldGrains24k").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("goldGrains24k").length).toBeGreaterThanOrEqual(
+      1,
+    );
     expect(screen.getByText(/20.000g/i)).toBeInTheDocument();
 
     // Statement item

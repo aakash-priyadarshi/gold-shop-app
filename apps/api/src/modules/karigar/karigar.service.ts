@@ -25,6 +25,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { ShopPriceRebaseService } from "../shops/shop-price-rebase.service";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import { AccountingService } from "../accounting/accounting.service";
+import type { MonetaryContext } from "../accounting/accounting.types";
 import {
   AdvanceKarigarFloorDto,
   CreateCastingTreeDto,
@@ -77,6 +78,12 @@ const BUILT_IN_VAULT: Record<string, string> = {
   silverBullion999: "Silver Bullion (999)",
 };
 
+type KarigarMonetaryPreflight = {
+  currency: CurrencyCode;
+  operationContext: MonetaryContext;
+  openingBalanceContexts: Map<string, MonetaryContext>;
+};
+
 @Injectable()
 export class KarigarService {
   constructor(
@@ -92,7 +99,15 @@ export class KarigarService {
     }
     await this.priceRebase.ensureShopPricesMatchCurrency(shopId);
 
-    const [shop, workshops, jobs, reserves, movementGroups, financialGroups] =
+    const [
+      shop,
+      workshops,
+      jobs,
+      reserves,
+      movementGroups,
+      financialGroups,
+      stageUnusedMovements,
+    ] =
       await Promise.all([
         this.prisma.shop.findUnique({
           where: { id: shopId },
@@ -121,6 +136,19 @@ export class KarigarService {
           where: { shopId },
           _sum: { amount: true },
         }),
+        this.prisma.karigarMetalMovement.findMany({
+          where: {
+            shopId,
+            jobId: { not: null },
+            type: "RETURN_UNUSED",
+          },
+          select: {
+            jobId: true,
+            stage: true,
+            type: true,
+            weightGrams: true,
+          },
+        }),
       ]);
 
     const currentCurrency = shop?.currency ?? "NPR";
@@ -130,6 +158,21 @@ export class KarigarService {
           `Karigar snapshot contains financial entries in currency ${fg.currency} that differs from current shop currency ${currentCurrency}. Currency rebase must be migrated immutably.`,
         );
       }
+    }
+
+    const unusedReturnsByJob = new Map<
+      string,
+      Array<{
+        type: KarigarMovementType;
+        weightGrams: number;
+        stage: KarigarStage | null;
+      }>
+    >();
+    for (const movement of stageUnusedMovements) {
+      if (!movement.jobId) continue;
+      const returns = unusedReturnsByJob.get(movement.jobId) ?? [];
+      returns.push(movement);
+      unusedReturnsByJob.set(movement.jobId, returns);
     }
 
     const vaultReserves: Record<string, number> = {
@@ -244,9 +287,20 @@ export class KarigarService {
           goldLoss: loss,
         };
       }),
-      jobs: jobs.map((j) => this.serializeJob(j)),
+      jobs: jobs.map((j) =>
+        this.serializeJob({
+          ...j,
+          stageUnusedReturns: unusedReturnsByJob.get(j.id) ?? [],
+        }),
+      ),
       customMaterials,
-      goldLoss: this.buildGoldLossReport(jobs, workshops),
+      goldLoss: this.buildGoldLossReport(
+        jobs.map((job) => ({
+          ...job,
+          stageUnusedReturns: unusedReturnsByJob.get(job.id) ?? [],
+        })),
+        workshops,
+      ),
     };
   }
 
@@ -513,6 +567,7 @@ export class KarigarService {
     tx: Prisma.TransactionClient,
     shopId: string,
     workshopId: string,
+    openingBalanceContexts: Map<string, MonetaryContext>,
   ) {
     const unposted = await tx.karigarFinancialEntry.findMany({
       where: {
@@ -523,10 +578,12 @@ export class KarigarService {
       include: { workshop: { select: { artisan: true, name: true } } },
     });
     for (const entry of unposted) {
-      const monetary = await this.accounting.prepareMonetaryContext(
-        Number(entry.amount),
-        entry.currency,
-      );
+      const monetary = openingBalanceContexts.get(entry.id);
+      if (!monetary) {
+        throw new ConflictException(
+          "Opening balance changed while monetary context was being prepared. Retry the operation.",
+        );
+      }
       await this.accounting.postKarigarOpeningBalance(tx, {
         ...monetary,
         shopId,
@@ -536,6 +593,87 @@ export class KarigarService {
         transactionDate: entry.createdAt,
       });
     }
+  }
+
+  private async prepareKarigarMonetaryPreflight(
+    shopId: string,
+    workshopId: string,
+    operationAmount?: number,
+  ): Promise<KarigarMonetaryPreflight> {
+    const [shop, openingBalances] = await Promise.all([
+      this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { currency: true },
+      }),
+      this.prisma.karigarFinancialEntry.findMany({
+        where: { shopId, workshopId, type: "OPENING_BALANCE" },
+        select: { id: true, amount: true, currency: true },
+      }),
+    ]);
+    if (!shop) throw new NotFoundException("Shop not found");
+
+    const currency = (shop.currency ?? CurrencyCode.NPR) as CurrencyCode;
+    const [operationContext, openingBalanceEntries] = await Promise.all([
+      this.accounting.prepareMonetaryContext(operationAmount ?? 1, currency),
+      Promise.all(
+        openingBalances.map(async (entry) =>
+          [
+            entry.id,
+            await this.accounting.prepareMonetaryContext(
+              Number(entry.amount),
+              entry.currency,
+            ),
+          ] as const,
+        ),
+      ),
+    ]);
+
+    return {
+      currency,
+      operationContext,
+      openingBalanceContexts: new Map(openingBalanceEntries),
+    };
+  }
+
+  private assertPreparedShopCurrency(
+    preflight: KarigarMonetaryPreflight,
+    currentCurrency: CurrencyCode,
+  ) {
+    if (preflight.currency !== currentCurrency) {
+      throw new ConflictException(
+        "Shop currency changed while the ledger operation was being prepared. Retry the operation.",
+      );
+    }
+  }
+
+  private monetaryContextFromPreparedQuote(
+    amount: number,
+    currency: CurrencyCode,
+    quote: MonetaryContext,
+  ): MonetaryContext {
+    const transactionAmount = new Prisma.Decimal(amount).toDecimalPlaces(4);
+    const fxRate = new Prisma.Decimal(quote.fxRate).toDecimalPlaces(10);
+    if (
+      !Number.isFinite(amount) ||
+      transactionAmount.lte(0) ||
+      quote.transactionCurrency !== currency ||
+      !fxRate.isFinite() ||
+      fxRate.lte(0) ||
+      !quote.fxSource?.trim() ||
+      !(quote.fxQuotedAt instanceof Date) ||
+      Number.isNaN(quote.fxQuotedAt.getTime())
+    ) {
+      throw new BadRequestException("Invalid prepared ledger FX quote");
+    }
+
+    return {
+      transactionCurrency: currency,
+      transactionAmount,
+      canonicalAmountNpr: transactionAmount.mul(fxRate).toDecimalPlaces(4),
+      fxRate,
+      fxSource: quote.fxSource,
+      fxQuotedAt: quote.fxQuotedAt,
+    };
   }
 
   async addMovement(
@@ -595,6 +733,11 @@ export class KarigarService {
       });
     }
 
+    const monetaryPreflight =
+      type === "RETURN_FINISHED" && workshopId
+        ? await this.prepareKarigarMonetaryPreflight(shopId, workshopId)
+        : null;
+
     await this.prisma.$transaction(async (tx) => {
       // Row lock on workshop to serialize metal float and financial mutation
       if (workshopId) {
@@ -604,6 +747,20 @@ export class KarigarService {
         if (!lockedRows || lockedRows.length === 0) {
           throw new NotFoundException("Karigar not found");
         }
+      }
+
+      const lockedShop = monetaryPreflight
+        ? await tx.shop.findUnique({
+            where: { id: shopId },
+            select: { currency: true },
+          })
+        : null;
+      if (monetaryPreflight) {
+        if (!lockedShop) throw new NotFoundException("Shop not found");
+        this.assertPreparedShopCurrency(
+          monetaryPreflight,
+          (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode,
+        );
       }
 
       // Check Idempotency for metal movement
@@ -732,11 +889,18 @@ export class KarigarService {
           });
 
           if (wage > 0) {
-            await this.ensureOpeningBalancePosted(tx, shopId, workshop.id);
-            const shop = await tx.shop.findUnique({
-              where: { id: shopId },
-              select: { currency: true },
-            });
+            if (!monetaryPreflight || !lockedShop) {
+              throw new ConflictException(
+                "Missing pre-resolved monetary context for wage accrual",
+              );
+            }
+            const currency = (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode;
+            await this.ensureOpeningBalancePosted(
+              tx,
+              shopId,
+              workshop.id,
+              monetaryPreflight.openingBalanceContexts,
+            );
             const entry = await tx.karigarFinancialEntry.create({
               data: {
                 shopId,
@@ -744,7 +908,7 @@ export class KarigarService {
                 jobId: job?.id ?? null,
                 type: "WAGE_ACCRUAL",
                 amount: new Prisma.Decimal(roundMoney(wage)),
-                currency: shop?.currency ?? "NPR",
+                currency,
                 sourceMovementId: movement.id,
                 note:
                   dto.note ?? `Wage accrued for finished return of ${weight}g`,
@@ -753,9 +917,10 @@ export class KarigarService {
             });
 
             // Post Wage Accrual to General Ledger
-            const monetary = await this.accounting.prepareMonetaryContext(
+            const monetary = this.monetaryContextFromPreparedQuote(
               roundMoney(wage),
-              (shop?.currency ?? CurrencyCode.NPR) as CurrencyCode,
+              currency,
+              monetaryPreflight.operationContext,
             );
             await this.accounting.postKarigarWageAccrual(tx, {
               ...monetary,
@@ -804,11 +969,11 @@ export class KarigarService {
                         amount: new Prisma.Decimal(allocAmount),
                       },
                     });
-                    const advMonetary =
-                      await this.accounting.prepareMonetaryContext(
-                        allocAmount,
-                        (shop?.currency ?? CurrencyCode.NPR) as CurrencyCode,
-                      );
+                    const advMonetary = this.monetaryContextFromPreparedQuote(
+                      allocAmount,
+                      currency,
+                      monetaryPreflight.operationContext,
+                    );
                     await this.accounting.postKarigarAdvanceApplication(tx, {
                       ...advMonetary,
                       shopId,
@@ -1093,7 +1258,7 @@ export class KarigarService {
             ...(to ? { lte: new Date(to) } : {}),
           }
         : undefined;
-    const [jobs, workshops] = await Promise.all([
+    const [jobs, workshops, stageUnusedMovements] = await Promise.all([
       this.prisma.karigarJob.findMany({
         where: { shopId, ...(createdAt ? { createdAt } : {}) },
         include: {
@@ -1102,8 +1267,32 @@ export class KarigarService {
         },
       }),
       this.prisma.karigarWorkshop.findMany({ where: { shopId } }),
+      this.prisma.karigarMetalMovement.findMany({
+        where: { shopId, jobId: { not: null }, type: "RETURN_UNUSED" },
+        select: { jobId: true, type: true, weightGrams: true, stage: true },
+      }),
     ]);
-    return this.buildGoldLossReport(jobs, workshops);
+    const unusedReturnsByJob = new Map<
+      string,
+      Array<{
+        type: KarigarMovementType;
+        weightGrams: number;
+        stage: KarigarStage | null;
+      }>
+    >();
+    for (const movement of stageUnusedMovements) {
+      if (!movement.jobId) continue;
+      const returns = unusedReturnsByJob.get(movement.jobId) ?? [];
+      returns.push(movement);
+      unusedReturnsByJob.set(movement.jobId, returns);
+    }
+    return this.buildGoldLossReport(
+      jobs.map((job) => ({
+        ...job,
+        stageUnusedReturns: unusedReturnsByJob.get(job.id) ?? [],
+      })),
+      workshops,
+    );
   }
 
   async loadSampleJob(shopId: string, userId?: string) {
@@ -1223,16 +1412,22 @@ export class KarigarService {
   }
 
   async getJob(shopId: string, jobId: string) {
-    const job = await this.prisma.karigarJob.findFirst({
-      where: { id: jobId, shopId },
-      include: {
-        stages: { orderBy: { createdAt: "asc" } },
-        trees: { include: { lines: { orderBy: { sortOrder: "asc" } } } },
-        movements: { orderBy: { createdAt: "desc" }, take: 50 },
-      },
-    });
+    const [job, stageUnusedReturns] = await Promise.all([
+      this.prisma.karigarJob.findFirst({
+        where: { id: jobId, shopId },
+        include: {
+          stages: { orderBy: { createdAt: "asc" } },
+          trees: { include: { lines: { orderBy: { sortOrder: "asc" } } } },
+          movements: { orderBy: { createdAt: "desc" }, take: 50 },
+        },
+      }),
+      this.prisma.karigarMetalMovement.findMany({
+        where: { shopId, jobId, type: "RETURN_UNUSED" },
+        select: { type: true, weightGrams: true, stage: true },
+      }),
+    ]);
     if (!job) throw new NotFoundException("Job not found");
-    return this.serializeJob(job);
+    return this.serializeJob({ ...job, stageUnusedReturns });
   }
 
   private async requireWorkshopShop(shopId: string) {
@@ -1306,22 +1501,47 @@ export class KarigarService {
       resolveDepartments(shop.workshopDepartments),
     );
     const stageFilter = dept ? this.parseStage(dept) : undefined;
-    const jobs = await this.prisma.karigarJob.findMany({
-      where: {
-        shopId,
-        status: { notIn: ["Completed", "CANCELLED", "REJECTED"] },
-        ...(stageFilter ? { currentStage: stageFilter } : {}),
-      },
-      orderBy: [{ dueAt: "asc" }, { createdAt: "asc" }],
-      include: {
-        stages: { orderBy: { createdAt: "asc" } },
-        trees: { include: { lines: { orderBy: { sortOrder: "asc" } } } },
-      },
-    });
+    const [jobs, stageUnusedMovements] = await Promise.all([
+      this.prisma.karigarJob.findMany({
+        where: {
+          shopId,
+          status: { notIn: ["Completed", "CANCELLED", "REJECTED"] },
+          ...(stageFilter ? { currentStage: stageFilter } : {}),
+        },
+        orderBy: [{ dueAt: "asc" }, { createdAt: "asc" }],
+        include: {
+          stages: { orderBy: { createdAt: "asc" } },
+          trees: { include: { lines: { orderBy: { sortOrder: "asc" } } } },
+        },
+      }),
+      this.prisma.karigarMetalMovement.findMany({
+        where: { shopId, jobId: { not: null }, type: "RETURN_UNUSED" },
+        select: { jobId: true, type: true, weightGrams: true, stage: true },
+      }),
+    ]);
+    const unusedReturnsByJob = new Map<
+      string,
+      Array<{
+        type: KarigarMovementType;
+        weightGrams: number;
+        stage: KarigarStage | null;
+      }>
+    >();
+    for (const movement of stageUnusedMovements) {
+      if (!movement.jobId) continue;
+      const returns = unusedReturnsByJob.get(movement.jobId) ?? [];
+      returns.push(movement);
+      unusedReturnsByJob.set(movement.jobId, returns);
+    }
     return {
       departments,
       dept: stageFilter ?? null,
-      jobs: jobs.map((job) => this.serializeJob(job)),
+      jobs: jobs.map((job) =>
+        this.serializeJob({
+          ...job,
+          stageUnusedReturns: unusedReturnsByJob.get(job.id) ?? [],
+        }),
+      ),
     };
   }
 
@@ -1837,7 +2057,28 @@ export class KarigarService {
       createdAt: Date;
       note: string | null;
     }>;
+    stageUnusedReturns?: Array<{
+      type: KarigarMovementType;
+      weightGrams: number;
+      stage: KarigarStage | null;
+    }>;
   }) {
+    const returnedUnusedByStage = new Map<KarigarStage, number>();
+    const unusedReturns =
+      job.stageUnusedReturns ??
+      (job.movements ?? []).filter((movement) => movement.type === "RETURN_UNUSED");
+    let jobReturnedUnusedGrams = 0;
+    for (const movement of unusedReturns) {
+      jobReturnedUnusedGrams += movement.weightGrams;
+      if (movement.stage) {
+        returnedUnusedByStage.set(
+          movement.stage,
+          (returnedUnusedByStage.get(movement.stage) ?? 0) +
+            movement.weightGrams,
+        );
+      }
+    }
+
     const stages = (job.stages ?? []).map((stage) => ({
       ...stage,
       goldLoss: stageGoldLoss({
@@ -1845,6 +2086,7 @@ export class KarigarService {
         goldOutGrams: stage.goldOutGrams,
         scrapGrams: stage.scrapGrams,
         dustGrams: stage.dustGrams,
+        returnedUnusedGrams: returnedUnusedByStage.get(stage.stage) ?? 0,
         allowedPercent: stage.allowedWastagePercent,
       }),
     }));
@@ -1876,6 +2118,7 @@ export class KarigarService {
             goldOutGrams: stages.reduce((s, st) => Math.max(s, st.goldOutGrams), 0),
             scrapGrams: stages.reduce((s, st) => s + st.scrapGrams, 0),
             dustGrams: stages.reduce((s, st) => s + st.dustGrams, 0),
+            returnedUnusedGrams: jobReturnedUnusedGrams,
             allowedPercent: job.allowedWastagePercent,
           });
     const steps = (job.steps as Record<string, boolean> | null) ?? {
@@ -2247,6 +2490,11 @@ export class KarigarService {
         "idempotencyKey is required for payment mutation",
       );
     }
+    const monetaryPreflight = await this.prepareKarigarMonetaryPreflight(
+      shopId,
+      workshopId,
+      paymentAmount,
+    );
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Lock workshop row for strict concurrency serialization
@@ -2256,6 +2504,13 @@ export class KarigarService {
       if (!lockedRows || lockedRows.length === 0) {
         throw new NotFoundException("Karigar not found");
       }
+      const lockedShop = await tx.shop.findUnique({
+        where: { id: shopId },
+        select: { currency: true },
+      });
+      if (!lockedShop) throw new NotFoundException("Shop not found");
+      const shopCurrency = (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode;
+      this.assertPreparedShopCurrency(monetaryPreflight, shopCurrency);
 
       // 2. Compute canonical request intent fingerprint
       const allocationMode =
@@ -2441,12 +2696,16 @@ export class KarigarService {
       // 5. Workshop & Shop context
       const workshop = await tx.karigarWorkshop.findFirst({
         where: { id: workshopId, shopId },
-        include: { shop: { select: { currency: true } } },
       });
       if (!workshop) throw new NotFoundException("Karigar not found");
 
       // 6. Ensure opening balance is posted before settlement
-      await this.ensureOpeningBalancePosted(tx, shopId, workshopId);
+      await this.ensureOpeningBalancePosted(
+        tx,
+        shopId,
+        workshopId,
+        monetaryPreflight.openingBalanceContexts,
+      );
 
       // 7. Check current payable
       const existingEntries = await tx.karigarFinancialEntry.findMany({
@@ -2466,7 +2725,7 @@ export class KarigarService {
           workshopId,
           type: "SETTLEMENT_PAYMENT",
           amount: new Prisma.Decimal(paymentAmount),
-          currency: workshop.shop.currency ?? "NPR",
+          currency: shopCurrency,
           paymentMethod: dto.paymentMethod ?? "CASH",
           reference: dto.reference?.slice(0, 120) ?? null,
           note: dto.note?.slice(0, 1000) ?? null,
@@ -2489,12 +2748,8 @@ export class KarigarService {
       }
 
       // 9. Post to General Ledger
-      const monetary = await this.accounting.prepareMonetaryContext(
-        paymentAmount,
-        (workshop.shop.currency ?? CurrencyCode.NPR) as CurrencyCode,
-      );
       await this.accounting.postKarigarSettlementPayment(tx, {
-        ...monetary,
+        ...monetaryPreflight.operationContext,
         shopId,
         financialEntryId: entry.id,
         workshopId: workshop.id,
@@ -2541,6 +2796,11 @@ export class KarigarService {
         "idempotencyKey is required for advance mutation",
       );
     }
+    const monetaryPreflight = await this.prepareKarigarMonetaryPreflight(
+      shopId,
+      workshopId,
+      advanceAmount,
+    );
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Lock workshop row
@@ -2550,6 +2810,13 @@ export class KarigarService {
       if (!lockedRows || lockedRows.length === 0) {
         throw new NotFoundException("Karigar not found");
       }
+      const lockedShop = await tx.shop.findUnique({
+        where: { id: shopId },
+        select: { currency: true },
+      });
+      if (!lockedShop) throw new NotFoundException("Shop not found");
+      const shopCurrency = (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode;
+      this.assertPreparedShopCurrency(monetaryPreflight, shopCurrency);
 
       // 2. Check Idempotency with fingerprint matching
       const fingerprint = computeSha256({
@@ -2587,12 +2854,16 @@ export class KarigarService {
 
       const workshop = await tx.karigarWorkshop.findFirst({
         where: { id: workshopId, shopId },
-        include: { shop: { select: { currency: true } } },
       });
       if (!workshop) throw new NotFoundException("Karigar not found");
 
       // 3. Ensure opening balance is posted
-      await this.ensureOpeningBalancePosted(tx, shopId, workshopId);
+      await this.ensureOpeningBalancePosted(
+        tx,
+        shopId,
+        workshopId,
+        monetaryPreflight.openingBalanceContexts,
+      );
 
       // 4. Create Financial Entry
       const entry = await tx.karigarFinancialEntry.create({
@@ -2601,7 +2872,7 @@ export class KarigarService {
           workshopId,
           type: "ADVANCE_PAYMENT",
           amount: new Prisma.Decimal(advanceAmount),
-          currency: workshop.shop.currency ?? "NPR",
+          currency: shopCurrency,
           paymentMethod: dto.paymentMethod ?? "CASH",
           reference: dto.reference?.slice(0, 120) ?? null,
           note: dto.note?.slice(0, 1000) ?? null,
@@ -2612,12 +2883,8 @@ export class KarigarService {
       });
 
       // 5. Post to General Ledger (Dr KARIGAR_ADVANCES, Cr CASH/BANK)
-      const monetary = await this.accounting.prepareMonetaryContext(
-        advanceAmount,
-        (workshop.shop.currency ?? CurrencyCode.NPR) as CurrencyCode,
-      );
       await this.accounting.postKarigarAdvancePayment(tx, {
-        ...monetary,
+        ...monetaryPreflight.operationContext,
         shopId,
         financialEntryId: entry.id,
         workshopId: workshop.id,
@@ -2686,9 +2953,10 @@ export class KarigarService {
                 amount: new Prisma.Decimal(allocAmt),
               },
             });
-            const advMonetary = await this.accounting.prepareMonetaryContext(
+            const advMonetary = this.monetaryContextFromPreparedQuote(
               allocAmt,
-              (workshop.shop.currency ?? CurrencyCode.NPR) as CurrencyCode,
+              shopCurrency,
+              monetaryPreflight.operationContext,
             );
             await this.accounting.postKarigarAdvanceApplication(tx, {
               ...advMonetary,
@@ -2759,6 +3027,11 @@ export class KarigarService {
         "Invalid adjustment type. Must be ADJUSTMENT_INCREASE or ADJUSTMENT_DECREASE.",
       );
     }
+    const monetaryPreflight = await this.prepareKarigarMonetaryPreflight(
+      shopId,
+      workshopId,
+      adjAmount,
+    );
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Lock workshop row
@@ -2768,6 +3041,13 @@ export class KarigarService {
       if (!lockedRows || lockedRows.length === 0) {
         throw new NotFoundException("Karigar not found");
       }
+      const lockedShop = await tx.shop.findUnique({
+        where: { id: shopId },
+        select: { currency: true },
+      });
+      if (!lockedShop) throw new NotFoundException("Shop not found");
+      const shopCurrency = (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode;
+      this.assertPreparedShopCurrency(monetaryPreflight, shopCurrency);
 
       // 2. Check Idempotency with fingerprint matching
       const fingerprint = computeSha256({
@@ -2803,12 +3083,16 @@ export class KarigarService {
 
       const workshop = await tx.karigarWorkshop.findFirst({
         where: { id: workshopId, shopId },
-        include: { shop: { select: { currency: true } } },
       });
       if (!workshop) throw new NotFoundException("Karigar not found");
 
       // 3. Ensure opening balance is posted
-      await this.ensureOpeningBalancePosted(tx, shopId, workshopId);
+      await this.ensureOpeningBalancePosted(
+        tx,
+        shopId,
+        workshopId,
+        monetaryPreflight.openingBalanceContexts,
+      );
 
       // 4. Validate adjustment decrease does not exceed current amount payable
       if (dto.type === "ADJUSTMENT_DECREASE") {
@@ -2830,7 +3114,7 @@ export class KarigarService {
           workshopId,
           type: dto.type,
           amount: new Prisma.Decimal(adjAmount),
-          currency: workshop.shop.currency ?? "NPR",
+          currency: shopCurrency,
           note: dto.note.slice(0, 1000),
           idempotencyKey: dto.idempotencyKey ?? null,
           requestFingerprint: fingerprint,
@@ -2839,12 +3123,8 @@ export class KarigarService {
       });
 
       // 4. Post to General Ledger
-      const monetary = await this.accounting.prepareMonetaryContext(
-        adjAmount,
-        (workshop.shop.currency ?? CurrencyCode.NPR) as CurrencyCode,
-      );
       await this.accounting.postKarigarAdjustment(tx, {
-        ...monetary,
+        ...monetaryPreflight.operationContext,
         shopId,
         financialEntryId: entry.id,
         workshopId: workshop.id,
@@ -3051,6 +3331,11 @@ export class KarigarService {
         sprueButtonGrams: number;
         recoverableGrams: number;
         allowedWastagePercent: number;
+      }>;
+      stageUnusedReturns?: Array<{
+        type: KarigarMovementType;
+        weightGrams: number;
+        stage: KarigarStage | null;
       }>;
     }>,
     workshops: Array<{
