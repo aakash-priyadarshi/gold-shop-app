@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { ConflictException, Injectable, Logger } from "@nestjs/common";
 import { CurrencyCode, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import {
@@ -83,6 +83,15 @@ export class ShopPriceRebaseService {
           await tx.shop.update({ where: { id: shopId }, data: shopUpdate });
         }
         return;
+      }
+
+      const karigarEntriesCount = await tx.karigarFinancialEntry.count({
+        where: { shopId },
+      });
+      if (karigarEntriesCount > 0) {
+        throw new ConflictException(
+          "Cannot rebase or change shop currency while active Karigar financial entries exist. Karigar ledger currencies must remain immutable.",
+        );
       }
 
       await this.applyRate(tx, shopId, fx.rate, toCurrency as CurrencyCode);
@@ -357,8 +366,7 @@ export class ShopPriceRebaseService {
     await db.$executeRaw`
       UPDATE "KarigarWorkshop"
       SET
-        "wageRatePerGram" = ROUND(("wageRatePerGram" * ${rate})::numeric, 2),
-        "wageDue" = ROUND(("wageDue" * ${rate})::numeric, 2)
+        "wageRatePerGram" = ROUND(("wageRatePerGram" * ${rate})::numeric, 2)
       WHERE "shopId" = ${shopId}
     `;
   }

@@ -7,6 +7,7 @@ import { karigarApi } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 
 interface JobCostSummaryModalProps {
   jobId: string;
@@ -19,6 +20,7 @@ export function JobCostSummaryModal({
   currency,
   onClose,
 }: JobCostSummaryModalProps) {
+  const t = useT();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
@@ -51,14 +53,32 @@ export function JobCostSummaryModal({
     };
   }, [jobId]);
 
+  const activeCurrency = data?.currency || currency;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="job-cost-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+    >
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-800">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h3
+                id="job-cost-title"
+                className="text-lg font-bold text-slate-900 dark:text-white"
+              >
                 <T>Job Cost & Wage Reconciliation</T>
               </h3>
               {data?.status && (
@@ -74,6 +94,7 @@ export function JobCostSummaryModal({
           </div>
           <button
             onClick={onClose}
+            aria-label={t("Close")}
             className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             <X className="w-5 h-5" />
@@ -97,13 +118,13 @@ export function JobCostSummaryModal({
           ) : data ? (
             <>
               {/* Financial KPI Cards */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5">
                   <span className="text-[11px] font-semibold uppercase text-slate-500 block">
                     <T>Accrued Wage</T>
                   </span>
-                  <p className="text-lg font-bold text-slate-900 dark:text-white mt-1">
-                    {currency}{" "}
+                  <p className="text-base font-bold text-slate-900 dark:text-white mt-1">
+                    {activeCurrency}{" "}
                     {data.wageAccrued.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                     })}
@@ -111,10 +132,21 @@ export function JobCostSummaryModal({
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5">
                   <span className="text-[11px] font-semibold uppercase text-slate-500 block">
-                    <T>Settlements Allocated</T>
+                    <T>Advance Consumed</T>
                   </span>
-                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                    {currency}{" "}
+                  <p className="text-base font-bold text-purple-600 dark:text-purple-400 mt-1">
+                    {activeCurrency}{" "}
+                    {(data.advanceAllocated ?? 0).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5">
+                  <span className="text-[11px] font-semibold uppercase text-slate-500 block">
+                    <T>Settlements</T>
+                  </span>
+                  <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                    {activeCurrency}{" "}
                     {data.settlementAllocated.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                     })}
@@ -124,8 +156,8 @@ export function JobCostSummaryModal({
                   <span className="text-[11px] font-semibold uppercase text-amber-800 dark:text-amber-400 block">
                     <T>Wage Outstanding</T>
                   </span>
-                  <p className="text-lg font-bold text-amber-900 dark:text-amber-300 mt-1">
-                    {currency}{" "}
+                  <p className="text-base font-bold text-amber-900 dark:text-amber-300 mt-1">
+                    {activeCurrency}{" "}
                     {data.wageOutstanding.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                     })}
@@ -209,7 +241,7 @@ export function JobCostSummaryModal({
                             </span>
                           </div>
                           <span className="font-bold text-slate-900 dark:text-white">
-                            +{currency}{" "}
+                            +{activeCurrency}{" "}
                             {acc.amount.toLocaleString(undefined, {
                               minimumFractionDigits: 2,
                             })}
@@ -222,12 +254,12 @@ export function JobCostSummaryModal({
 
                 <div>
                   <h4 className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-2">
-                    <T>Settlement Allocations</T> (
+                    <T>Allocations & Advance Applications</T> (
                     {data.allocations?.length || 0})
                   </h4>
                   {data.allocations?.length === 0 ? (
                     <p className="text-xs text-slate-400 italic py-1">
-                      <T>No payments allocated to this job yet.</T>
+                      <T>No payments or advances allocated to this job yet.</T>
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -251,7 +283,7 @@ export function JobCostSummaryModal({
                             </span>
                           </div>
                           <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                            -{currency}{" "}
+                            -{activeCurrency}{" "}
                             {alloc.amount.toLocaleString(undefined, {
                               minimumFractionDigits: 2,
                             })}

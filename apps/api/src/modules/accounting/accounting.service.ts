@@ -9,6 +9,7 @@ import {
   InvoicePaymentStatus,
   JournalEntryStatus,
   JournalReferenceType,
+  KarigarFinancialEntryType,
   LedgerAccountKey,
   LedgerAccountType,
   Prisma,
@@ -1041,6 +1042,87 @@ export class AccountingService {
     });
   }
 
+  async postKarigarOpeningBalance(
+    tx: Prisma.TransactionClient,
+    input: MonetaryContext & {
+      shopId: string;
+      financialEntryId: string;
+      workshopId: string;
+      artisanName?: string;
+      transactionDate?: Date;
+      actorUserId?: string;
+    },
+  ) {
+    return this.postEntry(tx, {
+      ...input,
+      referenceType: JournalReferenceType.KARIGAR_OPENING_BALANCE,
+      referenceId: input.financialEntryId,
+      idempotencyKey: `karigar-opening-balance:${input.financialEntryId}`,
+      description: `Opening karigar wage payable for ${input.artisanName || input.workshopId}`,
+      transactionDate: input.transactionDate || new Date(),
+      metadata: {
+        workshopId: input.workshopId,
+        artisanName: input.artisanName,
+      },
+      lines: [
+        {
+          accountKey: LedgerAccountKey.OPENING_BALANCE_EQUITY,
+          debitNpr: input.canonicalAmountNpr,
+          transactionDebit: input.transactionAmount,
+        },
+        {
+          accountKey: LedgerAccountKey.KARIGAR_PAYABLE,
+          creditNpr: input.canonicalAmountNpr,
+          transactionCredit: input.transactionAmount,
+        },
+      ],
+    });
+  }
+
+  async postKarigarAdvanceApplication(
+    tx: Prisma.TransactionClient,
+    input: MonetaryContext & {
+      shopId: string;
+      financialEntryId: string;
+      allocationId?: string;
+      workshopId: string;
+      artisanName?: string;
+      jobId?: string | null;
+      productName?: string | null;
+      transactionDate?: Date;
+      actorUserId?: string;
+    },
+  ) {
+    const refId = input.allocationId || input.financialEntryId;
+    return this.postEntry(tx, {
+      ...input,
+      referenceType: JournalReferenceType.KARIGAR_ADVANCE_APPLICATION,
+      referenceId: refId,
+      idempotencyKey: `karigar-advance-app:${refId}`,
+      description: `Karigar advance applied against wages for ${input.artisanName || input.workshopId}${input.productName ? ` (${input.productName})` : ""}`,
+      transactionDate: input.transactionDate || new Date(),
+      metadata: {
+        workshopId: input.workshopId,
+        artisanName: input.artisanName,
+        jobId: input.jobId,
+        financialEntryId: input.financialEntryId,
+        allocationId: input.allocationId,
+      },
+      lines: [
+        {
+          accountKey: LedgerAccountKey.KARIGAR_PAYABLE,
+          debitNpr: input.canonicalAmountNpr,
+          transactionDebit: input.transactionAmount,
+        },
+        {
+          accountKey: LedgerAccountKey.KARIGAR_ADVANCES,
+          creditNpr: input.canonicalAmountNpr,
+          transactionCredit: input.transactionAmount,
+        },
+      ],
+    });
+  }
+
   /**
    * Post shop opening balances: debit cash and/or bank, credit opening equity.
    * Idempotent per shop + as-of date (OPENING_BALANCE reference).
@@ -1201,12 +1283,26 @@ export class AccountingService {
       orderBy: { receivedAt: "asc" },
     });
 
+    const karigarOpenings = await this.prisma.karigarFinancialEntry.findMany({
+      where: {
+        shopId,
+        type: KarigarFinancialEntryType.OPENING_BALANCE,
+      },
+      include: {
+        workshop: { select: { artisan: true, name: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
     let invoicesPosted = 0;
     let invoicesSkipped = 0;
     let invoicesFailed = 0;
     let paymentsPosted = 0;
     let paymentsSkipped = 0;
     let paymentsFailed = 0;
+    let karigarOpeningsPosted = 0;
+    let karigarOpeningsSkipped = 0;
+    let karigarOpeningsFailed = 0;
 
     for (const invoice of invoices) {
       try {
@@ -1285,6 +1381,38 @@ export class AccountingService {
       }
     }
 
+    for (const entry of karigarOpenings) {
+      try {
+        const amount = this.money(entry.amount);
+        if (amount.lte(0)) {
+          karigarOpeningsSkipped += 1;
+          continue;
+        }
+        const monetary = await this.prepareMonetaryContext(
+          amount,
+          entry.currency,
+        );
+        const result = await this.prisma.$transaction(async (tx) =>
+          this.postKarigarOpeningBalance(tx, {
+            ...monetary,
+            shopId,
+            financialEntryId: entry.id,
+            workshopId: entry.workshopId,
+            artisanName: entry.workshop?.artisan || entry.workshop?.name,
+            transactionDate: entry.createdAt,
+            actorUserId,
+          }),
+        );
+        if (result.idempotent) karigarOpeningsSkipped += 1;
+        else karigarOpeningsPosted += 1;
+      } catch (err) {
+        karigarOpeningsFailed += 1;
+        this.logger.warn(
+          `Backfill karigar opening ${entry.id} failed: ${(err as Error).message}`,
+        );
+      }
+    }
+
     const summary = {
       shopId,
       invoicesScanned: invoices.length,
@@ -1295,11 +1423,16 @@ export class AccountingService {
       paymentsPosted,
       paymentsSkipped,
       paymentsFailed,
+      karigarOpeningsScanned: karigarOpenings.length,
+      karigarOpeningsPosted,
+      karigarOpeningsSkipped,
+      karigarOpeningsFailed,
     };
     this.logger.log(
       `Ledger backfill for shop ${shopId}: ` +
         `invoices posted=${invoicesPosted} skipped=${invoicesSkipped} failed=${invoicesFailed}; ` +
-        `payments posted=${paymentsPosted} skipped=${paymentsSkipped} failed=${paymentsFailed}`,
+        `payments posted=${paymentsPosted} skipped=${paymentsSkipped} failed=${paymentsFailed}; ` +
+        `karigar openings posted=${karigarOpeningsPosted} skipped=${karigarOpeningsSkipped} failed=${karigarOpeningsFailed}`,
     );
     return summary;
   }

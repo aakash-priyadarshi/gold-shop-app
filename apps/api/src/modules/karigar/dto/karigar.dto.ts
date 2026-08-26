@@ -412,6 +412,11 @@ export class CreateKarigarMovementDto {
   @IsString()
   @MaxLength(80)
   lotId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(191)
+  idempotencyKey?: string;
 }
 
 export class UpdateKarigarStageDto {

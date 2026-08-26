@@ -1903,9 +1903,11 @@ enum JournalReferenceType {
   COMMISSION_WAIVER
   OPENING_BALANCE
   REVERSAL
+  KARIGAR_OPENING_BALANCE
   KARIGAR_WAGE_ACCRUAL
   KARIGAR_SETTLEMENT_PAYMENT
   KARIGAR_ADVANCE_PAYMENT
+  KARIGAR_ADVANCE_APPLICATION
   KARIGAR_ADJUSTMENT
 }
 
@@ -4280,26 +4282,29 @@ model KarigarCastingTreeLine {
 }
 
 model KarigarMetalMovement {
-  id             String                 @id @default(uuid())
-  shopId         String
-  workshopId     String?
-  jobId          String?
-  treeId         String?
-  stage          KarigarStage?
-  type           KarigarMovementType
-  metalKey       String                 @default("goldGrains24k")
-  weightGrams    Float
-  purity         String?
-  lotId          String?
-  note           String?
-  createdBy      String?
-  createdAt      DateTime               @default(now())
-  shop           Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  workshop       KarigarWorkshop?       @relation(fields: [workshopId], references: [id], onDelete: SetNull)
-  job            KarigarJob?            @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  tree           KarigarCastingTree?    @relation(fields: [treeId], references: [id], onDelete: SetNull)
-  financialEntry KarigarFinancialEntry?
+  id                 String                 @id @default(uuid())
+  shopId             String
+  workshopId         String?
+  jobId              String?
+  treeId             String?
+  stage              KarigarStage?
+  type               KarigarMovementType
+  metalKey           String                 @default("goldGrains24k")
+  weightGrams        Float
+  purity             String?
+  lotId              String?
+  note               String?
+  idempotencyKey     String?                @db.VarChar(191)
+  requestFingerprint String?                @db.VarChar(64)
+  createdBy          String?
+  createdAt          DateTime               @default(now())
+  shop               Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workshop           KarigarWorkshop?       @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  job                KarigarJob?            @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  tree               KarigarCastingTree?    @relation(fields: [treeId], references: [id], onDelete: SetNull)
+  financialEntry     KarigarFinancialEntry?
 
+  @@unique([shopId, idempotencyKey])
   @@index([shopId, createdAt])
   @@index([jobId])
   @@index([workshopId])
@@ -4321,20 +4326,21 @@ model KarigarVaultReserve {
 }
 
 model KarigarFinancialEntry {
-  id               String                    @id @default(uuid())
-  shopId           String
-  workshopId       String
-  jobId            String?
-  type             KarigarFinancialEntryType
-  amount           Decimal                   @db.Decimal(18, 2)
-  currency         CurrencyCode              @default(NPR)
-  paymentMethod    String?                   @db.VarChar(50)
-  reference        String?                   @db.VarChar(120)
-  note             String?                   @db.VarChar(1000)
-  sourceMovementId String?                   @unique
-  idempotencyKey   String?                   @db.VarChar(191)
-  createdBy        String?
-  createdAt        DateTime                  @default(now())
+  id                 String                    @id @default(uuid())
+  shopId             String
+  workshopId         String
+  jobId              String?
+  type               KarigarFinancialEntryType
+  amount             Decimal                   @db.Decimal(18, 2)
+  currency           CurrencyCode              @default(NPR)
+  paymentMethod      String?                   @db.VarChar(50)
+  reference          String?                   @db.VarChar(120)
+  note               String?                   @db.VarChar(1000)
+  sourceMovementId   String?                   @unique
+  idempotencyKey     String?                   @db.VarChar(191)
+  requestFingerprint String?                   @db.VarChar(64)
+  createdBy          String?
+  createdAt          DateTime                  @default(now())
 
   shop           Shop                         @relation(fields: [shopId], references: [id], onDelete: Cascade)
   workshop       KarigarWorkshop              @relation(fields: [workshopId], references: [id], onDelete: Restrict)
@@ -4346,7 +4352,6 @@ model KarigarFinancialEntry {
   @@index([shopId, workshopId, createdAt])
   @@index([workshopId])
   @@index([jobId])
-  @@index([sourceMovementId])
 }
 
 model KarigarFinancialAllocation {
@@ -4359,7 +4364,7 @@ model KarigarFinancialAllocation {
 
   shop           Shop                  @relation(fields: [shopId], references: [id], onDelete: Cascade)
   financialEntry KarigarFinancialEntry @relation(fields: [financialEntryId], references: [id], onDelete: Cascade)
-  job            KarigarJob            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  job            KarigarJob            @relation(fields: [jobId], references: [id], onDelete: Restrict)
 
   @@unique([financialEntryId, jobId])
   @@index([shopId])

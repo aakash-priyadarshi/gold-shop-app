@@ -1,5 +1,6 @@
 import { Type } from "class-transformer";
 import {
+  ArrayMaxSize,
   IsArray,
   IsIn,
   IsInt,
@@ -20,12 +21,14 @@ export class KarigarPaymentAllocationDto {
   @MaxLength(64)
   jobId: string;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0.01)
   amount: number;
 }
 
 export class RecordKarigarPaymentDto {
+  @Type(() => Number)
   @IsNumber()
   @Min(0.01)
   amount: number;
@@ -54,19 +57,21 @@ export class RecordKarigarPaymentDto {
   @MaxLength(1000)
   note?: string;
 
-  @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(191)
-  idempotencyKey?: string;
+  idempotencyKey: string;
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(50)
   @ValidateNested({ each: true })
   @Type(() => KarigarPaymentAllocationDto)
   allocations?: KarigarPaymentAllocationDto[];
 }
 
 export class RecordKarigarAdvanceDto {
+  @Type(() => Number)
   @IsNumber()
   @Min(0.01)
   amount: number;
@@ -95,13 +100,14 @@ export class RecordKarigarAdvanceDto {
   @MaxLength(1000)
   note?: string;
 
-  @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(191)
-  idempotencyKey?: string;
+  idempotencyKey: string;
 }
 
 export class RecordKarigarAdjustmentDto {
+  @Type(() => Number)
   @IsNumber()
   @Min(0.01)
   amount: number;
@@ -115,10 +121,10 @@ export class RecordKarigarAdjustmentDto {
   @MaxLength(1000)
   note: string;
 
-  @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(191)
-  idempotencyKey?: string;
+  idempotencyKey: string;
 }
 
 export class RecordKarigarMetalReturnDto {
@@ -127,6 +133,7 @@ export class RecordKarigarMetalReturnDto {
   @MaxLength(64)
   metalKey: string;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0.001)
   weightGrams: number;
@@ -145,10 +152,10 @@ export class RecordKarigarMetalReturnDto {
   @MaxLength(400)
   note?: string;
 
-  @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(191)
-  idempotencyKey?: string;
+  idempotencyKey: string;
 }
 
 export class KarigarStatementQueryDto {

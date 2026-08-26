@@ -64,6 +64,7 @@ export function KarigarAccountDrawer({
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printItems, setPrintItems] = useState<any[]>([]);
   const [selectedJobCostId, setSelectedJobCostId] = useState<string | null>(
     null,
   );
@@ -72,6 +73,20 @@ export function KarigarAccountDrawer({
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  // Idempotency keys state (stable across retries, rotated on success or new modal open)
+  const [payIdempotencyKey, setPayIdempotencyKey] = useState<string>(() =>
+    crypto.randomUUID(),
+  );
+  const [advIdempotencyKey, setAdvIdempotencyKey] = useState<string>(() =>
+    crypto.randomUUID(),
+  );
+  const [retIdempotencyKey, setRetIdempotencyKey] = useState<string>(() =>
+    crypto.randomUUID(),
+  );
+  const [adjIdempotencyKey, setAdjIdempotencyKey] = useState<string>(() =>
+    crypto.randomUUID(),
+  );
 
   // Payment Form
   const [payAmount, setPayAmount] = useState<string>("");
@@ -126,47 +141,126 @@ export function KarigarAccountDrawer({
     loadData();
   }, [loadData]);
 
-  const currency = accountData?.currency || statementData?.currency || shopCurrency;
+  // Global Escape key handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showPayModal) setShowPayModal(false);
+        else if (showAdvanceModal) setShowAdvanceModal(false);
+        else if (showReturnModal) setShowReturnModal(false);
+        else if (showAdjustModal) setShowAdjustModal(false);
+        else if (showPrintModal) setShowPrintModal(false);
+        else if (selectedJobCostId) setSelectedJobCostId(null);
+        else onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    showPayModal,
+    showAdvanceModal,
+    showReturnModal,
+    showAdjustModal,
+    showPrintModal,
+    selectedJobCostId,
+    onClose,
+  ]);
+
+  const currency =
+    accountData?.currency || statementData?.currency || shopCurrency;
   const workshop = accountData?.workshop;
 
-  // CSV Export handler (uses authoritative loaded statement)
-  const handleExportCSV = () => {
-    if (!statementData?.items || statementData.items.length === 0) return;
-    const headers = [
-      "Date",
-      "Kind",
-      "Event Type",
-      "Job / Material",
-      "Quantity (g)",
-      `Amount (${currency})`,
-      "Method",
-      "Reference",
-      "Note",
-    ];
-    const rows = statementData.items.map((it: any) => [
-      format(new Date(it.createdAt), "yyyy-MM-dd HH:mm"),
-      it.kind,
-      it.eventType,
-      `"${(it.jobProduct || it.metalKey || "").replace(/"/g, '""')}"`,
-      it.quantity != null ? it.quantity : "",
-      it.amount != null ? it.amount : "",
-      it.paymentMethod || "",
-      `"${(it.reference || "").replace(/"/g, '""')}"`,
-      `"${(it.note || "").replace(/"/g, '""')}"`,
-    ]);
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((r: any) => r.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
-      `karigar_${workshop?.name || "account"}_statement.csv`,
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const sanitizeCsvCell = (val: any): string => {
+    if (val == null) return "";
+    let str = String(val).replace(/"/g, '""');
+    if (/^[=+\-@]/.test(str)) {
+      str = "'" + str;
+    }
+    return `"${str}"`;
+  };
+
+  const fetchAllStatementItems = async () => {
+    let allItems: any[] = [];
+    let cursor: string | undefined = undefined;
+    while (true) {
+      const res = await karigarApi.getStatement(workshopId, {
+        type: statementFilter === "ALL" ? undefined : statementFilter,
+        cursor,
+        limit: 250,
+      });
+      const items = res.data.items || [];
+      allItems = allItems.concat(items);
+      if (!res.data.nextCursor || items.length === 0) break;
+      cursor = res.data.nextCursor;
+    }
+    return allItems;
+  };
+
+  // CSV Export handler with pagination and formula injection sanitization
+  const handleExportCSV = async () => {
+    try {
+      setActionLoading(true);
+      const items = await fetchAllStatementItems();
+      if (items.length === 0) return;
+      const headers = [
+        "Date",
+        "Kind",
+        "Event Type",
+        "Job / Material",
+        "Quantity (g)",
+        `Amount (${currency})`,
+        "Method",
+        "Reference",
+        "Note",
+      ];
+      const rows = items.map((it: any) => [
+        sanitizeCsvCell(format(new Date(it.createdAt), "yyyy-MM-dd HH:mm")),
+        sanitizeCsvCell(it.kind),
+        sanitizeCsvCell(it.eventType),
+        sanitizeCsvCell(it.jobProduct || it.metalKey || ""),
+        it.quantity != null ? String(it.quantity) : "",
+        it.amount != null ? String(it.amount) : "",
+        sanitizeCsvCell(it.paymentMethod || ""),
+        sanitizeCsvCell(it.reference || ""),
+        sanitizeCsvCell(it.note || ""),
+      ]);
+      const csvContent =
+        [headers.join(","), ...rows.map((r: any) => r.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `karigar_${workshop?.name || "account"}_statement.csv`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setActionError(
+        err.response?.data?.message || t("Failed to export statement"),
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleOpenPrint = async () => {
+    try {
+      setActionLoading(true);
+      const items = await fetchAllStatementItems();
+      setPrintItems(items);
+      setShowPrintModal(true);
+    } catch (err: any) {
+      setActionError(
+        err.response?.data?.message ||
+          t("Failed to prepare statement for printing"),
+      );
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // Submit Payment
@@ -178,7 +272,9 @@ export function KarigarAccountDrawer({
       return;
     }
     if (payMethod === "OTHER" && !payRef.trim() && !payNote.trim()) {
-      setActionError(t("Reference or note is required for Other payment method"));
+      setActionError(
+        t("Reference or note is required for Other payment method"),
+      );
       return;
     }
     try {
@@ -189,13 +285,14 @@ export function KarigarAccountDrawer({
         paymentMethod: payMethod,
         reference: payRef || undefined,
         note: payNote || undefined,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: payIdempotencyKey,
       });
       setActionSuccess(t("Settlement payment recorded successfully"));
       setShowPayModal(false);
       setPayAmount("");
       setPayRef("");
       setPayNote("");
+      setPayIdempotencyKey(crypto.randomUUID());
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
@@ -216,7 +313,9 @@ export function KarigarAccountDrawer({
       return;
     }
     if (advMethod === "OTHER" && !advRef.trim() && !advNote.trim()) {
-      setActionError(t("Reference or note is required for Other payment method"));
+      setActionError(
+        t("Reference or note is required for Other payment method"),
+      );
       return;
     }
     try {
@@ -227,13 +326,14 @@ export function KarigarAccountDrawer({
         paymentMethod: advMethod,
         reference: advRef || undefined,
         note: advNote || undefined,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: advIdempotencyKey,
       });
       setActionSuccess(t("Advance payment recorded successfully"));
       setShowAdvanceModal(false);
       setAdvAmount("");
       setAdvRef("");
       setAdvNote("");
+      setAdvIdempotencyKey(crypto.randomUUID());
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
@@ -262,13 +362,14 @@ export function KarigarAccountDrawer({
         weightGrams: weightNum,
         jobId: retJobId || undefined,
         note: retNote || undefined,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: retIdempotencyKey,
       });
       setActionSuccess(t("Metal return reconciled successfully"));
       setShowReturnModal(false);
       setRetWeight("");
       setRetJobId("");
       setRetNote("");
+      setRetIdempotencyKey(crypto.randomUUID());
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
@@ -299,12 +400,13 @@ export function KarigarAccountDrawer({
         type: adjType,
         amount: amountNum,
         note: adjNote,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: adjIdempotencyKey,
       });
       setActionSuccess(t("Financial adjustment recorded successfully"));
       setShowAdjustModal(false);
       setAdjAmount("");
       setAdjNote("");
+      setAdjIdempotencyKey(crypto.randomUUID());
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
@@ -317,7 +419,12 @@ export function KarigarAccountDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-sm flex justify-end animate-in fade-in duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="karigar-drawer-title"
+      className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-sm flex justify-end animate-in fade-in duration-200"
+    >
       <div className="bg-white dark:bg-slate-900 w-full max-w-3xl h-full flex flex-col shadow-2xl border-l border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 relative">
         {/* Header */}
         <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
@@ -327,7 +434,7 @@ export function KarigarAccountDrawer({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold">
+                <h2 id="karigar-drawer-title" className="text-lg font-bold">
                   {workshop?.name || <T>Karigar Account</T>}
                 </h2>
                 {accountData?.summary && (
@@ -491,7 +598,7 @@ export function KarigarAccountDrawer({
                     <T>Active Jobs</T>
                   </span>
                   <p className="text-lg font-bold text-slate-900 dark:text-white mt-1">
-                    {accountData.openJobs?.length || 0}
+                    {accountData.openJobs ?? 0}
                   </p>
                   <span className="text-[10px] text-slate-400 mt-1">
                     {workshop?.phone || <T>Workshop Float</T>}
@@ -610,7 +717,7 @@ export function KarigarAccountDrawer({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowPrintModal(true)}
+                    onClick={handleOpenPrint}
                     className="h-8 text-xs gap-1.5"
                   >
                     <Printer className="w-3.5 h-3.5" />
@@ -1176,7 +1283,9 @@ export function KarigarAccountDrawer({
             currency={currency}
             summary={accountData.summary}
             metalBalances={accountData.metalBalances || []}
-            items={statementData?.items || []}
+            items={
+              printItems.length > 0 ? printItems : statementData?.items || []
+            }
             shopName={statementData?.shopName}
             onClose={() => setShowPrintModal(false)}
           />

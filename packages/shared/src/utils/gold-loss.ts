@@ -30,6 +30,7 @@ export type GoldLossInput = {
   finishedGrams: number;
   sprueButtonGrams?: number;
   recoverableGrams?: number;
+  returnedUnusedGrams?: number;
   allowedPercent?: number;
 };
 
@@ -38,6 +39,7 @@ export type GoldLossResult = {
   finished: number;
   sprueButton: number;
   recoverable: number;
+  returnedUnused: number;
   accounted: number;
   actualLoss: number;
   allowedPercent: number;
@@ -51,7 +53,8 @@ export function roundGrams(n: number): number {
 }
 
 /**
- * actualLoss = issued - finished - sprue/button - recoverable
+ * accounted = finished + sprue/button + recoverable + returnedUnused
+ * actualLoss = issued - accounted
  * allowedLoss = issued * (allowedPercent / 100)
  * unexplained = max(0, actualLoss - allowedLoss)
  */
@@ -60,7 +63,10 @@ export function computeGoldLoss(input: GoldLossInput): GoldLossResult {
   const finished = roundGrams(input.finishedGrams);
   const sprueButton = roundGrams(input.sprueButtonGrams ?? 0);
   const recoverable = roundGrams(input.recoverableGrams ?? 0);
-  const accounted = roundGrams(finished + sprueButton + recoverable);
+  const returnedUnused = roundGrams(input.returnedUnusedGrams ?? 0);
+  const accounted = roundGrams(
+    finished + sprueButton + recoverable + returnedUnused,
+  );
   const actualLoss = roundGrams(issued - accounted);
   const allowedPercent = Number.isFinite(input.allowedPercent)
     ? Number(input.allowedPercent)
@@ -72,6 +78,7 @@ export function computeGoldLoss(input: GoldLossInput): GoldLossResult {
     finished,
     sprueButton,
     recoverable,
+    returnedUnused,
     accounted,
     actualLoss,
     allowedPercent,
@@ -85,6 +92,7 @@ export function stageGoldLoss(input: {
   goldOutGrams: number;
   scrapGrams?: number;
   dustGrams?: number;
+  returnedUnusedGrams?: number;
   allowedPercent?: number;
 }): GoldLossResult {
   return computeGoldLoss({
@@ -92,6 +100,7 @@ export function stageGoldLoss(input: {
     finishedGrams: input.goldOutGrams,
     sprueButtonGrams: 0,
     recoverableGrams: (input.scrapGrams ?? 0) + (input.dustGrams ?? 0),
+    returnedUnusedGrams: input.returnedUnusedGrams ?? 0,
     allowedPercent: input.allowedPercent,
   });
 }

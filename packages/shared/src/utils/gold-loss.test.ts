@@ -16,6 +16,22 @@ describe("computeGoldLoss", () => {
     expect(result.unexplained).toBe(0);
   });
 
+  it("reduces actual loss when returned unused metal is present without labeling as finished", () => {
+    const result = computeGoldLoss({
+      issuedGrams: 1000,
+      finishedGrams: 700,
+      sprueButtonGrams: 50,
+      recoverableGrams: 20,
+      returnedUnusedGrams: 220,
+      allowedPercent: 1,
+    });
+    expect(result.returnedUnused).toBe(220);
+    expect(result.accounted).toBe(990);
+    expect(result.actualLoss).toBe(10);
+    expect(result.allowedLoss).toBe(10);
+    expect(result.unexplained).toBe(0);
+  });
+
   it("flags unexplained loss above the allowed percent", () => {
     const result = computeGoldLoss({
       issuedGrams: 1000,
