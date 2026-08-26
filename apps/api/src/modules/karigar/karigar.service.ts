@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -91,31 +92,45 @@ export class KarigarService {
     }
     await this.priceRebase.ensureShopPricesMatchCurrency(shopId);
 
-    const [workshops, jobs, reserves, movementGroups, financialGroups] = await Promise.all([
-      this.prisma.karigarWorkshop.findMany({
-        where: { shopId },
-        orderBy: { createdAt: "asc" },
-      }),
-      this.prisma.karigarJob.findMany({
-        where: { shopId },
-        orderBy: { createdAt: "desc" },
-        include: {
-          stages: { orderBy: { createdAt: "asc" } },
-          trees: { include: { lines: { orderBy: { sortOrder: "asc" } } } },
-        },
-      }),
-      this.prisma.karigarVaultReserve.findMany({ where: { shopId } }),
-      this.prisma.karigarMetalMovement.groupBy({
-        by: ["workshopId", "type"],
-        where: { shopId, workshopId: { not: null } },
-        _sum: { weightGrams: true },
-      }),
-      this.prisma.karigarFinancialEntry.groupBy({
-        by: ["workshopId", "type"],
-        where: { shopId },
-        _sum: { amount: true },
-      }),
-    ]);
+    const [shop, workshops, jobs, reserves, movementGroups, financialGroups] =
+      await Promise.all([
+        this.prisma.shop.findUnique({
+          where: { id: shopId },
+          select: { currency: true },
+        }),
+        this.prisma.karigarWorkshop.findMany({
+          where: { shopId },
+          orderBy: { createdAt: "asc" },
+        }),
+        this.prisma.karigarJob.findMany({
+          where: { shopId },
+          orderBy: { createdAt: "desc" },
+          include: {
+            stages: { orderBy: { createdAt: "asc" } },
+            trees: { include: { lines: { orderBy: { sortOrder: "asc" } } } },
+          },
+        }),
+        this.prisma.karigarVaultReserve.findMany({ where: { shopId } }),
+        this.prisma.karigarMetalMovement.groupBy({
+          by: ["workshopId", "type"],
+          where: { shopId, workshopId: { not: null } },
+          _sum: { weightGrams: true },
+        }),
+        this.prisma.karigarFinancialEntry.groupBy({
+          by: ["workshopId", "type", "currency"],
+          where: { shopId },
+          _sum: { amount: true },
+        }),
+      ]);
+
+    const currentCurrency = shop?.currency ?? "NPR";
+    for (const fg of financialGroups) {
+      if (fg.currency !== currentCurrency) {
+        throw new ConflictException(
+          `Karigar snapshot contains financial entries in currency ${fg.currency} that differs from current shop currency ${currentCurrency}. Currency rebase must be migrated immutably.`,
+        );
+      }
+    }
 
     const vaultReserves: Record<string, number> = {
       goldGrains24k: 0,
@@ -252,37 +267,51 @@ export class KarigarService {
 
     await this.prisma.$transaction(async (tx) => {
       for (const w of dto.workshops) {
-        await tx.karigarWorkshop.upsert({
+        const existingWorkshop = await tx.karigarWorkshop.findUnique({
           where: { id: w.id },
-          create: {
-          id: w.id,
-          shopId,
-          name: w.name,
-          artisan: w.artisan,
-          location: w.location ?? "Local",
-          phone: w.phone ?? null,
-          email: w.email ?? null,
-          rating: w.rating ?? 5,
-          metalIssued: w.metalIssued ?? 0,
-          metalReturned: w.metalReturned ?? 0,
-          wastagePercent: w.wastagePercent ?? 0,
-          wastageLimit: w.wastageLimit ?? 1,
-          wageRatePerGram: w.wageRatePerGram ?? 0,
-          outstandingBalance: w.outstandingBalance ?? 0,
-          wageDue: w.wageDue ?? 0,
-          },
-          update: {
-            name: w.name,
-            artisan: w.artisan,
-            location: w.location ?? "Local",
-            phone: w.phone ?? null,
-            email: w.email ?? null,
-            rating: w.rating ?? 5,
-            wastageLimit: w.wastageLimit ?? 1,
-            wageRatePerGram: w.wageRatePerGram ?? 0,
-            wageDue: w.wageDue ?? 0,
-          },
+          select: { id: true, shopId: true },
         });
+        if (existingWorkshop) {
+          if (existingWorkshop.shopId !== shopId) {
+            throw new ForbiddenException(
+              "Cannot modify workshop belonging to another shop",
+            );
+          }
+          await tx.karigarWorkshop.update({
+            where: { id: w.id },
+            data: {
+              name: w.name,
+              artisan: w.artisan,
+              location: w.location ?? "Local",
+              phone: w.phone ?? null,
+              email: w.email ?? null,
+              rating: w.rating ?? 5,
+              wastageLimit: w.wastageLimit ?? 1,
+              wageRatePerGram: w.wageRatePerGram ?? 0,
+              // wageDue is derived strictly from financial ledger entries, ignore client payload
+            },
+          });
+        } else {
+          await tx.karigarWorkshop.create({
+            data: {
+              id: w.id,
+              shopId,
+              name: w.name,
+              artisan: w.artisan,
+              location: w.location ?? "Local",
+              phone: w.phone ?? null,
+              email: w.email ?? null,
+              rating: w.rating ?? 5,
+              metalIssued: w.metalIssued ?? 0,
+              metalReturned: w.metalReturned ?? 0,
+              wastagePercent: w.wastagePercent ?? 0,
+              wastageLimit: w.wastageLimit ?? 1,
+              wageRatePerGram: w.wageRatePerGram ?? 0,
+              outstandingBalance: w.outstandingBalance ?? 0,
+              wageDue: 0,
+            },
+          });
+        }
       }
 
       for (const key of reserveKeys) {
@@ -845,6 +874,8 @@ export class KarigarService {
             purity: dto.purity ?? null,
             note: dto.note ?? null,
             lotId: dto.lotId ?? null,
+            idempotencyKey: dto.idempotencyKey ?? null,
+            requestFingerprint: movementFingerprint,
             createdBy: userId ?? null,
           },
         });
@@ -863,6 +894,8 @@ export class KarigarService {
             purity: dto.purity ?? null,
             note: dto.note ?? null,
             lotId: dto.lotId ?? null,
+            idempotencyKey: dto.idempotencyKey ?? null,
+            requestFingerprint: movementFingerprint,
             createdBy: userId ?? null,
           },
         });
@@ -1909,11 +1942,13 @@ export class KarigarService {
       }),
     ]);
 
-    const currencies = new Set(financialEntries.map((e) => e.currency));
-    if (currencies.size > 1) {
-      throw new ConflictException(
-        "Karigar account contains mixed currencies from previous operations. Currency rebase must be migrated immutably.",
-      );
+    const shopCurrency = workshop.shop.currency ?? "NPR";
+    for (const e of financialEntries) {
+      if (e.currency !== shopCurrency) {
+        throw new ConflictException(
+          `Karigar account contains historical currency (${e.currency}) that differs from current shop currency (${shopCurrency}). Currency rebase must be migrated immutably.`,
+        );
+      }
     }
 
     const financialSummary = computeFinancialSummary(financialEntries);
@@ -1978,17 +2013,13 @@ export class KarigarService {
 
     let cursorTuple: { createdAt: Date; id: string } | null = null;
     if (query.cursor) {
+      if (!query.cursor.startsWith("v1.")) {
+        throw new BadRequestException("Invalid pagination cursor format");
+      }
       try {
-        let parsed: { createdAt: string; id: string };
-        if (query.cursor.includes("_")) {
-          const [iso, cid] = query.cursor.split("_");
-          parsed = { createdAt: iso, id: cid };
-        } else {
-          const decoded = Buffer.from(query.cursor, "base64url").toString(
-            "utf-8",
-          );
-          parsed = JSON.parse(decoded);
-        }
+        const raw = query.cursor.slice(3);
+        const decoded = Buffer.from(raw, "base64url").toString("utf-8");
+        const parsed = JSON.parse(decoded);
         const dt = new Date(parsed.createdAt);
         if (
           !Number.isFinite(dt.getTime()) ||
@@ -2024,73 +2055,110 @@ export class KarigarService {
           }
         : undefined;
 
+    const filter = (query.type ?? "ALL").toUpperCase();
+    const queryMetal = filter === "ALL" || filter === "METAL";
+
+    let financialTypeFilter:
+      | Prisma.KarigarFinancialEntryWhereInput["type"]
+      | undefined = undefined;
+    let queryFinancial = true;
+    if (filter === "ALL" || filter === "MONEY") {
+      financialTypeFilter = undefined;
+    } else if (filter === "WAGES" || filter === "WAGE") {
+      financialTypeFilter = "WAGE_ACCRUAL";
+    } else if (filter === "PAYMENTS" || filter === "PAYMENT") {
+      financialTypeFilter = "SETTLEMENT_PAYMENT";
+    } else if (filter === "ADVANCES" || filter === "ADVANCE") {
+      financialTypeFilter = "ADVANCE_PAYMENT";
+    } else if (filter === "ADJUSTMENTS" || filter === "ADJUSTMENT") {
+      financialTypeFilter = {
+        in: ["ADJUSTMENT_INCREASE", "ADJUSTMENT_DECREASE"],
+      };
+    } else if (filter === "METAL") {
+      queryFinancial = false;
+    } else {
+      throw new BadRequestException(
+        `Unknown statement filter type: ${query.type}`,
+      );
+    }
+
     const [movements, entries, jobs, totalMovementsCount, totalEntriesCount] =
       await Promise.all([
-        this.prisma.karigarMetalMovement.findMany({
-          where: {
-            shopId,
-            workshopId,
-            ...(dateFilter ? { createdAt: dateFilter } : {}),
-            ...(query.jobId ? { jobId: query.jobId } : {}),
-            ...cursorFilter,
-          },
-          include: {
-            job: { select: { id: true, product: true } },
-          },
-          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-          take: limit + 1,
-        }),
-        this.prisma.karigarFinancialEntry.findMany({
-          where: {
-            shopId,
-            workshopId,
-            ...(dateFilter ? { createdAt: dateFilter } : {}),
-            ...(query.jobId
-              ? {
-                  OR: [
-                    { jobId: query.jobId },
-                    { allocations: { some: { jobId: query.jobId } } },
-                  ],
-                }
-              : {}),
-            ...cursorFilter,
-          },
-          include: {
-            job: { select: { id: true, product: true } },
-            allocations: {
-              include: { job: { select: { id: true, product: true } } },
-            },
-          },
-          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-          take: limit + 1,
-        }),
+        queryMetal
+          ? this.prisma.karigarMetalMovement.findMany({
+              where: {
+                shopId,
+                workshopId,
+                ...(dateFilter ? { createdAt: dateFilter } : {}),
+                ...(query.jobId ? { jobId: query.jobId } : {}),
+                ...cursorFilter,
+              },
+              include: {
+                job: { select: { id: true, product: true } },
+              },
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+              take: limit + 1,
+            })
+          : Promise.resolve([]),
+        queryFinancial
+          ? this.prisma.karigarFinancialEntry.findMany({
+              where: {
+                shopId,
+                workshopId,
+                ...(financialTypeFilter ? { type: financialTypeFilter } : {}),
+                ...(dateFilter ? { createdAt: dateFilter } : {}),
+                ...(query.jobId
+                  ? {
+                      OR: [
+                        { jobId: query.jobId },
+                        { allocations: { some: { jobId: query.jobId } } },
+                      ],
+                    }
+                  : {}),
+                ...cursorFilter,
+              },
+              include: {
+                job: { select: { id: true, product: true } },
+                allocations: {
+                  include: { job: { select: { id: true, product: true } } },
+                },
+              },
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+              take: limit + 1,
+            })
+          : Promise.resolve([]),
         this.prisma.karigarJob.findMany({
           where: { shopId, workshopId },
           select: { id: true, product: true },
         }),
-        this.prisma.karigarMetalMovement.count({
-          where: {
-            shopId,
-            workshopId,
-            ...(dateFilter ? { createdAt: dateFilter } : {}),
-            ...(query.jobId ? { jobId: query.jobId } : {}),
-          },
-        }),
-        this.prisma.karigarFinancialEntry.count({
-          where: {
-            shopId,
-            workshopId,
-            ...(dateFilter ? { createdAt: dateFilter } : {}),
-            ...(query.jobId
-              ? {
-                  OR: [
-                    { jobId: query.jobId },
-                    { allocations: { some: { jobId: query.jobId } } },
-                  ],
-                }
-              : {}),
-          },
-        }),
+        queryMetal
+          ? this.prisma.karigarMetalMovement.count({
+              where: {
+                shopId,
+                workshopId,
+                ...(dateFilter ? { createdAt: dateFilter } : {}),
+                ...(query.jobId ? { jobId: query.jobId } : {}),
+              },
+            })
+          : Promise.resolve(0),
+        queryFinancial
+          ? this.prisma.karigarFinancialEntry.count({
+              where: {
+                shopId,
+                workshopId,
+                ...(financialTypeFilter ? { type: financialTypeFilter } : {}),
+                ...(dateFilter ? { createdAt: dateFilter } : {}),
+                ...(query.jobId
+                  ? {
+                      OR: [
+                        { jobId: query.jobId },
+                        { allocations: { some: { jobId: query.jobId } } },
+                      ],
+                    }
+                  : {}),
+              },
+            })
+          : Promise.resolve(0),
       ]);
 
     const jobNameMap = new Map<string, string>();
@@ -2133,30 +2201,7 @@ export class KarigarService {
       })),
     }));
 
-    let combined = [...metalEvents, ...moneyEvents];
-
-    if (query.type) {
-      const filter = query.type.toUpperCase();
-      if (filter === "METAL") {
-        combined = combined.filter((ev) => ev.kind === "METAL");
-      } else if (filter === "MONEY") {
-        combined = combined.filter((ev) => ev.kind === "MONEY");
-      } else if (filter === "WAGES" || filter === "WAGE") {
-        combined = combined.filter((ev) => ev.eventType === "WAGE_ACCRUAL");
-      } else if (filter === "PAYMENTS" || filter === "PAYMENT") {
-        combined = combined.filter(
-          (ev) => ev.eventType === "SETTLEMENT_PAYMENT",
-        );
-      } else if (filter === "ADVANCES" || filter === "ADVANCE") {
-        combined = combined.filter((ev) => ev.eventType === "ADVANCE_PAYMENT");
-      } else if (filter === "ADJUSTMENTS" || filter === "ADJUSTMENT") {
-        combined = combined.filter(
-          (ev) =>
-            ev.eventType === "ADJUSTMENT_INCREASE" ||
-            ev.eventType === "ADJUSTMENT_DECREASE",
-        );
-      }
-    }
+    const combined = [...metalEvents, ...moneyEvents];
 
     // Deterministic Sort: chronological descending by createdAt, secondary by id
     combined.sort((a, b) => {
@@ -2171,9 +2216,11 @@ export class KarigarService {
     let nextCursor: string | null = null;
     if (hasMore && paginated.length > 0) {
       const last = paginated[paginated.length - 1];
-      nextCursor = Buffer.from(
-        JSON.stringify({ createdAt: last.createdAt, id: last.id }),
-      ).toString("base64url");
+      const payload = JSON.stringify({
+        createdAt: last.createdAt,
+        id: last.id,
+      });
+      nextCursor = `v1.${Buffer.from(payload).toString("base64url")}`;
     }
 
     return {
@@ -2210,12 +2257,15 @@ export class KarigarService {
         throw new NotFoundException("Karigar not found");
       }
 
-      // 2. Validate allocations (explicit or automatic FIFO)
-      const finalAllocations: { jobId: string; amount: number }[] = [];
-
-      if (dto.allocations && dto.allocations.length > 0) {
+      // 2. Compute canonical request intent fingerprint
+      const allocationMode =
+        dto.allocations && dto.allocations.length > 0
+          ? "EXPLICIT"
+          : "AUTO_FIFO";
+      let requestedAllocations: { jobId: string; amount: number }[] = [];
+      if (allocationMode === "EXPLICIT") {
         const allocMap = new Map<string, number>();
-        for (const a of dto.allocations) {
+        for (const a of dto.allocations!) {
           if (a.amount <= 0) {
             throw new BadRequestException("Allocation amount must be positive");
           }
@@ -2224,7 +2274,51 @@ export class KarigarService {
             roundMoney((allocMap.get(a.jobId) ?? 0) + a.amount),
           );
         }
-        const jobIds = Array.from(allocMap.keys());
+        requestedAllocations = Array.from(allocMap.entries())
+          .map(([jobId, amount]) => ({ jobId, amount }))
+          .sort((a, b) => a.jobId.localeCompare(b.jobId));
+      }
+
+      const fingerprint = computeSha256({
+        workshopId,
+        operation: "PAYMENT",
+        amount: paymentAmount,
+        paymentMethod: dto.paymentMethod ?? "CASH",
+        reference: dto.reference?.trim() || null,
+        note: dto.note?.trim() || null,
+        allocationMode,
+        allocations: requestedAllocations,
+      });
+
+      // 3. Check Idempotency with canonical SHA-256 fingerprint immediately
+      const existing = await tx.karigarFinancialEntry.findUnique({
+        where: {
+          shopId_idempotencyKey: {
+            shopId,
+            idempotencyKey: dto.idempotencyKey!,
+          },
+        },
+      });
+      if (existing) {
+        if (existing.requestFingerprint === fingerprint) {
+          const allEntries = await tx.karigarFinancialEntry.findMany({
+            where: { shopId, workshopId },
+            select: { type: true, amount: true },
+          });
+          return {
+            entry: { ...existing, amount: Number(existing.amount) },
+            summary: computeFinancialSummary(allEntries),
+          };
+        }
+        throw new ConflictException(
+          "Idempotency key reused for a different payment payload",
+        );
+      }
+
+      // 4. ONLY IF no existing record, resolve allocations
+      const finalAllocations: { jobId: string; amount: number }[] = [];
+      if (allocationMode === "EXPLICIT") {
+        const jobIds = requestedAllocations.map((a) => a.jobId);
         const jobsFound = await tx.karigarJob.findMany({
           where: { id: { in: jobIds }, shopId, workshopId },
           select: { id: true, product: true },
@@ -2267,18 +2361,18 @@ export class KarigarService {
         }
 
         let totalAlloc = 0;
-        for (const j of jobsFound) {
-          const requestedAlloc = allocMap.get(j.id) ?? 0;
-          const accrued = accruedByJob.get(j.id) ?? 0;
-          const alreadyAlloc = allocatedByJob.get(j.id) ?? 0;
+        for (const req of requestedAllocations) {
+          const accrued = accruedByJob.get(req.jobId) ?? 0;
+          const alreadyAlloc = allocatedByJob.get(req.jobId) ?? 0;
           const outstanding = Math.max(0, roundMoney(accrued - alreadyAlloc));
-          if (requestedAlloc > outstanding + 0.0001) {
+          if (req.amount > outstanding + 0.0001) {
+            const j = jobsFound.find((jf) => jf.id === req.jobId);
             throw new BadRequestException(
-              `Allocation for job ${j.product} (${requestedAlloc}) exceeds outstanding wage (${outstanding})`,
+              `Allocation for job ${j?.product || req.jobId} (${req.amount}) exceeds outstanding wage (${outstanding})`,
             );
           }
-          totalAlloc = roundMoney(totalAlloc + requestedAlloc);
-          finalAllocations.push({ jobId: j.id, amount: requestedAlloc });
+          totalAlloc = roundMoney(totalAlloc + req.amount);
+          finalAllocations.push({ jobId: req.jobId, amount: req.amount });
         }
         if (totalAlloc > paymentAmount + 0.0001) {
           throw new BadRequestException(
@@ -2344,55 +2438,17 @@ export class KarigarService {
         }
       }
 
-      // 3. Check Idempotency with canonical SHA-256 fingerprint
-      const sortedAllocations = finalAllocations
-        .slice()
-        .sort((a, b) => a.jobId.localeCompare(b.jobId));
-      const fingerprint = computeSha256({
-        workshopId,
-        operation: "PAYMENT",
-        amount: paymentAmount,
-        paymentMethod: dto.paymentMethod ?? "CASH",
-        reference: dto.reference?.trim() || null,
-        note: dto.note?.trim() || null,
-        allocations: sortedAllocations,
-      });
-
-      const existing = await tx.karigarFinancialEntry.findUnique({
-        where: {
-          shopId_idempotencyKey: {
-            shopId,
-            idempotencyKey: dto.idempotencyKey!,
-          },
-        },
-      });
-      if (existing) {
-        if (existing.requestFingerprint === fingerprint) {
-          const allEntries = await tx.karigarFinancialEntry.findMany({
-            where: { shopId, workshopId },
-            select: { type: true, amount: true },
-          });
-          return {
-            entry: { ...existing, amount: Number(existing.amount) },
-            summary: computeFinancialSummary(allEntries),
-          };
-        }
-        throw new ConflictException(
-          "Idempotency key reused for a different payment payload",
-        );
-      }
-
-      // 4. Workshop & Shop context
+      // 5. Workshop & Shop context
       const workshop = await tx.karigarWorkshop.findFirst({
         where: { id: workshopId, shopId },
         include: { shop: { select: { currency: true } } },
       });
       if (!workshop) throw new NotFoundException("Karigar not found");
 
-      // 5. Ensure opening balance is posted before settlement
+      // 6. Ensure opening balance is posted before settlement
       await this.ensureOpeningBalancePosted(tx, shopId, workshopId);
 
-      // 6. Check current payable
+      // 7. Check current payable
       const existingEntries = await tx.karigarFinancialEntry.findMany({
         where: { shopId, workshopId },
         select: { type: true, amount: true },
@@ -2753,6 +2809,20 @@ export class KarigarService {
 
       // 3. Ensure opening balance is posted
       await this.ensureOpeningBalancePosted(tx, shopId, workshopId);
+
+      // 4. Validate adjustment decrease does not exceed current amount payable
+      if (dto.type === "ADJUSTMENT_DECREASE") {
+        const existingEntries = await tx.karigarFinancialEntry.findMany({
+          where: { shopId, workshopId },
+          select: { type: true, amount: true },
+        });
+        const currentSummary = computeFinancialSummary(existingEntries);
+        if (adjAmount > currentSummary.amountPayable + 0.0001) {
+          throw new BadRequestException(
+            `Adjustment decrease (${adjAmount}) cannot exceed current payable (${currentSummary.amountPayable}). Use an advance or recovery workflow for karigar receivables.`,
+          );
+        }
+      }
 
       const entry = await tx.karigarFinancialEntry.create({
         data: {

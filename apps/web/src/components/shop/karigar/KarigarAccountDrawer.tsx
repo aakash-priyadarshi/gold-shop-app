@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { format } from "date-fns";
 import {
   X,
@@ -74,7 +74,7 @@ export function KarigarAccountDrawer({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
-  // Idempotency keys state (stable across retries, rotated on success or new modal open)
+  // Idempotency keys state (stable across retries, rotated on success, modal close, or material form edit)
   const [payIdempotencyKey, setPayIdempotencyKey] = useState<string>(() =>
     crypto.randomUUID(),
   );
@@ -87,6 +87,12 @@ export function KarigarAccountDrawer({
   const [adjIdempotencyKey, setAdjIdempotencyKey] = useState<string>(() =>
     crypto.randomUUID(),
   );
+
+  // Last attempted payload trackers to detect material form edits after failed attempts
+  const lastPayAttemptPayload = useRef<string | null>(null);
+  const lastAdvAttemptPayload = useRef<string | null>(null);
+  const lastRetAttemptPayload = useRef<string | null>(null);
+  const lastAdjAttemptPayload = useRef<string | null>(null);
 
   // Payment Form
   const [payAmount, setPayAmount] = useState<string>("");
@@ -113,6 +119,46 @@ export function KarigarAccountDrawer({
   >("ADJUSTMENT_INCREASE");
   const [adjAmount, setAdjAmount] = useState<string>("");
   const [adjNote, setAdjNote] = useState<string>("");
+
+  const handleClosePayModal = () => {
+    setShowPayModal(false);
+    setPayAmount("");
+    setPayRef("");
+    setPayNote("");
+    setPayMethod("CASH");
+    setPayIdempotencyKey(crypto.randomUUID());
+    lastPayAttemptPayload.current = null;
+  };
+
+  const handleCloseAdvanceModal = () => {
+    setShowAdvanceModal(false);
+    setAdvAmount("");
+    setAdvRef("");
+    setAdvNote("");
+    setAdvMethod("CASH");
+    setAdvIdempotencyKey(crypto.randomUUID());
+    lastAdvAttemptPayload.current = null;
+  };
+
+  const handleCloseReturnModal = () => {
+    setShowReturnModal(false);
+    setRetWeight("");
+    setRetJobId("");
+    setRetNote("");
+    setRetType("RETURN_UNUSED");
+    setRetMetalKey("goldGrains24k");
+    setRetIdempotencyKey(crypto.randomUUID());
+    lastRetAttemptPayload.current = null;
+  };
+
+  const handleCloseAdjustModal = () => {
+    setShowAdjustModal(false);
+    setAdjAmount("");
+    setAdjNote("");
+    setAdjType("ADJUSTMENT_INCREASE");
+    setAdjIdempotencyKey(crypto.randomUUID());
+    lastAdjAttemptPayload.current = null;
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -145,10 +191,10 @@ export function KarigarAccountDrawer({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (showPayModal) setShowPayModal(false);
-        else if (showAdvanceModal) setShowAdvanceModal(false);
-        else if (showReturnModal) setShowReturnModal(false);
-        else if (showAdjustModal) setShowAdjustModal(false);
+        if (showPayModal) handleClosePayModal();
+        else if (showAdvanceModal) handleCloseAdvanceModal();
+        else if (showReturnModal) handleCloseReturnModal();
+        else if (showAdjustModal) handleCloseAdjustModal();
         else if (showPrintModal) setShowPrintModal(false);
         else if (selectedJobCostId) setSelectedJobCostId(null);
         else onClose();
@@ -173,7 +219,7 @@ export function KarigarAccountDrawer({
   const sanitizeCsvCell = (val: any): string => {
     if (val == null) return "";
     let str = String(val).replace(/"/g, '""');
-    if (/^[=+\-@]/.test(str)) {
+    if (/^\s*[=+\-@\t\r]/.test(str)) {
       str = "'" + str;
     }
     return `"${str}"`;
@@ -277,6 +323,23 @@ export function KarigarAccountDrawer({
       );
       return;
     }
+
+    const currentPayload = JSON.stringify({
+      amount: amountNum,
+      method: payMethod,
+      ref: payRef.trim(),
+      note: payNote.trim(),
+    });
+    let keyToUse = payIdempotencyKey;
+    if (
+      lastPayAttemptPayload.current !== null &&
+      lastPayAttemptPayload.current !== currentPayload
+    ) {
+      keyToUse = crypto.randomUUID();
+      setPayIdempotencyKey(keyToUse);
+    }
+    lastPayAttemptPayload.current = currentPayload;
+
     try {
       setActionLoading(true);
       setActionError(null);
@@ -285,14 +348,10 @@ export function KarigarAccountDrawer({
         paymentMethod: payMethod,
         reference: payRef || undefined,
         note: payNote || undefined,
-        idempotencyKey: payIdempotencyKey,
+        idempotencyKey: keyToUse,
       });
       setActionSuccess(t("Settlement payment recorded successfully"));
-      setShowPayModal(false);
-      setPayAmount("");
-      setPayRef("");
-      setPayNote("");
-      setPayIdempotencyKey(crypto.randomUUID());
+      handleClosePayModal();
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
@@ -318,6 +377,23 @@ export function KarigarAccountDrawer({
       );
       return;
     }
+
+    const currentPayload = JSON.stringify({
+      amount: amountNum,
+      method: advMethod,
+      ref: advRef.trim(),
+      note: advNote.trim(),
+    });
+    let keyToUse = advIdempotencyKey;
+    if (
+      lastAdvAttemptPayload.current !== null &&
+      lastAdvAttemptPayload.current !== currentPayload
+    ) {
+      keyToUse = crypto.randomUUID();
+      setAdvIdempotencyKey(keyToUse);
+    }
+    lastAdvAttemptPayload.current = currentPayload;
+
     try {
       setActionLoading(true);
       setActionError(null);
@@ -326,14 +402,10 @@ export function KarigarAccountDrawer({
         paymentMethod: advMethod,
         reference: advRef || undefined,
         note: advNote || undefined,
-        idempotencyKey: advIdempotencyKey,
+        idempotencyKey: keyToUse,
       });
       setActionSuccess(t("Advance payment recorded successfully"));
-      setShowAdvanceModal(false);
-      setAdvAmount("");
-      setAdvRef("");
-      setAdvNote("");
-      setAdvIdempotencyKey(crypto.randomUUID());
+      handleCloseAdvanceModal();
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
@@ -353,6 +425,24 @@ export function KarigarAccountDrawer({
       setActionError(t("Please enter a valid positive weight"));
       return;
     }
+
+    const currentPayload = JSON.stringify({
+      type: retType,
+      metalKey: retMetalKey,
+      weight: weightNum,
+      jobId: retJobId.trim(),
+      note: retNote.trim(),
+    });
+    let keyToUse = retIdempotencyKey;
+    if (
+      lastRetAttemptPayload.current !== null &&
+      lastRetAttemptPayload.current !== currentPayload
+    ) {
+      keyToUse = crypto.randomUUID();
+      setRetIdempotencyKey(keyToUse);
+    }
+    lastRetAttemptPayload.current = currentPayload;
+
     try {
       setActionLoading(true);
       setActionError(null);
@@ -362,14 +452,10 @@ export function KarigarAccountDrawer({
         weightGrams: weightNum,
         jobId: retJobId || undefined,
         note: retNote || undefined,
-        idempotencyKey: retIdempotencyKey,
+        idempotencyKey: keyToUse,
       });
       setActionSuccess(t("Metal return reconciled successfully"));
-      setShowReturnModal(false);
-      setRetWeight("");
-      setRetJobId("");
-      setRetNote("");
-      setRetIdempotencyKey(crypto.randomUUID());
+      handleCloseReturnModal();
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
@@ -393,6 +479,22 @@ export function KarigarAccountDrawer({
       setActionError(t("Please provide a reason note for the adjustment"));
       return;
     }
+
+    const currentPayload = JSON.stringify({
+      type: adjType,
+      amount: amountNum,
+      note: adjNote.trim(),
+    });
+    let keyToUse = adjIdempotencyKey;
+    if (
+      lastAdjAttemptPayload.current !== null &&
+      lastAdjAttemptPayload.current !== currentPayload
+    ) {
+      keyToUse = crypto.randomUUID();
+      setAdjIdempotencyKey(keyToUse);
+    }
+    lastAdjAttemptPayload.current = currentPayload;
+
     try {
       setActionLoading(true);
       setActionError(null);
@@ -400,13 +502,10 @@ export function KarigarAccountDrawer({
         type: adjType,
         amount: amountNum,
         note: adjNote,
-        idempotencyKey: adjIdempotencyKey,
+        idempotencyKey: keyToUse,
       });
       setActionSuccess(t("Financial adjustment recorded successfully"));
-      setShowAdjustModal(false);
-      setAdjAmount("");
-      setAdjNote("");
-      setAdjIdempotencyKey(crypto.randomUUID());
+      handleCloseAdjustModal();
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
@@ -875,7 +974,7 @@ export function KarigarAccountDrawer({
                     {accountData?.summary?.amountPayable?.toLocaleString()}
                   </p>
                 </div>
-                <button onClick={() => setShowPayModal(false)}>
+                <button onClick={handleClosePayModal}>
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
               </div>
@@ -960,7 +1059,7 @@ export function KarigarAccountDrawer({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowPayModal(false)}
+                    onClick={handleClosePayModal}
                   >
                     <T>Cancel</T>
                   </Button>
@@ -993,7 +1092,7 @@ export function KarigarAccountDrawer({
                     <T>Will create an advance balance against future jobs</T>
                   </p>
                 </div>
-                <button onClick={() => setShowAdvanceModal(false)}>
+                <button onClick={handleCloseAdvanceModal}>
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
               </div>
@@ -1052,7 +1151,7 @@ export function KarigarAccountDrawer({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowAdvanceModal(false)}
+                    onClick={handleCloseAdvanceModal}
                   >
                     <T>Cancel</T>
                   </Button>
@@ -1085,7 +1184,7 @@ export function KarigarAccountDrawer({
                     <T>Increases shop vault & reduces karigar outstanding float</T>
                   </p>
                 </div>
-                <button onClick={() => setShowReturnModal(false)}>
+                <button onClick={handleCloseReturnModal}>
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
               </div>
@@ -1166,7 +1265,7 @@ export function KarigarAccountDrawer({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowReturnModal(false)}
+                    onClick={handleCloseReturnModal}
                   >
                     <T>Cancel</T>
                   </Button>
@@ -1199,7 +1298,7 @@ export function KarigarAccountDrawer({
                     <T>Append an immutable financial adjustment</T>
                   </p>
                 </div>
-                <button onClick={() => setShowAdjustModal(false)}>
+                <button onClick={handleCloseAdjustModal}>
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
               </div>
@@ -1256,7 +1355,7 @@ export function KarigarAccountDrawer({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowAdjustModal(false)}
+                    onClick={handleCloseAdjustModal}
                   >
                     <T>Cancel</T>
                   </Button>

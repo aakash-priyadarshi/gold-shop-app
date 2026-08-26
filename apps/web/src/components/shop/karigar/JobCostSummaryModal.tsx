@@ -38,7 +38,7 @@ export function JobCostSummaryModal({
       } catch (err: any) {
         if (mounted) {
           setError(
-            err.response?.data?.message || "Failed to load job cost breakdown",
+            err.response?.data?.message || t("Failed to load job cost breakdown"),
           );
         }
       } finally {
@@ -51,7 +51,7 @@ export function JobCostSummaryModal({
     return () => {
       mounted = false;
     };
-  }, [jobId]);
+  }, [jobId, t]);
 
   const activeCurrency = data?.currency || currency;
 

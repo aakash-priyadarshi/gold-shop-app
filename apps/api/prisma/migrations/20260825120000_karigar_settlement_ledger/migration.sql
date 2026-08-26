@@ -77,7 +77,7 @@ CREATE INDEX "KarigarFinancialEntry_shopId_workshopId_createdAt_idx" ON "Karigar
 CREATE INDEX "KarigarFinancialEntry_workshopId_idx" ON "KarigarFinancialEntry"("workshopId");
 CREATE INDEX "KarigarFinancialEntry_jobId_idx" ON "KarigarFinancialEntry"("jobId");
 
-CREATE UNIQUE INDEX "KarigarFinancialAllocation_financialEntryId_jobId_key" ON "KarigarFinancialAllocation"("financialEntryId", "jobId");
+CREATE INDEX "KarigarFinancialAllocation_financialEntryId_jobId_idx" ON "KarigarFinancialAllocation"("financialEntryId", "jobId");
 CREATE INDEX "KarigarFinancialAllocation_shopId_idx" ON "KarigarFinancialAllocation"("shopId");
 CREATE INDEX "KarigarFinancialAllocation_jobId_idx" ON "KarigarFinancialAllocation"("jobId");
 

@@ -177,4 +177,120 @@ describe("KarigarAccountDrawer", () => {
 
     expect(screen.getByText(/Reconcile \/ Return Metal/i)).toBeInTheDocument();
   });
+
+  it("preserves idempotencyKey on unchanged retry after failure, but mints a new key on material edit", async () => {
+    (karigarApi.recordPayment as any).mockRejectedValueOnce(
+      new Error("Network glitch"),
+    );
+
+    render(
+      <KarigarAccountDrawer
+        workshopId="ws-1"
+        shopCurrency="NPR"
+        onClose={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Kathmandu Filigree Works")).toBeInTheDocument();
+    });
+
+    // Open Pay Wages modal
+    fireEvent.click(screen.getByRole("button", { name: /Pay Wages/i }));
+
+    const amountInput = screen.getByPlaceholderText("0.00");
+    fireEvent.change(amountInput, { target: { value: "5000" } });
+
+    // 1st attempt (fails)
+    fireEvent.click(
+      screen.getByRole("button", { name: /Confirm Settlement/i }),
+    );
+
+    await waitFor(() => {
+      expect(karigarApi.recordPayment).toHaveBeenCalledTimes(1);
+    });
+
+    const firstCallKey = (karigarApi.recordPayment as any).mock.calls[0][1]
+      .idempotencyKey;
+    expect(firstCallKey).toBeDefined();
+
+    // 2nd attempt: UNCHANGED RETRY (clicking submit again without changing inputs)
+    (karigarApi.recordPayment as any).mockResolvedValueOnce({
+      data: {
+        entry: { id: "p1", amount: 5000 },
+        summary: mockAccount.summary,
+      },
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Confirm Settlement/i }),
+    );
+
+    await waitFor(() => {
+      expect(karigarApi.recordPayment).toHaveBeenCalledTimes(2);
+    });
+
+    const secondCallKey = (karigarApi.recordPayment as any).mock.calls[1][1]
+      .idempotencyKey;
+    // Unchanged retry must preserve the exact same idempotency key
+    expect(secondCallKey).toBe(firstCallKey);
+  });
+
+  it("mints a new idempotencyKey when form values are edited after a failed attempt", async () => {
+    (karigarApi.recordPayment as any).mockRejectedValueOnce(
+      new Error("Network glitch"),
+    );
+
+    render(
+      <KarigarAccountDrawer
+        workshopId="ws-1"
+        shopCurrency="NPR"
+        onClose={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Kathmandu Filigree Works")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Pay Wages/i }));
+
+    const amountInput = screen.getByPlaceholderText("0.00");
+    fireEvent.change(amountInput, { target: { value: "5000" } });
+
+    // 1st attempt (fails)
+    fireEvent.click(
+      screen.getByRole("button", { name: /Confirm Settlement/i }),
+    );
+
+    await waitFor(() => {
+      expect(karigarApi.recordPayment).toHaveBeenCalledTimes(1);
+    });
+
+    const firstCallKey = (karigarApi.recordPayment as any).mock.calls[0][1]
+      .idempotencyKey;
+
+    // User edits amount to 6000 after failure
+    fireEvent.change(amountInput, { target: { value: "6000" } });
+
+    (karigarApi.recordPayment as any).mockResolvedValueOnce({
+      data: {
+        entry: { id: "p2", amount: 6000 },
+        summary: mockAccount.summary,
+      },
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Confirm Settlement/i }),
+    );
+
+    await waitFor(() => {
+      expect(karigarApi.recordPayment).toHaveBeenCalledTimes(2);
+    });
+
+    const secondCallKey = (karigarApi.recordPayment as any).mock.calls[1][1]
+      .idempotencyKey;
+    // Edited retry must rotate to a brand new idempotency key
+    expect(secondCallKey).not.toBe(firstCallKey);
+  });
 });

@@ -1,4 +1,8 @@
-import { ConflictException } from "@nestjs/common";
+import {
+  ConflictException,
+  BadRequestException,
+  ForbiddenException,
+} from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { createHash } from "crypto";
 import { KarigarService } from "./karigar.service";
@@ -61,6 +65,7 @@ describe("KarigarService Account & Settlement Ledger", () => {
         upsert: jest.fn(),
       },
       karigarWorkshop: {
+        findUnique: jest.fn(),
         findFirst: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
@@ -519,6 +524,7 @@ describe("KarigarService Account & Settlement Ledger", () => {
         paymentMethod: "CASH",
         reference: null,
         note: null,
+        allocationMode: "AUTO_FIFO",
         allocations: [],
       });
 
@@ -575,9 +581,7 @@ describe("KarigarService Account & Settlement Ledger", () => {
 
       await expect(
         service.getWorkshopAccount("shop-1", "ws-1"),
-      ).rejects.toThrow(
-        "Karigar account contains mixed currencies from previous operations. Currency rebase must be migrated immutably.",
-      );
+      ).rejects.toThrow("Currency rebase must be migrated immutably.");
     });
   });
 
@@ -654,6 +658,278 @@ describe("KarigarService Account & Settlement Ledger", () => {
           }),
         }),
       );
+    });
+
+    it("filters statement by category directly in database query", async () => {
+      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
+      prisma.karigarFinancialEntry.findMany.mockResolvedValue([]);
+      prisma.karigarFinancialEntry.count.mockResolvedValue(0);
+
+      await service.getWorkshopStatement("shop-1", "ws-1", {
+        type: "PAYMENTS",
+      });
+
+      expect(prisma.karigarFinancialEntry.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            shopId: "shop-1",
+            workshopId: "ws-1",
+            type: "SETTLEMENT_PAYMENT",
+          }),
+        }),
+      );
+      expect(prisma.karigarMetalMovement.findMany).not.toHaveBeenCalled();
+    });
+
+    it("parses valid base64url cursor containing _ and - without error", async () => {
+      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
+      prisma.karigarFinancialEntry.findMany.mockResolvedValue([]);
+      prisma.karigarMetalMovement.findMany.mockResolvedValue([]);
+
+      const cursorObj = {
+        createdAt: "2026-08-26T12:00:00.000Z",
+        id: "entry_1-2_3",
+      };
+      const base64url = Buffer.from(JSON.stringify(cursorObj))
+        .toString("base64")
+        .replace(/=/g, "")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_");
+      const cursor = `v1.${base64url}`;
+
+      const res = await service.getWorkshopStatement("shop-1", "ws-1", {
+        cursor,
+      });
+      expect(res).toBeDefined();
+      expect(res.items).toEqual([]);
+    });
+
+    it("rejects malformed cursor format with BadRequestException", async () => {
+      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
+
+      await expect(
+        service.getWorkshopStatement("shop-1", "ws-1", {
+          cursor: "invalid-unversioned-cursor",
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("Hardening & Regression Validations", () => {
+    it("1. auto-payment retry after original allocation committed replays exact transaction without failing outstanding wage check", async () => {
+      const runTimestamp = Date.now();
+      const fp = computeTestFingerprint({
+        workshopId: "ws-1",
+        operation: "PAYMENT",
+        amount: 500,
+        paymentMethod: "CASH",
+        reference: null,
+        note: null,
+        allocationMode: "AUTO_FIFO",
+        allocations: [],
+      });
+
+      // Existing committed entry with exact matching request fingerprint
+      prisma.karigarFinancialEntry.findUnique.mockResolvedValue({
+        id: "fin-pay-auto-1",
+        shopId: "shop-1",
+        workshopId: "ws-1",
+        type: "SETTLEMENT_PAYMENT",
+        amount: new Prisma.Decimal(500),
+        currency: "NPR",
+        requestFingerprint: fp,
+      });
+
+      // Financial entries now reflect 0 payable
+      prisma.karigarFinancialEntry.findMany.mockResolvedValue([
+        { type: "WAGE_ACCRUAL", amount: new Prisma.Decimal(500) },
+        { type: "SETTLEMENT_PAYMENT", amount: new Prisma.Decimal(500) },
+      ]);
+
+      const res = await service.recordPayment("shop-1", "ws-1", "user-1", {
+        amount: 500,
+        paymentMethod: "CASH",
+        idempotencyKey: `auto-pay-key-${runTimestamp}`,
+      });
+
+      expect(res.entry.id).toBe("fin-pay-auto-1");
+      expect(res.entry.amount).toBe(500);
+      expect(res.summary.amountPayable).toBe(0);
+      expect(prisma.karigarFinancialEntry.create).not.toHaveBeenCalled();
+    });
+
+    it("2. explicit-payment retry after original allocation committed replays exact transaction", async () => {
+      const runTimestamp = Date.now();
+      const fp = computeTestFingerprint({
+        workshopId: "ws-1",
+        operation: "PAYMENT",
+        amount: 500,
+        paymentMethod: "CASH",
+        reference: null,
+        note: null,
+        allocationMode: "EXPLICIT",
+        allocations: [{ jobId: "job-1", amount: 500 }],
+      });
+
+      prisma.karigarFinancialEntry.findUnique.mockResolvedValue({
+        id: "fin-pay-exp-1",
+        shopId: "shop-1",
+        workshopId: "ws-1",
+        type: "SETTLEMENT_PAYMENT",
+        amount: new Prisma.Decimal(500),
+        currency: "NPR",
+        requestFingerprint: fp,
+      });
+
+      prisma.karigarFinancialEntry.findMany.mockResolvedValue([
+        { type: "WAGE_ACCRUAL", amount: new Prisma.Decimal(500) },
+        { type: "SETTLEMENT_PAYMENT", amount: new Prisma.Decimal(500) },
+      ]);
+
+      const res = await service.recordPayment("shop-1", "ws-1", "user-1", {
+        amount: 500,
+        paymentMethod: "CASH",
+        allocations: [{ jobId: "job-1", amount: 500 }],
+        idempotencyKey: `exp-pay-key-${runTimestamp}`,
+      });
+
+      expect(res.entry.id).toBe("fin-pay-exp-1");
+      expect(res.entry.amount).toBe(500);
+      expect(prisma.karigarFinancialEntry.create).not.toHaveBeenCalled();
+    });
+
+    it("3. allows multiple partial wage returns to consume the same advance on the same job", async () => {
+      // Setup job and workshop
+      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
+      prisma.karigarJob.findFirst.mockResolvedValue(mockJob);
+      prisma.karigarMetalMovement.findMany.mockResolvedValue([
+        { type: "ISSUE", weightGrams: 10 },
+      ]);
+
+      // There is an unallocated advance of 1000 with 400 already allocated
+      prisma.karigarFinancialEntry.findMany.mockImplementation((args: any) => {
+        if (args?.where?.type === "ADVANCE_PAYMENT") {
+          return Promise.resolve([
+            {
+              id: "adv-1",
+              amount: new Prisma.Decimal(1000),
+              createdAt: new Date("2026-08-01"),
+              allocations: [
+                {
+                  id: "alloc-1",
+                  financialEntryId: "adv-1",
+                  jobId: "job-1",
+                  amount: new Prisma.Decimal(400),
+                },
+              ],
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      // Existing allocations: first return already allocated 400 from adv-1 to job-1
+      prisma.karigarFinancialAllocation.findMany.mockResolvedValue([
+        {
+          id: "alloc-1",
+          financialEntryId: "adv-1",
+          jobId: "job-1",
+          amount: new Prisma.Decimal(400),
+        },
+      ]);
+
+      // Second return of 1.5g @ 200/g = 300 wage on same job-1
+      await service.addMovement("shop-1", "job-1", "user-1", {
+        type: "RETURN_FINISHED",
+        weightGrams: 1.5,
+        workshopId: "ws-1",
+        metalKey: "goldGrains24k",
+        idempotencyKey: `return-part-2-${Date.now()}`,
+      });
+
+      // Assert that a second allocation row for (adv-1, job-1) is created with amount 300
+      expect(prisma.karigarFinancialAllocation.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          financialEntryId: "adv-1",
+          jobId: "job-1",
+          amount: new Prisma.Decimal(300),
+        }),
+      });
+    });
+
+    it("4. replaceSnapshot throws ForbiddenException if any workshop belongs to another shop", async () => {
+      prisma.karigarWorkshop.findUnique.mockImplementation((args: any) => {
+        if (args?.where?.id === "foreign-ws-1") {
+          return Promise.resolve({
+            id: "foreign-ws-1",
+            shopId: "shop-OTHER",
+          });
+        }
+        return Promise.resolve(null);
+      });
+
+      await expect(
+        service.replaceSnapshot("shop-1", {
+          vaultReserves: {},
+          workshops: [
+            {
+              id: "foreign-ws-1",
+              name: "Foreign Workshop",
+              artisan: "Foreign Artisan",
+              wageRatePerGram: 200,
+              wastageLimit: 1.0,
+            },
+          ],
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it("5. getWorkshopAccount throws ConflictException if single historical entry currency != current shop currency", async () => {
+      prisma.karigarWorkshop.findFirst.mockResolvedValue({
+        ...mockWorkshop,
+        shop: { currency: "NPR" },
+      });
+      prisma.karigarFinancialEntry.findMany.mockResolvedValue([
+        {
+          type: "WAGE_ACCRUAL",
+          amount: new Prisma.Decimal(1000),
+          currency: "USD",
+        },
+      ]);
+      prisma.karigarMetalMovement.findMany.mockResolvedValue([]);
+      prisma.karigarJob.findMany.mockResolvedValue([]);
+
+      await expect(
+        service.getWorkshopAccount("shop-1", "ws-1"),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("6. adjustment decrease == payable succeeds; decrease > payable throws BadRequestException", async () => {
+      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
+      // Current ledger payable is 500
+      prisma.karigarFinancialEntry.findMany.mockResolvedValue([
+        { type: "WAGE_ACCRUAL", amount: new Prisma.Decimal(500) },
+      ]);
+
+      // Exactly 500 decrease succeeds
+      await expect(
+        service.recordAdjustment("shop-1", "ws-1", "user-1", {
+          type: "ADJUSTMENT_DECREASE",
+          amount: 500,
+          note: "Full deduction",
+          idempotencyKey: `adj-exact-${Date.now()}`,
+        }),
+      ).resolves.toBeDefined();
+
+      // 500.01 decrease fails
+      await expect(
+        service.recordAdjustment("shop-1", "ws-1", "user-1", {
+          type: "ADJUSTMENT_DECREASE",
+          amount: 500.01,
+          note: "Over deduction",
+          idempotencyKey: `adj-over-${Date.now()}`,
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

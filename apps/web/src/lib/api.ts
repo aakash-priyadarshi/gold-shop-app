@@ -670,7 +670,7 @@ export const karigarApi = {
     data: {
       type: "RETURN_FINISHED" | "RETURN_UNUSED" | "RETURN_SPRUE" | "SCRAP" | "DUST";
       weightGrams: number;
-      metalKey?: string;
+      metalKey: string;
       jobId?: string;
       note?: string;
       idempotencyKey?: string;

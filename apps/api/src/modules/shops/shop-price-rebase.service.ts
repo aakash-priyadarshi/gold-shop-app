@@ -161,6 +161,9 @@ export class ShopPriceRebaseService {
         userId: shop.userId,
       });
     } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
       this.logger.warn(
         `Could not rebase shop ${shopId} prices ${fromCurrency} → ${shop.currency}: ${
           error instanceof Error ? error.message : error

@@ -4366,7 +4366,7 @@ model KarigarFinancialAllocation {
   financialEntry KarigarFinancialEntry @relation(fields: [financialEntryId], references: [id], onDelete: Cascade)
   job            KarigarJob            @relation(fields: [jobId], references: [id], onDelete: Restrict)
 
-  @@unique([financialEntryId, jobId])
+  @@index([financialEntryId, jobId])
   @@index([shopId])
   @@index([jobId])
 }

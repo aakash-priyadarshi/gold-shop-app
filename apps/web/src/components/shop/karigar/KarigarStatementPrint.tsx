@@ -64,9 +64,41 @@ export function KarigarStatementPrint({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm p-4 sm:p-6 flex justify-center print:p-0 print:bg-white print:static">
-      <div className="bg-white text-slate-900 w-full max-w-4xl rounded-2xl shadow-2xl p-8 print:shadow-none print:p-6 print:w-full print:rounded-none relative flex flex-col justify-between">
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+          body * {
+            visibility: hidden !important;
+          }
+          #karigar-statement-print-root,
+          #karigar-statement-print-root * {
+            visibility: visible !important;
+          }
+          #karigar-statement-print-root {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            color: black !important;
+          }
+          .karigar-print-hide {
+            display: none !important;
+            visibility: hidden !important;
+          }
+        }
+      `}</style>
+      <div
+        id="karigar-statement-print-root"
+        className="bg-white text-slate-900 w-full max-w-4xl rounded-2xl shadow-2xl p-8 print:shadow-none print:p-6 print:w-full print:rounded-none relative flex flex-col justify-between"
+      >
         {/* Screen Action Bar (hidden in print) */}
-        <div className="flex items-center justify-between pb-6 mb-6 border-b border-slate-200 print:hidden">
+        <div className="flex items-center justify-between pb-6 mb-6 border-b border-slate-200 print:hidden karigar-print-hide">
           <div>
             <h2 className="text-xl font-bold text-slate-900">
               <T>Karigar Account Statement Print Preview</T>
