@@ -516,6 +516,56 @@ describe("KarigarService Account & Settlement Ledger", () => {
       expect(res.entry.amount).toBe(4500);
     });
 
+    it("canonicalizes duplicate explicit allocations before validation and persistence", async () => {
+      prisma.karigarWorkshop.findFirst.mockResolvedValue(mockWorkshop);
+      prisma.karigarJob.findMany.mockResolvedValue([
+        { id: "job-1", product: "Diamond Bridal Ring" },
+      ]);
+      prisma.karigarFinancialEntry.findMany.mockImplementation(({ where }: any) => {
+        if (where?.type === "OPENING_BALANCE") return [];
+        if (where?.type === "WAGE_ACCRUAL") {
+          return [{ jobId: "job-1", amount: new Prisma.Decimal(100) }];
+        }
+        return [{ type: "WAGE_ACCRUAL", amount: new Prisma.Decimal(100) }];
+      });
+      prisma.karigarFinancialAllocation.findMany.mockResolvedValue([]);
+      prisma.karigarFinancialEntry.create.mockResolvedValue({
+        id: "fin-duplicate-allocation",
+        shopId: "shop-1",
+        workshopId: "ws-1",
+        type: "SETTLEMENT_PAYMENT",
+        amount: new Prisma.Decimal(50),
+        currency: "NPR",
+        createdAt: new Date(),
+      });
+
+      await service.recordPayment("shop-1", "ws-1", "user-1", {
+        amount: 50,
+        paymentMethod: "CASH",
+        idempotencyKey: "duplicate-explicit-allocation-key",
+        allocations: [
+          { jobId: "job-1", amount: 25 },
+          { jobId: "job-1", amount: 25 },
+        ],
+      });
+
+      expect(prisma.karigarJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: { in: ["job-1"] } }),
+        }),
+      );
+      expect(prisma.karigarFinancialAllocation.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            shopId: "shop-1",
+            financialEntryId: "fin-duplicate-allocation",
+            jobId: "job-1",
+            amount: new Prisma.Decimal(50),
+          },
+        ],
+      });
+    });
+
     it("supports replay with exact idempotency key payload fingerprint", async () => {
       const expectedFingerprint = computeTestFingerprint({
         workshopId: "ws-1",

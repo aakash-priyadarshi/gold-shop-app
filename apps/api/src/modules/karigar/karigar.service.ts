@@ -3382,6 +3382,10 @@ export class KarigarService {
         (s, j) => s + j.goldLoss.recoverable,
         0,
       );
+      const returnedUnused = theirs.reduce(
+        (s, j) => s + j.goldLoss.returnedUnused,
+        0,
+      );
       return {
         workshopId: w.id,
         name: w.name,
@@ -3391,6 +3395,7 @@ export class KarigarService {
           finishedGrams: finished,
           sprueButtonGrams: sprue,
           recoverableGrams: recoverable,
+          returnedUnusedGrams: returnedUnused,
           allowedPercent: w.wastageLimit,
         }),
       };

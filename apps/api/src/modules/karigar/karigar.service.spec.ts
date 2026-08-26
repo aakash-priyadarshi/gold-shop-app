@@ -521,6 +521,51 @@ describe("KarigarService workshop safeguards", () => {
     expect(serialized.goldLoss).toMatchObject({ returnedUnused: 2 });
   });
 
+  it("aggregates returned-unused grams into the workshop gold-loss report exactly once", () => {
+    const report = (service as any).buildGoldLossReport(
+      [
+        {
+          id: "job-1",
+          product: "Workshop report ring",
+          artisan: "Karigar",
+          workshopId: "ws-1",
+          allowedWastagePercent: 1,
+          stages: [
+            {
+              id: "stage-casting",
+              stage: "CASTING",
+              goldInGrams: 10,
+              goldOutGrams: 7,
+              scrapGrams: 0,
+              dustGrams: 0,
+              allowedWastagePercent: 1,
+              status: "DONE",
+              workshopId: "ws-1",
+            },
+          ],
+          stageUnusedReturns: [
+            { type: "RETURN_UNUSED", weightGrams: 2, stage: "CASTING" },
+          ],
+        },
+      ],
+      [
+        {
+          id: "ws-1",
+          name: "Report Workshop",
+          artisan: "Karigar",
+          wastageLimit: 1,
+        },
+      ],
+    );
+
+    expect(report.karigars).toHaveLength(1);
+    expect(report.karigars[0].goldLoss).toMatchObject({
+      issued: 10,
+      returnedUnused: 2,
+      actualLoss: 1,
+    });
+  });
+
   it("still allows physical metal return reconciliation after cancellation", async () => {
     prisma.karigarJob.findFirst.mockResolvedValue(cancelledJob);
     prisma.shop.findUnique.mockResolvedValue({ currency: "NPR" });
