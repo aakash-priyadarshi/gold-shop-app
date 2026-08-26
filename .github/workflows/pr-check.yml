@@ -445,7 +445,7 @@ jobs:
         # A failed bootstrap must not reserve the shared test job indefinitely.
         timeout-minutes: 10
         working-directory: apps/api
-        run: pnpm test:e2e -- test/karigar-concurrency.e2e-spec.ts --runInBand --detectOpenHandles --forceExit
+        run: pnpm exec jest --config ./test/jest-e2e.json --runInBand --forceExit --testPathPattern=karigar-concurrency.e2e-spec.ts
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
           DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test

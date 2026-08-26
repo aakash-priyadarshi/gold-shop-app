@@ -4,8 +4,9 @@
   "testEnvironment": "node",
   "setupFiles": ["<rootDir>/src/jest.setup.ts"],
   "testRegex": ".e2e-spec.ts$",
+  "forceExit": true,
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.ts$": "ts-jest"
   },
   "moduleNameMapper": {
     "^src/(.*)$": "<rootDir>/src/$1"

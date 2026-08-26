@@ -284,6 +284,12 @@ describe("Karigar PostgreSQL Concurrency Integration", () => {
           await tx.karigarFinancialAllocation.deleteMany({
             where: { shopId: fixtureIds.shopId },
           });
+          // Posted GL rows are trigger-protected. Replica role skips those
+          // user triggers for this transaction only so the disposable shop
+          // can be torn down without creating compensating reversals.
+          await tx.$executeRawUnsafe(
+            "SET LOCAL session_replication_role = replica",
+          );
           await tx.journalLine.deleteMany({
             where: {
               journalEntryId: { in: journals.map((journal) => journal.id) },
