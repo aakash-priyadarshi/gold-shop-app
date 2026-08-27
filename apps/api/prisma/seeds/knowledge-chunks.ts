@@ -278,6 +278,11 @@ const CHUNKS: { topic: string; content: string }[] = [
     content:
       "Review & Earn: a shopkeeper leaves a review on SaaSHub, G2, or Crunchbase, then submits both the public review URL and a screenshot from Dashboard → Reviews. After an admin verifies the review, Orivraa grants 1 month of Pro (not Pro+). One review per platform per shop. This is separate from the seller referral programme.",
   },
+  {
+    topic: "karigar_settlement_ledger",
+    content:
+      "Karigar Settlement & Account Ledger: Inside /dashboard/shop/supply-chain, click 'Account' on any karigar card to open the authoritative financial reconciliation drawer. 1) Append-only Financial Entries: all wage accruals, settlement payments, advances, and authorized adjustments are immutable with no PUT/DELETE. 2) Anti-overreturn check: returns (RETURN_FINISHED, RETURN_UNUSED, RETURN_SPRUE, SCRAP, DUST) are validated against the outstanding physical metal float for that specific metalKey. 3) RETURN_UNUSED: allows returning unused metal to the shop vault without accruing making wages, and is permitted on cancelled jobs to reconcile outstanding metal floats. 4) Wage Accrual: occurs automatically when RETURN_FINISHED is logged (wage = weightGrams × wageRatePerGram). 5) Settlement Payments: pay accrued wages up to amountPayable (with optional job allocations). 6) Advances: prepaid advances reduce net payable and track positive advance balances. 7) Adjustments: authorized increases or decreases require a mandatory reason note. 8) Printable Statement & CSV: view and export unified chronological metal and money statements with date and type filters.",
+  },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -353,6 +358,7 @@ async function main() {
     "seller_referral_programme",
     "review_and_earn",
     "ui-languages",
+    "karigar_settlement_ledger",
   ]);
 
   for (const chunk of CHUNKS) {

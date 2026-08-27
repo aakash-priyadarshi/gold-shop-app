@@ -466,16 +466,18 @@ model Shop {
   managerPinDiscountThreshold Float?    @default(0)
 
   // Mobile shopkeeper tools (offline-first capable)
-  repairJobs            RepairJob[]
-  savingsMembers        SavingsMember[]
-  chitGroups            ChitGroup[]
-  goldLoans             GoldLoan[]
-  karigarWorkshops      KarigarWorkshop[]
-  karigarJobs           KarigarJob[]
-  karigarVaultReserves  KarigarVaultReserve[]
-  karigarMetalMovements KarigarMetalMovement[]
-  karigarJobStages      KarigarJobStage[]
-  karigarCastingTrees   KarigarCastingTree[]
+  repairJobs                  RepairJob[]
+  savingsMembers              SavingsMember[]
+  chitGroups                  ChitGroup[]
+  goldLoans                   GoldLoan[]
+  karigarWorkshops            KarigarWorkshop[]
+  karigarJobs                 KarigarJob[]
+  karigarVaultReserves        KarigarVaultReserve[]
+  karigarMetalMovements       KarigarMetalMovement[]
+  karigarJobStages            KarigarJobStage[]
+  karigarCastingTrees         KarigarCastingTree[]
+  karigarFinancialEntries     KarigarFinancialEntry[]
+  karigarFinancialAllocations KarigarFinancialAllocation[]
 
   // POS Registers & Shifts & Returns
   posRegisters PosRegister[]
@@ -1877,6 +1879,9 @@ enum LedgerAccountKey {
   SALES_REVENUE
   SALES_RETURNS
   PLATFORM_COMMISSION_EXPENSE
+  KARIGAR_ADVANCES
+  KARIGAR_PAYABLE
+  KARIGAR_MAKING_EXPENSE
 }
 
 enum JournalEntryStatus {
@@ -1898,6 +1903,12 @@ enum JournalReferenceType {
   COMMISSION_WAIVER
   OPENING_BALANCE
   REVERSAL
+  KARIGAR_OPENING_BALANCE
+  KARIGAR_WAGE_ACCRUAL
+  KARIGAR_SETTLEMENT_PAYMENT
+  KARIGAR_ADVANCE_PAYMENT
+  KARIGAR_ADVANCE_APPLICATION
+  KARIGAR_ADJUSTMENT
 }
 
 model LedgerAccount {
@@ -4119,72 +4130,85 @@ enum KarigarMovementType {
   ISSUE
   TRANSFER
   RETURN_FINISHED
+  RETURN_UNUSED
   RETURN_SPRUE
   SCRAP
   DUST
   ADJUST
 }
 
+enum KarigarFinancialEntryType {
+  OPENING_BALANCE
+  WAGE_ACCRUAL
+  SETTLEMENT_PAYMENT
+  ADVANCE_PAYMENT
+  ADJUSTMENT_INCREASE
+  ADJUSTMENT_DECREASE
+}
+
 model KarigarWorkshop {
-  id                 String                 @id // client-generated id (e.g. ws-...)
+  id                 String                  @id // client-generated id (e.g. ws-...)
   shopId             String
   name               String
   artisan            String
-  location           String                 @default("Local")
+  location           String                  @default("Local")
   phone              String?
   email              String?
-  rating             Float                  @default(5)
-  metalIssued        Float                  @default(0)
-  metalReturned      Float                  @default(0)
-  wastagePercent     Float                  @default(0)
-  wastageLimit       Float                  @default(1)
-  wageRatePerGram    Float                  @default(0)
-  outstandingBalance Float                  @default(0)
-  wageDue            Float                  @default(0)
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
-  shop               Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  rating             Float                   @default(5)
+  metalIssued        Float                   @default(0)
+  metalReturned      Float                   @default(0)
+  wastagePercent     Float                   @default(0)
+  wastageLimit       Float                   @default(1)
+  wageRatePerGram    Float                   @default(0)
+  outstandingBalance Float                   @default(0)
+  wageDue            Float                   @default(0)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  shop               Shop                    @relation(fields: [shopId], references: [id], onDelete: Cascade)
   jobs               KarigarJob[]
   movements          KarigarMetalMovement[]
   stages             KarigarJobStage[]
+  financialEntries   KarigarFinancialEntry[]
 
   @@index([shopId])
 }
 
 model KarigarJob {
-  id                    String                 @id // client-generated id (e.g. job-...)
+  id                    String                       @id // client-generated id (e.g. job-...)
   shopId                String
   workshopId            String?
   product               String
   artisan               String
-  grossWeight           Float                  @default(0)
-  metalKey              String                 @default("goldGrains24k")
-  allowedWastagePercent Float                  @default(1)
-  status                String                 @default("PENDING")
+  grossWeight           Float                        @default(0)
+  metalKey              String                       @default("goldGrains24k")
+  allowedWastagePercent Float                        @default(1)
+  status                String                       @default("PENDING")
   steps                 Json? // legacy checkboxes; stages table is source of truth
   walkInCustomerId      String?
   shopQuoteId           String?
-  inventoryItemId       String?                @unique
+  inventoryItemId       String?                      @unique
   dueAt                 DateTime?
-  priority              String                 @default("NORMAL")
-  qty                   Int                    @default(1)
+  priority              String                       @default("NORMAL")
+  qty                   Int                          @default(1)
   sizeLabel             String?
   purity                String?
   metalColor            String?
-  photos                String[]               @default([])
+  photos                String[]                     @default([])
   notes                 String?
   bom                   Json?
   currentStage          KarigarStage?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  shop                  Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  workshop              KarigarWorkshop?       @relation(fields: [workshopId], references: [id], onDelete: SetNull)
-  walkInCustomer        WalkInCustomer?        @relation(fields: [walkInCustomerId], references: [id], onDelete: SetNull)
-  shopQuote             ShopQuote?             @relation(fields: [shopQuoteId], references: [id], onDelete: SetNull)
-  inventoryItem         InventoryItem?         @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
+  shop                  Shop                         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workshop              KarigarWorkshop?             @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  walkInCustomer        WalkInCustomer?              @relation(fields: [walkInCustomerId], references: [id], onDelete: SetNull)
+  shopQuote             ShopQuote?                   @relation(fields: [shopQuoteId], references: [id], onDelete: SetNull)
+  inventoryItem         InventoryItem?               @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
   stages                KarigarJobStage[]
   movements             KarigarMetalMovement[]
   trees                 KarigarCastingTree[]
+  financialEntries      KarigarFinancialEntry[]
+  financialAllocations  KarigarFinancialAllocation[]
 
   @@index([shopId])
   @@index([workshopId])
@@ -4258,25 +4282,29 @@ model KarigarCastingTreeLine {
 }
 
 model KarigarMetalMovement {
-  id          String              @id @default(uuid())
-  shopId      String
-  workshopId  String?
-  jobId       String?
-  treeId      String?
-  stage       KarigarStage?
-  type        KarigarMovementType
-  metalKey    String              @default("goldGrains24k")
-  weightGrams Float
-  purity      String?
-  lotId       String?
-  note        String?
-  createdBy   String?
-  createdAt   DateTime            @default(now())
-  shop        Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  workshop    KarigarWorkshop?    @relation(fields: [workshopId], references: [id], onDelete: SetNull)
-  job         KarigarJob?         @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  tree        KarigarCastingTree? @relation(fields: [treeId], references: [id], onDelete: SetNull)
+  id                 String                 @id @default(uuid())
+  shopId             String
+  workshopId         String?
+  jobId              String?
+  treeId             String?
+  stage              KarigarStage?
+  type               KarigarMovementType
+  metalKey           String                 @default("goldGrains24k")
+  weightGrams        Float
+  purity             String?
+  lotId              String?
+  note               String?
+  idempotencyKey     String?                @db.VarChar(191)
+  requestFingerprint String?                @db.VarChar(64)
+  createdBy          String?
+  createdAt          DateTime               @default(now())
+  shop               Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workshop           KarigarWorkshop?       @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  job                KarigarJob?            @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  tree               KarigarCastingTree?    @relation(fields: [treeId], references: [id], onDelete: SetNull)
+  financialEntry     KarigarFinancialEntry?
 
+  @@unique([shopId, idempotencyKey])
   @@index([shopId, createdAt])
   @@index([jobId])
   @@index([workshopId])
@@ -4295,6 +4323,52 @@ model KarigarVaultReserve {
 
   @@unique([shopId, materialKey])
   @@index([shopId])
+}
+
+model KarigarFinancialEntry {
+  id                 String                    @id @default(uuid())
+  shopId             String
+  workshopId         String
+  jobId              String?
+  type               KarigarFinancialEntryType
+  amount             Decimal                   @db.Decimal(18, 2)
+  currency           CurrencyCode              @default(NPR)
+  paymentMethod      String?                   @db.VarChar(50)
+  reference          String?                   @db.VarChar(120)
+  note               String?                   @db.VarChar(1000)
+  sourceMovementId   String?                   @unique
+  idempotencyKey     String?                   @db.VarChar(191)
+  requestFingerprint String?                   @db.VarChar(64)
+  createdBy          String?
+  createdAt          DateTime                  @default(now())
+
+  shop           Shop                         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workshop       KarigarWorkshop              @relation(fields: [workshopId], references: [id], onDelete: Restrict)
+  job            KarigarJob?                  @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  sourceMovement KarigarMetalMovement?        @relation(fields: [sourceMovementId], references: [id], onDelete: SetNull)
+  allocations    KarigarFinancialAllocation[]
+
+  @@unique([shopId, idempotencyKey])
+  @@index([shopId, workshopId, createdAt])
+  @@index([workshopId])
+  @@index([jobId])
+}
+
+model KarigarFinancialAllocation {
+  id               String   @id @default(uuid())
+  shopId           String
+  financialEntryId String
+  jobId            String
+  amount           Decimal  @db.Decimal(18, 2)
+  createdAt        DateTime @default(now())
+
+  shop           Shop                  @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  financialEntry KarigarFinancialEntry @relation(fields: [financialEntryId], references: [id], onDelete: Cascade)
+  job            KarigarJob            @relation(fields: [jobId], references: [id], onDelete: Restrict)
+
+  @@index([financialEntryId, jobId])
+  @@index([shopId])
+  @@index([jobId])
 }
 
 // ─── Security Shield ───────────────────────────────────────

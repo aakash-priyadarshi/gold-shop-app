@@ -62,6 +62,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { KarigarAccountDrawer } from "@/components/shop/karigar/KarigarAccountDrawer";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 // ── Types ──
@@ -80,6 +81,12 @@ interface Workshop {
   wageRatePerGram: number;
   outstandingBalance: number;
   wageDue: number;
+  amountPayable?: number;
+  advanceBalance?: number;
+  netPayable?: number;
+  totalWagesAccrued?: number;
+  totalSettlementsPaid?: number;
+  totalAdvances?: number;
 }
 
 interface Job {
@@ -448,6 +455,8 @@ function KarigarSupplyChainLedger() {
 
   // ── Delete Karigar Confirm ──
   const [deleteKarigarId, setDeleteKarigarId] = useState<string | null>(null);
+  const [selectedAccountWorkshopId, setSelectedAccountWorkshopId] =
+    useState<string | null>(null);
 
   // ── Add Job Modal ──
   const [addJobModalOpen, setAddJobModalOpen] = useState(false);
@@ -617,7 +626,17 @@ function KarigarSupplyChainLedger() {
     (sum, w) => sum + w.outstandingBalance,
     0,
   );
-  const totalWagesDue = workshops.reduce((sum, w) => sum + w.wageDue, 0);
+  const totalWagesDue = workshops.reduce(
+    (sum, w) => sum + (w.amountPayable ?? w.wageDue ?? 0),
+    0,
+  );
+  const totalAdvancesInHand = workshops.reduce(
+    (sum, w) => sum + (w.advanceBalance ?? 0),
+    0,
+  );
+  const activeJobsCount = jobs.filter(
+    (j) => j.status !== "CANCELLED" && j.status !== "Completed",
+  ).length;
 
   // ═════════════════════════════════════════════════
   // ── CRUD Handlers ──
@@ -1276,6 +1295,38 @@ function KarigarSupplyChainLedger() {
               </CardContent>
             </Card>
 
+            {/* Karigar Overview KPI Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"><T>Float with Karigars</T></p>
+                <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
+                  {totalOutstandingKarigarGrams.toFixed(2)} g
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5"><T>Physical metal issued</T></p>
+              </Card>
+              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"><T>Accrued Wages</T></p>
+                <p className="text-2xl font-black text-gray-900 dark:text-white mt-1">
+                  {formatCurrency(totalWagesDue)}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5"><T>Awaiting settlement</T></p>
+              </Card>
+              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"><T>Advances in Hand</T></p>
+                <p className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">
+                  {formatCurrency(totalAdvancesInHand)}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5"><T>Prepaid against future jobs</T></p>
+              </Card>
+              <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"><T>Active Jobs</T></p>
+                <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
+                  {activeJobsCount}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5"><T>In production stages</T></p>
+              </Card>
+            </div>
+
             {/* Karigar Ledgers + Jobs */}
             <div className="grid gap-6 lg:grid-cols-3">
               {/* Karigar Ledger Table */}
@@ -1353,7 +1404,7 @@ function KarigarSupplyChainLedger() {
                             <T>Float Bal (g)</T>
                           </th>
                           <th className="py-2.5 px-3 font-semibold text-end">
-                            <T>Wage Due</T>
+                            <T>Account / Wages</T>
                           </th>
                           <th className="py-2.5 px-3 font-semibold text-center">
                             <T>Actions</T>
@@ -1440,11 +1491,27 @@ function KarigarSupplyChainLedger() {
                                   {w.outstandingBalance.toFixed(1)} g
                                 </Badge>
                               </td>
-                              <td className="py-3 px-3 font-bold text-end text-gray-900 dark:text-gray-100">
-                                {formatCurrency(w.wageDue)}
+                              <td className="py-3 px-3 font-bold text-end">
+                                {w.advanceBalance && w.advanceBalance > 0 ? (
+                                  <span className="text-purple-600 dark:text-purple-400 text-xs font-semibold">
+                                    <T>Adv</T>: {formatCurrency(w.advanceBalance)}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-900 dark:text-gray-100">
+                                    {formatCurrency(w.amountPayable ?? w.wageDue)}
+                                  </span>
+                                )}
                               </td>
                               <td className="py-3 px-3">
-                                <div className="flex items-center justify-center gap-1">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setSelectedAccountWorkshopId(w.id)}
+                                    className="h-7 px-2.5 text-xs font-bold text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                                  >
+                                    <T>Account</T>
+                                  </Button>
                                   <button
                                     onClick={() => {
                                       setEditKarigarForm({ ...w });
@@ -2435,6 +2502,16 @@ function KarigarSupplyChainLedger() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 10. Karigar Account & Settlement Ledger Drawer */}
+      {selectedAccountWorkshopId && (
+        <KarigarAccountDrawer
+          workshopId={selectedAccountWorkshopId}
+          shopCurrency={goldRates.currency}
+          onClose={() => setSelectedAccountWorkshopId(null)}
+          onRefreshParent={() => void loadDatabaseConfig()}
+        />
       )}
     </div>
   );

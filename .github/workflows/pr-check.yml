@@ -407,9 +407,16 @@ jobs:
         working-directory: apps/api
         run: npx prisma generate
 
-      - name: Push Schema to Test DB
+      - name: Apply Migration History to Fresh Test DB
         working-directory: apps/api
-        run: npx prisma db push --skip-generate
+        run: pnpm exec prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
+          DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
+
+      - name: Verify Test DB Migration Status
+        working-directory: apps/api
+        run: pnpm exec prisma migrate status
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
           DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
@@ -429,6 +436,16 @@ jobs:
       - name: Run API Tests
         working-directory: apps/api
         run: pnpm test
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
+          DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
+          NODE_ENV: test
+
+      - name: Run Karigar Concurrency E2E Tests
+        # A failed bootstrap must not reserve the shared test job indefinitely.
+        timeout-minutes: 10
+        working-directory: apps/api
+        run: pnpm exec jest --config ./test/jest-e2e.json --runInBand --forceExit --testPathPattern=karigar-concurrency.e2e-spec.ts
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
           DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test

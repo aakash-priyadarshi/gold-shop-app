@@ -11,6 +11,8 @@ import {
   type KarigarStageCode,
 } from "@gold-shop/shared";
 import { useState } from "react";
+import { useMarket } from "@/hooks/useMarket";
+import { JobCostSummaryModal } from "./JobCostSummaryModal";
 
 export type JobGold = {
   id: string;
@@ -185,15 +187,19 @@ function CastingTreeEditor({
 
 export function KarigarJobGoldCard({
   job,
+  currency: currencyProp,
   onChanged,
   onEdit,
   onDelete,
 }: {
   job: JobGold;
+  currency?: string;
   onChanged: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { selectedCurrency } = useMarket();
+  const currency = currencyProp || selectedCurrency || "NPR";
   const trees = job.trees ?? [];
   const archived = job.archived || job.readOnly || job.status === "CANCELLED";
   const [addingTree, setAddingTree] = useState(false);
@@ -223,6 +229,8 @@ export function KarigarJobGoldCard({
     }
   };
 
+  const [showCostModal, setShowCostModal] = useState(false);
+
   return (
     <div className="p-3 border dark:border-gray-800 rounded-xl bg-gray-50/50 dark:bg-gray-800/20 space-y-3">
       <div className="flex justify-between items-start gap-2">
@@ -235,10 +243,17 @@ export function KarigarJobGoldCard({
             </p>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700">
             {job.status}
           </span>
+          <button
+            type="button"
+            className="text-xs text-slate-600 dark:text-slate-400 hover:text-amber-700 underline font-medium"
+            onClick={() => setShowCostModal(true)}
+          >
+            <T>Cost & Ledger</T>
+          </button>
           {!archived && (
             <>
               <button type="button" className="text-xs text-amber-700 underline" onClick={onEdit}>
@@ -251,6 +266,14 @@ export function KarigarJobGoldCard({
           )}
         </div>
       </div>
+
+      {showCostModal && (
+        <JobCostSummaryModal
+          jobId={job.id}
+          currency={currency}
+          onClose={() => setShowCostModal(false)}
+        />
+      )}
 
       <LossGrid loss={job.goldLoss} />
 

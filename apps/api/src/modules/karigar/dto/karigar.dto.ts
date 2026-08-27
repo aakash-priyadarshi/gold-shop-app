@@ -27,6 +27,7 @@ export const KARIGAR_MOVEMENT_TYPES = [
   "ISSUE",
   "TRANSFER",
   "RETURN_FINISHED",
+  "RETURN_UNUSED",
   "RETURN_SPRUE",
   "SCRAP",
   "DUST",
@@ -411,6 +412,11 @@ export class CreateKarigarMovementDto {
   @IsString()
   @MaxLength(80)
   lotId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(191)
+  idempotencyKey?: string;
 }
 
 export class UpdateKarigarStageDto {

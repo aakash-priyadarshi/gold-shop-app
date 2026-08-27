@@ -349,9 +349,9 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='supply-ledger']",
       popover: {
-        title: "Artisan balances",
+        title: "Artisan Ledger & Settlement",
         description:
-          "Each karigar's issued versus returned metal, wastage limit, outstanding float, and wages due. A finished-metal return adds to wage due; settle the wage separately from the physical-metal return.",
+          "Manage karigars, issued bullion float, wastage limits, and settlement accounts. Click 'Account' on any karigar to view their unified statement timeline, pay wages, record advances, return metal, or print voucher slips.",
         side: "top",
         align: "center",
       },

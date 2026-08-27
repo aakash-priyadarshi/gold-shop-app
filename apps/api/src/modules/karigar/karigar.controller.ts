@@ -13,7 +13,10 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { UserRole } from "@prisma/client";
 import { FeatureGateGuard } from "../core/subscriptions/feature-gate.guard";
 import { RequireFeature } from "../core/subscriptions/require-feature.decorator";
 import {
@@ -28,11 +31,19 @@ import {
   UpdateKarigarJobDto,
   UpdateKarigarStageDto,
 } from "./dto/karigar.dto";
+import {
+  RecordKarigarPaymentDto,
+  RecordKarigarAdvanceDto,
+  RecordKarigarAdjustmentDto,
+  RecordKarigarMetalReturnDto,
+  KarigarStatementQueryDto,
+} from "./dto/karigar-account.dto";
 import { KarigarService } from "./karigar.service";
 
 @ApiTags("karigar")
 @Controller("karigar")
-@UseGuards(JwtAuthGuard, FeatureGateGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGateGuard)
+@Roles(UserRole.SHOPKEEPER, UserRole.ADMIN)
 @ApiBearerAuth()
 export class KarigarController {
   constructor(private readonly karigarService: KarigarService) {}
@@ -234,5 +245,101 @@ export class KarigarController {
   ) {
     if (!shopId) throw new BadRequestException("No active shop selected");
     return this.karigarService.updateTree(shopId, jobId, treeId, dto);
+  }
+
+  @Get("workshops/:workshopId/account")
+  @ApiOperation({ summary: "Get karigar account summary and metal balances" })
+  async getAccount(
+    @CurrentUser("shopId") shopId: string,
+    @Param("workshopId") workshopId: string,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.getWorkshopAccount(shopId, workshopId);
+  }
+
+  @Get("workshops/:workshopId/account/statement")
+  @ApiOperation({
+    summary: "Get unified chronological metal + money statement",
+  })
+  async getStatement(
+    @CurrentUser("shopId") shopId: string,
+    @Param("workshopId") workshopId: string,
+    @Query() query: KarigarStatementQueryDto,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.getWorkshopStatement(shopId, workshopId, query);
+  }
+
+  @Post("workshops/:workshopId/account/payment")
+  @ApiOperation({
+    summary: "Record settlement payment against accrued karigar wages",
+  })
+  async recordPayment(
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Param("workshopId") workshopId: string,
+    @Body() dto: RecordKarigarPaymentDto,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.recordPayment(shopId, workshopId, userId, dto);
+  }
+
+  @Post("workshops/:workshopId/account/advance")
+  @ApiOperation({ summary: "Record advance payment to a karigar" })
+  async recordAdvance(
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Param("workshopId") workshopId: string,
+    @Body() dto: RecordKarigarAdvanceDto,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.recordAdvance(shopId, workshopId, userId, dto);
+  }
+
+  @Post("workshops/:workshopId/account/adjustment")
+  @ApiOperation({ summary: "Record authorised financial adjustment" })
+  async recordAdjustment(
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Param("workshopId") workshopId: string,
+    @Body() dto: RecordKarigarAdjustmentDto,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.recordAdjustment(
+      shopId,
+      workshopId,
+      userId,
+      dto,
+    );
+  }
+
+  @Post("workshops/:workshopId/account/metal-return")
+  @ApiOperation({
+    summary:
+      "Reconcile/return outstanding metal (raw, sprue, scrap, dust) from karigar",
+  })
+  async recordMetalReturn(
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Param("workshopId") workshopId: string,
+    @Body() dto: RecordKarigarMetalReturnDto,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.recordMetalReturn(
+      shopId,
+      workshopId,
+      userId,
+      dto,
+    );
+  }
+
+  @Get("jobs/:jobId/cost-summary")
+  @ApiOperation({ summary: "Get job cost, accrued wage and settlement summary" })
+  async getJobCostSummary(
+    @CurrentUser("shopId") shopId: string,
+    @Param("jobId") jobId: string,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.getJobCostSummary(shopId, jobId);
   }
 }

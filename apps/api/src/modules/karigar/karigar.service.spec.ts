@@ -18,10 +18,27 @@ describe("KarigarService workshop safeguards", () => {
       karigarVaultReserve: { findUnique: jest.fn(), upsert: jest.fn() },
       karigarWorkshop: { findFirst: jest.fn(), update: jest.fn() },
       karigarMetalMovement: { create: jest.fn() },
+      karigarFinancialEntry: { findMany: jest.fn().mockResolvedValue([]) },
       inventoryItem: { update: jest.fn() },
-      $transaction: jest.fn(),
+      $transaction: jest.fn(async (cb) => (typeof cb === "function" ? cb(prisma) : cb)),
+      $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
+      $executeRaw: jest.fn().mockResolvedValue(undefined),
     };
-    service = new KarigarService(prisma, {} as never, {} as never);
+    const accountingMock = {
+      prepareMonetaryContext: jest.fn().mockImplementation((amount, currency) => ({
+        transactionCurrency: currency || "NPR",
+        transactionAmount: amount,
+        canonicalAmountNpr: amount,
+        fxRate: 1,
+        fxSource: "INTERNAL",
+        fxQuotedAt: new Date(),
+      })),
+      postKarigarWageAccrual: jest.fn().mockResolvedValue({ id: "gl-accrual-1" }),
+      postKarigarSettlementPayment: jest.fn().mockResolvedValue({ id: "gl-pay-1" }),
+      postKarigarAdvancePayment: jest.fn().mockResolvedValue({ id: "gl-adv-1" }),
+      postKarigarAdjustment: jest.fn().mockResolvedValue({ id: "gl-adj-1" }),
+    };
+    service = new KarigarService(prisma, {} as never, {} as never, accountingMock as never);
   });
 
   const activeJob = {
@@ -373,9 +390,247 @@ describe("KarigarService workshop safeguards", () => {
     expect(serialized).toMatchObject({ archived: true, readOnly: true });
   });
 
+  it("applies only a stage's RETURN_UNUSED gold to that stage's loss", () => {
+    const serialized = (service as any).serializeJob({
+      ...activeJob,
+      product: "Stage loss ring",
+      artisan: "Karigar",
+      workshopId: "ws-1",
+      grossWeight: 10,
+      metalKey: "goldGrains24k",
+      allowedWastagePercent: 1,
+      steps: null,
+      updatedAt: new Date(),
+      stages: [
+        {
+          id: "stage-a",
+          stage: "CASTING",
+          goldInGrams: 10,
+          goldOutGrams: 7,
+          scrapGrams: 0,
+          dustGrams: 0,
+          allowedWastagePercent: 1,
+          status: "DONE",
+          workshopId: "ws-1",
+        },
+      ],
+      stageUnusedReturns: [
+        { type: "RETURN_UNUSED", weightGrams: 2, stage: "CASTING" },
+      ],
+    });
+
+    expect(serialized.stages[0].goldLoss).toMatchObject({
+      returnedUnused: 2,
+      actualLoss: 1,
+    });
+  });
+
+  it("does not apply a stage A unused return to stage B", () => {
+    const serialized = (service as any).serializeJob({
+      ...activeJob,
+      product: "Separate stages ring",
+      artisan: "Karigar",
+      workshopId: "ws-1",
+      grossWeight: 10,
+      metalKey: "goldGrains24k",
+      allowedWastagePercent: 1,
+      steps: null,
+      updatedAt: new Date(),
+      stages: [
+        {
+          id: "stage-a",
+          stage: "CASTING",
+          goldInGrams: 10,
+          goldOutGrams: 7,
+          scrapGrams: 0,
+          dustGrams: 0,
+          allowedWastagePercent: 1,
+          status: "DONE",
+          workshopId: "ws-1",
+        },
+        {
+          id: "stage-b",
+          stage: "FILING",
+          goldInGrams: 10,
+          goldOutGrams: 7,
+          scrapGrams: 0,
+          dustGrams: 0,
+          allowedWastagePercent: 1,
+          status: "DONE",
+          workshopId: "ws-1",
+        },
+      ],
+      stageUnusedReturns: [
+        { type: "RETURN_UNUSED", weightGrams: 2, stage: "CASTING" },
+      ],
+    });
+
+    expect(serialized.stages[0].goldLoss).toMatchObject({
+      returnedUnused: 2,
+      actualLoss: 1,
+    });
+    expect(serialized.stages[1].goldLoss).toMatchObject({
+      returnedUnused: 0,
+      actualLoss: 3,
+    });
+  });
+
+  it("keeps an unscoped unused return out of every stage while preserving job reconciliation", () => {
+    const serialized = (service as any).serializeJob({
+      ...activeJob,
+      product: "Unscoped return ring",
+      artisan: "Karigar",
+      workshopId: "ws-1",
+      grossWeight: 10,
+      metalKey: "goldGrains24k",
+      allowedWastagePercent: 1,
+      steps: null,
+      updatedAt: new Date(),
+      stages: [
+        {
+          id: "stage-a",
+          stage: "CASTING",
+          goldInGrams: 10,
+          goldOutGrams: 7,
+          scrapGrams: 0,
+          dustGrams: 0,
+          allowedWastagePercent: 1,
+          status: "DONE",
+          workshopId: "ws-1",
+        },
+        {
+          id: "stage-b",
+          stage: "FILING",
+          goldInGrams: 10,
+          goldOutGrams: 7,
+          scrapGrams: 0,
+          dustGrams: 0,
+          allowedWastagePercent: 1,
+          status: "DONE",
+          workshopId: "ws-1",
+        },
+      ],
+      stageUnusedReturns: [
+        { type: "RETURN_UNUSED", weightGrams: 2, stage: null },
+      ],
+    });
+
+    expect(serialized.stages.map((stage: any) => stage.goldLoss.actualLoss)).toEqual([
+      3,
+      3,
+    ]);
+    expect(serialized.goldLoss).toMatchObject({ returnedUnused: 2 });
+  });
+
+  it("aggregates returned-unused grams into the workshop gold-loss report exactly once", () => {
+    const report = (service as any).buildGoldLossReport(
+      [
+        {
+          id: "job-1",
+          product: "Workshop report ring",
+          artisan: "Karigar",
+          workshopId: "ws-1",
+          allowedWastagePercent: 1,
+          stages: [
+            {
+              id: "stage-casting",
+              stage: "CASTING",
+              goldInGrams: 10,
+              goldOutGrams: 7,
+              scrapGrams: 0,
+              dustGrams: 0,
+              allowedWastagePercent: 1,
+              status: "DONE",
+              workshopId: "ws-1",
+            },
+          ],
+          stageUnusedReturns: [
+            { type: "RETURN_UNUSED", weightGrams: 2, stage: "CASTING" },
+          ],
+        },
+      ],
+      [
+        {
+          id: "ws-1",
+          name: "Report Workshop",
+          artisan: "Karigar",
+          wastageLimit: 1,
+        },
+      ],
+    );
+
+    expect(report.karigars).toHaveLength(1);
+    expect(report.karigars[0].goldLoss).toMatchObject({
+      issued: 10,
+      returnedUnused: 2,
+      actualLoss: 1,
+    });
+  });
+
+  it("applies returned-unused grams once to a tree job aggregate and its report", () => {
+    const tree = {
+      id: "tree-casting",
+      label: "Casting tree",
+      metalKey: "goldGrains24k",
+      purity: "24K",
+      issuedGrams: 10,
+      finishedGrams: 7,
+      sprueButtonGrams: 0,
+      recoverableGrams: 0,
+      allowedWastagePercent: 1,
+      status: "DONE",
+      lines: [],
+    };
+    const returnedUnused = [
+      { type: "RETURN_UNUSED" as const, weightGrams: 2, stage: "CASTING" as const },
+    ];
+    const job = {
+      ...activeJob,
+      product: "Tree loss ring",
+      artisan: "Karigar",
+      workshopId: "ws-1",
+      grossWeight: 10,
+      metalKey: "goldGrains24k",
+      allowedWastagePercent: 1,
+      steps: null,
+      updatedAt: new Date(),
+      trees: [tree],
+      stageUnusedReturns: returnedUnused,
+    };
+
+    const serialized = (service as any).serializeJob(job);
+    const report = (service as any).buildGoldLossReport(
+      [job],
+      [
+        {
+          id: "ws-1",
+          name: "Tree Report Workshop",
+          artisan: "Karigar",
+          wastageLimit: 1,
+        },
+      ],
+    );
+
+    expect(serialized.trees[0].goldLoss.actualLoss).toBe(3);
+    expect(serialized.goldLoss).toMatchObject({
+      returnedUnused: 2,
+      actualLoss: 1,
+    });
+    expect(report.jobs[0].goldLoss).toMatchObject({
+      returnedUnused: 2,
+      actualLoss: 1,
+    });
+    expect(report.karigars[0].goldLoss).toMatchObject({
+      returnedUnused: 2,
+      actualLoss: 1,
+    });
+  });
+
   it("still allows physical metal return reconciliation after cancellation", async () => {
     prisma.karigarJob.findFirst.mockResolvedValue(cancelledJob);
+    prisma.shop.findUnique.mockResolvedValue({ currency: "NPR" });
     const tx = {
+      shop: { findUnique: jest.fn().mockResolvedValue({ currency: "NPR" }) },
       karigarVaultReserve: {
         findUnique: jest.fn().mockResolvedValue({ quantity: 0 }),
         upsert: jest.fn(),
@@ -386,7 +641,16 @@ describe("KarigarService workshop safeguards", () => {
           .mockResolvedValue({ id: "ws-1", wageRatePerGram: 2 }),
         update: jest.fn(),
       },
-      karigarMetalMovement: { create: jest.fn() },
+      karigarMetalMovement: {
+        create: jest.fn().mockResolvedValue({ id: "mov-1" }),
+        findMany: jest.fn().mockResolvedValue([{ type: "ISSUE", weightGrams: 10 }]),
+      },
+      karigarFinancialEntry: {
+        create: jest.fn().mockResolvedValue({ id: "fin-entry-1" }),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
+      $executeRaw: jest.fn().mockResolvedValue(undefined),
     };
     prisma.$transaction.mockImplementation(async (callback: any) => callback(tx));
     jest.spyOn(service, "getJob").mockResolvedValue({ archived: true } as never);
