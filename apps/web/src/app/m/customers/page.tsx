@@ -355,7 +355,7 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const debounce = useRef<NodeJS.Timeout>();
+  const debounce = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const search = useCallback(async (q: string) => {
     setLoading(true);

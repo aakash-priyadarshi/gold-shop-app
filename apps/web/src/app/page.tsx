@@ -46,9 +46,9 @@ const DynamicFooter = dynamic(
   },
 );
 
-export default function HomePage() {
+export default async function HomePage() {
   // Server-side country detection via Cloudflare CF-IPCountry header
-  const headersList = headers();
+  const headersList = await headers();
   const country = headersList.get("cf-ipcountry");
   const { videoSrc } = resolveHeroVideo(country);
   const serverCountry = mapCountryToMarket(country);

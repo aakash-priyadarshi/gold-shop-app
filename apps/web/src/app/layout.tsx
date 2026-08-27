@@ -3,28 +3,18 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+import { SupportBotClient } from "@/components/support/SupportBotClient";
 import { Toaster } from "@/components/ui/toaster";
 import { BRAND } from "@/config/brand";
 import { SITE_URL, MOBILE_SITE_URL } from "@/config/site";
 import { mapCountryToMarket } from "@/lib/geo";
 import { getLocaleDirection, isUiLocale } from "@gold-shop/shared";
-import dynamic from "next/dynamic";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 
 const googleSiteVerification = process.env.GOOGLE_SITE_VERIFICATION;
-
-// SupportBot reads browser storage and creates a browser-tab session ID during
-// render, so it must mount only on the client to keep SSR markup deterministic.
-const SupportBot = dynamic(
-  () =>
-    import("@/components/support/SupportBot").then(
-      (module) => module.SupportBot,
-    ),
-  { ssr: false },
-);
 
 const inter = Inter({
   subsets: ["latin"],
@@ -122,12 +112,12 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const headersList = headers();
+  const headersList = await headers();
   const rawPathname = headersList.get("x-pathname") || "/";
   // Strip trailing slash if present (except for root path)
   const pathname = rawPathname === "/" ? "" : rawPathname;
@@ -398,7 +388,7 @@ export default function RootLayout({
           <ErrorBoundary>
             <GeoMismatchBanner />
             {children}
-            <SupportBot />
+            <SupportBotClient />
             <Toaster />
             <AppTracking />
             <ServiceWorkerRegistrar />
