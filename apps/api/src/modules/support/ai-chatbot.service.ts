@@ -26,6 +26,14 @@ import {
   sanitizeHistory,
   type ChatAudience,
 } from "./chat-limits";
+import {
+  appendTruncationRetrySuffix,
+  buildGeminiSupportGenerationConfig,
+  extractGeminiResponseParts,
+  formatGeminiDiagnostics,
+  isTruncatedGeminiResponse,
+  type ExtractedGeminiResponse,
+} from "./gemini-support-chat";
 import { SupportService } from "./support.service";
 import { TicketsService } from "./tickets.service";
 import { formatTutorialVideoPromptLines } from "./tutorial-videos";
@@ -252,6 +260,88 @@ export class AiChatbotService {
       ...reply,
       reply: clampReply(reply.reply, CHAT_LIMITS[audience].maxReply),
     };
+  }
+
+  /**
+   * Gemini 2.5 Flash support chat — disables thinking budget, logs token metadata,
+   * and retries once with a concise-answer hint when the visible reply is truncated.
+   */
+  private async callGeminiSupportChat(params: {
+    contents: Array<{ role?: string; parts?: Array<{ text?: string }> }>;
+    tools: unknown[];
+    audience: ChatAudience;
+    temperature?: number;
+    logContext: string;
+  }): Promise<ExtractedGeminiResponse | null> {
+    const generationConfig = buildGeminiSupportGenerationConfig(
+      params.audience,
+      params.temperature ?? 0.3,
+    );
+    const post = async (
+      contents: Array<{ role?: string; parts?: Array<{ text?: string }> }>,
+      ctx: string,
+    ): Promise<ExtractedGeminiResponse | null> => {
+      const response = await fetch(
+        `${this.GEMINI_API_URL}?key=${this.apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents,
+            tools: params.tools,
+            generationConfig,
+          }),
+        },
+      );
+      if (!response.ok) {
+        this.logger.warn(
+          `Gemini API error (${ctx}): HTTP ${response.status}`,
+        );
+        return null;
+      }
+      const data = await response.json();
+      const extracted = extractGeminiResponseParts(data);
+      this.logger.log(`Gemini ${formatGeminiDiagnostics(extracted, ctx)}`);
+      return extracted;
+    };
+
+    let extracted = await post(params.contents, params.logContext);
+    if (!extracted) return null;
+
+    if (
+      !extracted.functionCall &&
+      isTruncatedGeminiResponse(extracted.text, extracted.finishReason)
+    ) {
+      this.logger.warn(
+        `Gemini truncated; retrying once: ${formatGeminiDiagnostics(
+          extracted,
+          params.logContext,
+        )}`,
+      );
+      const retryContents = appendTruncationRetrySuffix(params.contents);
+      const retryExtracted = await post(
+        retryContents,
+        `${params.logContext}:retry`,
+      );
+      if (retryExtracted) extracted = retryExtracted;
+    }
+
+    return extracted;
+  }
+
+  private truncatedChatFallback(
+    audience: ChatAudience,
+    message?: string,
+    sellerSnapshot?: SellerSnapshot,
+    adminSnapshot?: AdminSnapshot,
+  ): AiChatResponse {
+    if (audience === "admin" && adminSnapshot) {
+      return this.fallbackAdminResponse(adminSnapshot);
+    }
+    if (audience === "dashboard" && sellerSnapshot) {
+      return this.fallbackSellerResponse(sellerSnapshot);
+    }
+    return this.fallbackResponse(message);
   }
 
   /**
@@ -588,31 +678,19 @@ export class AiChatbotService {
       }
       const tools = [{ functionDeclarations }];
 
-      const response = await fetch(
-        `${this.GEMINI_API_URL}?key=${this.apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents,
-            tools,
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: CHAT_LIMITS[audience].maxOutputTokens,
-              topP: 0.8,
-            },
-          }),
-        },
-      );
+      const gemini = await this.callGeminiSupportChat({
+        contents,
+        tools,
+        audience,
+        temperature: 0.3,
+        logContext: "publicChat",
+      });
 
-      if (!response.ok) {
-        this.logger.warn(`Gemini API error: ${response.status}`);
-        return this.fallbackResponse(message);
+      if (!gemini) {
+        return this.limitReply(this.fallbackResponse(message), audience);
       }
 
-      const data = await response.json();
-      const { functionCall, text, finishReason, blockReason } =
-        this.extractGeminiResponseParts(data);
+      const { functionCall, text, finishReason, blockReason } = gemini;
 
       if (!text && !functionCall) {
         this.logger.warn(
@@ -667,6 +745,25 @@ export class AiChatbotService {
           );
           return { reply, shouldEscalate: false, confidence: 1.0 };
         }
+      }
+
+      if (isTruncatedGeminiResponse(text, finishReason)) {
+        this.logger.warn(
+          `Gemini truncated after retry: ${formatGeminiDiagnostics(
+            gemini,
+            "publicChat:final",
+          )}`,
+        );
+        const fallback = this.truncatedChatFallback(audience, message);
+        await this.supportService.logAiChat(
+          sessionId ?? null,
+          "assistant",
+          fallback.reply,
+          "truncatedFallback",
+          fallback.confidence,
+          ipAddress,
+        );
+        return this.limitReply(fallback, audience);
       }
 
       // Fallback manual parsing if Gemini responded as JSON string instead of function structure
@@ -1198,30 +1295,6 @@ AVAILABLE TOOLS:
       shouldEscalate: false,
       confidence: 0.8,
     };
-  }
-
-  private extractGeminiResponseParts(data: any): {
-    functionCall?: any;
-    text: string;
-    finishReason?: string;
-    blockReason?: string;
-  } {
-    const finishReason = data?.candidates?.[0]?.finishReason;
-    const blockReason =
-      data?.promptFeedback?.blockReason ||
-      data?.candidates?.[0]?.finishMessage;
-    const parts = data?.candidates?.[0]?.content?.parts;
-    if (!Array.isArray(parts) || parts.length === 0) {
-      return { text: "", finishReason, blockReason };
-    }
-
-    const functionCall = parts.find((part) => part?.functionCall)?.functionCall;
-    const text = parts
-      .map((part) => (typeof part?.text === "string" ? part.text : ""))
-      .join("")
-      .trim();
-
-    return { functionCall, text, finishReason, blockReason };
   }
 
   private fallbackResponse(_message?: string): AiChatResponse {
@@ -2489,30 +2562,19 @@ SELLER RESPONSE RULES:
         },
       ];
 
-      const response = await fetch(
-        `${this.GEMINI_API_URL}?key=${this.apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents,
-            tools,
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: CHAT_LIMITS[audience].maxOutputTokens,
-              topP: 0.8,
-            },
-          }),
-        },
-      );
+      const gemini = await this.callGeminiSupportChat({
+        contents,
+        tools,
+        audience,
+        temperature: 0.3,
+        logContext: "sellerChat",
+      });
 
-      if (!response.ok) {
-        this.logger.warn(`Gemini API error (sellerChat): ${response.status}`);
+      if (!gemini) {
         return this.limitReply(this.fallbackSellerResponse(seller), audience);
       }
 
-      const data = await response.json();
-      const { functionCall, text } = this.extractGeminiResponseParts(data);
+      const { functionCall, text, finishReason } = gemini;
 
       if (functionCall) {
         return this.limitReply(
@@ -2524,6 +2586,20 @@ SELLER RESPONSE RULES:
           audience,
         );
       }
+
+      if (isTruncatedGeminiResponse(text, finishReason)) {
+        this.logger.warn(
+          `Gemini truncated sellerChat: ${formatGeminiDiagnostics(
+            gemini,
+            "sellerChat:final",
+          )}`,
+        );
+        return this.limitReply(
+          this.truncatedChatFallback(audience, message, seller),
+          audience,
+        );
+      }
+
       const parsed = this.parseAiResponse(text);
       await this.supportService.logAiChat(
         sessionId ?? null,
@@ -3129,30 +3205,19 @@ ADMIN RESPONSE RULES:
         },
       ];
 
-      const response = await fetch(
-        `${this.GEMINI_API_URL}?key=${this.apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents,
-            tools,
-            generationConfig: {
-              temperature: 0.2,
-              maxOutputTokens: CHAT_LIMITS[audience].maxOutputTokens,
-              topP: 0.8,
-            },
-          }),
-        },
-      );
+      const gemini = await this.callGeminiSupportChat({
+        contents,
+        tools,
+        audience,
+        temperature: 0.2,
+        logContext: "adminChat",
+      });
 
-      if (!response.ok) {
-        this.logger.warn(`Gemini API error (adminChat): ${response.status}`);
+      if (!gemini) {
         return this.limitReply(this.fallbackAdminResponse(admin), audience);
       }
 
-      const data = await response.json();
-      const { functionCall, text } = this.extractGeminiResponseParts(data);
+      const { functionCall, text, finishReason } = gemini;
 
       if (functionCall) {
         return this.limitReply(
@@ -3162,6 +3227,19 @@ ADMIN RESPONSE RULES:
             sessionId,
             userId,
           ),
+          audience,
+        );
+      }
+
+      if (isTruncatedGeminiResponse(text, finishReason)) {
+        this.logger.warn(
+          `Gemini truncated adminChat: ${formatGeminiDiagnostics(
+            gemini,
+            "adminChat:final",
+          )}`,
+        );
+        return this.limitReply(
+          this.truncatedChatFallback(audience, message, undefined, admin),
           audience,
         );
       }

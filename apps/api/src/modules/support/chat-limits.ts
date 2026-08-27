@@ -16,7 +16,8 @@ export const CHAT_LIMITS: Record<
     maxReply: 400,
     maxHistory: 8,
     historyItemChars: 400,
-    maxOutputTokens: 180,
+    // Enough for ~400 visible chars after disabling Gemini 2.5 Flash thinking budget.
+    maxOutputTokens: 256,
     hourlyMessages: 20,
   },
   dashboard: {
