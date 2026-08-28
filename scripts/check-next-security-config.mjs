@@ -13,7 +13,8 @@ const SCAN_ROOTS = [
   "cloudflare-worker",
   "scripts",
 ];
-const ROOT_FILE_RE = /^(?:Dockerfile(?:\..*)?|railway(?:\..*)?|\.env(?:\..*)?)$/i;
+const ROOT_FILE_RE =
+  /^(?:next\.config\.(?:js|mjs|ts)|Dockerfile(?:\..*)?|railway(?:\..*)?|\.env(?:\..*)?)$/i;
 const SCANNABLE_EXTENSIONS = new Set([
   ".cjs",
   ".env",
@@ -22,22 +23,73 @@ const SCANNABLE_EXTENSIONS = new Set([
   ".mjs",
   ".ps1",
   ".sh",
+  ".ts",
   ".toml",
   ".yml",
   ".yaml",
 ]);
 
-function stripComments(text) {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .split(/\r?\n/)
-    .map((line) => {
-      if (/^\s*(?:\/\/|#)/.test(line)) return "";
-      // Only remove comments introduced after whitespace so URLs and strings
-      // containing `//` remain intact.
-      return line.replace(/\s+\/\/.*$/, "");
-    })
-    .join("\n");
+export function stripComments(text) {
+  let source = "";
+  let quote = null;
+  let escaped = false;
+  let lineStart = true;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    const next = text[index + 1];
+
+    if (quote) {
+      source += character;
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === quote) quote = null;
+    } else if (character === '"' || character === "'" || character === "`") {
+      quote = character;
+      source += character;
+    } else if (character === "/" && next === "/") {
+      while (
+        index < text.length &&
+        text[index] !== "\r" &&
+        text[index] !== "\n"
+      ) {
+        index += 1;
+      }
+      index -= 1;
+      continue;
+    } else if (character === "/" && next === "*") {
+      index += 2;
+      while (
+        index < text.length &&
+        !(text[index] === "*" && text[index + 1] === "/")
+      ) {
+        if (text[index] === "\r" || text[index] === "\n") {
+          source += text[index];
+          lineStart = true;
+        }
+        index += 1;
+      }
+      if (index < text.length) index += 1;
+      continue;
+    } else if (character === "#" && lineStart) {
+      while (
+        index < text.length &&
+        text[index] !== "\r" &&
+        text[index] !== "\n"
+      ) {
+        index += 1;
+      }
+      index -= 1;
+      continue;
+    } else {
+      source += character;
+    }
+
+    if (character === "\r" || character === "\n") lineStart = true;
+    else if (!/\s/.test(character)) lineStart = false;
+  }
+
+  return source;
 }
 
 export function findViolations(text, file = "configuration") {
