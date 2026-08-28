@@ -40,9 +40,6 @@ export function buildGeminiSupportGenerationConfig(
   };
 }
 
-/**
- * Extract token usage statistics from Gemini API response.
- */
 export function extractGeminiUsageMetadata(data: unknown): GeminiUsageMetadata {
   const usage = (data as { usageMetadata?: GeminiUsageMetadata })?.usageMetadata;
   if (!usage) return {};
@@ -54,10 +51,6 @@ export function extractGeminiUsageMetadata(data: unknown): GeminiUsageMetadata {
   };
 }
 
-/**
- * Extract function call, text, finish reason, and usage metadata from Gemini API response.
- * Filters out internal thinking parts to return only visible text.
- */
 export function extractGeminiResponseParts(data: unknown): ExtractedGeminiResponse {
   const payload = data as {
     candidates?: Array<{
@@ -119,9 +112,6 @@ export function formatGeminiDiagnostics(
   return parts.join(" ");
 }
 
-/**
- * Check if the finish reason indicates token limit or length truncation.
- */
 export function isTruncationFinishReason(finishReason?: string): boolean {
   if (!finishReason) return false;
   return TRUNCATION_FINISH_REASONS.has(finishReason);
@@ -152,10 +142,6 @@ export function isTruncatedGeminiResponse(
   return false;
 }
 
-/**
- * Append a retry instruction to the last user message to nudge concise completion.
- * Used when the first attempt was truncated before finishing the answer.
- */
 export function appendTruncationRetrySuffix(
   contents: Array<{ role?: string; parts?: Array<{ text?: string }> }>,
 ): Array<{ role?: string; parts?: Array<{ text?: string }> }> {

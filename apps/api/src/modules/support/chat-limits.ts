@@ -44,9 +44,6 @@ const JAILBREAK =
 const PRIVACY_PROBE =
   /\b(list|show|give|tell|dump|export|leak)\b.{0,60}\b(all )?(users?|customers?|sellers?|shopkeepers?|emails?|phone numbers?|passwords?|invoices?)\b|\bwho is\b.{0,40}@|\b(other|another) (user|shop|seller|customer|account)\b.{0,40}\b(name|email|phone|details|data)\b/i;
 
-/**
- * Map a user role to the appropriate chat audience tier.
- */
 export function audienceForRole(viewerRole?: string): ChatAudience {
   const role = (viewerRole || "").toUpperCase();
   if (role === "ADMIN") return "admin";
@@ -56,16 +53,10 @@ export function audienceForRole(viewerRole?: string): ChatAudience {
   return "public";
 }
 
-/**
- * Check if a message looks like a prompt injection or jailbreak attempt.
- */
 export function looksLikeJailbreak(text: string): boolean {
   return JAILBREAK.test(text);
 }
 
-/**
- * Check if a reply looks like a data dump (excessive emails, lines, or JSON structures).
- */
 export function looksLikeDataDump(text: string): boolean {
   const emails = text.match(/[^\s@]+@[^\s@]+\.[^\s@]+/g) || [];
   if (emails.length >= 3) return true;
@@ -82,9 +73,6 @@ export function isCrossUserPrivacyProbe(text: string): boolean {
   return PRIVACY_PROBE.test(text);
 }
 
-/**
- * Truncate a reply to a maximum character count, breaking at word boundaries when possible.
- */
 export function clampReply(text: string, maxChars: number): string {
   const trimmed = (text || "").trim();
   if (trimmed.length <= maxChars) return trimmed;
@@ -94,9 +82,6 @@ export function clampReply(text: string, maxChars: number): string {
   return `${base.trimEnd()}…`;
 }
 
-/**
- * Sanitize chat history by limiting item count and truncating each message to a character limit.
- */
 export function sanitizeHistory(
   history: Array<{ role: "user" | "assistant"; content: string }>,
   maxItems: number,

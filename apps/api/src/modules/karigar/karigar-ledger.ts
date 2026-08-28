@@ -19,16 +19,10 @@ import { Prisma } from "@prisma/client";
 
 /** Pure ledger rules for the shop karigar book and account ledger. */
 
-/**
- * Check if a metal issue operation requires a valid workshop ID.
- */
 export function issueRequiresWorkshop(workshopId?: string | null): boolean {
   return Boolean(workshopId && workshopId.trim());
 }
 
-/**
- * Calculate wage amount for finished goods return based on weight and rate per gram.
- */
 export function wageForFinishedReturn(
   weightGrams: number,
   wageRatePerGram: number,
@@ -37,9 +31,6 @@ export function wageForFinishedReturn(
   return Math.round(weightGrams * wageRatePerGram * 100) / 100;
 }
 
-/**
- * Compute karigar financial summary from ledger entries, normalizing Prisma Decimal types.
- */
 export function computeFinancialSummary(
   entries: Array<{ type: string; amount: number | string | Prisma.Decimal }>,
 ): KarigarFinancialSummary {
@@ -55,9 +46,6 @@ export function computeFinancialSummary(
   return computeKarigarFinancialSummary(normalized);
 }
 
-/**
- * Compute metal balances (issued, returned, outstanding) per material from movement records.
- */
 export function computeMetalBalances(
   movements: Array<{
     metalKey?: string | null;
@@ -68,9 +56,6 @@ export function computeMetalBalances(
   return computeKarigarMetalBalances(movements);
 }
 
-/**
- * Validate a payment amount against current amount payable, preventing overpayment.
- */
 export function validatePaymentAmount(
   amountToPay: number,
   currentAmountPayable: number,
@@ -89,9 +74,6 @@ export function validatePaymentAmount(
   return { valid: true };
 }
 
-/**
- * Validate a metal return weight against current outstanding balance, preventing over-return.
- */
 export function validateMetalReturn(
   weightGrams: number,
   currentOutstandingGrams: number,

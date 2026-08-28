@@ -103,9 +103,6 @@ function money(currency: string, value: number): string {
   return `${currency} ${Number(value || 0).toLocaleString()}`;
 }
 
-/**
- * Format a gemstone specification line for PDF invoice display, including type, origin, cut, clarity, weight, and certification.
- */
 export function formatGemstonePdfSpec(
   gem: InvoicePdfGemstone,
   totalGemsCount = 1,
@@ -148,9 +145,6 @@ export function formatGemstonePdfSpec(
   return parts.filter(Boolean).join(" · ");
 }
 
-/**
- * Clean legacy detail string by removing redundant gemstone info when structured gemstones are present.
- */
 export function cleanLegacyDetails(
   details?: string,
   hasStructuredGemstones?: boolean,

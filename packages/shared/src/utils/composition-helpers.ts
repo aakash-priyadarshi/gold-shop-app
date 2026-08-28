@@ -341,9 +341,6 @@ export const METAL_TO_MARKET_KEY_MAP: Record<string, string> = {
   PALLADIUM_PD500: "PALLADIUM_PD500",
 };
 
-/**
- * Normalize metal code to market pricing key (e.g. PLATINUM_950 -> PLATINUM_PT950).
- */
 export function normalizeMetalMarketKey(metal?: string | null): string {
   if (!metal) return "";
   const code = normalizeMetalCode(metal);

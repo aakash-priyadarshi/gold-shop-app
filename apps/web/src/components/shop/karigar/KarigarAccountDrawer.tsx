@@ -44,9 +44,6 @@ export interface KarigarAccountDrawerProps {
   onRefreshParent?: () => void;
 }
 
-/**
- * Generate a UUIDv4 idempotency key using browser crypto APIs with fallbacks.
- */
 export function createIdempotencyKey(): string {
   const cryptoApi =
     typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
