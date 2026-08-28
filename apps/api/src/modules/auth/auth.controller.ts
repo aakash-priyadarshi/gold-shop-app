@@ -298,6 +298,7 @@ export class AuthController {
     @CurrentUser() user: any,
     @Query("operation") operation: string,
     @Query("uploadType") uploadType?: string,
+    @Res({ passthrough: true }) response?: Response,
   ) {
     const secret = this.configService.get<string>("IMAGE_WORKER_AUTH_SECRET");
     if (!secret || secret.length < 32) {
@@ -332,6 +333,7 @@ export class AuthController {
       maxBytes: 10 * 1024 * 1024,
     });
 
+    response?.setHeader("Cache-Control", "no-store");
     return { token, expiresIn: IMAGE_WORKER_TOKEN_TTL_SECONDS };
   }
 

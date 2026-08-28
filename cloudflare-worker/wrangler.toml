@@ -17,7 +17,7 @@ bucket_name = "orivraa-demos"
 ALLOWED_ORIGINS = "https://orivraa.com,https://www.orivraa.com,https://m.orivraa.com"
 
 # Set the matching secret out-of-band; never put it in this file:
-# npx wrangler secret put IMAGE_WORKER_AUTH_SECRET
+# npx wrangler secret put IMAGE_WORKER_AUTH_SECRET --env production
 
 # Production environment
 [env.production]

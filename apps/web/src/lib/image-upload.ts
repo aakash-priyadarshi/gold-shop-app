@@ -13,10 +13,30 @@ const WORKER_URL =
 
 type WorkerOperation = "upload" | "delete";
 
+export function validateImageWorkerUrl(value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("NEXT_PUBLIC_IMAGE_WORKER_URL must be a valid HTTPS URL");
+  }
+
+  if (url.protocol !== "https:") {
+    throw new Error("NEXT_PUBLIC_IMAGE_WORKER_URL must be a valid HTTPS URL");
+  }
+
+  return url.toString().replace(/\/+$/, "");
+}
+
+function getWorkerUrl(): string {
+  return validateImageWorkerUrl(WORKER_URL);
+}
+
 async function getWorkerToken(
   operation: WorkerOperation,
   uploadType?: string,
 ): Promise<string> {
+  getWorkerUrl();
   const response = await api.get<{ token?: string }>(
     "/auth/image-upload-token",
     { params: { operation, ...(uploadType ? { uploadType } : {}) } },
@@ -220,7 +240,7 @@ export async function uploadImage(
     const token = await getWorkerToken("upload", type);
 
     // Upload to worker
-    const response = await fetch(`${WORKER_URL}/upload`, {
+    const response = await fetch(`${getWorkerUrl()}/upload`, {
       method: "POST",
       headers: {
         "X-Upload-Type": type,
@@ -312,7 +332,7 @@ export async function uploadCertificate(
       const formData = new FormData();
       formData.append("file", body, filename);
       const token = await getWorkerToken("upload", type);
-      const response = await fetch(`${WORKER_URL}/upload`, {
+      const response = await fetch(`${getWorkerUrl()}/upload`, {
         method: "POST",
         headers: {
           "X-Upload-Type": type,
@@ -353,7 +373,7 @@ export async function uploadBase64Image(
 
   try {
     const token = await getWorkerToken("upload", type);
-    const response = await fetch(`${WORKER_URL}/upload`, {
+    const response = await fetch(`${getWorkerUrl()}/upload`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -385,7 +405,7 @@ export async function deleteImage(
   try {
     const token = await getWorkerToken("delete");
     const response = await fetch(
-      `${WORKER_URL}/delete/${encodeURIComponent(key)}`,
+      `${getWorkerUrl()}/delete/${encodeURIComponent(key)}`,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
@@ -413,7 +433,7 @@ export async function uploadAuthenticatedFile(
     const token = await getWorkerToken("upload", type);
     const formData = new FormData();
     formData.append("file", file, file.name);
-    const response = await fetch(`${WORKER_URL}/upload`, {
+    const response = await fetch(`${getWorkerUrl()}/upload`, {
       method: "POST",
       headers: {
         "X-Upload-Type": type,
@@ -445,7 +465,7 @@ export function getImageUrl(
   }
 
   // Build URL with optional variant query param
-  let url = `${WORKER_URL}/${key}`;
+  let url = `${getWorkerUrl()}/${key}`;
 
   if (variant === "medium") {
     url += "?w=600";

@@ -7,6 +7,7 @@ const repoRoot = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const SCAN_ROOTS = [
   ".github",
   "apps/web",
+  "apps/team-web",
   "apps/api",
   "apps/desktop",
   "cloudflare-worker",

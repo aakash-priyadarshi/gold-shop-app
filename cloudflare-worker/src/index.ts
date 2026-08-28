@@ -112,6 +112,42 @@ const ALLOWED_TYPES = [
 ];
 const MAX_REQUEST_SIZE = 12 * 1024 * 1024; // 10MB payload plus multipart overhead
 
+class RequestBodyTooLargeError extends Error {
+  constructor() {
+    super("Request body is too large");
+  }
+}
+
+async function readRequestBodyWithinLimit(request: Request): Promise<Uint8Array> {
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array();
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_REQUEST_SIZE) {
+        throw new RequestBodyTooLargeError();
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
+
 /** Voiced demo/tutorial langs in R2. UI also has si/he; those have no video assets yet. */
 const SUPPORTED_DEMO_LANGS = [
   "en",
@@ -343,7 +379,18 @@ async function handleUpload(
 
   // Handle multipart form data
   if (contentType.includes("multipart/form-data")) {
-    const formData = await request.formData();
+    let formData: FormData;
+    try {
+      const body = await readRequestBodyWithinLimit(request);
+      formData = await new Response(body, {
+        headers: { "Content-Type": contentType },
+      }).formData();
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return jsonError("Request body is too large", 413, corsHeaders);
+      }
+      return jsonError("Invalid multipart form data", 400, corsHeaders);
+    }
     const uploadedFile = formData.get("file") as File | null;
 
     if (!uploadedFile) {
@@ -361,7 +408,15 @@ async function handleUpload(
   }
   // Handle raw binary upload
   else if (ALLOWED_TYPES.some((type) => contentType.includes(type))) {
-    const buffer = await request.arrayBuffer();
+    let buffer: Uint8Array;
+    try {
+      buffer = await readRequestBodyWithinLimit(request);
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return jsonError("Request body is too large", 413, corsHeaders);
+      }
+      throw error;
+    }
     const rawMimeType = contentType.split(";", 1)[0].trim().toLowerCase();
     file = new Blob([buffer], { type: rawMimeType });
     const ext = rawMimeType.split("/")[1] || "jpg";
@@ -369,11 +424,16 @@ async function handleUpload(
   }
   // Handle base64 JSON upload
   else if (contentType.includes("application/json")) {
-    const json = (await request.json()) as {
-      data?: string;
-      filename?: string;
-      type?: string;
-    };
+    let json: { data?: string; filename?: string; type?: string };
+    try {
+      const body = await readRequestBodyWithinLimit(request);
+      json = JSON.parse(new TextDecoder().decode(body));
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return jsonError("Request body is too large", 413, corsHeaders);
+      }
+      return jsonError("Invalid JSON upload body", 400, corsHeaders);
+    }
 
     if (!json.data) {
       return new Response(
@@ -419,7 +479,7 @@ async function handleUpload(
     );
   }
 
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  const bytes = new Uint8Array(await file.slice(0, 64).arrayBuffer());
   const detectedType = detectFileType(bytes);
   if (!detectedType || detectedType !== file.type) {
     return jsonError(
@@ -497,12 +557,10 @@ async function handleUpload(
   // (Cloudflare Workers have limited image processing capabilities without paid features)
   // The client-side can handle resizing, or we use Cloudflare Images transformations on delivery
 
-  const arrayBuffer = bytes.buffer;
-
   // Store original
-  await env.IMAGES_BUCKET.put(baseKey, arrayBuffer, {
+  await env.IMAGES_BUCKET.put(baseKey, file.stream(), {
     httpMetadata: {
-      contentType: file.type,
+      contentType: detectedType,
       cacheControl: "public, max-age=31536000", // 1 year cache
     },
     customMetadata: {

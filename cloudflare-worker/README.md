@@ -64,7 +64,7 @@ npm run deploy:prod
 4. Configure the shared authorization secret (the API uses the same value):
 
 ```bash
-npx wrangler secret put IMAGE_WORKER_AUTH_SECRET
+npx wrangler secret put IMAGE_WORKER_AUTH_SECRET --env production
 ```
 
 The API exposes `GET /api/auth/image-upload-token` to authenticated users. It

@@ -39,8 +39,13 @@ function tokenFor(claims: Record<string, unknown>, now = 1_700_000_000) {
 class MemoryBucket {
   private readonly objects = new Map<string, { body: ArrayBuffer; customMetadata: Record<string, string> }>();
 
-  async put(key: string, body: ArrayBuffer, options: { customMetadata: Record<string, string> }) {
-    this.objects.set(key, { body, customMetadata: options.customMetadata });
+  async put(
+    key: string,
+    body: ArrayBuffer | ReadableStream,
+    options: { customMetadata: Record<string, string> },
+  ) {
+    const buffer = body instanceof ReadableStream ? await new Response(body).arrayBuffer() : body;
+    this.objects.set(key, { body: buffer, customMetadata: options.customMetadata });
   }
 
   async head(key: string) {
@@ -178,8 +183,29 @@ const oversized = await worker.fetch(
   }),
   sharedEnv,
   {} as any,
-);
-assert.equal(oversized.status, 413);
+  );
+  assert.equal(oversized.status, 413);
+
+  const headerlessOversizedBytes = new Uint8Array(12 * 1024 * 1024 + 1);
+  headerlessOversizedBytes.set(jpeg);
+  const headerlessForm = new FormData();
+  headerlessForm.append(
+    "file",
+    new Blob([headerlessOversizedBytes], { type: "image/jpeg" }),
+    "ring.jpg",
+  );
+  const headerlessOversizedRequest = new Request("https://images.orivraa.com/upload", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${validToken}`, "X-Upload-Type": "product" },
+    body: headerlessForm,
+  });
+  assert.equal(headerlessOversizedRequest.headers.get("Content-Length"), null);
+  const headerlessOversized = await worker.fetch(
+    headerlessOversizedRequest,
+    sharedEnv,
+    {} as any,
+  );
+  assert.equal(headerlessOversized.status, 413);
 
 const deleteToken = tokenFor({ op: "delete", uploadType: undefined }, runtimeNow);
 const anonymousDelete = await worker.fetch(
