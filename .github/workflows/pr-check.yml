@@ -173,7 +173,10 @@ jobs:
 
       - name: TypeCheck Web
         working-directory: apps/web
-        run: pnpm exec tsc --noEmit
+        # React 19's automatic JSX runtime avoids the duplicate global JSX
+        # namespace emitted by the monorepo's React 18 team-web workspace.
+        # Next's production compiler still owns the JSX transform in `next build`.
+        run: pnpm exec tsc --noEmit --jsx react-jsx
 
   # ══════════════════════════════════════════════════════════
   # Stage 4: Build Verification
