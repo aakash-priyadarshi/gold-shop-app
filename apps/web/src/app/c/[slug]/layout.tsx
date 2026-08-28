@@ -11,15 +11,16 @@ function titleizeSlug(slug: string): string {
     .join(" ");
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
-}): Metadata {
-  const name = titleizeSlug(params.slug);
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const name = titleizeSlug(slug);
   const title = `${name} Catalogue | Browse Jewellery on Orivraa`;
   const description = `Explore the ${name} collection on Orivraa — browse gold, silver and diamond pieces from verified jewellers, see live-rate pricing, and request custom designs or quotes online.`;
-  const canonical = `/c/${params.slug}`;
+  const canonical = `/c/${slug}`;
 
   return {
     title,

@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { toast } from "@/hooks/use-toast";
 import { shopsApi } from "@/lib/api";
+import { uploadAuthenticatedFile } from "@/lib/image-upload";
 import {
   getKycIdentifierConfig,
   validateKycIdentifiers,
@@ -24,9 +25,6 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
-
-const CLOUDFLARE_UPLOAD_URL =
-  process.env.NEXT_PUBLIC_CDN_UPLOAD_URL || "https://images.orivraa.com/upload";
 
 export default function MobileKycPage() {
   const { user, refreshUser } = useAuth();
@@ -152,28 +150,21 @@ export default function MobileKycPage() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !activeUploadField) return;
+    const uploadField = activeUploadField;
+    if (!file || !uploadField) return;
 
     setIsUploading(true);
     haptic("light");
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch(CLOUDFLARE_UPLOAD_URL, {
-        method: "POST",
-        headers: { "X-Upload-Type": "kyc" },
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || "Upload failed");
+      const data = await uploadAuthenticatedFile(file, "kyc");
+      if (!data.success || !data.url) throw new Error(data.error || "Upload failed");
+      const uploadedUrl = data.url;
 
       setKycData((prev) => ({
         ...prev,
         verificationDocuments: {
           ...prev.verificationDocuments,
-          [activeUploadField]: data.url,
+          [uploadField]: uploadedUrl,
         },
       }));
 

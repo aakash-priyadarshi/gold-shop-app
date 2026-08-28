@@ -1,3 +1,5 @@
+import { api } from "@/lib/api";
+
 /**
  * Image Upload Service
  *
@@ -8,6 +10,42 @@
 // Get the worker URL from environment or use default
 const WORKER_URL =
   process.env.NEXT_PUBLIC_IMAGE_WORKER_URL || "https://images.orivraa.com";
+
+type WorkerOperation = "upload" | "delete";
+
+export function validateImageWorkerUrl(value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("NEXT_PUBLIC_IMAGE_WORKER_URL must be a valid HTTPS URL");
+  }
+
+  if (url.protocol !== "https:") {
+    throw new Error("NEXT_PUBLIC_IMAGE_WORKER_URL must be a valid HTTPS URL");
+  }
+
+  return url.toString().replace(/\/+$/, "");
+}
+
+function getWorkerUrl(): string {
+  return validateImageWorkerUrl(WORKER_URL);
+}
+
+async function getWorkerToken(
+  operation: WorkerOperation,
+  uploadType?: string,
+): Promise<string> {
+  getWorkerUrl();
+  const response = await api.get<{ token?: string }>(
+    "/auth/image-upload-token",
+    { params: { operation, ...(uploadType ? { uploadType } : {}) } },
+  );
+  if (!response.data?.token) {
+    throw new Error("Image upload authorization is unavailable");
+  }
+  return response.data.token;
+}
 
 export type UploadType =
   | "product"
@@ -158,7 +196,13 @@ export async function uploadImage(
 
   try {
     // Validate file type
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/avif",
+    ];
     if (!allowedTypes.includes(file.type)) {
       return {
         success: false,
@@ -193,12 +237,14 @@ export async function uploadImage(
       compressedBlob,
       filenameForCompressed(file.name, compressedBlob),
     );
+    const token = await getWorkerToken("upload", type);
 
     // Upload to worker
-    const response = await fetch(`${WORKER_URL}/upload`, {
+    const response = await fetch(`${getWorkerUrl()}/upload`, {
       method: "POST",
       headers: {
         "X-Upload-Type": type,
+        Authorization: `Bearer ${token}`,
       },
       body: formData,
     });
@@ -224,6 +270,7 @@ const CERTIFICATE_IMAGE_TYPES = [
   "image/png",
   "image/webp",
   "image/gif",
+  "image/avif",
 ];
 const CERTIFICATE_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const CERTIFICATE_MAX_PDF_BYTES = 5 * 1024 * 1024;
@@ -284,9 +331,13 @@ export async function uploadCertificate(
     const upload = async (type: "certificate" | "kyc") => {
       const formData = new FormData();
       formData.append("file", body, filename);
-      const response = await fetch(`${WORKER_URL}/upload`, {
+      const token = await getWorkerToken("upload", type);
+      const response = await fetch(`${getWorkerUrl()}/upload`, {
         method: "POST",
-        headers: { "X-Upload-Type": type },
+        headers: {
+          "X-Upload-Type": type,
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
       return (await response.json()) as UploadResult;
@@ -321,11 +372,13 @@ export async function uploadBase64Image(
   const { type, filename = "image.jpg" } = options;
 
   try {
-    const response = await fetch(`${WORKER_URL}/upload`, {
+    const token = await getWorkerToken("upload", type);
+    const response = await fetch(`${getWorkerUrl()}/upload`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Upload-Type": type,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         data: base64Data,
@@ -350,10 +403,12 @@ export async function deleteImage(
   key: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const token = await getWorkerToken("delete");
     const response = await fetch(
-      `${WORKER_URL}/delete/${encodeURIComponent(key)}`,
+      `${getWorkerUrl()}/delete/${encodeURIComponent(key)}`,
       {
         method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       },
     );
     return await response.json();
@@ -362,6 +417,35 @@ export async function deleteImage(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Delete failed",
+    };
+  }
+}
+
+/** Upload an authenticated non-image attachment (KYC documents or chat files). */
+export async function uploadAuthenticatedFile(
+  file: File,
+  type: "kyc" | "chat",
+): Promise<UploadResult> {
+  if (file.size > 10 * 1024 * 1024) {
+    return { success: false, error: "File too large. Maximum size is 10MB" };
+  }
+  try {
+    const token = await getWorkerToken("upload", type);
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    const response = await fetch(`${getWorkerUrl()}/upload`, {
+      method: "POST",
+      headers: {
+        "X-Upload-Type": type,
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    return (await response.json()) as UploadResult;
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Upload failed",
     };
   }
 }
@@ -381,7 +465,7 @@ export function getImageUrl(
   }
 
   // Build URL with optional variant query param
-  let url = `${WORKER_URL}/${key}`;
+  let url = `${getWorkerUrl()}/${key}`;
 
   if (variant === "medium") {
     url += "?w=600";
@@ -404,7 +488,7 @@ export function isValidImageUrl(url: string): boolean {
   }
 
   // Check if it's a valid key format (type/timestamp-random.ext)
-  return /^(product|profile|rfq)\/\d+-[a-z0-9]+\.(jpg|jpeg|png|webp|gif)$/i.test(
+  return /^(product|profile|rfq|designs|kyc|chat|certificate|review-proof)\/\d+-[a-z0-9]+\.(jpg|jpeg|png|webp|gif|avif)$/i.test(
     url,
   );
 }

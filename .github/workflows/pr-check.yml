@@ -60,7 +60,7 @@ jobs:
           path: |
             ${{ steps.pnpm-cache.outputs.STORE_PATH }}
             **/node_modules
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: pnpm-${{ runner.os }}-${{ github.sha }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-${{ runner.os }}-
 
@@ -105,10 +105,19 @@ jobs:
         with:
           path: |
             **/node_modules
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: pnpm-${{ runner.os }}-${{ github.sha }}-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Enforce Next security compensating control
+        run: pnpm check:next-security
+
+      - name: Test Next security guard
+        run: pnpm test:next-security
+
+      - name: Test image worker security controls
+        run: pnpm test:image-worker-security
 
       - name: Lint API
         working-directory: apps/api
@@ -154,7 +163,7 @@ jobs:
         with:
           path: |
             **/node_modules
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: pnpm-${{ runner.os }}-${{ github.sha }}-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -169,11 +178,11 @@ jobs:
 
       - name: TypeCheck API
         working-directory: apps/api
-        run: npx tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
       - name: TypeCheck Web
         working-directory: apps/web
-        run: npx tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
   # ══════════════════════════════════════════════════════════
   # Stage 4: Build Verification
@@ -205,7 +214,7 @@ jobs:
         with:
           path: |
             **/node_modules
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: pnpm-${{ runner.os }}-${{ github.sha }}-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -276,7 +285,7 @@ jobs:
         with:
           path: |
             **/node_modules
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: pnpm-${{ runner.os }}-${{ github.sha }}-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -398,7 +407,7 @@ jobs:
         with:
           path: |
             **/node_modules
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: pnpm-${{ runner.os }}-${{ github.sha }}-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

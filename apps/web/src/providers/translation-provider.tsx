@@ -152,7 +152,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
 
   // Pending texts collected between flushes
   const pending = useRef<Set<string>>(new Set());
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const inflightRef = useRef(false);
   const flushIdRef = useRef(0);
   const localeRef = useRef(locale);

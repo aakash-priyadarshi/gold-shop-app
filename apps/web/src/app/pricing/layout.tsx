@@ -8,7 +8,8 @@ import { Metadata } from "next";
 import { headers } from "next/headers";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const seo = getRegionalPricingSeo(headers().get("cf-ipcountry"));
+  const requestHeaders = await headers();
+  const seo = getRegionalPricingSeo(requestHeaders.get("cf-ipcountry"));
   const pricingJsonLd = {
     "@context": "https://schema.org",
     "@graph": [
