@@ -132,7 +132,7 @@ export function ScrollReveal({
         className={className}
       >
         {React.Children.map(children, (child) => (
-          <motion.div variants={itemVariants}>{child}</motion.div>
+          <motion.div variants={itemVariants}>{child as any}</motion.div>
         ))}
       </motion.div>
     );
@@ -148,8 +148,7 @@ export function ScrollReveal({
       variants={variants}
       className={className}
     >
-      {children}
+      {children as any}
     </motion.div>
   );
 }
-
