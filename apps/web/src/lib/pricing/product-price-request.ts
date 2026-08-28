@@ -37,6 +37,9 @@ export class GemstonePricingError extends Error {
   }
 }
 
+/**
+ * Build a gemstone pricing request from product form input, validating required fields per stone type.
+ */
 export function buildProductGemstonePricingRequest(
   shopId: string,
   gemstone: object,

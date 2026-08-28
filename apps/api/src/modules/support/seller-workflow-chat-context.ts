@@ -1,3 +1,6 @@
+/**
+ * Check if a message asks about POS workflows like pending payments, returns, exchanges, or bill verification.
+ */
 export function isSellerPosWorkflowQuestion(message: string): boolean {
   const normalized = message.toLowerCase();
   return /(card|upi|wallet|bank).*(pending|payment|sale)|(pending|payment|sale).*(card|upi|wallet|bank)|what does.*(paid|pending|partially)|why.*return|can't.*return|cannot.*return|return.*(quantity|gram|metal)|exchange|store credit|verify.*bill|bill.*verify|qr.*bill/.test(
@@ -5,6 +8,9 @@ export function isSellerPosWorkflowQuestion(message: string): boolean {
   );
 }
 
+/**
+ * Generate a contextual help reply for recognized POS workflow questions.
+ */
 export function formatSellerPosWorkflowReply(message: string): string {
   const normalized = message.toLowerCase();
 

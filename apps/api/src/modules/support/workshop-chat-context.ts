@@ -31,6 +31,9 @@ export type LiveWorkshopAccess = {
   workshopPlanCatalogUnavailable?: boolean;
 };
 
+/**
+ * Format workshop plan catalog for AI context, listing plans by country or explaining unavailability.
+ */
 export function formatWorkshopPlanCatalog(
   catalog: WorkshopPlanCatalogInput,
 ): string | undefined {
@@ -52,6 +55,9 @@ export function formatWorkshopPlanCatalog(
     .join("; ");
 }
 
+/**
+ * Format workshop access details for AI context, including plan entitlement and mode status.
+ */
 export function formatLiveWorkshopAccess(access: LiveWorkshopAccess): string {
   const planList = access.workshopPlanCatalogUnavailable
     ? "temporarily unavailable — do not claim no plans include it"
@@ -85,6 +91,9 @@ export function formatLiveWorkshopAccess(access: LiveWorkshopAccess): string {
   ].join("\n");
 }
 
+/**
+ * Format a customer-facing reply explaining workshop access, plan requirements, and setup steps.
+ */
 export function formatSellerWorkshopReply(access: LiveWorkshopAccess): string {
   const livePlans = access.workshopPlanCatalogUnavailable
     ? "Live plan catalog is temporarily unavailable — do not claim which plans include workshop manufacturing until it reloads."
@@ -106,6 +115,9 @@ export function formatSellerWorkshopReply(access: LiveWorkshopAccess): string {
   return `Supply Chain is at /dashboard/shop/supply-chain. Karigar book is the artisan ledger. Your current plan (${access.planName}) does not include workshop manufacturing right now, so the Workshop mode switch in Settings → Preferences stays off. ${livePlans} Compare or change plans at /dashboard/shop/billing. Which plans include the flag comes from live admin plan JSON, not from a fixed price list.`;
 }
 
+/**
+ * Check if message asks about workshop metal operations like scrap, issue, or gold loss.
+ */
 export function isWorkshopMetalOperationQuestion(message: string): boolean {
   const normalized = message.toLowerCase();
   return /(scrap return|return scrap|recoverable scrap|custom metal|custom material|issue metal|bullion reserve|process wastage|metal movement|return metal to vault|gold[-\s]loss)/.test(
@@ -113,6 +125,9 @@ export function isWorkshopMetalOperationQuestion(message: string): boolean {
   );
 }
 
+/**
+ * Check if message asks about workshop access, plan entitlement, or mode setup.
+ */
 export function isWorkshopAccessQuestion(message: string): boolean {
   const normalized = message.toLowerCase();
   return /(workshop mode|factory tab|factory view|workshop manufactur|unlock.*tower|which plan.*workshop|plan.*workshop|enable workshop|turn on workshop|supply chain tab|include workshop|workshop entitlement|workshop access|difference.*karigar.*workshop|karigar.*workshop.*difference)/.test(
@@ -120,6 +135,9 @@ export function isWorkshopAccessQuestion(message: string): boolean {
   );
 }
 
+/**
+ * Check if message asks about workshop operations like job receipt, cancellation, wages, or karigar accounts.
+ */
 export function isWorkshopOperationalQuestion(message: string): boolean {
   const normalized = message.toLowerCase();
   return /(receive.*(finished|workshop)|finished.*receive|can't.*receive|cannot.*receive|why.*receive|cancel.*job|archive.*job|delete.*job|job.*delete|wage.*(due|settle|settlement)|settle.*wage|karigar.*(account|statement|ledger|advance|settlement)|procure.*bullion|procurement.*bullion|supplier.*bullion)/.test(
@@ -127,6 +145,9 @@ export function isWorkshopOperationalQuestion(message: string): boolean {
   );
 }
 
+/**
+ * Format a customer-facing reply for workshop operational questions, considering access level.
+ */
 export function formatWorkshopOperationalReply(
   access: Pick<
     LiveWorkshopAccess,

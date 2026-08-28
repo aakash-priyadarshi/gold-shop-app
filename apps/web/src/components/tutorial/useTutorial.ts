@@ -18,6 +18,9 @@ const SUPPLY_CHAIN_NAV_STEP: DriveStep = {
   },
 };
 
+/**
+ * Programmatically activate the Preferences tab in Shop Settings during a tour.
+ */
 function activateShopSettingsPreferencesTab() {
   if (typeof document === "undefined") return;
   document
@@ -27,6 +30,9 @@ function activateShopSettingsPreferencesTab() {
 
 let preferencesAdvancePending = false;
 
+/**
+ * Wait for a tour element to appear in the DOM, resolving true if found within timeout.
+ */
 function waitForTourElement(
   selector: string,
   timeoutMs = 2000,

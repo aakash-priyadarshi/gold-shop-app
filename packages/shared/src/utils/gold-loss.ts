@@ -47,6 +47,9 @@ export type GoldLossResult = {
   unexplained: number;
 };
 
+/**
+ * Round a weight value to 3 decimal places (milligram precision).
+ */
 export function roundGrams(n: number): number {
   if (!Number.isFinite(n)) return 0;
   return Math.round(n * 1000) / 1000;
@@ -87,6 +90,10 @@ export function computeGoldLoss(input: GoldLossInput): GoldLossResult {
   };
 }
 
+/**
+ * Compute gold loss for a workshop production stage (filing, polishing, etc).
+ * Combines scrap and dust as recoverable material.
+ */
 export function stageGoldLoss(input: {
   goldInGrams: number;
   goldOutGrams: number;

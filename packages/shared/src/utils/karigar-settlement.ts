@@ -54,6 +54,9 @@ export const KARIGAR_STATEMENT_FILTERS = [
 export type KarigarStatementFilterCode =
   (typeof KARIGAR_STATEMENT_FILTERS)[number];
 
+/**
+ * Round a monetary amount to 2 decimal places.
+ */
 export function roundMoney(amount: number): number {
   if (!Number.isFinite(amount)) return 0;
   return Math.round(amount * 100) / 100;
@@ -160,6 +163,9 @@ export interface MaterialMetalBalance {
   outstandingGrams: number;
 }
 
+/**
+ * Check if a movement type represents a return of metal to the shop.
+ */
 export function isReturnMovementType(type: string): boolean {
   return (
     type === "RETURN_FINISHED" ||

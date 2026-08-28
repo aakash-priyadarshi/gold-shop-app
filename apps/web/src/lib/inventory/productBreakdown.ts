@@ -52,6 +52,9 @@ export type ProductBreakdown = {
   estimatedBill: number;
 };
 
+/**
+ * Type guard to cast unknown value to object record.
+ */
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -59,19 +62,31 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
+/**
+ * Round monetary amount to 2 decimal places.
+ */
 function roundMoney2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+/**
+ * Extract trimmed string from unknown value.
+ */
 function readString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Extract finite number from unknown value, defaulting to 0.
+ */
 function readNumber(value: unknown): number {
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * Extract metal type and purity from composition object or fallback purity string.
+ */
 export function parseMetalFromComposition(
   composition: unknown,
   fallbackPurity?: string,
@@ -87,6 +102,9 @@ export function parseMetalFromComposition(
   };
 }
 
+/**
+ * Parse a single gemstone record from unknown input.
+ */
 function parseGemstone(raw: unknown): ProductGemstone | null {
   const row = asRecord(raw);
   if (!row) return null;
@@ -108,6 +126,9 @@ function parseGemstone(raw: unknown): ProductGemstone | null {
   };
 }
 
+/**
+ * Extract gemstones array from inventory source, checking direct field and composition.
+ */
 export function parseProductGemstones(
   source: InventoryBreakdownSource,
 ): ProductGemstone[] {
@@ -188,6 +209,9 @@ export function buildProductBreakdown(
   };
 }
 
+/**
+ * Check if a product breakdown contains any pricing or component information.
+ */
 export function hasPricingBreakdown(breakdown: ProductBreakdown): boolean {
   return (
     breakdown.metalValue > 0 ||
