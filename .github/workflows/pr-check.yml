@@ -169,11 +169,11 @@ jobs:
 
       - name: TypeCheck API
         working-directory: apps/api
-        run: npx tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
       - name: TypeCheck Web
         working-directory: apps/web
-        run: npx tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
   # ══════════════════════════════════════════════════════════
   # Stage 4: Build Verification
