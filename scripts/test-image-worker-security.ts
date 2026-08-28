@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
+import { createHmac, webcrypto } from "node:crypto";
 import worker from "../cloudflare-worker/src/index";
 import {
   detectFileType,
   isSafeObjectKey,
   verifyImageWorkerToken,
 } from "../cloudflare-worker/src/security";
+
+// Node 18 does not expose WebCrypto on the global object in every patch release,
+// while Cloudflare Workers always do. Keep this local test portable across CI's
+// Node 18 and newer developer runtimes without adding a Worker-only dependency.
+if (!globalThis.crypto?.subtle) {
+  Object.defineProperty(globalThis, "crypto", { configurable: true, value: webcrypto });
+}
 
 const SECRET = "test-image-worker-secret-012345678901234567890";
 
