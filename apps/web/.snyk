@@ -1,0 +1,10 @@
+version: v1.25.0
+ignore:
+  SNYK-JS-NEXT-15105315:
+    - '*':
+        reason: >-
+          Not exploitable in this application: experimental.ppr and
+          cacheComponents are disabled, and NEXT_PRIVATE_MINIMAL_MODE=1 is not
+          used by the Railway or Tauri builds. Re-evaluate before this exception
+          expires or when those settings change.
+        expires: 2027-02-28T00:00:00.000Z
