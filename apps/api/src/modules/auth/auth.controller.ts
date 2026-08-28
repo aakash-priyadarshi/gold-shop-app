@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -10,6 +12,7 @@ import {
   Query,
   Request,
   Res,
+  ServiceUnavailableException,
   UseGuards,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -37,6 +40,20 @@ import { VerifyEmailDto } from "./dto/verify-email.dto";
 import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { TurnstileService } from "./turnstile.service";
+import {
+  IMAGE_WORKER_TOKEN_TTL_SECONDS,
+  signImageWorkerToken,
+} from "../media/image-worker-token";
+
+const IMAGE_UPLOAD_TYPES = new Set([
+  "product",
+  "profile",
+  "rfq",
+  "kyc",
+  "review-proof",
+  "certificate",
+  "chat",
+]);
 
 @ApiTags("auth")
 @Controller("auth")
@@ -266,6 +283,56 @@ export class AuthController {
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async me(@CurrentUser() user: any) {
     return this.authService.getMe(user.id);
+  }
+
+  @Get("image-upload-token")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
+  @ApiOperation({
+    summary: "Issue a short-lived token for an authorized image worker operation",
+  })
+  @ApiQuery({ name: "operation", enum: ["upload", "delete"] })
+  @ApiQuery({ name: "uploadType", required: false })
+  async imageUploadToken(
+    @CurrentUser() user: any,
+    @Query("operation") operation: string,
+    @Query("uploadType") uploadType?: string,
+  ) {
+    const secret = this.configService.get<string>("IMAGE_WORKER_AUTH_SECRET");
+    if (!secret || secret.length < 32) {
+      throw new ServiceUnavailableException(
+        "Image upload authorization is not configured",
+      );
+    }
+    if (operation !== "upload" && operation !== "delete") {
+      throw new BadRequestException("operation must be upload or delete");
+    }
+    if (operation === "upload") {
+      if (!uploadType || !IMAGE_UPLOAD_TYPES.has(uploadType)) {
+        throw new BadRequestException("A supported uploadType is required");
+      }
+      if (
+        ["product", "kyc", "review-proof", "certificate"].includes(uploadType) &&
+        !["SHOPKEEPER", "ADMIN"].includes(user.role)
+      ) {
+        throw new ForbiddenException("This upload type requires shop authorization");
+      }
+    } else if (uploadType) {
+      throw new BadRequestException("uploadType is only valid for uploads");
+    }
+
+    const token = signImageWorkerToken(secret, {
+      sub: user.id,
+      shopId: user.shopId ?? null,
+      role: user.role,
+      op: operation,
+      ...(uploadType ? { uploadType } : {}),
+      // The worker applies the stricter per-format limit after reading bytes.
+      maxBytes: 10 * 1024 * 1024,
+    });
+
+    return { token, expiresIn: IMAGE_WORKER_TOKEN_TTL_SECONDS };
   }
 
   // =====================

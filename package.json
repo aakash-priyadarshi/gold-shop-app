@@ -32,6 +32,9 @@
     "test:all": "pnpm test:shared && pnpm test:web && pnpm test:api && pnpm smoke-test:full",
     "prepare": "husky",
     "check-migrations": "npx tsx scripts/check-migrations-safe.ts",
+    "check:next-security": "node scripts/check-next-security-config.mjs",
+    "test:next-security": "node scripts/test-next-security-config.mjs",
+    "test:image-worker-security": "tsx scripts/test-image-worker-security.ts",
     "clear-cache": "npx tsx scripts/clear-metal-cache.ts",
     "warm-cache": "npx tsx scripts/warm-market-cache.ts"
   },

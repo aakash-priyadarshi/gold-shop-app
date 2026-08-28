@@ -24,6 +24,7 @@ import {
 } from "@gold-shop/shared";
 import { randomUUID } from "crypto";
 import { RedisService } from "../../common/redis";
+import { signImageWorkerToken } from "../media/image-worker-token";
 
 interface CreateDesignDto {
   jewelryType: JewelleryType;
@@ -398,11 +399,26 @@ export class DesignsService {
       const formData = new FormData();
       formData.append("file", blob, `design-${hash}.${format}`);
 
+      const workerSecret = this.configService.get<string>(
+        "IMAGE_WORKER_AUTH_SECRET",
+      );
+      if (!workerSecret) {
+        throw new Error("IMAGE_WORKER_AUTH_SECRET is not configured");
+      }
+      const authorization = signImageWorkerToken(workerSecret, {
+        sub: "system:designs",
+        role: "SYSTEM",
+        op: "upload",
+        uploadType: "designs",
+        maxBytes: 10 * 1024 * 1024,
+      });
+
       // Upload to the existing Cloudflare Worker
       const response = await fetch(`${this.imageWorkerUrl}/upload`, {
         method: "POST",
         headers: {
           "X-Upload-Type": "designs",
+          Authorization: `Bearer ${authorization}`,
         },
         body: formData,
       });

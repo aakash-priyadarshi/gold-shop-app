@@ -110,6 +110,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Enforce Next security compensating control
+        run: pnpm check:next-security
+
+      - name: Test Next security guard
+        run: pnpm test:next-security
+
+      - name: Test image worker security controls
+        run: pnpm test:image-worker-security
+
       - name: Lint API
         working-directory: apps/api
         run: pnpm lint

@@ -11,6 +11,7 @@ import {
   type ViolationWarning,
 } from "@/hooks/useChatSocket";
 import { chatApi } from "@/lib/api";
+import { uploadAuthenticatedFile } from "@/lib/image-upload";
 import { cn } from "@/lib/utils";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
@@ -67,9 +68,6 @@ interface Message {
   attachmentUrl?: string;
   attachmentType?: string;
 }
-
-const CLOUDFLARE_UPLOAD_URL =
-  process.env.NEXT_PUBLIC_CDN_UPLOAD_URL || "https://images.orivraa.com/upload";
 
 /* ────────────────────────────────────────────────────────────
    Widget
@@ -387,15 +385,8 @@ export function ChatPopupWidget() {
   ): Promise<{ url: string; type: string } | null> => {
     try {
       setUploading(true);
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch(CLOUDFLARE_UPLOAD_URL, {
-        method: "POST",
-        headers: { "X-Upload-Type": "chat" },
-        body: formData,
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || "Upload failed");
+      const data = await uploadAuthenticatedFile(file, "chat");
+      if (!data.success || !data.url) throw new Error(data.error || "Upload failed");
 
       const isVideo = file.type.startsWith("video/");
       const isDoc =
