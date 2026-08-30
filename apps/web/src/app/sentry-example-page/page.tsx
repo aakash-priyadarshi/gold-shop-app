@@ -33,7 +33,7 @@ export default function SentryExamplePage() {
               if (!client) {
                 setStatus("failed");
                 setDetail(
-                  "Sentry client is not initialized (missing sentry.client.config.ts load).",
+                  "Sentry client is not initialized (missing instrumentation-client.ts load).",
                 );
                 return;
               }
