@@ -2,8 +2,12 @@
 
 import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useToast } from "@/hooks/use-toast";
 import { crashReportApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
+  BellRing,
   Bug,
   Check,
   ChevronDown,
@@ -11,7 +15,9 @@ import {
   ChevronRight,
   Clock,
   Copy,
+  Download,
   Eye,
+  FileText,
   Filter,
   Monitor,
   RefreshCw,
@@ -52,6 +58,14 @@ interface Stats {
   today?: number;
   userTriggered?: number;
   byPlatform: Record<string, number>;
+}
+
+interface IntegrationsStatus {
+  slack: {
+    configured: boolean;
+    requested: boolean;
+    mentionEnabled: boolean;
+  };
 }
 
 function startOfLocalDayIso() {
@@ -144,9 +158,17 @@ function PlatformBadge({ platform }: { platform: string }) {
 
 // ─── Main Page ──────────────────────────────────────────
 export default function CrashReportsPage() {
+  const { toast } = useToast();
+  const t = useT();
   const [reports, setReports] = useState<CrashReport[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [integrations, setIntegrations] =
+    useState<IntegrationsStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exportAction, setExportAction] = useState<
+    "copy" | "download" | null
+  >(null);
+  const [testingSlack, setTestingSlack] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -161,7 +183,7 @@ export default function CrashReportsPage() {
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
-      const [reportsRes, statsRes] = await Promise.all([
+      const [reportsRes, statsRes, integrationsRes] = await Promise.all([
         crashReportApi.getAll({
           page,
           limit: 25,
@@ -176,11 +198,13 @@ export default function CrashReportsPage() {
           since: todayOnly ? startOfLocalDayIso() : undefined,
         }),
         crashReportApi.getStats(),
+        crashReportApi.getIntegrations().catch(() => null),
       ]);
       setReports(reportsRes.data.reports);
       setTotalPages(reportsRes.data.totalPages);
       setTotal(reportsRes.data.total);
       setStats(statsRes.data);
+      if (integrationsRes) setIntegrations(integrationsRes.data);
     } catch (err) {
       console.error("Failed to fetch crash reports:", err);
     } finally {
@@ -191,6 +215,90 @@ export default function CrashReportsPage() {
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
+
+  const exportFilters = () => ({
+    status: statusFilter || undefined,
+    platform: platformFilter || undefined,
+    userTriggered:
+      sourceFilter === "user"
+        ? true
+        : sourceFilter === "auto"
+          ? false
+          : undefined,
+    since: todayOnly ? startOfLocalDayIso() : undefined,
+  });
+
+  const handleCopyAllMarkdown = async () => {
+    setExportAction("copy");
+    try {
+      const response = await crashReportApi.exportMarkdown(exportFilters());
+      await navigator.clipboard.writeText(String(response.data));
+      toast({
+        title: t("Crash reports copied"),
+        description: t("Paste the Markdown directly into your AI coding agent."),
+      });
+    } catch (error) {
+      console.error("Failed to copy crash report export:", error);
+      toast({
+        title: t("Copy failed"),
+        description: t("Could not prepare the crash-report prompt."),
+        variant: "destructive",
+      });
+    } finally {
+      setExportAction(null);
+    }
+  };
+
+  const handleDownloadMarkdown = async () => {
+    setExportAction("download");
+    try {
+      const response = await crashReportApi.exportMarkdown(exportFilters());
+      const blob = new Blob([String(response.data)], {
+        type: "text/markdown;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `orivraa-crash-reports-${new Date().toISOString().slice(0, 10)}.md`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: t("Crash-report Markdown downloaded") });
+    } catch (error) {
+      console.error("Failed to download crash report export:", error);
+      toast({
+        title: t("Download failed"),
+        description: t("Could not prepare the crash-report file."),
+        variant: "destructive",
+      });
+    } finally {
+      setExportAction(null);
+    }
+  };
+
+  const handleTestSlack = async () => {
+    setTestingSlack(true);
+    try {
+      const response = await crashReportApi.testSlack();
+      if (!response.data.delivered) {
+        throw new Error(response.data.reason || "delivery_failed");
+      }
+      toast({
+        title: t("Slack test delivered"),
+        description: t("Check your configured incident channel."),
+      });
+    } catch (error) {
+      console.error("Failed to send Slack test:", error);
+      toast({
+        title: t("Slack test failed"),
+        description: t("Check the webhook URL in the Railway API variables."),
+        variant: "destructive",
+      });
+    } finally {
+      setTestingSlack(false);
+    }
+  };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
@@ -256,7 +364,7 @@ export default function CrashReportsPage() {
       <DashboardLayout>
         <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gold-100 flex items-center gap-2" data-tour="crash-reports-header">
               <Bug className="h-6 w-6 text-red-500" />
@@ -267,13 +375,88 @@ export default function CrashReportsPage() {
               copy matches the user toast.
             </p>
           </div>
-          <button
-            onClick={fetchReports}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all disabled:opacity-50"
+          <div
+            className="flex flex-wrap items-center gap-2"
+            data-tour="crash-reports-export"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
+            <button
+              type="button"
+              onClick={handleCopyAllMarkdown}
+              disabled={Boolean(exportAction)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all disabled:opacity-50"
+            >
+              <FileText className="h-4 w-4" />
+              <T>Copy all as AI prompt</T>
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadMarkdown}
+              disabled={Boolean(exportAction)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              <T>Download .md</T>
+            </button>
+            <button
+              type="button"
+              onClick={fetchReports}
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              <T>Refresh</T>
+            </button>
+          </div>
+        </div>
+
+        {/* Alert integration */}
+        <div
+          className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4 ${
+            integrations?.slack.configured
+              ? "border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/20"
+              : "border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/20"
+          }`}
+          data-tour="crash-reports-alerts"
+        >
+          <div className="flex items-start gap-3">
+            <BellRing
+              className={`mt-0.5 h-5 w-5 ${
+                integrations?.slack.configured
+                  ? "text-green-600"
+                  : "text-amber-600"
+              }`}
+            />
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {!integrations ? (
+                  <T>Checking Slack alert configuration</T>
+                ) : integrations.slack.configured ? (
+                  <T>Slack crash alerts are active</T>
+                ) : (
+                  <T>Slack crash alerts need configuration</T>
+                )}
+              </p>
+              <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                {!integrations ? (
+                  <T>The webhook status is loading from the API service.</T>
+                ) : integrations.slack.configured ? (
+                  <T>Every new incident is sent to your existing channel. Duplicate reports are grouped silently.</T>
+                ) : (
+                  <T>Add CRASH_REPORT_SLACK_WEBHOOK_URL to the Railway API service, then redeploy it.</T>
+                )}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleTestSlack}
+            disabled={!integrations?.slack.configured || testingSlack}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${testingSlack ? "animate-spin" : ""}`}
+            />
+            <T>Send test alert</T>
           </button>
         </div>
 

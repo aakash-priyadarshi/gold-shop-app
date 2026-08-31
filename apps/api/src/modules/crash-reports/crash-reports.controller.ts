@@ -10,9 +10,11 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
+import { Response } from "express";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
@@ -73,6 +75,65 @@ export class CrashReportsController {
   @Roles(UserRole.ADMIN)
   async getStats() {
     return this.crashReportsService.getStats();
+  }
+
+  /** Slack alert configuration status (never returns the webhook secret). */
+  @Get("integrations")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async getIntegrationsStatus() {
+    return this.crashReportsService.getIntegrationsStatus();
+  }
+
+  /** Send a test message to the configured Slack channel. */
+  @Post("integrations/slack/test")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async testSlack() {
+    return this.crashReportsService.sendSlackTest();
+  }
+
+  /** Download filtered incidents as AI-ready Markdown or structured JSON. */
+  @Get("export")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async exportReports(
+    @Res({ passthrough: true }) response: Response,
+    @Query("format") format = "markdown",
+    @Query("status") status?: string,
+    @Query("platform") platform?: string,
+    @Query("userTriggered") userTriggered?: string,
+    @Query("since") since?: string,
+  ) {
+    const query = {
+      status,
+      platform,
+      userTriggered:
+        userTriggered === "true"
+          ? true
+          : userTriggered === "false"
+            ? false
+            : undefined,
+      since,
+      limit: 2000,
+    };
+    const date = new Date().toISOString().slice(0, 10);
+
+    if (format.toLowerCase() === "json") {
+      response.setHeader(
+        "Content-Disposition",
+        `attachment; filename="orivraa-crash-reports-${date}.json"`,
+      );
+      return this.crashReportsService.getAiExport(query);
+    }
+
+    response.type("text/markdown; charset=utf-8");
+    response.setHeader(
+      "Content-Disposition",
+      `attachment; filename="orivraa-crash-reports-${date}.md"`,
+    );
+    return this.crashReportsService.getMarkdownExport(query);
   }
 
   /** Get a single report */

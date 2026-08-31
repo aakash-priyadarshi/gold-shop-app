@@ -2231,6 +2231,28 @@ export const securityApi = {
 };
 
 // ─── Crash Reports API ──────────────────────────────────
+export interface CrashReportFilterParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  platform?: string;
+  userTriggered?: boolean;
+  since?: string;
+}
+
+function crashReportQuery(params?: CrashReportFilterParams) {
+  const query = new URLSearchParams();
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.limit) query.set("limit", String(params.limit));
+  if (params?.status) query.set("status", params.status);
+  if (params?.platform) query.set("platform", params.platform);
+  if (params?.userTriggered !== undefined) {
+    query.set("userTriggered", String(params.userTriggered));
+  }
+  if (params?.since) query.set("since", params.since);
+  return query.toString();
+}
+
 export const crashReportApi = {
   /** Submit a crash report (public — no auth needed) */
   submit: (data: {
@@ -2251,29 +2273,28 @@ export const crashReportApi = {
   }) => api.post("/crash-reports", data),
 
   /** Get paginated crash reports (admin) */
-  getAll: (params?: {
-    page?: number;
-    limit?: number;
-    status?: string;
-    platform?: string;
-    userTriggered?: boolean;
-    since?: string;
-  }) => {
-    const query = new URLSearchParams();
-    if (params?.page) query.set("page", String(params.page));
-    if (params?.limit) query.set("limit", String(params.limit));
-    if (params?.status) query.set("status", params.status);
-    if (params?.platform) query.set("platform", params.platform);
-    if (params?.userTriggered !== undefined) {
-      query.set("userTriggered", String(params.userTriggered));
-    }
-    if (params?.since) query.set("since", params.since);
-    const qs = query.toString();
+  getAll: (params?: CrashReportFilterParams) => {
+    const qs = crashReportQuery(params);
     return api.get(`/crash-reports${qs ? `?${qs}` : ""}`);
   },
 
   /** Get crash report stats (admin) */
   getStats: () => api.get("/crash-reports/stats"),
+
+  /** Get integration status without exposing webhook credentials */
+  getIntegrations: () => api.get("/crash-reports/integrations"),
+
+  /** Send a test message to the configured Slack channel */
+  testSlack: () => api.post("/crash-reports/integrations/slack/test"),
+
+  /** Export all incidents matching the current admin filters as an AI prompt */
+  exportMarkdown: (params?: CrashReportFilterParams) => {
+    const qs = crashReportQuery(params);
+    return api.get(
+      `/crash-reports/export?format=markdown${qs ? `&${qs}` : ""}`,
+      { responseType: "text" },
+    );
+  },
 
   /** Get a single report */
   getById: (id: string) => api.get(`/crash-reports/${id}`),
